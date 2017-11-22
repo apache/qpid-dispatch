@@ -1298,17 +1298,18 @@ static int CORE_link_push(void *context, qdr_link_t *link, int limit)
     return 0;
 }
 
-static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
+static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *dlv, bool settled)
 {
     qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
+    uint64_t update = 0;
 
     if (!qlink)
-        return;
+        return 0;
 
     pn_link_t *plink = qd_link_pn(qlink);
     if (!plink)
-        return;
+        return 0;
 
     //
     // If the remote send settle mode is set to 'settled' then settle the delivery on behalf of the receiver.
@@ -1370,10 +1371,10 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
     if (send_complete) {
         if (qd_message_aborted(msg_out)) {
 
-            // This message has been aborted.
-            // When a sender aborts a message the message is implicitly settled.
-            // Tell the core that the delivery has been rejected and settled.
-            qdr_delivery_update_disposition(router->router_core, dlv, PN_REJECTED, true, 0, 0, false);
+            // This message has been aborted.  When a sender aborts a message
+            // the message is implicitly settled.  The caller will need to tell
+            // the core that the delivery has been rejected and settled.
+            update = PN_REJECTED;
 
             // Aborted messages must be settled locally
             // Settling does not produce any disposition to message sender.
@@ -1386,8 +1387,10 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
         } else {
             if (!settled && remote_snd_settled) {
-                // Tell the core that the delivery has been accepted and settled, since we are settling on behalf of the receiver
-                qdr_delivery_update_disposition(router->router_core, dlv, PN_ACCEPTED, true, 0, 0, false);
+                // The caller must tell the core that the delivery has been
+                // accepted and settled, since we are settling on behalf of the
+                // receiver
+                update = PN_ACCEPTED;  // schedule the settle
             }
 
             pn_link_advance(plink);
@@ -1399,6 +1402,7 @@ static void CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_t *d
 
         }
     }
+    return update;
 }
 
 
