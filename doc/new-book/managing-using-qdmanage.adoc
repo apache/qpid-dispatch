@@ -183,6 +183,7 @@ qdmanage delete --name=_LISTENER_NAME_
 
 |===
 
+[[managing_connectors]]
 === Managing Connectors
 
 Connectors define how the router can connect to other endpoints in your messaging network, such as brokers and other routers. The following table lists the `qdmanage` commands you can use to perform common operations on connectors.
@@ -208,6 +209,13 @@ a|
 [options="nowrap"]
 ----
 qdmanage query role port --type=connector
+----
+
+|If the router is connected to a broker, view the alternate URLs on which the router can connect to the broker if the primary connection fails
+a|
+[options="nowrap",subs="+quotes"]
+----
+qdmanage query failoverList --type=connector --name=CONNECTOR_NAME
 ----
 
 |View the attributes configured for a connector
