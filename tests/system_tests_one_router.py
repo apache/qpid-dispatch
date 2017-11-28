@@ -1552,6 +1552,14 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
             self.conn.close()
         elif self.n_sent == self.n_released:
             self.error = None
+
+            if not self.error:
+                local_node = Node.connect(self.address, timeout=TIMEOUT)
+                for result in local_node.query(type='org.apache.qpid.dispatch.router.link').results:
+                    if result[5] == 'in' and 'multicast.MulticastNoReceiverTest' in result[6]:
+                        if result[16] != 250:
+                            self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
+
             self.timer.cancel()
             self.conn.close()
 
@@ -1795,6 +1803,8 @@ class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
         Container(self).run()
 
 
+
+
 class PresettledOverflowTest(MessagingHandler):
     def __init__(self, address):
         super(PresettledOverflowTest, self).__init__(prefetch=0)
@@ -1836,6 +1846,16 @@ class PresettledOverflowTest(MessagingHandler):
         if self.last_seq == self.count - 1:
             if self.n_received == self.count:
                 self.error = "No deliveries were dropped"
+
+            if not self.error:
+                local_node = Node.connect(self.address, timeout=TIMEOUT)
+                out = local_node.query(type='org.apache.qpid.dispatch.router.link')
+
+                for result in out.results:
+                    if result[5] == 'out' and 'balanced.PresettledOverflow' in result[6]:
+                        if result[16] != 250:
+                            self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
+
             self.conn.close()
             self.timer.cancel()
 
