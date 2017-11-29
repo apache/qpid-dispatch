@@ -1528,6 +1528,12 @@ return;
       var viewport = $('#overview-controller .pane-viewport')
       viewport.height( window.innerHeight - viewport.offset().top)
 
+      // don't allow HTML in the tree titles
+      $('.fancytree-title').each( function (idx) {
+        var unsafe = $(this).html()
+        $(this).html(unsafe.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+      })
+
       // remove the comments to allow the tree to take all the height it needs
 /*
       var gridDetails = $('#overview-controller .grid')

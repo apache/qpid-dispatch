@@ -361,6 +361,11 @@ var QDR = (function(QDR) {
       // the scroll bar on the window
       var viewport = $('#list-controller .pane-viewport')
       viewport.height( window.innerHeight - viewport.offset().top)
+      // don't allow HTML in the tree titles
+      $('.fancytree-title').each( function (idx) {
+        var unsafe = $(this).html()
+        $(this).html(unsafe.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+      })
     }
     $(window).resize(resizer);
 
