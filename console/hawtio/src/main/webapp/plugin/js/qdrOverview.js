@@ -1423,7 +1423,12 @@ QDR.log.debug("newly created node needs to be activated")
           activated(newActive)
         }
       }
-     }
+      $('.dynatree-title').each( function (idx) {
+        //QDR.log.info('found a title of ' + $(this).html())
+        var unsafe = $(this).html()
+        $(this).html(unsafe.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+      })
+   }
 
     // get saved tree state
     var lastKey = loadActivatedNode();

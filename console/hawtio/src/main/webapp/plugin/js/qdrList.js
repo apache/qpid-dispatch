@@ -308,6 +308,11 @@ var QDR = (function(QDR) {
         updateDetails(row)  // update the table on the right
       }
       scrollTreeDiv.scrollTop(scrollTop)
+      $('.dynatree-title').each( function (idx) {
+        var unsafe = $(this).html()
+        $(this).html(unsafe.replace(/</g, "&lt;").replace(/>/g, "&gt;"))
+      })
+
     }
 
     var schemaProps = function (entityName, key, currentNode) {
