@@ -122,14 +122,20 @@ For information about additional `sslProfile` attributes, see xref:router_config
 
 If you plan to use SASL to authenticate connections, you must first add the SASL attributes to the `router` entity in the router's configuration file. These attributes define a set of SASL parameters that can be used by the router's incoming and outgoing connections.
 
-// Do we need to say something here about only supporting Cyrus SASL?
-
 .Prerequisites
 
 Before you can set up SASL, you must have the following:
 
 * xref:generating_sasl_database[The SASL database is generated.]
 * xref:configuring_sasl_database[The SASL configuration file is configured.]
+* The Cyrus SASL plugin is installed for each SASL mechanism you plan to use.
++
+Cyrus SASL uses plugins to support specific SASL mechanisms. Before you can use a particular SASL mechanism, the relevant plugin must be installed. For example, you need the `cyrus-sasl-plain` plugin to use SASL PLAIN authentication.
++
+--
+// Note about searching for an installing SASL plugins.
+include::{FragmentDir}/fragment-router-sasl-para.adoc[]
+--
 
 .Procedure
 
