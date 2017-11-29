@@ -1,0 +1,2 @@
+
+To see a list of Cyrus SASL plugins in a `dnf`-based Linux system, use the `dnf search cyrus-sasl` command. To install a Cyrus SASL plugin, use the `dnf install _PLUGIN_` command.
