@@ -1,1 +1,994 @@
-../../../../../../stand-alone/plugin/css/plugin.css
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+main-display > .span8 {
+  height: 100%;
+  position: relative;
+}
+
+ul.qdrListNodes > li > span {
+  padding: 6px 20px; 6px; 6px;
+  display: block;
+}
+
+.qdrList .gridStyle {
+    width: 20em;
+    margin-right: 0;
+    float: left;
+}
+
+
+.qdrList div.gridDetails {
+    width: auto;
+}
+
+div.gridDetails {
+    margin-left: 1em;
+}
+
+.selectedItems {
+    /* margin-left: 21em; */
+}
+
+.qdrListPane {
+    top: 110px;
+}
+
+.qdrListActions {
+    width: auto;
+    margin-left: 1em;
+}
+
+div.listAttrName {
+    padding-top: 5px;
+}
+
+div.listAttrName i.icon-bar-chart {
+    float: right;
+    margin: 3px 5px;
+}
+
+div.listAttrName i.icon-bar-chart.active, div.hastip i.icon-bar-chart.active, li.haschart i {
+    background-color: #AAFFAA;
+}
+
+div#main div ul.nav li a:not(.btn) {
+    background: initial !important;
+}
+
+div#main div ul.nav li.active a {
+    background-color: #f0f0ff !important;
+}
+
+div#main.qdr {
+    margin-top: 56px !important;
+}
+
+div.charts-header {
+  font-size: 1.2em;
+  color: #666666;
+  margin: 1em 0;
+}
+
+.selectedNode, .selectedAction, .selectedEntity {
+    font-weight: 600;
+    color: #606066;
+}
+
+.okButton {
+    text-align: center;
+    margin: 1em;
+}
+
+span.showChartsLink {
+    border: 1px solid blue;
+    padding: 1px 2px;
+}
+
+div.listGraphs p {
+    margin: 1em 0 2em 2em;
+    text-align: center;
+}
+
+div.centered {
+    text-align: center;
+    margin: 4em;
+}
+
+.modal-body.centered {
+	margin: 0;
+}
+
+/* dialog */
+div.aChart {
+    height: 200px;
+    width:  400px;
+    margin: 1em;
+}
+
+/* dashboard */
+div.aChart.hDash {
+	/* width: 21em; */
+	/* height: 17em; */
+	width: 100%;
+	height: 87%;
+	margin: 0;
+	padding: 0;
+
+}
+div.chartContainer {
+    float: left;
+	width: 100%;
+	height: 100%;
+	overflow: hidden;
+}
+
+/* the x and y axis lines */
+.d3Chart g.axis path.domain {
+    stroke-width: 1;
+    stroke: black;
+}
+
+/* the line surrounding the area chart */
+div.d3Chart path {
+/*    stroke: black; */
+    stroke-width: 0;
+/*	opacity: 0.5; */
+}
+
+/* the line above the area chart */
+/* the color gets overridden */
+div.d3Chart path.line {
+    stroke: steelblue;
+    stroke-width: 1.5;
+    fill: none;
+    opacity: 1;
+}
+
+.mo-rect {
+    fill: #ffffdd;
+    stroke: #f0f0f0;
+    stroke-width: 1;
+}
+
+.mo-guide {
+    fill: none;
+    stroke: #d0d0d0;
+    stroke-width: 2;
+    stroke-dasharray: 3,3;
+}
+
+div.d3Chart .title {
+    text-decoration: underline;
+}
+
+
+.axis line, .axis path {
+  fill: none;
+  shape-rendering: crispEdges;
+  stroke-width: 1;
+  stroke: #000000;
+}
+
+.axis line {
+  stroke: #C0C0C0;
+  stroke-dasharray: 1,1;
+  opacity: 0.5;
+}
+
+.y.axis text, .x.axis text, .focus text, div.d3Chart .title {
+    font-size: 12px;
+}
+
+.y.axis path {
+   stroke: #000;
+ }
+
+.overlay {
+   fill: none;
+   pointer-events: all;
+ }
+
+.focus circle {
+   fill: none;
+   stroke: steelblue;
+ }
+.focus .fo-table {
+	/* box-shadow: 2px 2px 3px #EEE; */
+}
+
+div.d3Chart {
+    padding: 1em 0;
+    border: 1px solid #C0C0C0;
+}
+div.d3Chart.hDash {
+    border: 0px;
+}
+
+div.d3Chart .axis path {
+	display: inherit;
+}
+.c3-circle {
+	display: none;
+}
+
+.fo-table {
+	border: 1px solid darkgray;
+	background-color: white;
+	font-size: .85em;
+}
+
+.fo-table td {
+	padding: 4px;
+	border-left: 1px solid darkgray;
+}
+.fo-table tr.detail td {
+	padding: 1px 4px;
+}
+.fo-title {
+	color: white;
+	background-color: darkgray;
+}
+
+.fo-table-legend {
+	width: 8px;
+	height: 8px;
+	border: 1px solid black;
+	margin: 0 4px;
+	display: inline-block;
+}
+
+svg .legend {
+	dominant-baseline: central;
+}
+
+div.chartContainer div.aChart {
+    margin-top: 0.5em;
+}
+
+#list-controller .tree-header {
+    position: absolute;
+    height: auto;
+}
+
+#list-controller select {
+  height: 25px;
+  float: left;
+  padding: 0;
+}
+
+
+div#main.qdr div ul.nav li.active a {
+  background-color: #e0e0ff !important;
+  color: #000000;
+}
+
+div#main.qdr .selected, .box.selected {
+  color: #000000;
+  text-shadow: none;
+}
+
+/* the selected node on the list page */
+div.qdrList li.active, ul.qdrListNodes li.active {
+    background-color: #e0e0ff;
+}
+
+div.qdr-attributes span.dynatree-selected a {
+    background-color: #e0e0ff;
+}
+div.qdr-attributes.pane, div.qdr-topology.pane {
+	position: absolute;
+	margin-left: 10px;
+}
+div.qdr-overview.pane {
+	position: absolute;
+}
+div.qdr-topology.pane.left {
+	width: auto;
+  /*border-right: 1px solid lightgray; */
+}
+
+/* the selected row in the name table */
+div#main.qdr div.qdrList div.selected {
+  background-color: #e0e0ff !important;
+}
+
+#dialogChart, #dialogEditChart {
+    height: 200px;
+}
+
+.chartOptions .modal-body {
+  overflow-y: initial;
+}
+
+div.qdrCharts p.chartLabels button {
+    float: right;
+}
+
+div.qdrCharts p.chartLabels {
+     padding-right: 1em;;
+ }
+
+p.dialogHeader {
+    text-align: center;
+}
+
+p.dialogHeader input {
+    margin-top: 10px;
+    width: 480px;
+}
+
+.ui-slider-tick {
+  position: absolute;
+  background-color: #666;
+  width: 2px;
+  height: 8px;
+  top: 12px;
+  z-index: -1;
+}
+
+label.rateGroup {
+    float: left;
+}
+
+div.chartOptions div.dlg-slider {
+    float: left;
+    width: 28em;
+    font-size: 14px;
+}
+
+div.chartOptions div.duration {
+  width: 35em !important;
+}
+
+div.chartOptions .slider {
+    margin-top: 1em;
+    margin-bottom: 1em;
+}
+
+input[type="radio"] {
+    margin-top: 0 !important;
+}
+
+div.chartOptions legend {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+div.chartOptions tab > div {
+  margin-left: 1em;
+}
+
+div.chartOptions span.minicolors-swatch {
+    width: 14px;
+    height: 14px;
+}
+
+.minicolors-input {
+    width: 4em;
+    padding: 0 0 0 24px !important;
+}
+
+div.colorPicker div.colorText {
+	display: inline-block;
+	width: 10em;
+}
+div.colorPicker div:nth-of-type(1), /* first span under div.colorPicker */
+ div.minicolors{
+    float:left;
+    margin-right: 0.5em;
+}
+
+div.chartOptions p.sep {
+    height: 1em;
+}
+
+ul.nav-tabs {
+    border-bottom: 1px solid #ddd !important;
+}
+
+.chartOptions ul.nav-tabs {
+    margin-bottom: 0px !important;
+}
+
+div.tabbable div.tab-content {
+    overflow: visible;
+}
+
+div.tabbable ul.nav-tabs > .active > a {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+}
+
+
+div.tabbable .tab-pane {
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+div.dlg-large div.tabbable .tab-pane {
+	margin-left: 11em;
+}
+
+div.tabbable ul.nav-tabs {
+  margin-bottom: 0;
+}
+
+ul.qdrTopoModes {
+    position: relative;
+    top: -10px;
+}
+.overview.section {
+	/* width: 35em; */
+}
+.overview.section .ngGrid {
+	height: 12em !important;
+	min-height: 12em !important;
+}
+
+.overview.routers.section .ngGrid {
+ 	height: 16em !important;
+ 	min-height: 16em !important;
+}
+.overview.routers.section {
+ 	/*width: 15em; */
+ }
+
+.grid-align-value {
+	text-align: right;
+}
+
+.grid-align-value .ngCellText {
+	padding-right: 10px;
+}
+
+.overview .ngRow:hover {
+	background:#e0e0ff;
+}
+
+.overview-cell .ngCell:hover {
+	background:#e0e0ff;
+}
+.overview-cell .ngCell.col0:hover, .overview-cell .ngCell.col1:hover {
+	background: initial;
+}
+
+
+.qdr-overview.pane.left, .qdr-attributes.pane.left {
+	top: 104px;
+}
+.qdr-topology.pane.left {
+	top: 104px;
+}
+.qdr-overview.pane.left, .qdr-attributes.pane.left, .qdr-topology.pane.left {
+	left: 10px;
+}
+
+.treeContainer {
+	width: 100%;
+	float: left;
+}
+
+.pane-content {
+	overflow: auto;
+}
+
+#entityNames {
+    width: 20em;
+    float: left;
+}
+
+.treeDetails {
+	margin-left: 260px;
+}
+
+.gridStyle:not(.noHighlight) .ui-grid-row:hover .ui-grid-cell-contents {
+	background-color: #e0e0ff;
+}
+
+.ngCellText {
+	padding: 4px 0 0 4px;
+}
+
+.overview {
+	border-bottom: 1px solid #d4d4d4;
+}
+
+.ui-grid-row.ui-grid-row-selected > [ui-grid-row] > .ui-grid-cell {
+  background-color: #e0e0ff;
+}
+
+.tab-content .tab-pane {
+    background-color: #f8f8f8;
+    padding: 12px;
+    border-right: 1px solid #ddd;
+    border-left: 1px solid #ddd;
+    border-bottom: 1px solid #ddd;
+}
+
+div.chartOptions ul.nav-tabs > .active > a {
+  background-color: #f8f8f8;
+  border: 1px solid #ddd;
+  border-bottom-color: transparent;
+}
+
+div.chartOptions label:nth-of-type(2) {
+    margin-left: 1em;
+}
+div.chartOptions label {
+	font-weight: normal;
+	display: inline-block;
+}
+
+/*
+.form-horizontal .control-label {
+    float: left;
+    width: 160px;
+    padding-top: 5px;
+    text-align: right;
+}
+
+.form-horizontal .controls {
+    margin-left: 180px;
+}
+
+.form-horizontal input,  {
+    display: inline-block;
+    margin-bottom: 0;
+    vertical-align: middle;
+}
+
+input[type="text"], input[type="number"], input[type="password"] {
+    background-color: #ffffff;
+    border: 1px solid #cccccc;
+    -webkit-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -moz-box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075);
+    -webkit-transition: border linear 0.2s, box-shadow linear 0.2s;
+    -moz-transition: border linear 0.2s, box-shadow linear 0.2s;
+    -o-transition: border linear 0.2s, box-shadow linear 0.2s;
+    transition: border linear 0.2s, box-shadow linear 0.2s;
+}
+
+input[type="text"], input[type="number"], input[type="password"] {
+    display: inline-block;
+    width: 200px;
+    padding: 4px 6px;
+    margin-bottom: 10px;
+    font-size: 14px;
+    line-height: 20px;
+    color: #555555;
+    vertical-align: middle;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.login input[type="checkbox"] {
+	margin-top: 0.75em;
+}
+*/
+
+#dispatch-login-container {
+	/* width: 18.5em; */
+	margin-top: 2em;
+}
+/*
+div.login.container {
+	width: 550px;
+}
+*/
+
+
+#overtree .fancytree-container {
+	border: 0px;
+}
+
+#overtree span.fancytree-alert-icon.ui-icon-refresh {
+	background-position: -64px -80px;
+}
+#overtree span.fancytree-alert-icon.ui-icon-transfer-e-w {
+	background-position: -112px -80px;
+}
+
+#alerts {
+	position: fixed;
+	right: 0;
+	top: 0;
+	z-index: 100;
+}
+
+.alert-enter,
+.alert-leave,
+.alert-move {
+  -webkit-transition: 1s linear all;
+  -moz-transition: 1s linear all;
+  -o-transition: 1s linear all;
+  transition: 1s linear all;
+  position:relative;
+}
+
+.alert-enter {
+  left:-10px;
+  opacity:0;
+}
+.alert-enter.alert-enter-active {
+  left:0;
+  opacity:1;
+}
+
+.alert-leave {
+  left:0;
+  opacity:1;
+}
+.alert-leave.alert-leave-active {
+  left:-10px;
+  opacity:0;
+}
+
+.alert-move {
+  opacity:0.5;
+}
+.alert-move.alert-move-active {
+  opacity:1;
+}
+
+.overview .table-striped tr:hover  td {
+	background-color: #e0e0ff !important;
+}
+
+#entityNames div.ngViewport {
+	overflow-x: hidden;
+}
+
+.connect-column.connect-form {
+	width: 20em;
+}
+
+.chartLabels button a {
+	text-decoration: none;
+}
+
+.fancytree-ico-c.router .fancytree-icon {
+
+}
+
+.tabs-left .nav-tabs {
+	float: left;
+}
+.tabs-left .nav-tabs > li {
+/*	float: initial; */
+}
+
+div.modal.dlg-large {
+	width: 53em;
+}
+
+button.hdash-button a {
+	text-decoration: none;
+	color: #fff;
+}
+
+div.widget-body > div {
+	height: 100%;
+}
+
+div.qdrCharts {
+	height: 100%;
+}
+
+ul.dispatch-view {
+	margin-bottom: 0 !important;
+}
+
+.qdr-overview.pane.left span:not(.dynatree-has-children) .dynatree-icon:before,
+.qdr-attributes.pane.left span:not(.dynatree-has-children) .dynatree-icon:before {
+    color: green;
+}
+
+span:not(.dynatree-has-children).address .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.mobile .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f109";
+}
+span:not(.dynatree-has-children).address.internal.mobile .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.internal.mobile .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0ac";
+}
+span:not(.dynatree-has-children).address.router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.address.router .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f047";
+}
+
+span.address-link .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0ac";
+}
+
+span:not(.dynatree-has-children).connection.external .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f109";
+}
+span:not(.dynatree-has-children).connection.normal .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f08e";
+}
+span:not(.dynatree-has-children).connection.external.quiesced .dynatree-icon:before {
+  font-family: FontAwesome;
+	content: "\f14c";
+	color: red;
+}
+span:not(.dynatree-has-children).connection.inter-router .dynatree-icon:before {
+  font-family: FontAwesome;
+   content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.router-control .dynatree-icon:before {
+  font-family: FontAwesome;
+   content: "\f013";
+}
+span:not(.dynatree-has-children).no-data .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f05e";
+  color: red !important;
+}
+span:not(.dynatree-has-children).loading .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f254";
+}
+span:not(.dynatree-has-children).connector .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f126";
+}
+span:not(.dynatree-has-children).container .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f16c";
+}
+span:not(.dynatree-has-children).log .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0f6";
+}
+span:not(.dynatree-has-children).router\.node .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f013";
+}
+span:not(.dynatree-has-children).link.inter-router .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.inter-router .dynatree-icon:before{
+  font-family: FontAwesome;
+  content: "\f07e";
+}
+span:not(.dynatree-has-children).link.router-control .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.router-control .dynatree-icon:before{
+  font-family: FontAwesome;
+  content: "\f013";
+}
+span:not(.dynatree-has-children).link.endpoint .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.endpoint .dynatree-icon:before{
+  font-family: FontAwesome;
+  content: "\f109";
+}
+span:not(.dynatree-has-children).link.console .dynatree-icon:before,
+span:not(.dynatree-has-children).router\.link.console .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f108";
+}
+span:not(.dynatree-has-children).listener .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f025";
+}
+span:not(.dynatree-has-children).connection .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f07e";
+}
+span:not(.dynatree-has-children).connection.console .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f108";
+}
+span:not(.dynatree-has-children).waypoint .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f0ec";
+}
+span:not(.dynatree-has-children).router .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f047";
+}
+span:not(.dynatree-has-children).fixedAddress .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f015";
+}
+span:not(.dynatree-has-children).linkRoutePattern .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f039";
+}
+span:not(.dynatree-has-children).allocator .dynatree-icon:before {
+  font-family: FontAwesome;
+  content: "\f170";
+}
+
+.ngCellText {
+/*    color: #333333; */
+}
+
+.changed {
+    color: #339933;
+}
+
+div.dispatch-router div.help {
+    width: auto;
+    padding: 1em;
+    background-color: lavender;
+    border-radius: 6px;
+    margin-top: 1em;
+    text-align: center;
+}
+
+div.operations tr:nth-child(even) {
+	background: #f3f3f3;
+}
+div.operations tr:nth-child(odd), div.operations tr:last-child {
+	background: #fff;
+}
+
+div.operations tr input {
+	margin: 0;
+	padding: 3px 6px;
+}
+div.operations table {
+    width: 100%;
+}
+div.operations th {
+    width: 50%;
+    border-bottom: 1px solid #cccccc;
+    text-align: left;
+}
+div.operations td:nth-child(odd), div.operations th:nth-child(odd) {
+	border-right: 1px solid #cccccc;
+}
+div.operations td:nth-child(odd) {
+	padding-left: 0;
+}
+div.operations td:nth-child(even), div.operations th:nth-child(even) {
+	padding-left: 5px;
+}
+div.operations th {
+	padding: 5px;
+}
+div.operations .tab-pane.active {
+    padding: 12px 12px 12px 0;
+}
+div.operations label {
+    padding-top: 4px;
+    margin-bottom: 4px;
+}
+.qdrListActions .ngGrid {
+	/*min-height: 40em;
+	height: 100%; */
+}
+div.qdrListActions .ngViewport {
+    height: initial !important;
+}
+
+div.operations .boolean {
+    padding-bottom: 0;
+}
+
+table.log-entry {
+    margin-bottom: 1em;
+    border-top: 1px solid black;
+}
+
+table.log-entry pre {
+    background-color: #f5f5f5;
+    color: inherit;
+    margin: 0;
+}
+
+circle.node.normal.console {
+    fill: lightcyan;
+}
+circle.node.artemis {
+    fill: lightgreen;
+}
+circle.node.route-container {
+    fill: orange;
+}
+
+text.console, text.on-demand, text.normal {
+	font-family: FontAwesome;
+	font-weight: normal;
+	font-size: 16px;
+}
+
+@font-face {
+    font-family:"Brokers";
+    src: url("brokers.ttf") /* TTF file for CSS3 browsers */
+}
+
+text.artemis {
+    font-family: Brokers;
+    font-size: 20px;
+    font-weight: bold;
+}
+
+text.qpid-cpp {
+    font-family: Brokers;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+i.red {
+	color: red;
+}
+
+.qdrListActions div.delete {
+    width: 20em;
+    margin: auto;
+    border: 1px solid #eaeaea;
+    height: 5em;
+    padding: 4em;
+    background-color: #fcfcfc;
+}
+
+.btn:focus {
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+}
+
+select:focus, input[type="file"]:focus, input[type="radio"]:focus, input[type="checkbox"]:focus {
+	outline:3px solid rgba(82, 168, 236, 0.6);
+    box-shadow: inset 0 1px 1px rgba(0, 0, 0, 0.075), 0 0 8px rgba(82, 168, 236, 0.6);
+    outline: 5px auto -webkit-focus-ring-color;
+    outline-offset: -2px;
+}
+
+btn.disabled, .btn[disabled] {
+    opacity: 0.35;
+}
+
+#dispatch-login-container .ng-invalid-range {
+	border-color: #e9322d !important;
+}
+
+div#durationSlider, div#rateSlider {
+	margin-top: 1em;
+}
+
+.list-grid {
+	padding-left: 10px;
+}
+
+.ngViewport.ng-scope {
+  height: auto !important;
+}
+
+div#list-controller {
+    padding-left: 300px;
+}
+
+.listening-on {
+    background-color: #CCFFCC;
+}
