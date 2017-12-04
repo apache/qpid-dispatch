@@ -338,6 +338,17 @@ static char *test_matches(void *context)
     };
     rc = match_test("*/#/*", test14);
 
+    match_test_t test15[] = {
+        {"/policy", true},
+        {"/good/policy", true},
+        {"/really/really/good/policy", true},
+        {"help/police", false},
+        {"bad/polic", false},
+        {"/bad/p", false},
+        {NULL, false}
+    };
+    rc = match_test("/#/policy", test15);
+
     return rc;
 }
 
