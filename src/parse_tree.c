@@ -91,7 +91,7 @@ static void token_iterator_pop(token_iterator_t *t, token_t *head)
 
 static bool token_match_str(const token_t *t, const char *str)
 {
-    return !strncmp(t->begin, str, TOKEN_LEN(*t));
+    return (TOKEN_LEN(*t) == strlen(str) && !strncmp(t->begin, str, TOKEN_LEN(*t)));
 }
 
 // True if token matches the given char value
@@ -562,8 +562,6 @@ void qd_parse_tree_search(qd_parse_tree_t *node,
     qd_iterator_t *dup = qd_iterator_dup(value);
     char *str = (char *)qd_iterator_copy(dup);
     qd_log(node->log_source, QD_LOG_TRACE, "Parse tree search for '%s'", str);
-
-    normalize_pattern(str);
 
     token_iterator_init(&t_iter, str);
     parse_node_find(node, &t_iter, callback, handle);
