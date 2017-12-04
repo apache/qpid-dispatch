@@ -255,6 +255,15 @@ static qd_http_listener_t *qd_http_listener(qd_http_server_t *hs, qd_listener_t 
     return hl;
 }
 
+/* Linked list: first entry on each line should point to next, last line should be the 
+ * octet-stream default.
+ */
+static const struct lws_protocol_vhost_options mime_types[] = {
+    { &mime_types[1], NULL, ".json", "application/json" },
+    { &mime_types[2], NULL, ".woff2", "font/woff2" },
+    { NULL, NULL, "*", "application/octet-stream" }
+};
+
 static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
     log_init();                 /* Update log flags at each listener */
 
@@ -273,6 +282,7 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
         config->http_root : QPID_CONSOLE_STAND_ALONE_INSTALL_DIR;
     m->def = "index.html";  /* Default file name */
     m->origin_protocol = LWSMPRO_FILE; /* mount type is a directory in a filesystem */
+    m->extra_mimetypes = mime_types;
 
     struct lws_context_creation_info info = {0};
     info.mounts = m;
