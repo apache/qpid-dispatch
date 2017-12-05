@@ -562,7 +562,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     // Start with the local links
     //
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
-    while (link_ref) {
+    while (link_ref && eligible_link_value != 0) {
         qdr_link_t *link     = link_ref->link;
         uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
         bool        eligible = link->capacity > value;
