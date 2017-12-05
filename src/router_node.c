@@ -1370,12 +1370,6 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 
     if (send_complete) {
         if (qd_message_aborted(msg_out)) {
-
-            // This message has been aborted.  When a sender aborts a message
-            // the message is implicitly settled.  The caller will need to tell
-            // the core that the delivery has been rejected and settled.
-            update = PN_REJECTED;
-
             // Aborted messages must be settled locally
             // Settling does not produce any disposition to message sender.
             if (pdlv) {
@@ -1384,7 +1378,6 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
                 pn_link_advance(plink);
                 pn_delivery_settle(pdlv);
             }
-
         } else {
             if (!settled && remote_snd_settled) {
                 // The caller must tell the core that the delivery has been
@@ -1399,7 +1392,6 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
                 if (pdlv)
                     pn_delivery_settle(pdlv);
             }
-
         }
     }
     return update;
