@@ -565,7 +565,19 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     while (link_ref) {
         qdr_link_t *link     = link_ref->link;
         uint32_t    value    = DEQ_SIZE(link->undelivered) + DEQ_SIZE(link->unsettled);
-        bool        eligible = link->capacity > value;
+
+        // If this link has no deliveries in undelivered + unsettled (meaning that there are no outstanding deliveries),
+        // immediately choose this link as the best_eligible_link. We don't even want to look at the other links. We
+        // will send out the delivery on this link.
+        // Later in the code we rotate the contents of addr->rlinks so there is no possibility of starving
+        // certain links.
+        if (value == 0) {
+            best_eligible_link = link;
+            eligible_link_value = 0;
+            break;
+        }
+
+        bool eligible = link->capacity > value;
 
         //
         // If this is the best eligible link so far, record the fact.
@@ -630,11 +642,13 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
                 }
             }
         }
-    } else if (best_eligible_link) {
+    } else if (best_eligible_link && !eligible_link_value) {
         //
-        // Rotate the rlinks list to enhance the appearance of balance when there is
+        // Rotate the rlinks list when eligible_link_value=0 to enhance the appearance of balance when there is
         // little load (see DISPATCH-367)
         //
+        // If eligible_link_value !=0 we are not going to rotate the links. This will save a lot of time in bursty
+        // non-synchronous traffic situations.
         if (DEQ_SIZE(addr->rlinks) > 1) {
             link_ref = DEQ_HEAD(addr->rlinks);
             DEQ_REMOVE_HEAD(addr->rlinks);
