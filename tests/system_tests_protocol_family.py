@@ -17,8 +17,7 @@
 # under the License.
 #
 
-import unittest
-from time import sleep
+import unittest2 as unittest
 from proton import Message
 from system_test import TestCase, Qdrouterd, main_module
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
@@ -138,6 +137,7 @@ class ProtocolFamilyTest(TestCase):
 
         M1.stop()
         M2.stop()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

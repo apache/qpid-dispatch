@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import unittest
+import unittest2 as unittest
 
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
 from qpid_dispatch_internal.policy.policy_util import HostStruct
@@ -315,6 +315,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.connections_active == 10000)
         self.assertTrue(stats.connections_approved == 10000)
         self.assertTrue(stats.connections_denied == 1)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

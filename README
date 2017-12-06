@@ -19,6 +19,7 @@ packages installed:
 - cyrus-sasl-plain
 - cyrus-sasl-devel
 - asciidoc (for building docs)
+- python-unittest2 (python2-unittest2 on Fedora) (we use unittest2 for running python tests)
 
 Dispatch will not build on Windows.
 

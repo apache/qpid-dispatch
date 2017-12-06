@@ -17,11 +17,11 @@
 # under the License.
 #
 
-import unittest
-
+import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, main_module
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
+
 
 class DrainSupportTest(TestCase):
 
@@ -61,6 +61,7 @@ class DrainSupportTest(TestCase):
         drain_support = DrainNoMoreMessagesHandler(self.address)
         drain_support.run()
         self.assertEqual(drain_support.error, None)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

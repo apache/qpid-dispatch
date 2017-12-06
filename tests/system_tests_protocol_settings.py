@@ -17,14 +17,9 @@
 # under the License.
 #
 
-import unittest
-from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
+import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, main_module
-from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
-from proton.utils import BlockingConnection, SyncRequestResponse
-from qpid_dispatch.management.client import Node
-from proton import ConnectionException
+from proton.utils import BlockingConnection
 
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""

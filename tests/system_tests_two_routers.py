@@ -17,12 +17,12 @@
 # under the License.
 #
 
-import unittest, os, json, logging
-from subprocess import PIPE, STDOUT
-from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest
+import logging
+from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
+from proton.reactor import Container
 
 # PROTON-828:
 try:
@@ -1314,6 +1314,7 @@ class AttachOnInterRouterTest(MessagingHandler):
             Container(self).run()
         finally:
             logging.disable(logging.NOTSET) # Restore to normal
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

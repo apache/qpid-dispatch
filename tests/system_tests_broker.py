@@ -21,9 +21,11 @@
 System tests involving one or more brokers and dispatch routers integrated
 with waypoints.
 """
-import unittest, system_test
+import unittest2 as unittest
+import system_test
 from system_test import Qdrouterd, message, MISSING_REQUIREMENTS
 from itertools import cycle
+
 
 class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-public-methods
     """System tests involving routers and qpidd brokers"""
@@ -100,6 +102,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             for r in routers: r.wait_ready()
             addrs = [r.addresses[0]+"/"+self.testq for r in routers]
             self.verify_equal_spread(addrs, addrs)
+
 
 if __name__ == '__main__':
     unittest.main(system_test.main_module())
