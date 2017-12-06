@@ -17,7 +17,7 @@
 # under the License.
 #
 
-import unittest
+import unittest2 as unittest
 from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler, TransactionHandler
@@ -1896,6 +1896,7 @@ class RejectDispositionTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

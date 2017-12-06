@@ -17,8 +17,8 @@
 # under the License.
 #
 
-import unittest, json
-import os
+import unittest as unittest
+import os, json
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException
@@ -300,6 +300,7 @@ class SenderReceiverLimits(TestCase):
         self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
 
         bs1.close()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

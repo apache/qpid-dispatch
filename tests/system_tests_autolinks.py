@@ -17,11 +17,11 @@
 # under the License.
 #
 
-import unittest
-from proton import Message, Delivery, PENDING, ACCEPTED, REJECTED
+import unittest2 as unittest
+from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce
+from proton.reactor import Container
 
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
 

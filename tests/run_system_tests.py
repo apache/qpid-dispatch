@@ -28,7 +28,7 @@ the standard system places. Use run.py or config.sh to run against dispatch buil
 import os
 import sys
 from fnmatch import fnmatch
-import unittest
+import unittest2 as unittest
 import system_test
 
 # Collect all system_tests_*.py scripts in the same directory as this script.
