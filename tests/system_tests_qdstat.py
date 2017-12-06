@@ -23,6 +23,8 @@ import system_test
 import unittest
 from subprocess import PIPE
 from proton import Url, SSLDomain, SSLUnavailable, SASL
+from system_test import main_module
+
 
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
@@ -358,4 +360,4 @@ except SSLUnavailable:
 
 
 if __name__ == '__main__':
-    unittest.main(system_test.main_module())
+    unittest.main(main_module())
