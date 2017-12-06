@@ -17,9 +17,9 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess import PIPE, Popen, STDOUT
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest, os
+from subprocess import PIPE, Popen
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT
 from qpid_dispatch.management.client import Node
 from proton import SASL
 

@@ -17,17 +17,16 @@
 # under the License.
 #
 
-import unittest
+import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 
-from proton import Message, Endpoint
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption
-from proton.utils import BlockingConnection, LinkDetached
-
+from proton.utils import BlockingConnection
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
 from qpid_dispatch.management.client import Node

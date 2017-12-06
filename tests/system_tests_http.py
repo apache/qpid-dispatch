@@ -17,9 +17,11 @@
 # under the License.
 #
 
-import unittest, os, json, threading, sys, ssl, urllib2
+import unittest2 as unittest
+import os, threading, sys, urllib2
 import ssl
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+from system_test import TestCase, Qdrouterd, main_module, DIR
+
 
 class RouterTestHttp(TestCase):
 
@@ -131,6 +133,7 @@ class RouterTestHttp(TestCase):
         self.assertRaises(urllib2.URLError, self.assert_get, "https://localhost:%s" % r.ports[2])
         # Provide client cert
         self.assert_get_cert("https://localhost:%d" % r.ports[2])
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

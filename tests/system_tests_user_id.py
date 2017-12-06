@@ -19,10 +19,10 @@
 
 
 import os
-import unittest
+import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, DIR, main_module
 from qpid_dispatch.management.client import Node
-from proton import SSLDomain, Message
+from proton import SSLDomain
 
 class QdSSLUseridTest(TestCase):
 
@@ -312,6 +312,7 @@ class QdSSLUseridTest(TestCase):
         self.assertEqual("user13", user_id)
 
         node.close()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

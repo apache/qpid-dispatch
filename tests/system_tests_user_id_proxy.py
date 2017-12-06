@@ -19,12 +19,12 @@
 
 
 import os
-import unittest
+import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, DIR, main_module
-from qpid_dispatch.management.client import Node
 import proton
-from proton import SSLDomain, Message, ProtonException, Delivery
+from proton import SSLDomain, Delivery
 from proton.utils import BlockingConnection
+
 
 class QdSSLUseridTest(TestCase):
 

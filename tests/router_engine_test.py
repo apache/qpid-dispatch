@@ -19,7 +19,7 @@
 
 import os
 import sys
-import unittest
+import unittest2 as unittest
 import mock                     # Mock definitions for tests.
 
 sys.path.append(os.path.join(os.environ["SOURCE_DIR"], "python"))

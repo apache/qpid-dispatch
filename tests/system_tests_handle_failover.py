@@ -17,9 +17,10 @@
 # under the License.
 #
 
+import unittest2 as unittest
 import json, re
 from time import sleep
-import system_test
+from system_test import main_module, TIMEOUT
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
 from subprocess import PIPE, STDOUT
 
@@ -95,7 +96,7 @@ class FailoverTest(TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
-            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(TIMEOUT) ] + args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None)
 
         out = p.communicate()[0]
@@ -138,3 +139,7 @@ class FailoverTest(TestCase):
         # Since router B has been killed, router A should now try to connect to a listener on router C.
         # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.
         self.run_qdstat(['--connections'], regexp=r'QDR.A.*inter-router.*', address=self.routers[2].addresses[1])
+
+
+if __name__ == '__main__':
+    unittest.main(main_module())

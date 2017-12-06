@@ -17,12 +17,11 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess import PIPE, STDOUT
-from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest
+from proton import Message, Timeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties, LinkOption
+from proton.reactor import Container, LinkOption
 
 # PROTON-828:
 try:
