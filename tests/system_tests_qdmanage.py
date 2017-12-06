@@ -17,9 +17,9 @@
 # under the License
 #
 
-import json, unittest, os
+import json, unittest2 as unittest, os
 
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, wait_port
+from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema

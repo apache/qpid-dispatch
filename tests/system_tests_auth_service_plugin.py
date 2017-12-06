@@ -17,12 +17,14 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess import PIPE, Popen, STDOUT
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest
+import os
+from subprocess import PIPE, Popen
+from system_test import TestCase, Qdrouterd, main_module
 from proton import SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 
 class AuthServicePluginTest(TestCase):
     @classmethod
@@ -134,6 +136,7 @@ class SimpleConnect(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

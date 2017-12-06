@@ -17,13 +17,14 @@
 # under the License.
 #
 
+import unittest2 as unittest
 import re
-import system_test
 from subprocess import PIPE
-from system_test import TestCase, Qdrouterd, TIMEOUT
+from system_test import TestCase, Qdrouterd, TIMEOUT, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message
+
 
 class DefaultDistributionTest(TestCase):
     """System tests for testing the defaultDistribution attribute of the router entity"""
@@ -46,7 +47,7 @@ class DefaultDistributionTest(TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
-            ['qdstat', '--bus', str(address or self.address), '--timeout', str(system_test.TIMEOUT) ] + args,
+            ['qdstat', '--bus', str(address or self.address), '--timeout', str(TIMEOUT) ] + args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None)
 
         out = p.communicate()[0]
@@ -184,3 +185,6 @@ class UnavailableAnonymousSender(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
+if __name__ == '__main__':
+    unittest.main(main_module())

@@ -66,9 +66,9 @@ add_test(unit_tests_size_1     ${TEST_WRAP} -x unit_tests_size 1)
 add_test(unit_tests            ${TEST_WRAP} -x unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 
 # Unit test python modules
-add_test(router_engine_test    ${TEST_WRAP} -m unittest -v router_engine_test)
-add_test(management_test       ${TEST_WRAP} -m unittest -v management)
-add_test(router_policy_test    ${TEST_WRAP} -m unittest -v router_policy_test)
+add_test(router_engine_test    ${TEST_WRAP} -x unit2 -v router_engine_test)
+add_test(management_test       ${TEST_WRAP} -x unit2 -v management)
+add_test(router_policy_test    ${TEST_WRAP} -x unit2 -v router_policy_test)
 
 if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
@@ -105,7 +105,7 @@ foreach(py_test_module
     ${SYSTEM_TESTS_HTTP}
     )
 
-  add_test(${py_test_module} ${TEST_WRAP} -m unittest -v ${py_test_module})
+  add_test(${py_test_module} ${TEST_WRAP} -x unit2 -v ${py_test_module})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
 endforeach()
 
