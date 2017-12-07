@@ -1406,6 +1406,10 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     if (!pnd)
         return;
 
+    // If the delivery's link is somehow gone (maybe because of a connection drop, we don't proceed.
+    if (!pn_delivery_link(pnd))
+        return;
+
     qdr_error_t *error = qdr_delivery_error(dlv);
 
     if (error) {
@@ -1420,6 +1424,22 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         free(name);
         free(description);
     }
+
+    qdr_link_t *qlink = qdr_delivery_link(dlv);
+    qd_link_t *link = 0;
+
+    if (qlink) {
+        link = (qd_link_t*) qdr_link_get_context(qlink);
+        if (link) {
+            qd_connection_t  *conn     = qd_link_connection(link);
+            if (conn == 0)
+                return;
+        }
+        else
+            return;
+    }
+    else
+        return;
 
     //
     // If the disposition has changed, update the proton delivery.
@@ -1436,8 +1456,6 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     // If the delivery is settled, remove the linkage and settle the proton delivery.
     //
     if (settled) {
-        qdr_link_t *qlink = qdr_delivery_link(dlv);
-        qd_link_t  *link  = (qd_link_t*) qdr_link_get_context(qlink);
         qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
         pn_delivery_settle(pnd);
     }
