@@ -26,9 +26,10 @@ under the License.
                     <p>
                         Enter the address and a HTML-enabled port of a <strong><a href="http://qpid.apache.org/components/dispatch-router/" target="_blank">Qpid Dispatch Router</a></strong> to connect..
                     </p>
+                    <!--
                     <p>
                         If Autostart is checked, you will be automatically logged in to the router the next time you start the console.
-                    </p>
+                    </p> -->
 
                 </div>
             </div>
@@ -47,12 +48,14 @@ under the License.
                                 <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
                             </div>
                         </div>
+<!--
                         <div class="form-group">
                             <label tabindex="-1" class="col-md-2 control-label" title="Whether or not the connection should be started as soon as you log in" for="autostart">Autostart: </label>
                             <div class="col-md-6">
                                 <input tabindex="3" id="autostart" type="checkbox" tooltip="Whether or not the connection should be started as soon as you log into hawtio" ng-model="formEntity.autostart" name="autostart" title="Whether or not the connection should be started as soon as you log into hawtio"
                                        class="ng-scope ng-pristine ng-valid"></div>
                         </div>
+-->
                         <input tabindex="-1" type="submit" style="position: absolute; left: -9999px; width: 1px; height: 1px;">
                         <p></p>
                         <div class="form-group">
