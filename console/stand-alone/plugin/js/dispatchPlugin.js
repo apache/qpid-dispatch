@@ -174,7 +174,7 @@ var QDR = (function(QDR) {
     // of our module
   QDR.module.run( ["$rootScope", '$route', '$timeout', "$location", "$log", "QDRService", "QDRChartService",  function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {
     QDR.log = new QDR.logger($log);
-    QDR.log.info("*************creating Dispatch Console************");
+    QDR.log.info("************* creating Dispatch Console ************");
     var curPath = $location.path()
     var org = curPath.substr(1)
     if (org && org.length > 0 && org !== "connect") {
@@ -188,7 +188,6 @@ var QDR = (function(QDR) {
       QDRService.management.topology.delUpdatedAction("initChartService")
       QDRChartService.init(); // initialize charting service after we are connected
     });
-    var settings = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {autostart: false, address: 'localhost', port: 5673}
     if (!QDRService.management.connection.is_connected()) {
       // attempt to connect to the host:port that served this page
       var protocol = $location.protocol()
@@ -200,51 +199,23 @@ var QDR = (function(QDR) {
           $location.search("org", "overview")
       }
       var connectOptions = {address: host, port: port}
-      QDRService.management.connection.testConnect(connectOptions, function (e) {
-        if (e.error) {
-          QDR.log.debug("failed to auto-connect to " + host + ":" + port)
-          QDR.log.debug("redirecting to connect page")
-          // the connect page should rneder
+      QDR.log.info("Attempting AMQP over websockets connection using address:port of browser ("+host+':'+port+")")
+      QDRService.management.connection.testConnect(connectOptions)
+        .then( function (r) {
+          QDRService.disconnect()
+          QDR.log.info("Connect succeeded. Using address:port of browser")
+          connectOptions.reconnect = true
+          // complete the connection (create the sender/receiver)
+          QDRService.connect(connectOptions) // since the testConnect succeeded, we don't need to handle the success/failure return of the promise
+      }, function (e) {
+          QDR.log.info("failed to auto-connect to " + host + ":" + port)
+          QDR.log.info("redirecting to connect page")
           $timeout(function () {
             $location.path('/connect')
             $location.search('org', org)
+            $location.replace()
           })
-        } else {
-          QDR.log.info("Connect succeeded. Using address:port of browser")
-          // register an onConnect event handler
-          QDRService.management.connection.addConnectAction( function () {
-            QDRService.management.getSchema(function () {
-              QDR.log.debug("got schema after connection")
-              QDRService.management.topology.addUpdatedAction("initialized", function () {
-                QDRService.management.topology.delUpdatedAction("initialized")
-                QDR.log.debug("got initial topology")
-                $timeout(function() {
-                  if (org === '' || org === 'connect') {
-                    org = localStorage[QDR.LAST_LOCATION] || "/overview"
-                    if (org === '/')
-                      org = "/overview"
-                  } else {
-                    if (org && $location.path() !== '/connect') {
-                      org = $location.path().substr(1)
-                    }
-                  }
-                  $location.path(org)
-                  $location.search('org', null)
-                  $location.replace()
-                })
-              })
-              QDR.log.info("requesting a topology")
-              QDRService.management.topology.setUpdateEntities([])
-              QDRService.management.topology.get() // gets the list of routers
-            })
-          })
-          $timeout( function () {
-            // complete the connection (create the sender/receiver)
-            connectOptions.reconnect = true
-            QDRService.management.connection.connect(connectOptions)
-          })
-        }
-      })
+        })
     }
 
     $rootScope.$on('$routeChangeSuccess', function(event, next, current) {

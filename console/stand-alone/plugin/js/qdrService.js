@@ -28,7 +28,17 @@ var QDR = (function(QDR) {
       management: new dm.Management($location.protocol()),
       utilities: dm.Utilities,
 
+      onReconnect: function () {
+        self.management.connection.on('disconnected', self.onDisconnect)
+        var org = localStorage[QDR.LAST_LOCATION] || "/overview"
+        $timeout ( function () {
+          $location.path(org)
+          $location.search('org', null)
+          $location.replace()
+        })
+      },
       onDisconnect: function () {
+        self.management.connection.on('connected', self.onReconnect)
         $timeout( function () {
           $location.path('/connect')
           var curPath = $location.path()
@@ -38,8 +48,53 @@ var QDR = (function(QDR) {
           } else {
             $location.search('org', null)
           }
+          $location.replace()
         })
+      },
+
+      connect: function (connectOptions) {
+        return new Promise ( function (resolve, reject) {
+          self.management.connection.connect(connectOptions)
+            .then( function (r) {
+              // if we are ever disconnected, show the connect page and wait for a reconnect
+              self.management.connection.on('disconnected', self.onDisconnect)
+
+              self.management.getSchema()
+                .then( function (schema) {
+                  QDR.log.info("got schema after connection")
+                  self.management.topology.setUpdateEntities([])
+                  QDR.log.info("requesting a topology")
+                  self.management.topology.get() // gets the list of routers
+                    .then( function () {
+                      QDR.log.info("got initial topology")
+                      var curPath = $location.path()
+                      var org = curPath.substr(1)
+                      if (org === '' || org === 'connect') {
+                        org = localStorage[QDR.LAST_LOCATION] || "/overview"
+                      } else {
+                        if (org && $location.path() !== '/connect') {
+                          org = $location.path().substr(1)
+                        }
+                      }
+                      $timeout ( function () {
+                        $location.path(org)
+                        $location.search('org', null)
+                        $location.replace()
+                      })
+                    })
+                })
+                resolve(r)
+            }, function (e) {
+              reject(e)
+            })
+          })
+      },
+      disconnect: function () {
+        self.management.connection.disconnect();
+        delete self.management
+        self.management = new dm.Management($location.protocol())
       }
+
 
     }
 
