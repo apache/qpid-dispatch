@@ -63,6 +63,7 @@ under the License.
         </a>
     </div>
     <div class="collapse navbar-collapse navbar-collapse-1">
+<!--
         <ul class="nav navbar-nav navbar-utility">
             <li class="dropdown">
                 <a class="dropdown-toggle" data-toggle="dropdown">
@@ -76,6 +77,7 @@ under the License.
                 </ul>
             </li>
         </ul>
+-->
         <ul class="nav navbar-nav navbar-primary" ng-controller="QDR.NavBarController">
             <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
                 <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.name"></a>
