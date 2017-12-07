@@ -388,6 +388,13 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
         }
     }
 
+    if (config->protocols) {
+        if (pn_ssl_domain_set_protocols(domain, config->protocols)) {
+            pn_ssl_domain_free(domain);
+            return qd_error(QD_ERROR_RUNTIME, "Cannot set protocols. The protocols string might be invalid. This list is a space separated string of the allowed TLS protocols (TLSv1 TLSv1.1 TLSv1.2)");
+        }
+    }
+
     const char *trusted = config->ssl_trusted_certificate_db;
     if (config->ssl_trusted_certificates)
         trusted = config->ssl_trusted_certificates;
@@ -1059,6 +1066,14 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
             if (pn_ssl_domain_set_ciphers(domain, config->ciphers)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "SSL cipher configuration failed for %s:%s",
+                       config->host, config->port);
+            }
+        }
+
+        if (config->protocols) {
+            if (pn_ssl_domain_set_protocols(domain, config->protocols)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "Permitted TLS protocols configuration failed %s:%s",
                        config->host, config->port);
             }
         }
