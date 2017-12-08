@@ -1518,14 +1518,106 @@
                 },
                 "groups": {
                     "type": "map",
-                    "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group.",
+                    "description": "A map where each key is a vhost name and each value is a map of the settings for users of that vhost.",
                     "required": false,
                     "create": true,
                     "update": true
                 }
             }
         },
-        
+
+        "vhostUserGroupSettings": {
+            "description": "Policy settings for users connecting to a vhost. Configuration files including this section must use .json format.",
+            "extends": "configurationEntity",
+            "attributes": {
+                "users": {
+                    "type": "string",
+                    "description": "CSV string or list of authenticated user names. A user may belong to one vhost user group only.",
+                    "required": true
+                },
+                "remoteHosts": {
+                    "type": "string",
+                    "description": "CSV string of numeric host IP addresses or address ranges from which the users may connect.",
+                    "required": true
+                },
+                "maxFrameSize": {
+                    "type": "integer",
+                    "description": "Largest frame that may be sent on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Open, max-frame-size)",
+                    "default": 16384,
+                    "required": false,
+                    "create": true
+                },
+                "maxMessageSize": {
+                    "type": "integer",
+                    "description": "[NOT IMPLEMENTED] Largest message size supported by links created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Attach, max-message-size)",
+                    "default": 0,
+                    "required": false,
+                    "create": true
+                },
+                "maxSessionWindow": {
+                    "type": "integer",
+                    "description": "Largest incoming window in octets for sessions created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Begin, incoming-window)",
+                    "default": 1638400,
+                    "required": false,
+                    "create": true
+                },
+                "maxSessions": {
+                    "type": "integer",
+                    "description": "Maximum number of sessions that may be created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Open, channel-max)",
+                    "default": 32768,
+                    "required": false,
+                    "create": true
+                },
+                "maxSenders": {
+                    "type": "integer",
+                    "description": "Maximum number of sending links that may be created on this connection. Zero disables all sender links.",
+                    "default": 2147483647,
+                    "required": false,
+                    "create": true
+                },
+                "maxReceivers": {
+                    "type": "integer",
+                    "description": "Maximum number of receiving links that may be created on this connection. Zero disables all receiver links.",
+                    "default": 2147483647,
+                    "required": false,
+                    "create": true
+                },
+                "allowDynamicSource": {
+                    "type": "boolean",
+                    "description": "This connection is allowed to use the Dynamic Link Source feature.",
+                    "default": false,
+                    "required": false,
+                    "create": true
+                },
+                "allowAnonymousSender": {
+                    "type": "boolean",
+                    "description": "This connection is allowed to use the Anonymous Sender feature.",
+                    "default": false,
+                    "required": false,
+                    "create": true
+                },
+                "allowUserIdProxy": {
+                    "type": "boolean",
+                    "description": "This connection is allowed to send messages with a user_id property that differs from the connection authenticated user name.",
+                    "default": false,
+                    "required": false,
+                    "create": true
+                },
+                "sources": {
+                    "type": "string",
+                    "description": "CSV list of Source addresses allowed when creating receiving links.",
+                    "required": false,
+                    "create": true
+                },
+                "targets": {
+                    "type": "string",
+                    "description": "CSV list of Target addresses allowed when creating sending links.",
+                    "required": false,
+                    "create": true
+                }
+            }
+        },
+
         "vhostStats": {
             "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
