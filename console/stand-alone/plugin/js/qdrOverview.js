@@ -1775,7 +1775,7 @@ QDR.log.debug("newly created node needs to be activated")
     logs.key = "Logs"
     logs.parent = "Logs"
     logs.isFolder = true
-    if (QDRService.versionCheck('0.8.0'))
+    if (QDRService.versionCheck('0.8.1'))
       topLevelChildren.push(logs)
     var initTreeAndGrid = function () {
       if (!htmlReady || !dataReady)
