@@ -43,7 +43,6 @@ typedef struct qd_policy_t qd_policy_t;
 
 struct qd_policy__settings_s {
     int  maxFrameSize;
-    int  maxMessageSize;
     int  maxSessionWindow;
     int  maxSessions;
     int  maxSenders;

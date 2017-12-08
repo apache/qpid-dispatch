@@ -1547,13 +1547,6 @@
                     "required": false,
                     "create": true
                 },
-                "maxMessageSize": {
-                    "type": "integer",
-                    "description": "[NOT IMPLEMENTED] Largest message size supported by links created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Attach, max-message-size)",
-                    "default": 0,
-                    "required": false,
-                    "create": true
-                },
                 "maxSessionWindow": {
                     "type": "integer",
                     "description": "Largest incoming window in octets for sessions created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Begin, incoming-window)",
