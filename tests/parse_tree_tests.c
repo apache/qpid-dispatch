@@ -27,7 +27,7 @@ static char *test_add_remove(void *context)
 {
     qd_iterator_t *piter = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
     qd_iterator_t *piter2 = qd_iterator_string("Sam.I.Am", ITER_VIEW_ALL);
-    qd_parse_tree_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     void *payload;
 
     if (qd_parse_tree_remove_pattern(node, piter))
@@ -107,7 +107,7 @@ static char *check_normalize(const char *input,
     const char *patterns[1];
     void *payloads[1];
     visit_handle_t vh = {0, patterns, payloads};
-    qd_parse_tree_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     qd_iterator_t *iter = qd_iterator_string(input, ITER_VIEW_ALL);
     void *payload;
 
@@ -167,12 +167,13 @@ typedef struct {
     bool match;
 } match_test_t;
 
-static char *match_test(const char *pattern,
+static char *match_test(qd_parse_tree_type_t type,
+                        const char *pattern,
                         const match_test_t *tests)
 {
     char *rc = NULL;
     qd_iterator_t *piter = qd_iterator_string(pattern, ITER_VIEW_ALL);
-    qd_parse_tree_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new(type);
     void *payload = (void *)"found";
 
     if (qd_parse_tree_add_pattern(node, piter, payload))
@@ -208,21 +209,21 @@ static char *test_matches(void *context)
         {NULL, false}
     };
 
-    char *rc = match_test("ab.cd.e", test1);
+    char *rc = match_test(QD_PARSE_TREE_ADDRESS, "ab.cd.e", test1);
     if (rc) return rc;
 
     match_test_t test2[] = {
         {"", true},
         {NULL, false},
     };
-    rc = match_test("", test2);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "", test2);
     if (rc) return rc;
 
     match_test_t test3[] = {
         {".", true},
         {NULL, false},
     };
-    rc = match_test(".", test3);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, ".", test3);
     if (rc) return rc;
 
     match_test_t test4[] = {
@@ -230,7 +231,7 @@ static char *test_matches(void *context)
         {"a.b", false},
         {NULL, false}
     };
-    rc = match_test("a.*.b", test4);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "a.*.b", test4);
     if (rc) return rc;
 
     match_test_t test5[] = {
@@ -239,7 +240,7 @@ static char *test_matches(void *context)
         {"x.y", false},
         {NULL,  false}
     };
-    rc = match_test("*.x", test5);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "*.x", test5);
     if (rc) return rc;
 
     match_test_t test6[] = {
@@ -249,7 +250,7 @@ static char *test_matches(void *context)
         {"q.x.y", false},
         {NULL, false}
     };
-    rc = match_test("x.x.*", test6);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "x.x.*", test6);
     if (rc) return rc;
 
 
@@ -262,7 +263,7 @@ static char *test_matches(void *context)
         {"q.x.b", false},
         {NULL, false}
     };
-    rc = match_test("a.#.b", test7);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "a.#.b", test7);
     if (rc) return rc;
 
     match_test_t test8[] = {
@@ -272,7 +273,7 @@ static char *test_matches(void *context)
         {"b.a", false},
         {NULL, false}
     };
-    rc = match_test("a.#", test8);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "a.#", test8);
     if (rc) return rc;
 
     match_test_t test9[] = {
@@ -281,7 +282,7 @@ static char *test_matches(void *context)
         {"a.b", false},
         {NULL, false}
     };
-    rc = match_test("#.a", test9);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "#.a", test9);
     if (rc) return rc;
 
     match_test_t test10[] = {
@@ -291,7 +292,7 @@ static char *test_matches(void *context)
         {"a.b", false},
         {NULL, false}
     };
-    rc = match_test("a.#.b.#.c", test10);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "a.#.b.#.c", test10);
     if (rc) return rc;
 
     match_test_t test11[] = {
@@ -303,7 +304,7 @@ static char *test_matches(void *context)
         {"a.x.p.qq.y.b", false},
         {NULL, false}
     };
-    rc = match_test("*.x.#.y", test11);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "*.x.#.y", test11);
     if (rc) return rc;
 
     match_test_t test12[] = {
@@ -314,7 +315,7 @@ static char *test_matches(void *context)
         {"a.b", false},
         {NULL, false}
     };
-    rc = match_test("a.#.b.*", test12);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "a.#.b.*", test12);
     if (rc) return rc;
 
     match_test_t test13[] = {
@@ -326,7 +327,7 @@ static char *test_matches(void *context)
         {"x", false},
         {NULL, false}
     };
-    rc = match_test("*.*.*.#", test13);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "*.*.*.#", test13);
     if (rc) return rc;
 
     match_test_t test14[] = {
@@ -336,7 +337,7 @@ static char *test_matches(void *context)
         {"x.y.z.y.z.y.z", true},
         {NULL, false}
     };
-    rc = match_test("*/#/*", test14);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "*/#/*", test14);
 
     match_test_t test15[] = {
         {"/policy", true},
@@ -347,41 +348,63 @@ static char *test_matches(void *context)
         {"/bad/p", false},
         {NULL, false}
     };
-    rc = match_test("/#/policy", test15);
+    rc = match_test(QD_PARSE_TREE_ADDRESS, "/#/policy", test15);
 
+    match_test_t test16[] = {
+        {"some/policy", false},
+        {"some.policy", true},
+        {"policy", false},
+        {"policy.ycilop", false},
+        {"/hi/there/.policy", true},
+        {"hi.there.policy", true},
+        {"hi.there/policy", false},
+        {NULL, false}
+    };
+    rc = match_test(QD_PARSE_TREE_AMQP_0_10, ".#.*.policy", test16);
+
+    match_test_t test17[] = {
+        {"some/policy", false},
+        {"some.policy", false},
+        {"policy", false},
+        {".#./policy", false},
+        {"hi/.#./policy", true},
+        {"/hi/.there./policy", false},
+        {NULL, false}
+    };
+    rc = match_test(QD_PARSE_TREE_MQTT, "+/.#./policy", test17);
+
+    match_test_t test18[] = {
+        {"test/?/*", true},
+        {"test/?/*/one/two/three", true},
+        {"test/something.or.other/*", true},
+        {"test/something.or.other/xxx", false},
+        {"test/something.or.other", false},
+        {"test", false},
+        {NULL, false}
+    };
+    rc = match_test(QD_PARSE_TREE_MQTT, "test/+/*/#", test18);
     return rc;
 }
 
 // For debug (see parse_tree.c)
 // void qd_parse_tree_dump(qd_parse_node_t *node, int depth);
 
-// search a full parse tree for multiple and best matches
-static char *test_multiple_matches(void *context)
-{
+
 #define PCOUNT 17
-    const char *patterns[PCOUNT] =
-      { "alpha",
-        "bravo",
-        "alpha.bravo",
-        "bravo.charlie",
-        "alpha.bravo.charlie.delta",
-        "bravo.charlie.delta.echo",
-        "alpha.*",
-        "alpha.#",
-        "alpha.*.#",
-        "#.bravo",
-        "*.bravo",
-        "*.#.bravo",
-        "alpha.*.bravo",
-        "alpha.#.bravo",
-        "alpha.*.#.bravo",
-        "*.bravo.*",
-        "#.bravo.#",
-      };
+typedef struct {
+    const char *address;
+    int count;
+    const char *matches[PCOUNT];
+} multi_match_t;
+
+static char *multiple_matches(qd_parse_tree_type_t type,
+                              const char *patterns[],
+                              multi_match_t *tests)
+{
     const char *_patterns[PCOUNT] = {NULL};
     void *_payloads[PCOUNT] = {NULL};
     visit_handle_t vh = {0, _patterns, _payloads};
-    qd_parse_tree_t *node = qd_parse_tree_new();
+    qd_parse_tree_t *node = qd_parse_tree_new(type);
 
     // build the tree
     for (int i = 0; i < PCOUNT; i++) {
@@ -409,35 +432,15 @@ static char *test_multiple_matches(void *context)
         }
     }
 
-    // matches are listed in order of best->least best match
-    struct {
-        const char *address;
-        const int   count;
-        const char *matches[PCOUNT];
-    } tests[] = {
-        {"alpha",       2, {"alpha", "alpha.#"}},
-        {"alpha.zulu",  3, { "alpha.*", "alpha.*.#", "alpha.#"}},
-        {"alpha.bravo", 9, {"alpha.bravo", "alpha.*", "alpha.*.#", "alpha.#.bravo", "alpha.#", "*.bravo", "*.#.bravo", "#.bravo", "#.bravo.#"}},
-        {"bravo",       3, {"bravo", "#.bravo",  "#.bravo.#"}},
-        {"xray.bravo",  4, {"*.bravo", "*.#.bravo", "#.bravo", "#.bravo.#"}},
-        {"alpha.bravo.charlie",         4, {"alpha.*.#", "alpha.#", "*.bravo.*", "#.bravo.#"}},
-        {"xray.yankee.zulu.bravo",      3, {"*.#.bravo", "#.bravo", "#.bravo.#"}},
-        {"alpha.bravo.charlie.delta",   4, {"alpha.bravo.charlie.delta", "alpha.*.#","alpha.#", "#.bravo.#"}},
-        {"alpha.charlie.charlie.bravo", 7, {"alpha.*.#.bravo", "alpha.*.#", "alpha.#.bravo", "alpha.#", "*.#.bravo", "#.bravo", "#.bravo.#"}},
-        {"xray.yankeee.zulu.bravo.alpha.bravo.charlie", 2, {"#.bravo.#", "#.bravo.#"}},
-        {"I.match.nothing", 0, {NULL}},
-        {NULL, 0, {NULL}}
-    };
-
     // verify all matching patterns are hit and in the correct order
     for (int k = 0; tests[k].address; k++) {
         qd_iterator_t *find_me = qd_iterator_string(tests[k].address, ITER_VIEW_ALL);
         vh.count = 0;
         qd_parse_tree_search(node, find_me, visit_all, (void *)&vh);
-        // printf("Matches for %s:\n", tests[k].address);
-        // for (int i = 0; i < vh.count; i++)
-        //    printf("%s, ", vh.patterns[i]);
-        // printf("count = %d\n", vh.count);
+        //printf("Matches for %s:\n", tests[k].address);
+        //for (int i = 0; i < vh.count; i++)
+        //  printf("%s, ", vh.patterns[i]);
+        //printf("count = %d\n", vh.count);
         if (vh.count != tests[k].count)
             return "Unexpected match count";
         for (int i = 0; i < tests[k].count; i++) {
@@ -468,6 +471,116 @@ static char *test_multiple_matches(void *context)
 }
 
 
+// search a full parse tree for multiple and best matches
+static char *test_multiple_matches(void *context)
+{
+    const char *patterns_amqp_0_10[PCOUNT] =
+      { "alpha",
+        "bravo",
+        "alpha.bravo",
+        "bravo.charlie",
+        "alpha.bravo.charlie.delta",
+        "bravo.charlie.delta.echo",
+        "alpha.*",
+        "alpha.#",
+        "alpha.*.#",
+        "#.bravo",
+        "*.bravo",
+        "*.#.bravo",
+        "alpha.*.bravo",
+        "alpha.#.bravo",
+        "alpha.*.#.bravo",
+        "*.bravo.*",
+        "#.bravo.#",
+      };
+    // matches are listed in order of best->least best match
+    multi_match_t tests_amqp_0_10[] = {
+        {"alpha",       2, {"alpha", "alpha.#"}},
+        {"alpha.zulu",  3, { "alpha.*", "alpha.*.#", "alpha.#"}},
+        {"alpha.bravo", 9, {"alpha.bravo", "alpha.*", "alpha.*.#", "alpha.#.bravo", "alpha.#", "*.bravo", "*.#.bravo", "#.bravo", "#.bravo.#"}},
+        {"bravo",       3, {"bravo", "#.bravo",  "#.bravo.#"}},
+        {"xray.bravo",  4, {"*.bravo", "*.#.bravo", "#.bravo", "#.bravo.#"}},
+        {"alpha.bravo.charlie",         4, {"alpha.*.#", "alpha.#", "*.bravo.*", "#.bravo.#"}},
+        {"xray.yankee.zulu.bravo",      3, {"*.#.bravo", "#.bravo", "#.bravo.#"}},
+        {"alpha.bravo.charlie.delta",   4, {"alpha.bravo.charlie.delta", "alpha.*.#","alpha.#", "#.bravo.#"}},
+        {"alpha.charlie.charlie.bravo", 7, {"alpha.*.#.bravo", "alpha.*.#", "alpha.#.bravo", "alpha.#", "*.#.bravo", "#.bravo", "#.bravo.#"}},
+        {"xray.yankeee.zulu.bravo.alpha.bravo.charlie", 2, {"#.bravo.#", "#.bravo.#"}},
+        {"I.match.nothing", 0, {NULL}},
+        {NULL, 0, {NULL}}
+    };
+
+    char *rc = multiple_matches(QD_PARSE_TREE_AMQP_0_10,
+                                patterns_amqp_0_10,
+                                tests_amqp_0_10);
+    if (rc) return rc;
+
+    const char *patterns_mqtt[PCOUNT] =
+      { "alpha",
+        "bravo",
+        "alpha/bravo",
+        "bravo/charlie",
+        "alpha/bravo/charlie/delta",
+        "alpha/+",
+        "alpha/#",
+        "alpha/+/#",
+        "bravo/charlie/echo",
+        "bravo/charlie/+",
+        "+/bravo",
+        "bravo/#",
+        "alpha/+/bravo",
+        "alpha/+/bravo/#",
+        "+/+/+/#",
+        "+/bravo/+",
+        "xray/+/#"
+      };
+
+    // matches are listed in order of best->least best match
+    multi_match_t tests_mqtt[] = {
+        {"alpha",       2, {"alpha", "alpha/#"}},
+        {"alpha/zulu",  3, { "alpha/+", "alpha/+/#", "alpha/#"}},
+        {"alpha/bravo", 5, {"alpha/bravo", "alpha/+", "alpha/+/#", "alpha/#", "+/bravo"}},
+        {"bravo",       2, {"bravo", "bravo/#"}},
+        {"xray/bravo",  2, {"xray/+/#", "+/bravo"}},
+        {"alpha/bravo/charlie",         4, {"alpha/+/#", "alpha/#", "+/bravo/+", "+/+/+/#"}},
+        {"xray/yankee/zulu/bravo",      2, {"xray/+/#", "+/+/+/#"}},
+        {"alpha/bravo/charlie/delta",   4, {"alpha/bravo/charlie/delta", "alpha/+/#", "alpha/#", "+/+/+/#"}},
+        {"alpha/charlie/charlie/bravo", 3, {"alpha/+/#", "alpha/#", "+/+/+/#"}},
+        {"xray/bravo/alpha", 3, {"xray/+/#", "+/bravo/+", "+/+/+/#"}},
+        {"bravo/charlie/ech", 3, {"bravo/charlie/+", "bravo/#", "+/+/+/#"}},
+        {"I/match.nothing", 0, {NULL}},
+        {NULL, 0, {NULL}}
+    };
+
+    rc = multiple_matches(QD_PARSE_TREE_MQTT, patterns_mqtt, tests_mqtt);
+    return rc;
+}
+
+
+static char *test_validation(void *context)
+{
+    qd_iterator_t *iter = qd_iterator_string("sam.*.am.#", ITER_VIEW_ALL);
+    if (!qd_parse_tree_validate_pattern(QD_PARSE_TREE_ADDRESS, iter) ||
+        !qd_parse_tree_validate_pattern(QD_PARSE_TREE_AMQP_0_10, iter)) {
+        return "expected to skip validation";
+    }
+    qd_iterator_free(iter);
+
+    qd_iterator_t *iter_good = qd_iterator_string("sam/+/a.#.m/#", ITER_VIEW_ALL);
+    if (!qd_parse_tree_validate_pattern(QD_PARSE_TREE_MQTT, iter_good)) {
+        return "expected to pass mqtt validation";
+    }
+    qd_iterator_free(iter_good);
+
+    qd_iterator_t *iter_bad = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);
+    if (qd_parse_tree_validate_pattern(QD_PARSE_TREE_MQTT, iter_bad)) {
+        return "expected to fail mqtt validation";
+    }
+    qd_iterator_free(iter_bad);
+
+    return NULL;
+}
+
+
 int parse_tree_tests(void)
 {
     int result = 0;
@@ -477,5 +590,6 @@ int parse_tree_tests(void)
     TEST_CASE(test_normalization, 0);
     TEST_CASE(test_matches, 0);
     TEST_CASE(test_multiple_matches, 0);
+    TEST_CASE(test_validation, 0);
     return result;
 }

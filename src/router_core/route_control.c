@@ -284,12 +284,13 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
 
     // forward compatibility hack: convert the old style prefix addresses into
     // a proper pattern addresses by appending ".#"
+    // note: see parse_tree.c for acceptable separator and wildcard characters
     if (is_prefix) {
         char suffix = pattern[strlen(pattern) - 1];
         if (suffix == '#') {
             // already converted - do nothing
         } else {
-            if (!strchr(QD_PARSE_TREE_TOKEN_SEP, suffix))
+            if (!strchr("./", suffix))
                 strcat(pattern, ".");  // use . for legacy
             strcat(pattern, "#");
         }
