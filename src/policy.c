@@ -321,8 +321,10 @@ bool qd_policy_open_lookup_user(
                     settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
                     settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                     settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                    settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
-                    settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    if (settings->sources == 0)
+                        settings->sources          = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                    if (settings->targets == 0)
+                        settings->targets          = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
                     settings->denialCounts         = (qd_policy_denial_counts_t*)
                                                     qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
                     Py_XDECREF(result2);
@@ -689,8 +691,10 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
 #define SETTINGS_NAME_SIZE 256
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
-        qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
-        memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
+        if (!qd_conn->policy_settings) {
+            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+            memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
+        }
 
         if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,
                                        settings_name, SETTINGS_NAME_SIZE, conn_id,

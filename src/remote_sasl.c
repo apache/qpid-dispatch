@@ -20,6 +20,7 @@
  */
 
 #include "remote_sasl.h"
+#include "server_private.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -29,6 +30,7 @@
 #include <proton/sasl.h>
 #include <proton/sasl-plugin.h>
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/ctools.h>
 
 static qd_log_source_t* auth_service_log;
 
@@ -44,6 +46,45 @@ const int8_t DOWNSTREAM_MECHANISMS_RECEIVED = 3;
 const int8_t DOWNSTREAM_CHALLENGE_RECEIVED = 4;
 const int8_t DOWNSTREAM_OUTCOME_RECEIVED = 5;
 const int8_t DOWNSTREAM_CLOSED = 6;
+
+typedef struct {
+    size_t used;
+    size_t capacity;
+    char *start;
+} buffer_t;
+
+
+static void allocate_buffer(buffer_t* buffer)
+{
+    buffer->start = malloc(buffer->capacity);
+    memset(buffer->start, 0, buffer->capacity);
+}
+
+static void free_buffer(buffer_t* buffer)
+{
+    free(buffer->start);
+    buffer->start = 0;
+    buffer->capacity = 0;
+    buffer->used = 0;
+}
+
+typedef struct {
+    buffer_t sources;
+    buffer_t targets;
+} permissions_t;
+
+static void init_buffer(buffer_t* buffer)
+{
+    buffer->used = 0;
+    buffer->capacity = 0;
+    buffer->start = 0;
+}
+
+static void init_permissions(permissions_t* permissions)
+{
+    init_buffer(&permissions->sources);
+    init_buffer(&permissions->targets);
+}
 
 typedef struct
 {
@@ -65,6 +106,7 @@ typedef struct
 
     bool complete;
     char* username;
+    permissions_t permissions;
     pn_sasl_outcome_t outcome;
 } qdr_sasl_relay_t;
 
@@ -101,6 +143,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
     instance->upstream = 0;
     instance->downstream = 0;
     instance->username = 0;
+    init_permissions(&instance->permissions);
     return instance;
 }
 
@@ -113,6 +156,8 @@ static void delete_qdr_sasl_relay_t(qdr_sasl_relay_t* instance)
     if (instance->response.start) free(instance->response.start);
     if (instance->challenge.start) free(instance->challenge.start);
     if (instance->username) free(instance->username);
+    free_buffer(&(instance->permissions.targets));
+    free_buffer(&(instance->permissions.sources));
     free(instance);
 }
 
@@ -160,8 +205,13 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         if (!proactor) return false;
         impl->downstream = pn_connection();
         pn_connection_set_hostname(impl->downstream, pn_connection_get_hostname(upstream));
-        pn_connection_set_user(impl->downstream, "dummy");//force sasl
         set_sasl_relay_context(impl->downstream, impl);
+        //request permissions in response if supported by peer:
+        pn_data_t* data = pn_connection_desired_capabilities(impl->downstream);
+        pn_data_put_array(data, false, PN_SYMBOL);
+        pn_data_enter(data);
+        pn_data_put_symbol(data, pn_bytes(13, "ADDRESS-AUTHZ"));
+        pn_data_exit(data);
 
         pn_proactor_connect(proactor, impl->downstream, impl->authentication_service_address);
         return true;
@@ -207,6 +257,25 @@ static void remote_sasl_free(pn_transport_t *transport)
     }
 }
 
+static void set_policy_settings(pn_connection_t* conn, permissions_t* permissions)
+{
+    if (permissions->targets.start || permissions->sources.start) {
+        qd_connection_t *qd_conn = (qd_connection_t*) pn_connection_get_context(conn);
+        qd_conn->policy_settings = NEW(qd_policy_settings_t);
+        ZERO(qd_conn->policy_settings);
+
+        qd_conn->policy_settings->denialCounts = NEW(qd_policy_denial_counts_t);
+        ZERO(qd_conn->policy_settings->denialCounts);
+
+        if (permissions->targets.start && permissions->targets.capacity) {
+            qd_conn->policy_settings->targets = strdup(permissions->targets.start);
+        }
+        if (permissions->sources.start && permissions->sources.capacity) {
+            qd_conn->policy_settings->sources = strdup(permissions->sources.start);
+        }
+    }
+}
+
 static void remote_sasl_prepare(pn_transport_t *transport)
 {
     qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
@@ -231,6 +300,7 @@ static void remote_sasl_prepare(pn_transport_t *transport)
         } else if (impl->upstream_state == DOWNSTREAM_OUTCOME_RECEIVED) {
             switch (impl->outcome) {
             case PN_SASL_OK:
+                set_policy_settings(impl->upstream, &impl->permissions);
                 pnx_sasl_succeed_authentication(transport, impl->username);
                 break;
             default:
@@ -304,9 +374,9 @@ static void remote_sasl_process_outcome(pn_transport_t *transport)
         pn_sasl_t* sasl = pn_sasl(transport);
         if (sasl) {
             impl->outcome = pn_sasl_outcome(sasl);
-            impl->username = strdup(pn_sasl_get_user(sasl));
             impl->complete = true;
-            if (!notify_upstream(impl, DOWNSTREAM_OUTCOME_RECEIVED)) {
+            //only consider complete if failed; if successful wait for the open frame
+            if (impl->outcome != PN_SASL_OK && !notify_upstream(impl, DOWNSTREAM_OUTCOME_RECEIVED)) {
                 pnx_sasl_set_desired_state(transport, SASL_ERROR);
             }
         }
@@ -398,11 +468,142 @@ void qdr_use_remote_authentication_service(pn_transport_t *transport, const char
     set_remote_impl(transport, context);
 }
 
+static bool append(buffer_t* buffer, pn_bytes_t data)
+{
+    if (buffer->capacity > data.size + buffer->used) {
+        if (buffer->used > 0) buffer->start[buffer->used++] = ',';
+        strncpy(buffer->start + buffer->used, data.start, data.size);
+        buffer->used += data.size;
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static size_t min(size_t a, size_t b)
+{
+    if (a > b) return b;
+    else return a;
+}
+
+typedef void* (*permission_handler)(pn_bytes_t, bool, bool, void*);
+
+static void* compute_required_size(pn_bytes_t address, bool send, bool recv, void* context)
+{
+    permissions_t* permissions = (permissions_t*) context;
+    if (send) permissions->targets.capacity += address.size + 1;
+    if (recv) permissions->sources.capacity += address.size + 1;
+    return context;
+}
+
+static void* collect_permissions(pn_bytes_t address, bool send, bool recv, void* context)
+{
+    permissions_t* permissions = (permissions_t*) context;
+    if (send) append(&(permissions->targets), address);
+    if (recv) append(&(permissions->sources), address);
+    return context;
+}
+
+static void* parse_permissions(pn_data_t* data, permission_handler handler, void* initial_context)
+{
+    void* context = initial_context;
+    size_t count = pn_data_get_map(data);
+    pn_data_enter(data);
+    for (size_t i = 0; i < count/2; i++) {
+        if (pn_data_next(data)) {
+            if (pn_data_type(data) == PN_STRING) {
+                pn_bytes_t address = pn_data_get_string(data);
+                if (pn_data_next(data)) {
+                    if (pn_data_type(data) == PN_ARRAY && pn_data_get_array_type(data) == PN_STRING) {
+                        size_t length = pn_data_get_array(data);
+                        pn_data_enter(data);
+                        for (size_t j = 0; j < length; j++) {
+                            if (pn_data_next(data)) {
+                                pn_bytes_t permission = pn_data_get_string(data);
+                                //printf("in permissions map %i of %i is %.*s for %.*s\n", (int) (j+1), (int) length, (int) permission.size, permission.start, (int) address.size, address.start);
+                                bool send = strncmp(permission.start, "send", min(permission.size, 4)) == 0;
+                                bool recv = strncmp(permission.start, "recv", min(permission.size, 4)) == 0;
+
+                                if (send || recv) {
+                                    context = handler(address, send, recv, context);
+                                }
+                            }
+                        }
+                        pn_data_exit(data);
+                    }
+                }
+            } else {
+                //key is not string, consume value to move onto next pair
+                pn_data_next(data);
+            }
+        }
+    }
+    pn_data_exit(data);
+    return context;
+}
+
+static void* parse_properties(pn_data_t* data, permission_handler handler, void* initial_context)
+{
+    void* context = 0;
+    size_t count = pn_data_get_map(data);
+    pn_data_enter(data);
+    for (size_t i = 0; !context && i < count/2; i++) {
+        if (pn_data_next(data)) {
+            if (pn_data_type(data) == PN_SYMBOL) {
+                pn_bytes_t key = pn_data_get_symbol(data);
+                if (key.size && key.start && strncmp(key.start, "address-authz", min(key.size, 13)) == 0) {
+                    pn_data_next(data);
+                    context = parse_permissions(data, handler, initial_context);
+                } else {
+                    //key didn't match, move to next pair
+                    pn_data_next(data);
+                }
+            } else {
+                //key was not symbol, move to next pair
+                pn_data_next(data);
+            }
+        }
+    }
+    pn_data_exit(data);
+    pn_data_rewind(data);
+    pn_data_next(data);
+    return context;
+}
+
+static pn_bytes_t extract_authenticated_identity(pn_data_t* data)
+{
+    pn_bytes_t result = pn_bytes_null;
+    size_t count = pn_data_get_map(data);
+    pn_data_enter(data);
+    for (size_t i = 0; !result.size && i < count/2; i++) {
+        if (pn_data_next(data)) {
+            if (pn_data_type(data) == PN_SYMBOL) {
+                pn_bytes_t key = pn_data_get_symbol(data);
+                if (key.size && key.start && strncmp(key.start, "authenticated-identity", min(key.size, 22)) == 0) {
+                    pn_data_next(data);
+                    result = pn_data_get_string(data);
+                } else {
+                    //key didn't match, move to next pair
+                    pn_data_next(data);
+                }
+            } else {
+                //key was not symbol, move to next pair
+                pn_data_next(data);
+            }
+        }
+    }
+    pn_data_exit(data);
+    pn_data_rewind(data);
+    pn_data_next(data);
+    return result;
+}
+
 void qdr_handle_authentication_service_connection_event(pn_event_t *e)
 {
     pn_connection_t *conn = pn_event_connection(e);
     pn_transport_t *transport = pn_event_transport(e);
     if (pn_event_type(e) == PN_CONNECTION_BOUND) {
+        pn_sasl(transport);
         qd_log(auth_service_log, QD_LOG_DEBUG, "Handling connection bound event for authentication service connection");
         qdr_sasl_relay_t* context = get_sasl_relay_context(conn);
         if (context->ssl_domain) {
@@ -416,6 +617,33 @@ void qdr_handle_authentication_service_connection_event(pn_event_t *e)
         set_remote_impl(pn_event_transport(e), context);
     } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_OPEN) {
         qd_log(auth_service_log, QD_LOG_DEBUG, "authentication against service complete; closing connection");
+
+        qdr_sasl_relay_t* context = get_sasl_relay_context(conn);
+        //extract permissions as two comma separated lists (allowed sources and targets)
+        pn_data_t* properties = pn_connection_remote_properties(conn);
+        if (parse_properties(properties, compute_required_size, (void*) &(context->permissions))) {
+            if (!context->permissions.sources.capacity) {
+                context->permissions.sources.capacity = 1;
+            }
+            if (!context->permissions.targets.capacity) {
+                context->permissions.targets.capacity = 1;
+            }
+            allocate_buffer(&(context->permissions.targets));
+            allocate_buffer(&(context->permissions.sources));
+            parse_properties(properties, collect_permissions, (void*) &(context->permissions));
+            printf("allowed sources %s\n", context->permissions.sources.start);
+            printf("allowed targets %s\n", context->permissions.targets.start);
+        }
+        const pn_bytes_t authid = extract_authenticated_identity(properties);
+        if (authid.start && authid.size) {
+            context->username = strndup(authid.start, authid.size);
+        } else {
+            context->username = strdup("");
+        }
+        //notify upstream connection of successful authentication
+        notify_upstream(context, DOWNSTREAM_OUTCOME_RECEIVED);
+
+        //close downstream connection
         pn_connection_close(conn);
     } else if (pn_event_type(e) == PN_CONNECTION_REMOTE_CLOSE) {
         qd_log(auth_service_log, QD_LOG_DEBUG, "authentication service closed connection");
