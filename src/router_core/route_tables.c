@@ -221,9 +221,9 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
     core->addr_hash    = qd_hash(12, 32, 0);
     core->conn_id_hash = qd_hash(6, 4, 0);
     core->cost_epoch   = 1;
-    core->addr_parse_tree = qd_parse_tree_new();
-    core->link_route_tree[QD_INCOMING] = qd_parse_tree_new();
-    core->link_route_tree[QD_OUTGOING] = qd_parse_tree_new();
+    core->addr_parse_tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    core->link_route_tree[QD_INCOMING] = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    core->link_route_tree[QD_OUTGOING] = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
 
     if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
         core->hello_addr      = qdr_add_local_address_CT(core, 'L', "qdhello",     QD_TREATMENT_MULTICAST_FLOOD);
