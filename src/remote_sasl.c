@@ -163,7 +163,7 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         pn_connection_set_user(impl->downstream, "dummy");//force sasl
         set_sasl_relay_context(impl->downstream, impl);
 
-        pn_proactor_connect(proactor, impl->downstream, impl->authentication_service_address);
+        pn_proactor_connect(proactor, impl->downstream, NULL, impl->authentication_service_address);
         return true;
     } else {
         return false;
