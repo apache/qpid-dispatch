@@ -541,7 +541,7 @@ static void on_accept(pn_event_t *e)
            "[%"PRIu64"] Accepting incoming connection from %s to %s",
            ctx->connection_id, qd_connection_name(ctx), ctx->listener->config.host_port);
     /* Asynchronous accept, configure the transport on PN_CONNECTION_BOUND */
-    pn_listener_accept(pn_listener, ctx->pn_conn, NULL);
+    pn_listener_accept(pn_listener, ctx->pn_conn);
  }
 
 
@@ -1000,7 +1000,7 @@ static void try_open_lh(qd_connector_t *ct)
     qd_log(ct->server->log_source, QD_LOG_TRACE,
            "[%"PRIu64"] Connecting to %s", ctx->connection_id, host_port);
     /* Note: the transport is configured in the PN_CONNECTION_BOUND event */
-    pn_proactor_connect(ct->server->proactor, ctx->pn_conn, NULL, host_port);
+    pn_proactor_connect(ct->server->proactor, ctx->pn_conn, host_port);
 }
 
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
