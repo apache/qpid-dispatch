@@ -29,6 +29,7 @@ int compose_tests(void);
 int policy_tests(void);
 int failoverlist_tests(void);
 int parse_tree_tests(void);
+int proton_utils_tests(void);
 
 int main(int argc, char** argv)
 {
@@ -61,6 +62,7 @@ int main(int argc, char** argv)
     result += policy_tests();
     result += failoverlist_tests();
     result += parse_tree_tests();
+    result += proton_utils_tests();
 
     qd_dispatch_free(qd);       // dispatch_free last.
 

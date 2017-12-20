@@ -27,6 +27,7 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include <qpid/dispatch/router_core.h>
+#include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
@@ -911,9 +912,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                         else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY) &&
                                                                             strcmp(sym.start, QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY) == 0) {
                                             pn_data_next(props);
-                                            if (pn_data_type(props) == PN_STRING) {
-                                                item->port = strdup(pn_data_get_string(props).start);
-                                            }
+                                            item->port = qdpn_data_as_string(props);
 
                                         }
                                         else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY) &&

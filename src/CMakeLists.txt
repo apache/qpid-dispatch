@@ -70,6 +70,7 @@ set(qpid_dispatch_SOURCES
   parse.c
   parse_tree.c
   policy.c
+  proton_utils.c
   remote_sasl.c
   posix/threading.c
   python_embedded.c
