@@ -794,6 +794,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
 
+
     if (role == QDR_ROLE_INTER_ROUTER) {
         //
         // Check the remote properties for an inter-router cost value.
@@ -828,6 +829,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     bool found_failover = false;
 
+
     if (conn->connector && DEQ_SIZE(conn->connector->conn_info_list) > 1) {
         // Here we are simply removing all other failover information except the one we used to make a successful connection.
         int i = 1;
@@ -855,6 +857,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
         // By the end of this loop we should be left with only one element in the conn_info_list.
     }
+
 
     if (props) {
         pn_data_rewind(props);
@@ -914,6 +917,12 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                             if (pn_data_type(props) == PN_STRING) {
                                                 item->port = strdup(pn_data_get_string(props).start);
                                             }
+                                            else if (pn_data_type(props) == PN_INT) {
+                                                int port = pn_data_get_int(props);
+                                                int port_length = snprintf( NULL, 0, "%d", port);
+                                                item->port = malloc( port_length + 1 );
+                                                snprintf( item->port, port_length + 1, "%d", port );
+                                            }
 
                                         }
                                         else if (sym.size == strlen(QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY) &&
@@ -947,9 +956,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                     int hplen = strlen(item->host) + strlen(item->port) + 2;
                                     item->host_port = malloc(hplen);
                                     snprintf(item->host_port, hplen, "%s:%s", item->host, item->port);
-
                                     DEQ_INSERT_TAIL(conn->connector->conn_info_list, item);
-
                                     qd_log(router->log_source, QD_LOG_DEBUG, "Added %s as backup host", item->host_port);
                                 }
                                 else {
