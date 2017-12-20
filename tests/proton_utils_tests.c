@@ -49,7 +49,6 @@ as_string_vector_t vectors0[] = {
     {"\x71\x00\x11\x22\x33", 5, "1122867"},  // int
     {"\x53\x55",             2, "85"},       // smallulong
     {"\x55\x55",             2, "85"},       // smalllong
-    {"\x83\x00\x00\x00\x00\x3f\xff\xff\xff", 9, "Sat Jan 10 08:37:03 2004"},  // timestamp
     {"\x98\x00\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f", 17, "00010203-0405-0607-0809-0a0b0c0d0e0f"}, // uuid
     {"\xa0\x04GB\x01D",      6, 0},          // vbin8
     {"\xa0\x04GBCD",         6, "GBCD"},     // vbin8
