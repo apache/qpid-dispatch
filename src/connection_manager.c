@@ -44,7 +44,8 @@ struct qd_config_ssl_profile_t {
     char        *ssl_display_name_file;
     char        *ssl_certificate_file;
     char        *ssl_private_key_file;
-    char        *ciphers;
+    char        *ssl_ciphers;
+    char        *ssl_protocols;
 };
 
 DEQ_DECLARE(qd_config_ssl_profile_t, qd_config_ssl_profile_list_t);
@@ -141,7 +142,8 @@ void qd_server_config_free(qd_server_config_t *cf)
 
     if (cf->ssl_certificate_file)       free(cf->ssl_certificate_file);
     if (cf->ssl_private_key_file)       free(cf->ssl_private_key_file);
-    if (cf->ciphers)                    free(cf->ciphers);
+    if (cf->ssl_ciphers)                free(cf->ssl_ciphers);
+    if (cf->ssl_protocols)              free(cf->ssl_protocols);
     if (cf->ssl_password)               free(cf->ssl_password);
     if (cf->ssl_trusted_certificate_db) free(cf->ssl_trusted_certificate_db);
     if (cf->ssl_trusted_certificates)   free(cf->ssl_trusted_certificates);
@@ -386,7 +388,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         if (ssl_profile) {
             config->ssl_certificate_file = SSTRDUP(ssl_profile->ssl_certificate_file);
             config->ssl_private_key_file = SSTRDUP(ssl_profile->ssl_private_key_file);
-            config->ciphers = SSTRDUP(ssl_profile->ciphers);
+            config->ssl_ciphers = SSTRDUP(ssl_profile->ssl_ciphers);
+            config->ssl_protocols = SSTRDUP(ssl_profile->ssl_protocols);
             config->ssl_password = SSTRDUP(ssl_profile->ssl_password);
             config->ssl_trusted_certificate_db = SSTRDUP(ssl_profile->ssl_trusted_certificate_db);
             config->ssl_trusted_certificates = SSTRDUP(ssl_profile->ssl_trusted_certificates);
@@ -425,9 +428,14 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
                         }
                     }
                 }
-                if (auth_ssl_profile->ciphers) {
-                    if (pn_ssl_domain_set_ciphers(config->auth_ssl_conf, auth_ssl_profile->ciphers)) {
+                if (auth_ssl_profile->ssl_ciphers) {
+                    if (pn_ssl_domain_set_ciphers(config->auth_ssl_conf, auth_ssl_profile->ssl_ciphers)) {
                         return qd_error(QD_ERROR_RUNTIME, "Cannot set ciphers. The ciphers string might be invalid. Use openssl ciphers -v <ciphers> to validate");
+                    }
+                }
+                if (auth_ssl_profile->ssl_protocols) {
+                    if (pn_ssl_domain_set_protocols(config->auth_ssl_conf, auth_ssl_profile->ssl_protocols)) {
+                        return qd_error(QD_ERROR_RUNTIME, "Cannot set protocols. The protocols string might be invalid. This list is a space separated string of the allowed TLS protocols (TLSv1 TLSv1.1 TLSv1.2)");
                     }
                 }
 
@@ -471,7 +479,8 @@ static bool config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_p
     free(ssl_profile->ssl_display_name_file);
     free(ssl_profile->ssl_certificate_file);
     free(ssl_profile->ssl_private_key_file);
-    free(ssl_profile->ciphers);
+    free(ssl_profile->ssl_ciphers);
+    free(ssl_profile->ssl_protocols);
     free(ssl_profile);
     return true;
 
@@ -534,10 +543,11 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         }
         free(password_file);
     }
-    ssl_profile->ciphers = qd_entity_opt_string(entity, "ciphers", 0); CHECK();
-    ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "certDb", 0); CHECK();
+    ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
+    ssl_profile->ssl_protocols = qd_entity_opt_string(entity, "protocols", 0);                 CHECK();
+    ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "certDb", 0);       CHECK();
     ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
-    ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0); CHECK();
+    ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0);    CHECK();
     ssl_profile->ssl_display_name_file      = qd_entity_opt_string(entity, "displayNameFile", 0); CHECK();
 
     //
