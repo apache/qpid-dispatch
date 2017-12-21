@@ -123,6 +123,9 @@ The total number of deliveries that have transited this link.
 presett::
 The number of pre-settled deliveries that transited this link.
 
+psdrop::
+The number of pre-settled deliveries that were dropped due to congestion.
+
 acc::
 The number of deliveries on this link that were accepted.
 

@@ -283,7 +283,7 @@ class BusManager(Node):
                     has_dropped_presettled_count = True
 
         if has_dropped_presettled_count:
-            heads.append(Header("droppedpresett"))
+            heads.append(Header("psdrop"))
 
         heads.append(Header("acc"))
         heads.append(Header("rej"))
