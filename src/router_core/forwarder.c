@@ -162,6 +162,10 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
                 dlv->link_work = 0;
             }
             qdr_delivery_decref_CT(core, dlv, "qdr_forward_drop_presettled_CT_LH - remove from link-work list");
+
+            // Increment the presettled_dropped_deliveries on the out_link
+            link->dropped_presettled_deliveries++;
+
         }
         dlv = next;
     }

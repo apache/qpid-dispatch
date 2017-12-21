@@ -263,21 +263,34 @@ class BusManager(Node):
         heads.append(Header("unsett"))
         heads.append(Header("del"))
         heads.append(Header("presett"))
+
+        if self.opts.verbose:
+            heads.append(Header("name"))
+        rows = []
+        cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
+                'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
+                'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
+                'modifiedCount', 'adminStatus', 'operStatus', 'linkName')
+
+        objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
+
+        has_dropped_presettled_count = False
+
+        if objects:
+            first_row = objects[0]
+            if first_row:
+                if hasattr(first_row, 'droppedPresettledCount'):
+                    has_dropped_presettled_count = True
+
+        if has_dropped_presettled_count:
+            heads.append(Header("droppedpresett"))
+
         heads.append(Header("acc"))
         heads.append(Header("rej"))
         heads.append(Header("rel"))
         heads.append(Header("mod"))
         heads.append(Header("admin"))
         heads.append(Header("oper"))
-        if self.opts.verbose:
-            heads.append(Header("name"))
-        rows = []
-        cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
-                'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
-                'presettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'adminStatus', 'operStatus', 'linkName')
-
-        objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         for link in objects:
             row = []
@@ -294,6 +307,8 @@ class BusManager(Node):
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
             row.append(link.presettledCount)
+            if has_dropped_presettled_count:
+                row.append(link.droppedPresettledCount)
             row.append(link.acceptedCount)
             row.append(link.rejectedCount)
             row.append(link.releasedCount)
