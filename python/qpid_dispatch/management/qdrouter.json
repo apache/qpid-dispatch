@@ -515,7 +515,12 @@
                     "type": "string",
                     "description": "Specifies the enabled ciphers so the SSL Ciphers can be hardened. In other words, use this field to disable weak ciphers. The ciphers are specified in the format understood by the OpenSSL library. For example, ciphers can be set to ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP; -- The full list of allowed ciphers can be viewed using the openssl ciphers command",
                     "create": true
-                },            
+                },      
+                "protocols": {
+                    "type": "string",
+                    "description": "The TLS protocols that this sslProfile can use. You can specify a list of one or more of TLSv1, TLSv1.1, or TLSv1.2. To specify multiple protocols, separate the protocols with a space. For example, to permit the sslProfile to use TLS v1.1 and TLS v1.2 only, you would set the value to TLSv1.1 TLSv1.2. If you do not specify a value, the sslProfile uses the TLS protocol specified by the system-wide configuration.",
+                    "create": true
+                },                            
                 "certDb": {
                     "type": "path",
                     "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
