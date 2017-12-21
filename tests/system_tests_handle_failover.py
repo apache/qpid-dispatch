@@ -17,9 +17,10 @@
 # under the License.
 #
 
+import unittest2 as unittest
 import json, re
 from time import sleep
-import system_test
+from system_test import main_module, TIMEOUT
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
 from subprocess import PIPE, STDOUT
 
@@ -95,7 +96,7 @@ class FailoverTest(TestCase):
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
-            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(TIMEOUT) ] + args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None)
 
         out = p.communicate()[0]
@@ -118,7 +119,9 @@ class FailoverTest(TestCase):
     def test_remove_router_B(self):
         # First make sure there are no inter-router connections on router C
         outs = self.run_qdstat(['--connections'], address=self.routers[2].addresses[1])
-        self.assertNotIn('inter-router', outs)
+
+        inter_router = 'inter-router' in outs
+        self.assertFalse(inter_router)
 
         # Kill the router B
         FailoverTest.routers[0].teardown()
@@ -133,8 +136,12 @@ class FailoverTest(TestCase):
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
         # The failoverList must now be gone since the backup router does not send a failoverList in its
         # connection properties.
-        self.assertIsNone(output[0].get('failoverList'))
+        self.assertTrue(output[0].get('failoverList') == None)
 
         # Since router B has been killed, router A should now try to connect to a listener on router C.
         # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.
         self.run_qdstat(['--connections'], regexp=r'QDR.A.*inter-router.*', address=self.routers[2].addresses[1])
+
+
+if __name__ == '__main__':
+    unittest.main(main_module())

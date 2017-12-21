@@ -17,19 +17,11 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess      import PIPE, STDOUT
-from proton          import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test     import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest
+from proton          import Message, Timeout
+from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor  import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
-from proton.utils    import BlockingConnection
-from qpid_dispatch.management.client import Node
-
-import time
-import datetime
-
-
+from proton.reactor  import Container, LinkOption, ApplicationEvent, EventInjector
 
 # PROTON-828:
 try:
@@ -4199,9 +4191,6 @@ class ParallelWaypointTest ( MessagingHandler ):
         container = Container(self)
         container.container_id = self.container_id
         container.run()
-
-
-
 
 
 if __name__ == '__main__':

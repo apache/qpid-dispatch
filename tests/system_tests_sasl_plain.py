@@ -17,9 +17,9 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess import PIPE, Popen, STDOUT
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest, os
+from subprocess import PIPE, Popen
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT
 from qpid_dispatch.management.client import Node
 from proton import SASL
 
@@ -541,7 +541,8 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         local_node.delete(type='connector', name='connectorToX')
         local_node.delete(type='sslProfile', name='client-ssl-profile')
         connections = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
-        self.assertNotIn("QDR.X", [c.container for c in connections]) # Should not be present now
+        is_qdr_x = "QDR.X" in [c.container for c in connections]
+        self.assertFalse(is_qdr_x) # Should not be present now
 
         # re-create the ssl profile
         local_node.create({'type': 'sslProfile',
