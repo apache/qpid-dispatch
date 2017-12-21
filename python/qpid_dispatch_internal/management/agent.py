@@ -467,14 +467,6 @@ class RouterAddressEntity(EntityAdapter):
         return super(RouterAddressEntity, self).__str__().replace("Entity(", "RouterAddressEntity(")
 
 
-class ConnectionEntity(EntityAdapter):
-    def _identifier(self):
-        return self.attributes.get('host') + ":" + str(self.attributes.get('identity'))
-
-    def __str__(self):
-        return super(ConnectionEntity, self).__str__().replace("Entity(", "ConnectionEntity(")
-
-
 class LogStatsEntity(EntityAdapter):
     def _identifier(self):
         return self.attributes.get('identity')
