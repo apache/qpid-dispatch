@@ -21,26 +21,27 @@
 #include <inttypes.h>
 #include <stdio.h>
 
-#define QDR_LINK_NAME               0
-#define QDR_LINK_IDENTITY           1
-#define QDR_LINK_TYPE               2
-#define QDR_LINK_LINK_NAME          3
-#define QDR_LINK_LINK_TYPE          4
-#define QDR_LINK_LINK_DIR           5
-#define QDR_LINK_OWNING_ADDR        6
-#define QDR_LINK_CAPACITY           7
-#define QDR_LINK_PEER               8
-#define QDR_LINK_UNDELIVERED_COUNT  9
-#define QDR_LINK_UNSETTLED_COUNT    10
-#define QDR_LINK_DELIVERY_COUNT     11
-#define QDR_LINK_CONNECTION_ID      12
-#define QDR_LINK_ADMIN_STATE        13
-#define QDR_LINK_OPER_STATE         14
-#define QDR_LINK_PRESETTLED_COUNT   15
-#define QDR_LINK_ACCEPTED_COUNT     16
-#define QDR_LINK_REJECTED_COUNT     17
-#define QDR_LINK_RELEASED_COUNT     18
-#define QDR_LINK_MODIFIED_COUNT     19
+#define QDR_LINK_NAME                     0
+#define QDR_LINK_IDENTITY                 1
+#define QDR_LINK_TYPE                     2
+#define QDR_LINK_LINK_NAME                3
+#define QDR_LINK_LINK_TYPE                4
+#define QDR_LINK_LINK_DIR                 5
+#define QDR_LINK_OWNING_ADDR              6
+#define QDR_LINK_CAPACITY                 7
+#define QDR_LINK_PEER                     8
+#define QDR_LINK_UNDELIVERED_COUNT        9
+#define QDR_LINK_UNSETTLED_COUNT          10
+#define QDR_LINK_DELIVERY_COUNT           11
+#define QDR_LINK_CONNECTION_ID            12
+#define QDR_LINK_ADMIN_STATE              13
+#define QDR_LINK_OPER_STATE               14
+#define QDR_LINK_PRESETTLED_COUNT         15
+#define QDR_LINK_DROPPED_PRESETTLED_COUNT 16
+#define QDR_LINK_ACCEPTED_COUNT           17
+#define QDR_LINK_REJECTED_COUNT           18
+#define QDR_LINK_RELEASED_COUNT           19
+#define QDR_LINK_MODIFIED_COUNT           20
 
 const char *qdr_link_columns[] =
     {"name",
@@ -59,6 +60,7 @@ const char *qdr_link_columns[] =
      "adminStatus",
      "operStatus",
      "presettledCount",
+     "droppedPresettledCount",
      "acceptedCount",
      "rejectedCount",
      "releasedCount",
@@ -184,6 +186,11 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
     case QDR_LINK_PRESETTLED_COUNT:
         qd_compose_insert_ulong(body, link->presettled_deliveries);
         break;
+
+    case QDR_LINK_DROPPED_PRESETTLED_COUNT: {
+        qd_compose_insert_ulong(body, link->dropped_presettled_deliveries);
+        break;
+    }
 
     case QDR_LINK_ACCEPTED_COUNT:
         qd_compose_insert_ulong(body, link->accepted_deliveries);

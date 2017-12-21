@@ -1183,6 +1183,11 @@
                     "graph": true,
                     "description": "The total number of pre-settled deliveries."
                 },
+                "droppedPresettledCount": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of pre-settled deliveries that were dropped."
+                },
                 "acceptedCount": {
                     "type": "integer",
                     "graph": true,

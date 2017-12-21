@@ -403,6 +403,7 @@ struct qdr_link_t {
 
     uint64_t total_deliveries;
     uint64_t presettled_deliveries;
+    uint64_t dropped_presettled_deliveries;
     uint64_t accepted_deliveries;
     uint64_t rejected_deliveries;
     uint64_t released_deliveries;
