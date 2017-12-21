@@ -17,6 +17,7 @@
 # under the License.
 #
 
+import unittest2 as unittest
 import json
 from proton import Message, symbol
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
@@ -203,3 +204,7 @@ class LogMessageTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+if __name__ == '__main__':
+    unittest.main(main_module())

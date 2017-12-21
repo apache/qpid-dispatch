@@ -17,28 +17,20 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess      import PIPE, STDOUT
-from proton          import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test     import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+
+import unittest2 as unittest
+from proton          import Message, Timeout
+from system_test     import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
-from proton.reactor  import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
-from proton.utils    import BlockingConnection
-from qpid_dispatch.management.client import Node
+from proton.reactor  import Container
 
 import time
-import datetime
-import pdb
-
-
 
 # PROTON-828:
 try:
     from proton import MODIFIED
 except ImportError:
     from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
 
 
 #------------------------------------------------
@@ -601,8 +593,6 @@ class TopologyFailover ( MessagingHandler ):
 
     def run(self):
         Container(self).run()
-
-
 
 
 if __name__ == '__main__':

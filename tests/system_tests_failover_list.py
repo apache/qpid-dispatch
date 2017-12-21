@@ -17,12 +17,11 @@
 # under the License.
 #
 
-import unittest, os, json
-from subprocess import PIPE, STDOUT
-from proton import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+import unittest2 as unittest
+from proton import Timeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
+from proton.reactor import Container
 
 # PROTON-828:
 try:
@@ -32,8 +31,6 @@ except ImportError:
 
 
 class RouterTest(TestCase):
-
-    inter_router_port = None
 
     @classmethod
     def setUpClass(cls):
@@ -55,11 +52,8 @@ class RouterTest(TestCase):
 
         cls.routers = []
 
-        inter_router_port = cls.tester.get_port()
-
         router('A')
         cls.routers[0].wait_ready()
-
 
     def test_01_no_failover_list(self):
         test = FailoverTest(self.routers[0].addresses[0], 0)
@@ -129,7 +123,6 @@ class FailoverTest(MessagingHandler):
 
         self.timer.cancel()
         self.conn.close()
-
 
     def run(self):
         Container(self).run()

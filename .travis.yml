@@ -39,6 +39,8 @@ addons:
     # documentation
     - asciidoc
     - dblatex
+    # unit test requirement
+    - python-unittest2
 
 install:
 - PREFIX=$PWD/install
