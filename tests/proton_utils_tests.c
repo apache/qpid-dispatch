@@ -69,18 +69,22 @@ static char *test_data_as_string(void *context)
         pn_data_t *data = pn_data(0);
         pn_data_decode(data, vector->encoded, vector->size);
         char *result = qdpn_data_as_string(data);
+        pn_data_free(data);
 
         if (result || vector->expected) {
             if ((result == 0 || vector->expected == 0) && result != vector->expected) {
                 snprintf(error, MAX_ERROR, "Expected '%s', got '%s'", vector->expected, result);
+                free(result);
                 return error;
             }
 
             if (strcmp(result, vector->expected)) {
                 snprintf(error, MAX_ERROR, "Expected '%s', got '%s'", vector->expected, result);
+                free(result);
                 return error;
             }
         }
+        free(result);
         vector++;
     }
 

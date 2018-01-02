@@ -155,7 +155,7 @@ static char *test_compose_insert_empty_string(void *context)
         if (empty_string[idx] != right[idx])
             return "Pattern Mismatch";
     }
-
+    qd_compose_free(field);
     return 0;
 }
 
@@ -173,7 +173,7 @@ static char *test_compose_insert_empty_symbol(void *context)
         if (empty_string[idx] != right[idx])
             return "Pattern Mismatch";
     }
-
+    qd_compose_free(field);
     return 0;
 }
 
@@ -191,7 +191,7 @@ static char *test_compose_insert_empty_binary(void *context)
         if (empty_string[idx] != right[idx])
             return "Pattern Mismatch";
     }
-
+    qd_compose_free(field);
     return 0;
 }
 
