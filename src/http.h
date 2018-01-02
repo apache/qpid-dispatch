@@ -31,7 +31,10 @@ struct qd_log_source_t;
 /* Create a HTTP server */
 qd_http_server_t *qd_http_server(struct qd_server_t *server, struct qd_log_source_t *log);
 
-/* Free the HTTP server */
+/* Stop the HTTP server threads */
+void qd_http_server_stop(qd_http_server_t*);
+
+/* Free the HTTP server (stops threads if still running) */
 void qd_http_server_free(qd_http_server_t*);
 
 /* Listening for HTTP, thread safe. */

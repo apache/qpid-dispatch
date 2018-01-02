@@ -514,7 +514,7 @@ static void* http_thread_run(void* v) {
     return NULL;
 }
 
-void qd_http_server_free(qd_http_server_t *hs) {
+void qd_http_server_stop(qd_http_server_t *hs) {
     if (!hs) return;
     if (hs->thread) {
         /* Thread safe, stop via work queue then clean up */
@@ -524,6 +524,11 @@ void qd_http_server_free(qd_http_server_t *hs) {
         sys_thread_free(hs->thread);
         hs->thread = NULL;
     }
+}
+
+void qd_http_server_free(qd_http_server_t *hs) {
+    if (!hs) return;
+    qd_http_server_stop(hs);
     work_queue_destroy(&hs->work);
     if (hs->context) lws_context_destroy(hs->context);
     free(hs);
