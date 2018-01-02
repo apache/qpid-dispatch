@@ -1154,7 +1154,8 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-    qd_http_server_free(qd_server->http); /* Shut down in reverse order of start-up */
+    qd_http_server_free(qd_server->http);
+    pn_proactor_free(qd_server->proactor);
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {
         DEQ_REMOVE_HEAD(qd_server->conn_list);
@@ -1166,7 +1167,6 @@ void qd_server_free(qd_server_t *qd_server)
         ctx = DEQ_HEAD(qd_server->conn_list);
     }
     qd_timer_finalize();
-    pn_proactor_free(qd_server->proactor);
     sys_mutex_free(qd_server->lock);
     sys_cond_free(qd_server->cond);
     Py_XDECREF((PyObject *)qd_server->py_displayname_obj);
