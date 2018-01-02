@@ -326,11 +326,13 @@ static void qdr_route_use_connection_properties_CT(qdr_core_t *core, qdr_connect
     //
     while (pn_data_type(p) == PN_SYMBOL) {
         pn_bytes_t key = pn_data_get_symbol(p);
+        if (!pn_data_next(p))
+            break;
+
         if (strcmp(key.start, QD_CONNECTION_PROPERTY_LINK_ROUTE_PATTERNS) == 0) {
             //
             // The connected container wants to receive link-routed attaches.
             //
-            pn_data_next(p);
             if (pn_data_type(p) == PN_LIST) {
                 pn_data_enter(p);
                 pn_data_next(p);
@@ -349,9 +351,9 @@ static void qdr_route_use_connection_properties_CT(qdr_core_t *core, qdr_connect
                 }
                 pn_data_exit(p);
             }
-        } else
-            pn_data_next(p);
-        pn_data_next(p);
+        }
+        if (!pn_data_next(p))
+            break;
     }
 
     pn_data_exit(p);
