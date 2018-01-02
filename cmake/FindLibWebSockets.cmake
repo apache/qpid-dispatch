@@ -23,7 +23,8 @@
 #
 #   LIBWEBSOCKETS_FOUND            - True if headers and requested libraries were found
 #   LIBWEBSOCKETS_INCLUDE_DIRS     - LibWebSockets include directories
-#   LIBWEBSOCKETS_LIBRARIES        - Link these to use libwebsockets.
+#   LIBWEBSOCKETS_LIBRARIES        - Link these to use libwebsockets
+#   LIBWEBSOCKETS_VERSION_STRING   - The library version number
 #
 # This module reads hints about search locations from variables::
 #   LIBWEBSOCKETS_LIBRARYDIR       - Preferred library directory e.g. <prefix>/lib
@@ -42,12 +43,25 @@ find_path(LIBWEBSOCKETS_INCLUDE_DIRS
   PATHS /usr/include
   )
 
-include(FindPackageHandleStandardArgs)
+if(LIBWEBSOCKETS_INCLUDE_DIRS AND EXISTS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_config.h")
+  file(STRINGS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_config.h" lws_version_str
+    REGEX "^#define[ \t]+LWS_LIBRARY_VERSION[ \t]+\"[^\"]+\"")
+  string(REGEX REPLACE "^#define[ \t]+LWS_LIBRARY_VERSION[ \t]+\"([^\"]+)\".*" "\\1"
+    LIBWEBSOCKETS_VERSION_STRING "${lws_version_str}")
+  unset(lws_version_str)
+endif()
 
-find_package_handle_standard_args(
-  LIBWEBSOCKETS DEFAULT_MSG LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
+set(lws_required "2.1.0")
+if (LIBWEBSOCKETS_VERSION_STRING AND (LIBWEBSOCKETS_VERSION_STRING VERSION_LESS lws_required))
+  message(STATUS "Found libwebsockets version ${LIBWEBSOCKETS_VERSION_STRING} but need at least ${lws_required}")
+else()
+  include(FindPackageHandleStandardArgs)
+  find_package_handle_standard_args(
+    LIBWEBSOCKETS DEFAULT_MSG LIBWEBSOCKETS_VERSION_STRING LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
+endif()
 
 if(NOT LIBWEBSOCKETS_FOUND)
   unset(LIBWEBSOCKETS_LIBRARIES)
   unset(LIBWEBSOCKETS_INCLUDE_DIRS)
+  unset(LIBWEBSOCKETS_VERSION_STRING)
 endif()
