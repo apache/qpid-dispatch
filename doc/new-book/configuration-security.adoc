@@ -352,3 +352,63 @@ For a full list of supported Cyrus SASL authentication mechanisms, see link:http
 `saslUsername`:: If any of the SASL mechanisms uses username/password authentication, then provide the username to connect to the external container.
 `saslPassword`:: If any of the SASL mechanisms uses username/password authentication, then provide the password to connect to the external container.
 --
+
+[[integrating_with_kerberos]]
+== Integrating with Kerberos
+
+By using the `GSSAPI` SASL mechanism, you can configure {RouterName} to authenticate incoming connections using Kerberos.
+
+.Prerequisites
+
+* A Kerberos infrastructure must be deployed in your environment.
+
+* In the Kerberos environment, a service principal of `amqp/_HOSTNAME_@_REALM_` must be configured.
++
+This is the service principal that {RouterName} uses.
+
+* The `cyrus-sasl-gssapi` package must be installed on each client and router host machine.
+
+* xref:setting_up_sasl_for_authentication_and_payload_encryption[SASL must be set up for {RouterName}].
+
+.Procedure
+
+. On the router's host machine, open the `/etc/sasl2/qdrouterd.conf` configuration file.
++
+--
+.An `/etc/sasl2/qdrouterd.conf` Configuration File
+====
+[options="nowrap"]
+----
+pwcheck_method: auxprop
+auxprop_plugin: sasldb
+sasldb_path: qdrouterd.sasldb
+keytab: /etc/krb5.keytab
+mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
+----
+====
+--
+
+. Verify the following:
+** The `mech_list` attribute contains the `GSSAPI` mechanism.
+** The `keytab` attribute points to the location of the keytab file.
+
+
+. Open the router's configuration file.
+
+. For each incoming connection that should use Kerberos for authentication, set the router's `listener` to use the `GSSAPI` mechanism.
++
+--
+.A `listener` in the Router Configuration File
+====
+[options="nowrap"]
+----
+listener {
+    ...
+    authenticatePeer: yes
+    saslMechanisms: GSSAPI
+}
+----
+====
+
+For more information about these attributes, see xref:adding_sasl_authentication_to_incoming_connection[].
+--
