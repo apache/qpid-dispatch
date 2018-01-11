@@ -29,7 +29,7 @@ var QDR = (function(QDR) {
    * Controller that handles the QDR settings page
    */
 
-  QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', '$timeout', '$location', function($scope, QDRService, $timeout, $location) {
+  QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', 'QDRChartService', '$timeout', '$location', function($scope, QDRService, QDRChartService, $timeout, $location) {
 
     $scope.connecting = false;
     $scope.connectionError = false;
@@ -58,6 +58,7 @@ var QDR = (function(QDR) {
       }
     };
 
+    // connect/disconnect button clicked
     $scope.connect = function() {
       if (QDRService.management.connection.is_connected()) {
         $timeout( function () {
@@ -93,6 +94,13 @@ var QDR = (function(QDR) {
       var options = {address: $scope.formEntity.address, port: $scope.formEntity.port, reconnect: true}
       QDRService.connect(options)
         .then( function (r) {
+          // register a callback for when the node list is available (needed for loading saved charts)
+          QDRService.management.topology.addUpdatedAction("initChartService", function() {
+            QDRService.management.topology.delUpdatedAction("initChartService")
+            QDRChartService.init(); // initialize charting service after we are connected
+          });
+          // get the list of nodes
+          QDRService.management.topology.startUpdating(false);
           // will have redirected to last known page or /overview
         }, function (e) {
           failed(e)

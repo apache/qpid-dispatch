@@ -70,9 +70,9 @@ var QDR = (function(QDR) {
         this.hreq = false; // has this hdash chart been requested
         this.type = opts.type ? opts.type : "value"; // value or rate
         this.rateWindow = opts.rateWindow ? opts.rateWindow : 1000; // calculate the rate of change over this time interval. higher == smother graph
-        this.areaColor = "#cbe7f3"; // the chart's area color when not an empty string
+        this.areaColor = "#32b9f3"; // the chart's area color when not an empty string
         this.lineColor = "#058dc7"; // the chart's line color when not an empty string
-        this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : 10; // number of minutes of data to show (<= base.duration)
+        this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : 1; // number of minutes of data to show (<= base.duration)
         this.userTitle = null; // user title overrides title()
 
         // generate a unique id for this chart
@@ -140,6 +140,9 @@ var QDR = (function(QDR) {
           if (!arguments.length) return this.base.request.duration;
           this.base.request.duration = _;
           return this;
+        }
+        this.router = function () {
+          return QDRService.management.topology.nameFromId(this.nodeId())
         }
         this.title = function(_) {
           var name = this.request().aggregate ? 'Aggregate' : QDRService.management.topology.nameFromId(this.nodeId());
@@ -338,6 +341,7 @@ var QDR = (function(QDR) {
             request = new ChartRequest(opts); //nodeId, entity, name, attr, interval, aggregate);
             self.chartRequests.push(request);
             self.startCollecting(request);
+            self.sendChartRequest(request, true)
           }
           var charts = self.findCharts(opts); //name, attr, nodeId, entity, hdash);
           var chart;
@@ -479,7 +483,7 @@ var QDR = (function(QDR) {
           //return self.charts.length;
         },
 
-        isAttrCharted: function(nodeId, entity, name, attr) {
+        isAttrCharted: function(nodeId, entity, name, attr, aggregate) {
           var charts = self.findCharts({
               name: name,
               attr: attr,
@@ -488,7 +492,7 @@ var QDR = (function(QDR) {
             })
             // if any of the matching charts are on the dashboard page, return true
           return charts.some(function(chart) {
-            return (chart.dashboard)
+            return (chart.dashboard && (aggregate ? chart.aggregate() : !chart.aggregate()))
           });
         },
 
@@ -527,9 +531,7 @@ var QDR = (function(QDR) {
           var charts = angular.fromJson(localStorage["QDRCharts"]);
           if (charts) {
             // get array of known ids
-            var nodeList = QDRService.management.topology.nodeList().map(function(node) {
-              return node.id;
-            })
+            var nodeList = QDRService.management.topology.nodeIdList()
             charts.forEach(function(chart) {
               // if this chart is not in the current list of nodes, skip
               if (nodeList.indexOf(chart.nodeId) >= 0) {
@@ -539,7 +541,7 @@ var QDR = (function(QDR) {
                 if (chart.instance >= instance)
                   instance = chart.instance + 1;
                 if (!chart.duration)
-                  chart.duration = 10;
+                  chart.duration = 1;
                 if (chart.nodeList)
                   chart.aggregate = true;
                 if (!chart.hdash)
@@ -558,10 +560,10 @@ var QDR = (function(QDR) {
                 newChart.hreq = false;
                 newChart.type = chart.type;
                 newChart.rateWindow = chart.rateWindow;
-                newChart.areaColor = chart.areaColor ? chart.areaColor : "#cbe7f3";
+                newChart.areaColor = chart.areaColor ? chart.areaColor : "#32b9f3";
                 newChart.lineColor = chart.lineColor ? chart.lineColor : "#058dc7";
                 newChart.duration(chart.duration);
-                newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 10;
+                newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 1;
                 if (chart.userTitle)
                   newChart.title(chart.userTitle);
               }
@@ -569,583 +571,223 @@ var QDR = (function(QDR) {
           }
         },
 
-        AreaChart: function(chart) {
+        // constructor for a c3 area chart
+        pfAreaChart: function (chart, chartId, defer) {
           if (!chart)
             return;
 
+          // reference to underlying chart
+          this.chart = chart;
+
           // if this is an aggregate chart, show it stacked
-          var stacked = chart.request().aggregate;
-          this.chart = chart; // reference to underlying chart
-          this.svgchart = null;
-          this.url = $location.absUrl();
+          this.stacked = chart.request().aggregate;
 
-          // callback function. called by svgchart when binding data
-          // the variable 'this' refers to the svg and not the AreaChart,
-          // but since we are still in the scope of the AreaChart we have access to the passed in chart argument
-          this.chartData = function() {
+          // the id of the html element that is bound to the chart. The svg will be a child of this
+          this.htmlId = chartId
 
-            var now = new Date();
-            var visibleDate = new Date(now.getTime() - chart.visibleDuration * 60 * 1000);
-            var data = chart.data();
-            var nodeList = QDRService.management.topology.nodeIdList();
+          // an array of 20 colors
+          this.colors = d3.scale.category10().range();
 
-            if (chart.type == "rate") {
-              var rateData = [];
-              var datalen = data.length;
-              k = 0; // inner loop optimization
-              for (var i = 0; i < datalen; ++i) {
-                var d = data[i];
-                if (d[0] >= visibleDate) {
-                  for (var j = k + 1; j < datalen; ++j) {
-                    var d1 = data[j];
-                    if (d1[0] - d[0] >= chart.rateWindow) { // rateWindow is the timespan to calculate rates
-                      var elapsed = Math.max((d1[0] - d[0]) / 1000, 1); // number of seconds that elapsed
-                      var rd = [d1[0], (d1[1] - d[1]) / elapsed]
-                      k = j; // start here next time
-                      // this is a stacked (aggregate) chart
-                      if (stacked) {
-                        var detail = [];
-                        nodeList.forEach(function(node, nodeIndex) {
-                          if (d1[2][nodeIndex] && d[2][nodeIndex])
-                            detail.push({
-                              node: QDRService.management.topology.nameFromId(node),
-                              val: (d1[2][nodeIndex].val - d[2][nodeIndex].val) / elapsed
-                            })
-                        })
-                        rd.push(detail)
-                      }
-                      rateData.push(rd);
-                      break;
-                    }
-                  }
-                }
-              }
-              // we need at least a point to chart
-              if (rateData.length == 0) {
-                rateData[0] = [chart.data()[0][0], 0, [{
-                  node: '',
-                  val: 0
-                }]];
-              }
-              return rateData;
-            }
-            if (chart.visibleDuration != chart.duration()) {
-              return data.filter(function(d) {
-                return d[0] >= visibleDate
-              });
-            } else
-              return data;
-          }
-
-          this.zoom = function(id, zoom) {
-            if (this.svgchart) {
-              this.svgchart.attr("zoom", zoom)
-              d3.select('#' + id)
-                .data([this.chartData()])
-                .call(this.svgchart)
-            }
-          }
-
-          // called by the controller on the page that displays the chart
-          // called whenever the controller wants to redraw the chart
-          // note: the data is collected independently of how often the chart is redrawn
-          this.tick = function(id) {
-
-            // can't draw charts that don't have data yet
-            if (this.chart.data().length == 0) {
-              return;
-            }
-
-            // if we haven't created the svg yet
-            if (!this.svgchart) {
-
-              // make sure the dom element exists on the page
-              var div = angular.element('#' + id);
-              if (!div)
-                return;
-
-              var width = div.width();
-              var height = div.height();
-
-              // make sure the dom element has a size. otherwise we wouldn't see anything anyway
-              if (!width)
-                return;
-
-              var tooltipGenerator;
-              // stacked charts have a different tooltip
-              if (stacked) {
-                tooltipGenerator = function(d, color, format) {
-                  var html = "<table class='fo-table'><tbody><tr class='fo-title'>" +
-                    "<td align='center' colspan='2' nowrap>Time: " + d[0].toTimeString().substring(0, 8) + "</td></tr>"
-                  d[2].forEach(function(detail) {
-                    html += "<tr class='detail'><td align='right' nowrap>" + detail.node + "<div class='fo-table-legend' style='background-color: " + color(detail.node) + "'></div>" + "</td><td>" + format(detail.val) + "</td></tr>"
-                  })
-                  html += "</tbody></table>"
-                  return html;
-                }
-              } else {
-                tooltipGenerator = function(d, color, format) {
-                  var html = "<table class='fo-table'><tbody><tr class='fo-title'>" +
-                    "<td align='center'>Time</td><td align='center'>Value</td></tr><tr><td>" +
-                    d[0].toTimeString().substring(0, 8) +
-                    "</td><td>" +
-                    format(d[1]) +
-                    "</td></tr></tbody></table>"
-                  return html;
-                }
-              }
-              // create and initialize the chart
-              this.svgchart = self.timeSeriesStackedChart(id, width, height,
-                  QDRService.utilities.humanify(this.chart.attr()),
-                  this.chart.name(),
-                  QDRService.management.topology.nameFromId(this.chart.nodeId()),
-                  this.chart.entity(),
-                  stacked,
-                  this.chart.visibleDuration)
-                .tooltipGenerator(tooltipGenerator);
-
-            }
-            // in case the chart properties have changed, set the new props
-            this.svgchart
-              .attr("type", this.chart.type)
-              .attr("areaColor", this.chart.areaColor)
-              .attr("lineColor", this.chart.lineColor)
-              .attr("url", this.url)
-              .attr("title", this.chart.userTitle);
-
-            // bind the new data and update the chart
-            d3.select('#' + id) // the div id on the page/dialog
-              .data([this.chartData()])
-              .call(this.svgchart); // the charting function
-          }
+          if (!defer)
+            this.generate()
         },
-
-        timeSeriesStackedChart: function(id, width, height, attrName, name, node, entity, stacked, visibleDuration) {
-          var margin = {
-              top: 20,
-              right: 18,
-              bottom: 10,
-              left: 15
-            }
-            // attrs that can be changed after the chart is created by using
-            // chart.attr(<attrname>, <attrvalue>);
-          var attrs = {
-            attrName: attrName, // like Deliveries to Container. Put at top of chart
-            name: name, // like router.address/qdrhello  Put at bottom of chart with node
-            node: node, // put at bottom of chart with name
-            entity: entity, // like .router.address  Not used atm
-            title: "", // user title overrides the node and name at the bottom of the chart
-            url: "", // needed to reference filters and clip because of angular's location service
-            type: "value", // value or rate
-            areaColor: "", // can be set for non-stacked charts
-            lineColor: "", // can be set for non-stacked charts
-            zoom: false, // should the y-axis range start at 0 or the min data value
-            visibleDuration: visibleDuration
-          }
-          var width = width - margin.left - margin.right,
-            height = height - margin.top - margin.bottom,
-            yAxisTransitionDuration = 0
-
-          var x = d3.time.scale()
-          var y = d3.scale.linear()
-            .rangeRound([height, 0]);
-          // The x-accessor for the path generator; xScale * xValue.
-          var X = function(d) {
-              return x(d[0])
-            }
-            // The x-accessor for the path generator; yScale * yValue.
-          var Y = function Y(d) {
-            return y(d[1])
-          }
-
-          var xAxis = d3.svg.axis().scale(x).orient("bottom")
-            .outerTickSize(6)
-            .innerTickSize(-(height - margin.top - margin.bottom))
-            .tickPadding(2)
-            .ticks(d3.time.minutes, 2)
-          var yAxis = d3.svg.axis().scale(y).orient("right")
-            .outerTickSize(8)
-            .innerTickSize(-(width - margin.left - margin.right))
-            .tickPadding(10)
-            .ticks(3)
-            .tickFormat(function(d) {
-              return formatValue(d)
-            })
-
-          var tooltipGenerator = function(d, color, format) {
-            return ""
-          }; // should be overridden to set an appropriate tooltip
-          var formatValue = d3.format(".2s");
-          var formatPrecise = d3.format(",");
-          var bisectDate = d3.bisector(function(d) {
-            return d[0];
-          }).left;
-          var line = d3.svg.line();
-
-          var stack = d3.layout.stack()
-            .offset("zero")
-            .values(function(d) {
-              return d.values;
-            })
-            .x(function(d) {
-              return x(d.date);
-            })
-            .y(function(d) {
-              return d.value;
-            });
-
-          var area = d3.svg.area()
-          if (stacked) {
-            area.interpolate("cardinal")
-              .x(function(d) {
-                return x(d.date);
-              })
-              .y0(function(d) {
-                return y(d.y0);
-              })
-              .y1(function(d) {
-                return y(d.y0 + d.y);
-              });
-          } else {
-            area.interpolate("basis").x(X).y1(Y)
-            line.x(X).y(Y)
-          }
-          var color = d3.scale.category20();
-
-          var sv = d3.select("#" + id).append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          var svg = sv
-            .append("g")
-            .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
-
-          sv.append("linearGradient")
-            .attr("id", id) //"temperature-gradient")
-            .attr("gradientUnits", "userSpaceOnUse")
-            .attr("x1", 0).attr("y1", height * .5)
-            .attr("x2", 0).attr("y2", height * 1.2)
-            .selectAll("stop")
-            .data([{
-              offset: "0%",
-              opacity: 1
-            }, {
-              offset: "100%",
-              opacity: 0
-            }])
-            .enter().append("stop")
-            .attr("offset", function(d) {
-              return d.offset;
-            })
-            .attr("stop-opacity", function(d) {
-              return d.opacity;
-            })
-            .attr("stop-color", function(d) {
-              return "#cbe7f3"
-            });
-          /*
-                      var clip = svg.append("defs").append("svg:clipPath")
-                        .attr("id", "clip")
-                        .append("svg:rect")
-                        .attr("id", "clip-rect")
-                        .attr("x", "0")
-                        .attr("y", "0")
-                        .attr("width", width)
-                        .attr("height", height);
-          */
-          // we want all our areas to appear before the axiis
-          svg.append("g")
-            .attr("class", "section-container")
-
-          svg.append("g")
-            .attr("class", "x axis")
-
-          svg.append("g")
-            .attr("class", "y axis")
-
-          svg.append("text").attr("class", "title")
-            .attr("x", (width / 2) - (margin.left + margin.right) / 2)
-            .attr("y", 0 - (margin.top / 2))
-            .attr("text-anchor", "middle")
-            .text(attrs.attrName);
-
-          svg.append("text").attr("class", "legend")
-            .attr("x", (width / 2) - (margin.left + margin.right) / 2)
-            .attr("y", height + (margin.bottom / 2))
-            .attr("text-anchor", "middle")
-            .text(!stacked ? attrs.node + " " + attrs.name : attrs.name);
-
-          var focus = sv.append("g")
-            .attr("class", "focus")
-            .style("display", "none");
-
-          focus.append("circle")
-            .attr("r", 4.5);
-
-          var focusg = focus.append("g");
-          focusg.append("rect")
-            .attr("class", "mo-guide y")
-            .attr("width", 1)
-            .attr("height", height - (margin.top + margin.bottom));
-          focusg.append("rect")
-            .attr("class", "mo-guide x")
-            .attr("width", width - (margin.left + margin.right))
-            .attr("height", 1);
-          focus.append("foreignObject")
-            .attr('class', 'svg-tooltip')
-            .append("xhtml:span");
-          /*
-                  var transition = d3.select({}).transition()
-                      .duration(2000)
-                      .ease("linear");
-          */
-          function chart(selection) {
-            selection.each(function(data) {
-
-              var seriesArr = []
-              if (stacked) {
-                var detailNames = data[0][2].map(function(detail) {
-                  return detail.node
-                })
-                var revNames = angular.copy(detailNames).reverse();
-                color.domain(revNames);
-
-                var series = {};
-                detailNames.forEach(function(name) {
-                  series[name] = {
-                    name: name,
-                    values: []
-                  };
-                  seriesArr.unshift(series[name]); // insert at beginning
-                });
-
-                data.forEach(function(d) {
-                  detailNames.map(function(name, i) {
-                    series[name].values.push({
-                      date: d[0],
-                      value: d[2][i] ? d[2][i].val : 0
-                    });
-                  });
-                });
-
-                // this decorates seriesArr with x,y,and y0 properties
-                stack(seriesArr);
-              }
-
-              var extent = d3.extent(data, function(d) {
-                return d[0];
-              });
-              //var points = data.length;
-              //var futureDate = new Date(data[points-1][0].getTime() - attrs.visibleDuration * 60 * 1000);
-              //extent = [futureDate, data[points-1][0]]
-              x.domain(extent)
-                .range([0, width - margin.left - margin.right]);
-
-              // Update the y-scale.
-              var min = attrs.zoom ? 0 : d3.min(data, function(d) {
-                return d[1]
-              }) * .99;
-              var max = d3.max(data, function(d) {
-                return d[1]
-              }) * 1.01;
-              var mean = d3.mean(data, function(d) {
-                return d[1]
-              });
-              //max = max * 1.01;
-              var diff = (max - min);
-              if (diff == 0) {
-                max = max + 1;
-                diff = 1;
-              }
-              var ratio = mean != 0 ? diff / mean : 1;
-              if (ratio < .05)
-                formatValue = d3.format(".3s")
-
-              if (stacked) {
-                y.domain([min, max])
-                  .range([height - margin.top - margin.bottom, 0]);
-              } else {
-                y
-                  .domain([min, max])
-                  .range([height - margin.top - margin.bottom, 0]);
-              }
-              if (attrs.type == "rate") {
-                area.interpolate("linear"); // rate charts look better smoothed, but the tooltop is in the wrong place
-                line.interpolate("linear");
-//                area.interpolate("basis"); // rate charts look better smoothed
-//                line.interpolate("basis");
-              } else {
-                area.interpolate("linear"); // don't smooth value charts
-                line.interpolate("linear");
-              }
-
-              // adjust the xaxis based on the range of x values (domain)
-              var timeSpan = (extent[1] - extent[0]) / (1000 * 60); // number of minutes
-              if (timeSpan < 1.5)
-                xAxis.ticks(d3.time.seconds, 10);
-              else if (timeSpan < 3)
-                xAxis.ticks(d3.time.seconds, 30);
-              else if (timeSpan < 8)
-                xAxis.ticks(d3.time.minutes, 1);
-              else
-                xAxis.ticks(d3.time.minutes, 2);
-
-              // adjust the number of yaxis ticks based on the range of y values
-              if (formatValue(min) === formatValue(max))
-                yAxis.ticks(2);
-
-              var container = svg.select('.section-container');
-              container.selectAll('.series').remove();
-              if (stacked) {
-                y.domain([Math.min(min, 0), d3.max(seriesArr, function(c) {
-                  return d3.max(c.values, function(d) {
-                    return d.y0 + d.y;
-                  });
-                })]);
-
-                // creates a .series g path for each section in the detail
-                // since we don't get more sections this selection is only run once
-                var series = container.selectAll(".series")
-                  .data(seriesArr)
-
-                series.enter().append("g")
-                  .attr("class", "series")
-                  .append("path")
-                  .attr("class", "streamPath")
-                  .style("fill", function(d) {
-                    return color(d.name);
-                  })
-                  .style("stroke", "grey");
-
-                series.exit().remove()
-
-                // each time the data is updated, update each section
-                container.selectAll(".series .streamPath").data(seriesArr)
-                  .attr("d", function(d) {
-                    return area(d.values);
-                  })
-              } else {
-                var series = container.selectAll(".series")
-                  .data([data], function(d) {
-                    return d;
-                  })
-
-                var g = series.enter().append("g")
-                  .attr("class", "series")
-
-                g.append("path")
-                  .attr("class", "area")
-                  .style("fill", "url(" + attrs.url + "#" + id + ") " + attrs.areaColor) //temperature-gradient)")
-                  .attr("d", area.y0(y.range()[0]))
-                  .attr("transform", null);
-
-                g.append("path")
-                  .attr("class", "line")
-                  .style("stroke", attrs.lineColor)
-                  .attr("d", line)
-                  /*
-                  debugger;
-                              g.transition()
-                                .duration(2000)
-                                              .attr("transform", "translate(-4)");
-                  */
-                series.exit().remove()
-
-                sv.selectAll("stop")
-                  .attr("stop-color", attrs.areaColor)
-
-              }
-              // Update the x-axis.
-              svg.select(".x.axis")
-                .attr("transform", "translate(0," + (height - margin.top - margin.bottom + 1) + ")")
-                .call(xAxis);
-
-              svg.select(".y.axis")
-                .transition().duration(yAxisTransitionDuration) // animate the y axis
-                .attr("transform", "translate(" + (width - margin.right - margin.left) + ",0)")
-                .call(yAxis);
-              yAxisTransitionDuration = 1000 // only do a transition after the chart is 1st drawn
-
-              // TODO: fix this
-              // need to recreate this every update... not sure why
-              var overlay = sv.select(".overlay");
-              if (!overlay.empty())
-                overlay.remove();
-              sv.append("rect")
-                .attr("class", "overlay")
-                .attr("width", width)
-                .attr("height", height)
-                .on("mouseover", function() {
-                  focus.style("display", null)
-                })
-                .on("mouseout", function() {
-                  focus.style("display", "none")
-                })
-                .on("mousemove", mousemove)
-
-              function mousemove() {
-                var x0 = x.invert(d3.mouse(this)[0] - margin.left);
-                var i = bisectDate(data, x0, 1);
-                if (i < data.length && i > 0) {
-                  var d0 = data[i - 1];
-                  var d1 = data[i];
-                  // set d to the data that is closest to the mouse position
-                  var d = x0 - d0[0] > d1[0] - x0 ? d1 : d0;
-                  focus.attr("transform", "translate(" + (x(d[0]) + margin.left) + "," + (y(d[1]) + margin.top) + ")");
-
-                  var tipFormat = formatPrecise;
-                  if (attrs.type === "rate")
-                    tipFormat = d3.format(".2n")
-                    // set the tooltip html and position it
-                  focus.select('.svg-tooltip span')
-                    .html(tooltipGenerator(d, color, tipFormat))
-
-                  var foBounds = focus.select('table')[0][0].getBoundingClientRect();
-                  var mx = x(d[0]); // mouse x
-                  var my = y(d[1]); // mouse y
-
-                  // perfer to put the tooltip in the nw corner relative to the focus circle
-                  var foy = -foBounds.height;
-                  var fox = -foBounds.width;
-                  // off the left side
-                  if (mx - foBounds.width - margin.left < 0)
-                    fox = 0;
-                  // above the top
-                  if (my - foBounds.height - margin.top < 0)
-                    foy = 0;
-                  // won't fit above or below, just put it at bottom
-                  if (my + foBounds.height > height)
-                    foy = -(foBounds.height - (height - my));
-
-                  focus.select('.svg-tooltip')
-                    .attr('x', fox).attr('y', foy);
-
-                  // position the guide lines
-                  focus.select(".mo-guide.y")
-                    .attr("y", -my);
-                  focus.select(".mo-guide.x")
-                    .attr("x", -mx);
-
-                } else {
-                  focus.attr("transform", "translate(-10,-10)");
-                }
-              }
-
-            })
-          }
-          chart.attr = function(attrName, value) {
-            if (arguments.length < 2)
-              return arguments.length == 1 ? attrs[attrName] : chart;
-            if (angular.isDefined(attrs[attrName]))
-              attrs[attrName] = value;
-            return chart;
-          }
-          chart.tooltipGenerator = function(_) {
-            tooltipGenerator = _;
-            return chart;
-          }
-          return chart;
-        }
       }
+
+      // create the svg and bind it to the given div.id
+      self.pfAreaChart.prototype.generate = function () {
+        var chart = this.chart  // for access during chart callbacks
+        var self = this
+
+        // list of router names. used to get the color index
+        var nameList = QDRService.management.topology.nodeNameList();
+
+        var c3ChartDefaults = $().c3ChartDefaults();
+        var singleAreaChartConfig = c3ChartDefaults.getDefaultSingleAreaConfig();
+        singleAreaChartConfig.bindto = '#' + this.htmlId;
+        singleAreaChartConfig.data = {
+            x: 'x',           // x-axis is named x
+            columns: [[]],
+            type: 'area-spline'
+        }
+        singleAreaChartConfig.axis = {
+          x: {
+            type: 'timeseries',
+            tick: {
+              format: (function (d) {
+                var data = this.singleAreaChart.data.shown()
+                var first = data[0]['values'][0].x
+
+                if (d - first == 0) {
+                  return d3.timeFormat("%I:%M:%S")(d)
+                }
+                return d3.timeFormat("%M:%S")(d)
+              }).bind(this),
+              culling: {max: 4}
+            },
+            label: {
+              text: chart.name()
+            }
+          },
+          y: {
+            tick: {
+              format: function (d) { return d<1 ? d3.format(".2f")(d) : d3.format(".2s")(d) },
+              count: 5
+            }
+          }
+        }
+        singleAreaChartConfig.transition = {
+          duration: 0
+        }
+
+        singleAreaChartConfig.area = {
+          zerobased: false
+        }
+
+        singleAreaChartConfig.tooltip = {
+          contents: function (d, defaultTitleFormat, defaultValueFormat, color) {
+            var d3f = ","
+            if (chart.type === 'rate')
+              d3f = ",.2f"
+            var zPre = function (i) {
+              if (i < 10) {
+                i = "0" + i;
+              }
+              return i;
+            }
+            var h = zPre(d[0].x.getHours())
+            var m = zPre(d[0].x.getMinutes())
+            var s = zPre(d[0].x.getSeconds())
+            var table = "<table class='dispatch-c3-tooltip'>  <tr><th colspan='2' class='text-center'><strong>"+h+':'+m+':'+s+"</strong></th></tr> <tbody>"
+            for (var i=0; i<d.length; i++) {
+              var colorIndex = nameList.indexOf(d[i].id) % 10
+              var span = "<span class='chart-tip-legend' style='background-color: "+self.colors[colorIndex]+";'> </span>" + d[i].id
+              table += ("<tr><td>"+span+"<td>"+d3.format(d3f)(d[i].value)+"</td></tr>")
+            }
+            table += "</tbody></table>"
+            return table
+          }
+        }
+
+        singleAreaChartConfig.title = {
+          text: QDRService.utilities.humanify(this.chart.attr())
+        }
+
+        singleAreaChartConfig.data.colors = {}
+        nameList.forEach( (function (r, i) {
+          singleAreaChartConfig.data.colors[r] = this.colors[i % 10]
+        }).bind(this))
+
+        singleAreaChartConfig.data.color = (function (color, d) {
+          var i = nameList.indexOf(d)
+          return i >= 0 ? this.colors[i % 10] : color
+        }).bind(this)
+
+        singleAreaChartConfig.legend = {show: true}
+
+        this.singleAreaChart = c3.generate(singleAreaChartConfig);
+      }
+
+      // filter/modify the chart.data into data points for the svg
+      /* the collected data looks like:
+         [[date, val, [v1,v2,...]], [date, val, [v1,v2,...]],...]
+         with date being the timestamp of the sample
+              val being the total value
+              and the [v1,v2,...] array being the component values for each router for stacked charts
+
+         for stacked charts, the returned data looks like:
+         [['x', date, date,...},
+          ['R1', v1, v1,...},
+          ['R2', v2, v2,...],
+          ...]
+
+         for non-stacked charts, the returned data looks like:
+         ['x', date, date,...],
+         ['R1', val, val,...]]
+
+         for rate charts, all the values returned are the change per second between adjacent values
+      */
+      self.pfAreaChart.prototype.chartData = function() {
+        var data = this.chart.data();
+        var nodeList = QDRService.management.topology.nodeIdList();
+
+        // oldest data point that should be visible
+        var now = new Date();
+        var visibleDate = new Date(now.getTime() - this.chart.visibleDuration * 60 * 1000);
+
+        var accessorSingle = function (d, d1, elapsed) {
+          return this.chart.type === 'rate' ? (d1[1] - d[1]) / elapsed : d[1]
+        }
+        var accessorStacked = function (d, d1, elapsed, i) {
+          return this.chart.type === 'rate' ? (d1[2][i].val - d[2][i].val) / elapsed : d[2][i].val
+        }
+        var accessor = this.stacked ? accessorStacked : accessorSingle
+
+        var dx = ['x']
+        var dlines = []
+        if (this.stacked) {
+          // for stacked, there is a line per router
+          nodeList.forEach( function (node) {
+            dlines.push([QDRService.management.topology.nameFromId(node)])
+          })
+        } else {
+          // for non-stacked, there is only one line
+          dlines.push([this.chart.router()])
+        }
+        for (var i=0; i<data.length; i++) {
+          var d = data[i], elapsed = 1, d1
+          if (d[0] >= visibleDate) {
+            if (this.chart.type === 'rate' && i < data.length-1) {
+              d1 = data[i+1]
+              elapsed = Math.max((d1[0] - d[0]) / 1000, 0.001); // number of seconds that elapsed
+            }
+            // don't push the last data point for a rate chart
+            if (this.chart.type !== 'rate' || i < data.length-1) {
+              dx.push(d[0])
+              if (this.stacked) {
+                nodeList.forEach( (function (node, nodeIndex) {
+                  dlines[nodeIndex].push(accessor.call(this, d, d1, elapsed, nodeIndex))
+                }).bind(this))
+              } else {
+                dlines[0].push(accessor.call(this, d, d1, elapsed))
+              }
+            }
+          }
+        }
+        var columns = [dx]
+        dlines.forEach( function (line) {
+          columns.push(line)
+        })
+        return columns
+      }
+
+      // get the data for the chart and update it
+      self.pfAreaChart.prototype.tick = function() {
+        // can't draw charts that don't have data yet
+        if (this.chart.data().length == 0 || !this.singleAreaChart) {
+          return;
+        }
+
+        // update the chart title
+        // since there is no c3 api to get or set the chart title, we change the title directly using d3
+        var rate = ''
+        if (this.chart.type === 'rate')
+          rate = ' per second'
+        d3.select("#"+this.htmlId+" svg text.c3-title").text(QDRService.utilities.humanify(this.chart.attr()) + rate);
+
+/*
+        var type='area'
+        if (this.chart.type === 'rate')
+          type = 'area-spline'
+        this.singleAreaChart.transform(type);
+*/
+        var d = this.chartData()
+        // load the new data
+        // using the c3.flow api causes the x-axis labels to jump around
+        this.singleAreaChart.load({
+          columns: d
+        })
+      }
+
       return self;
     }
   ]);

@@ -184,10 +184,6 @@ var QDR = (function(QDR) {
     }
     QDR.queue = d3.queue;
 
-    QDRService.management.topology.addUpdatedAction("initChartService", function() {
-      QDRService.management.topology.delUpdatedAction("initChartService")
-      QDRChartService.init(); // initialize charting service after we are connected
-    });
     if (!QDRService.management.connection.is_connected()) {
       // attempt to connect to the host:port that served this page
       var protocol = $location.protocol()
@@ -202,11 +198,23 @@ var QDR = (function(QDR) {
       QDR.log.info("Attempting AMQP over websockets connection using address:port of browser ("+host+':'+port+")")
       QDRService.management.connection.testConnect(connectOptions)
         .then( function (r) {
+          // We didn't connect with reconnect: true flag.
+          // The reason being that if we used reconnect:true and the connection failed, rhea would keep trying. There
+          // doesn't appear to be a way to tell it to stop trying to reconnect.
           QDRService.disconnect()
           QDR.log.info("Connect succeeded. Using address:port of browser")
           connectOptions.reconnect = true
           // complete the connection (create the sender/receiver)
-          QDRService.connect(connectOptions) // since the testConnect succeeded, we don't need to handle the success/failure return of the promise
+          QDRService.connect(connectOptions)
+            .then( function (r) {
+              // register a callback for when the node list is available (needed for loading saved charts)
+              QDRService.management.topology.addUpdatedAction("initChartService", function() {
+                QDRService.management.topology.delUpdatedAction("initChartService")
+                QDRChartService.init(); // initialize charting service after we are connected
+              });
+              // get the list of nodes
+              QDRService.management.topology.startUpdating(false);
+            })
       }, function (e) {
           QDR.log.info("failed to auto-connect to " + host + ":" + port)
           QDR.log.info("redirecting to connect page")

@@ -24,7 +24,7 @@ under the License.
                 <button ng-click="editChart(chart)" title="Configure"><span class="fa-edit"></span></button>
 <!--                <button ng-click="zoomChart(chart)" title="Zoom {{chart.zoomed ? 'in' : 'out'}}" ng-if="!chart.chart.request().nodeList"><i ng-class="chart.zoomed ? 'fa-zoom-in' : 'icon-zoom-out'"></i></button> -->
             </p><div style="clear:both"></div>
-            <div id="{{chart.chart.id()}}" class="aChart d3Chart"></div>
+            <div id="{{chart.chart.id()}}" class="line-chart-pf aChart d3Chart"></div>
         </div>
         <div ng-init="chartsLoaded()"></div>
     </div>

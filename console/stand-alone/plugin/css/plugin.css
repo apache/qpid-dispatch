@@ -63,6 +63,10 @@ div.listAttrName button {
     margin: 3px 5px;
 }
 
+div.listAggrValue button {
+    margin: 3px 5px;
+}
+
 @-moz-document url-prefix() {
   div.listAttrName button {
     top: -24px;
@@ -156,7 +160,7 @@ div.chartContainer {
 /* the line surrounding the area chart */
 div.d3Chart path {
 /*    stroke: black; */
-    stroke-width: 0;
+/*    stroke-width: 0; */
 /*	opacity: 0.5; */
 }
 
@@ -222,8 +226,8 @@ div.d3Chart .title {
 }
 
 div.d3Chart {
-    padding: 1em 0;
-    border: 1px solid #C0C0C0;
+    /* padding: 1em 0; */
+    /* border: 1px solid #C0C0C0; */
     margin-bottom: 2em;
 }
 div.d3Chart.hDash {
@@ -233,8 +237,9 @@ div.d3Chart.hDash {
 div.d3Chart .axis path {
 	display: inherit;
 }
+
 .c3-circle {
-	display: none;
+	/* display: none; */
 }
 
 .fo-table {

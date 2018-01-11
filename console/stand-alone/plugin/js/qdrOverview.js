@@ -1442,7 +1442,7 @@ return;
     }
 
     var setTemplate = function (node) {
-      var type = node.data.type;
+      var type = node.type;
       var template = $scope.templates.filter( function (tpl) {
         return tpl.name == type;
       })

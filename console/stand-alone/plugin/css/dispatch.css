@@ -35,7 +35,7 @@ svg:not(.active):not(.ctrl) {
 	fill: #33F;
 }
 path.link.selected {
-  stroke-dasharray: 10,2;
+  /* stroke-dasharray: 10,2; */
   stroke: #33F  !important;
 }
 
@@ -435,8 +435,8 @@ div.boolean {
 }
 
 .aggregate i {
-	float: right;
-    margin: 3px 3px 3px 8px;
+  float: right;
+  /*  margin: 3px 3px 3px 8px; */
 }
 
 .aggregate .hastip {
@@ -514,6 +514,14 @@ div.boolean {
     position: absolute;
     top: 200px;
     left: 600px;
+}
+
+.cross-rect {
+  /* fill: #cfe2f3; */
+}
+.cross-line {
+  stroke: black;
+  stroke-width: 4px;
 }
 
 .node circle {

@@ -24,8 +24,8 @@ var QDR = (function(QDR) {
   /**
    * Controller for the main interface
    */
-  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService', 'uiGridConstants',
-    function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService, uiGridConstants) {
+  QDR.module.controller("QDR.ListController", ['$scope', '$location', '$uibModal', '$filter', '$timeout', 'QDRService', 'QDRChartService', 'uiGridConstants', '$sce',
+    function ($scope, $location, $uibModal, $filter, $timeout, QDRService, QDRChartService, uiGridConstants, $sce) {
 
     QDR.log.debug("QDR.ListControll started with location of " + $location.path() + " and connection of  " + QDRService.management.connection.is_connected());
     var updateIntervalHandle = undefined;
@@ -147,6 +147,7 @@ var QDR = (function(QDR) {
     $scope.nodes = []
     var excludedEntities = ["management", "org.amqp.management", "operationalEntity", "entity", "configurationEntity", "dummy", "console"];
     var aggregateEntities = ["router.address"];
+
     var classOverrides = {
       "connection": function (row, nodeId) {
         var isConsole = QDRService.utilities.isAConsole (row.properties.value, row.identity.value, row.role.value, nodeId)
@@ -429,25 +430,6 @@ var QDR = (function(QDR) {
           return (old.name === attr) ? old.graph && old.rawValue != row[attr].value : false;
         })
         var schemaEntity = schemaProps($scope.selectedEntity, attr, $scope.currentNode)
-/*
-[{
-  "type": "value",
-  "rateWindow": 1000,
-  "areaColor": "#cbe7f3",
-  "lineColor": "#058dc7",
-  "visibleDuration": 10,
-  "userTitle": null,
-  "dashboard": true,
-  "hdash": false,
-  "instance": 1,
-  "name": "Lqdhello",
-  "attr": "deliveriesFromContainer",
-  "nodeId": "amqp:/_topo/0/QDR.A/$management",
-  "entity": "router.address",
-  "interval": 1000,
-  "duration": 10
-}]
-*/
         details.push( {
           attributeName:  QDRService.utilities.humanify(attr),
           attributeValue: attr === 'port' ? row[attr].value : QDRService.utilities.pretty(row[attr].value),
@@ -456,8 +438,8 @@ var QDR = (function(QDR) {
           rawValue:       row[attr].value,
           graph:          row[attr].graph,
           title:          row[attr].title,
-          chartExists:    (QDRChartService.findCharts({name: row.name.value, attr: attr, nodeId: $scope.currentNode.id, entity: $scope.selectedEntity}).length > 0),
-          //chartExists:    QDRChartService.findChartRequest($scope.currentNode.id, $scope.selectedEntity) !== null,
+          chartExists:    (QDRChartService.isAttrCharted($scope.currentNode.id, $scope.selectedEntity, row.name.value, attr)),
+          aggchartExists: (QDRChartService.isAttrCharted($scope.currentNode.id, $scope.selectedEntity, row.name.value, attr, true)),
           aggregateValue: QDRService.utilities.pretty(row[attr].aggregate),
           aggregateTip:   row[attr].aggregateTip,
 
@@ -629,43 +611,8 @@ var QDR = (function(QDR) {
     // tableRows are the records that were returned, this populates the left hand tree on the page
     var selectRow = function (info) {
       updateTreeChildren(info.entity, info.rows, info.expand);
-      fixTooltips();
+      //fixTooltips();
     }
-
-    var titleFromAlt = function (alt) {
-      if (alt && alt.length) {
-        var data = angular.fromJson(alt);
-        var table = "<table class='tiptable'><tbody>";
-        data.forEach (function (row) {
-          table += "<tr>";
-          table += "<td>" + row.node + "</td><td align='right'>" + QDRService.utilities.pretty(row.val) + "</td>";
-          table += "</tr>"
-        })
-        table += "</tbody></table>"
-        return table;
-      }
-      return '';
-    }
-
-    var fixTooltips = function () {
-      if ($('.hastip').length == 0) {
-        setTimeout(fixTooltips, 100);
-        return;
-      }
-      $('.hastip').each( function (i, tip) {
-        var tipset = tip.getAttribute('tipset')
-        if (!tipset) {
-          $(tip).tipsy({html: true, className: 'subTip', opacity: 1, title: function () {
-            return titleFromAlt(this.getAttribute('alt'))
-          } });
-          tip.setAttribute('tipset', true)
-        } else {
-          var title = titleFromAlt(tip.getAttribute('alt'))
-          tip.setAttribute('original-title', title)
-        }
-      })
-    }
-
     $scope.detailFields = [];
 
     $scope.addToGraph = function(rowEntity) {
@@ -675,7 +622,8 @@ var QDR = (function(QDR) {
          name:   $scope.selectedRecordName,
          attr:    rowEntity.name,
          forceCreate: true});
-      doDialog('tmplListChart.html', chart);
+
+      doDialog('tmplChartConfig.html', chart);
     }
 
     $scope.addAllToGraph = function(rowEntity) {
@@ -689,9 +637,31 @@ var QDR = (function(QDR) {
         visibleDuration: 1,
         forceCreate: true,
         aggregate:   true});
-      doDialog('tmplListChart.html', chart);
+      doDialog('tmplChartConfig.html', chart);
     }
 
+    // The ui-popover dynamic html
+    $scope.aggregateTip = ''
+    // disable popover tips for non-integer cells
+    $scope.aggregateTipEnabled = function (row) {
+      var tip = row.entity.aggregateTip
+      return (tip && tip.length) ? "true" : "false"
+    }
+    // convert the aggregate data into a table for the popover tip
+    $scope.genAggregateTip = function (row) {
+      var tip = row.entity.aggregateTip
+      if (tip && tip.length) {
+        var data = angular.fromJson(tip);
+        var table = "<table class='tiptable'><tbody>";
+        data.forEach (function (row) {
+          table += "<tr>";
+          table += "<td>" + row.node + "</td><td align='right'>" + QDRService.utilities.pretty(row.val) + "</td>";
+          table += "</tr>"
+        })
+        table += "</tbody></table>"
+        $scope.aggregateTip = $sce.trustAsHtml(table)
+      }
+    }
     var aggregateColumn = function () {
       if ((aggregateEntities.indexOf($scope.selectedEntity) > -1 && $scope.detailCols.length != 3) ||
         (aggregateEntities.indexOf($scope.selectedEntity) == -1 && $scope.detailCols.length != 2)) {
@@ -710,13 +680,13 @@ var QDR = (function(QDR) {
         ]
         if (aggregateEntities.indexOf($scope.selectedEntity) > -1) {
           $scope.detailCols.push(
-          {
-            width: '10%',
-            field: 'aggregateValue',
-            displayName: 'Aggregate',
-            cellTemplate: '<div class="hastip ui-grid-cell-contents" alt="{{row.entity.aggregateTip}}" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}} <button title="Click to view/add a graph" ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>',
-            cellClass: 'aggregate'
-          }
+            {
+              width: '10%',
+              field: 'aggregateValue',
+              displayName: 'Aggregate',
+              cellTemplate: '<div popover-enable="{{grid.appScope.aggregateTipEnabled(row)}}" uib-popover-html="grid.appScope.aggregateTip" popover-append-to-body="true" ng-mouseover="grid.appScope.genAggregateTip(row)" popover-trigger="\'mouseenter\'" class="listAggrValue ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}} <button title="Click to view/add a graph" ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.aggchartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>',
+              cellClass: 'aggregate'
+            }
           )
         }
       }
@@ -802,27 +772,32 @@ var QDR = (function(QDR) {
        .then(function (response) {gotMethodResponse($scope.selectedEntity, response.context)})
     }
 
-    function doDialog(tmpl, chart) {
-        var d = $uibModal.open({
-          backdrop: true,
-          keyboard: true,
-          backdropClick: true,
-          templateUrl: QDR.templatePath + tmpl,
-          controller: "QDR.ListChartController",
-          resolve: {
-                 chart: function() {
-                   return chart
-                 },
-                 nodeName: function () {
-                    return $scope.selectedNode
-                 }
-              }
-        });
+    function doDialog(template, chart) {
 
-        d.result.then(function(result) { QDR.log.debug("d.open().then"); });
-
+      var d = $uibModal.open({
+      backdrop: true,
+      keyboard: true,
+      backdropClick: true,
+      templateUrl: QDR.templatePath + template,
+      controller: "QDR.ChartDialogController",
+      resolve: {
+        chart: function() {
+          return chart;
+        },
+        updateTick: function () {
+          return function () {};
+        },
+        dashboard: function () {
+          return $scope;
+        },
+        adding: function () {
+          return true
+        }
+      }
+      }).result.then(function(result) {
+        QDRChartService.unRegisterChart(chart)
+      });
     };
-
     var setCurrentNode = function () {
       $scope.nodes.some( function (node, i) {
         if (node.name === $scope.selectedNode) {
@@ -835,6 +810,9 @@ var QDR = (function(QDR) {
     var treeReady = false;
     var serviceReady = false;
     $scope.largeNetwork = QDRService.management.topology.isLargeNetwork()
+    if ($scope.largeNetwork)
+      aggregateEntities = [];
+
     // called after we know for sure the schema is fetched and the routers are all ready
     QDRService.management.topology.addUpdatedAction("initList", function () {
       QDRService.management.topology.stopUpdating();

@@ -1227,13 +1227,62 @@ console.log("showEntityForm " + args.entity)
                   .value(function(d) { return d.size; });
 
               d3.select("#crosssection svg").remove();
-              //var svg = d3.select(document.createElement('div'))
               var svg = d3.select("#crosssection").append("svg")
                   .attr("width", diameter)
                   .attr("height", diameter)
+
+              var rg = svg.append('svg:defs')
+                .append('radialGradient')
+                .attr("id", "cross-gradient")
+                .attr("gradientTransform", "scale(2.0) translate(-0.5,-0.5)")
+
+              rg
+                .append('stop')
+                .attr("offset", "0%")
+                .attr("stop-color", "#feffff")
+              rg
+                .append('stop')
+                .attr("offset", "40%")
+                .attr("stop-color", "#cfe2f3")
+
               var svgg = svg.append("g")
                   .attr("transform", "translate(2,2)");
 
+              svgg
+                .append("rect")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("width", 200)
+                .attr("height", 200)
+                .attr("class", "cross-rect")
+                .attr("fill", "url("+urlPrefix+"#cross-gradient)")
+
+              svgg
+                .append("line")
+                .attr("class", "cross-line")
+                .attr({x1: 2, y1: 0, x2: 200, y2: 0})
+              svgg
+                .append("line")
+                .attr("class", "cross-line")
+                .attr({x1: 2, y1: 0, x2: 0, y2: 200})
+
+/*
+              var simpleLine = d3.svg.line();
+              svgg
+                .append('path')
+                .attr({
+                  d: simpleLine([[0,0],[0,200]]),
+                  stroke: '#000',
+                  'stroke-width': '4px'
+                });
+              svgg
+                .append('path')
+                .attr({
+                  d: simpleLine([[0,0],[200,0]]),
+                  stroke: '#000',
+                  'stroke-width': '4px'
+                });
+*/
               var root = {
                 name: " Links between " + d.source.name + " and " + d.target.name,
                 children: []

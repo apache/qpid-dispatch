@@ -26,46 +26,54 @@ var QDR = (function (QDR) {
    *
    * Controller that handles the QDR charts page
    */
-  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $uibModal, $location, $routeParams) {
+  QDR.module.controller("QDR.ChartsController", function($scope, QDRService, QDRChartService, $uibModal, $location, $routeParams, $timeout) {
 
-  var updateTimer = null;
+    var updateTimer = null;
 
-  if (!QDRService.management.connection.is_connected()) {
-    // we are not connected. we probably got here from a bookmark or manual page reload
-    QDR.redirectWhenConnected($location, "charts");
-    return;
-  }
+    if (!QDRService.management.connection.is_connected()) {
+      // we are not connected. we probably got here from a bookmark or manual page reload
+      QDR.redirectWhenConnected($location, "charts");
+      return;
+    }
 
-  $scope.svgCharts = [];
-  // create an svg object for each chart
-  QDRChartService.charts.filter(function (chart) {return chart.dashboard}).forEach(function (chart) {
-    var svgChart = new QDRChartService.AreaChart(chart)
-    svgChart.zoomed = false;
-    $scope.svgCharts.push(svgChart);
-  })
+    $scope.svgCharts = [];
+    // create an svg object for each chart
+    QDRChartService.charts.filter(function (chart) {return chart.dashboard}).forEach(function (chart) {
+      var svgChart = new QDRChartService.pfAreaChart(chart, chart.id(), true)
+      svgChart.zoomed = false;
+      $scope.svgCharts.push(svgChart);
+    })
+
 
     // redraw the chart every update period
-  // this is a $scope function because it is called from the dialog
     var updateCharts = function () {
       $scope.svgCharts.forEach(function (svgChart) {
         svgChart.tick(svgChart.chart.id()); // on this page we are using the chart.id() as the div id in which to render the chart
       })
-      var updateRate = localStorage['updateRate'] ?  localStorage['updateRate'] : 5000;
+      var updateRate = localStorage['updateRate'] ?  localStorage['updateRate'] : 1000;
       if (updateTimer) {
         clearTimeout(updateTimer)
       }
       updateTimer = setTimeout(updateCharts, updateRate);
     }
 
-        // called by ng-init in the html when the page is loaded
-  $scope.chartsLoaded = function () {
-      $scope.svgCharts.forEach(function (svgChart) {
-                QDRChartService.sendChartRequest(svgChart.chart.request(), true);
-            })
-            if (updateTimer)
-                clearTimeout(updateTimer)
-      setTimeout(updateCharts, 0);
-  }
+    // called by ng-init in the html when the page is loaded
+    $scope.chartsLoaded = function () {
+      // ensure the div for our chart is loaded in the dom
+      var div = angular.element(".chartContainer");
+      if (!div.width()) {
+        setTimeout($scope.chartsLoaded, 100);
+        return;
+      }
+      // create an svg object for each chart
+      $scope.svgCharts.forEach ( function (c) {
+        c.generate()
+        QDRChartService.sendChartRequest(c.chart.request(), true);
+      })
+      if (updateTimer)
+        clearTimeout(updateTimer)
+      setTimeout(updateCharts);
+    }
 
   $scope.zoomChart = function (chart) {
     chart.zoomed = !chart.zoomed;
@@ -80,23 +88,28 @@ var QDR = (function (QDR) {
     };
 
     $scope.editChart = function (chart) {
-        doDialog("tmplChartConfig.html", chart.chart);
+      doDialog("tmplChartConfig.html", chart.chart);
     };
 
     $scope.delChart = function (chart) {
-        QDRChartService.unRegisterChart(chart.chart);
-        // remove from svgCharts
-        $scope.svgCharts.forEach(function (svgChart, i) {
-            if (svgChart === chart) {
-                delete $scope.svgCharts.splice(i, 1);
-            }
-        })
-    };
+      QDRChartService.unRegisterChart(chart.chart);
+      // remove from svgCharts
+      $scope.svgCharts.forEach(function (svgChart, i) {
+        if (svgChart === chart) {
+          delete $scope.svgCharts.splice(i, 1);
+        }
+      })
+    }
 
     // called from dialog when we want to clone the dialog chart
     // the chart argument here is a QDRChartService chart
     $scope.addChart = function (chart) {
-      $scope.svgCharts.push(new QDRChartService.AreaChart(chart));
+      var nchart = new QDRChartService.pfAreaChart(chart, chart.id(), true)
+      $scope.svgCharts.push(nchart);
+      $timeout( function () {
+        nchart.generate()
+        QDRChartService.sendChartRequest(chart.request(), true);
+      })
     };
 
     $scope.$on("$destroy", function( event ) {

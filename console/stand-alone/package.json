@@ -31,14 +31,15 @@
     "angular-ui-grid": "^4.0.8",
     "angular-ui-slider": "^0.4.0",
     "bluebird": "^3.5.1",
+    "c3": "^0.4.18",
     "d3": "^3.5.14",
     "d3-queue": "^3.0.7",
+    "d3-time-format": "^2.1.1",
     "dispatch-management": "^0.1.0",
     "html5shiv": "^3.7.3",
     "jquery": "^3.2.1",
     "jquery-ui-dist": "^1.12.1",
     "jquery.fancytree": "^2.26.0",
-    "jquery.tipsy": "^1.0.3",
     "notifyjs-browser": "^0.4.2",
     "patternfly": "^3.30.0"
   }

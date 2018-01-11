@@ -158,6 +158,9 @@ var QDR = (function (QDR) {
     $scope.addChartsPage = function () {
       QDRChartService.addDashboard(dialogSvgChart.chart);
     };
+    $scope.delChartsPage = function () {
+      QDRChartService.delDashboard($scope.chart);
+    }
 
     $scope.showChartsPage = function () {
       cleanup();
@@ -197,7 +200,7 @@ var QDR = (function (QDR) {
         setTimeout(initRateSlider, 100)
       }
     }
-    initRateSlider();
+    //initRateSlider();
 
     var initDurationSlider = function () {
       if (document.getElementById('durationSlider')) {
@@ -224,8 +227,9 @@ var QDR = (function (QDR) {
     }
 
     $scope.isOnChartsPage = function () {
+      var chart = $scope.chart
       if (adding)
-        return dialogSvgChart ? dialogSvgChart.chart.dashboard : false;
+        return QDRChartService.isAttrCharted(chart.nodeId(), chart.entity(), chart.name(), chart.attr(), chart.aggregate())
       else
         return $scope.chart.dashboard
     }
@@ -260,7 +264,7 @@ var QDR = (function (QDR) {
           dialogSvgChart.tick($scope.svgDivId);
 
       // draw the chart again in 1 second
-      var updateRate = localStorage['updateRate'] ? localStorage['updateRate'] : 5000;
+      var updateRate = localStorage['updateRate'] ? localStorage['updateRate'] : 1000;
       if (updateTimer)
       clearTimeout(updateTimer);
         updateTimer = setTimeout(updateDialogChart, updateRate);
@@ -273,17 +277,14 @@ var QDR = (function (QDR) {
         setTimeout(showChart, 100);
         return;
       }
-      dialogSvgChart = new QDRChartService.AreaChart($scope.dialogChart);
-      $('input[name=lineColor]').val($scope.dialogChart.lineColor);
+      dialogSvgChart = new QDRChartService.pfAreaChart($scope.dialogChart, $scope.svgDivId)
+/*
       $('input[name=areaColor]').val($scope.dialogChart.areaColor);
       $('input[name=areaColor]').on('input', function (e) {
         $scope.dialogChart.areaColor = $(this).val();
         updateDialogChart()
       })
-      $('input[name=lineColor]').on('input', function (e) {
-        $scope.dialogChart.lineColor = $(this).val();
-        updateDialogChart()
-      })
+*/
       if (updateTimer)
         clearTimeout(updateTimer);
           updateDialogChart();

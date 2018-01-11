@@ -250,3 +250,46 @@ span.fancytree-expander {
 
   display: none;
 }
+
+.dispatch-c3-tooltip {
+  border-collapse: collapse;
+  border-spacing: 0;
+  background-color: #fff;
+  empty-cells: show;
+  -webkit-box-shadow: 7px 7px 12px -9px #777777;
+  -moz-box-shadow: 7px 7px 12px -9px #777777;
+  box-shadow: 7px 7px 12px -9px #777777;
+  opacity: 0.9;
+
+}
+
+.dispatch-c3-tooltip tr {
+  border: 1px solid #CCC;
+}
+
+.dispatch-c3-tooltip th {
+  background-color: #aaa;
+  font-size: 13px;
+  padding: 2px 5px;
+  text-align: left;
+  color: #FFF;
+  font-weight: normal;
+}
+
+.dispatch-c3-tooltip td {
+  font-size: 13px;
+  padding: 3px 6px;
+  background-color: #fff;
+  border-left: 1px dotted #999;
+}
+
+.chart-tip-legend {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+th.text-center {
+  text-align: center;
+}
