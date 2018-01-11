@@ -373,21 +373,25 @@ This is the service principal that {RouterName} uses.
 .Procedure
 
 . On the router's host machine, open the `/etc/sasl2/qdrouterd.conf` configuration file.
-
-. Verify that the `mech_list` attribute contains the `GSSAPI` mechanism.
 +
 --
-.The `/etc/sasl2/qdrouterd.conf` Configuration File
+.An `/etc/sasl2/qdrouterd.conf` Configuration File
 ====
 [options="nowrap"]
 ----
 pwcheck_method: auxprop
 auxprop_plugin: sasldb
 sasldb_path: qdrouterd.sasldb
+keytab: /tmp/keytabs/server.keytab
 mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
 ----
 ====
 --
+
+. Verify the following:
+** The `mech_list` attribute contains the `GSSAPI` mechanism.
+** The `keytab` attribute points to the location of the keytab file.
+
 
 . Open the router's configuration file.
 
