@@ -382,7 +382,7 @@ This is the service principal that {RouterName} uses.
 pwcheck_method: auxprop
 auxprop_plugin: sasldb
 sasldb_path: qdrouterd.sasldb
-keytab: /tmp/keytabs/server.keytab
+keytab: /etc/krb5.keytab
 mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
 ----
 ====
