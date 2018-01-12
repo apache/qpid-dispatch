@@ -72,6 +72,7 @@ var QDR = (function (QDR) {
 
     $scope.tmplOverviewTree = QDR.templatePath + 'tmplOverviewTree.html';
     $scope.templates = [
+      { name: 'Charts', url: 'overviewCharts.html'},
       { name: 'Routers', url: 'routers.html'},
       { name: 'Router', url: 'router.html'},
       { name: 'Addresses', url: 'addresses.html'},
@@ -1548,6 +1549,16 @@ return;
     var expandedNodeList = loadExpandedNodeList();
     var firstTime = true;
 
+/*
+    var showCharts = function () {
+    }
+    var charts = new Folder("Charts")
+    charts.info = {fn: showCharts}
+    charts.type = "Charts"  // for the charts template
+    charts.key = 'Charts'
+    charts.extraClasses = "charts"
+    topLevelChildren.push(charts)
+*/
     // create a routers tree branch
     var routers = new Folder("Routers")
     routers.type = "Routers"
