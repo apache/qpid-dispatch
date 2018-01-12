@@ -21,6 +21,14 @@ under the License.
     <div class="gridDetails" ng-include="template.url"></div>
 </script>
 
+<script type="text/ng-template" id="overviewCharts.html">
+    <div ng-repeat="chart in overviewCharts" class="chartContainer" ng-controller="QDR.OverviewChartsController">
+        <p class="chartLabels">
+        </p><div style="clear:both"></div>
+        <div id="{{chart.chart.id()}}" class="line-chart-pf aChart d3Chart"></div>
+    </div>
+</script>
+
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
 <script type="text/ng-template" id="routers.html">
     <div class="row-fluid">

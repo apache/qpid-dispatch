@@ -70,14 +70,22 @@ span.fancytree-icon {
   font-family: FontAwesome;
 }
 
+/* closed folder */
 .fancytree-ico-cf span.fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f07b";
 }
+/* expanded folder */
 .fancytree-ico-ef span.fancytree-icon:before {
   font-family: FontAwesome;
   content: "\f07c";
 }
+/* chart */
+.fancytree-ico-cf.charts span.fancytree-icon:before, .fancytree-ico-ef.charts span.fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f080";
+}
+
 
 ul.fancytree-container a {
     color: #363636;
