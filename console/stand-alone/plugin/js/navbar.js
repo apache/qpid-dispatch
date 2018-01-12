@@ -277,7 +277,7 @@ var QDR = (function (QDR) {
         setTimeout(showChart, 100);
         return;
       }
-      dialogSvgChart = new QDRChartService.pfAreaChart($scope.dialogChart, $scope.svgDivId)
+      dialogSvgChart = new QDRChartService.pfAggChart($scope.dialogChart, $scope.svgDivId)
 /*
       $('input[name=areaColor]').val($scope.dialogChart.areaColor);
       $('input[name=areaColor]').on('input', function (e) {

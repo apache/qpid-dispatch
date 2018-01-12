@@ -591,7 +591,32 @@ var QDR = (function(QDR) {
           if (!defer)
             this.generate()
         },
+
+        // aggregate chart is based on pfAreaChart
+        pfAggChart: function (chart, chartId, defer) {
+          // inherit pfChart's properties, but force a defer
+          self.pfAreaChart.call(this, chart, chartId, true)
+
+          // the request is for aggregate data, but the chart is for the sum and not the detail
+          // Explanation: When the chart.request is aggregate, each data point is composed of 3 parts:
+          //  1. the datetime stamp
+          //  2. the sum of the value for all routers
+          //  3. an object with each router's name and value for this data point
+          // Normally, an aggregate chart shows lines for each of the routers and ignores the sum
+          // For this chart, we want to chart the sum (the 2nd value), so we set stacked to false
+          this.stacked = false
+
+          // let chart legends and tooltips show 'Total' instead of a router name
+          this.aggregate = true
+
+          if (!defer)
+            this.generate()
+        }
       }
+      // allow pfAggChart to inherit prototyped methods
+      self.pfAggChart.prototype = Object.create(self.pfAreaChart.prototype);
+      // except for the constructor
+      self.pfAggChart.prototype.constructor = self.pfAggChart;
 
       // create the svg and bind it to the given div.id
       self.pfAreaChart.prototype.generate = function () {
@@ -626,7 +651,7 @@ var QDR = (function(QDR) {
             },
             label: {
               text: chart.name()
-            }
+        }
           },
           y: {
             tick: {
@@ -708,7 +733,7 @@ var QDR = (function(QDR) {
       */
       self.pfAreaChart.prototype.chartData = function() {
         var data = this.chart.data();
-        var nodeList = QDRService.management.topology.nodeIdList();
+        var nodeList = QDRService.management.topology.nodeNameList();
 
         // oldest data point that should be visible
         var now = new Date();
@@ -727,11 +752,11 @@ var QDR = (function(QDR) {
         if (this.stacked) {
           // for stacked, there is a line per router
           nodeList.forEach( function (node) {
-            dlines.push([QDRService.management.topology.nameFromId(node)])
+            dlines.push([node])
           })
         } else {
           // for non-stacked, there is only one line
-          dlines.push([this.chart.router()])
+          dlines.push([this.aggregate ? 'Total' : this.chart.router()])
         }
         for (var i=0; i<data.length; i++) {
           var d = data[i], elapsed = 1, d1
@@ -744,9 +769,9 @@ var QDR = (function(QDR) {
             if (this.chart.type !== 'rate' || i < data.length-1) {
               dx.push(d[0])
               if (this.stacked) {
-                nodeList.forEach( (function (node, nodeIndex) {
+                for (var nodeIndex=0; nodeIndex<nodeList.length; nodeIndex++) {
                   dlines[nodeIndex].push(accessor.call(this, d, d1, elapsed, nodeIndex))
-                }).bind(this))
+                }
               } else {
                 dlines[0].push(accessor.call(this, d, d1, elapsed))
               }

@@ -457,7 +457,7 @@ var QDR = (function (QDR) {
         }
         return include;
       })
-      QDR.log.debug("setting linkFields in updateLinkGrid")
+      QDR.log.info("setting linkFields in updateLinkGrid")
       $scope.linkFields = filteredLinks;
       expandGridToContent("Links", $scope.linkFields.length)
       getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
@@ -851,8 +851,9 @@ return;
         response.results.forEach( function (result) {
 
           var auth = "no_auth"
-          var sasl = QDRService.utilities.valFor(response.attributeNames, result, "sasl")
-          if (QDRService.utilities.valFor(response.attributeNames, result, "isAuthenticated")) {
+          var connection = QDRService.utilities.flatten(response.attributeNames, result)
+          var sasl = connection.sasl
+          if (connection.isAuthenticated) {
             auth = sasl
             if (sasl === "ANONYMOUS")
               auth = "anonymous-user"
@@ -861,27 +862,25 @@ return;
                 sasl = "Kerberos"
               if (sasl === "EXTERNAL")
                 sasl = "x.509"
-              auth = QDRService.utilities.valFor(response.attributeNames, result, "user") + "(" +
-                  QDRService.utilities.valFor(response.attributeNames, result, "sslCipher") + ")"
+              auth = connection.user + "(" + connection.sslCipher + ")"
               }
           }
 
           var sec = "no-security"
-          if (QDRService.utilities.valFor(response.attributeNames, result, "isEncrypted")) {
+          if (connection.isEncrypted) {
             if (sasl === "GSSAPI")
               sec = "Kerberos"
             else
-              sec = QDRService.utilities.valFor(response.attributeNames, result, "sslProto") + "(" +
-                  QDRService.utilities.valFor(response.attributeNames, result, "sslCipher") + ")"
+              sec = connection.sslProto + "(" + connection.sslCipher + ")"
           }
 
-          var host = QDRService.utilities.valFor(response.attributeNames, result, "host")
+          var host = connection.host
           var connField = {
             host: host,
             security: sec,
             authentication: auth,
             routerId: nodeName,
-            uid: host + QDRService.utilities.valFor(response.attributeNames, result, "identity")
+            uid: host + connection.container + connection.identity
           }
           response.attributeNames.forEach( function (attribute, i) {
             connField[attribute] = result[i]
@@ -889,7 +888,8 @@ return;
           connectionFields.push(connField)
         })
         if (expected === ++received) {
-          connectionFields.sort ( function (a,b) { return a.host < b.host ? -1 : a.host > b.host ? 1 : 0})
+          connectionFields.sort ( function (a,b) { return a.host+a.container+a.identity < b.host+b.container+b.identity ?
+            -1 : a.host+a.container+a.identity > b.host+b.container+b.identity ? 1 : 0})
           callbacks.forEach( function (cb) {
             cb(connectionFields)
           })
@@ -1060,7 +1060,7 @@ return;
       var currentEntity;
       var active = $("#overtree").fancytree("getActiveNode");
       if (active) {
-        currentEntity = active.data.type;
+        currentEntity = active.type ? active.type : active.data.fields.type
       }
       return currentEntity;
     }
@@ -1141,13 +1141,11 @@ return;
       }
 
       $scope.connectionFields = [];
-      var fields = Object.keys(connection.data.fields)
-      fields.forEach( function (field) {
+      for (var field in connection.data.fields) {
         if (field != "title" && field != "uid")
           $scope.connectionFields.push({attribute: field, value: connection.data.fields[field]})
-      })
+      }
       expandGridToContent("Connection", $scope.connectionFields.length)
-      // this is missing an argument?
       loadColState($scope.connectionGrid);
       callback(null)
     }
@@ -1654,7 +1652,11 @@ return;
 
     updateConnectionTree = function (connectionFields) {
       var worker = function (connection) {
-        var c = new Leaf(connection.host)
+        var host = connection.host
+        if (connection.name === 'connection/' && connection.role === 'inter-router' && connection.host === '')
+          host = connection.container + ':' + connection.identity
+
+        var c = new Leaf(host)
         var isConsole = QDRService.utilities.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId)
         c.type = "Connection"
         c.info = {fn: connectionInfo}
@@ -1787,7 +1789,6 @@ return;
       clearTimeout(updateIntervalHandle)
       $(window).off("resize", resizer);
     });
-
   }]);
 
   return QDR;
