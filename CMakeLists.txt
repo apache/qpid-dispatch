@@ -121,7 +121,7 @@ if (USE_VALGRIND)
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     message(WARNING "Building for coverage analysis; disabling valgrind run-time error detection")
   else ()
-    set(TEST_RUNNER "${VALGRIND_EXECUTABLE} --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp")
+    set(TEST_RUNNER "${VALGRIND_EXECUTABLE} --quiet --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp")
   endif ()
 endif()
 
