@@ -250,6 +250,13 @@ class QdmanageTest(TestCase):
         self.assertEqual(output[1]['pattern'], "a/*/b/#/c")
         self.assertTrue('prefix' not in output[1])
 
+    def test_create_address(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.address'
+        create_command = 'CREATE --type=' + long_type + ' pattern="a.b.#" ingressPhase=5 egressPhase=6'
+        output = json.loads(self.run_qdmanage(create_command))
+        self.assertEqual(output['egressPhase'], 6)
+        self.assertEqual(output['ingressPhase'], 5)
+
     def test_check_link_route_name(self):
         long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
         query_command = 'QUERY --type=' + long_type
@@ -271,6 +278,12 @@ class QdmanageTest(TestCase):
         self.assertEqual(output[0]['name'], "test-auto-link")
         self.assertEqual(output[0]['dir'], "out")
         self.assertEqual(output[0]['addr'], "mnop")
+
+    def test_create_auto_link_with_phase(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
+        create_command = 'CREATE --type=' + long_type + ' addr=xyz containerId=id1 dir=out phase=2'
+        output = json.loads(self.run_qdmanage(create_command))
+        self.assertEqual(output['phase'], 2)
 
     def test_specify_container_id_connection_auto_link(self):
         long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
