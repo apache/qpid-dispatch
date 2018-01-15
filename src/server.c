@@ -577,7 +577,9 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 
 
 /* Get the host IP address for the remote end */
-static void set_rhost_port(qd_connection_t *ctx) {
+static void set_rhost_port(pn_event_t *e) {
+    pn_connection_t *pn_conn = pn_event_connection(e);
+    qd_connection_t *ctx = pn_connection_get_context(pn_conn);
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
     const struct sockaddr* sa = pn_netaddr_sockaddr(pn_netaddr_remote(tport));
     size_t salen = pn_netaddr_socklen(pn_netaddr_remote(tport));
@@ -591,7 +593,6 @@ static void set_rhost_port(qd_connection_t *ctx) {
         }
     }
 }
-
 
 /* Configure the transport once it is bound to the connection */
 static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
@@ -614,7 +615,6 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         config = &ctx->listener->config;
         const char *name = config->host_port;
         pn_transport_set_server(tport);
-        set_rhost_port(ctx);
 
         sys_mutex_lock(server->lock); /* Policy check is not thread safe */
         ctx->policy_counted = qd_policy_socket_accept(server->qd->policy, ctx->rhost);
@@ -874,6 +874,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
         break;
 
     case PN_CONNECTION_REMOTE_OPEN:
+        set_rhost_port(e);
         // If we are transitioning to the open state, notify the client via callback.
         if (ctx && ctx->timer) {
             qd_timer_free(ctx->timer);
