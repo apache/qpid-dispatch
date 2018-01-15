@@ -26,18 +26,29 @@ from collections import Mapping, Sequence
 from optparse import OptionGroup
 from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, \
     main, opts_ssl_domain, opts_url, opts_sasl
+from qpid_dispatch_internal.management.qdrouter import QdSchema
 
-def attr_split(attrstr):
+INTEGER_TYPE = "integer"
+
+def attr_split(attrstr, qd_schema, type):
     """Split an attribute string of the form name=value or name to indicate None"""
     nv = attrstr.split("=", 1)
-    if len(nv) == 1: return [nv[0], None]
+    if len(nv) == 1:
+        return [nv[0], None]
     else:
-        if nv[1] == "true": nv[1] = True
-        if nv[1] == "false": nv[1] = False
+        if nv[1] == "true":
+            nv[1] = True
+        elif nv[1] == "false":
+            nv[1] = False
+        elif type and qd_schema.entity_type(type) and qd_schema.entity_type(type).attribute(nv[0]).type == INTEGER_TYPE:
+            nv[1] = int(nv[1])
+
         return nv
+
 
 class QdManage():
     def __init__(self):
+        self.qd_schema = QdSchema()
         self.prefix = 'org.apache.qpid.dispatch.'
         self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
                            'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
@@ -149,7 +160,7 @@ class QdManage():
     def create(self):
         """create [ATTR=VALUE...]   Create a new entity."""
         if self.args:
-            self.opts.attributes = dict(attr_split(arg) for arg in self.args)
+            self.opts.attributes = dict(attr_split(arg, self.qd_schema, self.opts.type) for arg in self.args)
         self.call_bulk(lambda attrs: self.call_node('create', 'type', 'name', attributes=attrs))
 
     def read(self):
@@ -160,7 +171,7 @@ class QdManage():
     def update(self):
         """update [ATTR=VALUE...]   Update an entity."""
         if self.args:
-            self.opts.attributes = dict(attr_split(arg) for arg in self.args)
+            self.opts.attributes = dict(attr_split(arg, self.qd_schema, self.opts.type) for arg in self.args)
         self.call_bulk(
             lambda attrs: self.call_node('update', 'type', 'name', 'identity', attributes=attrs))
 
@@ -204,7 +215,7 @@ class QdManage():
 
     def operation(self, operation):
         """operation [ATTR=VALUE...]   Call custom operation with ATTR=VALUE as request properties. Use --body and --properties if specified."""
-        properties = dict(attr_split(arg) for arg in self.args or [])
+        properties = dict(attr_split(arg, self.qd_schema, self.opts.type) for arg in self.args or [])
         if self.opts.properties:
             properties.update(self.json_arg(self.opts.properties))
         body = None
