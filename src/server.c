@@ -1392,6 +1392,7 @@ bool qd_connector_decref(qd_connector_t* ct)
             free(item);
             item = DEQ_HEAD(ct->conn_info_list);
         }
+        sys_mutex_free(ct->lock);
         free_qd_connector_t(ct);
         return true;
     }
