@@ -628,7 +628,7 @@ void qdra_config_exchange_get_first_CT(qdr_core_t *core, qdr_query_t *query, int
     // Run to the object at the offset.
     //
     qdr_exchange_t *ex = DEQ_HEAD(core->exchanges);
-    for (int i = 0; i < offset && ex; i++)
+    for (int i = 0; i < offset; i++)
         ex = DEQ_NEXT(ex);
     assert(ex);
 
@@ -1325,11 +1325,11 @@ static qdr_binding_t *get_binding_at_index(qdr_core_t *core, int index)
 
     if (ex) {
         // then to the target binding
+        assert(index < DEQ_SIZE(ex->bindings));
         binding = DEQ_HEAD(ex->bindings);
         while (index--) {
             binding = DEQ_NEXT_N(exchange_list, binding);
         }
-        assert(binding);
     }
     return binding;
 }

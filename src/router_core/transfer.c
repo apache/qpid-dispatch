@@ -763,7 +763,7 @@ static long qdr_addr_path_count_CT(qdr_address_t *addr)
                + (long) qd_bitmask_cardinality(addr->rnodes));
     if (addr->exchange)
         rc += qdr_exchange_binding_count(addr->exchange)
-            + (qdr_exchange_alternate_addr(addr->exchange)) ? 1 : 0;
+            + ((qdr_exchange_alternate_addr(addr->exchange)) ? 1 : 0);
     return rc;
 }
 

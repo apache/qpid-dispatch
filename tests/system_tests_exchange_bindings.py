@@ -101,7 +101,7 @@ class ExchangeBindingsTest(TestCase):
                 for k,v in expected.items():
                     self.assertTrue(k in entity)
                     self.assertEqual(v, entity[k])
-                return;
+                return
         raise Exception("Could not find %s named %s" % (kind, name))
 
     def _validate_exchange(self, router, name, **kwargs):
