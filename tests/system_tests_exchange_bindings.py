@@ -33,16 +33,24 @@ from proton import Message, Timeout
 from proton.reactor import AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SendException
 
-# TIMEOUT=5
+#TIMEOUT=5
 _EXCHANGE_TYPE = "org.apache.qpid.dispatch.router.config.exchange"
 _BINDING_TYPE  = "org.apache.qpid.dispatch.router.config.binding"
 
 
 class _AsyncReceiver(object):
-    def __init__(self, address, source, credit=100, timeout=0.1):
+    def __init__(self, address, source, credit=100, timeout=0.1,
+                 conn_args=None, link_args=None):
         super(_AsyncReceiver, self).__init__()
-        self.conn = BlockingConnection(address)
-        self.rcvr = self.conn.create_receiver(address=source, credit=credit)
+        kwargs = {'url': address}
+        if conn_args:
+            kwargs.update(conn_args)
+        self.conn = BlockingConnection(**kwargs)
+        kwargs = {'address': source,
+                  'credit': credit}
+        if link_args:
+            kwargs.update(link_args)
+        self.rcvr = self.conn.create_receiver(**kwargs)
         self.thread = Thread(target=self._poll)
         self.queue = Queue.Queue()
         self._run = True
@@ -668,6 +676,54 @@ class ExchangeBindingsTest(TestCase):
         nhop1B.stop()
         nhop2.stop()
         nhop3.stop()
+        conn.close()
+
+    def test_large_messages(self):
+        """
+        Verify that multi-frame messages are forwarded properly
+        """
+        MAX_FRAME=1024
+        config = [
+            ('router', {'mode': 'interior', 'id': 'QDR.X',
+                        'allowUnsettledMulticast': 'yes'}),
+            ('listener', {'port': self.tester.get_port(),
+                          'stripAnnotations': 'no',
+                          'maxFrameSize': MAX_FRAME}),
+
+            ('address', {'pattern': 'nextHop1/#',
+                         'distribution': 'multicast'}),
+
+            ('exchange', {'address': 'AddressA',
+                          'name': 'ExchangeA'}),
+
+            ('binding', {'name': 'bindingA1',
+                         'exchange': 'ExchangeA',
+                         'key': 'a/b',
+                         'nextHop': 'nextHop1'})
+        ]
+
+        router = self.tester.qdrouterd('QDR.X',
+                                       Qdrouterd.Config(config),
+                                       wait=True)
+
+        # connect clients to router B (no exchange)
+        nhop1A = _AsyncReceiver(router.addresses[0], 'nextHop1',
+                                conn_args={'max_frame_size': MAX_FRAME})
+        nhop1B = _AsyncReceiver(router.addresses[0], 'nextHop1',
+                                conn_args={'max_frame_size': MAX_FRAME})
+
+        conn = BlockingConnection(router.addresses[0],
+                                  max_frame_size=MAX_FRAME)
+        sender = conn.create_sender(address="AddressA")
+        jumbo = (10 * MAX_FRAME) * 'X'
+        sender.send(Message(subject='a/b', body=jumbo))
+
+        # multicast
+        self.assertEqual(jumbo, nhop1A.queue.get(timeout=TIMEOUT).body)
+        self.assertEqual(jumbo, nhop1B.queue.get(timeout=TIMEOUT).body)
+
+        nhop1A.stop()
+        nhop1B.stop()
         conn.close()
 
 
