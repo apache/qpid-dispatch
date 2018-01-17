@@ -747,8 +747,12 @@ qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter)
         return 0;
 
     qd_iterator_t *dup = new_qd_iterator_t();
-    if (dup)
+    if (dup) {
         *dup = *iter;
+        // drop any references to the hash segments to avoid potential double
+        // free
+        DEQ_INIT(dup->hash_segments);
+    }
     return dup;
 }
 
@@ -908,4 +912,41 @@ void qd_iterator_get_view_cursor(
     ptr->buffer    = iter->view_pointer.buffer;
     ptr->cursor    = iter->view_pointer.cursor;
     ptr->remaining = iter->view_pointer.remaining;
+}
+
+
+qd_iterator_t *qd_iterator_clone(const qd_iterator_t *iter, unsigned char **data)
+{
+    if (!data)
+        return NULL;
+    *data = NULL;
+    if (!iter)
+        return NULL;
+
+    qd_iterator_t alias = *iter;
+    qd_iterator_reset_view(&alias, ITER_VIEW_ALL);
+    *data = qd_iterator_copy(&alias);
+    if (!*data)
+        return NULL;
+    qd_iterator_t *clone = qd_iterator_string((char *)*data, iter->view);
+    if (!clone)
+        return NULL;
+
+    // copy over any annotations and overrides
+    bool reset_view = false;
+    if (iter->space) {
+        qd_iterator_annotate_space(clone, iter->space, iter->space_length);
+        reset_view = true;
+    }
+    if (iter->phase != '0') {
+        qd_iterator_annotate_phase(clone, iter->phase);
+        reset_view = true;
+    }
+    if (iter->prefix_override) {
+        qd_iterator_annotate_prefix(clone, iter->prefix_override);
+        reset_view = false;  // annotate_prefix calls reset_view
+    }
+    if (reset_view) qd_iterator_reset_view(clone, iter->view);
+
+    return clone;
 }

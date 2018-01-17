@@ -886,21 +886,6 @@ void qdra_config_binding_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 }
 
 
-// create a new iterator with its own copy of the data. caller must free both the
-// iterator and the returned data buffer.  Used for retaining data extracted
-// from query messages.
-static qd_iterator_t *clone_iterator(qd_iterator_t *iter, unsigned char **data)
-{
-    if (!iter) {
-        *data = NULL;
-        return NULL;
-    }
-    *data = qd_iterator_copy(iter);
-    qd_iterator_reset(iter);
-    return qd_iterator_string((char *)*data, qd_iterator_get_view(iter));
-}
-
-
 // Exchange constructor/destructor
 static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
                                     qd_iterator_t *name,
@@ -917,8 +902,8 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
         DEQ_ITEM_INIT(ex);
         ex->core = core;
         ex->identity = qdr_identifier(core);
-        ex->name = clone_iterator(name, &ex->name_str);
-        ex->address = clone_iterator(address, &ex->address_str);
+        ex->name = qd_iterator_clone(name, &ex->name_str);
+        ex->address = qd_iterator_clone(address, &ex->address_str);
         ex->phase = phase;
         ex->parse_tree = qd_parse_tree_new(method);
         DEQ_INIT(ex->bindings);
@@ -994,10 +979,10 @@ static qdr_binding_t *qdr_binding(qdr_exchange_t *ex,
         DEQ_ITEM_INIT_N(exchange_list, b);
         DEQ_ITEM_INIT_N(tree_list, b);
 
-        b->name = clone_iterator(name, &b->name_str);
+        b->name = qd_iterator_clone(name, &b->name_str);
         b->identity = qdr_identifier(ex->core);
         b->exchange = ex;
-        b->key = clone_iterator(key, &b->key_str);
+        b->key = qd_iterator_clone(key, &b->key_str);
         b->next_hop = next_hop(ex, nhop, phase);
 
         qdr_binding_list_t  *bindings = NULL;
@@ -1051,7 +1036,7 @@ static next_hop_t *next_hop(qdr_exchange_t *ex,
         DEQ_ITEM_INIT_N(exchange_list, nh);
         DEQ_ITEM_INIT_N(transmit_list, nh);
         nh->exchange = ex;
-        nh->next_hop = clone_iterator(address, &nh->next_hop_str);
+        nh->next_hop = qd_iterator_clone(address, &nh->next_hop_str);
         nh->phase = phase;
 
         qd_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
