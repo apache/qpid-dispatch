@@ -393,14 +393,14 @@ var QDR = (function (QDR) {
               }
             else {
               var sumObj = addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)]
-              sumObj.inproc = addNull(sumObj.inproc, address.inproc)
-              sumObj.local = addNull(sumObj.local, address.local)
-              sumObj.remote = addNull(sumObj.remote, address.remote)
-              sumObj['in'] = addNull(sumObj['in'], address['in'])
-              sumObj.out = addNull(sumObj.out, address.out)
-              sumObj.thru = addNull(sumObj.thru, address.thru)
-              sumObj.toproc = addNull(sumObj.toproc, address.toproc)
-              sumObj.fromproc = addNull(sumObj.fromproc, address.fromproc)
+              sumObj.inproc = addNull(sumObj.inproc, address.inProcess)
+              sumObj.local = addNull(sumObj.local, address.subscriberCount)
+              sumObj.remote = addNull(sumObj.remote, address.remoteCount)
+              sumObj['in'] = addNull(sumObj['in'], address.deliveriesIngress)
+              sumObj.out = addNull(sumObj.out, address.deliveriesEgress)
+              sumObj.thru = addNull(sumObj.thru, address.deliveriesTransit)
+              sumObj.toproc = addNull(sumObj.toproc, address.deliveriesToContainer)
+              sumObj.fromproc = addNull(sumObj.fromproc, address.deliveriesFromContainer)
             }
           })
         }
@@ -1449,7 +1449,6 @@ return;
         $scope.template = template[0];
       })
     }
-    $scope.template = $scope.templates[0]
     // activated is called each time a tree node is clicked
     // based on which node is clicked, load the correct data grid template and start getting the data
     var onTreeNodeActivated = function (event, data) {
@@ -1469,6 +1468,7 @@ return;
       QDR.redirectWhenConnected($location, "overview")
       return;
     }
+    $scope.template = $scope.templates[0]
 
     /* --------------------------------------------------
      *
@@ -1549,8 +1549,8 @@ return;
     var expandedNodeList = loadExpandedNodeList();
     var firstTime = true;
 
-/*
     var showCharts = function () {
+
     }
     var charts = new Folder("Charts")
     charts.info = {fn: showCharts}
@@ -1558,7 +1558,7 @@ return;
     charts.key = 'Charts'
     charts.extraClasses = "charts"
     topLevelChildren.push(charts)
-*/
+
     // create a routers tree branch
     var routers = new Folder("Routers")
     routers.type = "Routers"
@@ -1733,13 +1733,13 @@ return;
         return;
       }
       $('#overtree').fancytree({
-        activate: onTreeNodeActivated,
-        expand: onTreeNodeExpanded,
-        init: onTreeInitialized,
-        autoCollapse: $scope.largeNetwork,
-        activeVisible: !$scope.largeNetwork,
+        activate:       onTreeNodeActivated,
+        expand:         onTreeNodeExpanded,
+        init:           onTreeInitialized,
+        autoCollapse:   $scope.largeNetwork,
+        activeVisible:! $scope.largeNetwork,
         clickFolderMode: 1,
-        source: topLevelChildren
+        source:         topLevelChildren
       })
     }
 

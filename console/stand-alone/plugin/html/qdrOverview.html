@@ -22,10 +22,17 @@ under the License.
 </script>
 
 <script type="text/ng-template" id="overviewCharts.html">
-    <div ng-repeat="chart in overviewCharts" class="chartContainer" ng-controller="QDR.OverviewChartsController">
-        <p class="chartLabels">
-        </p><div style="clear:both"></div>
-        <div id="{{chart.chart.id()}}" class="line-chart-pf aChart d3Chart"></div>
+    <div ng-controller="QDR.OverviewChartsController" class="clearfix">
+        <div ng-repeat="chart in overviewCharts" class="chartContainer" >
+            <p class="chartLabels">
+            </p><div style="clear:both"></div>
+            <div id="{{chart.chart.id()}}" class="line-chart-pf aChart d3Chart"></div>
+        </div>
+    </div>
+    <div ng-controller="QDR.TopAddressesController">
+        <h1>Most active addresses</h1>
+        <div ng-if="anyAddresses()" id="topAddresses" class="grid" ui-grid="topAddressesGrid"  ui-grid-selection ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state></div>
+        <div ng-if="!anyAddresses()">There are no addresses to which messages are being delivered.</div>
     </div>
 </script>
 

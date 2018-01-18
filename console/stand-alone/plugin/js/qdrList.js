@@ -508,7 +508,7 @@ var QDR = (function(QDR) {
     $scope.selectNode = function(node) {
       $scope.selectedNode = node.name;
       $scope.selectedNodeId = node.id;
-      setCurrentNode();
+      $timeout(setCurrentNode);
     };
     $scope.$watch('ActivatedKey', function(newValue, oldValue) {
       if (newValue !== oldValue) {
@@ -601,8 +601,8 @@ var QDR = (function(QDR) {
       }
       // if this entity should show an aggregate column, send the request to get the info for this entity from all the nedes
       if (aggregateEntities.indexOf(entity) > -1) {
-        var nodeInfo = QDRService.management.topology.nodeInfo();
-        QDRService.management.topology.getMultipleNodeInfo(Object.keys(nodeInfo), entity, [], gotNodeInfo, $scope.selectedNodeId);
+        var nodeIdList = QDRService.management.topology.nodeIdList();
+        QDRService.management.topology.getMultipleNodeInfo(nodeIdList, entity, [], gotNodeInfo, $scope.selectedNodeId);
       } else {
         QDRService.management.topology.fetchEntity($scope.selectedNodeId, entity, [], gotNodeInfo);
       }
@@ -634,7 +634,7 @@ var QDR = (function(QDR) {
         attr:       rowEntity.name,
         type:       "rate",
         rateWindow: updateInterval,
-        visibleDuration: 1,
+        visibleDuration: 0.25,
         forceCreate: true,
         aggregate:   true});
       doDialog('tmplChartConfig.html', chart);

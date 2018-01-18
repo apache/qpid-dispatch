@@ -301,3 +301,13 @@ span.fancytree-expander {
 th.text-center {
   text-align: center;
 }
+
+.clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+#topAddresses.grid {
+  min-height: 190px;
+}

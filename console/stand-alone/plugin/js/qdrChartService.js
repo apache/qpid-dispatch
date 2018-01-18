@@ -72,8 +72,10 @@ var QDR = (function(QDR) {
         this.rateWindow = opts.rateWindow ? opts.rateWindow : 1000; // calculate the rate of change over this time interval. higher == smother graph
         this.areaColor = "#32b9f3"; // the chart's area color when not an empty string
         this.lineColor = "#058dc7"; // the chart's line color when not an empty string
-        this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : 1; // number of minutes of data to show (<= base.duration)
+        this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : opts.type === 'rate' ? 0.25 : 1; // number of minutes of data to show (<= base.duration)
         this.userTitle = null; // user title overrides title()
+        this.hideLabel = opts.hideLabel
+        this.hideLegend = opts.hideLegend
 
         // generate a unique id for this chart
         this.id = function() {
@@ -203,7 +205,10 @@ var QDR = (function(QDR) {
 
         this.interval = opts.interval || 1000; // number of milliseconds between updates to data
         this.setTimeoutHandle = null; // used to cancel the next request
-        // copy the savable properties to an object
+
+        // allow override of normal request's management call to get data
+        this.override = opts.override; // call this instead of internal function to retreive data
+        this.overrideAttrs = opts.overrideAttrs //
 
         this.data = function(name, attr) {
           if (this.datum[name] && this.datum[name][attr])
@@ -330,6 +335,22 @@ var QDR = (function(QDR) {
           }
         },
 
+        createChart: function (opts, request) {
+          return new Chart(opts, request)
+        },
+        createChartRequest: function (opts) {
+          var request = new ChartRequest(opts); //nodeId, entity, name, attr, interval, aggregate);
+          request.creationTimestamp = opts.now
+          self.chartRequests.push(request);
+          self.startCollecting(request);
+          self.sendChartRequest(request, true)
+          return request;
+        },
+        destroyChartRequest: function (request) {
+          self.stopCollecting(request);
+          self.delChartRequest(request);
+        },
+
         registerChart: function(opts) { //nodeId, entity, name, attr, interval, instance, forceCreate, aggregate, hdash) {
           var request = self.findChartRequest(opts.nodeId, opts.entity, opts.aggregate);
           if (request) {
@@ -338,10 +359,7 @@ var QDR = (function(QDR) {
           } else {
             // the nodeId/entity did not already exist, so add a new request and chart
             QDR.log.debug("added new request: " + opts.nodeId + " " + opts.entity);
-            request = new ChartRequest(opts); //nodeId, entity, name, attr, interval, aggregate);
-            self.chartRequests.push(request);
-            self.startCollecting(request);
-            self.sendChartRequest(request, true)
+            var request = self.createChartRequest(opts);
           }
           var charts = self.findCharts(opts); //name, attr, nodeId, entity, hdash);
           var chart;
@@ -384,8 +402,7 @@ var QDR = (function(QDR) {
                 }
                 // no other charts use this attr, so remove it
                 if (request.removeAttr(chart.name(), chart.attr()) == 0) {
-                  self.stopCollecting(request);
-                  self.delChartRequest(request);
+                  self.destroyChartRequest(request)
                 }
               }
             }
@@ -396,14 +413,13 @@ var QDR = (function(QDR) {
 
         stopCollecting: function(request) {
           if (request.setTimeoutHandle) {
-            clearTimeout(request.setTimeoutHandle);
+            clearInterval(request.setTimeoutHandle);
             request.setTimeoutHandle = null;
           }
         },
 
         startCollecting: function(request) {
-          // Using setTimeout instead of setInterval because the response may take longer than interval
-          request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request);
+          request.setTimeoutHandle = setInterval(self.sendChartRequest, request.interval, request);
         },
         shouldRequest: function(request) {
           // see if any of the charts associated with this request have either dialog, dashboard, or hreq
@@ -413,11 +429,13 @@ var QDR = (function(QDR) {
         },
         // send the request
         sendChartRequest: function(request, once) {
-          if (!once && !self.shouldRequest(request)) {
-            request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
+          //if (!once)
+          //  request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
+          if (request.busy)
+            return
+          if (self.charts.length > 0 && !self.shouldRequest(request)) {
             return;
           }
-
           // ensure the response has the name field so we can associate the response values with the correct chart
           var attrs = request.attrs();
           if (attrs.indexOf("name") == -1)
@@ -425,6 +443,7 @@ var QDR = (function(QDR) {
 
           // this is called when the response is received
           var saveResponse = function(nodeId, entity, response) {
+            request.busy = false
             if (!response || !response.attributeNames)
               return;
             //QDR.log.debug("got chart results for " + nodeId + " " + entity);
@@ -447,33 +466,39 @@ var QDR = (function(QDR) {
               // if we want to store the values for some attrs for this name
               if (names.indexOf(name) > -1) {
                 attrs.forEach(function(attr) {
-                  var data = request.data(name, attr) // get a reference to the data array
-                  if (data) {
-                    var attrIndex = response.attributeNames.indexOf(attr)
-                    if (request.aggregate) {
-                      data.push([now, response.aggregates[i][attrIndex].sum, response.aggregates[i][attrIndex].detail])
-                    } else {
-                      data.push([now, records[i][attrIndex]])
-                    }
-                    // expire the old data
-                    while (data[0][0] < cutOff) {
-                      data.shift();
+                  var attrIndex = response.attributeNames.indexOf(attr)
+                  if (records[i][attrIndex] !== undefined) {
+                    var data = request.data(name, attr) // get a reference to the data array
+                    if (data) {
+
+                      if (request.aggregate) {
+                        data.push([now, response.aggregates[i][attrIndex].sum, response.aggregates[i][attrIndex].detail])
+                      } else {
+                        data.push([now, records[i][attrIndex]])
+                      }
+                      // expire the old data
+                      while (data[0][0] < cutOff) {
+                        data.shift();
+                      }
                     }
                   }
                 })
               }
             }
           }
-          if (request.aggregate) {
-            var nodeList = QDRService.management.topology.nodeIdList()
-            QDRService.management.topology.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
+          request.busy = true
+          // check for override of request
+          if (request.override) {
+            request.override(request, saveResponse)
           } else {
-            QDRService.management.topology.fetchEntity(request.nodeId, request.entity, attrs, saveResponse);
+            // send the appropriate request
+            if (request.aggregate) {
+              var nodeList = QDRService.management.topology.nodeIdList()
+              QDRService.management.topology.getMultipleNodeInfo(nodeList, request.entity, attrs, saveResponse, request.nodeId);
+            } else {
+              QDRService.management.topology.fetchEntity(request.nodeId, request.entity, attrs, saveResponse);
+            }
           }
-          // it is now safe to schedule another request
-          if (once)
-            return;
-          request.setTimeoutHandle = setTimeout(self.sendChartRequest, request.interval, request)
         },
 
         numCharts: function() {
@@ -563,7 +588,7 @@ var QDR = (function(QDR) {
                 newChart.areaColor = chart.areaColor ? chart.areaColor : "#32b9f3";
                 newChart.lineColor = chart.lineColor ? chart.lineColor : "#058dc7";
                 newChart.duration(chart.duration);
-                newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : 1;
+                newChart.visibleDuration = chart.visibleDuration ? chart.visibleDuration : newChart.type === 'rate' ? 0.25 : 1;
                 if (chart.userTitle)
                   newChart.title(chart.userTitle);
               }
@@ -648,10 +673,7 @@ var QDR = (function(QDR) {
                 return d3.timeFormat("%M:%S")(d)
               }).bind(this),
               culling: {max: 4}
-            },
-            label: {
-              text: chart.name()
-        }
+            }
           },
           y: {
             tick: {
@@ -659,6 +681,14 @@ var QDR = (function(QDR) {
               count: 5
             }
           }
+        }
+
+        if (!chart.hideLabel) {
+            singleAreaChartConfig.axis.x.label = {
+              text: chart.name(),
+              position: 'outer-right'
+            }
+
         }
         singleAreaChartConfig.transition = {
           duration: 0
@@ -707,7 +737,17 @@ var QDR = (function(QDR) {
           return i >= 0 ? this.colors[i % 10] : color
         }).bind(this)
 
-        singleAreaChartConfig.legend = {show: true}
+        if (!chart.hideLegend) {
+          singleAreaChartConfig.legend = {
+            show: true,
+          }
+        }
+
+        if (this.stacked) {
+          // create a stacked area chart
+          singleAreaChartConfig.data.groups = [QDRService.management.topology.nodeNameList()]
+          singleAreaChartConfig.data.order = function (t1, t2) { return t1.id < t2.id }
+        }
 
         this.singleAreaChart = c3.generate(singleAreaChartConfig);
       }
@@ -799,12 +839,6 @@ var QDR = (function(QDR) {
           rate = ' per second'
         d3.select("#"+this.htmlId+" svg text.c3-title").text(QDRService.utilities.humanify(this.chart.attr()) + rate);
 
-/*
-        var type='area'
-        if (this.chart.type === 'rate')
-          type = 'area-spline'
-        this.singleAreaChart.transform(type);
-*/
         var d = this.chartData()
         // load the new data
         // using the c3.flow api causes the x-axis labels to jump around
