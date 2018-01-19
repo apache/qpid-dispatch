@@ -179,6 +179,40 @@ class QdmanageTest(TestCase):
         out = json.loads(self.run_qdmanage("get-types"))
         self.assertEqual(len(out), 26)
 
+    def test_get_attributes(self):
+        out = json.loads(self.run_qdmanage("get-attributes"))
+        self.assertEqual(len(out), 26)
+
+    def test_get_operations(self):
+        out = json.loads(self.run_qdmanage("get-operations"))
+        self.assertEqual(len(out), 26)
+        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], [u'CREATE', u'DELETE', u'READ'])
+
+    def test_get_types_with_ssl_profile_type(self):
+        out = json.loads(self.run_qdmanage("get-types --type=org.apache.qpid.dispatch.sslProfile"))
+        self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], [u'org.apache.qpid.dispatch.configurationEntity', u'org.apache.qpid.dispatch.entity'])
+
+    def test_get_ssl_profile_type_attributes(self):
+        out = json.loads(self.run_qdmanage('get-attributes --type=org.apache.qpid.dispatch.sslProfile'))
+        self.assertEqual(len(out), 1)
+        self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 12)
+
+    def test_get_ssl_profile_attributes(self):
+        out = json.loads(self.run_qdmanage('get-attributes org.apache.qpid.dispatch.sslProfile'))
+        self.assertEqual(len(out), 1)
+        self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 12)
+
+    def test_get_ssl_profile_type_operations(self):
+        out = json.loads(self.run_qdmanage('get-operations --type=org.apache.qpid.dispatch.sslProfile'))
+        self.assertEqual(len(out), 1)
+        self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 3)
+
+    def test_get_ssl_profile_operations(self):
+        out = json.loads(self.run_qdmanage('get-operations org.apache.qpid.dispatch.sslProfile'))
+        self.assertEqual(len(out), 1)
+        self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 3)
+
+
     def test_get_log(self):
         log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
         self.assertEquals(['AGENT', 'trace'], log[0:2])
