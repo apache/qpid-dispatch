@@ -87,6 +87,7 @@ class QdManage():
         self.node = Node.connect(opts_url(self.opts), self.opts.router, self.opts.timeout,
                                  opts_ssl_domain(self.opts),
                                  opts_sasl(self.opts))
+
         operation = self.args.pop(0)
         method = operation.lower().replace('-','_')
         if operation.upper() in self.operations and hasattr(self, method):
@@ -182,22 +183,26 @@ class QdManage():
 
     def get_types(self):
         """get-types [TYPE]         List entity types with their base types."""
-        self.opts.type = check_args(self.args, 1)[0]
+        if not self.opts.type:
+            self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_types', 'type'))
 
     def get_annotations(self):
         """get-annotations [TYPE]   List entity types with the annotations they implement."""
-        self.opts.type = check_args(self.args, 1)[0]
+        if not self.opts.type:
+            self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_annotations', 'type'))
 
     def get_attributes(self):
         """get-attributes [TYPE]    List entity types with their attributes."""
-        self.opts.type = check_args(self.args, 1)[0]
+        if not self.opts.type:
+            self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_attributes', 'type'))
 
     def get_operations(self):
         """get-operations [TYPE]    List entity types with their operations."""
-        self.opts.type = check_args(self.args, 1)[0]
+        if not self.opts.type:
+            self.opts.type = check_args(self.args, 1)[0]
         self.print_json(self.call_node('get_operations', 'type'))
 
     def get_mgmt_nodes(self):
