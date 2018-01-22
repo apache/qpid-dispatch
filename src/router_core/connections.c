@@ -254,6 +254,24 @@ int qdr_connection_process(qdr_connection_t *conn)
         sys_mutex_unlock(conn->work_lock);
 
         if (link) {
+
+            //
+            // Handle disposition/settlement updates
+            //
+            qdr_delivery_ref_list_t updated_deliveries;
+            sys_mutex_lock(conn->work_lock);
+            DEQ_MOVE(link->updated_deliveries, updated_deliveries);
+            sys_mutex_unlock(conn->work_lock);
+
+            qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
+            while (dref) {
+                core->delivery_update_handler(core->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
+                qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
+                qdr_del_delivery_ref(&updated_deliveries, dref);
+                dref = DEQ_HEAD(updated_deliveries);
+                event_count++;
+            }
+
             while (link_work) {
                 switch (link_work->work_type) {
                 case QDR_LINK_WORK_DELIVERY :
@@ -300,23 +318,6 @@ int qdr_connection_process(qdr_connection_t *conn)
                     }
                 }
                 sys_mutex_unlock(conn->work_lock);
-                event_count++;
-            }
-
-            //
-            // Handle disposition/settlement updates
-            //
-            qdr_delivery_ref_list_t updated_deliveries;
-            sys_mutex_lock(conn->work_lock);
-            DEQ_MOVE(link->updated_deliveries, updated_deliveries);
-            sys_mutex_unlock(conn->work_lock);
-
-            qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
-            while (dref) {
-                core->delivery_update_handler(core->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
-                qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
-                qdr_del_delivery_ref(&updated_deliveries, dref);
-                dref = DEQ_HEAD(updated_deliveries);
                 event_count++;
             }
 
