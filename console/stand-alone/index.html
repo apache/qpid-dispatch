@@ -44,9 +44,9 @@ under the License.
     <link rel="stylesheet" href="node_modules/angular-ui-grid/ui-grid.css" type="text/css"/>
 
     <!-- local Styles -->
-    <link rel="stylesheet" href="plugin/css/plugin.css" type="text/css"/>
-    <link rel="stylesheet" href="plugin/css/dispatch.css" type="text/css"/>
-    <link rel="stylesheet" href="plugin/css/dispatchpf.css" type="text/css"/>
+    <link rel="stylesheet" href="node_modules/dispatch-console-pages/dist/css/plugin.css" type="text/css"/>
+    <link rel="stylesheet" href="node_modules/dispatch-console-pages/dist/css/dispatch.css" type="text/css"/>
+    <link rel="stylesheet" href="node_modules/dispatch-console-pages/dist/css/dispatchpf.css" type="text/css"/>
 
 </head>
 <body ng-app="QDR" ng-controller="QDR.Core">
@@ -65,21 +65,6 @@ under the License.
         </a>
     </div>
     <div class="collapse navbar-collapse navbar-collapse-1">
-<!--
-        <ul class="nav navbar-nav navbar-utility">
-            <li class="dropdown">
-                <a class="dropdown-toggle" data-toggle="dropdown">
-                    <span class="pficon pficon-user"></span>
-                    User <b class="caret"></b>
-                </a>
-                <ul class="dropdown-menu">
-                    <li>
-                        <a href="/#!/connect">Disconnect</a>
-                    </li>
-                </ul>
-            </li>
-        </ul>
--->
         <ul class="nav navbar-nav navbar-primary" ng-controller="QDR.NavBarController">
             <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
                 <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.name"></a>
@@ -131,20 +116,20 @@ under the License.
 
 <script type="text/javascript" src="node_modules/dispatch-management/dist/dispatch-management.js"></script>
 <script type="text/javascript" src="plugin/js/dispatchPlugin.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverview.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverviewLogsController.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverviewChartsController.js"></script>
-<script type="text/javascript" src="plugin/js/qdrTopAddressesController.js"></script>
-<script type="text/javascript" src="plugin/js/dlgChartController.js"></script>
 <script type="text/javascript" src="plugin/js/navbar.js"></script>
-<script type="text/javascript" src="plugin/js/qdrList.js"></script>
-<script type="text/javascript" src="plugin/js/qdrListChart.js"></script>
-<script type="text/javascript" src="plugin/js/qdrCharts.js"></script>
-<script type="text/javascript" src="plugin/js/qdrSchema.js"></script>
-<script type="text/javascript" src="plugin/js/qdrService.js"></script>
-<script type="text/javascript" src="plugin/js/qdrChartService.js"></script>
-<script type="text/javascript" src="plugin/js/qdrTopology.js"></script>
-<script type="text/javascript" src="plugin/js/qdrSettings.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrOverview.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrOverviewLogsController.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrOverviewChartsController.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrTopAddressesController.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/dlgChartController.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrList.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrListChart.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrCharts.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrSchema.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrService.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrChartService.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrTopology.js"></script>
+<script type="text/javascript" src="node_modules/dispatch-console-pages/dist/js/qdrSettings.js"></script>
 
 <script type="text/javascript">
         //angular.element(document.getElementsByTagName('head')).append(angular.element('<base href="' + window.location.pathname + '" />'));

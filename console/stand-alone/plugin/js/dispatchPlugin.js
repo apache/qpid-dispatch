@@ -48,9 +48,8 @@ var QDR = (function(QDR) {
    *
    * The top level path to this plugin's partials
    */
-  QDR.srcBase = "plugin/";
+  QDR.srcBase = "node_modules/dispatch-console-pages/dist/";
   QDR.templatePath = QDR.srcBase + "html/";
-  QDR.cssPath = QDR.srcBase + "css/";
   /**
    * @property SETTINGS_KEY
    * @type {string}
