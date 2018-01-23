@@ -47,7 +47,6 @@ class AuthService(MessagingHandler):
             self.listener.close()
 
     def on_connection_opening(self, event):
-        print('connection opening for %s' % event.transport.user)
         if self.permissions.get(event.transport.user):
             event.connection.properties = {
                 symbol('authenticated-identity'): "%s" % event.transport.user,
