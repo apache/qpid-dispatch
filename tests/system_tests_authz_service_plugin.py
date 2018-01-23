@@ -41,14 +41,14 @@ class AuthServicePluginAuthzTest(TestCase):
         # Create a SASL configuration file.
         with open('tests-mech-SCRAM.conf', 'w') as sasl_conf:
             sasl_conf.write("""
-mech_list: SCRAM-SHA-1
+mech_list: SCRAM-SHA-1 PLAIN
 """)
         with open('proton-server.conf', 'w') as sasl_conf:
             sasl_conf.write("""
 pwcheck_method: auxprop
 auxprop_plugin: sasldb
 sasldb_path: users.sasldb
-mech_list: SCRAM-SHA-1
+mech_list: SCRAM-SHA-1 PLAIN
 """)
 
 
@@ -65,12 +65,13 @@ mech_list: SCRAM-SHA-1
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', '127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+        cls.tester.popen(['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
-                     ('authServicePlugin', {'name':'myauth', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
-                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1'}),
+                     ('sslProfile', {'name':'myssl'}),
+                     ('authServicePlugin', {'name':'myauth', 'authSslProfile':'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
+                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1 PLAIN'}),
                      ('router', {'mode': 'standalone', 'id': 'router',
                                  'saslConfigName': 'tests-mech-SCRAM',
                                  'saslConfigPath': os.getcwd()})
