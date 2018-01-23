@@ -465,8 +465,8 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
     if (method_field) {
         if (qd_iterator_equal(qd_parse_raw(method_field), (const unsigned char *)"mqtt")) {
             method = QD_PARSE_TREE_MQTT;
-        } else if (!qd_iterator_equal(qd_parse_raw(method_field), (const unsigned char *)"0-10")) {
-            query->status.description = "Exchange matchMethod must be either '0-10' or 'mqtt'";
+        } else if (!qd_iterator_equal(qd_parse_raw(method_field), (const unsigned char *)"amqp")) {
+            query->status.description = "Exchange matchMethod must be either 'amqp' or 'mqtt'";
             goto exit;
         }
     }
@@ -1159,7 +1159,7 @@ static void exchange_insert_column(qdr_exchange_t *ex, int col, qd_composed_fiel
     case QDR_CONFIG_EXCHANGE_MATCH_METHOD:
         switch (qd_parse_tree_type(ex->parse_tree)) {
         case QD_PARSE_TREE_AMQP_0_10:
-            qd_compose_insert_string(body, "0-10");
+            qd_compose_insert_string(body, "amqp");
             break;
         case QD_PARSE_TREE_MQTT:
             qd_compose_insert_string(body, "mqtt");

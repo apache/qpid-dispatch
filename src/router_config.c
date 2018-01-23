@@ -368,20 +368,24 @@ qd_error_t qd_router_configure_binding(qd_router_t *router, qd_entity_t *entity)
         long phase = qd_entity_opt_long(entity, "phase", 0);   QD_ERROR_BREAK();
         name       = qd_entity_opt_string(entity, "name", 0);  QD_ERROR_BREAK();
         exchange   = qd_entity_get_string(entity, "exchange"); QD_ERROR_BREAK();
-        key        = qd_entity_get_string(entity, "key");      QD_ERROR_BREAK();
+        key        = qd_entity_opt_string(entity, "key", 0);   QD_ERROR_BREAK();
         next_hop   = qd_entity_get_string(entity, "nextHop");  QD_ERROR_BREAK();
 
         qd_composed_field_t *body = qd_compose_subfield(0);
         qd_compose_start_map(body);
 
-        qd_compose_insert_string(body, "name");
-        qd_compose_insert_string(body, name);
+        if (name) {
+            qd_compose_insert_string(body, "name");
+            qd_compose_insert_string(body, name);
+        }
 
         qd_compose_insert_string(body, "exchange");
         qd_compose_insert_string(body, exchange);
 
-        qd_compose_insert_string(body, "key");
-        qd_compose_insert_string(body, key);
+        if (key) {
+            qd_compose_insert_string(body, "key");
+            qd_compose_insert_string(body, key);
+        }
 
         qd_compose_insert_string(body, "nextHop");
         qd_compose_insert_string(body, next_hop);

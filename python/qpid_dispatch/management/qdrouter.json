@@ -1156,9 +1156,9 @@
                     "required": false
                 },
                 "matchMethod": {
-                    "description": "Key matching algorithm used. '0-10' uses the legacy AMQP topic exchange wildcard match method as described in the 0-10 draft. 'mqtt' uses the MQTT topic filter wildcard match method.",
-                    "type": ["0-10", "mqtt"],
-                    "default": "0-10",
+                    "description": "Key matching algorithm used. 'amqp' uses the legacy AMQP topic exchange wildcard match method as described in the pre-1.0 drafts. 'mqtt' uses the MQTT topic filter wildcard match method.",
+                    "type": ["amqp", "mqtt"],
+                    "default": "amqp",
                     "required": false,
                     "create": true
                 },
@@ -1178,12 +1178,12 @@
                     "create": false
                 },
                 "deliveriesForwarded": {
-                    "description": "The total number of deliveries forwarded via matched bindings.",
+                    "description": "The total number of deliveries forwarded via matched bindings or the alternate exchange.",
                     "type": "integer",
                     "create": false
                 },
                 "deliveriesAlternate": {
-                    "description": "The total number of deliveries forwarded to the alternate exchange.",
+                    "description": "The total number of deliveries sent via the alternate exchange.",
                     "type": "integer",
                     "create": false
                 }
@@ -1202,10 +1202,10 @@
                     "required": true
                 },
                 "key": {
-                    "description": "Pattern to compare against incoming message's topic.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For 0-10 each token is delimited by the '.' character and wild-card token '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard token '+' matches a single token and '#' matches zero or more tokens at the end of the topic.",
+                    "description": "Pattern to compare against incoming message's subject.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For AMQP each token is delimited by the '.' character and wild-card token '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard token '+' matches a single token and '#' matches zero or more tokens at the end of the topic. If a key is not provided the binding will match all messages arriving at the exchange (fanout).",
                     "type": "string",
                     "create": true,
-                    "required": true
+                    "required": false
                 },
                 "nextHop": {
                     "description": "The address to forward the message to when the message's topic string matches the binding key pattern.",

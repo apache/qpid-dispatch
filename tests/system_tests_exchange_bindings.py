@@ -310,7 +310,8 @@ class ExchangeBindingsTest(TestCase):
         """
         config = [
             ('exchange', {'address': 'Address1',
-                          'name': 'Exchange1'}),
+                          'name': 'Exchange1',
+                          'matchMethod': 'amqp'}),
             # two different patterns, same next hop:
             ('binding', {'name': 'binding1',
                          'exchange': 'Exchange1',
@@ -725,6 +726,53 @@ class ExchangeBindingsTest(TestCase):
         nhop1A.stop()
         nhop1B.stop()
         conn.close()
+
+    def test_forwarding_fanout(self):
+        """
+        Verify bindings that do not have a key receive all messages
+        """
+        config = [
+            ('exchange', {'address': 'AddressF',
+                          'name': 'ExchangeF'}),
+            ('binding', {'name': 'binding1',
+                         'exchange': 'ExchangeF',
+                         'key': 'pattern',
+                         'nextHop': 'nextHop1'}),
+            # two bindings w/o key
+            ('binding', {'name': 'binding2',
+                         'exchange': 'ExchangeF',
+                         'nextHop': 'nextHop2'}),
+            ('binding', {'name': 'binding3',
+                         'exchange': 'ExchangeF',
+                         'nextHop': 'nextHop3'})
+        ]
+
+        for meth in ['amqp', 'mqtt']:
+            config[0][1]['matchMethod'] = meth
+            router = self._create_router('A', config)
+
+            # create clients for message transfer
+            conn = BlockingConnection(router.addresses[0])
+            sender = conn.create_sender(address="AddressF", options=AtMostOnce())
+            nhop1 = conn.create_receiver(address="nextHop1", credit=100)
+            nhop2 = conn.create_receiver(address="nextHop2", credit=100)
+            nhop3 = conn.create_receiver(address="nextHop3", credit=100)
+
+            # send message with subject "nope"
+            # should arrive at nextHop2 & 3 only
+            sender.send(Message(subject='nope', body='A'))
+            self.assertEqual('A', nhop2.receive(timeout=TIMEOUT).body)
+            self.assertEqual('A', nhop3.receive(timeout=TIMEOUT).body)
+
+            # send message with subject "pattern"
+            # forwarded to all bindings:
+            sender.send(Message(subject='pattern', body='B'))
+            self.assertEqual('B', nhop1.receive(timeout=TIMEOUT).body)
+            self.assertEqual('B', nhop2.receive(timeout=TIMEOUT).body)
+            self.assertEqual('B', nhop3.receive(timeout=TIMEOUT).body)
+
+            conn.close()
+            router.teardown()
 
 
 if __name__ == '__main__':
