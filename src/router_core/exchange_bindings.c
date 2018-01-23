@@ -39,8 +39,7 @@ struct next_hop_t
     int                  phase;
     bool                 on_xmit_list;
     qdr_exchange_t      *exchange;
-    qd_iterator_t       *next_hop;
-    unsigned char       *next_hop_str;
+    unsigned char       *next_hop;
     qdr_address_t       *qdr_addr;
 };
 
@@ -69,14 +68,11 @@ struct qdr_binding
     // parse tree node's list of bindings sharing the same pattern
     DEQ_LINKS_N(tree_list, qdr_binding_t);
 
-    qd_iterator_t       *name;
-    unsigned char       *name_str;
+    unsigned char       *name;
     uint64_t             identity;
     qdr_exchange_t      *exchange;
 
-    // the routing key
-    qd_iterator_t       *key;
-    unsigned char       *key_str;
+    unsigned char       *key;
     next_hop_t          *next_hop;
 
     uint64_t             msgs_matched;
@@ -91,10 +87,8 @@ struct qdr_exchange {
     DEQ_LINKS(qdr_exchange_t);          // for core->exchanges
     qdr_core_t         *core;
     uint64_t            identity;
-    qd_iterator_t      *name;
-    unsigned char      *name_str;
-    qd_iterator_t      *address;
-    unsigned char      *address_str;
+    unsigned char      *name;
+    unsigned char      *address;
     int                 phase;
     qd_parse_tree_t    *parse_tree;
     qdr_address_t      *qdr_addr;
@@ -324,11 +318,11 @@ static int send_message(qdr_core_t     *core,
     qd_message_t *copy = qd_message_copy(msg);
 
     qd_log(core->log, QD_LOG_TRACE, "Exchange '%s' forwarding message to '%s'",
-           next_hop->exchange->name_str, next_hop->next_hop_str);
+           next_hop->exchange->name, next_hop->next_hop);
 
     // set "to override" and "phase" message annotations based on the next hop
     qd_composed_field_t *to_field = qd_compose_subfield(0);
-    qd_compose_insert_string(to_field, (char *)next_hop->next_hop_str);
+    qd_compose_insert_string(to_field, (char *)next_hop->next_hop);
     qd_message_set_to_override_annotation(copy, to_field);  // frees to_field
     qd_message_set_phase_annotation(copy, next_hop->phase);
 
@@ -455,10 +449,10 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
     {
         qdr_exchange_t *eptr = 0;
         for (eptr = DEQ_HEAD(core->exchanges); eptr; eptr = DEQ_NEXT(eptr)) {
-            if (qd_iterator_equal(address, eptr->address_str)) {
+            if (qd_iterator_equal(address, eptr->address)) {
                 query->status.description = "duplicate exchange address";
                 goto exit;
-            } else if (qd_iterator_equal(name, eptr->name_str)) {
+            } else if (qd_iterator_equal(name, eptr->name)) {
                 query->status.description = "duplicate exchange name";
                 goto exit;
             }
@@ -529,7 +523,7 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
 
     if (query->status.status == QD_AMQP_CREATED.status) {
         qd_log(core->agent_log, QD_LOG_DEBUG,
-               "Exchange %s CREATED (id=%"PRIu64")", ex->name_str, ex->identity);
+               "Exchange %s CREATED (id=%"PRIu64")", ex->name, ex->identity);
 
     } else {
         qd_log(core->agent_log, QD_LOG_ERROR,
@@ -565,7 +559,7 @@ void qdra_config_exchange_delete_CT(qdr_core_t    *core,
         ex = find_exchange(core, identity, name);
         if (ex) {
             qd_log(core->agent_log, QD_LOG_DEBUG,
-                   "Exchange %s DELETED (id=%"PRIu64")", ex->name_str, ex->identity);
+                   "Exchange %s DELETED (id=%"PRIu64")", ex->name, ex->identity);
             qdr_exchange_free(ex);
             query->status = QD_AMQP_NO_CONTENT;
         } else
@@ -743,11 +737,11 @@ void qdra_config_binding_create_CT(qdr_core_t         *core,
     // be unique per exchange
 
     for (qdr_binding_t *b = DEQ_HEAD(ex->bindings); b; b = DEQ_NEXT_N(exchange_list, b)) {
-        if (name && b->name_str && qd_iterator_equal(name, b->name_str)) {
+        if (name && b->name && qd_iterator_equal(name, b->name)) {
             query->status.description = "Duplicate next hop name";
             goto exit;
-        } else if (qd_iterator_equal(key, b->key_str) &&
-                   qd_iterator_equal(nhop, b->next_hop->next_hop_str) &&
+        } else if (qd_iterator_equal(key, b->key) &&
+                   qd_iterator_equal(nhop, b->next_hop->next_hop) &&
                    phase == b->next_hop->phase) {
             query->status.description = "Next hop for key already exists";
             goto exit;
@@ -769,8 +763,8 @@ void qdra_config_binding_create_CT(qdr_core_t         *core,
 
     if (query->status.status == QD_AMQP_CREATED.status) {
         qd_log(core->agent_log, QD_LOG_DEBUG,
-               "Exchange %s Binding %s -> %s CREATED (id=%"PRIu64")", ex->name_str,
-               binding->key_str, binding->next_hop->next_hop_str, binding->identity);
+               "Exchange %s Binding %s -> %s CREATED (id=%"PRIu64")", ex->name,
+               binding->key, binding->next_hop->next_hop, binding->identity);
     } else {
         qd_log(core->agent_log, QD_LOG_ERROR,
                "Error performing CREATE of %s: %s",
@@ -810,9 +804,9 @@ void qdra_config_binding_delete_CT(qdr_core_t    *core,
         } else {
             qd_log(core->agent_log, QD_LOG_DEBUG,
                    "Binding %s -> %s on exchange %s DELETED (id=%"PRIu64")",
-                   binding->key_str,
-                   binding->next_hop->next_hop_str,
-                   binding->exchange->name_str,
+                   binding->key,
+                   binding->next_hop->next_hop,
+                   binding->exchange->name,
                    binding->identity);
             qdr_binding_free(binding);
             query->status = QD_AMQP_NO_CONTENT;
@@ -902,8 +896,8 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
         DEQ_ITEM_INIT(ex);
         ex->core = core;
         ex->identity = qdr_identifier(core);
-        ex->name = qd_iterator_clone(name, &ex->name_str);
-        ex->address = qd_iterator_clone(address, &ex->address_str);
+        ex->name = qd_iterator_copy(name);
+        ex->address = qd_iterator_copy(address);
         ex->phase = phase;
         ex->parse_tree = qd_parse_tree_new(method);
         DEQ_INIT(ex->bindings);
@@ -956,10 +950,8 @@ static void qdr_exchange_free(qdr_exchange_t *ex)
     ex->qdr_addr->ref_count -= 1;
     qdr_check_addr_CT(ex->core, ex->qdr_addr, false); // @TODO(kgiusti) ?is
                                                       // false correct ?
-    if (ex->name) qd_iterator_free(ex->name);
-    free(ex->name_str);
-    if (ex->address) qd_iterator_free(ex->address);
-    free(ex->address_str);
+    free(ex->name);
+    free(ex->address);
 
     qd_parse_tree_free(ex->parse_tree);
     free_qdr_exchange_t(ex);
@@ -979,10 +971,10 @@ static qdr_binding_t *qdr_binding(qdr_exchange_t *ex,
         DEQ_ITEM_INIT_N(exchange_list, b);
         DEQ_ITEM_INIT_N(tree_list, b);
 
-        b->name = qd_iterator_clone(name, &b->name_str);
+        b->name = qd_iterator_copy(name);
         b->identity = qdr_identifier(ex->core);
         b->exchange = ex;
-        b->key = qd_iterator_clone(key, &b->key_str);
+        b->key = qd_iterator_copy(key);
         b->next_hop = next_hop(ex, nhop, phase);
 
         qdr_binding_list_t  *bindings = NULL;
@@ -1004,19 +996,22 @@ static void qdr_binding_free(qdr_binding_t *b)
 {
     qdr_binding_list_t *bindings = NULL;
     qdr_exchange_t *ex = b->exchange;
-    if (qd_parse_tree_get_pattern(ex->parse_tree, b->key, (void **)&bindings)) {
+
+    qd_iterator_t *k_iter = qd_iterator_string((char *)b->key,
+                                               ITER_VIEW_ALL);
+    if (qd_parse_tree_get_pattern(ex->parse_tree, k_iter, (void **)&bindings)) {
         assert(bindings && !DEQ_IS_EMPTY(*bindings));
         DEQ_REMOVE_N(tree_list, *bindings, b);
         if (DEQ_IS_EMPTY(*bindings)) {
-            qd_parse_tree_remove_pattern(ex->parse_tree, b->key);
+            qd_parse_tree_remove_pattern(ex->parse_tree, k_iter);
             free(bindings);
         }
     }
+    qd_iterator_free(k_iter);
+
     DEQ_REMOVE_N(exchange_list, b->exchange->bindings, b);
-    if (b->name) qd_iterator_free(b->name);
-    free(b->name_str);
-    if (b->key) qd_iterator_free(b->key);
-    free(b->key_str);
+    free(b->name);
+    free(b->key);
     next_hop_release(b->next_hop);
     free_qdr_binding_t(b);
 }
@@ -1036,7 +1031,7 @@ static next_hop_t *next_hop(qdr_exchange_t *ex,
         DEQ_ITEM_INIT_N(exchange_list, nh);
         DEQ_ITEM_INIT_N(transmit_list, nh);
         nh->exchange = ex;
-        nh->next_hop = qd_iterator_clone(address, &nh->next_hop_str);
+        nh->next_hop = qd_iterator_copy(address);
         nh->phase = phase;
 
         qd_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
@@ -1069,8 +1064,7 @@ static void next_hop_release(next_hop_t *nh)
         }
         DEQ_REMOVE_N(exchange_list, nh->exchange->next_hops, nh);
         assert(!nh->on_xmit_list);
-        if (nh->next_hop) qd_iterator_free(nh->next_hop);
-        free(nh->next_hop_str);
+        free(nh->next_hop);
         free_next_hop_t(nh);
     }
 }
@@ -1088,7 +1082,7 @@ static qdr_exchange_t *find_exchange(qdr_core_t *core, qd_iterator_t *identity, 
             snprintf(id, 100, "%"PRId64, ex->identity);
             if (qd_iterator_equal(identity, (const unsigned char*) id))
                 break;
-        } else if (name && qd_iterator_equal(name, ex->name_str))
+        } else if (name && qd_iterator_equal(name, ex->name))
             break;
     }
     return ex;
@@ -1105,7 +1099,7 @@ static qdr_binding_t *find_binding(qdr_core_t *core, qd_iterator_t *identity, qd
                 snprintf(id, 100, "%"PRId64, binding->identity);
                 if (qd_iterator_equal(identity, (const unsigned char*) id))
                     return binding;
-            } else if (name && qd_iterator_equal(name, binding->name_str))
+            } else if (name && qd_iterator_equal(name, binding->name))
                 return binding;
         }
     }
@@ -1118,7 +1112,7 @@ static next_hop_t *find_next_hop(qdr_exchange_t *ex,
                                  int             phase)
 {
     next_hop_t *nh = DEQ_HEAD(ex->next_hops);
-    DEQ_FIND_N(exchange_list, nh, (phase == nh->phase) && qd_iterator_equal(address, nh->next_hop_str));
+    DEQ_FIND_N(exchange_list, nh, (phase == nh->phase) && qd_iterator_equal(address, nh->next_hop));
     return nh;
 }
 
@@ -1129,7 +1123,7 @@ static void exchange_insert_column(qdr_exchange_t *ex, int col, qd_composed_fiel
 {
     switch(col) {
     case QDR_CONFIG_EXCHANGE_NAME:
-        qd_compose_insert_string(body, (const char *)ex->name_str);
+        qd_compose_insert_string(body, (const char *)ex->name);
         break;
 
     case QDR_CONFIG_EXCHANGE_IDENTITY: {
@@ -1140,7 +1134,7 @@ static void exchange_insert_column(qdr_exchange_t *ex, int col, qd_composed_fiel
     }
 
     case QDR_CONFIG_EXCHANGE_ADDRESS:
-        qd_compose_insert_string(body, (const char *)ex->address_str);
+        qd_compose_insert_string(body, (const char *)ex->address);
         break;
 
     case QDR_CONFIG_EXCHANGE_PHASE:
@@ -1148,8 +1142,8 @@ static void exchange_insert_column(qdr_exchange_t *ex, int col, qd_composed_fiel
         break;
 
     case QDR_CONFIG_EXCHANGE_ALTERNATE:
-        if (ex->alternate && ex->alternate->next_hop_str)
-            qd_compose_insert_string(body, (const char *)ex->alternate->next_hop_str);
+        if (ex->alternate && ex->alternate->next_hop)
+            qd_compose_insert_string(body, (const char *)ex->alternate->next_hop);
         else
             qd_compose_insert_null(body);
         break;
@@ -1202,8 +1196,8 @@ static void binding_insert_column(qdr_binding_t *b, int col, qd_composed_field_t
 {
     switch(col) {
     case QDR_CONFIG_BINDING_NAME:
-        if (b->name_str)
-            qd_compose_insert_string(body, (char *)b->name_str);
+        if (b->name)
+            qd_compose_insert_string(body, (char *)b->name);
         else
             qd_compose_insert_null(body);
         break;
@@ -1216,16 +1210,16 @@ static void binding_insert_column(qdr_binding_t *b, int col, qd_composed_field_t
     }
 
     case QDR_CONFIG_BINDING_EXCHANGE:
-        qd_compose_insert_string(body, (char *)b->exchange->name_str);
+        qd_compose_insert_string(body, (char *)b->exchange->name);
         break;
 
     case QDR_CONFIG_BINDING_KEY:
-        qd_compose_insert_string(body, (char *)b->key_str);
+        qd_compose_insert_string(body, (char *)b->key);
         break;
 
     case QDR_CONFIG_BINDING_NEXTHOP:
         assert(b->next_hop && b->next_hop->next_hop_str);
-        qd_compose_insert_string(body, (char *)b->next_hop->next_hop_str);
+        qd_compose_insert_string(body, (char *)b->next_hop->next_hop);
         break;
 
     case QDR_CONFIG_BINDING_PHASE:

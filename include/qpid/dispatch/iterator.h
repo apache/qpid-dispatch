@@ -318,15 +318,6 @@ unsigned char *qd_iterator_copy(qd_iterator_t *iter);
 qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter);
 
 /**
- * Create a new iterator with its own copy of the iterator's view. Caller must
- * free both the iterator and the returned data buffer.
- * @param iter Input iterator to be cloned
- * @param data Output set to the allocated buffer in the new iterator
- * @return Pointer to a new iterator with a copy of the original's data
- */
-qd_iterator_t *qd_iterator_clone(const qd_iterator_t *iter, unsigned char **data);
-
-/**
  * Copy the iterator's view into buffer as a null terminated string,
  * up to a maximum of n bytes. Cursor is advanced by the number of bytes
  * copied.  Useful for log messages.

@@ -252,19 +252,6 @@ static char* view_address_hash(void *context, qd_iterator_t *iter,
     return 0;
 }
 
-static char* check_clone(void *context, const qd_iterator_t *iter,
-                         const char *addr, const char *view)
-{
-    unsigned char *buf;
-    qd_iterator_t *clone = qd_iterator_clone(iter, &buf);
-    if (!clone)
-        return "clone of iterator failed";
-    char *ret = view_address_hash(context, clone, addr, view);
-    qd_iterator_free(clone);
-    free(buf);
-    return ret;
-}
-
 static char *check_dup(void *context, const qd_iterator_t *iter,
                          const char *addr, const char *view)
 {
@@ -282,8 +269,6 @@ static char *verify_iterator(void *context, qd_iterator_t *iter,
     char *ret = view_address_hash(context, iter, addr, view);
     if (!ret)
         ret = check_dup(context, iter, addr, view);
-    if (!ret)
-        ret = check_clone(context, iter, addr, view);
     return ret;
 }
 
