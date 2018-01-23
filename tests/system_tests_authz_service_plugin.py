@@ -62,10 +62,16 @@ mech_list: SCRAM-SHA-1
         if not SASL.extended():
             return
 
+        authservice = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py')
+        if not os.path.isfile(authservice):
+            print('authservice script does NOT exist: %s' % authservice)
+        else:
+            print('authservice script DOES exist: %s' % authservice)
+
         cls.createSaslFiles()
 
         cls.auth_service_port = cls.tester.get_port()
-        cls.tester.popen(['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', '127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+        cls.tester.popen(['/usr/bin/env', 'python', authservice, '-a', '127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
