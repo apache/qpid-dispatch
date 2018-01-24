@@ -360,21 +360,21 @@ qdr_address_t *qdr_exchange_alternate_addr(const qdr_exchange_t *ex)
 #define QDR_CONFIG_EXCHANGE_RECEIVED      8
 #define QDR_CONFIG_EXCHANGE_DROPPED       9
 #define QDR_CONFIG_EXCHANGE_FORWARDED     10
-#define QDR_CONFIG_EXCHANGE_ALTERNATED    11
+#define QDR_CONFIG_EXCHANGE_DIVERTED      11
 
 const char *qdr_config_exchange_columns[QDR_CONFIG_EXCHANGE_COLUMN_COUNT + 1] =
     {"name",
      "identity",
      "address",
      "phase",
-     "alternate",
+     "alternateAddress",
      "alternatePhase",
      "matchMethod",
      "bindingCount",
-     "deliveriesReceived",
-     "deliveriesDropped",
-     "deliveriesForwarded",
-     "deliveriesAlternate",
+     "receivedCount",
+     "droppedCount",
+     "forwardedCount",
+     "divertedCount",
      0};
 
 // from management_agent.c
@@ -385,17 +385,17 @@ extern const unsigned char *config_exchange_entity_type;
 #define QDR_CONFIG_BINDING_EXCHANGE     2
 #define QDR_CONFIG_BINDING_KEY          3
 #define QDR_CONFIG_BINDING_NEXTHOP      4
-#define QDR_CONFIG_BINDING_PHASE        5
+#define QDR_CONFIG_BINDING_NHOP_PHASE   5
 #define QDR_CONFIG_BINDING_MATCHED      6
 
 const char *qdr_config_binding_columns[QDR_CONFIG_BINDING_COLUMN_COUNT + 1] =
     {"name",
      "identity",
-     "exchange",
-     "key",
-     "nextHop",
-     "phase",
-     "deliveriesMatched",
+     "exchangeName",
+     "bindingKey",
+     "nextHopAddress",
+     "nextHopPhase",
+     "matchedCount",
      0};
 
 // from management_agent.c
@@ -726,7 +726,7 @@ void qdra_config_binding_create_CT(qdr_core_t         *core,
     }
 
     qd_parsed_field_t *phase_field = qd_parse_value_by_key(in_body,
-                                                         qdr_config_binding_columns[QDR_CONFIG_BINDING_PHASE]);
+                                                         qdr_config_binding_columns[QDR_CONFIG_BINDING_NHOP_PHASE]);
     int phase = (phase_field ? qd_parse_as_int(phase_field) : 0);
     if (phase < 0 || phase > 9) {
         query->status.description = "phase must be in the range 0-9";
@@ -1185,7 +1185,7 @@ static void exchange_insert_column(qdr_exchange_t *ex, int col, qd_composed_fiel
         qd_compose_insert_ulong(body, ex->msgs_routed);
         break;
 
-    case QDR_CONFIG_EXCHANGE_ALTERNATED:
+    case QDR_CONFIG_EXCHANGE_DIVERTED:
         qd_compose_insert_ulong(body, ex->msgs_alternate);
         break;
     }
@@ -1222,7 +1222,7 @@ static void binding_insert_column(qdr_binding_t *b, int col, qd_composed_field_t
         qd_compose_insert_string(body, (char *)b->next_hop->next_hop);
         break;
 
-    case QDR_CONFIG_BINDING_PHASE:
+    case QDR_CONFIG_BINDING_NHOP_PHASE:
         assert(b->next_hop);
         qd_compose_insert_int(body, b->next_hop->phase);
         break;

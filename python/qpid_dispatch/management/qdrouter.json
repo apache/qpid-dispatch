@@ -1132,7 +1132,7 @@
             "operations": ["CREATE", "DELETE"],
             "attributes": {
                 "address": {
-                    "description": "The address of the exchange.",
+                    "description": "The address of the exchange. Used by the message publisher as the target for sending messages.",
                     "type": "string",
                     "create": true,
                     "required": true
@@ -1143,7 +1143,7 @@
                     "create": true,
                     "required": false
                 },
-                "alternate": {
+                "alternateAddress": {
                     "description": "The address to forward the message to if no bindings are matched.",
                     "type": "string",
                     "create": true,
@@ -1151,7 +1151,7 @@
                 },
                 "alternatePhase": {
                     "type": "integer",
-                    "description": "The address phase for the alternate address.  Defaults to '0'.",
+                    "description": "The address phase for the alternateAddress.  Defaults to '0'.",
                     "create": true,
                     "required": false
                 },
@@ -1167,23 +1167,23 @@
                     "type": "integer",
                     "create": false
                 },
-                "deliveriesReceived": {
+                "receivedCount": {
                     "description": "The total number of deliveries received by this exchange.",
                     "type": "integer",
                     "create": false
                 },
-                "deliveriesDropped": {
+                "droppedCount": {
                     "description": "The total number of deliveries dropped due to the lack of an outgoing subscription.",
                     "type": "integer",
                     "create": false
                 },
-                "deliveriesForwarded": {
-                    "description": "The total number of deliveries forwarded via matched bindings or the alternate exchange.",
+                "forwardedCount": {
+                    "description": "The total number of deliveries forwarded via matched bindings or to the alternateAddress",
                     "type": "integer",
                     "create": false
                 },
-                "deliveriesAlternate": {
-                    "description": "The total number of deliveries sent via the alternate exchange.",
+                "divertedCount": {
+                    "description": "A count of those deliveries that were forwarded via the alternateAddress only.  This is a subset of the forwardedCount.",
                     "type": "integer",
                     "create": false
                 }
@@ -1191,36 +1191,36 @@
         },
 
         "router.config.binding": {
-            "description":"[EXPERIMENTAL] Defines a keyed next hop binding for an exchange.",
+            "description":"[EXPERIMENTAL] Defines a keyed next hop binding for a topic exchange. The subject field of the messages arriving at the exchange is compared against the binding's key value using the exchange's matchMethod.  If the subject matches the key the message is forwarded to the nextHopAddress. The nextHopAddress overrides the message's original destination.",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
-                "exchange": {
+                "exchangeName": {
                     "description": "The name of the exchange to bind.",
                     "type": "string",
                     "create": true,
                     "required": true
                 },
-                "key": {
-                    "description": "Pattern to compare against incoming message's subject.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For AMQP each token is delimited by the '.' character and wild-card token '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard token '+' matches a single token and '#' matches zero or more tokens at the end of the topic. If a key is not provided the binding will match all messages arriving at the exchange (fanout).",
+                "bindingKey": {
+                    "description": "Pattern to compare against incoming message's subject.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For AMQP each token is delimited by the '.' character and wild-card tokens '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard tokens '+' matches a single token and '#' matches zero or more tokens at the end of the topic. If a key is not provided the binding will match all messages arriving at the exchange (fanout behavior).",
                     "type": "string",
                     "create": true,
                     "required": false
                 },
-                "nextHop": {
-                    "description": "The address to forward the message to when the message's topic string matches the binding key pattern.",
+                "nextHopAddress": {
+                    "description": "The address to forward the message to when the message's topic string matches the binding key pattern.  This address is used by message consumers as the source of incoming messages.",
                     "type": "string",
                     "create": true,
                     "required": true
                 },
-                "phase": {
+                "nextHopPhase": {
                     "type": "integer",
                     "description": "The address phase used when forwarding messages that match this binding.",
                     "create": true,
                     "required": false
                 },
-                "deliveriesMatched": {
-                    "description": "Total number of deliveries that matched this binding",
+                "matchedCount": {
+                    "description": "Total number of deliveries that matched this binding.",
                     "type": "integer"
                 }
             }

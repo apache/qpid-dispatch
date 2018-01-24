@@ -131,7 +131,7 @@ class ExchangeBindingsTest(TestCase):
             ["Exchange1", {"address": "Address1"}],
             ["Exchange2", {"address": "Address2",
                            "phase": 2,
-                           "alternate": "Alternate2",
+                           "alternateAddress": "Alternate2",
                            "alternatePhase": 1,
                            "matchMethod": "mqtt"}]
         ]
@@ -158,35 +158,35 @@ class ExchangeBindingsTest(TestCase):
 
         # create bindings
         binding_config = [
-            ["b11", {"exchange": "Exchange1",
-                     "key":      "a.b.*.#",
-                     "nextHop":  "nextHop1",
-                     "phase":    3}],
-            ["b12", {"exchange": "Exchange1",
-                     "key":      "a.*.c.#",
-                     "nextHop":  "nextHop1",
-                     "phase":    3}],
-            ["b13", {"exchange": "Exchange1",
-                     "key":      "a.b.*.#",
-                     "nextHop":  "nextHop2",
-                     "phase":    0}],
-            ["b14", {"exchange": "Exchange1",
-                     "key":      "a.*.c.#",
-                     "nextHop":  "nextHop2",
-                     "phase":    0}],
+            ["b11", {"exchangeName":    "Exchange1",
+                     "bindingKey":      "a.b.*.#",
+                     "nextHopAddress":  "nextHop1",
+                     "nextHopPhase":    3}],
+            ["b12", {"exchangeName":    "Exchange1",
+                     "bindingKey":      "a.*.c.#",
+                     "nextHopAddress":  "nextHop1",
+                     "nextHopPhase":    3}],
+            ["b13", {"exchangeName":    "Exchange1",
+                     "bindingKey":      "a.b.*.#",
+                     "nextHopAddress":  "nextHop2",
+                     "nextHopPhase":    0}],
+            ["b14", {"exchangeName":    "Exchange1",
+                     "bindingKey":      "a.*.c.#",
+                     "nextHopAddress":  "nextHop2",
+                     "nextHopPhase":    0}],
 
-            ["b21", {"exchange": "Exchange2",
-                     "key":      "a/b/?/#",
-                     "nextHop":  "nextHop3"}],
-            ["b22", {"exchange": "Exchange2",
-                     "key":      "a",
-                     "nextHop":  "nextHop4"}],
-            ["b23", {"exchange": "Exchange2",
-                     "key":      "a/b",
-                     "nextHop":  "nextHop4"}],
-            ["b24", {"exchange": "Exchange2",
-                     "key":      "b",
-                     "nextHop":  "nextHop3"}]
+            ["b21", {"exchangeName":    "Exchange2",
+                     "bindingKey":      "a/b/?/#",
+                     "nextHopAddress":  "nextHop3"}],
+            ["b22", {"exchangeName":    "Exchange2",
+                     "bindingKey":      "a",
+                     "nextHopAddress":  "nextHop4"}],
+            ["b23", {"exchangeName":    "Exchange2",
+                     "bindingKey":      "a/b",
+                     "nextHopAddress":  "nextHop4"}],
+            ["b24", {"exchangeName":    "Exchange2",
+                     "bindingKey":      "b",
+                     "nextHopAddress":  "nextHop3"}]
         ]
 
         for cfg in binding_config:
@@ -276,29 +276,29 @@ class ExchangeBindingsTest(TestCase):
         # binding with bad exchange name
         self.assertRaises(Exception, self.run_qdmanage, router,
                           "create --type " + _BINDING_TYPE +
-                          " exchange=Nope")
+                          " exchangeName=Nope")
         # binding with duplicate name
         self.assertRaises(Exception, self.run_qdmanage, router,
                           "create --type " + _BINDING_TYPE +
-                          " --name b22 exchange=Exchange2"
-                          " key=b nextHop=nextHop3")
+                          " --name b22 exchangeName=Exchange2"
+                          " bindingKey=b nextHopAddress=nextHop3")
         # binding with duplicate pattern & next hop
         self.assertRaises(Exception, self.run_qdmanage, router,
                           "create --type " + _BINDING_TYPE +
-                          " --name Nuhuh exchange=Exchange2"
+                          " --name Nuhuh exchangeName=Exchange2"
                           " key=b nextHop=nextHop3")
         # binding with no next hop
         self.assertRaises(Exception, self.run_qdmanage, router,
                           "create --type " + _BINDING_TYPE +
-                          " --name Nuhuh exchange=Exchange2"
-                          " key=x/y/z")
+                          " --name Nuhuh exchangeName=Exchange2"
+                          " bindingKey=x/y/z")
 
         # invalid mqtt key
         self.assertRaises(Exception, self.run_qdmanage, router,
                           "create --type " + _BINDING_TYPE +
-                          " exchange=Exchange2"
-                          " key=x/#/z"
-                          " nextHop=Nope")
+                          " exchangeName=Exchange2"
+                          " bindingKey=x/#/z"
+                          " nextHopAddress=Nope")
 
         # delete exchange by identity:
         self.run_qdmanage(router, "delete --type " + _EXCHANGE_TYPE +
@@ -313,28 +313,28 @@ class ExchangeBindingsTest(TestCase):
                           'name': 'Exchange1',
                           'matchMethod': 'amqp'}),
             # two different patterns, same next hop:
-            ('binding', {'name': 'binding1',
-                         'exchange': 'Exchange1',
-                         'key': 'a.*',
-                         'nextHop': 'nextHop1'}),
-            ('binding', {'name': 'binding2',
-                         'exchange': 'Exchange1',
-                         'key': 'a.b',
-                         'nextHop': 'nextHop1'}),
+            ('binding', {'name':           'binding1',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.*',
+                         'nextHopAddress': 'nextHop1'}),
+            ('binding', {'name':           'binding2',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.b',
+                         'nextHopAddress': 'nextHop1'}),
             # duplicate patterns, different next hops:
-            ('binding', {'name': 'binding3',
-                         'exchange': 'Exchange1',
-                         'key': 'a.c.#',
-                         'nextHop': 'nextHop1'}),
+            ('binding', {'name':           'binding3',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.c.#',
+                         'nextHopAddress': 'nextHop1'}),
             ('binding', {'name': 'binding4',
-                         'exchange': 'Exchange1',
-                         'key': 'a.c.#',
-                         'nextHop': 'nextHop2'}),
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.c.#',
+                         'nextHopAddress': 'nextHop2'}),
             # match for nextHop2 only
-            ('binding', {'name': 'binding5',
-                         'exchange': 'Exchange1',
-                         'key': 'a.b.c',
-                         'nextHop': 'nextHop2'})
+            ('binding', {'name':           'binding5',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.b.c',
+                         'nextHopAddress': 'nextHop2'})
         ]
         router = self._create_router('A', config)
 
@@ -347,15 +347,15 @@ class ExchangeBindingsTest(TestCase):
         # verify initial metrics
         self._validate_exchange(router, name='Exchange1',
                                 bindingCount=5,
-                                deliveriesReceived=0,
-                                deliveriesDropped=0,
-                                deliveriesForwarded=0,
-                                deliveriesAlternate=0)
+                                receivedCount=0,
+                                droppedCount=0,
+                                forwardedCount=0,
+                                divertedCount=0)
 
         for b in range(5):
             self._validate_binding(router,
                                    name='binding%s' % (b + 1),
-                                   deliveriesMatched=0)
+                                   matchedCount=0)
 
         # send message with subject "a.b"
         # matches (binding1, binding2)
@@ -395,20 +395,20 @@ class ExchangeBindingsTest(TestCase):
 
         # validate counters
         self._validate_binding(router, name='binding1',
-                               deliveriesMatched=2)
+                               matchedCount=2)
         self._validate_binding(router, name='binding2',
-                               deliveriesMatched=1)
+                               matchedCount=1)
         self._validate_binding(router, name='binding3',
-                               deliveriesMatched=2)
+                               matchedCount=2)
         self._validate_binding(router, name='binding4',
-                               deliveriesMatched=2)
+                               matchedCount=2)
         self._validate_binding(router, name='binding5',
-                               deliveriesMatched=1)
+                               matchedCount=1)
         self._validate_exchange(router, name="Exchange1",
-                                deliveriesReceived=5,
-                                deliveriesForwarded=4,
-                                deliveriesAlternate=0,
-                                deliveriesDropped=1)
+                                receivedCount=5,
+                                forwardedCount=4,
+                                divertedCount=0,
+                                droppedCount=1)
         conn.close()
 
     def test_forwarding_mqtt(self):
@@ -416,27 +416,27 @@ class ExchangeBindingsTest(TestCase):
         Simple forwarding over a single mqtt exchange
         """
         config = [
-            ('exchange', {'address': 'Address2',
-                          'name': 'Exchange1',
-                          'matchMethod': 'mqtt',
-                          'alternate': 'altNextHop'}),
+            ('exchange', {'address':          'Address2',
+                          'name':             'Exchange1',
+                          'matchMethod':      'mqtt',
+                          'alternateAddress': 'altNextHop'}),
 
-            ('binding', {'name': 'binding1',
-                         'exchange': 'Exchange1',
-                         'key': 'a/b',
-                         'nextHop': 'nextHop1'}),
-            ('binding', {'name': 'binding2',
-                         'exchange': 'Exchange1',
-                         'key': 'a/+',
-                         'nextHop': 'nextHop2'}),
-            ('binding', {'name': 'binding3',
-                         'exchange': 'Exchange1',
-                         'key': 'c/#',
-                         'nextHop': 'nextHop1'}),
-            ('binding', {'name': 'binding4',
-                         'exchange': 'Exchange1',
-                         'key': 'c/b',
-                         'nextHop': 'nextHop2'}),
+            ('binding', {'name':           'binding1',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a/b',
+                         'nextHopAddress': 'nextHop1'}),
+            ('binding', {'name':           'binding2',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a/+',
+                         'nextHopAddress': 'nextHop2'}),
+            ('binding', {'name':           'binding3',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'c/#',
+                         'nextHopAddress': 'nextHop1'}),
+            ('binding', {'name':           'binding4',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'c/b',
+                         'nextHopAddress': 'nextHop2'}),
         ]
         router = self._create_router('B', config)
 
@@ -487,18 +487,18 @@ class ExchangeBindingsTest(TestCase):
 
         # validate counters
         self._validate_binding(router, name='binding1',
-                               deliveriesMatched=1)
+                               matchedCount=1)
         self._validate_binding(router, name='binding2',
-                               deliveriesMatched=2)
+                               matchedCount=2)
         self._validate_binding(router, name='binding3',
-                               deliveriesMatched=2)
+                               matchedCount=2)
         self._validate_binding(router, name='binding4',
-                               deliveriesMatched=1)
+                               matchedCount=1)
         self._validate_exchange(router, name="Exchange1",
-                                deliveriesReceived=5,
-                                deliveriesForwarded=5,
-                                deliveriesAlternate=1,
-                                deliveriesDropped=0)
+                                receivedCount=5,
+                                forwardedCount=5,
+                                divertedCount=1,
+                                droppedCount=0)
         conn.close()
 
     def test_forwarding_sync(self):
@@ -512,17 +512,17 @@ class ExchangeBindingsTest(TestCase):
                           'port': self.tester.get_port(),
                           'saslMechanisms':'ANONYMOUS'}),
             ('address', {'pattern': 'nextHop2/#', 'distribution': 'multicast'}),
-            ('exchange', {'address': 'Address3',
-                          'name': 'Exchange1',
-                          'alternate': 'altNextHop'}),
-            ('binding', {'name': 'binding1',
-                         'exchange': 'Exchange1',
-                         'key': 'a.b',
-                         'nextHop': 'nextHop1'}),
-            ('binding', {'name': 'binding2',
-                         'exchange': 'Exchange1',
-                         'key': '*.b',
-                         'nextHop': 'nextHop2'})
+            ('exchange', {'address':          'Address3',
+                          'name':             'Exchange1',
+                          'alternateAddress': 'altNextHop'}),
+            ('binding', {'name':           'binding1',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.b',
+                         'nextHopAddress': 'nextHop1'}),
+            ('binding', {'name':           'binding2',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     '*.b',
+                         'nextHopAddress': 'nextHop2'})
         ]
         router = self.tester.qdrouterd('QDR.mcast', Qdrouterd.Config(config))
 
@@ -562,10 +562,10 @@ class ExchangeBindingsTest(TestCase):
                           'saslMechanisms':'ANONYMOUS'}),
             ('exchange', {'address': 'Address4',
                           'name': 'Exchange1'}),
-            ('binding', {'name': 'binding1',
-                         'exchange': 'Exchange1',
-                         'key': 'a.b',
-                         'nextHop': 'nextHop1'})
+            ('binding', {'name':           'binding1',
+                         'exchangeName':   'Exchange1',
+                         'bindingKey':     'a.b',
+                         'nextHopAddress': 'nextHop1'})
         ]
         router = self.tester.qdrouterd('QDR.mcast2', Qdrouterd.Config(config))
 
@@ -616,22 +616,22 @@ class ExchangeBindingsTest(TestCase):
                               'name': 'ExchangeA',
                               'matchMethod': 'mqtt'}),
 
-                ('binding', {'name': 'bindingA1',
-                             'exchange': 'ExchangeA',
-                             'key': 'a/b',
-                             'nextHop': 'nextHop1'}),
-                ('binding', {'name': 'bindingA2',
-                             'exchange': 'ExchangeA',
-                             'key': 'a/+',
-                             'nextHop': 'nextHop2'}),
-                ('binding', {'name': 'bindingA3',
-                             'exchange': 'ExchangeA',
-                             'key': '+/b',
-                             'nextHop': 'nextHop3'}),
-                ('binding', {'name': 'bindingA4',
-                             'exchange': 'ExchangeA',
-                             'key': 'a/#',
-                             'nextHop': 'NotSubscribed'})
+                ('binding', {'name':           'bindingA1',
+                             'exchangeName':   'ExchangeA',
+                             'bindingKey':     'a/b',
+                             'nextHopAddress': 'nextHop1'}),
+                ('binding', {'name':           'bindingA2',
+                             'exchangeName':   'ExchangeA',
+                             'bindingKey':     'a/+',
+                             'nextHopAddress': 'nextHop2'}),
+                ('binding', {'name':           'bindingA3',
+                             'exchangeName':   'ExchangeA',
+                             'bindingKey':     '+/b',
+                             'nextHopAddress': 'nextHop3'}),
+                ('binding', {'name':           'bindingA4',
+                             'exchangeName':   'ExchangeA',
+                             'bindingKey':     'a/#',
+                             'nextHopAddress': 'NotSubscribed'})
                ])
 
         router(self, 'B',
@@ -697,10 +697,10 @@ class ExchangeBindingsTest(TestCase):
             ('exchange', {'address': 'AddressA',
                           'name': 'ExchangeA'}),
 
-            ('binding', {'name': 'bindingA1',
-                         'exchange': 'ExchangeA',
-                         'key': 'a/b',
-                         'nextHop': 'nextHop1'})
+            ('binding', {'name':           'bindingA1',
+                         'exchangeName':   'ExchangeA',
+                         'bindingKey':     'a/b',
+                         'nextHopAddress': 'nextHop1'})
         ]
 
         router = self.tester.qdrouterd('QDR.X',
@@ -734,17 +734,17 @@ class ExchangeBindingsTest(TestCase):
         config = [
             ('exchange', {'address': 'AddressF',
                           'name': 'ExchangeF'}),
-            ('binding', {'name': 'binding1',
-                         'exchange': 'ExchangeF',
-                         'key': 'pattern',
-                         'nextHop': 'nextHop1'}),
+            ('binding', {'name':           'binding1',
+                         'exchangeName':   'ExchangeF',
+                         'bindingKey':     'pattern',
+                         'nextHopAddress': 'nextHop1'}),
             # two bindings w/o key
-            ('binding', {'name': 'binding2',
-                         'exchange': 'ExchangeF',
-                         'nextHop': 'nextHop2'}),
-            ('binding', {'name': 'binding3',
-                         'exchange': 'ExchangeF',
-                         'nextHop': 'nextHop3'})
+            ('binding', {'name':           'binding2',
+                         'exchangeName':   'ExchangeF',
+                         'nextHopAddress': 'nextHop2'}),
+            ('binding', {'name':           'binding3',
+                         'exchangeName':   'ExchangeF',
+                         'nextHopAddress': 'nextHop3'})
         ]
 
         for meth in ['amqp', 'mqtt']:

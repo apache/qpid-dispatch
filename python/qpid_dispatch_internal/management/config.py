@@ -62,10 +62,10 @@ class Config(object):
         end = re.compile(r'}')                 # }
         attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
 
-        # The 'pattern:' and 'key:' attributes in the schema are special
+        # The 'pattern:' and 'bindingKey:' attributes in the schema are special
         # snowflakes. They allow '#' characters in their value, so they cannot
         # be treated as comment delimiters
-        special_snowflakes = ['pattern', 'key']
+        special_snowflakes = ['pattern', 'bindingKey']
         hash_ok = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
 
         def sub(line):
@@ -73,7 +73,7 @@ class Config(object):
             line = line.strip()
             if line.startswith("#"):
                 return ""
-            if line.split(':')[0].strip().lower() in special_snowflakes:
+            if line.split(':')[0].strip() in special_snowflakes:
                 line = re.sub(hash_ok, r'"\1": "\2",', line)
             else:
                 line = line.split('#')[0].strip()
