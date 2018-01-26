@@ -45,9 +45,6 @@ include::routing.adoc[leveloffset=+1]
 // Logging
 include::logging.adoc[leveloffset=+1]
 
-// Policies
-include::policy.adoc[leveloffset=+1]
-
 // Management
 include::management.adoc[leveloffset=+1]
 

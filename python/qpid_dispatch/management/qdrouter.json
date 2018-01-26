@@ -1525,28 +1525,28 @@
                 "maxConnections": {
                     "type": "integer",
                     "default": 65535,
-                    "description": "Global maximum number of concurrent client connections allowed. This limit is always enforced even if no other policy settings have been defined.",
+                    "description": "The maximum number of concurrent client connections allowed for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost.",
                     "required": false,
                     "create": true
                 },
                 "enableVhostPolicy": {
                     "type": "boolean",
                     "default": false,
-                    "description": "Enable vhost policy user groups, connection denial, and resource limit enforcement",
+                    "description": "Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies.",
                     "required": false,
                     "create": true
                 },
                 "policyDir": {
                     "type": "path",
                     "default": "",
-                    "description": "Absolute path to a directory that holds vhost definition .json files. All vhost definitions in all .json files in this directory are processed.",
+                    "description": "The absolute path to a directory that holds vhost policy definition files in JSON format (*.json). The router processes all of the vhost policies in each JSON file that is in this directory.",
                     "required": false,
                     "create": true
                 },
                 "defaultVhost": {
                     "type": "string",
                     "default": "$default",
-                    "description": "Vhost rule set name to use for connections with a vhost that is otherwise not defined. Default vhost processing may be disabled either by erasing the definition of defaultVhost or by not defining a vhost object named '$default'.",
+                    "description": "The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. If 'defaultVhost' is not defined, then default vhost processing is disabled.",
                     "required": false,
                     "create": true
                 },
@@ -1571,7 +1571,7 @@
                 "maxConnections": {
                     "type": "integer",
                     "default": 65535,
-                    "description": "Maximum number of concurrent client connections allowed.",
+                    "description": "The global maximum number of concurrent client connections allowed for this vhost.",
                     "required": false,
                     "create": true,
                     "update": true
@@ -1579,7 +1579,7 @@
                 "maxConnectionsPerUser": {
                     "type": "integer",
                     "default": 65535,
-                    "description": "Maximum number of concurrent client connections allowed for any single user.",
+                    "description": "The maximum number of concurrent client connections allowed for any user.",
                     "required": false,
                     "create": true,
                     "update": true
@@ -1587,14 +1587,14 @@
                 "maxConnectionsPerHost": {
                     "type": "integer",
                     "default": 65535,
-                    "description": "Maximum number of concurrent client connections allowed for any remote host.",
+                    "description": "The maximum number of concurrent client connections allowed for any remote host (the host from which the client is connecting).",
                     "required": false,
                     "create": true,
                     "update": true
                 },
                 "allowUnknownUser": {
                     "type": "boolean",
-                    "description": "Unrestricted users, those who are not members of a defined user group, are allowed to connect to this application. Unrestricted users are assigned to the 'default' user group and receive 'default' settings.",
+                    "description": "Whether unknown users (users who are not members of a defined user group) are allowed to connect to the vhost. Unknown users are assigned to the '$default' user group and receive '$default' settings.",
                     "default": false,
                     "required": false,
                     "create": true,
@@ -1616,79 +1616,79 @@
             "attributes": {
                 "users": {
                     "type": "string",
-                    "description": "CSV string or list of authenticated user names. A user may belong to one vhost user group only.",
+                    "description": "A list of authenticated users for this user group. Use commas to separate multiple users. A user may belong to only one vhost user group.",
                     "required": true
                 },
                 "remoteHosts": {
                     "type": "string",
-                    "description": "CSV string of numeric host IP addresses or address ranges from which the users may connect.",
+                    "description": "A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard '*'. To deny access from all remote hosts, leave this attribute blank.",
                     "required": true
                 },
                 "maxFrameSize": {
                     "type": "integer",
-                    "description": "Largest frame that may be sent on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Open, max-frame-size)",
+                    "description": "The largest frame, in bytes, that may be sent on this connection. Non-zero policy values overwrite values specified for a listener object (AMQP Open, max-frame-size).",
                     "default": 16384,
                     "required": false,
                     "create": true
                 },
                 "maxSessionWindow": {
                     "type": "integer",
-                    "description": "Largest incoming window in octets for sessions created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Begin, incoming-window)",
+                    "description": "The incoming capacity for new AMQP sessions, measured in octets. Non-zero policy values overwrite values specified for a listener object (AMQP Begin, incoming-window).",
                     "default": 1638400,
                     "required": false,
                     "create": true
                 },
                 "maxSessions": {
                     "type": "integer",
-                    "description": "Maximum number of sessions that may be created on this connection. Non-zero policy values overwrite values specified for a listener object. (AMQP Open, channel-max)",
+                    "description": "The maximum number of sessions that may be created on this connection. Non-zero policy values overwrite values specified for a listener object (AMQP Open, channel-max).",
                     "default": 32768,
                     "required": false,
                     "create": true
                 },
                 "maxSenders": {
                     "type": "integer",
-                    "description": "Maximum number of sending links that may be created on this connection. Zero disables all sender links.",
+                    "description": "The maximum number of sending links that may be created on this connection. A value of '0' disables all sender links.",
                     "default": 2147483647,
                     "required": false,
                     "create": true
                 },
                 "maxReceivers": {
                     "type": "integer",
-                    "description": "Maximum number of receiving links that may be created on this connection. Zero disables all receiver links.",
+                    "description": "The maximum number of receiving links that may be created on this connection. A value of '0' disables all receiver links.",
                     "default": 2147483647,
                     "required": false,
                     "create": true
                 },
                 "allowDynamicSource": {
                     "type": "boolean",
-                    "description": "This connection is allowed to use the Dynamic Link Source feature.",
+                    "description": "Whether this connection is allowed to create dynamic receiving links (links to resources that do not exist on the peer). A value of 'true' means that users are able to automatically create resources on the peer system.",
                     "default": false,
                     "required": false,
                     "create": true
                 },
                 "allowAnonymousSender": {
                     "type": "boolean",
-                    "description": "This connection is allowed to use the Anonymous Sender feature.",
+                    "description": "Whether this connection is allowed to create sending links if the sender does not provide a target address. By prohibiting anonymous senders, the router only needs to verify once, when the link is created, that the sender is permitted to send messages to the target address. The router does not need to verify each message that is sent on the link. A value of 'true' means that users may send messages to any address. Allowing anonymous senders can also decrease performance: if the sender does not specify a target address, then the router must parse each message to determine how to route it.",
                     "default": false,
                     "required": false,
                     "create": true
                 },
                 "allowUserIdProxy": {
                     "type": "boolean",
-                    "description": "This connection is allowed to send messages with a user_id property that differs from the connection authenticated user name.",
+                    "description": "Whether this connection is allowed to send messages with a user ID that is different than the connection's authenticated user name.",
                     "default": false,
                     "required": false,
                     "create": true
                 },
                 "sources": {
                     "type": "string",
-                    "description": "CSV list of Source addresses allowed when creating receiving links.",
+                    "description": "A list of source addresses from which users in this group may receive messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses. You can use the substitution token '{user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name.",
                     "required": false,
                     "create": true
                 },
                 "targets": {
                     "type": "string",
-                    "description": "CSV list of Target addresses allowed when creating sending links.",
+                    "description": "A list of target addresses from which users in this group may send messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to send messages from any addresses. You can use the substitution token '{user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name.",
                     "required": false,
                     "create": true
                 }
