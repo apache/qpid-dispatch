@@ -64,6 +64,9 @@ under the License
 :qdrouterdManPageUrl: {BookUrlBase}/man/qdrouterd.html
 :qdrouterdManPageLink: link:{qdrouterdManPageUrl}[qdrouterd man page]
 
+:qdrouterdConfManPageUrl: {BookUrlBase}/man/qdrouterd.conf.html
+:qdrouterdConfManPageLink: link:{qdrouterdManPageUrl}[qdrouterd.conf man page]
+
 :qdstatManPageUrl: {BookUrlBase}/man/qdstat.html
 :qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page]
 

@@ -20,17 +20,19 @@ under the License
 [[security_config]]
 = Security
 
+Securing your router network involves configuring authentication and authorization. You can authenticate and encrypt the router's connections using SSL/TLS or SASL. Additionally, you can authorize access to messaging resources by setting user connection restrictions and defining AMQP resource access control.
+
+== Authenticating Remote Peers
+
 You can configure {RouterName} to communicate with clients, routers, and brokers in a secure way by authenticating and encrypting the router's connections. {RouterName} supports the following security protocols:
 
 * _SSL/TLS_ for certificate-based encryption and mutual authentication
 * _SASL_ for authentication and payload encryption
 
 [[setting_up_ssl_for_encryption_and_authentication]]
-== Setting Up SSL/TLS for Encryption and Authentication
+=== Setting Up SSL/TLS for Encryption and Authentication
 
 Before you can secure incoming and outgoing connections using SSL/TLS encryption and authentication, you must first set up the SSL/TLS profile in the router's configuration file.
-
-// This section assumes that you only need to set up a single SSL profile. Are there scenarios in which customers might need multiple SSL profiles? Would you typically use a single SSL profile for all incoming and outgoing connections, or would you use separate profiles?
 
 .Prerequisites
 
@@ -118,7 +120,7 @@ For information about additional `sslProfile` attributes, see xref:router_config
 --
 
 [[setting_up_sasl_for_authentication_and_payload_encryption]]
-== Setting Up SASL for Authentication and Payload Encryption
+=== Setting Up SASL for Authentication and Payload Encryption
 
 If you plan to use SASL to authenticate connections, you must first add the SASL attributes to the `router` entity in the router's configuration file. These attributes define a set of SASL parameters that can be used by the router's incoming and outgoing connections.
 
@@ -171,7 +173,7 @@ saslConfigName: qdrouterd_sasl
 --
 
 [[securing_incoming_connections]]
-== Securing Incoming Connections
+=== Securing Incoming Connections
 
 You can secure incoming connections by configuring each connection's `listener` entity for encryption, authentication, or both.
 
@@ -187,7 +189,7 @@ Before securing incoming connections, the security protocols you plan to use sho
 * xref:adding_sasl_payload_encryption_to_incoming_connection[Add SASL payload encryption]
 
 [[adding_ssl_encryption_to_incoming_connection]]
-=== Adding SSL/TLS Encryption to an Incoming Connection
+==== Adding SSL/TLS Encryption to an Incoming Connection
 
 You can configure an incoming connection to accept encrypted connections only. By adding SSL/TLS encryption, to connect to this router, a remote peer must first start an SSL/TLS handshake with the router and be able to validate the server certificate received by the router during the handshake.
 
@@ -211,7 +213,7 @@ listener {
 --
 
 [[adding_sasl_authentication_to_incoming_connection]]
-=== Adding SASL Authentication to an Incoming Connection
+==== Adding SASL Authentication to an Incoming Connection
 
 You can configure an incoming connection to authenticate the client using SASL. You can use SASL authentication with or without SSL/TLS encryption.
 
@@ -237,7 +239,7 @@ For a full list of supported Cyrus SASL authentication mechanisms, see link:http
 --
 
 [[adding_ssl_client_authentication_to_incoming_connection]]
-=== Adding SSL/TLS Client Authentication to an Incoming Connection
+==== Adding SSL/TLS Client Authentication to an Incoming Connection
 
 You can configure an incoming connection to authenticate the client using SSL/TLS.
 
@@ -264,7 +266,7 @@ listener {
 --
 
 [[adding_sasl_payload_encryption_to_incoming_connection]]
-=== Adding SASL Payload Encryption to an Incoming Connection
+==== Adding SASL Payload Encryption to an Incoming Connection
 
 If you do not use SSL/TLS, you can still encrypt the incoming connection by using SASL payload encryption.
 
@@ -290,7 +292,7 @@ For a full list of supported Cyrus SASL authentication mechanisms, see link:http
 --
 
 [[securing_outgoing_connections]]
-== Securing Outgoing Connections
+=== Securing Outgoing Connections
 
 You can secure outgoing connections by configuring each connection's `connector` entity for encryption, authentication, or both.
 
@@ -304,7 +306,7 @@ Before securing outgoing connections, the security protocols you plan to use sho
 * xref:adding_sasl_authentication_to_outgoing_connection[Add SASL authentication]
 
 [[adding_ssl_authentication_to_outgoing_connection]]
-=== Adding SSL/TLS Client Authentication to an Outgoing Connection
+==== Adding SSL/TLS Client Authentication to an Outgoing Connection
 
 If an outgoing connection connects to an external client configured with mutual authentication, you should ensure that the outgoing connection is configured to provide the external client with a valid security certificate during the SSL/TLS handshake.
 
@@ -327,7 +329,7 @@ connector {
 --
 
 [[adding_sasl_authentication_to_outgoing_connection]]
-=== Adding SASL Authentication to an Outgoing Connection
+==== Adding SASL Authentication to an Outgoing Connection
 
 You can configure an outgoing connection to provide authentication credentials to the external container. You can use SASL authentication with or without SSL/TLS encryption.
 
@@ -354,7 +356,7 @@ For a full list of supported Cyrus SASL authentication mechanisms, see link:http
 --
 
 [[integrating_with_kerberos]]
-== Integrating with Kerberos
+=== Integrating with Kerberos
 
 By using the `GSSAPI` SASL mechanism, you can configure {RouterName} to authenticate incoming connections using Kerberos.
 
@@ -412,3 +414,360 @@ listener {
 
 For more information about these attributes, see xref:adding_sasl_authentication_to_incoming_connection[].
 --
+
+== Authorizing Access to Messaging Resources
+
+You can restrict the number of user connections, and control access to AMQP messaging resources by configuring _policies_.
+
+=== Types of Policies
+
+You can configure two different types of policies: _global policies_ and _vhost policies_.
+
+Global policies::
+Settings for the router. A global policy defines the maximum number of incoming user connections for the router (across all vhost policies), and defines how the router should use vhost policies.
+
+Vhost policies::
+Connection and AMQP resource limits for a messaging endpoint (called an AMQP virtual host, or _vhost_). A vhost policy defines what a client can access on a messaging endpoint over a particular connection.
++
+[NOTE]
+====
+A vhost is typically the name of the host to which the client connection is directed. For example, if a client application opens a connection to the `amqp://mybroker.example.com:5672/queue01` URL, the vhost would be `mybroker.example.com`.
+====
+
+The resource limits defined in global and vhost policies are applied to user connections only. The limits do not affect inter-router connections or router connections that are outbound to waypoints.
+
+=== How {RouterName} Applies Policies
+
+{RouterName} uses both global and vhost policies to determine whether to permit a connection, and if it is permitted, to apply the appropriate resource limits.
+
+When a client creates a connection to the router, the router first determines whether to allow or deny the connection. This decision is based on the following criteria:
+
+* Whether the connection will exceed the router's global connection limit (defined in the global policy)
+* Whether the connection will exceed the vhost's connection limits (defined in the vhost policy that matches the host to which the connection is directed)
+
+If the connection is allowed, the router assigns the user (the authenticated user name from the connection) to a user group, and enforces the user group's resource limits for the lifetime of the connection.
+
+=== Configuring Global Policies
+
+You can set the incoming connection limit for the router and define how it should use vhost policies by configuring a global policy.
+
+.Procedure
+
+* In the router configuration file, add a `policy` section.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+policy = {
+    maxConnections: 10000  // <1>
+    enableVhostPolicy: true  // <2>
+    policyDir: /etc/qpid-dispatch/policies/  // <3>
+    defaultVhost: $default  // <4>
+}
+----
+<1> The maximum number of concurrent client connections allowed for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
+
+<2> Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies. The default is `false`, which means that the router will not enforce any vhost policies.
++
+[NOTE]
+====
+Setting `enableVhostPolicy` to `false` improves the router's performance.
+====
+
+<3> The absolute path to a directory that holds vhost policy definition files in JSON format (`*.json`). The router processes all of the vhost policies in each JSON file that is in this directory. For more information, see xref:configuring-vhost-policies-json[].
+
+<4> The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. The default is `$default`. If `defaultVhost` is not defined, then default vhost processing is disabled.
+--
+
+=== Configuring Vhost Policies
+
+You configure vhost policies to define the connection limits and AMQP resource limits for a messaging endpoint.
+
+A vhost policy consists of the following:
+
+* Connection limits
++
+These limits control the number of users that can be connected to the vhost simultaneously.
+
+* User groups
++
+A user group defines the messaging resources that the group members are permitted to access. Each user group defines the following:
+
+** A set of users that can connect to the vhost (the group members)
+** The remote hosts from which the group members may connect to the router network
+** The AMQP resources that the group members are permitted to access on the vhost
+
+You can use the following methods to configure vhost policies:
+
+* xref:configuring-vhost-policies-router[Configure vhost policies directly in the router configuration file]
+* xref:configuring-vhost-policies-json[Configure vhost policies as JSON files]
+
+[id='configuring-vhost-policies-router']
+==== Configuring Vhost Policies in the Router Configuration File
+
+You can configure vhost policies in the router configuration file by configuring `vhost` entities. However, if multiple routers in your router network should be configured with the same vhost configuration, you will need to add the `vhost` configuration to each router's configuration file.
+
+.Procedure
+
+. In the router configuration file, add a `vhost` section and define the connection limits for it.
++
+--
+The connection limits apply to all users that are connected to the vhost. These limits control the number of users that can be connected simultaneously to the vhost.
+
+[options="nowrap",subs="+quotes"]
+----
+vhost = {
+    hostname: example.com  // <1>
+    maxConnections: 10000  // <2>
+    maxConnectionsPerUser: 1000  // <3>
+    maxConnectionsPerHost: 1000  // <4>
+    allowUnknownUser: false  // <5>
+    ...
+}
+----
+
+<1> The host name of the vhost. This vhost policy will be applied to any client connection that is directed to the hostname that you specify.
+
+<2> The global maximum number of concurrent client connections allowed for this vhost. The default is `65535`.
+
+<3> The maximum number of concurrent client connections allowed for any user. The default is `65535`.
+
+<4> The maximum number of concurrent client connections allowed for any remote host (the host from which the client is connecting). The default is `65535`. 
+
+<5> Whether unknown users (users who are not members of a defined user group) are allowed to connect to the vhost. Unknown users are assigned to the `$default` user group and receive `$default` settings. The default is `false`, which means that unknown users are not allowed.
+--
+
+. In the `vhost` section, beneath the connection settings that you added, add the necessary user groups.
++
+--
+A user group defines what messaging resources the members of the group are allowed to access.
+
+[options="nowrap",subs="+quotes"]
+----
+vhost {
+    ...
+    groups: {
+        admin: {  // <1>
+            users: admin1, admin2  // <2>
+            remoteHosts: 127.0.0.1, ::1  // <3>
+            sources: *  // <4>
+            targets: *  // <5>
+        },
+        ...
+    }
+}
+----
+
+<1> The name of the user group.
+
+<2> A list of authenticated users for this user group. Use commas to separate multiple users. A user may belong to only one vhost user group.
+
+<3> A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard `*`. To deny access from all remote hosts, leave this attribute blank.
+
+<4> A list of AMQP source addresses from which users in this group may receive messages. To specify multiple AMQP addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses.
++
+You can use the substitution token `{user}` to specify an AMQP address that contains a user's authenticated user name. This enables you to allow access to resources specific to each user in the user group without having to name each user individually. You can only specify the `{user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
++
+You can use an asterisk (`*`) wildcard to match one or more characters in an AMQP address. However, this wildcard is only recognized if it is the last character in the address name.
++
+.Allowing Access to All Addresses
+====
+[options="nowrap"]
+----
+sources: *
+----
+====
++
+.Restricting Access to All Addresses
+====
+[options="nowrap"]
+----
+sources:
+----
+====
++
+.Allowing Access to Specific Addresses
+====
+[options="nowrap"]
+----
+sources: myaddress01, myaddress02, myaddress03
+----
+====
++
+.Allowing Access to User-Specific Addresses
+====
+This definition allows access to any address that meets any of the following rules:
+
+* Starts with the prefix `tmp_` and ends with the user name
+* Starts with the prefix `temp` followed by any additional characters
+* Starts with the user name, is followed by `-home-`, and ends with any additional characters
+
+[options="nowrap"]
+----
+sources: tmp_{user}, temp*, {user}-home-*
+----
+====
+
+<5> A list of AMQP target addresses from which users in this group may send messages. You can specify multiple AMQP addresses and use user name substitution and wildcards the same way as with source addresses.
+--
+
+. If necessary, add any advanced user group settings to the vhost user group.
++
+The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhostUserGroupSettings[Vhost User Group Settings^].
+
+[id='configuring-vhost-policies-json']
+==== Configuring Vhost Policies as JSON Files
+
+As an alternative to using the router configuration file, you can configure vhost policies in JSON files. If you have multiple routers that need to share the same vhost configuration, you can put the vhost configuration JSON files in a location accessible to each router, and then configure the routers to apply the vhost policies defined in these JSON files.
+
+.Procedure
+
+. Determine where to store the vhost policy JSON files.
++
+The directory should be accessible by each router that needs to apply these vhost policies.
+
+. In the directory you determined, create a JSON file for each vhost policy.
++
+The vhost policy is configured the same way as a `vhost` entity in the router configuration file, only using JSON syntax. For more information about vhost policy attributes, see xref:configuring-vhost-policies-router[].
++
+.Sample Vhost Policy JSON File
+====
+[source,json,options="nowrap"]
+----
+{
+    "vhost": {    
+        "name": "example.com",        
+        "maxConnectionsPerUser": 100,        
+        "allowUnknownUser": true,        
+        "groups": {
+            "admin": {
+                "users": ["admin1", "admin2"],
+                "sources": "*",
+                "targets": "*"
+            },
+            "developers": {    
+                "users": ["dev1", "dev2", "dev3"],
+                "remoteHosts": "*",
+                "sources": ["myqueue1", "myqueue2"],
+                "targets": ["myqueue1", "myqueue2"]
+            }
+        }
+    }
+}
+----
+====
+
+. In the router configuration file, locate the `policy` entity and set the `policyDir` attribute to point to the directory where the vhost policy JSON files are stored.
++
+.A `policy` Entity
+====
+[options="nowrap"]
+----
+policy = {
+    maxConnections: 1000
+    enableVhostPolicy: true
+    policyDir: /etc/vhost-policies/ // <1>
+    defaultVhost: $default
+}
+----
+<1> The absolute path to a directory that holds vhost policy definition files in JSON format (*.json). The router processes all of the vhost policies in each JSON file that is in this directory.
+====
+
+. Repeat the previous step for each additional router that should use the vhost policies located in the vhost policy directory.
+
+=== Example: Configuring a Vhost Policy
+
+In this example, a vhost policy defines resource limits for clients connecting to the `example.com` host.
+
+.A Vhost Policy in the Router Configuration File
+====
+[options="nowrap"]
+----
+vhost {
+    name: example.com  // <1>
+    maxConnectionsPerUser: 10  // <2>
+    allowUnknownUser: true  // <3>
+    groups: {
+        admin: {
+            users: admin-01, admin-02  // <4>
+            remoteHosts: 127.0.0.1, ::1  // <5>
+            sources: *  // <6>
+            targets: *  // <6>
+        },
+        $default: {
+            remoteHosts: *  // <7>
+            sources: news*, sports*, chat*  // <8>
+            targets: chat*  // <9>
+        }
+    }
+}
+----
+
+<1> The rules defined in this vhost policy will be applied to any user connecting to `example.com`.
+
+<2> Each user can open up to 10 connections to the vhost.
+
+<3> Any user can connect to this vhost. Users that are not part of the `admin` group are assigned to the `$default` group.
+
+<4> If the `admin-01` or `admin-02` user connects to the vhost, they are assigned to the `admin` user group.
+
+<5> Users in the `admin` user group must connect from localhost. If the admin user attempts to connect from any other host, the connection will be denied.
+
+<6> Users in the admin user group can send and receive from any address offered by the vhost.
+
+<7> Any non-admin user is permitted to connect from any host.
+
+<8> Non-admin users are permitted to receive messages from any addresses that start with the `news`, `sports`, or `chat` prefixes.
+
+<9> Non-admin users are permitted to send messages to any address that start with the `chat` prefix.
+====
+
+=== Example: Using a Vhost Policy to Limit Memory Consumption (Advanced)
+
+By using the advanced vhost policy attributes, you can control how much system buffer memory a user connection can potentially consume.
+
+In this example, a stock trading site provides services for stock traders. However, the site must also accept high-capacity, automated data feeds from stock exchanges. To prevent trading activity from consuming memory needed for the feeds, a larger amount of system buffer memory is allotted to the feeds than to the traders. 
+
+This examples uses the `maxSessions` and `maxSessionWindow` attributes to set the buffer memory consumption limits for each AMQP session. These settings are passed directly to the AMQP connection and session negotiations, and do not require any processing cycles on the router.
+
+This example does not show the vhost policy settings that are unrelated to buffer allocation.
+
+.A Vhost Policy to Limit Memory Consumption
+====
+[options="nowrap"]
+----
+vhost {
+    name: traders.com  // <1>
+    groups: {
+        traders: {
+            users: trader-1, trader-2, ...  // <2>
+            maxFrameSize: 10000  // <3>
+            maxSessionWindow: 5000000  // <3>
+            maxSessions: 1  // <4>
+            ...
+        },
+        feeds: {
+            users: nyse-feed, nasdaq-feed  // <5>
+            maxFrameSize: 60000  // <6>
+            maxSessionWindow: 1200000000  // <6>
+            maxSessions: 3  // <7>
+            ...
+        }
+    }
+}
+----
+
+<1> The rules defined in this vhost policy will be applied to any user connecting to `traders.com`.
+
+<2> The `traders` group includes `trader-01`, `trader-02`, and any other user defined in the list.
+
+<3> At most, 5,000,000 bytes of data can be in flight on each session.
+
+<4> Only one session per connection is allowed.
+
+<5> The `feeds` group includes two users.
+
+<6> At most, 1,200,000,000 bytes of data can be in flight on each session.
+
+<7> Up to three sessions per connection are allowed.
+====
