@@ -187,6 +187,8 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
  */
 void qdr_connection_closed(qdr_connection_t *conn);
 
+bool qdr_connection_route_container(qdr_connection_t *conn);
+
 /**
  * qdr_connection_set_context
  *

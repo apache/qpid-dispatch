@@ -462,18 +462,71 @@
                     "graph": true
                 },
 
+                "presettledDeliveries": {
+                    "type": "integer",
+                    "description":"Number of presettled deliveries handled by the router.",
+                    "graph": true
+                },
+                "droppedPresettledDeliveries": {
+                    "type": "integer",
+                    "description":"Number of presettled deliveries that were dropped by the router.",
+                    "graph": true
+                },
+                "acceptedDeliveries": {
+                    "type": "integer",
+                    "description":"Number of deliveries whose delivery state was set to ACCEPTED by the router. These deliveries were successfully processed by the router.",
+                    "graph": true
+                },
+                "rejectedDeliveries": {
+                    "type": "integer",
+                    "description":"Number of deliveries whose delivery state was set to REJECTED by the router. These deliveries were Invalid and unprocessable.",
+                    "graph": true
+                },
+                "releasedDeliveries": {
+                    "type": "integer",
+                    "description":"Number of deliveries whose delivery state was set to RELEASED by the router. These deliveries was not (and will not be) processed",
+                    "graph": true
+                },
+                "modifiedDeliveries": {
+                    "type": "integer",
+                    "description":"Number of deliveries whose delivery state was set to MODIFIED by the router. These deliveries were modified but not processed.",
+                    "graph": true
+                },
+                "deliveriesIngress": {
+                    "type": "integer",
+                    "description":"Number of deliveries that were sent to it by a sender that is directly attached to the router.",
+                    "graph": true
+                },
+                "deliveriesEgress": {
+                    "type": "integer",
+                    "description":"Number of deliveries that were sent by the router to a receiver that is directly attached to the router.",
+                    "graph": true
+                },
+                "deliveriesTransit": {
+                    "type": "integer",
+                    "description":"Number of deliveries that were sent to another router in the network.",
+                    "graph": true
+                },                
+                "deliveriesIngressRouteContainer": {
+                    "type": "integer",
+                    "description":"Number of deliveries that were received from router container connections.",
+                    "graph": true
+                },                
+                "deliveriesEgressRouteContainer": {
+                    "type": "integer",
+                    "description":"Number of deliveries that were sent to route container connections.",
+                    "graph": true
+                },                
                 "workerThreads": {
                     "type": "integer",
                     "default": 4,
                     "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
                     "create": true
-
                 },
                 "debugDump": {
                     "type": "path",
                     "description": "A file to dump debugging information that can't be logged normally.",
                     "create": true
-
                 },
                 "saslConfigPath": {
                     "type": "path",
@@ -1261,6 +1314,16 @@
                 "deliveriesFromContainer": {
                     "type": "integer",
                     "description": "The number of deliveries to this address that were originated from an in-process entity",
+                    "graph": true
+                },
+                "deliveriesIngressRouteContainer": {
+                    "type": "integer",
+                    "description": "Number of deliveries that were received from a route-container address.",
+                    "graph": true
+                },
+                "deliveriesEgressRouteContainer": {
+                    "type": "integer",
+                    "description": "Number of deliveries that were sent to a route-container address.",
                     "graph": true
                 },
                 "key": {

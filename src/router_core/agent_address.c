@@ -20,23 +20,25 @@
 #include "agent_address.h"
 #include "router_core_private.h"
 
-#define QDR_ADDRESS_NAME                      0
-#define QDR_ADDRESS_IDENTITY                  1
-#define QDR_ADDRESS_TYPE                      2
-#define QDR_ADDRESS_KEY                       3
-#define QDR_ADDRESS_DISTRIBUTION              4
-#define QDR_ADDRESS_IN_PROCESS                5
-#define QDR_ADDRESS_SUBSCRIBER_COUNT          6
-#define QDR_ADDRESS_REMOTE_COUNT              7
-#define QDR_ADDRESS_CONTAINER_COUNT           8
-#define QDR_ADDRESS_REMOTE_HOST_ROUTERS       9
-#define QDR_ADDRESS_DELIVERIES_INGRESS        10
-#define QDR_ADDRESS_DELIVERIES_EGRESS         11
-#define QDR_ADDRESS_DELIVERIES_TRANSIT        12
-#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER   13
-#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER 14
-#define QDR_ADDRESS_TRANSIT_OUTSTANDING       15
-#define QDR_ADDRESS_TRACKED_DELIVERIES        16
+#define QDR_ADDRESS_NAME                                0
+#define QDR_ADDRESS_IDENTITY                            1
+#define QDR_ADDRESS_TYPE                                2
+#define QDR_ADDRESS_KEY                                 3
+#define QDR_ADDRESS_DISTRIBUTION                        4
+#define QDR_ADDRESS_IN_PROCESS                          5
+#define QDR_ADDRESS_SUBSCRIBER_COUNT                    6
+#define QDR_ADDRESS_REMOTE_COUNT                        7
+#define QDR_ADDRESS_CONTAINER_COUNT                     8
+#define QDR_ADDRESS_REMOTE_HOST_ROUTERS                 9
+#define QDR_ADDRESS_DELIVERIES_INGRESS                 10
+#define QDR_ADDRESS_DELIVERIES_EGRESS                  11
+#define QDR_ADDRESS_DELIVERIES_TRANSIT                 12
+#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER            13
+#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER          14
+#define QDR_ADDRESS_DELIVERIES_EGRESS_ROUTE_CONTAINER  15
+#define QDR_ADDRESS_DELIVERIES_INGRESS_ROUTE_CONTAINER 16
+#define QDR_ADDRESS_TRANSIT_OUTSTANDING                17
+#define QDR_ADDRESS_TRACKED_DELIVERIES                 18
 
 const char *qdr_address_columns[] =
     {"name",
@@ -54,6 +56,8 @@ const char *qdr_address_columns[] =
      "deliveriesTransit",
      "deliveriesToContainer",
      "deliveriesFromContainer",
+     "deliveriesEgressRouteContainer",
+     "deliveriesIngressRouteContainer",
      "transitOutstanding",
      "trackedDeliveries",
      0};
@@ -139,6 +143,14 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
 
     case QDR_ADDRESS_DELIVERIES_FROM_CONTAINER:
         qd_compose_insert_ulong(body, addr->deliveries_from_container);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_EGRESS_ROUTE_CONTAINER:
+        qd_compose_insert_ulong(body, addr->deliveries_egress_route_container);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_INGRESS_ROUTE_CONTAINER:
+        qd_compose_insert_ulong(body, addr->deliveries_ingress_route_container);
         break;
 
     case QDR_ADDRESS_TRANSIT_OUTSTANDING:
