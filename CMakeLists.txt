@@ -45,8 +45,18 @@ include(CheckIncludeFiles)
 include(FindPythonInterp)
 include(FindPythonLibs)
 
-enable_testing()
-include (CTest)
+# Find python-unittest2
+execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
+			RESULT_VARIABLE UNITTEST2_STATUS
+			ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+
+if(UNITTEST2_STATUS)
+  message( STATUS "WARNING: python-unittest2 is not installed. You cannot execute unit tests" )
+else(UNITTEST2_STATUS)
+  enable_testing()
+  include (CTest)
+endif(UNITTEST2_STATUS)
+
 
 if (NOT PYTHONLIBS_FOUND)
      message(FATAL_ERROR "Python Development Libraries are needed.")
