@@ -33,7 +33,6 @@
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
-const char *CORE_AGENT_ADDRESS = "$management";
 
 static char *router_role    = "inter-router";
 static char *container_role = "route-container";

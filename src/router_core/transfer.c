@@ -520,16 +520,31 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     }
 
     if (link) {
-        if (delivery->presettled)
+        if (delivery->presettled) {
             link->presettled_deliveries++;
-        else if (delivery->disposition == PN_ACCEPTED)
+            if (link->link_direction ==  QD_INCOMING)
+                core->presettled_deliveries++;
+        }
+        else if (delivery->disposition == PN_ACCEPTED) {
             link->accepted_deliveries++;
-        else if (delivery->disposition == PN_REJECTED)
+            if (link->link_direction ==  QD_INCOMING)
+                core->accepted_deliveries++;
+        }
+        else if (delivery->disposition == PN_REJECTED) {
             link->rejected_deliveries++;
-        else if (delivery->disposition == PN_RELEASED)
+            if (link->link_direction ==  QD_INCOMING)
+                core->rejected_deliveries++;
+        }
+        else if (delivery->disposition == PN_RELEASED) {
             link->released_deliveries++;
-        else if (delivery->disposition == PN_MODIFIED)
+            if (link->link_direction ==  QD_INCOMING)
+                core->released_deliveries++;
+        }
+        else if (delivery->disposition == PN_MODIFIED) {
             link->modified_deliveries++;
+            if (link->link_direction ==  QD_INCOMING)
+                core->modified_deliveries++;
+        }
     }
 
     //
@@ -764,6 +779,7 @@ static long qdr_addr_path_count_CT(qdr_address_t *addr)
 
 static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv, qdr_address_t *addr)
 {
+    core->deliveries_ingress++;
     bool receive_complete = qd_message_receive_complete(qdr_delivery_message(dlv));
     if (addr && addr == link->owning_addr && qdr_addr_path_count_CT(addr) == 0) {
         //
@@ -787,6 +803,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             if (dlv->settled) {
                 // Increment the presettled_dropped_deliveries on the in_link
                 link->dropped_presettled_deliveries++;
+                core->dropped_presettled_deliveries++;
             }
         }
         else {
@@ -801,8 +818,16 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
 
     if (addr) {
         fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
-        if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER)
+        if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER) {
             addr->deliveries_ingress++;
+
+            if (qdr_connection_route_container(link->conn)) {
+                addr->deliveries_from_route_container++;
+                core->deliveries_from_route_container++;
+
+            }
+
+        }
         link->total_deliveries++;
     }
     //

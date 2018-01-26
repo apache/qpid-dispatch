@@ -18,12 +18,16 @@
 #
 
 import unittest2 as unittest
+import json
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+from subprocess import PIPE, STDOUT
 
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
+
+
 
 class AutolinkTest(TestCase):
     """System tests involving a single router"""
@@ -74,6 +78,26 @@ class AutolinkTest(TestCase):
         cls.normal_address = cls.router.addresses[0]
         cls.route_address  = cls.router.addresses[1]
 
+    def run_qdstat_general(self):
+        cmd = ['qdstat', '--bus', str(AutolinkTest.normal_address), '--timeout', str(TIMEOUT)] + ['-g']
+        p = self.popen(
+            cmd,
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        return out
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', AutolinkTest.normal_address, '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
 
     def test_01_autolink_attach(self):
         """
@@ -84,7 +108,6 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_02_autolink_credit(self):
         """
         Create a normal connection and a sender to the autolink address.  Then create the route-container
@@ -94,6 +117,12 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+        long_type = 'org.apache.qpid.dispatch.router'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+
+        self.assertEqual(output[0]['deliveriesIngress'], 1)
+        self.assertEqual(output[0]['deliveriesEgress'], 0)
 
     def test_03_autolink_sender(self):
         """
@@ -104,6 +133,15 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+        long_type = 'org.apache.qpid.dispatch.router'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output[0]['routeContainerDeliveriesEgress'], 275)
+        self.assertEqual(output[0]['routeContainerDeliveriesIngress'], 0)
+        self.assertEqual(output[0]['deliveriesTransit'], 0)
+
+        self.assertEqual(output[0]['deliveriesIngress'], 277)
+        self.assertEqual(output[0]['deliveriesEgress'], 276)
 
     def test_04_autolink_receiver(self):
         """
@@ -114,6 +152,15 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+        long_type = 'org.apache.qpid.dispatch.router'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(output[0]['routeContainerDeliveriesEgress'], 275)
+        self.assertEqual(output[0]['routeContainerDeliveriesIngress'], 275)
+        self.assertEqual(output[0]['deliveriesTransit'], 0)
+
+        self.assertEqual(output[0]['deliveriesIngress'], 553)
+        self.assertEqual(output[0]['deliveriesEgress'], 552)
 
     def test_05_inter_container_transfer(self):
         """
