@@ -663,7 +663,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         }
     } else {
         // A receiver with no remote source.
-        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_TRACE,
+        qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                "DENY AMQP Attach receiver link '' for user '%s', rhost '%s', vhost '%s'",
                qd_conn->user_id, hostip, vhost);
         _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
@@ -680,7 +680,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
     qd_policy_t *policy = qd->policy;
     bool connection_allowed = true;
 
-    if (policy->enableVhostPolicy) {
+    if (policy->enableVhostPolicy && (!qd_conn->role || strcmp(qd_conn->role, "inter-router"))) {
         // Open connection or not based on policy.
         pn_transport_t *pn_trans = pn_connection_transport(conn);
         const char *hostip = qd_connection_remote_ip(qd_conn);
