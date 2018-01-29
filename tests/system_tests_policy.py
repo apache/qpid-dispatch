@@ -301,5 +301,57 @@ class SenderReceiverLimits(TestCase):
 
         bs1.close()
 
+
+class InterrouterLinksAllowed(TestCase):
+
+    inter_router_port = None
+
+    @classmethod
+    def setUpClass(cls):
+        """Start a router"""
+        super(InterrouterLinksAllowed, cls).setUpClass()
+
+        policy_config_path = os.path.join(DIR, 'policy-5')
+
+        def router(name, connection):
+
+            config = [
+                ('router', {'mode': 'interior', 'id': name}),
+                ('listener', {'port': cls.tester.get_port()}),
+                ('log', {'module': 'DEFAULT', 'enable': 'trace+'}),
+                ('policy', {'enableVhostPolicy': 'yes', 'policyDir': policy_config_path}),
+                connection
+            ]
+
+            config = Qdrouterd.Config(config)
+
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+
+        router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}))
+        router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port, 'verifyHostName': 'no'}))
+
+        # With these configs before DISPATCH-920 the routers never connect
+        # because the links are disallowed by policy. Before the wait_ready
+        # functions complete the routers should have tried the interrouter
+        # link.
+
+        cls.routers[0].wait_ready()
+        cls.routers[1].wait_ready()
+
+        cls.routers[0].teardown()
+        cls.routers[1].teardown()
+
+    def test_01_dispatch_920(self):
+
+        with  open('../setUpClass/A-2.out', 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            disallow_lines = [s for s in log_lines if "link disallowed" in s]
+            self.assertTrue(len(disallow_lines) == 0, msg='All links should be allowed but some were blocked by policy.')
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
