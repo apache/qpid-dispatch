@@ -82,7 +82,7 @@ DEQ_DECLARE(log_sink_t, log_sink_list_t);
 
 static log_sink_list_t sink_list = {0};
 
-const char *format = "%Y-%m-%d %H:%M:%S.%%03lu %z";
+const char *format = "%Y-%m-%d %H:%M:%S.%%06lu %z";
 
 static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
