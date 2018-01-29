@@ -345,13 +345,11 @@ class InterrouterLinksAllowed(TestCase):
         cls.routers[0].teardown()
         cls.routers[1].teardown()
 
-    def test_01_dispatch_920(self):
-
+    def test_01_router_links_allowed(self):
         with  open('../setUpClass/A-2.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             disallow_lines = [s for s in log_lines if "link disallowed" in s]
-            self.assertTrue(len(disallow_lines) == 0, msg='All links should be allowed but some were blocked by policy.')
-
+            self.assertTrue(len(disallow_lines) == 0, msg='Inter-router links should be allowed but some were blocked by policy.')
 
 
 if __name__ == '__main__':
