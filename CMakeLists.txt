@@ -45,8 +45,19 @@ include(CheckIncludeFiles)
 include(FindPythonInterp)
 include(FindPythonLibs)
 
+# Find python-unittest2
+execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
+			RESULT_VARIABLE UNITTEST2_MISSING
+			ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 enable_testing()
-include (CTest)
+if(UNITTEST2_MISSING)
+  message(STATUS "WARNING: python-unittest2 is not installed. ***unit tests cannot be run***" )
+  # add bogus test for folk who may have missed the cmake warning
+  add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
+else(UNITTEST2_MISSING)
+  include (CTest)
+endif(UNITTEST2_MISSING)
+
 
 if (NOT PYTHONLIBS_FOUND)
      message(FATAL_ERROR "Python Development Libraries are needed.")
@@ -218,7 +229,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/tests/run.py)
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 
-add_subdirectory(tests)
+if (NOT UNITTEST2_MISSING)
+  add_subdirectory(tests)
+endif(NOT UNITTEST2_MISSING)
 add_subdirectory(python)
 add_subdirectory(router)
 add_subdirectory(doc)
