@@ -273,6 +273,8 @@ static void set_policy_settings(pn_connection_t* conn, permissions_t* permission
         if (permissions->sources.start && permissions->sources.capacity) {
             qd_conn->policy_settings->sources = strdup(permissions->sources.start);
         }
+        qd_conn->policy_settings->allowDynamicSource = true;
+        qd_conn->policy_settings->allowAnonymousSender = true;
     }
 }
 

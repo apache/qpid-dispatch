@@ -115,6 +115,17 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(1, client.received)
         self.assertEqual(0, len(client.errors))
 
+    def test_dynamic_source_anonymous_sender(self):
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
+        container = Container()
+        client = DynamicSourceAnonymousSender()
+        container.connect("admin:admin@127.0.0.1:%d" % self.router_port, handler=client)
+        container.run()
+        self.assertEqual('hello', client.message)
+        self.assertEqual(0, len(client.errors))
+
 
 class ConnectionHandler(MessagingHandler):
     def __init__(self, address, count):
@@ -142,6 +153,25 @@ class ConnectionHandler(MessagingHandler):
     def on_connection_opened(self, event):
         event.container.create_receiver(event.connection, self.address)
         event.container.create_sender(event.connection, self.address)
+
+class DynamicSourceAnonymousSender(MessagingHandler):
+    def __init__(self):
+        super(DynamicSourceAnonymousSender, self).__init__()
+        self.sender = None
+        self.message = None
+        self.errors = []
+
+    def on_message(self, event):
+        self.message = event.message.body;
+        event.connection.close()
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.sender.send(Message(address=event.receiver.remote_source.address, body='hello'))
+
+    def on_connection_opened(self, event):
+        event.container.create_receiver(event.connection, None, dynamic=True)
+        self.sender = event.container.create_sender(event.connection, None)
 
 if __name__ == '__main__':
     unittest.main(main_module())
