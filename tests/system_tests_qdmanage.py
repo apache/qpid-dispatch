@@ -177,7 +177,7 @@ class QdmanageTest(TestCase):
 
     def test_get_types(self):
         out = json.loads(self.run_qdmanage("get-types"))
-        self.assertEqual(len(out), 26)
+        self.assertEqual(len(out), 28)
 
     def test_get_attributes(self):
         out = json.loads(self.run_qdmanage("get-attributes"))

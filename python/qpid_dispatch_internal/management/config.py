@@ -52,6 +52,8 @@ class Config(object):
             if s[0] == "address":   s[0] = "router.config.address"
             if s[0] == "linkRoute": s[0] = "router.config.linkRoute"
             if s[0] == "autoLink":  s[0] = "router.config.autoLink"
+            if s[0] == "exchange":  s[0] = "router.config.exchange"
+            if s[0] == "binding":   s[0] = "router.config.binding"
 
     @staticmethod
     def _parse(lines):
@@ -59,17 +61,20 @@ class Config(object):
         begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
         end = re.compile(r'}')                 # }
         attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
-        pattern = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
+
+        # The 'pattern:' and 'bindingKey:' attributes in the schema are special
+        # snowflakes. They allow '#' characters in their value, so they cannot
+        # be treated as comment delimiters
+        special_snowflakes = ['pattern', 'bindingKey']
+        hash_ok = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
 
         def sub(line):
             """Do substitutions to make line json-friendly"""
             line = line.strip()
             if line.startswith("#"):
                 return ""
-            # 'pattern:' is a special snowflake.  It allows '#' characters in
-            # its value, so they cannot be treated as comment delimiters
-            if line.split(':')[0].strip().lower() == "pattern":
-                line = re.sub(pattern, r'"\1": "\2",', line)
+            if line.split(':')[0].strip() in special_snowflakes:
+                line = re.sub(hash_ok, r'"\1": "\2",', line)
             else:
                 line = line.split('#')[0].strip()
                 line = re.sub(begin, r'["\1", {', line)
@@ -174,6 +179,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     # Remaining configuration
     for t in "sslProfile", "authServicePlugin", "listener", "connector", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
+             "router.config.exchange", "router.config.binding", \
              "policy", "vhost":
         for a in config.by_type(t):
             configure(a)

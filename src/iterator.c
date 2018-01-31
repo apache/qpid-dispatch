@@ -747,8 +747,12 @@ qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter)
         return 0;
 
     qd_iterator_t *dup = new_qd_iterator_t();
-    if (dup)
+    if (dup) {
         *dup = *iter;
+        // drop any references to the hash segments to avoid potential double
+        // free
+        DEQ_INIT(dup->hash_segments);
+    }
     return dup;
 }
 

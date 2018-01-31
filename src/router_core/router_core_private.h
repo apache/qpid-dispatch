@@ -36,6 +36,7 @@ typedef struct qdr_link_route_t      qdr_link_route_t;
 typedef struct qdr_auto_link_t       qdr_auto_link_t;
 typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
 typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
+typedef struct qdr_exchange          qdr_exchange_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -462,7 +463,12 @@ struct qdr_address_t {
     // State for "balanced" treatment
     //
     int *outstanding_deliveries;
-    
+
+    //
+    // State for "exchange" treatment
+    //
+    qdr_exchange_t      *exchange;  // weak ref
+
     /**@name Statistics */
     ///@{
     uint64_t deliveries_ingress;
@@ -617,6 +623,7 @@ struct qdr_conn_identifier_t {
 };
 
 ALLOC_DECLARE(qdr_conn_identifier_t);
+DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
 
 
 struct qdr_core_t {
@@ -700,6 +707,7 @@ struct qdr_core_t {
     uint64_t              next_identifier;
     sys_mutex_t          *id_lock;
 
+    qdr_exchange_list_t   exchanges;
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 };
 

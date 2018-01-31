@@ -239,11 +239,9 @@ static char *test_sub_iterator(void *context)
     return 0;
 }
 
-
 static char* view_address_hash(void *context, qd_iterator_t *iter,
                                const char *addr, const char *view)
 {
-    qd_iterator_annotate_phase(iter, '1');
     if (!qd_iterator_equal(iter, (unsigned char*) view)) {
         char *got = (char*) qd_iterator_copy(iter);
         snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
@@ -252,6 +250,26 @@ static char* view_address_hash(void *context, qd_iterator_t *iter,
         return fail_text;
     }
     return 0;
+}
+
+static char *check_dup(void *context, const qd_iterator_t *iter,
+                         const char *addr, const char *view)
+{
+    qd_iterator_t *dup = qd_iterator_dup(iter);
+    if (!dup)
+        return "dup of iterator failed";
+    char *ret = view_address_hash(context, dup, addr, view);
+    qd_iterator_free(dup);
+    return ret;
+}
+
+static char *verify_iterator(void *context, qd_iterator_t *iter,
+                             const char *addr, const char *view)
+{
+    char *ret = view_address_hash(context, iter, addr, view);
+    if (!ret)
+        ret = check_dup(context, iter, addr, view);
+    return ret;
 }
 
 static char* test_view_address_hash(void *context)
@@ -296,11 +314,10 @@ static char* test_view_address_hash(void *context)
 
     for (idx = 0; cases[idx].addr; idx++) {
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
-        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
-        if (ret) {
-            return strncpy(fail_text, ret, FAIL_TEXT_SIZE-1);
-        }
+        if (ret) return ret;
     }
 
     for (idx = 0; cases[idx].addr; idx++) {
@@ -310,7 +327,8 @@ static char* test_view_address_hash(void *context)
         qd_iterator_t *iter = qd_iterator_buffer(DEQ_HEAD(chain), 0,
                                                  strlen(cases[idx].addr),
                                                  ITER_VIEW_ADDRESS_HASH);
-        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         release_buffer_chain(&chain);
         qd_iterator_free(iter);
         if (ret) return ret;
@@ -363,7 +381,8 @@ static char* test_view_address_with_space(void *context)
     for (idx = 0; cases[idx].addr; idx++) {
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_WITH_SPACE);
         qd_iterator_annotate_space(iter, "space/", 6);
-        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
         if (ret) return ret;
     }
@@ -376,7 +395,8 @@ static char* test_view_address_with_space(void *context)
                                                  strlen(cases[idx].addr),
                                                  ITER_VIEW_ADDRESS_WITH_SPACE);
         qd_iterator_annotate_space(iter, "space/", 6);
-        char *ret = view_address_hash(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         release_buffer_chain(&chain);
         qd_iterator_free(iter);
         if (ret) return ret;
@@ -400,14 +420,9 @@ static char* test_view_address_hash_override(void *context)
     for (idx = 0; cases[idx].addr; idx++) {
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
         qd_iterator_annotate_prefix(iter, 'C');
-        if (!qd_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
-            char *got = (char*) qd_iterator_copy(iter);
-            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
-                     cases[idx].addr, cases[idx].view, got);
-            qd_iterator_free(iter);
-            return fail_text;
-        }
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
+        if (ret) return ret;
     }
 
     return 0;
@@ -430,15 +445,9 @@ static char* test_view_address_hash_with_space(void *context)
     for (idx = 0; cases[idx].addr; idx++) {
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
         qd_iterator_annotate_space(iter, "test.vhost.", 11);
-        if (!qd_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
-            char *got = (char*) qd_iterator_copy(iter);
-            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s' (len: %d)",
-                     cases[idx].addr, cases[idx].view, got, qd_iterator_length(iter));
-            free(got);
-            qd_iterator_free(iter);
-            return fail_text;
-        }
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
+        if (ret) return ret;
     }
 
     return 0;
@@ -457,14 +466,9 @@ static char* test_view_node_hash(void *context)
 
     for (idx = 0; cases[idx].addr; idx++) {
         qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_NODE_HASH);
-        if (!qd_iterator_equal(iter, (unsigned char*) cases[idx].view)) {
-            char *got = (char*) qd_iterator_copy(iter);
-            snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
-                     cases[idx].addr, cases[idx].view, got);
-            qd_iterator_free(iter);
-            return fail_text;
-        }
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
         qd_iterator_free(iter);
+        if (ret) return ret;
     }
 
     return 0;
