@@ -266,6 +266,117 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 }
 
 
+static void qdr_router_add_link_route_pattern_CT(qdr_core_t *core, qdr_connection_t *conn, const char *pattern, qd_direction_t dir)
+{
+    if (*pattern == '\0')
+        return;
+
+    char          *addr_hash = qdr_link_route_pattern_to_address(pattern, dir);
+    qd_iterator_t *iter      = qd_iterator_string(addr_hash + 1, ITER_VIEW_ADDRESS_HASH);
+    qdr_address_t *addr      = 0;
+
+    qd_iterator_annotate_prefix(iter, addr_hash[0]);
+    if (conn->tenant_space)
+        qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
+
+    qd_hash_retrieve(core->addr_hash, iter, (void*) &addr);
+    if (!addr) {
+        addr = qdr_address_CT(core, QD_TREATMENT_LINK_BALANCED);
+        DEQ_INSERT_TAIL(core->addrs, addr);
+        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+        qdr_link_route_map_pattern_CT(core, iter, addr);
+    }
+
+    qdr_add_address_ref(&conn->addr_refs, addr);
+    qdr_add_connection_ref(&addr->conns, conn);
+    if (DEQ_SIZE(addr->conns) == 1) {
+        char *hash_key = (char*) qd_iterator_copy(iter);
+        qdr_post_mobile_added_CT(core, hash_key);
+        free(hash_key);
+    }
+
+    free(addr_hash);
+}
+
+
+static void qdr_route_use_connection_properties_CT(qdr_core_t *core, qdr_connection_t *conn)
+{
+    pn_data_t *p = conn->connection_info->connection_properties;
+
+    //
+    // If there are no connection properties, we have nothing to do.
+    //
+    if (!p)
+        return;
+
+    pn_data_rewind(p);
+    pn_data_next(p);
+
+    //
+    // If the connection properties are not a map, there's no point in continuing.
+    //
+    if (pn_data_type(p) != PN_MAP)
+        return;
+
+    pn_data_enter(p);
+    pn_data_next(p);
+
+    //
+    // Work across the map looking for keys that are relevant for route modification.
+    //
+    while (pn_data_type(p) == PN_SYMBOL) {
+        pn_bytes_t key = pn_data_get_symbol(p);
+        if (!pn_data_next(p))
+            break;
+
+        if (strcmp(key.start, QD_CONNECTION_PROPERTY_LINK_ROUTE_PATTERNS) == 0) {
+            //
+            // The connected container wants to receive link-routed attaches.
+            //
+            if (pn_data_type(p) == PN_LIST) {
+                pn_data_enter(p);
+                pn_data_next(p);
+                while (pn_data_type(p) == PN_STRING) {
+                    pn_bytes_t pattern = pn_data_get_string(p);
+                    pn_data_next(p);
+                    if (pn_data_type(p) == PN_SYMBOL) {
+                        pn_bytes_t dir = pn_data_get_symbol(p);
+                        pn_data_next(p);
+                        if (strcmp(dir.start, "in") == 0 || strcmp(dir.start, "inout") == 0)
+                            qdr_router_add_link_route_pattern_CT(core, conn, pattern.start, QD_INCOMING);
+                        if (strcmp(dir.start, "out") == 0 || strcmp(dir.start, "inout") == 0)
+                            qdr_router_add_link_route_pattern_CT(core, conn, pattern.start, QD_OUTGOING);
+                    } else
+                        break;
+                }
+                pn_data_exit(p);
+            }
+        }
+        if (!pn_data_next(p))
+            break;
+    }
+
+    pn_data_exit(p);
+    pn_data_rewind(p);
+}
+
+
+static void qdr_route_cleanup_connection_CT(qdr_core_t *core, qdr_connection_t *conn)
+{
+    qdr_address_ref_t *ref = DEQ_HEAD(conn->addr_refs);
+
+    while (ref) {
+        qdr_address_t *addr = ref->addr;
+        if (DEQ_SIZE(addr->conns) == 1)
+            qdr_post_mobile_removed_CT(core, (const char*) qd_hash_key_by_handle(addr->hash_handle));
+        qdr_del_connection_ref(&addr->conns, conn);
+        qdr_del_address_ref(&conn->addr_refs, addr);
+        qdr_check_addr_CT(core, addr, false);
+        ref = DEQ_HEAD(conn->addr_refs);
+    }
+}
+
+
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
@@ -322,7 +433,6 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
             qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
             qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
         }
-
         qd_iterator_free(a_iter);
         free(addr_hash);
     }
@@ -486,15 +596,26 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
                                     qdr_field_t      *container_field,
                                     qdr_field_t      *connection_field)
 {
+    //
+    // If this is a normal or route-container connection, check the connection
+    // properties to see if there are any routing directives in there that need
+    // to be honored.
+    //
+    if (conn->role == QDR_ROLE_ROUTE_CONTAINER ||
+        conn->role == QDR_ROLE_NORMAL)
+        qdr_route_use_connection_properties_CT(core, conn);
+
+    //
+    // The rest of this function is for router-container connections only.
+    //
     if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
         return;
 
     qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core,
-            container_field?container_field->iterator:0, connection_field?connection_field->iterator:0);
-
+                                                         container_field  ? container_field->iterator  : 0,
+                                                         connection_field ? connection_field->iterator : 0);
     qdr_add_connection_ref(&cid->connection_refs, conn);
-
-    conn->conn_id        = cid;
+    conn->conn_id = cid;
 
     //
     // Activate all link-routes associated with this remote container.
@@ -518,6 +639,14 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
 {
+    //
+    // If this is a normal or route-container connection, undo any routing entries
+    // that are associated with the connection.
+    //
+    if (conn->role == QDR_ROLE_ROUTE_CONTAINER ||
+        conn->role == QDR_ROLE_NORMAL)
+        qdr_route_cleanup_connection_CT(core, conn);
+
     if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
         return;
 
@@ -600,3 +729,5 @@ void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
     qd_iterator_free(iter);
     free(pattern);
 }
+
+

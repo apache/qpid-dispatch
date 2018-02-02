@@ -164,3 +164,37 @@ link-routing.
 The above configuration allows Rb and Rp to reject attaches that should
 be routed to B2 with an error message that indicates that there is no
 route available to the destination.
+
+Automatic Link Routes
+~~~~~~~~~~~~~~~~~~~~~
+
+There is an alternative way to use link routes that doesn't involve any
+configuration.  An endpoint connected to a router may declare, using
+connection properties, its availability to accept routed links for a
+specific set of addresses.  This connection may be connected to the router
+through a normal listener.  There is no need to create a listener with the
+'route-container' role.
+
+The connection property that controls this feature is
+'qd.link-route-patterns'.
+
+To use the feature, a client provides a connection property when opening
+the connection to the router.  The property has the key
+'qd.link-route-patterns'.  The value is a list containing an even number of
+elements, arranged in pairs.  The first element in a pair is a string
+containing the link route pattern.  This uses the same syntax that would be
+used in the 'pattern' attribute of a linkRoute configuration item.  The
+second element in the pair is a string which has one of three values: "in",
+"out", or "inout".  The second element identifies the direction of links
+for which the pattern shall be matched.  Any number of pattern/direction
+pairs may be supplied in the connection property.
+
+The lifecycle of the resulting link routes is matched to the lifecycle of
+the connection.  When the connection closes, the link routes are removed.
+
+Automatic link routes created using this connection property are propagated
+normally across a router network.
+
+If multi-tenancy is in effect for the connection, the link route patterns
+shall be automatically placed in the tenant namespace.
+
