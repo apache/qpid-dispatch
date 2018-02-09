@@ -1325,6 +1325,10 @@
                 "lastTopoChange": {
                      "description": "Timestamp showing the most recent change to this node's neighborhood.",
                      "type": "integer"
+                },
+                "index": {
+                    "description": "Index number for this router node used in statistics histograms.  This index is specific to this router.",
+                    "type": "integer"
                 }
 
             }
