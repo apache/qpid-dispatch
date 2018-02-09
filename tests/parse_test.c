@@ -302,9 +302,15 @@ static char *test_tracemask(void *context)
     qd_parsed_field_t *pf   = qd_parse(iter);
     qd_iterator_free(iter);
 
-    bm = qd_tracemask_create(tm, pf);
+    int ingress = -1;
+
+    bm = qd_tracemask_create(tm, pf, &ingress);
     if (qd_bitmask_cardinality(bm) != 3) {
         sprintf(error, "Expected cardinality of 3, got %d", qd_bitmask_cardinality(bm));
+        return error;
+    }
+    if (ingress != 0) {
+        sprintf(error, "(A) Expected ingress index of 0, got %d", ingress);
         return error;
     }
     int total = 0;
@@ -321,10 +327,15 @@ static char *test_tracemask(void *context)
     qd_tracemask_del_router(tm, 3);
     qd_tracemask_remove_link(tm, 0);
 
-    bm = qd_tracemask_create(tm, pf);
+    ingress = -1;
+    bm = qd_tracemask_create(tm, pf, &ingress);
     qd_parse_free(pf);
     if (qd_bitmask_cardinality(bm) != 1) {
         sprintf(error, "Expected cardinality of 1, got %d", qd_bitmask_cardinality(bm));
+        return error;
+    }
+    if (ingress != 0) {
+        sprintf(error, "(B) Expected ingress index of 0, got %d", ingress);
         return error;
     }
 

@@ -1207,6 +1207,10 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The total number of modified deliveries."
+                },
+                "ingressHistogram": {
+                    "type": "list",
+                    "description": "For outgoing links on normal connections.  This is a histogram with a value per interior router node.  The value is a count of settled deliveries on this link that ingressed the network at the specific interior router."
                 }
             }
         },

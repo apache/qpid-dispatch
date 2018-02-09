@@ -173,10 +173,10 @@ static int AMQP_writable_conn_handler(void *type_context, qd_connection_t *conn,
 static qd_iterator_t *router_annotate_message(qd_router_t   *router,
                                               qd_message_t  *msg,
                                               qd_bitmask_t **link_exclusions,
-                                              uint32_t      *distance)
+                                              uint32_t      *distance,
+                                              int           *ingress_index)
 {
     qd_iterator_t *ingress_iter = 0;
-
 
     qd_parsed_field_t *trace   = qd_message_get_trace(msg);
     qd_parsed_field_t *ingress = qd_message_get_ingress(msg);
@@ -206,7 +206,7 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
             // contain a one-bit for each link that leads to a neighbor router that
             // the message has already passed through.
             //
-            *link_exclusions = qd_tracemask_create(router->tracemask, trace);
+            *link_exclusions = qd_tracemask_create(router->tracemask, trace, ingress_index);
 
             //
             // Append this router's ID to the trace.
@@ -455,8 +455,9 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     qd_message_message_annotations(msg);
     qd_bitmask_t *link_exclusions;
     uint32_t      distance;
+    int           ingress_index = 0; // Default to _this_ router
 
-    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance);
+    qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance, &ingress_index);
 
     //
     // If this delivery has traveled further than the known radius of the network topology (plus 1),
@@ -510,7 +511,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             if (phase > 0)
                 qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
             delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
-                                           link_exclusions);
+                                           link_exclusions, ingress_index);
         }
     } else {
         //
@@ -534,7 +535,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             if (phase != 0)
                 qd_message_set_phase_annotation(msg, phase);
         }
-        delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions);
+        delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index);
     }
 
     if (delivery) {

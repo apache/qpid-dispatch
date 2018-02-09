@@ -42,6 +42,7 @@
 #define QDR_LINK_REJECTED_COUNT           18
 #define QDR_LINK_RELEASED_COUNT           19
 #define QDR_LINK_MODIFIED_COUNT           20
+#define QDR_LINK_INGRESS_HISTOGRAM        21
 
 const char *qdr_link_columns[] =
     {"name",
@@ -65,6 +66,7 @@ const char *qdr_link_columns[] =
      "rejectedCount",
      "releasedCount",
      "modifiedCount",
+     "ingressHistogram",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -206,6 +208,16 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
 
     case QDR_LINK_MODIFIED_COUNT:
         qd_compose_insert_ulong(body, link->modified_deliveries);
+        break;
+
+    case QDR_LINK_INGRESS_HISTOGRAM:
+        if (link->ingress_histogram) {
+            qd_compose_start_list(body);
+            for (int i = 0; i < qd_bitmask_width(); i++)
+                qd_compose_insert_ulong(body, link->ingress_histogram[i]);
+            qd_compose_end_list(body);
+        } else
+            qd_compose_insert_null(body);
         break;
 
     default:

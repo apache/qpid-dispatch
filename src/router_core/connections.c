@@ -397,6 +397,16 @@ const char *qdr_link_name(const qdr_link_t *link)
 }
 
 
+static void qdr_link_setup_histogram(qdr_connection_t *conn, qd_direction_t dir, qdr_link_t *link)
+{
+    if (dir == QD_OUTGOING && conn->role == QDR_ROLE_NORMAL) {
+        link->ingress_histogram = NEW_ARRAY(uint64_t, qd_bitmask_width());
+        for (int i = 0; i < qd_bitmask_width(); i++)
+            link->ingress_histogram[i] = 0;
+    }
+}
+
+
 qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
                                   qd_direction_t    dir,
                                   qdr_terminus_t   *source,
@@ -435,6 +445,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
         link->link_type = QD_LINK_CONTROL;
     else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
         link->link_type = QD_LINK_ROUTER;
+
+    qdr_link_setup_histogram(conn, dir, link);
 
     action->args.connection.conn   = conn;
     action->args.connection.link   = link;
@@ -822,6 +834,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     free(link->name);
     free(link->terminus_addr);
+    free(link->ingress_histogram);
     link->name = 0;
 }
 
@@ -854,6 +867,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
+
+    qdr_link_setup_histogram(conn, dir, link);
 
     DEQ_INSERT_TAIL(core->open_links, link);
     qdr_add_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
