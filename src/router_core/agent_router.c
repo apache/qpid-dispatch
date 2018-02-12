@@ -45,6 +45,19 @@
 #define QDR_ROUTER_SASL_CONFIG_NAME       20
 #define QDR_ROUTER_CONNECTION_COUNT       21
 
+#define QDR_ROUTER_PRESETTLED_DELIVERIES              22
+#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES      23
+#define QDR_ROUTER_ACCEPTED_DELIVERIES                24
+#define QDR_ROUTER_REJECTED_DELIVERIES                25
+#define QDR_ROUTER_RELEASED_DELIVERIES                26
+#define QDR_ROUTER_MODIFIED_DELIVERIES                27
+#define QDR_ROUTER_DELIVERIES_INGRESS                 28
+#define QDR_ROUTER_DELIVERIES_EGRESS                  29
+#define QDR_ROUTER_DELIVERIES_TRANSIT                 30
+#define QDR_ADDRESS_DELIVERIES_FROM_ROUTE_CONTAINER   31
+#define QDR_ADDRESS_DELIVERIES_TO_ROUTE_CONTAINER     32
+
+
 const char *qdr_router_columns[] =
     {"name",
      "identity",
@@ -68,6 +81,17 @@ const char *qdr_router_columns[] =
      "saslConfigPath",
      "saslConfigName",
      "connectionCount",
+     "presettledDeliveries",
+     "droppedPresettledDeliveries",
+     "acceptedDeliveries",
+     "rejectedDeliveries",
+     "releasedDeliveries",
+     "modifiedDeliveries",
+     "deliveriesIngress",
+     "deliveriesEgress",
+     "deliveriesTransit",
+     "routeContainerDeliveriesIngress",
+     "routeContainerDeliveriesEgress",
      0};
 
 
@@ -145,6 +169,50 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
             qd_compose_insert_string(body, core->router_id);
         else
             qd_compose_insert_null(body);
+        break;
+
+    case QDR_ROUTER_PRESETTLED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->presettled_deliveries);
+        break;
+
+    case QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->dropped_presettled_deliveries);
+        break;
+
+    case QDR_ROUTER_ACCEPTED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->accepted_deliveries);
+        break;
+
+    case QDR_ROUTER_REJECTED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->rejected_deliveries);
+        break;
+
+    case QDR_ROUTER_RELEASED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->released_deliveries);
+        break;
+
+    case QDR_ROUTER_MODIFIED_DELIVERIES:
+        qd_compose_insert_ulong(body, core->modified_deliveries);
+        break;
+
+    case QDR_ROUTER_DELIVERIES_INGRESS:
+        qd_compose_insert_ulong(body, core->deliveries_ingress);
+        break;
+
+    case QDR_ROUTER_DELIVERIES_EGRESS:
+        qd_compose_insert_ulong(body, core->deliveries_egress);
+        break;
+
+    case QDR_ROUTER_DELIVERIES_TRANSIT:
+        qd_compose_insert_ulong(body, core->deliveries_transit);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_FROM_ROUTE_CONTAINER:
+        qd_compose_insert_ulong(body, core->deliveries_from_route_container);
+        break;
+
+    case QDR_ADDRESS_DELIVERIES_TO_ROUTE_CONTAINER:
+        qd_compose_insert_ulong(body, core->deliveries_to_route_container);
         break;
 
     default:

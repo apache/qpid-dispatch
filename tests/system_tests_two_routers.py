@@ -23,6 +23,7 @@ from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+from qpid_dispatch.management.client import Node
 
 # PROTON-828:
 try:
@@ -97,6 +98,9 @@ class TwoRouterTest(TestCase):
         M1 = self.messenger()
         M2 = self.messenger()
 
+        # Why 104 ? Choose a random number and use it to test later on.
+        num_msgs = 104
+
         M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
         M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
 
@@ -108,18 +112,26 @@ class TwoRouterTest(TestCase):
         self.routers[0].wait_address("pre_settled.1", 0, 1)
 
         tm.address = addr
-        for i in range(100):
+        for i in range(num_msgs):
             tm.body = {'number': i}
             M1.put(tm)
         M1.send()
 
-        for i in range(100):
+        for i in range(num_msgs):
             M2.recv(1)
             M2.get(rm)
             self.assertEqual(i, rm.body['number'])
 
         M1.stop()
         M2.stop()
+
+        local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
+        outs = local_node.query(type='org.apache.qpid.dispatch.router')
+
+        # deliveriesTransit must most surely be greater than num_msgs
+        pos = outs.attribute_names.index("deliveriesTransit")
+        results = outs.results[0]
+        self.assertTrue(results[pos] > num_msgs)
 
     def test_02a_multicast_unsettled(self):
         addr = "amqp:/multicast.2"

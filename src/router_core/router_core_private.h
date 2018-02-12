@@ -470,6 +470,9 @@ struct qdr_address_t {
     uint64_t deliveries_transit;
     uint64_t deliveries_to_container;
     uint64_t deliveries_from_container;
+    uint64_t deliveries_to_route_container;
+    uint64_t deliveries_from_route_container;
+
     ///@}
 };
 
@@ -701,6 +704,22 @@ struct qdr_core_t {
     sys_mutex_t          *id_lock;
 
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
+
+
+    // Overall delivery counters
+    uint64_t           presettled_deliveries;
+    uint64_t           dropped_presettled_deliveries;
+    uint64_t           accepted_deliveries;
+    uint64_t           rejected_deliveries;
+    uint64_t           released_deliveries;
+    uint64_t           modified_deliveries;
+    uint64_t           deliveries_ingress;
+    uint64_t           deliveries_egress;
+    uint64_t           deliveries_transit;
+    uint64_t           deliveries_to_route_container;
+    uint64_t           deliveries_from_route_container;
+
+
 };
 
 void *router_core_thread(void *arg);

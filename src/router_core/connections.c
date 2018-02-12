@@ -120,6 +120,11 @@ void qdr_connection_closed(qdr_connection_t *conn)
     qdr_action_enqueue(conn->core, action);
 }
 
+bool qdr_connection_route_container(qdr_connection_t *conn)
+{
+    return conn->role == QDR_ROLE_ROUTE_CONTAINER;
+}
+
 
 void qdr_connection_set_context(qdr_connection_t *conn, void *context)
 {
