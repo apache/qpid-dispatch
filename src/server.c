@@ -429,6 +429,8 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     //
     // Offer ANONYMOUS_RELAY capability
     //
+    pn_data_put_array(pn_connection_offered_capabilities(conn), false, PN_SYMBOL);
+    pn_data_enter(pn_connection_offered_capabilities(conn));
     pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
 
     //
