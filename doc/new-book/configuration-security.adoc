@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[security_config]]
+[id='security-config']
 = Security
 
 Securing your router network involves configuring authentication and authorization. You can authenticate and encrypt the router's connections using SSL/TLS or SASL. Additionally, you can authorize access to messaging resources by setting user connection restrictions and defining AMQP resource access control.
@@ -29,8 +29,8 @@ You can configure {RouterName} to communicate with clients, routers, and brokers
 * _SSL/TLS_ for certificate-based encryption and mutual authentication
 * _SASL_ for authentication and payload encryption
 
-[[setting_up_ssl_for_encryption_and_authentication]]
-=== Setting Up SSL/TLS for Encryption and Authentication
+[id='setting-up-ssl-for-encryption-and-authentication']
+== Setting Up SSL/TLS for Encryption and Authentication
 
 Before you can secure incoming and outgoing connections using SSL/TLS encryption and authentication, you must first set up the SSL/TLS profile in the router's configuration file.
 
@@ -116,11 +116,11 @@ For example:
 password: routerKeyPassword
 ----
 
-For information about additional `sslProfile` attributes, see xref:router_configuration_file_sslprofile[_sslProfile_] in the _Configuration Reference_.
+For information about additional `sslProfile` attributes, see xref:router-configuration-file-sslprofile[_sslProfile_] in the _Configuration Reference_.
 --
 
-[[setting_up_sasl_for_authentication_and_payload_encryption]]
-=== Setting Up SASL for Authentication and Payload Encryption
+[id='setting-up-sasl-for-authentication-and-payload-encryption']
+== Setting Up SASL for Authentication and Payload Encryption
 
 If you plan to use SASL to authenticate connections, you must first add the SASL attributes to the `router` entity in the router's configuration file. These attributes define a set of SASL parameters that can be used by the router's incoming and outgoing connections.
 
@@ -128,8 +128,8 @@ If you plan to use SASL to authenticate connections, you must first add the SASL
 
 Before you can set up SASL, you must have the following:
 
-* xref:generating_sasl_database[The SASL database is generated.]
-* xref:configuring_sasl_database[The SASL configuration file is configured.]
+* xref:generating-sasl-database[The SASL database is generated.]
+* xref:configuring-sasl-database[The SASL configuration file is configured.]
 * The Cyrus SASL plugin is installed for each SASL mechanism you plan to use.
 +
 Cyrus SASL uses plugins to support specific SASL mechanisms. Before you can use a particular SASL mechanism, the relevant plugin must be installed. For example, you need the `cyrus-sasl-plain` plugin to use SASL PLAIN authentication.
@@ -172,8 +172,8 @@ saslConfigName: qdrouterd_sasl
 ----
 --
 
-[[securing_incoming_connections]]
-=== Securing Incoming Connections
+[id='securing-incoming-connections']
+== Securing Incoming Connections
 
 You can secure incoming connections by configuring each connection's `listener` entity for encryption, authentication, or both.
 
@@ -183,13 +183,13 @@ Before securing incoming connections, the security protocols you plan to use sho
 
 .Choices
 
-* xref:adding_ssl_encryption_to_incoming_connection[Add SSL/TLS encryption]
-* xref:adding_sasl_authentication_to_incoming_connection[Add SASL authentication]
-* xref:adding_ssl_client_authentication_to_incoming_connection[Add SSL/TLS client authentication]
-* xref:adding_sasl_payload_encryption_to_incoming_connection[Add SASL payload encryption]
+* xref:adding-ssl-encryption-to-incoming-connection[Add SSL/TLS encryption]
+* xref:adding-sasl-authentication-to-incoming-connection[Add SASL authentication]
+* xref:adding-ssl-client-authentication-to-incoming-connection[Add SSL/TLS client authentication]
+* xref:adding-sasl-payload-encryption-to-incoming-connection[Add SASL payload encryption]
 
-[[adding_ssl_encryption_to_incoming_connection]]
-==== Adding SSL/TLS Encryption to an Incoming Connection
+[id='adding-ssl-encryption-to-incoming-connection']
+=== Adding SSL/TLS Encryption to an Incoming Connection
 
 You can configure an incoming connection to accept encrypted connections only. By adding SSL/TLS encryption, to connect to this router, a remote peer must first start an SSL/TLS handshake with the router and be able to validate the server certificate received by the router during the handshake.
 
@@ -212,8 +212,8 @@ listener {
 `requireSsl`:: Enter `yes` to require all clients connecting to the router on this connection to use encryption.
 --
 
-[[adding_sasl_authentication_to_incoming_connection]]
-==== Adding SASL Authentication to an Incoming Connection
+[id='adding-sasl-authentication-to-incoming-connection']
+=== Adding SASL Authentication to an Incoming Connection
 
 You can configure an incoming connection to authenticate the client using SASL. You can use SASL authentication with or without SSL/TLS encryption.
 
@@ -238,8 +238,8 @@ listener {
 For a full list of supported Cyrus SASL authentication mechanisms, see link:https://www.cyrusimap.org/sasl/sasl/authentication_mechanisms.html[Authentication Mechanisms^].
 --
 
-[[adding_ssl_client_authentication_to_incoming_connection]]
-==== Adding SSL/TLS Client Authentication to an Incoming Connection
+[id='adding-ssl-client-authentication-to-incoming-connection']
+=== Adding SSL/TLS Client Authentication to an Incoming Connection
 
 You can configure an incoming connection to authenticate the client using SSL/TLS.
 
@@ -265,8 +265,8 @@ listener {
 `authenticatePeer`:: Set this attribute to `yes` to require the router to authenticate the identity of a remote peer before it can use this incoming connection.
 --
 
-[[adding_sasl_payload_encryption_to_incoming_connection]]
-==== Adding SASL Payload Encryption to an Incoming Connection
+[id='adding-sasl-payload-encryption-to-incoming-connection']
+=== Adding SASL Payload Encryption to an Incoming Connection
 
 If you do not use SSL/TLS, you can still encrypt the incoming connection by using SASL payload encryption.
 
@@ -291,8 +291,8 @@ listener {
 For a full list of supported Cyrus SASL authentication mechanisms, see link:https://www.cyrusimap.org/sasl/sasl/authentication_mechanisms.html[Authentication Mechanisms^].
 --
 
-[[securing_outgoing_connections]]
-=== Securing Outgoing Connections
+[id='securing-outgoing-connections']
+== Securing Outgoing Connections
 
 You can secure outgoing connections by configuring each connection's `connector` entity for encryption, authentication, or both.
 
@@ -302,11 +302,11 @@ Before securing outgoing connections, the security protocols you plan to use sho
 
 .Choices
 
-* xref:adding_ssl_authentication_to_outgoing_connection[Add SSL/TLS authentication]
-* xref:adding_sasl_authentication_to_outgoing_connection[Add SASL authentication]
+* xref:adding-ssl-authentication-to-outgoing-connection[Add SSL/TLS authentication]
+* xref:adding-sasl-authentication-to-outgoing-connection[Add SASL authentication]
 
-[[adding_ssl_authentication_to_outgoing_connection]]
-==== Adding SSL/TLS Client Authentication to an Outgoing Connection
+[id='adding-ssl-authentication-to-outgoing-connection']
+=== Adding SSL/TLS Client Authentication to an Outgoing Connection
 
 If an outgoing connection connects to an external client configured with mutual authentication, you should ensure that the outgoing connection is configured to provide the external client with a valid security certificate during the SSL/TLS handshake.
 
@@ -328,8 +328,8 @@ connector {
 `sslProfile`:: The name of the SSL/TLS profile you set up.
 --
 
-[[adding_sasl_authentication_to_outgoing_connection]]
-==== Adding SASL Authentication to an Outgoing Connection
+[id='adding-sasl-authentication-to-outgoing-connection']
+=== Adding SASL Authentication to an Outgoing Connection
 
 You can configure an outgoing connection to provide authentication credentials to the external container. You can use SASL authentication with or without SSL/TLS encryption.
 
@@ -355,8 +355,8 @@ For a full list of supported Cyrus SASL authentication mechanisms, see link:http
 `saslPassword`:: If any of the SASL mechanisms uses username/password authentication, then provide the password to connect to the external container.
 --
 
-[[integrating_with_kerberos]]
-=== Integrating with Kerberos
+[id='integrating-with-kerberos']
+== Integrating with Kerberos
 
 By using the `GSSAPI` SASL mechanism, you can configure {RouterName} to authenticate incoming connections using Kerberos.
 
@@ -370,7 +370,7 @@ This is the service principal that {RouterName} uses.
 
 * The `cyrus-sasl-gssapi` package must be installed on each client and router host machine.
 
-* xref:setting_up_sasl_for_authentication_and_payload_encryption[SASL must be set up for {RouterName}].
+* xref:setting-up-sasl-for-authentication-and-payload-encryption[SASL must be set up for {RouterName}].
 
 .Procedure
 
@@ -412,7 +412,7 @@ listener {
 ----
 ====
 
-For more information about these attributes, see xref:adding_sasl_authentication_to_incoming_connection[].
+For more information about these attributes, see xref:adding-sasl-authentication-to-incoming-connection[].
 --
 
 == Authorizing Access to Messaging Resources

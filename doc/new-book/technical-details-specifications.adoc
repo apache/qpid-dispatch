@@ -17,10 +17,10 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[technical_details_specifications]]
+[id='technical-details-specifications']
 = Technical Details and Specifications
 
-[[client_compatibility]]
+[id='client-compatibility']
 == Client Compatibility
 
 {RouterName} should, in theory, work with any client that is
@@ -39,14 +39,14 @@ connection option.
 |Proton Messenger |Messenger works with {RouterName}.
 |=======================================================================
 
-[[amqp_mapping]]
+[id='amqp-mapping']
 == AMQP Mapping
 
 {RouterName} is an AMQP router and as such, it provides extensions,
 code-points, and semantics for routing over AMQP. This page documents the
 details of {RouterName}'s use of AMQP.
 
-[[message_annotations]]
+[id='message-annotations']
 === Message Annotations
 
 The following Message Annotation fields are defined by {RouterName}:
@@ -75,7 +75,7 @@ for routing the message.
 flowing between routers.
 |=======================================================================
 
-[[sourcetarget_capabilities]]
+[id='sourcetarget-capabilities']
 === Source/Target Capabilities
 
 The following Capability values are used in Sources and Targets.
@@ -93,7 +93,7 @@ link used for user messages being message-routed across an inter-router
 connection.
 |=======================================================================
 
-[[dynamic_node_properties]]
+[id='dynamic-node-properties']
 === Dynamic-Node-Properties
 
 The following dynamic-node-properties are used by {RouterName} in Sources.
@@ -108,13 +108,13 @@ address to route the dynamic link attach to the proper destination
 container.
 |=======================================================================
 
-[[addresses_and_address_formats]]
+[id='addresses-and-address-formats']
 === Addresses and Address Formats
 
 The following AMQP addresses and address patterns are used within
 {RouterName}.
 
-[[address_patterns]]
+[id='address-patterns']
 ==== Address Patterns
 
 [width="100%",cols="38%,62%",options="header",]
@@ -143,7 +143,7 @@ to determine which router nodes are valid destinations for mobile
 addresses.
 |=======================================================================
 
-[[supported_addresses]]
+[id='supported-addresses']
 ==== Supported Addresses
 
 [width="100%",cols="36%,64%",options="header",]
@@ -172,7 +172,7 @@ indicated router. This address form is used by a router to communicate
 with a specific router that may or may not be a neighbor.
 |=======================================================================
 
-[[implementation_of_the_amqp_management_specification]]
+[id='implementation-of-the-amqp-management-specification']
 === Implementation of the AMQP Management Specification
 
 {RouterName} is manageable remotely via AMQP. It is compliant with the

@@ -17,12 +17,12 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[getting_started]]
+[id='getting-started']
 = Getting Started
 
 Before configuring {RouterName}, you should understand how to start the router, how it is configured by default, and how to use it in a simple peer-to-peer configuration. 
 
-[[starting_the_router]]
+[id='starting-the-router']
 == Starting the Router
 
 .Procedure
@@ -32,7 +32,7 @@ include::{FragmentDir}/fragment-starting-router-step.adoc[]
 +
 [NOTE]
 ====
-You can specify a different configuration file with which to start the router. For more information, see xref:methods_for_changing_router_configuration[_Changing a Router's Configuration_].
+You can specify a different configuration file with which to start the router. For more information, see xref:methods-for-changing-router-configuration[_Changing a Router's Configuration_].
 ====
 +
 The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`. 
@@ -93,10 +93,10 @@ This example uses a {ClientAmqpPythonName} client to start a receiver client, an
 
 .Procedure
 
-. xref:starting_the_receiver_client[Start the receiver client].
-. xref:sending_messages[Send messages].
+. xref:starting-the-receiver-client[Start the receiver client].
+. xref:sending-messages[Send messages].
 
-[[starting_the_receiver_client]]
+[id='starting-the-receiver-client']
 === Starting the Receiver Client
 
 In this example, the receiver client is started first. This means that the messages will be sent as soon as the sender client is started.
@@ -120,7 +120,7 @@ $ python simple_recv.py -a 127.0.0.1:5672/examples -m 5
 This command starts the receiver and listens on the default address (`127.0.0.1:5672/examples`). The receiver is also set to receive a maximum of five messages.
 --
 
-[[sending_messages]]
+[id='sending-messages']
 === Sending Messages
 
 After starting the receiver client, you can send messages from the sender. These messages will travel through the router to the receiver.

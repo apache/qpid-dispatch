@@ -17,14 +17,14 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[logging]]
+[id='logging']
 = Logging
 
 Logging enables you to diagnose error and performance issues with {RouterName}.
 
 {RouterName} consists of internal modules that provide important information about the router. For each module, you can specify logging levels, the format of the log file, and the location to which the logs should be written.
 
-[[logging_modules_you_can_configure]]
+[id='logging-modules-you-can-configure']
 == Logging Modules
 
 {RouterName} logs are broken into different categories called _logging modules_. Each module provides important information about a particular aspect of {RouterName}.
@@ -254,7 +254,7 @@ Tue Jun  7 15:07:32 2016 POLICY (info) Policy configured maximumConnections: 0, 
 Tue Jun  7 15:07:32 2016 POLICY (info) Policy fallback defaultApplication is disabled
 ----
 
-[[configure_default_logging]]
+[id='configure-default-logging']
 == Configuring Logging
 
 You can specify the types of events that should be logged, the format of the log entries, and where those entries should be sent.
@@ -291,7 +291,7 @@ To specify multiple levels, use a comma-separated list. You can also use `+` to 
 //end::logging-levels[]
 `timestamp`:: Set this to `yes` to include the timestamp in all logs.
 
-For information about additional log attributes, see xref:router_configuration_file_log[Log] in the _Configuration Reference_.
+For information about additional log attributes, see xref:router-configuration-file-log[Log] in the _Configuration Reference_.
 --
 
 . Add an additional `log` section for each logging module that should not follow the default logging configuration:
@@ -307,12 +307,12 @@ log {
 }
 ----
 
-`module`:: The name of the module for which you are configuring logging. For a list of valid modules, see xref:logging_modules_you_can_configure[Logging Modules You Can Configure].
+`module`:: The name of the module for which you are configuring logging. For a list of valid modules, see xref:logging-modules-you-can-configure[].
 `enable`:: The logging level. You can specify any of the following levels (from lowest to highest):
 +
 include::logging.adoc[tags=logging-levels]
 
-For information about additional log attributes, see xref:router_configuration_file_log[Log] in the _Configuration Reference_.
+For information about additional log attributes, see xref:router-configuration-file-log[Log] in the _Configuration Reference_.
 --
 
 == Viewing Log Entries

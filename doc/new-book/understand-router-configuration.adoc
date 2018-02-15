@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[router_configuration]]
+[id='router-configuration']
 = Configuration
 
 Before starting {RouterName}, you should understand where the router's configuration file is stored, how the file is structured, and the methods you can use to modify it.
@@ -51,16 +51,16 @@ sectionName {
 }
 ----
 
-[[methods_for_changing_router_configuration]]
+[id='methods-for-changing-router-configuration']
 == Changing a Router's Configuration
 
 You can use different methods for changing a router's configuration based on whether the router is currently running, and whether you want the change to take effect immediately.
 
 .Choices
-* xref:making_permanent_change_to_router_configuration[Make a permanent change to the router's configuration].
-* xref:changing_configuration_for_running_router[Change the configuration for a running router.]
+* xref:making-permanent-change-to-router-configuration[Make a permanent change to the router's configuration].
+* xref:changing-configuration-for-running-router[Change the configuration for a running router.]
 
-[[making_permanent_change_to_router_configuration]]
+[id='making-permanent-change-to-router-configuration']
 === Making a Permanent Change to the Router's Configuration
 
 You can make a permanent change to the router's configuration by editing the router's configuration file directly. You must restart the router for the changes to take effect, but the changes will be saved even if the router is stopped.
@@ -81,7 +81,7 @@ If you created a new configuration file, you must specify the path using the `--
 # qdrouterd -d --conf /etc/qpid-dispatch/new-configuration-file.conf
 ----
 
-[[changing_configuration_for_running_router]]
+[id='changing-configuration-for-running-router']
 === Changing the Configuration for a Running Router
 
 If the router is running, you can change its configuration on the fly. The changes you make take effect immediately, but are lost if the router is stopped.
@@ -90,7 +90,7 @@ If the router is running, you can change its configuration on the fly. The chang
 
 * Use `qdmanage` to change the configuration.
 +
-For more information about using `qdmanage`, see xref:managing_router[Managing {RouterName} Using _qdmanage_].
+For more information about using `qdmanage`, see xref:managing-router[Managing {RouterName} Using _qdmanage_].
 
 == Default Configuration Settings
 
@@ -178,29 +178,29 @@ router {
 * `interior` - Use this mode if the router is part of a router network and needs to collaborate with other routers.
 `id`:: The unique identifier for the router. This ID will also be the container name at the AMQP protocol level.
 
-For information about additional attributes, see xref:router_configuration_file_router[Router] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-router[Router] in the _Configuration Reference_.
 --
 
 . If necessary for your environment, secure the router.
 +
 --
-* xref:setting_up_ssl_for_encryption_and_authentication[Set up SSL/TLS for encryption, authentication, or both]
-* xref:setting_up_sasl_for_authentication_and_payload_encryption[Set up SASL for authentication and payload encryption]
+* xref:setting-up-ssl-for-encryption-and-authentication[Set up SSL/TLS for encryption, authentication, or both]
+* xref:setting-up-sasl-for-authentication-and-payload-encryption[Set up SASL for authentication and payload encryption]
 --
 
 . Connect the router to other routers, clients, and brokers.
 +
 --
-* xref:adding_incoming_connections[Add incoming connections]
-* xref:adding_outgoing_connections[Add outgoing connections]
+* xref:adding-incoming-connections[Add incoming connections]
+* xref:adding-outgoing-connections[Add outgoing connections]
 --
 
 . Set up routing for your environment:
 +
 --
-* xref:routing_messages_between_clients[Configure the router to route messages between clients directly]
-* xref:routing_messages_through_broker[Configure the router to route messages through a broker queue]
-* xref:creating_link_route[Create a link route to define a private messaging path between endpoints]
+* xref:routing-messages-between-clients[Configure the router to route messages between clients directly]
+* xref:routing-messages-through-broker[Configure the router to route messages through a broker queue]
+* xref:creating-link-route[Create a link route to define a private messaging path between endpoints]
 --
 
 . xref:logging[Set up logging].

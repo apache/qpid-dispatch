@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[monitoring_using_qdstat]]
+[id='monitoring-using-qdstat']
 = Monitoring {RouterName} Using `qdstat`
 
 You can use `qdstat` to view the status of routers on your router network. For example, you can view information about the attached links and configured addresses, available connections, and nodes in the router network.
@@ -95,7 +95,7 @@ You can view:
 $ qdstat -c [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_c[the qdstat -c output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_c[the qdstat -c output columns^].
 
 In this example, two clients are connected to `Router.A`. `Router.A` is connected to `Router.B` and a broker.
 
@@ -144,7 +144,7 @@ You can view a list of AMQP links attached to the router from clients (sender/re
 $ qdstat -l [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_l[the qdstat -l output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_l[the qdstat -l output columns^].
 
 In this example, `Router.A` is connected to both `Router.B` and a broker. A link route is configured for the `my_queue` queue and waypoint (with autolinks), and for the `my_queue_wp` queue on the broker. In addition, there is a receiver connected to `my_address` (message routing based), another to `my_queue`, and the a third one to `my_queue_wp`.
 
@@ -193,7 +193,7 @@ To see the topology of the router network, you can view known routers on the net
 $ qdstat -n [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_n[the qdstat -n output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_n[the qdstat -n output columns^].
 
 In this example, `Router.A` is connected to `Router.B`, which is connected to `Router.C`. Viewing the router topology on `Router.A` shows the following:
 
@@ -258,7 +258,7 @@ You can view message-routed and link-routed addresses known to a router.
 $ qdstat -a [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_a[the qdstat -a output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_a[the qdstat -a output columns^].
 
 In this example, `Router.A` is connected to both `Router.B` and a broker. The broker has two queues:
 
@@ -313,7 +313,7 @@ You can view a list of the autolinks that are associated with waypoint addresses
 $ qdstat --autolinks [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_autolinks[the qdstat --autolinks output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_autolinks[the qdstat --autolinks output columns^].
 
 In this example, a router is connected to a broker. The broker has a queue called `my_queue_wp`, to which the router is configured with a waypoint and autolinks. Viewing the autolinks displays the following:
 
@@ -344,7 +344,7 @@ You can view the status of each incoming and outgoing link route.
 $ qdstat --linkroutes [__CONNECTION_OPTIONS__]
 ----
 
-For more information about the fields displayed by this command, see link:https://qpid.apache.org/releases/qpid-dispatch-0.8.0/man/qdstat.html#_qdstat_linkroutes[the qdstat --linkroutes output columns].
+For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_linkroutes[the qdstat --linkroutes output columns^].
 
 In this example, a router is connected to a broker. The router is configured with a link route to the `my_queue` queue on the broker. Viewing the link routes displays the following:
 
