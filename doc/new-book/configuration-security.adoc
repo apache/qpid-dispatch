@@ -477,7 +477,7 @@ Setting `enableVhostPolicy` to `false` improves the router's performance.
 ====
 
 `policyDir`:: 
-The absolute path to a directory that holds vhost policy definition files in JSON format (`*.json`). The router processes all of the vhost policies in each JSON file that is in this directory. For more information, see xref:configuring_vhost_policies_json[].
+The absolute path to a directory that holds vhost policy definition files in JSON format (`*.json`). The router processes all of the vhost policies in each JSON file that is in this directory. For more information, see xref:configuring-vhost-policies-json[].
 
 `defaultVhost`:: 
 The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. The default is `$default`. If `defaultVhost` is not defined, then default vhost processing is disabled.
@@ -503,7 +503,7 @@ A user group defines the messaging resources that the group members are permitte
 
 You can configure vhost policies directly in the router configuration file, or create them as JSON files.
 
-[[configuring_vhost_policies_router]]
+[[configuring-vhost-policies-router]]
 ==== Configuring Vhost Policies in the Router Configuration File
 
 You can configure vhost policies in the router configuration file by configuring `vhost` entities. However, if multiple routers in your router network should be configured with the same vhost configuration, you will need to add the `vhost` configuration to each router's configuration file.
@@ -640,7 +640,7 @@ A list of target addresses from which users in this group may send messages. You
 +
 The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhostUserGroupSettings[Vhost User Group Settings^].
 
-[[configuring_vhost_policies_json]]
+[[configuring-vhost-policies-json]]
 ==== Configuring Vhost Policies as JSON Files
 
 As an alternative to using the router configuration file, you can configure vhost policies in JSON files. If you have multiple routers that need to share the same vhost configuration, you can put the vhost configuration JSON files in a location accessible to each router, and then configure the routers to apply the vhost policies defined in these JSON files.
@@ -653,7 +653,7 @@ The directory should be accessible by each router that needs to apply these vhos
 
 . In the directory you determined, create a JSON file for each vhost policy.
 +
-The vhost policy is configured the same way as a `vhost` entity in the router configuration file, only using JSON syntax. For more information about vhost policy attributes, see xref:configuring_vhost_policies_router[].
+The vhost policy is configured the same way as a `vhost` entity in the router configuration file, only using JSON syntax. For more information about vhost policy attributes, see xref:configuring-vhost-policies-router[].
 +
 .Sample Vhost Policy JSON File
 ====
