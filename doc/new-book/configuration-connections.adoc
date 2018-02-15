@@ -17,12 +17,12 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[router_network_connections]]
+[id='router-network-connections']
 = Network Connections
 
 Connections define how the router communicates with clients, other routers, and brokers. You can configure _incoming connections_ to define how the router listens for data from clients and other routers, and you can configure _outgoing connections_ to define how the router sends data to other routers and brokers.
 
-[[adding_incoming_connections]]
+[id='adding-incoming-connections']
 == Listening for Incoming Connections
 
 Listening for incoming connections involves setting the host and port on which the router should listen for traffic.
@@ -44,22 +44,22 @@ listener {
 `host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should listen for incoming connections.
 `port`:: The port number or symbolic service name on which the router should listen for incoming connections.
 
-For information about additional attributes, see xref:router_configuration_file_listener[Listener] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-listener[Listener] in the _Configuration Reference_.
 --
 
-. If necessary, xref:securing_incoming_connections[secure the connection].
+. If necessary, xref:securing-incoming-connections[secure the connection].
 +
 If you have set up SSL/TLS or SASL in your environment, you can configure the router to only accept encrypted or authenticated communication on this connection.
 
 . If you want the router to listen for incoming connections on additional hosts or ports, configure an additional `listener` entity for each host and port.
 
-[[adding_outgoing_connections]]
+[id='adding-outgoing-connections']
 == Adding Outgoing Connections
 
 Configuring outgoing connections involves setting the host and port on which the router connects to other routers and brokers.
 
 // Adding this here for now; in the future it might be better to have separate procedures for creating inter-router and route-container connections.
-When a router connects to a broker, the broker might provide backup connection data that the router can use if the primary connection fails. If the primary connection fails, the router attempts to reconnect by using a combination of the primary and -- if provided -- backup connections in round-robin fashion until the connection is successful. For more information about viewing the backup connection data provided by the broker, see xref:managing_connectors[].
+When a router connects to a broker, the broker might provide backup connection data that the router can use if the primary connection fails. If the primary connection fails, the router attempts to reconnect by using a combination of the primary and -- if provided -- backup connections in round-robin fashion until the connection is successful. For more information about viewing the backup connection data provided by the broker, see xref:managing-connectors[].
 
 .Procedure
 
@@ -80,10 +80,10 @@ connector {
 `host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should connect.
 `port`:: The port number or symbolic service name on which the router should connect.
 
-For information about additional attributes, see xref:router_configuration_file_connector[Connector] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-connector[Connector] in the _Configuration Reference_.
 --
 
-. If necessary, xref:securing_outgoing_connections[secure the connection].
+. If necessary, xref:securing-outgoing-connections[secure the connection].
 +
 If you have set up SSL/TLS or SASL in your environment, you can configure the router to only send encrypted or authenticated communication on this connection.
 

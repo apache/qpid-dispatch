@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[routing]]
+[id='routing']
 = Routing
 
 Routing is the process by which messages are delivered to their destinations. To accomplish this, {RouterName} provides two routing mechanisms: _message routing_ and _link routing_.
@@ -132,7 +132,7 @@ When a router receives a message, it uses the message's address to determine whe
 
 // Need to add something here about the difference between discovered vs. configured mobile addresses so that it's clear that with message routing, the router can either be proactive or reactive in the way it routes messages.
 
-[[routing_patterns_overview]]
+[id='routing-patterns-overview']
 === Routing Patterns
 
 Each address has one of the following routing patterns, which define the path that a message with the address can take across the messaging network:
@@ -192,7 +192,7 @@ This means that the message did not reach its destination.
 This means that the message might or might not have reached its destination. The delivery is considered to be "in-doubt" and should be re-sent if "at least once" delivery is required.
 * The link, session, or connection to {RouterName} was dropped, and all deliveries are "in-doubt".
 
-[[routing_messages_between_clients]]
+[id='routing-messages-between-clients']
 === Routing Messages Between Clients
 
 You can route messages between clients without using a broker. In a brokerless scenario (sometimes called _direct-routed messaging_), {RouterName} routes messages between clients directly.
@@ -246,16 +246,16 @@ You can convert a `prefix` value to a `pattern` by appending `/\#` to it. For ex
 * `closest` - Messages sent to the address are sent on the shortest path to reach the destination. It means that if there are multiple receivers for the same address, only the closest one will receive the message.
 * `multicast` - Messages are sent to all receivers that are attached to the address in a _publish/subscribe_ model.
 +
-For more information about message distribution patterns, see xref:routing_patterns_overview[Routing Patterns].
+For more information about message distribution patterns, see xref:routing-patterns-overview[Routing Patterns].
 
-For information about additional attributes, see xref:router_configuration_file_address[Address] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-address[Address] in the _Configuration Reference_.
 --
 
 . Add the same `address` section to any other routers that need to use the address.
 +
 The `address` that you added to this router configuration file only controls how this router distributes messages sent to the address. If you have additional routers in your router network that should distribute messages for this address, then you must add the same `address` section to each of their configuration files.
 
-[[routing_messages_through_broker]]
+[id='routing-messages-through-broker']
 === Routing Messages Through a Broker Queue
 
 You can route messages to and from a broker queue to provide clients with access to the queue through a router. In this scenario, clients connect to a router to send and receive messages, and the router routes the messages to or from the broker queue.
@@ -276,23 +276,23 @@ In this diagram, a sharded queue (my_queue) is distributed across two brokers. T
 
 .Procedure
 
-. xref:configure_waypoint_address[Add a waypoint address].
+. xref:configure-waypoint-address[Add a waypoint address].
 +
 This address identifies the queue to which you want to route messages.
-. xref:connect_router_to_broker[Add autolinks to connect the router to the broker].
+. xref:connect-router-to-broker[Add autolinks to connect the router to the broker].
 +
 Autolinks connect the router to the broker queue identified by the waypoint address.
 
-. xref:connect_router_to_broker[If the queue is sharded, add autolinks for each additional broker that hosts a shard].
+. xref:connect-router-to-broker[If the queue is sharded, add autolinks for each additional broker that hosts a shard].
 
-[[configure_waypoint_address]]
+[id='configure-waypoint-address']
 ==== Configuring Waypoint Addresses
 
 A waypoint address identifies a queue on a broker to which you want to route messages. You need to configure the waypoint address on each router that needs to use the address. For example, if a client is connected to _Router A_ to send messages to the broker queue, and another client is connected to _Router B_ to receive those messages, then you would need to configure the waypoint address on both _Router A_ and _Router B_.
 
 .Prerequisites
 
-An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:adding_incoming_connections[Adding Incoming Connections].
+An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:adding-incoming-connections[Adding Incoming Connections].
 
 // Does the broker queue have to exist before you create the waypoint address? If it doesn't exist, will you get an error?
 
@@ -318,7 +318,7 @@ include::routing.adoc[tags=pattern-matching]
 `waypoint`:: Set this attribute to `yes` so that the router handles messages sent to this address as a waypoint.
 --
 
-[[connect_router_to_broker]]
+[id='connect-router-to-broker']
 ==== Connecting a Router to the Broker
 
 After you add waypoint addresses to identify the broker queue, you must connect a router to the broker using autolinks.
@@ -346,7 +346,7 @@ connector {
 `port`:: The port number or symbolic service name on which the router should connect to the broker.
 `role`:: Specify `route-container` to indicate that this connection is for an external container (broker).
 
-For information about additional attributes, see xref:router_configuration_file_connector[Connector] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-connector[Connector] in the _Configuration Reference_.
 --
 
 . If you want to send messages to the broker queue, create an outgoing autolink to the broker queue:
@@ -367,7 +367,7 @@ autoLink {
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `out` to specify that this autolink can send messages from the router to the broker.
 
-For information about additional attributes, see xref:router_configuration_file_autolink[autoLink] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-autolink[autoLink] in the _Configuration Reference_.
 --
 
 . If you want to receive messages from the broker queue, create an incoming autolink from the broker queue:
@@ -388,7 +388,7 @@ autoLink {
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `in` to specify that this autolink can receive messages from the broker to the router.
 
-For information about additional attributes, see xref:router_configuration_file_autolink[autoLink] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-autolink[autoLink] in the _Configuration Reference_.
 --
 
 === Example: Routing Messages Through Broker Queues
@@ -544,7 +544,7 @@ Unlike message routing, with link routing, the sender and receiver handle flow c
 
 // What additional information do we need to provide about AMQP link flow control options? Since this is handled on the client side for link routing, should we provide a simple example with a client program that implements link flow control?
 
-[[creating_link_route]]
+[id='creating-link-route']
 === Creating a Link Route
  
 Link routes establish a link between a sender and a receiver that travels through a router. You can configure inward and outward link routes to enable the router to receive link-attaches from clients and to send them to a particular destination.
@@ -572,7 +572,7 @@ connector {
 `port`:: The port number or symbolic service name on which the router should connect to the broker.
 `role`:: Specify `route-container` to indicate that this connection is for an external container (broker).
 
-For information about additional attributes, see xref:router_configuration_file_connector[Connector] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-connector[Connector] in the _Configuration Reference_.
 --
 
 . If you want clients to send messages on this link route, create an incoming link route:
@@ -600,7 +600,7 @@ If multiple brokers are connected to the router through this connection, request
 
 `direction`:: Set this attribute to `in` to specify that clients can send messages into the router network on this link route.
 
-For information about additional attributes, see xref:router_configuration_file_linkroute[linkRoute] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-linkroute[linkRoute] in the _Configuration Reference_.
 --
 
 . If you want clients to receive messages on this link route, create an outgoing link route:
@@ -627,7 +627,7 @@ include::routing.adoc[tags=pattern-matching]
 If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
 `direction`:: Set this attribute to `out` to specify that this link route is for receivers.
 
-For information about additional attributes, see xref:router_configuration_file_linkroute[linkRoute] in the _Configuration Reference_.
+For information about additional attributes, see xref:router-configuration-file-linkroute[linkRoute] in the _Configuration Reference_.
 --
 
 === Example: Using a Link Route to Provide Client Isolation
