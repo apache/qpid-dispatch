@@ -149,7 +149,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             sys_mutex_unlock(conn->work_lock);
             if (dlv) {
                 settled = dlv->settled;
-                core->deliver_handler(core->user_context, link, dlv, settled);
+                uint64_t new_disp = core->deliver_handler(core->user_context, link, dlv, settled);
                 sys_mutex_lock(conn->work_lock);
                 send_complete = qdr_delivery_send_complete(dlv);
                 if (send_complete) {
@@ -195,6 +195,11 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     return num_deliveries_completed;
                 }
                 sys_mutex_unlock(conn->work_lock);
+
+                // the core will need to update the delivery's disposition
+                if (new_disp)
+                    qdr_delivery_update_disposition(((qd_router_t *)core->user_context)->router_core,
+                                                    dlv, new_disp, true, 0, 0, false);
             } else
                 break;
         }
