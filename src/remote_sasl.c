@@ -633,8 +633,6 @@ void qdr_handle_authentication_service_connection_event(pn_event_t *e)
             allocate_buffer(&(context->permissions.targets));
             allocate_buffer(&(context->permissions.sources));
             parse_properties(properties, collect_permissions, (void*) &(context->permissions));
-            printf("allowed sources %s\n", context->permissions.sources.start);
-            printf("allowed targets %s\n", context->permissions.targets.start);
         }
         const pn_bytes_t authid = extract_authenticated_identity(properties);
         if (authid.start && authid.size) {
