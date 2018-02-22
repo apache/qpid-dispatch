@@ -400,9 +400,11 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
         ssn = pn_event_session(event);
         pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         while (pn_link) {
-            qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-            if (qd_link)
-                qd_link->pn_link = 0;
+            if (pn_link_session(pn_link) == ssn) {
+                qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+                if (qd_link)
+                    qd_link->pn_link = 0;
+            }
             pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         }
 
