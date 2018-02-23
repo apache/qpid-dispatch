@@ -27,7 +27,7 @@
 #define QDR_CONFIG_AUTO_LINK_IDENTITY      1
 #define QDR_CONFIG_AUTO_LINK_TYPE          2
 #define QDR_CONFIG_AUTO_LINK_ADDR          3
-#define QDR_CONFIG_AUTO_LINK_DIR           4
+#define QDR_CONFIG_AUTO_LINK_DIRECTION     4
 #define QDR_CONFIG_AUTO_LINK_PHASE         5
 #define QDR_CONFIG_AUTO_LINK_CONNECTION    6
 #define QDR_CONFIG_AUTO_LINK_CONTAINER_ID  7
@@ -41,7 +41,7 @@ const char *qdr_config_auto_link_columns[] =
      "identity",
      "type",
      "addr",
-     "dir",
+     "direction",
      "phase",
      "connection",
      "containerId",
@@ -87,7 +87,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
             qd_compose_insert_null(body);
         break;
 
-    case QDR_CONFIG_AUTO_LINK_DIR:
+    case QDR_CONFIG_AUTO_LINK_DIRECTION:
         text = al->dir == QD_INCOMING ? "in" : "out";
         qd_compose_insert_string(body, text);
         break;
@@ -261,9 +261,9 @@ static const char *qdra_auto_link_direction_CT(qd_parsed_field_t *field, qd_dire
             *dir = QD_OUTGOING;
             return 0;
         }
-        return "Invalid value for 'dir'";
+        return "Invalid value for 'direction'";
     }
-    return "Missing value for 'dir'";
+    return "Missing value for 'direction'";
 }
 
 
@@ -368,7 +368,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         // Extract the fields from the request
         //
         qd_parsed_field_t *addr_field       = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_ADDR]);
-        qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_DIR]);
+        qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_DIRECTION]);
         qd_parsed_field_t *phase_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_PHASE]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONTAINER_ID]);
@@ -383,11 +383,11 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
 
 
         //
-        // Addr and dir fields are mandatory.  Fail if they're not both here.
+        // Addr and direction fields are mandatory.  Fail if they're not both here.
         //
         if (!addr_field || !dir_field) {
             query->status = QD_AMQP_BAD_REQUEST;
-            query->status.description = "addr and dir fields are mandatory";
+            query->status.description = "addr and direction fields are mandatory";
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_AUTOLINK_TYPE, query->status.description);
             break;
         }

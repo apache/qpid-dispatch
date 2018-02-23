@@ -300,13 +300,14 @@ class Qdrouterd(Process):
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
-    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True):
+    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True, perform_teardown=True):
         """
         @param name: name used for for output files, default to id from config.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
         self.config = copy(config)
+        self.perform_teardown = perform_teardown
         if not name: name = self.config.router_id
         assert name
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
@@ -336,6 +337,10 @@ class Qdrouterd(Process):
         if self._management:
             try: self._management.close()
             except: pass
+
+        if not self.perform_teardown:
+            return
+
         super(Qdrouterd, self).teardown()
 
     @property

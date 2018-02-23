@@ -21,6 +21,7 @@
 
 from collections import namedtuple
 import sys
+from .schema import AttributeType
 
 class SchemaWriter(object):
     """Write the schema as an asciidoc document"""
@@ -72,7 +73,20 @@ class SchemaWriter(object):
         self.writeln()
 
     def attribute_types(self, holder):
-        for attr in holder.my_attributes:
+        holder_attributes = holder.my_attributes
+        for attr in holder_attributes:
+            if attr.deprecation_name:
+                deprecated_attr = AttributeType(attr.deprecation_name, type=attr.type, defined_in=attr.defined_in,
+                                                default=attr.default, required=attr.required, unique=attr.unique,
+                                                hidden=attr.hidden, deprecated=True, value=attr.value,
+                                                description="(DEPRECATED) " + attr.description
+                                                            + " This attribute has been deprecated. Use " +
+                                                            attr.name + " instead.",
+                                                create=attr.create, update=attr.update,
+                                                graph=attr.graph)
+                holder_attributes.append(deprecated_attr)
+
+        for attr in holder_attributes:
             self.attribute_type(attr, holder)
 
     def operation_def(self, op, holder):

@@ -537,7 +537,7 @@ qdmanage create --stdin
 +
 [options="nowrap",subs="+quotes"]
 ----
-[{"type":"address", "prefix":"_ADDRESS_PREFIX_", "waypoint":"yes"}, {"type":"autolink", "addr":"_ADDRESS_NAME_", "connection":"_CONNECTOR/LISTENER_NAME_", "dir":"in"}, {"type":"autolink", "addr":"_ADDRESS_NAME_", "connection":"_CONNECTOR/LISTENER_NAME_", "dir":"out"}]
+[{"type":"address", "prefix":"_ADDRESS_PREFIX_", "waypoint":"yes"}, {"type":"autolink", "addr":"_ADDRESS_NAME_", "connection":"_CONNECTOR/LISTENER_NAME_", "direction":"in"}, {"type":"autolink", "addr":"_ADDRESS_NAME_", "connection":"_CONNECTOR/LISTENER_NAME_", "direction":"out"}]
 ----
 
 |Update an address configuration
@@ -608,7 +608,7 @@ qdmanage create --stdin
 +
 [options="nowrap",subs="+quotes"]
 ----
-[{"type":"linkRoute", "prefix":"_ADDRESS_PREFIX_", "connection":"_CONNECTOR/LISTENER_NAME_", "dir":"in", ...}, {"type":"linkRoute", "prefix":"_ADDRESS_PREFIX_", "connection":"_CONNECTOR/LISTENER_NAME_", "dir":"out", ...}]
+[{"type":"linkRoute", "prefix":"_ADDRESS_PREFIX_", "connection":"_CONNECTOR/LISTENER_NAME_", "direction":"in", ...}, {"type":"linkRoute", "prefix":"_ADDRESS_PREFIX_", "connection":"_CONNECTOR/LISTENER_NAME_", "direction":"out", ...}]
 ----
 
 |Update a link route
