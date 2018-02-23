@@ -1,21 +1,21 @@
-##
-## Licensed to the Apache Software Foundation (ASF) under one
-## or more contributor license agreements.  See the NOTICE file
-## distributed with this work for additional information
-## regarding copyright ownership.  The ASF licenses this file
-## to you under the Apache License, Version 2.0 (the
-## "License"); you may not use this file except in compliance
-## with the License.  You may obtain a copy of the License at
-##
-##   http://www.apache.org/licenses/LICENSE-2.0
-##
-## Unless required by applicable law or agreed to in writing,
-## software distributed under the License is distributed on an
-## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
-## KIND, either express or implied.  See the License for the
-## specific language governing permissions and limitations
-## under the License
-##
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License
+#
 
 """
 Schema for AMQP management entity types.
@@ -27,9 +27,17 @@ A Schema can be loaded/dumped to a json file.
 """
 
 import sys
+import traceback
 from qpid_dispatch.management.entity import EntityBase
 from qpid_dispatch.management.error import NotImplementedStatus
 from ..compat import OrderedDict
+try:
+    from ..dispatch import LogAdapter, LOG_WARNING
+    logger_available = True
+except:
+    # We need to do this because at compile time the schema is pulled using this code and at that time the
+    # LogAdapter is not loaded. When running the router, the LogAdapter is available.
+    logger_available = False
 
 class ValidationError(Exception):
     """Error raised if schema validation fails"""
@@ -185,7 +193,7 @@ class AttributeType(object):
     """
 
     def __init__(self, name, type=None, defined_in=None, default=None,
-                 required=False, unique=False, hidden=False, deprecated=False,
+                 required=False, unique=False, hidden=False, deprecated=False, deprecationName=None,
                  value=None, description="", create=False, update=False, graph=False):
         """
         See L{AttributeType} instance variables.
@@ -199,6 +207,7 @@ class AttributeType(object):
             self.hidden = hidden
             self.deprecated = deprecated
             self.default = default
+            self.deprecation_name = deprecationName
             self.value = value
             self.unique = unique
             self.description = description
@@ -312,6 +321,10 @@ class EntityType(object):
                 self.name = self.short_name = name
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
                                               for k, v in (attributes or {}).iteritems())
+            self.deprecation_names = []
+            for attr in self.attributes.itervalues():
+                self.deprecation_names.append(attr.deprecation_name)
+
             self.operations = operations or []
             # Bases are resolved in self.init()
             self.base = extends
@@ -360,9 +373,12 @@ class EntityType(object):
 
     def attribute(self, name):
         """Get the AttributeType for name"""
-        if not name in self.attributes:
+        if not name in self.attributes and not name in self.deprecation_names:
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
         return self.attributes[name]
+
+    def log(self, level, text):
+        self.schema.log(level, text)
 
     @property
     def my_attributes(self):
@@ -381,10 +397,32 @@ class EntityType(object):
             # Add missing values
             for attr in self.attributes.itervalues():
                 if attributes.get(attr.name) is None:
-                    value = attr.missing_value()
-                    if value is not None: attributes[attr.name] = value
+                    value = None
+                    deprecation_name = attr.deprecation_name
+                    if deprecation_name:
+                        value = attributes.get(deprecation_name)
+                        if value:
+                            if logger_available:
+                                self.log(LOG_WARNING, "Attribute '%s' of entity '%s' has been deprecated."
+                                                      " Use '%s' instead"%(deprecation_name, self.short_name, attr.name))
+                            del attributes[deprecation_name]
+
+                    if not value:
+                        value = attr.missing_value()
+                    if value is not None:
+                        attributes[attr.name] = value
                     if value is None and attr.name in attributes:
                         del attributes[attr.name]
+                else:
+                    deprecation_name = attr.deprecation_name
+                    if deprecation_name:
+                        value = attributes.get(deprecation_name)
+                        if value:
+                            # Both name and deprecation name have values
+                            # For example, both dir and direction of linkRoute have been specified, This is
+                            # illegal. Just fail.
+                            raise ValidationError("Both '%s' and '%s' cannot be specified for entity '%s'" %
+                                                  (deprecation_name, attr.name, self.short_name))
 
             # Validate attributes.
             for name, value in attributes.iteritems():
@@ -453,6 +491,11 @@ class Schema(object):
         @param entity_types: Map of  { entityTypeName: { singleton:, attributes:{...}}}
         @param description: Human readable description.
         """
+        if logger_available:
+            self.log_adapter = LogAdapter("AGENT")
+        else:
+            self.log_adapter = None
+
         if prefix:
             self.prefix = prefix.strip('.')
             self.prefixdot = self.prefix + '.'
@@ -464,13 +507,31 @@ class Schema(object):
             return OrderedDict((self.long_name(k), cls(k, self, **v))
                                for k, v in (defs or {}).iteritems())
 
+        # self.entity_types will contain a dict similar to the following after parsedefs is called-
+        # OrderedDict([(u'org.apache.qpid.dispatch.entity', EntityType(org.apache.qpid.dispatch.entity)),
+        # (u'org.apache.qpid.dispatch.org.amqp.management', EntityType(org.apache.qpid.dispatch.org.amqp.management)),
+        # (u'org.apache.qpid.dispatch.management', EntityType(org.apache.qpid.dispatch.management)),
+        # (u'org.apache.qpid.dispatch.configurationEntity', EntityType(org.apache.qpid.dispatch.configurationEntity)),
+        # (u'org.apache.qpid.dispatch.operationalEntity', EntityType(org.apache.qpid.dispatch.operationalEntity)),
+        # (u'org.apache.qpid.dispatch.router', EntityType(org.apache.qpid.dispatch.router)),
+        # (u'org.apache.qpid.dispatch.sslProfile', EntityType(org.apache.qpid.dispatch.sslProfile)), .....))])
         self.entity_types = parsedefs(EntityType, entityTypes)
 
         self.all_attributes = set()
 
+        # self.all_attributes will contain every attribute of every entity in the schema.
+        # For example, all_attributes looks liks this -
+        # set([u'linkType', u'policyDir', u'workerThreads', u'sslCipher', u'allowRedirect', u'unsettledCount',
+        #  u'idleTimeoutSeconds', u'trustedCerts', u'remoteHosts' ...and so on ])
         for e in self.entity_types.itervalues():
             e.init()
             self.all_attributes.update(e.attributes.keys())
+
+    def log(self, level, text):
+        if not self.log_adapter:
+            return
+        info = traceback.extract_stack(limit=2)[0] # Caller frame info
+        self.log_adapter.log(level, text, info[0], info[1])
 
     def short_name(self, name):
         """Remove prefix from name if present"""

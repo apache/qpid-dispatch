@@ -1053,10 +1053,11 @@
                     "required": false,
                     "default": "linkBalanced"
                 },
-                "dir": {
+                "direction": {
                     "type": ["in", "out"],
                     "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
                     "create": true,
+                    "deprecationName": "dir",
                     "required": true
                 },
                 "operStatus": {
@@ -1078,10 +1079,11 @@
                     "create": true,
                     "required": true
                 },
-                "dir": {
+                "direction": {
                     "type": ["in", "out"],
                     "description": "The direction of the link to be created.  In means into the router, out means out of the router.",
                     "create": true,
+                    "deprecationName": "dir",
                     "required": true
                 },
                 "phase": {

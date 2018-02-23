@@ -178,7 +178,7 @@ Entity type for link-route configuration. This is used to identify remote contai
 * *_containerId_* (string) : it specifies that the link route will be activated if a remote container will provide a container-id matching with this value.
 * *_connection_* (string) : The name from a connector or listener.
 * *_distribution_* (One of [`linkBalanced`], default=`linkBalanced`) : Treatment of traffic associated with the address.
-* *_dir_* (One of [`in`, `out`], required) : The permitted direction of links. It is defined from a router point of view so ‘in’ means client senders (router ingress) and ‘out’ means client receivers (router egress).
+* *_direction_* (One of [`in`, `out`], required) : The permitted direction of links. It is defined from a router point of view so ‘in’ means client senders (router ingress) and ‘out’ means client receivers (router egress).
 
 [[router_configuration_file_autolink]]
 ==== autoLink
@@ -186,7 +186,7 @@ Entity type for link-route configuration. This is used to identify remote contai
 Entity type for configuring auto-links. Auto-links are links whose lifecycle is managed by the router. These are typically used to attach to waypoints on remote containers (brokers, and so on.).
 
 * *_addr_* (string, required) : The address of the provisioned object.
-* *_dir_* (One of [`in`, `out`], required) : The direction of the link to be created. In means into the router, out means out of the router.
+* *_direction_* (One of [`in`, `out`], required) : The direction of the link to be created. In means into the router, out means out of the router.
 * *_phase_* (integer) : The address phase for this link. Defaults to `0` for `out` links and `1` for `in` links.
 * *_containerId_* (string) : ContainerID for the target container.
 * *_connection_* (string) : The name from a connector or listener.

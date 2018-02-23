@@ -53,17 +53,18 @@ class AutolinkTest(TestCase):
             #
             # Create a pair of default auto-links for 'node.1'
             #
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'in'}),
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'out'}),
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
 
             #
             # Create a pair of auto-links on non-default phases for container-to-container transfers
             #
-            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.2', 'dir': 'in',  'phase': '4'}),
-            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.3', 'dir': 'out', 'phase': '4'}),
+            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.2', 'direction': 'in',  'phase': '4'}),
+            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.3', 'direction': 'out', 'phase': '4'}),
 
             #
             # Create a pair of auto-links with a different external address
+            # Leave the direction as dir to test backward compatibility.
             #
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
@@ -517,7 +518,7 @@ class ManageAutolinksTest(MessagingHandler):
                 props = {'operation': 'CREATE',
                          'type': 'org.apache.qpid.dispatch.router.config.autoLink',
                          'name': 'AL.%d' % self.n_created }
-                body  = {'dir': 'out',
+                body  = {'direction': 'out',
                          'containerId': 'container.new',
                          'addr': 'node.%d' % self.n_created }
                 msg = Message(properties=props, body=body, reply_to=self.reply_to)
