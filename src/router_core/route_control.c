@@ -318,6 +318,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
         qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
         if (!lr->addr) {
             lr->addr = qdr_address_CT(core, treatment);
+            //treatment will not be undefined for link route so above will not return null
             DEQ_INSERT_TAIL(core->addrs, lr->addr);
             qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
             qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
@@ -417,7 +418,12 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
     if (!al->addr) {
-        al->addr = qdr_address_CT(core, qdr_treatment_for_address_CT(core, 0, iter, 0, 0));
+        qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0);
+        if (treatment == QD_TREATMENT_UNAVAILABLE) {
+            //if associated address is not defined, assume balanced
+            treatment = QD_TREATMENT_ANYCAST_BALANCED;
+        }
+        al->addr = qdr_address_CT(core, treatment);
         DEQ_INSERT_TAIL(core->addrs, al->addr);
         qd_hash_insert(core->addr_hash, iter, al->addr, &al->addr->hash_handle);
     }
