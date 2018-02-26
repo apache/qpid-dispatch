@@ -1488,11 +1488,19 @@
             "extends": "configurationEntity",
             "operations": ["CREATE", "UPDATE", "DELETE"],
             "attributes": {
-                "id": {
+                "hostname": {
                     "type": "string",
                     "description": "The vhost name.",
-                    "required": true,
-                    "create": true
+                    "required": false,
+                    "create": true,
+                    "update": false
+                },
+                "id": {
+                    "type": "string",
+                    "description": "The vhost name. DEPRECATED - use 'hostname'",
+                    "required": false,
+                    "create": true,
+                    "update": false
                 },
                 "maxConnections": {
                     "type": "integer",
@@ -1625,9 +1633,13 @@
             "description": "Virtual host connection and access statistics.",
             "extends": "operationalEntity",
             "attributes": {
-                "id": {
+                "hostname": {
                     "type": "string",
                     "description": "The vhost name."
+                },
+                "id": {
+                    "type": "string",
+                    "description": "The vhost name. DEPRECATED - use 'hostname'"
                 },
                 "connectionsApproved": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},

@@ -676,7 +676,7 @@
           "graph": true,
           "type": "integer"
         },
-        "id": {
+        "hostname": {
           "type": "string",
           "description": "The vhost name."
         },
@@ -1505,10 +1505,13 @@
           "type": "integer",
           "description": "Maximum number of concurrent client connections allowed for any remote host."
         },
-        "id": {
-          "required": true,
+        "hostname": {
           "type": "string",
           "description": "The vhost name."
+        },
+        "id": {
+          "type": "string",
+          "description": "The vhost name. DEPRECATED - use 'hostname'"
         },
         "identity": {
           "unique": true,

@@ -300,7 +300,16 @@ class VhostEntity(EntityAdapter):
         self._policy.create_ruleset(self.attributes)
 
     def _identifier(self):
-        return self.attributes.get('id')
+        hostname = self.attributes.get("hostname")
+        if hostname:
+            return hostname
+
+        id = self.attributes.get("id") # deprecated but check anyway
+        if id:
+            # TODO: Emit warning about using deprecated
+            return id
+        # TODO: Fail if this is the startup config. Reject if this is a managment config.
+        super(VhostEntity, self)._identifier() # placeholder. Not a creatable object.
 
     def __str__(self):
         return super(VhostEntity, self).__str__().replace("Entity(", "VhostEntity(")
@@ -314,7 +323,7 @@ class VhostEntity(EntityAdapter):
 
 class VhostStatsEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('id')
+        return self.attributes.get('hostname')
 
     def __str__(self):
         return super(VhostStatsEntity, self).__str__().replace("Entity(", "VhostStatsEntity(")

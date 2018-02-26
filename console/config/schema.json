@@ -1273,6 +1273,10 @@
           "type": "map", 
           "description": "A map where each key is a user group name and the value is a map of the corresponding settings for that group."
         }, 
+        "hostname": {
+          "type": "string", 
+          "description": "The vhost name."
+        }, 
         "maxConnections": {
           "default": 65535, 
           "type": "integer", 
@@ -1284,9 +1288,8 @@
           "description": "Maximum number of concurrent client connections allowed for any remote host."
         }, 
         "id": {
-          "required": true, 
           "type": "string", 
-          "description": "The vhost name."
+          "description": "The vhost name. DEPRECATED - use 'hostname' instead."
         }, 
         "identity": {
           "unique": true, 

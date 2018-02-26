@@ -18,7 +18,7 @@
 ##
 [
     ["vhost", {
-        "id": "$default",
+        "hostname": "$default",
         "allowUnknownUser": true,
         "groups" : {
             "$default": {
