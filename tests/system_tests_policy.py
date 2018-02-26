@@ -353,8 +353,8 @@ class InterrouterLinksAllowed(TestCase):
 
 class VhostPolicyNameField(TestCase):
     """
-    Verify that specifying a policy folder from the router conf file
-    effects loading the policies in that folder.
+    Verify that vhosts can be created getting the name from
+    'id' or from 'hostname'.
     This test relies on qdmanage utility.
     """
     @classmethod
