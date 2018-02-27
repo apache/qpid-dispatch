@@ -149,7 +149,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
         c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
         distrib   = qd_entity_opt_string(entity, "distribution", 0); QD_ERROR_BREAK();
-        dir       = qd_entity_opt_string(entity, "dir", 0);          QD_ERROR_BREAK();
+        dir       = qd_entity_opt_string(entity, "direction", 0);    QD_ERROR_BREAK();
 
         prefix    = qd_entity_opt_string(entity, "prefix", 0);
         pattern   = qd_entity_opt_string(entity, "pattern", 0);
@@ -203,7 +203,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
         }
 
         if (dir) {
-            qd_compose_insert_string(body, "dir");
+            qd_compose_insert_string(body, "direction");
             qd_compose_insert_string(body, dir);
         }
 
@@ -237,7 +237,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
     do {
         name      = qd_entity_opt_string(entity, "name", 0);         QD_ERROR_BREAK();
         addr      = qd_entity_get_string(entity, "addr");            QD_ERROR_BREAK();
-        dir       = qd_entity_get_string(entity, "dir");             QD_ERROR_BREAK();
+        dir       = qd_entity_get_string(entity, "direction");       QD_ERROR_BREAK();
         container = qd_entity_opt_string(entity, "containerId", 0);  QD_ERROR_BREAK();
         c_name    = qd_entity_opt_string(entity, "connection", 0);   QD_ERROR_BREAK();
         ext_addr  = qd_entity_opt_string(entity, "externalAddr", 0); QD_ERROR_BREAK();
@@ -260,7 +260,7 @@ qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entit
         }
 
         if (dir) {
-            qd_compose_insert_string(body, "dir");
+            qd_compose_insert_string(body, "direction");
             qd_compose_insert_string(body, dir);
         }
 

@@ -284,13 +284,13 @@ address {
 autoLink {
     addr: my_queue
     connection: BROKER
-    dir: in
+    direction: in
 }
 
 autoLink {
     addr: my_queue
     connection: BROKER
-    dir: out
+    direction: out
 }
 ----
 
@@ -411,8 +411,8 @@ Using the `qdmanage` tool, it is possible to configure the waypoint on `my_queue
 [
 { "type":"connector", "name":"BROKER", "port":5672, "role":"route-container" },
 { "type":"address", "prefix":"my_queue", "waypoint":"yes" },
-{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "dir":"in" },
-{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "dir":"out" }
+{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "direction":"in" },
+{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "direction":"out" }
 ]
 [
   {
@@ -448,7 +448,7 @@ Using the `qdmanage` tool, it is possible to configure the waypoint on `my_queue
     "type": "org.apache.qpid.dispatch.router.config.autoLink",
     "operStatus": "inactive",
     "connection": "BROKER",
-    "dir": "in",
+    "direction": "in",
     "phase": 1,
     "lastError": null,
     "externalAddr": null,
@@ -462,7 +462,7 @@ Using the `qdmanage` tool, it is possible to configure the waypoint on `my_queue
     "type": "org.apache.qpid.dispatch.router.config.autoLink",
     "operStatus": "inactive",
     "connection": "BROKER",
-    "dir": "out",
+    "direction": "out",
     "phase": 0,
     "lastError": null,
     "externalAddr": null,
@@ -613,25 +613,25 @@ address {
 autoLink {
     addr: my_queue
     connection: BROKER1
-    dir: in
+    direction: in
 }
 
 autoLink {
     addr: my_queue
     connection: BROKER1
-    dir: out
+    direction: out
 }
 
 autoLink {
     addr: my_queue
     connection: BROKER2
-    dir: in
+    direction: in
 }
 
 autoLink {
     addr: my_queue
     connection: BROKER2
-    dir: out
+    direction: out
 }
 ----
 

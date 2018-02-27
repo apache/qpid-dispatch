@@ -115,13 +115,13 @@ Now, the router must be configured to route certain addresses to B2:
 ----------------------
 linkRoute {
     prefix: b2
-    dir: in
+    direction: in
     connection: broker
 }
 
 linkRoute {
     prefix: b2
-    dir: out
+    direction: out
     connection: broker
 }
 ----------------------
