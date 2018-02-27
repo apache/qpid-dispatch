@@ -243,6 +243,19 @@ class BusManager(Node):
         rows.append(('Addresses',     router.addrCount))
         rows.append(('Connections',   router.connectionCount))
 
+        # Overall delivery related counts.
+        rows.append(('Presettled Count', router.presettledDeliveries))
+        rows.append(('Dropped Presettled Count', router.droppedPresettledDeliveries))
+        rows.append(('Accepted Count', router.acceptedDeliveries))
+        rows.append(('Rejected Count', router.rejectedDeliveries))
+        rows.append(('Released Count', router.releasedDeliveries))
+        rows.append(('Modified Count', router.modifiedDeliveries))
+        rows.append(('Ingress Count', router.deliveriesIngress))
+        rows.append(('Egress Count', router.deliveriesEgress))
+        rows.append(('Transit Count', router.deliveriesTransit))
+        rows.append(('Deliveries from Route Container', router.deliveriesIngressRouteContainer))
+        rows.append(('Deliveries to Route Container', router.deliveriesEgressRouteContainer))
+
         title = "Router Statistics"
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)

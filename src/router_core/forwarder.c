@@ -165,7 +165,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
 
             // Increment the presettled_dropped_deliveries on the out_link
             link->dropped_presettled_deliveries++;
-
+            core->dropped_presettled_deliveries++;
         }
         dlv = next;
     }
@@ -279,8 +279,10 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
             qdr_forward_deliver_CT(core, out_link, out_delivery);
             fanout++;
-            if (out_link->link_type != QD_LINK_CONTROL && out_link->link_type != QD_LINK_ROUTER)
+            if (out_link->link_type != QD_LINK_CONTROL && out_link->link_type != QD_LINK_ROUTER) {
                 addr->deliveries_egress++;
+                core->deliveries_egress++;
+            }
             link_ref = DEQ_NEXT(link_ref);
         }
     }
@@ -353,6 +355,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                 qdr_forward_deliver_CT(core, dest_link, out_delivery);
                 fanout++;
                 addr->deliveries_transit++;
+                core->deliveries_transit++;
             }
         }
 
@@ -482,6 +485,13 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
         }
 
         addr->deliveries_egress++;
+        core->deliveries_egress++;
+
+        if (qdr_connection_route_container(out_link->conn)) {
+            core->deliveries_egress_route_container++;
+            addr->deliveries_egress_route_container++;
+        }
+
         return 1;
     }
 
@@ -515,6 +525,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                 out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
                 qdr_forward_deliver_CT(core, out_link, out_delivery);
                 addr->deliveries_transit++;
+                core->deliveries_transit++;
                 return 1;
             }
         }
@@ -674,10 +685,19 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         //
         // Bump the appropriate counter based on where we sent the delivery.
         //
-        if (chosen_link_bit >= 0)
+        if (chosen_link_bit >= 0) {
             addr->deliveries_transit++;
-        else
+            core->deliveries_transit++;
+        }
+        else {
             addr->deliveries_egress++;
+            core->deliveries_egress++;
+
+            if (qdr_connection_route_container(chosen_link->conn)) {
+                core->deliveries_egress_route_container++;
+                addr->deliveries_egress_route_container++;
+            }
+        }
         return 1;
     }
 
