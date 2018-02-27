@@ -17,12 +17,7 @@
 # under the License.
 #
 
-import unittest, os
-from system_test import TestCase, Qdrouterd, TIMEOUT
-from system_tests_sasl_plain import RouterTestPlainSaslCommon
-from qpid_dispatch.management.client import Node
-from proton import SASL
-from time import sleep
+from system_test import TestCase, Qdrouterd
 
 
 class RouterTestDeprecatedLinkRoute(TestCase):
