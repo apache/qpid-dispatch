@@ -55,6 +55,7 @@ class NodeTracker(object):
         """Refresh management attributes"""
         attributes.update({
             "id": self.my_id,
+            "index": 0,
             "protocolVersion": ProtocolVersion,
             "instance": self.container.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes
@@ -411,6 +412,7 @@ class RouterNode(object):
         """Refresh management attributes"""
         attributes.update({
             "id": self.id,
+            "index": self.maskbit,
             "protocolVersion": self.version,
             "instance": self.instance, # Boot number, integer
             "linkState": [ls for ls in self.link_state.peers], # List of neighbour nodes

@@ -42,7 +42,7 @@ void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest
 //==================================================================================
 
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
-                                 bool settled, qd_bitmask_t *link_exclusion)
+                                 bool settled, qd_bitmask_t *link_exclusion, int ingress_index)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -55,6 +55,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->settled        = settled;
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
+    dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
@@ -68,7 +69,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
 
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_iterator_t *ingress, qd_iterator_t *addr,
-                                    bool settled, qd_bitmask_t *link_exclusion)
+                                    bool settled, qd_bitmask_t *link_exclusion, int ingress_index)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -81,6 +82,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->settled        = settled;
     dlv->presettled     = settled;
     dlv->link_exclusion = link_exclusion;
+    dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
@@ -530,6 +532,9 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
             link->released_deliveries++;
         else if (delivery->disposition == PN_MODIFIED)
             link->modified_deliveries++;
+
+        if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
+            link->ingress_histogram[delivery->ingress_index]++;
     }
 
     //

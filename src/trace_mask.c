@@ -124,10 +124,11 @@ void qd_tracemask_remove_link(qd_tracemask_t *tm, int router_maskbit)
 }
 
 
-qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist)
+qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *tracelist, int *ingress_index)
 {
-    qd_bitmask_t *bm  = qd_bitmask(0);
-    int           idx = 0;
+    qd_bitmask_t *bm    = qd_bitmask(0);
+    int           idx   = 0;
+    bool          first = true;
 
     assert(qd_parse_is_list(tracelist));
 
@@ -138,10 +139,15 @@ qd_bitmask_t *qd_tracemask_create(qd_tracemask_t *tm, qd_parsed_field_t *traceli
         qd_iterator_t *iter = qd_parse_raw(item);
         qd_iterator_reset_view(iter, ITER_VIEW_NODE_HASH);
         qd_hash_retrieve(tm->hash, iter, (void*) &router);
-        if (router && router->link_maskbit >= 0)
-            qd_bitmask_set_bit(bm, router->link_maskbit);
+        if (router) {
+            if (router->link_maskbit >= 0)
+                qd_bitmask_set_bit(bm, router->link_maskbit);
+            if (first)
+                *ingress_index = router->maskbit;
+        }
         idx++;
         item = qd_parse_sub_value(tracelist, idx);
+        first = false;
     }
     sys_rwlock_unlock(tm->lock);
     return bm;
