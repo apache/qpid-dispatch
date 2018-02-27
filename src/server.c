@@ -695,14 +695,33 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event);
 
 static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
+
     qd_listener_t *li = (qd_listener_t*) pn_listener_get_context(pn_event_listener(e));
     const char *host_port = li->config.host_port;
+    const char *port = li->config.port;
 
     switch (pn_event_type(e)) {
 
-    case PN_LISTENER_OPEN:
-        qd_log(log, QD_LOG_NOTICE, "Listening on %s", host_port);
+    case PN_LISTENER_OPEN: {
+
+        if (strcmp(port, "0") == 0) {
+            // If a 0 (zero) is specified for a port, get the actual listening port from the listener.
+            pn_listener_t *l = pn_event_listener(e);
+            const pn_netaddr_t *na = pn_netaddr_listening(l);
+            char str[PN_MAX_ADDR] = "";
+            pn_netaddr_str(na, str, sizeof(str));
+            // "str" contains the host and port on which this listener is listening.
+            if (li->config.name)
+                qd_log(log, QD_LOG_NOTICE, "Listening on %s (%s)", str, li->config.name);
+            else
+                qd_log(log, QD_LOG_NOTICE, "Listening on %s", str);
+        }
+        else {
+            qd_log(log, QD_LOG_NOTICE, "Listening on %s", host_port);
+        }
+
         break;
+    }
 
     case PN_LISTENER_ACCEPT:
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
