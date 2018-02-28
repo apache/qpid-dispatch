@@ -401,13 +401,13 @@ class EntityType(object):
                     deprecation_name = attr.deprecation_name
                     if deprecation_name:
                         value = attributes.get(deprecation_name)
-                        if value:
+                        if not value is None:
                             if logger_available:
                                 self.log(LOG_WARNING, "Attribute '%s' of entity '%s' has been deprecated."
                                                       " Use '%s' instead"%(deprecation_name, self.short_name, attr.name))
                             del attributes[deprecation_name]
 
-                    if not value:
+                    if value is None:
                         value = attr.missing_value()
                     if value is not None:
                         attributes[attr.name] = value
@@ -417,7 +417,7 @@ class EntityType(object):
                     deprecation_name = attr.deprecation_name
                     if deprecation_name:
                         value = attributes.get(deprecation_name)
-                        if value:
+                        if not value is None:
                             # Both name and deprecation name have values
                             # For example, both dir and direction of linkRoute have been specified, This is
                             # illegal. Just fail.
