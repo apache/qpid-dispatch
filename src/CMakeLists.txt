@@ -83,7 +83,7 @@ set(qpid_dispatch_SOURCES
   router_core/agent_connection.c
   router_core/agent_config_link_route.c
   router_core/agent_link.c
-  router_core/agent_router.c
+  router_core/agent_router_stats.c
   router_core/connections.c
   router_core/error.c
   router_core/exchange_bindings.c

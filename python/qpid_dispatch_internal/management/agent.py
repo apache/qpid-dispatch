@@ -479,6 +479,13 @@ class LogStatsEntity(EntityAdapter):
     def __str__(self):
         return super(LogStatsEntity, self).__str__().replace("Entity(", "LogStatsEntity(")
 
+class RouterStatsEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('identity')
+
+    def __str__(self):
+        return super(RouterStatsEntity, self).__str__().replace("Entity(", "RouterStatsEntity(")
+
 
 class AllocatorEntity(EntityAdapter):
     def _identifier(self):
