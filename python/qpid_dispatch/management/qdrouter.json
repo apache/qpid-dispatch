@@ -1262,6 +1262,10 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The total number of modified deliveries."
+                },
+                "ingressHistogram": {
+                    "type": "list",
+                    "description": "For outgoing links on connections with 'normal' role.  This histogram shows the number of settled deliveries on the link that ingressed the network at each interior router node."
                 }
             }
         },
@@ -1390,6 +1394,10 @@
                 "lastTopoChange": {
                      "description": "Timestamp showing the most recent change to this node's neighborhood.",
                      "type": "integer"
+                },
+                "index": {
+                    "description": "Index number used in statistics histograms for this router node.  This index is specific to this router.",
+                    "type": "integer"
                 }
 
             }

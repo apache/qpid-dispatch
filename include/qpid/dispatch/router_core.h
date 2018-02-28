@@ -563,13 +563,14 @@ void qdr_link_delete(qdr_link_t *link);
  * @param link_exclusion If present, this is a bitmask of inter-router links that should not be used
  *                       to send this message.  This bitmask is created by the trace_mask module and
  *                       it built on the trace header from a received message.
+ * @param ingress_index The bitmask index of the router that this delivery entered the network through.
  * @return Pointer to the qdr_delivery that will track the lifecycle of this delivery on this link.
  */
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
-                                 bool settled, qd_bitmask_t *link_exclusion);
+                                 bool settled, qd_bitmask_t *link_exclusion, int ingress_index);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_iterator_t *ingress, qd_iterator_t *addr,
-                                    bool settled, qd_bitmask_t *link_exclusion);
+                                    bool settled, qd_bitmask_t *link_exclusion, int ingress_index);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_state);

@@ -346,6 +346,7 @@ struct qdr_delivery_t {
     qd_bitmask_t           *link_exclusion;
     qdr_address_t          *tracking_addr;
     int                     tracking_addr_bit;
+    int                     ingress_index;
     qdr_link_work_t        *link_work;         ///< Delivery work item for this delivery
     qdr_subscription_list_t subscriptions;
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
@@ -401,13 +402,14 @@ struct qdr_link_t {
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
 
-    uint64_t total_deliveries;
-    uint64_t presettled_deliveries;
-    uint64_t dropped_presettled_deliveries;
-    uint64_t accepted_deliveries;
-    uint64_t rejected_deliveries;
-    uint64_t released_deliveries;
-    uint64_t modified_deliveries;
+    uint64_t  total_deliveries;
+    uint64_t  presettled_deliveries;
+    uint64_t  dropped_presettled_deliveries;
+    uint64_t  accepted_deliveries;
+    uint64_t  rejected_deliveries;
+    uint64_t  released_deliveries;
+    uint64_t  modified_deliveries;
+    uint64_t *ingress_histogram;
 };
 
 ALLOC_DECLARE(qdr_link_t);
