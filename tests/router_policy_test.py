@@ -133,6 +133,8 @@ class MockPolicyManager(object):
         print("TRACE: %s" % text)
     def log_error(self, text):
         print("ERROR: %s" % text)
+    def log_warning(self, text):
+        print("WARNING: %s" % text)
 
     def get_agent(self):
         return self.agent

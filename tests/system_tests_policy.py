@@ -127,7 +127,7 @@ class LoadPolicyFromFolder(TestCase):
     def new_policy(self):
         return """
 {
-    "id": "dispatch-494",
+    "hostname": "dispatch-494",
     "maxConnections": 50,
     "maxConnectionsPerHost": 20,
     "maxConnectionsPerUser": 8,
@@ -154,7 +154,6 @@ class LoadPolicyFromFolder(TestCase):
     def updated_policy(self):
         return """
 {
-    "id": "dispatch-494",
     "maxConnections": 500,
     "maxConnectionsPerHost": 2,
     "maxConnectionsPerUser": 30,
@@ -189,7 +188,7 @@ class LoadPolicyFromFolder(TestCase):
         self.assertEqual(len(rulesets), 6)
         found = False
         for ruleset in rulesets:
-            if ruleset['id'] == 'dispatch-494':
+            if ruleset['hostname'] == 'dispatch-494':
                 found = True
                 self.assertEqual(ruleset['maxConnections'], 50)
                 self.assertEqual(ruleset['maxConnectionsPerHost'], 20)
@@ -203,7 +202,7 @@ class LoadPolicyFromFolder(TestCase):
         self.assertEqual(len(rulesets), 6)
         found = False
         for ruleset in rulesets:
-            if ruleset['id'] == 'dispatch-494':
+            if ruleset['hostname'] == 'dispatch-494':
                 found = True
                 self.assertEqual(ruleset['maxConnections'], 500)
                 self.assertEqual(ruleset['maxConnectionsPerHost'], 2)
@@ -217,7 +216,7 @@ class LoadPolicyFromFolder(TestCase):
         self.assertEqual(len(rulesets), 5)
         absent = True
         for ruleset in rulesets:
-            if ruleset['id'] == 'dispatch-494':
+            if ruleset['hostname'] == 'dispatch-494':
                 absent = False
                 break
         self.assertTrue(absent)
@@ -233,7 +232,7 @@ class LoadPolicyFromFolder(TestCase):
             self.assertEqual(len(rulesets), 6)
             found = False
             for ruleset in rulesets:
-                if ruleset['id'] == 'dispatch-494':
+                if ruleset['hostname'] == 'dispatch-494':
                     found = True
                     break
             self.assertTrue(found)
@@ -244,7 +243,7 @@ class LoadPolicyFromFolder(TestCase):
             self.assertEqual(len(rulesets), 5)
             absent = True
             for ruleset in rulesets:
-                if ruleset['id'] == 'dispatch-494':
+                if ruleset['hostname'] == 'dispatch-494':
                     absent = False
                     break
             self.assertTrue(absent)
@@ -350,6 +349,221 @@ class InterrouterLinksAllowed(TestCase):
             log_lines = router_log.read().split("\n")
             disallow_lines = [s for s in log_lines if "link disallowed" in s]
             self.assertTrue(len(disallow_lines) == 0, msg='Inter-router links should be allowed but some were blocked by policy.')
+
+
+class VhostPolicyNameField(TestCase):
+    """
+    Verify that vhosts can be created getting the name from
+    'id' or from 'hostname'.
+    This test relies on qdmanage utility.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyNameField, cls).setUpClass()
+
+        ipv6_enabled = is_ipv6_enabled()
+
+        policy_config_path = os.path.join(DIR, 'policy-1')
+        replacements = {'{IPV6_LOOPBACK}':', ::1'}
+        for f in os.listdir(policy_config_path):
+            if f.endswith(".json.in"):
+                with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
+                    with open(policy_config_path + "/" + f) as infile:
+                        for line in infile:
+                            for src, target in replacements.iteritems():
+                                if ipv6_enabled:
+                                    line = line.replace(src, target)
+                                else:
+                                    line = line.replace(src, '')
+                            outfile.write(line)
+
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-policy-name-field', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def id_policy(self):
+        return """
+{
+    "id": "dispatch-918",
+    "maxConnections": 50,
+    "maxConnectionsPerHost": 20,
+    "maxConnectionsPerUser": 8,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def hostname_policy(self):
+        return """
+{
+    "hostname": "dispatch-918",
+    "maxConnections": 51,
+    "maxConnectionsPerHost": 20,
+    "maxConnectionsPerUser": 8,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def both_policy(self):
+        return """
+{
+    "id":       "isogyre",
+    "hostname": "dispatch-918",
+    "maxConnections": 52,
+    "maxConnectionsPerHost": 20,
+    "maxConnectionsPerUser": 8,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def neither_policy(self):
+        return """
+{
+    "maxConnections": 53,
+    "maxConnectionsPerHost": 20,
+    "maxConnectionsPerUser": 8,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 9999,
+            "maxFrameSize": 222222,
+            "sources": "public, private, $management, neither_policy",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+
+    def test_01_id_vs_hostname(self):
+        # verify current vhost count
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 5)
+
+        # create using 'id'
+        self.run_qdmanage('create --type=vhost --name=dispatch-918 --stdin', input=self.id_policy())
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 6)
+        found = False
+        for ruleset in rulesets:
+            if ruleset['hostname'] == 'dispatch-918':
+                found = True
+                self.assertEqual(ruleset['maxConnections'], 50)
+                break
+        self.assertTrue(found)
+
+        # update using 'hostname'
+        self.run_qdmanage('update --type=vhost --name=dispatch-918 --stdin', input=self.hostname_policy())
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 6)
+        found = False
+        for ruleset in rulesets:
+            if ruleset['hostname'] == 'dispatch-918':
+                found = True
+                self.assertEqual(ruleset['maxConnections'], 51)
+                break
+        self.assertTrue(found)
+
+        # update 'id' and 'hostname'
+        try:
+            self.run_qdmanage('update --type=vhost --name=dispatch-918 --stdin',
+                              input=self.both_policy())
+            self.assertTrue(false) # should not be able to update 'id'
+        except Exception,  e:
+            pass
+
+        # update using neither
+        self.run_qdmanage('update --type=vhost --name=dispatch-918 --stdin', input=self.neither_policy())
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 6)
+        found = False
+        for ruleset in rulesets:
+            if ruleset['hostname'] == 'dispatch-918':
+                found = True
+                self.assertEqual(ruleset['maxConnections'], 53)
+                break
+        self.assertTrue(found)
+        isoFound = False
+        for ruleset in rulesets:
+            if ruleset['hostname'] == 'isogyre':
+                isoFound = True
+                break
+        self.assertFalse(isoFound)
+
 
 
 if __name__ == '__main__':

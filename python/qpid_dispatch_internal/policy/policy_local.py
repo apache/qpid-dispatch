@@ -40,6 +40,7 @@ class PolicyKeys(object):
     KW_IGNORED_IDENTITY         = "identity"
     KW_IGNORED_TYPE             = "type"
     KW_VHOST_NAME               = "id"
+    KW_VHOST_HOSTNAME           = "hostname"
 
     # Policy ruleset key words
     KW_MAXCONN                     = "maxConnections"
@@ -101,6 +102,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_IGNORED_IDENTITY,
         PolicyKeys.KW_IGNORED_TYPE,
         PolicyKeys.KW_VHOST_NAME,
+        PolicyKeys.KW_VHOST_HOSTNAME,
         PolicyKeys.KW_MAXCONN,
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
@@ -303,6 +305,10 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT] = False
         policy_out[PolicyKeys.KW_GROUPS] = {}
 
+        # insert the name overriding blank or ignored fields
+        policy_out[PolicyKeys.KW_VHOST_NAME] = name
+        policy_out[PolicyKeys.KW_VHOST_HOSTNAME] = name
+
         # validate the options
         for key, val in policy_in.iteritems():
             if key not in self.allowed_ruleset_options:
@@ -395,6 +401,7 @@ class AppStats(object):
         """Refresh management attributes"""
         entitymap = {}
         entitymap[PolicyKeys.KW_VHOST_NAME] =     self.my_id
+        entitymap[PolicyKeys.KW_VHOST_HOSTNAME] = self.my_id
         entitymap[PolicyKeys.KW_CONNECTIONS_APPROVED] = self.conn_mgr.connections_approved
         entitymap[PolicyKeys.KW_CONNECTIONS_DENIED] =   self.conn_mgr.connections_denied
         entitymap[PolicyKeys.KW_CONNECTIONS_CURRENT] =  self.conn_mgr.connections_active
@@ -477,6 +484,45 @@ class PolicyLocal(object):
         self._default_vhost = ""
 
     #
+    # Utility to extract vhost ruleset name from attribute map.
+    #
+    def extract_vhost_name(self, attributes):
+        """
+        The name of the attribute that holds the name of the vhost
+        has changed. Allow both but the new attribute name overrides
+        the old attribute. One or the other must be defined.
+        Force both attributes to have the selected value.
+        @param[in] attributes: from config
+        @return the name of the vhost
+        """
+        if PolicyKeys.KW_VHOST_NAME in attributes:
+            # has 'id'
+            self._manager.log_warning("Policy rules for vhost '%s' uses attribute '%s' which is DEPRECATED. Use attribute '%s' instead." %
+                                      (attributes[PolicyKeys.KW_VHOST_NAME], PolicyKeys.KW_VHOST_NAME, PolicyKeys.KW_VHOST_HOSTNAME))
+            name = attributes[PolicyKeys.KW_VHOST_NAME]
+            if PolicyKeys.KW_VHOST_HOSTNAME in attributes:
+                # has 'id' and 'hostname'
+                self._manager.log_warning("Policy rules for vhost '%s' defined by attribute '%s' is overridden by '%s' defined by attribute '%s'." %
+                                        (attributes[PolicyKeys.KW_VHOST_NAME], PolicyKeys.KW_VHOST_NAME,
+                                         attributes[PolicyKeys.KW_VHOST_HOSTNAME], PolicyKeys.KW_VHOST_HOSTNAME))
+                name = attributes[PolicyKeys.KW_VHOST_HOSTNAME]
+                attributes[PolicyKeys.KW_VHOST_NAME] = name
+            else:
+                # has 'id' but no 'hostname'
+                attributes[PolicyKeys.KW_VHOST_HOSTNAME] = name
+        else:
+            # has no 'id'
+            if PolicyKeys.KW_VHOST_HOSTNAME in attributes:
+                # has no 'id' and 'hostname'. This is the expected path
+                name = attributes[PolicyKeys.KW_VHOST_HOSTNAME]
+                attributes[PolicyKeys.KW_VHOST_NAME] = name
+            else:
+                # has no 'id' and no 'hostname'
+                raise PolicyError("Policy is invalid. Vhost rulesets must be named with an '%s' or '%s' attribute." % (PolicyKeys.KW_VHOST_NAME, PolicyKeys.KW_VHOST_HOSTNAME))
+        return name
+
+
+    #
     # Service interfaces
     #
     def create_ruleset(self, attributes):
@@ -487,7 +533,7 @@ class PolicyLocal(object):
         warnings = []
         diag = []
         candidate = {}
-        name = attributes[PolicyKeys.KW_VHOST_NAME]
+        name = self.extract_vhost_name(attributes)
         result = self._policy_compiler.compile_access_ruleset(name, attributes, candidate, warnings, diag)
         if not result:
             raise PolicyError("Policy '%s' is invalid: %s" % (name, diag[0]))
@@ -696,7 +742,7 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["vhost", {"id": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
+        ruleset_str = '["vhost", {"hostname": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
         ruleset_str += '"groups": {'
         ruleset_str += '"anonymous":       { "users": "anonymous", "remoteHosts": "*", "maxFrameSize": 111111, "maxMessageSize": 111111, "maxSessionWindow": 111111, "maxSessions": 1, "maxSenders": 11, "maxReceivers": 11, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public", "targets": "" },'
         ruleset_str += '"users":           { "users": "u1, u2", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" },'

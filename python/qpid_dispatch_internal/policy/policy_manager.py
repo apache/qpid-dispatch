@@ -24,7 +24,7 @@
 import json
 import traceback
 from policy_local import PolicyLocal
-from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR
+from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR, LOG_WARNING
 
 
 
@@ -54,6 +54,9 @@ class PolicyManager(object):
 
     def log_debug(self, text):
         self._log(LOG_DEBUG, text)
+
+    def log_warning(self, text):
+        self._log(LOG_WARNING, text)
 
     def log_info(self, text):
         self._log(LOG_INFO, text)
