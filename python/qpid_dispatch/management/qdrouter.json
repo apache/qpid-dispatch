@@ -431,37 +431,100 @@
                     "description": "Time in seconds after which link state is declared stale if no RA is received.",
                     "create": true
                 },
-                "addrCount": {
+                "workerThreads": {
                     "type": "integer",
-                    "description":"Number of addresses known to the router.",
-                    "graph": true
+                    "default": 4,
+                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
+                    "create": true
                 },
-                "linkCount": {
-                    "type": "integer",
-                    "description":"Number of links attached to the router node.",
-                    "graph": true
+                "debugDump": {
+                    "type": "path",
+                    "description": "A file to dump debugging information that can't be logged normally.",
+                    "create": true
                 },
-                "nodeCount": {
-                    "type": "integer",
-                    "description":"Number of known peer router nodes.",
-                    "graph": true
+                "saslConfigPath": {
+                    "type": "path",
+                    "description": "Absolute path to the SASL configuration file.",
+                    "required": false,
+                    "create": true
                 },
-                "linkRouteCount": {
-                    "type": "integer",
-                    "description":"Number of link routes attached to the router node.",
-                    "graph": true
+                "saslConfigName": {
+                    "type": "string",
+                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
+                    "default": "qdrouterd",
+                    "required": false,
+                    "create": true
                 },
-                "autoLinkCount": {
-                    "type": "integer",
-                    "description":"Number of auto links attached to the router node.",
-                    "graph": true
+                "allowUnsettledMulticast": {
+                    "type": "boolean",
+                    "description": "If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 },
-                "connectionCount": {
-                    "type": "integer",
-                    "description":"Number of open connections to the router node.",
-                    "graph": true
-                },
-
+                "defaultDistribution": {
+                    "type": ["multicast", "closest", "balanced", "unavailable"],
+                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",
+                    "create": true,
+                    "required": false,
+                    "default": "balanced"
+                }
+            }
+        },
+        
+        "routerStats": {
+            "description": "Overall router statistics.",
+            "extends": "operationalEntity",
+            "attributes": {
+	            "id": {
+	                "description":"Router's unique identity. The router will fail to start without id.",
+	                "type": "string",
+	                "required": false,
+	                "create": true
+	            },
+	            "mode": {
+	                "type": [
+	                    "standalone",
+	                    "interior"
+	                ],
+	                "default": "standalone",
+	                "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.",
+	                "create": true
+	            },
+	            "version": {
+	                "type": "string",
+	                "description": "Software Version"
+	            },
+	            "addrCount": {
+	                "type": "integer",
+	                "description":"Number of addresses known to the router.",
+	                "graph": true
+	            },
+	            "linkCount": {
+	                "type": "integer",
+	                "description":"Number of links attached to the router node.",
+	                "graph": true
+	            },
+	            "nodeCount": {
+	                "type": "integer",
+	                "description":"Number of known peer router nodes.",
+	                "graph": true
+	            },
+	            "linkRouteCount": {
+	                "type": "integer",
+	                "description":"Number of link routes attached to the router node.",
+	                "graph": true
+	            },
+	            "autoLinkCount": {
+	                "type": "integer",
+	                "description":"Number of auto links attached to the router node.",
+	                "graph": true
+	            },
+	            "connectionCount": {
+	                "type": "integer",
+	                "description":"Number of open connections to the router node.",
+	                "graph": true
+	            },
                 "presettledDeliveries": {
                     "type": "integer",
                     "description":"Number of presettled deliveries handled by the router.",
@@ -516,47 +579,9 @@
                     "type": "integer",
                     "description":"Number of deliveries that were sent to route container connections.",
                     "graph": true
-                },                
-                "workerThreads": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
-                    "create": true
-                },
-                "debugDump": {
-                    "type": "path",
-                    "description": "A file to dump debugging information that can't be logged normally.",
-                    "create": true
-                },
-                "saslConfigPath": {
-                    "type": "path",
-                    "description": "Absolute path to the SASL configuration file.",
-                    "required": false,
-                    "create": true
-                },
-                "saslConfigName": {
-                    "type": "string",
-                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
-                    "default": "qdrouterd",
-                    "required": false,
-                    "create": true
-                },
-                "allowUnsettledMulticast": {
-                    "type": "boolean",
-                    "description": "If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
-                    "create": true,
-                    "required": false,
-                    "default": false
-                },
-                "defaultDistribution": {
-                    "type": ["multicast", "closest", "balanced", "unavailable"],
-                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",
-                    "create": true,
-                    "required": false,
-                    "default": "balanced"
-                }
-            }
-        },
+                }                
+            }        
+        },        
 
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",

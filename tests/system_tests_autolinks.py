@@ -24,9 +24,9 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from subprocess import PIPE, STDOUT
+from qpid_dispatch.management.client import Node
 
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
-
 
 
 class AutolinkTest(TestCase):
@@ -117,13 +117,7 @@ class AutolinkTest(TestCase):
         test = AutolinkCreditTest(self.normal_address, self.route_address)
         test.run()
         self.assertEqual(None, test.error)
-
-        long_type = 'org.apache.qpid.dispatch.router'
-        query_command = 'QUERY --type=' + long_type
-        output = json.loads(self.run_qdmanage(query_command))
-
-        self.assertEqual(output[0]['deliveriesIngress'], 1)
-        self.assertEqual(output[0]['deliveriesEgress'], 0)
+        self.assertTrue(test.autolink_count_ok)
 
     def test_03_autolink_sender(self):
         """
@@ -134,7 +128,7 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-        long_type = 'org.apache.qpid.dispatch.router'
+        long_type = 'org.apache.qpid.dispatch.routerStats'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
         self.assertEqual(output[0]['deliveriesEgressRouteContainer'], 275)
@@ -153,7 +147,7 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-        long_type = 'org.apache.qpid.dispatch.router'
+        long_type = 'org.apache.qpid.dispatch.routerStats'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
         self.assertEqual(output[0]['deliveriesEgressRouteContainer'], 275)
@@ -282,6 +276,7 @@ class AutolinkCreditTest(MessagingHandler):
         self.route_conn     = None
         self.error          = None
         self.last_action    = "None"
+        self.autolink_count_ok = False
 
     def timeout(self):
         self.error = "Timeout Expired: last_action=%s" % self.last_action
@@ -295,6 +290,13 @@ class AutolinkCreditTest(MessagingHandler):
         self.normal_conn = event.container.connect(self.normal_address)
         self.sender      = event.container.create_sender(self.normal_conn, self.dest)
         self.last_action = "Attached normal sender"
+
+        local_node = Node.connect(self.normal_address, timeout=TIMEOUT)
+        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        results = res.results[0]
+        attribute_names = res.attribute_names
+        if 6 == results[attribute_names.index('autoLinkCount')]:
+            self.autolink_count_ok = True
 
     def on_link_opening(self, event):
         if event.sender:
