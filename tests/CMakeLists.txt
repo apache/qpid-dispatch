@@ -105,6 +105,7 @@ foreach(py_test_module
     system_tests_delivery_abort
     system_tests_topology
     system_tests_topology_disposition
+    system_tests_topology_addition
     ${SYSTEM_TESTS_HTTP}
     )
 
