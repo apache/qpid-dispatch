@@ -32,7 +32,7 @@ void qdra_config_auto_link_get_CT(qdr_core_t    *core,
                                   qd_iterator_t *identity,
                                   qdr_query_t   *query,
                                   const char    *qdr_config_auto_link_columns[]);
-#define QDR_CONFIG_AUTO_LINK_COLUMN_COUNT 12
+#define QDR_CONFIG_AUTO_LINK_COLUMN_COUNT 13
 
 const char *qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_COLUMN_COUNT + 1];
 

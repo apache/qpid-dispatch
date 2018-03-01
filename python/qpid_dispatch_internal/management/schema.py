@@ -321,10 +321,23 @@ class EntityType(object):
                 self.name = self.short_name = name
             self.attributes = OrderedDict((k, AttributeType(k, defined_in=self, **v))
                                               for k, v in (attributes or {}).iteritems())
-            self.deprecation_names = []
-            for attr in self.attributes.itervalues():
-                self.deprecation_names.append(attr.deprecation_name)
 
+            self.deprecated_attributes = OrderedDict()
+            for key, value in self.attributes.items():
+                if value.deprecation_name:
+                    self.deprecated_attributes[value.deprecation_name] = AttributeType(value.deprecation_name,
+                                                                                       type=value.type, defined_in=self,
+                                                                                       default=value.default,
+                                                                                       required=value.required,
+                                                                                       unique=value.unique,
+                                                                                       hidden=value.hidden,
+                                                                                       deprecated=True,
+                                                                                       deprecationName=None,
+                                                                                       value=value.value,
+                                                                                       description="(DEPRECATED) " + value.description,
+                                                                                       create=value.create,
+                                                                                       update=value.update,
+                                                                                       graph=value.graph)
             self.operations = operations or []
             # Bases are resolved in self.init()
             self.base = extends
@@ -373,9 +386,13 @@ class EntityType(object):
 
     def attribute(self, name):
         """Get the AttributeType for name"""
-        if not name in self.attributes and not name in self.deprecation_names:
+        if not name in self.attributes and not name in self.deprecated_attributes.keys():
             raise ValidationError("Unknown attribute '%s' for '%s'" % (name, self))
-        return self.attributes[name]
+        if self.attributes.get(name):
+            return self.attributes[name]
+        if self.deprecated_attributes.get(name):
+            return self.deprecated_attributes[name]
+        return None
 
     def log(self, level, text):
         self.schema.log(level, text)

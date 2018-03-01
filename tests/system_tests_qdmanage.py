@@ -297,6 +297,7 @@ class QdmanageTest(TestCase):
         output = json.loads(self.run_qdmanage(query_command))
         self.assertEqual(output[0]['name'], "test-link-route")
         self.assertEqual(output[0]['direction'], "in")
+        self.assertEqual(output[0]['dir'], "in")
         self.assertEqual(output[0]['prefix'], "xyz")
 
     def test_specify_container_id_connection_link_route(self):
@@ -318,6 +319,21 @@ class QdmanageTest(TestCase):
         create_command = 'CREATE --type=' + long_type + ' addr=xyz containerId=id1 direction=out phase=2'
         output = json.loads(self.run_qdmanage(create_command))
         self.assertEqual(output['phase'], 2)
+
+    def test_create_auto_link_with_dir(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.autoLink'
+        create_command = 'CREATE --type=' + long_type + ' addr=defgh containerId=id2 dir=out phase=2'
+        output = json.loads(self.run_qdmanage(create_command))
+        self.assertEqual(output['dir'], 'out')
+        self.assertEqual(output['direction'], 'out')
+
+    def test_create_link_route_with_dir(self):
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        create_command = 'CREATE --type=' + long_type + ' pattern=mnb dir=out'
+        output = json.loads(self.run_qdmanage(create_command))
+        self.assertEqual(output['dir'], 'out')
+        self.assertEqual(output['direction'], 'out')
+
 
     def test_specify_container_id_connection_auto_link(self):
         long_type = 'org.apache.qpid.dispatch.router.config.autoLink'

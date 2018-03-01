@@ -31,8 +31,9 @@
 #define QDR_CONFIG_LINK_ROUTE_CONNECTION    5
 #define QDR_CONFIG_LINK_ROUTE_CONTAINER_ID  6
 #define QDR_CONFIG_LINK_ROUTE_DIRECTION     7
-#define QDR_CONFIG_LINK_ROUTE_OPER_STATUS   8
-#define QDR_CONFIG_LINK_ROUTE_PATTERN       9
+#define QDR_CONFIG_LINK_ROUTE_DIR           8
+#define QDR_CONFIG_LINK_ROUTE_OPER_STATUS   9
+#define QDR_CONFIG_LINK_ROUTE_PATTERN       10
 
 const char *qdr_config_link_route_columns[] =
     {"name",
@@ -43,6 +44,7 @@ const char *qdr_config_link_route_columns[] =
      "connection",
      "containerId",
      "direction",
+     "dir",
      "operStatus",
      "pattern",
      0};
@@ -129,6 +131,7 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
         qd_compose_insert_null(body);
         break;
 
+    case QDR_CONFIG_LINK_ROUTE_DIR:
     case QDR_CONFIG_LINK_ROUTE_DIRECTION:
         text = lr->dir == QD_INCOMING ? "in" : "out";
         qd_compose_insert_string(body, text);
@@ -383,6 +386,7 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
             break;
         }
 
+
         //
         // Extract the fields from the request
         //
@@ -392,6 +396,12 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONTAINER_ID]);
         qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DIRECTION]);
+        if (! dir_field) {
+            dir_field        = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DIR]);
+            if (dir_field)
+                qd_log(core->agent_log, QD_LOG_WARNING, "The 'dir' attribute of linkRoute has been deprecated. Use 'direction' instead");
+        }
+
 
         //
         // Both connection and containerId cannot be specified because both can represent different connections. Only one those

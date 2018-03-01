@@ -28,13 +28,14 @@
 #define QDR_CONFIG_AUTO_LINK_TYPE          2
 #define QDR_CONFIG_AUTO_LINK_ADDR          3
 #define QDR_CONFIG_AUTO_LINK_DIRECTION     4
-#define QDR_CONFIG_AUTO_LINK_PHASE         5
-#define QDR_CONFIG_AUTO_LINK_CONNECTION    6
-#define QDR_CONFIG_AUTO_LINK_CONTAINER_ID  7
-#define QDR_CONFIG_AUTO_LINK_EXT_ADDR      8
-#define QDR_CONFIG_AUTO_LINK_LINK_REF      9
-#define QDR_CONFIG_AUTO_LINK_OPER_STATUS   10
-#define QDR_CONFIG_AUTO_LINK_LAST_ERROR    11
+#define QDR_CONFIG_AUTO_LINK_DIR           5
+#define QDR_CONFIG_AUTO_LINK_PHASE         6
+#define QDR_CONFIG_AUTO_LINK_CONNECTION    7
+#define QDR_CONFIG_AUTO_LINK_CONTAINER_ID  8
+#define QDR_CONFIG_AUTO_LINK_EXT_ADDR      9
+#define QDR_CONFIG_AUTO_LINK_LINK_REF      10
+#define QDR_CONFIG_AUTO_LINK_OPER_STATUS   11
+#define QDR_CONFIG_AUTO_LINK_LAST_ERROR    12
 
 const char *qdr_config_auto_link_columns[] =
     {"name",
@@ -42,6 +43,7 @@ const char *qdr_config_auto_link_columns[] =
      "type",
      "addr",
      "direction",
+     "dir",
      "phase",
      "connection",
      "containerId",
@@ -87,6 +89,7 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
             qd_compose_insert_null(body);
         break;
 
+    case QDR_CONFIG_AUTO_LINK_DIR:
     case QDR_CONFIG_AUTO_LINK_DIRECTION:
         text = al->dir == QD_INCOMING ? "in" : "out";
         qd_compose_insert_string(body, text);
@@ -369,6 +372,11 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         //
         qd_parsed_field_t *addr_field       = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_ADDR]);
         qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_DIRECTION]);
+        if (! dir_field) {
+            dir_field        = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_DIR]);
+            if (dir_field)
+                qd_log(core->agent_log, QD_LOG_WARNING, "The 'dir' attribute of autoLink has been deprecated. Use 'direction' instead");
+        }
         qd_parsed_field_t *phase_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_PHASE]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONTAINER_ID]);

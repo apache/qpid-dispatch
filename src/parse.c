@@ -565,6 +565,9 @@ int qd_parse_is_scalar(qd_parsed_field_t *field)
 
 qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *key)
 {
+    if (!key)
+        return 0;
+
     uint32_t count = qd_parse_sub_count(field);
 
     for (uint32_t idx = 0; idx < count; idx++) {
