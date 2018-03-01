@@ -89,6 +89,10 @@ class TopologyAdditionTests ( TestCase ):
         cls.inter_router_ports['A'] = cls.tester.get_port()
         cls.inter_router_ports['B'] = cls.tester.get_port()
 
+        initial_cost = 10
+        lower_cost   =  8
+        higher_cost  = 12
+
         # Only routers A and B are set up initially by this class.
         # Routers C and D are started by the test itself.
         router_A_config = [
@@ -123,7 +127,7 @@ class TopologyAdditionTests ( TestCase ):
                                  'role': 'inter-router',
                                  'port': cls.inter_router_ports['A'],
                                  'verifyHostName': 'no',
-                                 'cost':  12,
+                                 'cost':  initial_cost,
                                  'stripAnnotations': 'no'
                               }
                             )
@@ -141,6 +145,10 @@ class TopologyAdditionTests ( TestCase ):
         cls.B_addr = router_B.addresses[0]
 
 
+
+        # The two connections that this router will make, AC and BC,
+        # will be lower cost than the direct AB route that the network
+        # already has.
         cls.router_C_config = [
                                 ( 'listener',
                                   { 'port': client_ports['C'],
@@ -153,7 +161,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
                                      'verifyHostName': 'no',
-                                     'cost':  5,
+                                     'cost':  lower_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -163,13 +171,16 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
                                      'verifyHostName': 'no',
-                                     'cost':  5,
+                                     'cost':  lower_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
                                 )
                               ]
 
+        # The two connections that this router will make, AD and BD,
+        # will be higher cost than the other paths the networks already has
+        # available to get from A to B.
         cls.router_D_config = [
                                 ( 'listener',
                                   { 'port': client_ports['D'],
@@ -182,7 +193,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
                                      'verifyHostName': 'no',
-                                     'cost':  7,
+                                     'cost':  higher_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -192,7 +203,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
                                      'verifyHostName': 'no',
-                                     'cost':  7,
+                                     'cost':  higher_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -225,8 +236,13 @@ class TopologyAdditionTests ( TestCase ):
         # it to expect both of them to be used.
         # If it terminates with the second path remaining unused
         # it will fail.
+        #
+        # Since this test alters the path that the messages follow,
+        # it is OK for some messages to be released rather than
+        # delivered. It doesn't always happen - depends on timing.
         initial_expected_trace = [ '0/A', '0/B' ]
         final_expected_trace   = [ '0/A', '0/C', '0/B' ]
+        released_ok = True
 
         test = AddRouter ( self.A_addr,
                            self.B_addr,
@@ -234,7 +250,8 @@ class TopologyAdditionTests ( TestCase ):
                            self,
                            'C',
                            self.router_C_config,
-                           [ initial_expected_trace, final_expected_trace ]
+                           [ initial_expected_trace, final_expected_trace ],
+                           released_ok
                          )
         test.run()
         self.assertEqual ( None, test.error )
@@ -250,7 +267,12 @@ class TopologyAdditionTests ( TestCase ):
         # We communicate this expectation to the test by sending
         # it a single expected trace. The test will fail with
         # error if any other traces are encountered.
+        #
+        # Since this test does not alter the path that the messages
+        # follow, it is *not* OK for any messages to be released
+        # rather than delivered.
         only_expected_trace   = [ '0/A', '0/C', '0/B' ]
+        released_ok = False
 
         test = AddRouter ( self.A_addr,
                            self.B_addr,
@@ -258,7 +280,8 @@ class TopologyAdditionTests ( TestCase ):
                            self,
                            'D',
                            self.router_D_config,
-                           [ only_expected_trace ]
+                           [ only_expected_trace ],
+                           released_ok
                          )
         test.run()
         self.assertEqual ( None, test.error )
@@ -324,7 +347,8 @@ class AddRouter ( MessagingHandler ):
                    parent,
                    new_router_name,
                    new_router_config,
-                   expected_traces
+                   expected_traces,
+                   released_ok
                  ):
         super(AddRouter, self).__init__(prefetch=100)
         self.send_addr         = send_addr
@@ -333,13 +357,18 @@ class AddRouter ( MessagingHandler ):
         self.parent            = parent
         self.new_router_name   = new_router_name
         self.new_router_config = new_router_config
+        self.released_ok       = released_ok
 
         self.error         = None
         self.sender        = None
         self.receiver      = None
-        self.n_expected    = 30
+
+        self.n_messages    = 30
         self.n_sent        = 0
         self.n_received    = 0
+        self.n_released    = 0
+        self.n_accepted    = 0
+
         self.test_timer    = None
         self.send_timer    = None
         self.timeout_count = 0
@@ -362,6 +391,7 @@ class AddRouter ( MessagingHandler ):
 
     # Close everything and allow the test to terminate.
     def bail ( self, reason_for_bailing ) :
+        self.finishing = True
         self.error = reason_for_bailing
         self.receiver.close()
         self.send_conn.close()
@@ -375,9 +405,13 @@ class AddRouter ( MessagingHandler ):
     # The 'send' timer expires frequently, and every time it goes off
     # we send out a little batch of messages.
     def timeout ( self, name ):
+
+        if self.finishing :
+            return
+
         self.timeout_count += 1
         if name == "test" :
-            self.bail ( "Timeout Expired" )
+            self.bail ( "Timeout Expired: %d messages received, %d expected." % (self.n_received, self.n_messages) )
         elif name == "send" :
             self.send()
             self.send_timer = self.reactor.schedule(1, Timeout(self, "send"))
@@ -396,12 +430,14 @@ class AddRouter ( MessagingHandler ):
         self.container = event.container
 
         self.test_timer  = self.reactor.schedule(30, Timeout(self, "test"))
-        self.send_timer = self.reactor.schedule(1, Timeout(self, "send"))
+        self.send_timer  = self.reactor.schedule(1, Timeout(self, "send"))
+
         self.send_conn   = event.container.connect(self.send_addr)
         self.recv_conn   = event.container.connect(self.recv_addr)
+
         self.sender      = event.container.create_sender(self.send_conn, self.dest)
         self.receiver    = event.container.create_receiver(self.recv_conn, self.dest)
-        self.receiver.flow ( self.n_expected )
+        self.receiver.flow ( self.n_messages )
 
 
     #------------------------------------------------------------
@@ -409,11 +445,53 @@ class AddRouter ( MessagingHandler ):
     #------------------------------------------------------------
 
     def send(self):
+
+        if self.n_sent >= self.n_messages :
+            return
+
         # Send little bursts of 3 messages every sender-timeout.
         for _ in xrange(3) :
             msg = Message(body=self.n_sent)
             self.sender.send(msg)
             self.n_sent += 1
+            if self.n_sent == self.n_messages :
+                return
+
+
+    # The caller of this tests decides whether it is OK or
+    # not OK to have some messages released during the test.
+    def on_released ( self, event ) :
+        if self.released_ok :
+            self.n_released += 1
+            self.check_count ( )
+        else :
+            self.bail ( "a message was released." )
+
+
+    def on_accepted ( self, event ) :
+        self.n_accepted += 1
+        self.check_count ( )
+
+
+    #
+    # Do the released plus the accepted messages add up to the number
+    # that were sent? If so, bail out with success.
+    # Do NOT end the test if the number is still shy of the expected
+    # total. The callers of this method just call it every time they
+    # get something -- it will be called many times poer test.
+    #
+    # Pleae Note:
+    #   This check is on the 'sender' side of this test, rather than the
+    #   'receiver' side, because it is to the sender that we make a
+    #   guarantee: namely, that the sender should know the disposition of
+    #   all sent messages -- whether they have been accepted by the receiver,
+    #   or released by the router network.
+    #
+    def check_count ( self ) :
+        if self.n_accepted + self.n_released == self.n_messages :
+            self.finishing = True
+            self.finish_test ( )
+
 
 
     #------------------------------------------------------------
@@ -425,15 +503,18 @@ class AddRouter ( MessagingHandler ):
             return
         self.n_received += 1
         trace = event.message.annotations [ 'x-opt-qd.trace' ]
-        # Deliberate flaw for debugging.
+        # Introduce flaws for debugging.
         # if self.n_received == 13 :
         #     trace = [ '0/B', '0/A', '0/D' ]
+        # if self.n_received == 13 :
+        #     self.n_received -= 1
         self.record_trace ( trace )
-        if self.n_received == self.n_expected:
-            self.finishing = True
-            self.finish_test ( )
+        self.check_count ( )
 
 
+    # Compare the trace that came from a message to the list of
+    # traces the caller told us to expect. If it is one of the
+    # expected traces, count it. Otherwise, fail the test.
     def record_trace ( self, observed_trace ):
         for trace_record in self.expected_trace_counts :
             trace = trace_record [ 0 ]
