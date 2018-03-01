@@ -24,7 +24,7 @@
 #    unnamed host- proton 0.13
 [
   ["vhost", {
-      "id": "",
+      "hostname": "",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
@@ -48,7 +48,7 @@
     }
   ],
   ["vhost", {
-      "id": "0.0.0.0",
+      "hostname": "0.0.0.0",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
@@ -72,7 +72,7 @@
     }
   ],
   ["vhost", {
-      "id": "localhost",
+      "hostname": "localhost",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,

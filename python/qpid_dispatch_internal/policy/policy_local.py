@@ -39,7 +39,8 @@ class PolicyKeys(object):
     KW_IGNORED_NAME             = "name"
     KW_IGNORED_IDENTITY         = "identity"
     KW_IGNORED_TYPE             = "type"
-    KW_VHOST_NAME               = "id"
+    KW_VHOST_NAME               = "hostname"
+    KW_VHOST_DEPRECATED_ID      = "id"
 
     # Policy ruleset key words
     KW_MAXCONN                     = "maxConnections"
@@ -395,6 +396,7 @@ class AppStats(object):
         """Refresh management attributes"""
         entitymap = {}
         entitymap[PolicyKeys.KW_VHOST_NAME] =     self.my_id
+        entitymap[PolicyKeys.KW_VHOST_DEPRECATED_ID]  = self.my_id
         entitymap[PolicyKeys.KW_CONNECTIONS_APPROVED] = self.conn_mgr.connections_approved
         entitymap[PolicyKeys.KW_CONNECTIONS_DENIED] =   self.conn_mgr.connections_denied
         entitymap[PolicyKeys.KW_CONNECTIONS_CURRENT] =  self.conn_mgr.connections_active
@@ -696,7 +698,7 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["vhost", {"id": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
+        ruleset_str = '["vhost", {"hostname": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
         ruleset_str += '"groups": {'
         ruleset_str += '"anonymous":       { "users": "anonymous", "remoteHosts": "*", "maxFrameSize": 111111, "maxMessageSize": 111111, "maxSessionWindow": 111111, "maxSessions": 1, "maxSenders": 11, "maxReceivers": 11, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public", "targets": "" },'
         ruleset_str += '"users":           { "users": "u1, u2", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" },'

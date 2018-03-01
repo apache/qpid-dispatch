@@ -30,7 +30,7 @@
     }],
 # Some ruleset
     ["vhost", {
-      "id": "photoserver",
+      "hostname": "photoserver",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
@@ -136,7 +136,7 @@
       }
   }],
   ["vhost", {
-      "id": "",
+      "hostname": "",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
@@ -160,7 +160,7 @@
     }
   ],
   ["vhost", {
-      "id": "0.0.0.0",
+      "hostname": "0.0.0.0",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,
@@ -184,7 +184,7 @@
     }
   ],
   ["vhost", {
-      "id": "localhost",
+      "hostname": "localhost",
       "maxConnections": 50,
       "maxConnectionsPerUser": 5,
       "maxConnectionsPerHost": 20,

@@ -300,13 +300,13 @@ class VhostEntity(EntityAdapter):
         self._policy.create_ruleset(self.attributes)
 
     def _identifier(self):
-        return self.attributes.get('id')
+        return self.attributes.get('hostname')
 
     def __str__(self):
         return super(VhostEntity, self).__str__().replace("Entity(", "VhostEntity(")
 
     def _delete(self):
-        self._policy.delete_ruleset(self.id)
+        self._policy.delete_ruleset(self.hostname)
 
     def _update(self):
         self._policy.update_ruleset(self.attributes)
@@ -314,7 +314,7 @@ class VhostEntity(EntityAdapter):
 
 class VhostStatsEntity(EntityAdapter):
     def _identifier(self):
-        return self.attributes.get('id')
+        return self.attributes.get('hostname')
 
     def __str__(self):
         return super(VhostStatsEntity, self).__str__().replace("Entity(", "VhostStatsEntity(")

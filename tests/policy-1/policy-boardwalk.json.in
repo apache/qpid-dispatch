@@ -21,7 +21,7 @@
     # The boardwalk policy ruleset
     ["vhost",
         {
-            "id": "boardwalk",
+            "hostname": "boardwalk",
             "maxConnections": 10,
             "maxConnectionsPerUser": 2,
             "maxConnectionsPerHost": 5,

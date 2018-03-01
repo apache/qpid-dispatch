@@ -1561,9 +1561,10 @@
             "extends": "configurationEntity",
             "operations": ["CREATE", "UPDATE", "DELETE"],
             "attributes": {
-                "id": {
+                "hostname": {
                     "type": "string",
-                    "description": "The vhost name.",
+                    "description": "The hostname of the vhost. This vhost policy will be applied to any client connection that is directed to this hostname.",
+                    "deprecationName": "id",
                     "required": true,
                     "create": true
                 },
@@ -1699,6 +1700,10 @@
             "extends": "operationalEntity",
             "attributes": {
                 "id": {
+                    "type": "string",
+                    "description": "The vhost name. DEPRECATED - use 'hostname' instead."
+                },
+                "hostname": {
                     "type": "string",
                     "description": "The vhost name."
                 },
