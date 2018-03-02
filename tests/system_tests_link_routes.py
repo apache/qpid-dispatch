@@ -578,11 +578,15 @@ class LinkRouteTest(TestCase):
         We are deleting the link route using qdmanage short name. This should be the last test to run
         """
 
-        # First delete linkRoutes on QDR.B
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
-        result_list = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute').results
-        self.assertEqual(8, len(result_list))
+        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        results = res.results[0]
+        attribute_list = res.attribute_names
 
+        result_list = local_node.query(type='org.apache.qpid.dispatch.router.config.linkRoute').results
+        self.assertEqual(results[attribute_list.index('linkRouteCount')], len(result_list))
+
+        # First delete linkRoutes on QDR.B
         for rid in range(8):
             cmd = 'DELETE --type=linkRoute --identity=' + result_list[rid][1]
             self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
@@ -612,6 +616,11 @@ class LinkRouteTest(TestCase):
         cmd = 'QUERY --type=linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=addr)
         self.assertEquals(out.rstrip(), '[]')
+
+        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        results = res.results[0]
+        attribute_list = res.attribute_names
+        self.assertEqual(results[attribute_list.index('linkRouteCount')], 0)
 
         blocking_connection = BlockingConnection(addr, timeout=3)
 
