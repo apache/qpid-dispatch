@@ -438,13 +438,14 @@ The resource limits defined in global and vhost policies are applied to user con
 
 === How {RouterName} Applies Policies
 
-When a client connects to a router, the router determines whether to permit the connection based on the global and vhost policies, and the following properties of the connection:
+{RouterName} uses both global and vhost policies to determine whether to permit a connection, and if it is permitted, to apply the appropriate resource limits.
 
-* The host to which the connection is directed (the vhost)
-* The connection's authenticated user name
-* The host from which the client is connecting (the remote host)
+When a client creates a connection to the router, the router first determines whether to allow or deny the connection. This decision is based on the following criteria:
 
-If the connection is permitted, then the router applies a vhost policy that matches the vhost to which the connection is directed. The vhost policy limits are enforced for the lifetime of the connection.
+* Whether the connection will exceed the router's global connection limit (defined in the global policy)
+* Whether the connection will exceed the vhost's connection limits (defined in the vhost policy that matches the host to which the connection is directed)
+
+If the connection is allowed, the router assigns the user (the authenticated user name from the connection) to a user group, and enforces the user group's resource limits for the lifetime of the connection.
 
 === Configuring Global Policies
 
@@ -464,7 +465,7 @@ policy = {
     defaultVhost: $default  // <4>
 }
 ----
-<1> The maximum number of concurrent client connections allowed for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default value is `65535`.
+<1> The maximum number of concurrent client connections allowed for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
 
 <2> Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies. The default is `false`, which means that the router will not enforce any vhost policies.
 +
@@ -496,9 +497,12 @@ A user group defines the messaging resources that the group members are permitte
 ** The remote hosts from which the group members may connect to the router network
 ** The AMQP resources that the group members are permitted to access on the vhost
 
-You can configure vhost policies directly in the router configuration file, or create them as JSON files.
+You can use the following methods to configure vhost policies:
 
-[[configuring-vhost-policies-router]]
+* xref:configuring-vhost-policies-router[Configure vhost policies directly in the router configuration file]
+* xref:configuring-vhost-policies-json[Configure vhost policies as JSON files]
+
+[id='configuring-vhost-policies-router']
 ==== Configuring Vhost Policies in the Router Configuration File
 
 You can configure vhost policies in the router configuration file by configuring `vhost` entities. However, if multiple routers in your router network should be configured with the same vhost configuration, you will need to add the `vhost` configuration to each router's configuration file.
@@ -513,7 +517,7 @@ The connection limits apply to all users that are connected to the vhost. These 
 [options="nowrap",subs="+quotes"]
 ----
 vhost = {
-    id: example.com  // <1>
+    hostname: example.com  // <1>
     maxConnections: 10000  // <2>
     maxConnectionsPerUser: 1000  // <3>
     maxConnectionsPerHost: 1000  // <4>
@@ -611,7 +615,7 @@ sources: tmp_{user}, temp*, {user}-home-*
 +
 The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhostUserGroupSettings[Vhost User Group Settings^].
 
-[[configuring-vhost-policies-json]]
+[id='configuring-vhost-policies-json']
 ==== Configuring Vhost Policies as JSON Files
 
 As an alternative to using the router configuration file, you can configure vhost policies in JSON files. If you have multiple routers that need to share the same vhost configuration, you can put the vhost configuration JSON files in a location accessible to each router, and then configure the routers to apply the vhost policies defined in these JSON files.
