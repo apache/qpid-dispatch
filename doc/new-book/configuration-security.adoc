@@ -675,7 +675,7 @@ policy = {
 
 . Repeat the previous step for each additional router that should use the vhost policies located in the vhost policy directory.
 
-=== Example: A Vhost Policy Configuration
+=== Example: Configuring a Vhost Policy
 
 In this example, a vhost policy defines resource limits for clients connecting to the `example.com` host.
 
