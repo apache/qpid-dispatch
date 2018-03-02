@@ -21,8 +21,7 @@ The stand-alone qpid dispatch console is an html web site that monitors and cont
 
 ## To install the console:
 
-  After a build, the console files are normally installed under /usr/share/qpid-dispatch/console/stand-alone
-  The 3rd party libraries are installed at during a 'make install' if npm is present on the build machine.
+  After a dispatch build the 3rd party libraries need to be installed.
 
   ### To manually install the 3rd party libraries:
     - cd /usr/share/qpid-dispatch/console/stand-alone
