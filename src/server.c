@@ -579,8 +579,8 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
 /* Get the host IP address for the remote end */
 static void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
-    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_netaddr_remote(tport));
-    size_t salen = pn_netaddr_socklen(pn_netaddr_remote(tport));
+    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(tport));
+    size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(tport));
     if (sa && salen) {
         char rport[NI_MAXSERV] = "";
         int err = getnameinfo(sa, salen,
@@ -707,7 +707,7 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
         if (strcmp(port, "0") == 0) {
             // If a 0 (zero) is specified for a port, get the actual listening port from the listener.
             pn_listener_t *l = pn_event_listener(e);
-            const pn_netaddr_t *na = pn_netaddr_listening(l);
+            const pn_netaddr_t *na = pn_listener_addr(l);
             char str[PN_MAX_ADDR] = "";
             pn_netaddr_str(na, str, sizeof(str));
             // "str" contains the host and port on which this listener is listening.
