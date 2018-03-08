@@ -162,7 +162,7 @@ include_directories(
     )
 
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-Werror)
+ #add_compile_options(-Werror)
  add_compile_options(-Wall)
  include(CheckCCompilerFlag)
  check_c_compiler_flag(-Wpedantic HAS_PEDANTIC_FLAG)
