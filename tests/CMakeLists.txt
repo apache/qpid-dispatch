@@ -107,6 +107,7 @@ foreach(py_test_module
     system_tests_topology_disposition
     system_tests_topology_addition
     system_tests_cmdline_parsing
+    system_tests_bad_configuration
     ${SYSTEM_TESTS_HTTP}
     )
 
