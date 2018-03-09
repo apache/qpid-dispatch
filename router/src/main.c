@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <getopt.h>
 #include <errno.h>
 #include "config.h"
@@ -186,9 +187,8 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
                 char *cur_path = NULL;
                 int path_size = 256;
                 int getcwd_error = 0;
-
-                cur_path = (char *) malloc(path_size * sizeof(char));
-                memset(cur_path, 0, path_size * sizeof(char));
+                cur_path = (char *) calloc(path_size, sizeof(char));
+                cur_path = (char *) calloc(path_size, sizeof(char));
 
                 while ( getcwd(cur_path, path_size) == NULL ) {
                     free(cur_path);
@@ -199,15 +199,17 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
                     }
                     // If current path does not fit, allocate more memory
                     path_size += 256;
-                    cur_path = (char *) malloc(path_size * sizeof(char));
-                    memset(cur_path, 0, path_size * sizeof(char));
+                    cur_path = (char *) calloc(path_size, sizeof(char));
                 }
 
                 // Populating fully qualified config file name
                 if (!getcwd_error) {
-                    config_path_full = malloc((path_size + strlen(config_path) + 1) * sizeof(char));
-                    memset(config_path_full, 0, (path_size + strlen(config_path) + 1) * sizeof(char));
-                    sprintf(config_path_full, "%s%s%s", cur_path, !strcmp("/", cur_path)? "":"/", config_path);
+                    int cpf_len = path_size + strlen(config_path) + 1;
+                    config_path_full = calloc(cpf_len, sizeof(char));
+                    snprintf(config_path_full, cpf_len, "%s%s%s",
+                             cur_path,
+                             !strcmp("/", cur_path)? "":"/",
+                             config_path);
                 }
 
                 // Releasing temporary path variable
