@@ -548,6 +548,13 @@
                     "required": false,
                     "default": false
                 },
+                "allowResumableLinkRoute": {
+                    "type": "boolean",
+                    "description": "Whether links can be routed where timeout is non-zero or expiry-policy is not link-detach",
+                    "create": true,
+                    "required": false,
+                    "default": true
+                },
                 "defaultDistribution": {
                     "type": ["multicast", "closest", "balanced", "unavailable"],
                     "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",

@@ -922,6 +922,10 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
                                                             "linkRoute to a coordinator must be configured to use transactions.");
             break;
 
+        case QDR_CONDITION_INVALID_LINK_EXPIRATION:
+            work->error = qdr_error("qd:link-expiration", "Requested link expiration not allowed");
+            break;
+
         case QDR_CONDITION_NONE:
             work->error = 0;
             break;
@@ -1340,7 +1344,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_free(conn);
 }
 
-
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
@@ -1419,11 +1422,18 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     //
                     // This is a link-routed destination, forward the attach to the next hop
                     //
-                    success = qdr_forward_attach_CT(core, addr, link, source, target);
-                    if (!success) {
-                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                    if (qdr_terminus_survives_disconnect(target) && !core->qd->allow_resumable_link_route) {
+                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_INVALID_LINK_EXPIRATION, true);
                         qdr_terminus_free(source);
                         qdr_terminus_free(target);
+                    } else {
+                        success = qdr_forward_attach_CT(core, addr, link, source, target);
+
+                        if (!success) {
+                            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                            qdr_terminus_free(source);
+                            qdr_terminus_free(target);
+                        }
                     }
 
                 }
@@ -1500,11 +1510,17 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 // This is a link-routed destination, forward the attach to the next hop
                 //
-                bool success = qdr_forward_attach_CT(core, addr, link, source, target);
-                if (!success) {
-                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                if (qdr_terminus_survives_disconnect(source) && !core->qd->allow_resumable_link_route) {
+                    qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_INVALID_LINK_EXPIRATION, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
+                } else {
+                    bool success = qdr_forward_attach_CT(core, addr, link, source, target);
+                    if (!success) {
+                        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                        qdr_terminus_free(source);
+                        qdr_terminus_free(target);
+                    }
                 }
             }
 

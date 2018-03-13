@@ -56,6 +56,7 @@
 #define QDR_ROUTER_DELIVERIES_TRANSIT                 30
 #define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER 31
 #define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER  32
+#define QDR_ROUTER_RESUMABLE_LINK_ROUTE               33
 
 
 const char *qdr_router_columns[] =
@@ -92,6 +93,7 @@ const char *qdr_router_columns[] =
      "deliveriesTransit",
      "deliveriesIngressRouteContainer",
      "deliveriesEgressRouteContainer",
+     "resumableLinkRouteDefault",
      0};
 
 

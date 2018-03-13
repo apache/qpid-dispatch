@@ -19,6 +19,7 @@
 
 #include "router_core_private.h"
 #include <strings.h>
+#include <stdio.h>
 
 struct qdr_terminus_t {
     qdr_field_t            *address;
@@ -158,6 +159,10 @@ bool qdr_terminus_is_dynamic(qdr_terminus_t *term)
     return term->dynamic;
 }
 
+bool qdr_terminus_survives_disconnect(qdr_terminus_t *term)
+{
+    return term->timeout > 0 || term->expiry_policy == PN_EXPIRE_NEVER;
+}
 
 void qdr_terminus_set_address(qdr_terminus_t *term, const char *addr)
 {
