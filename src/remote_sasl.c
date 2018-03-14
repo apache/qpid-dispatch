@@ -243,15 +243,11 @@ static void remote_sasl_free(pn_transport_t *transport)
             impl->downstream_released = true;
             if (impl->upstream_released) {
                 delete_qdr_sasl_relay_t(impl);
-            } else {
-                pn_connection_wake(impl->upstream);
             }
         } else {
             impl->upstream_released = true;
             if (impl->downstream_released) {
                 delete_qdr_sasl_relay_t(impl);
-            } else {
-                pn_connection_wake(impl->downstream);
             }
         }
     }
