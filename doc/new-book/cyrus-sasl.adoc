@@ -17,14 +17,14 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[cyrus_sasl]]
+[id='cyrus-sasl']
 = Using Cyrus SASL to Provide Authentication
 
 // Just doing some basic editing for now; for future releases, this content will need some more work. Also need to determine if it should be moved from an appendix to the section that deals with setting up SASL.
 
 {RouterName} uses the Cyrus SASL library for SASL authentication. Therefore, if you want to use SASL, you must set up the Cyrus SASL database and configure it.
 
-[[generating_sasl_database]]
+[id='generating-sasl-database']
 == Generating a SASL Database
 
 To generate a SASL database to store credentials, enter the following command:
@@ -51,7 +51,7 @@ user2@domain.com: __PASSWORD__
 user1@domain.com: __PASSWORD__
 ----
 
-[[configuring_sasl_database]]
+[id='configuring-sasl-database']
 == Configuring a SASL Database
 
 To use the SASL database to provide authentication in {RouterName}:

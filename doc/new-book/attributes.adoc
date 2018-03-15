@@ -42,7 +42,7 @@ under the License
 :FragmentDir: common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
-:RouterVersion: 0.8
+:RouterVersion: 1.0
 
 // Book names
 
@@ -50,29 +50,29 @@ under the License
 
 // Doc links
 
-:BookUrlBase: https://qpid.apache.org/releases/qpid-dispatch-0.8.0
+:BookUrlBase: https://qpid.apache.org/releases/qpid-dispatch-1.0.0
 
 :ManagementEntitiesUrl: {BookUrlBase}/man/managementschema.html
-:ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema] 
+:ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^] 
 
 :RouterBookUrl: {BookUrlBase}/book/book.html
 :RouterBookLink: link:{RouterBookUrl}[{RouterBook}]
 
 :qdmanageManPageUrl: {BookUrlBase}/man/qdmanage.html
-:qdmanageManPageLink: link:{qdmanageManPageUrl}[qdmanage man page]
+:qdmanageManPageLink: link:{qdmanageManPageUrl}[qdmanage man page^]
 
 :qdrouterdManPageUrl: {BookUrlBase}/man/qdrouterd.html
-:qdrouterdManPageLink: link:{qdrouterdManPageUrl}[qdrouterd man page]
+:qdrouterdManPageLink: link:{qdrouterdManPageUrl}[qdrouterd man page^]
 
 :qdrouterdConfManPageUrl: {BookUrlBase}/man/qdrouterd.conf.html
 :qdrouterdConfManPageLink: link:{qdrouterdManPageUrl}[qdrouterd.conf man page]
 
 :qdstatManPageUrl: {BookUrlBase}/man/qdstat.html
-:qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page]
+:qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page^]
 
 :ClientAmqpPythonUrl: https://qpid.apache.org/proton/
 
 // Other links
 
 :AmqpSpecUrl: http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html
-:AmqpSpecLink: link:{AmqpSpecUrl}[AMQP 1.0 specification]
+:AmqpSpecLink: link:{AmqpSpecUrl}[AMQP 1.0 specification^]

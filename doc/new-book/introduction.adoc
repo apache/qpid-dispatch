@@ -17,10 +17,10 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[introduction]]
+[id='introduction']
 = Introduction
 
-[[overview]]
+[id='overview']
 == Overview
 
 The {RouterName} is an AMQP message router that provides
@@ -91,7 +91,7 @@ Messages not delivered to their final destination will not be
 acknowledged to the sender and therefore the sender can re-send such
 messages if it is disconnected from the network.
 
-[[benefits]]
+[id='benefits']
 == Benefits
 
 Simplifies connectivity
@@ -113,7 +113,7 @@ not server clustering
 * Reliable end-to-end messaging without persistent stores
 * Use a message broker only when you need store-and-forward semantics
 
-[[features]]
+[id='features']
 == Features
 
 * Can be deployed stand-alone or in a network of routers
