@@ -291,11 +291,7 @@ To specify multiple levels, use a comma-separated list. You can also use `+` to 
 //end::logging-levels[]
 `timestamp`:: Set this to `yes` to include the timestamp in all logs.
 
-<<<<<<< HEAD
-For information about additional log attributes, see xref:router-configuration-file-log[Log] in the _Configuration Reference_.
-=======
 For information about additional log attributes, see link:{qdrouterdConfManPageUrl}#_log[the `qdrouterd.conf` man page].
->>>>>>> Remove outdated config ref and add links to qdrouterd.conf
 --
 
 . Add an additional `log` section for each logging module that should not follow the default logging configuration:
@@ -316,11 +312,7 @@ log {
 +
 include::logging.adoc[tags=logging-levels]
 
-<<<<<<< HEAD
-For information about additional log attributes, see xref:router-configuration-file-log[Log] in the _Configuration Reference_.
-=======
 For information about additional log attributes, see link:{qdrouterdConfManPageUrl}#_log[the `qdrouterd.conf` man page].
->>>>>>> Remove outdated config ref and add links to qdrouterd.conf
 --
 
 == Viewing Log Entries
