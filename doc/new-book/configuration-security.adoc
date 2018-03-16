@@ -116,7 +116,7 @@ For example:
 password: routerKeyPassword
 ----
 
-For information about additional `sslProfile` attributes, see xref:router-configuration-file-sslprofile[_sslProfile_] in the _Configuration Reference_.
+For information about additional `sslProfile` attributes, see link:{qdrouterdConfManPageUrl}#_sslprofile[the `qdrouterd.conf` man page].
 --
 
 [id='setting-up-sasl-for-authentication-and-payload-encryption']

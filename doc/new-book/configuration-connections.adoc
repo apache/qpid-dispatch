@@ -44,7 +44,7 @@ listener {
 `host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should listen for incoming connections.
 `port`:: The port number or symbolic service name on which the router should listen for incoming connections.
 
-For information about additional attributes, see xref:router-configuration-file-listener[Listener] in the _Configuration Reference_.
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_listener[the `qdrouterd.conf` man page].
 --
 
 . If necessary, xref:securing-incoming-connections[secure the connection].
@@ -80,7 +80,7 @@ connector {
 `host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should connect.
 `port`:: The port number or symbolic service name on which the router should connect.
 
-For information about additional attributes, see xref:router-configuration-file-connector[Connector] in the _Configuration Reference_.
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[the `qdrouterd.conf` man page].
 --
 
 . If necessary, xref:securing-outgoing-connections[secure the connection].

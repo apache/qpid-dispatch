@@ -85,7 +85,7 @@ You can use `qdmanage` to view, create, update, and delete listeners and connect
 
 Listeners define how clients can connect to a router. The following table lists the `qdmanage` commands you can use to perform common operations on listeners.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-listener[listener] section in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_listener[the `qdrouterd.conf` man page].
 
 //tag::qdmanage-connection-options-note[]
 [NOTE]
@@ -188,7 +188,7 @@ qdmanage delete --name=_LISTENER_NAME_
 
 Connectors define how the router can connect to other endpoints in your messaging network, such as brokers and other routers. The following table lists the `qdmanage` commands you can use to perform common operations on connectors.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-connector[connector] section in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_connector[the `qdrouterd.conf` man page].
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
@@ -297,7 +297,7 @@ qdmanage delete --name=_CONNECTOR_NAME_
 
 {RouterName} supports SSL/TLS for certificate-level encryption and mutual authentication. The following table lists the common `qdmanage` commands you can use to secure incoming and outgoing connections for a router in your router network.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-sslprofile[sslProfile] and xref:router-configuration-file-listener[listener] sections in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_sslprofile[the `qdrouterd.conf` man page].
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
@@ -375,7 +375,7 @@ qdmanage delete --name=_SSL_PROFILE_NAME_
 
 {RouterName} supports SASL for authentication and payload encryption. The following table lists the common `qdmanage` commands you can use to secure incoming and outgoing connections for a router in your router network.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-router[router] and xref:router-configuration-file-listener[listener] sections in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_router[the `qdrouterd.conf` man page].
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
@@ -457,7 +457,7 @@ qdmanage update --type=router --saslConfigPath --saslConfigName
 
 Message routing involves configuring addresses to define how {RouterName} should distribute messages. The following table lists the common `qdmanage` commands you can use to configure addresses for a router in your router network.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-address[address] and xref:router-configuration-file-autolink[autoLink] sections in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_address[address] and link:{qdrouterdConfManPageUrl}#_autolink[autolink] in the `qdrouterd.conf` man page.
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
@@ -574,7 +574,7 @@ qdmanage delete --name=_AUTOLINK_NAME_
 
 A link route is a chain of links between a sender and receiver that provides a private messaging path. The following table lists the common `qdmanage` commands you can use to view, create, update, and delete link routes.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-linkroute[linkRoute] section in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see the link:{qdrouterdConfManPageUrl}#_linkroute[the `qdrouterd.conf` man page].
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
@@ -632,7 +632,7 @@ qdmanage delete --name=_OUTGOING_LINK_ROUTE_NAME_
 
 {RouterName} logs are broken into different categories called logging modules. Each module provides important information about a particular aspect of a router. The following table lists the common `qdmanage` commands you can use to view and change the configuration of a logging module.
 
-For more information about the attributes you can use with these commands, see the xref:router-configuration-file-log[log] section in the _Configuration Reference_.
+For more information about the attributes you can use with these commands, see link:{qdrouterdConfManPageUrl}#_log[the `qdrouterd.conf` man page].
 
 // Note about qdmanage connection options.
 include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
