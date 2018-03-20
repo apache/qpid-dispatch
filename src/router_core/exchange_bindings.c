@@ -20,6 +20,7 @@
 #include <inttypes.h>
 #include <stdio.h>
 #include "router_core_private.h"
+#include "forwarder.h"
 #include "exchange_bindings.h"
 
 
@@ -95,6 +96,7 @@ struct qdr_exchange {
     next_hop_t         *alternate;
     qdr_binding_list_t  bindings;
     next_hop_list_t     next_hops;
+    qdr_forwarder_t    *old_forwarder;
 
     uint64_t msgs_received;
     uint64_t msgs_dropped;
@@ -159,17 +161,23 @@ static int send_message(qdr_core_t     *core,
 //
 // The Exchange Forwarder
 //
-int qdr_forward_exchange_CT(qdr_exchange_t *ex,
+int qdr_forward_exchange_CT(qdr_core_t     *core,
+                            qdr_address_t  *addr,
                             qd_message_t   *msg,
                             qdr_delivery_t *in_delivery,
                             bool            exclude_inprocess,
                             bool            control)
 {
     int forwarded = 0;
-    qdr_core_t *core = ex->core;
     const bool presettled = !!in_delivery ? in_delivery->settled : true;
+    qdr_exchange_t *ex = addr->exchange;
+    assert(ex);
 
     ex->msgs_received += 1;
+
+    // honor the disposition for the exchange address (this may not be right??)
+    if (ex->old_forwarder)
+        forwarded = ex->old_forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
 
     // @TODO(kgiusti): de-duplicate this code (cut & paste from multicast
     // forwarder)
@@ -913,6 +921,13 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
             DEQ_INSERT_TAIL(core->addrs, ex->qdr_addr);
         }
 
+        // we're going to override the forwarder
+        qdr_forwarder_t *old = ex->qdr_addr->forwarder;
+        qdr_forwarder_t *new = qdr_new_forwarder(qdr_forward_exchange_CT,
+                                                 old ? old->forward_attach : 0,
+                                                 old ? old->bypass_valid_origins: false);
+        ex->old_forwarder = old;
+        ex->qdr_addr->forwarder = new;
         ex->qdr_addr->ref_count += 1;
         ex->qdr_addr->exchange = ex;
         DEQ_INSERT_TAIL(core->exchanges, ex);
@@ -946,6 +961,8 @@ static void qdr_exchange_free(qdr_exchange_t *ex)
     }
     assert(DEQ_IS_EMPTY(ex->next_hops));
 
+    free(ex->qdr_addr->forwarder);
+    ex->qdr_addr->forwarder = ex->old_forwarder;
     assert(ex->qdr_addr->ref_count > 0);
     ex->qdr_addr->ref_count -= 1;
     qdr_check_addr_CT(ex->core, ex->qdr_addr, false); // @TODO(kgiusti) ?is
@@ -1218,7 +1235,7 @@ static void binding_insert_column(qdr_binding_t *b, int col, qd_composed_field_t
         break;
 
     case QDR_CONFIG_BINDING_NEXTHOP:
-        assert(b->next_hop && b->next_hop->next_hop_str);
+        assert(b->next_hop && b->next_hop->next_hop);
         qd_compose_insert_string(body, (char *)b->next_hop->next_hop);
         break;
 

@@ -26,11 +26,6 @@
 extern const char *qdr_config_exchange_columns[];
 extern const char *qdr_config_binding_columns[];
 
-int qdr_forward_exchange_CT(qdr_exchange_t *ex,
-                            qd_message_t   *msg,
-                            qdr_delivery_t *in_delivery,
-                            bool            exclude_inprocess,
-                            bool            control);
 void qdr_exchange_free_all(qdr_core_t *core);
 long qdr_exchange_binding_count(const qdr_exchange_t *ex);
 qdr_address_t *qdr_exchange_alternate_addr(const qdr_exchange_t *ex);
