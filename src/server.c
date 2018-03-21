@@ -1173,7 +1173,6 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-    qd_http_server_free(qd_server->http);
     pn_proactor_free(qd_server->proactor);
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {
@@ -1222,6 +1221,7 @@ void qd_server_run(qd_dispatch_t *qd)
     }
     free(threads);
     qd_http_server_stop(qd_server->http); /* Stop HTTP threads immediately */
+    qd_http_server_free(qd_server->http);
 
     qd_log(qd_server->log_source, QD_LOG_NOTICE, "Shut Down");
 }
