@@ -550,6 +550,7 @@ class EntityCache(object):
 
         if not adapter:
             adapter = cls(self.agent, implementation.entity_type, validate=validate)
+
         self.implementations[implementation.key] = adapter
         adapter._add_implementation(implementation)
         adapter._refresh()
@@ -849,7 +850,9 @@ class Agent(object):
             cimplementation = CImplementation(self.qd, entity.entity_type, pointer)
             self.entities.add_implementation(cimplementation, entity, validate)
         else:
-            self.add_entity(entity, validate)
+            # We have already validated the attributes, there is no need to validate the entity again.
+            self.add_entity(entity, False)
+
         return entity
 
     def create(self, request):
@@ -885,10 +888,10 @@ class Agent(object):
     def remove(self, entity):
         self.entities.remove(entity)
 
-    def add_implementation(self, implementation, entity_type_name):
+    def add_implementation(self, implementation, entity_type_name, validate=True):
         """Add an internal python implementation object, it will be wrapped with an entity adapter"""
         self.entities.add_implementation(
-            PythonImplementation(self.entity_type(entity_type_name), implementation))
+            PythonImplementation(self.entity_type(entity_type_name), implementation), validate=validate)
 
     def remove_implementation(self, implementation):
         """Remove and internal python implementation object."""

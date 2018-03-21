@@ -118,7 +118,7 @@ class MockAgent(object):
     def __init__(self):
         self.qd = QpidDispatch()
 
-    def add_implementation(self, entity, cfg_obj_name):
+    def add_implementation(self, entity, cfg_obj_name, validate=True):
         pass
 
 class MockPolicyManager(object):
