@@ -475,33 +475,6 @@ class Qdrouterd(Process):
     def wait_router_connected(self, router_id, **retry_kwargs):
         retry(lambda: self.is_router_connected(router_id), **retry_kwargs)
 
-class Messenger(proton.Messenger):
-    """Convenience additions to proton.Messenger"""
-
-    def __init__(self, name=None, timeout=TIMEOUT, blocking=True):
-        super(Messenger, self).__init__(name)
-        self.timeout = timeout
-        self.blocking = blocking
-
-    def flush(self):
-        """Call work() till there is no work left."""
-        while self.work(0.1):
-            pass
-
-    def fetch(self, accept=True):
-        """Fetch a single message"""
-        msg = Message()
-        self.recv(1)
-        self.get(msg)
-        if accept:
-            self.accept()
-        return msg
-
-    def subscribe(self, source, **retry_args):
-        """Do a proton.Messenger.subscribe and wait till the address is available."""
-        subscription = super(Messenger, self).subscribe(source)
-        assert retry(lambda: subscription.address, **retry_args) # Wait for address
-        return subscription
 
 class Tester(object):
     """Tools for use by TestCase
