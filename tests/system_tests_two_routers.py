@@ -94,36 +94,9 @@ class TwoRouterTest(TestCase):
         cls.routers[1].wait_router_connected('QDR.A')
 
     def test_01_pre_settled(self):
-        addr = "amqp:/pre_settled.1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        # Why 104 ? Choose a random number and use it to test later on.
-        num_msgs = 104
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M2.subscribe(addr)
-
-        tm = Message()
-        rm = Message()
-
-        self.routers[0].wait_address("pre_settled.1", 0, 1)
-
-        tm.address = addr
-        for i in range(num_msgs):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(num_msgs):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
+        test = DeliveriesInTransit(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
 
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
@@ -131,617 +104,49 @@ class TwoRouterTest(TestCase):
         # deliveriesTransit must most surely be greater than num_msgs
         pos = outs.attribute_names.index("deliveriesTransit")
         results = outs.results[0]
-        self.assertTrue(results[pos] > num_msgs)
+        self.assertTrue(results[pos] > 104)
 
     def test_02a_multicast_unsettled(self):
-        addr = "amqp:/multicast.2"
-        M1 = self.messenger()
-        M2 = self.messenger()
-        M3 = self.messenger()
-        M4 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-        M3.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M4.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-        M3.incoming_window = 5
-        M4.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M3.start()
-        M4.start()
-
-        M2.subscribe(addr)
-        M3.subscribe(addr)
-        M4.subscribe(addr)
-        self.routers[0].wait_address("multicast.2", 1, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        for i in range(2):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send(0)
-
-        for i in range(2):
-            M2.recv(1)
-            trk = M2.get(rm)
-            M2.accept(trk)
-            M2.settle(trk)
-            self.assertEqual(i, rm.body['number'])
-
-            M3.recv(1)
-            trk = M3.get(rm)
-            M3.accept(trk)
-            M3.settle(trk)
-            self.assertEqual(i, rm.body['number'])
-
-            M4.recv(1)
-            trk = M4.get(rm)
-            M4.accept(trk)
-            M4.settle(trk)
-            self.assertEqual(i, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
-        M3.stop()
-        M4.stop()
-
+        test = MulticastUnsettled(self.routers[0].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_02c_sender_settles_first(self):
-        addr = "amqp:/closest.senderfirst.1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("closest.senderfirst.1", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        tm.body = {'number': 0}
-        ttrk = M1.put(tm)
-        M1.send(0)
-
-        M1.settle(ttrk)
-        M1.flush()
-        M2.flush()
-
-        M2.recv(1)
-        rtrk = M2.get(rm)
-        M2.accept(rtrk)
-        M2.settle(rtrk)
-        self.assertEqual(0, rm.body['number'])
-
-        M1.flush()
-        M2.flush()
-
-        M1.stop()
-        M2.stop()
-
-
-    def test_03_propagated_disposition(self):
-        addr = "amqp:/unsettled/2"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("unsettled/2", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        tm.body = {'number': 0}
-
-        ##
-        ## Test ACCEPT
-        ##
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(0, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.accept(rx_tracker)
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
-
-        ##
-        ## Test REJECT
-        ##
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(0, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.reject(rx_tracker)
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(REJECTED, M1.status(tx_tracker))
-
-        M1.stop()
-        M2.stop()
-
-
-    def test_04_unsettled_undeliverable(self):
-        addr = self.routers[0].addresses[0]+"/unsettled_undeliverable/1"
-        M1 = self.messenger()
-
-        M1.outgoing_window = 5
-
-        M1.start()
-        M1.timeout = 1
-        tm = Message()
-        tm.address = addr
-        tm.body = {'number': 200}
-
-        exception = False
-        try:
-            M1.put(tm)
-            M1.send(0)
-            M1.flush()
-        except Exception:
-            exception = True
-
-        M1.stop()
-
-
-    def test_05_three_ack(self):
-        addr = "amqp:/three_ack/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("three_ack/1", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        tm.body = {'number': 200}
-
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(200, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.accept(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
-
-        M1.settle(tx_tracker)
-
-        M1.flush()
-        M2.flush()
-
-        ##
-        ## We need a way to verify on M2 (receiver) that the tracker has been
-        ## settled on the M1 (sender).  [ See PROTON-395 ]
-        ##
-
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        M1.stop()
-        M2.stop()
-
-
-    def notest_06_link_route_sender(self):
-        pass
-
-    def notest_07_link_route_receiver(self):
-        pass
-
-
-    def test_08_message_annotations(self):
-        addr = "amqp:/ma/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("ma/1", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-
-        ##
-        ## No inbound message annotations
-        ##
-        for i in range(10):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(10):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-            ma = rm.annotations
-            self.assertEqual(ma.__class__, dict)
-            self.assertEqual(ma['x-opt-qd.ingress'], '0/QDR.A')
-            self.assertEqual(ma['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
-
-        M1.stop()
-        M2.stop()
-
-
-    #The stripAnnotations property is set to 'no'
-    def test_08a_test_strip_message_annotations_no(self):
-        addr = "amqp:/message_annotations_strip_no/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[1]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[1]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("message_annotations_strip_no/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {'work': 'hard', 'stay': 'humble'}
-
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        #Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['work'], 'hard')
-        self.assertEqual(egress_message_annotations['stay'], 'humble')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
-
-        M1.stop()
-        M2.stop()
-
-    # This unit test is currently skipped because dispatch router do not pass thru custom message annotations.
-    # Once the feature is added the @unittest.skip decorator can be removed.
-    # The stripAnnotations property is set to 'no'
-    def test_08a_strip_message_annotations_custom(self):
-        addr = "amqp:/message_annotations_strip_no_custom/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[1]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[1]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("message_annotations_strip_no_custom/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {}
-        ingress_message_annotations['custom-annotation'] = '1/Custom_Annotation'
-
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        # Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['custom-annotation'], '1/Custom_Annotation')
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
-
-        M1.stop()
-        M2.stop()
-
-    #The stripAnnotations property is set to 'no'
-    def test_08a_test_strip_message_annotations_no_add_trace(self):
-        addr = "amqp:/strip_message_annotations_no_add_trace/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[1]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[1]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("strip_message_annotations_no_add_trace/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        ##
-        ## Pre-existing ingress and trace
-        ##
-        #ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['0/QDR.1']}
-        ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1']}
-        ingress_message.annotations = ingress_message_annotations
-
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        #Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR.A', '0/QDR.B'])
-
-        M1.stop()
-        M2.stop()
-
-    # Test to see if the dispatch router specific annotations were stripped.
-    # The stripAnnotations property is set to 'both'
-    # Send a message to the router with pre-existing ingress and trace annotations and make sure that nothing comes out.
-    def test_08a_test_strip_message_annotations_both_add_ingress_trace(self):
-        addr = "amqp:/strip_message_annotations_both_add_ingress_trace/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[2]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[2]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("strip_message_annotations_both_add_ingress_trace/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        ##
-        # Pre-existing ingress and trace. Intentionally populate the trace with the 0/QDR.A which is the trace
-        # of the first router. If the inbound annotations were not stripped, the router would drop this message
-        # since it would consider this message as being looped.
-        #
-        ingress_message_annotations = {'work': 'hard',
-                                       'x-opt-qd': 'humble',
-                                       'x-opt-qd.ingress': 'ingress-router',
-                                       'x-opt-qd.trace': ['0/QDR.A']}
-        ingress_message.annotations = ingress_message_annotations
-
-        #Put and send the message
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        # Router specific annotations (annotations with prefix "x-opt-qd.") will be stripped. User defined annotations will not be stripped.
-        self.assertEqual(egress_message.annotations, {'work': 'hard', 'x-opt-qd': 'humble'})
-
-        M1.stop()
-        M2.stop()
-
-    # Send in pre-existing trace and ingress and annotations and make sure that there are no outgoing annotations.
-    # stripAnnotations property is set to "in"
-    def test_08a_test_strip_message_annotations_out(self):
-        addr = "amqp:/strip_message_annotations_out/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[3]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[3]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("strip_message_annotations_out/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        #Put and send the message
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        egress_message = Message()
-        M2.recv(1)
-        M2.get(egress_message)
-
-         #Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message.annotations, None)
-
-        M1.stop()
-        M2.stop()
-
-    # Send in pre-existing trace and ingress and annotations and make sure that there are no outgoing annotations.
-    # stripAnnotations property is set to "in"
-    def test_08a_test_strip_message_annotations_out_custom(self):
-        # This test puts three items into message_annotations.
-        # Current router code depends on the order of the items in the annotation map and
-        # this code can't coerce python and the underlying messenger to send the items in
-        # any particular order. That is, the order of the items in the code is not equal
-        # to the order of the map items on the wire. Thus the test fails.
-        pass
-        #addr = "amqp:/strip_message_annotations_out/08a"
-
-        #M1 = self.messenger()
-        #M2 = self.messenger()
-
-        #M1.route("amqp:/*", self.routers[0].addresses[3]+"/$1")
-        #M2.route("amqp:/*", self.routers[1].addresses[3]+"/$1")
-
-        #M1.start()
-        #M2.start()
-        #M2.subscribe(addr)
-        #self.routers[0].wait_address("strip_message_annotations_out/08a", 0, 1)
-
-        #ingress_message = Message()
-        #ingress_message.address = addr
-        #ingress_message.body = {'message': 'Hello World!'}
-
-        ## Annotations with prefix "x-opt-qd." will be skipped
-        #ingress_message_annotations = {'work': 'zarg', "x-opt-qd": "custom", "x-opt-qd.": "custom"}
-        #ingress_message.annotations = ingress_message_annotations
-
-        ## Put and send the message
-        #M1.put(ingress_message)
-        #M1.send()
-
-        ## Receive the message
-        #egress_message = Message()
-        #M2.recv(1)
-        #M2.get(egress_message)
-
-        ## Make sure 'Hello World!' is in the message body dict
-        #self.assertEqual('Hello World!', egress_message.body['message'])
-
-        #self.assertEqual(egress_message.annotations, {'work': 'hard', "x-opt-qd": "custom"})
-
-        #M1.stop()
-        #M2.stop()
-
-    #Send in pre-existing trace and ingress and annotations and make sure that they are not in the outgoing annotations.
-    #stripAnnotations property is set to "in"
-    def test_08a_test_strip_message_annotations_in(self):
-        addr = "amqp:/strip_message_annotations_in/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-        M1.route("amqp:/*", self.routers[0].addresses[4]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[4]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("strip_message_annotations_in/1", 0, 1)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        ##
-        ## Pre-existing ingress and trace
-        ##
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
-        ingress_message.annotations = ingress_message_annotations
-
-        #Put and send the message
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        egress_message = Message()
-        M2.recv(1)
-        M2.get(egress_message)
-
-         #Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR.A')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.A', '0/QDR.B'])
-
-        M1.stop()
-        M2.stop()
-
-
-    def test_09_management(self):
+        test = SenderSettlesFirst(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03_message_annotations(self):
+        test = MessageAnnotationsTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03a_test_strip_message_annotations_no(self):
+        test = MessageAnnotationsStripTest(self.routers[0].addresses[1], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03a_test_strip_message_annotations_no_add_trace(self):
+        test = MessageAnnotationsStripAddTraceTest(self.routers[0].addresses[1], self.routers[1].addresses[1])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03a_test_strip_message_annotations_both_add_ingress_trace(self):
+        test = MessageAnnotationsStripBothAddIngressTrace(self.routers[0].addresses[2], self.routers[1].addresses[2])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03a_test_strip_message_annotations_out(self):
+        test = MessageAnnotationsStripMessageAnnotationsOut(self.routers[0].addresses[3], self.routers[1].addresses[3])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03a_test_strip_message_annotations_in(self):
+        test = MessageAnnotationSstripMessageAnnotationsInn(self.routers[0].addresses[4], self.routers[1].addresses[4])
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_04_management(self):
         M = self.messenger()
         M.start()
         M.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
@@ -777,7 +182,7 @@ class TwoRouterTest(TestCase):
 
         M.stop()
 
-    def test_10_semantics_multicast(self):
+    def test_05_semantics_multicast(self):
         addr = "amqp:/multicast.1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -835,7 +240,7 @@ class TwoRouterTest(TestCase):
         M3.stop()
         M4.stop()
 
-    def test_11a_semantics_closest_is_local(self):
+    def test_06_semantics_closest_is_local(self):
         addr = "amqp:/closest.1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -904,7 +309,7 @@ class TwoRouterTest(TestCase):
         M3.stop()
         M4.stop()
 
-    def test_11b_semantics_closest_is_remote(self):
+    def test_07_semantics_closest_is_remote(self):
         addr = "amqp:/closest.2"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -955,7 +360,7 @@ class TwoRouterTest(TestCase):
         M3.stop()
         M4.stop()
 
-    def test_12_semantics_spread(self):
+    def test_08_semantics_spread(self):
         addr = "amqp:/spread.1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -1033,7 +438,7 @@ class TwoRouterTest(TestCase):
         M3.stop()
         M4.stop()
 
-    def test_13_to_override(self):
+    def test_9_to_override(self):
         addr = "amqp:/toov/1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -1071,7 +476,122 @@ class TwoRouterTest(TestCase):
         M1.stop()
         M2.stop()
 
-    def test_14_excess_deliveries_released(self):
+    def test_10_propagated_disposition(self):
+        addr = "amqp:/unsettled/2"
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
+        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
+
+        M1.outgoing_window = 5
+        M2.incoming_window = 5
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+        self.routers[0].wait_address("unsettled/2", 0, 1)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+        tm.body = {'number': 0}
+
+        ##
+        ## Test ACCEPT
+        ##
+        tx_tracker = M1.put(tm)
+        M1.send(0)
+        M2.recv(1)
+        rx_tracker = M2.get(rm)
+        self.assertEqual(0, rm.body['number'])
+        self.assertEqual(PENDING, M1.status(tx_tracker))
+
+        M2.accept(rx_tracker)
+        M2.settle(rx_tracker)
+
+        M2.flush()
+        M1.flush()
+
+        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
+
+        ##
+        ## Test REJECT
+        ##
+        tx_tracker = M1.put(tm)
+        M1.send(0)
+        M2.recv(1)
+        rx_tracker = M2.get(rm)
+        self.assertEqual(0, rm.body['number'])
+        self.assertEqual(PENDING, M1.status(tx_tracker))
+
+        M2.reject(rx_tracker)
+        M2.settle(rx_tracker)
+
+        M2.flush()
+        M1.flush()
+
+        self.assertEqual(REJECTED, M1.status(tx_tracker))
+
+        M1.stop()
+        M2.stop()
+
+    def test_11_three_ack(self):
+        addr = "amqp:/three_ack/1"
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
+        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
+
+        M1.outgoing_window = 5
+        M2.incoming_window = 5
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+        self.routers[0].wait_address("three_ack/1", 0, 1)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+        tm.body = {'number': 200}
+
+        tx_tracker = M1.put(tm)
+        M1.send(0)
+        M2.recv(1)
+        rx_tracker = M2.get(rm)
+        self.assertEqual(200, rm.body['number'])
+        self.assertEqual(PENDING, M1.status(tx_tracker))
+
+        M2.accept(rx_tracker)
+
+        M2.flush()
+        M1.flush()
+
+        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
+
+        M1.settle(tx_tracker)
+
+        M1.flush()
+        M2.flush()
+
+        ##
+        ## We need a way to verify on M2 (receiver) that the tracker has been
+        ## settled on the M1 (sender).  [ See PROTON-395 ]
+        ##
+
+        M2.settle(rx_tracker)
+
+        M2.flush()
+        M1.flush()
+
+        M1.stop()
+        M2.stop()
+
+    def test_12_excess_deliveries_released(self):
         """
         Message-route a series of deliveries where the receiver provides credit for a subset and
         once received, closes the link.  The remaining deliveries should be released back to the sender.
@@ -1242,6 +762,7 @@ class LargeMessageStreamTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class ExcessDeliveriesReleasedTest(MessagingHandler):
     def __init__(self, address1, address2):
         super(ExcessDeliveriesReleasedTest, self).__init__(prefetch=0)
@@ -1251,10 +772,13 @@ class ExcessDeliveriesReleasedTest(MessagingHandler):
         self.error = None
         self.sender = None
         self.receiver = None
-        self.n_sent     = 0
+        self.n_sent  = 0
         self.n_received = 0
         self.n_accepted = 0
         self.n_released = 0
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
 
     def timeout(self):
         self.error = "Timeout Expired"
@@ -1326,6 +850,414 @@ class AttachOnInterRouterTest(MessagingHandler):
             Container(self).run()
         finally:
             logging.disable(logging.NOTSET) # Restore to normal
+
+
+class DeliveriesInTransit(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(DeliveriesInTransit, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "pre_settled.1"
+        self.error = "All messages not received"
+        self.n_sent = 0
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.num_msgs = 104
+        self.sent_count = 0
+        self.received_count = 0
+        self.receiver = None
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.n_sent <= self.num_msgs-1:
+            msg = Message(body="Hello World")
+            self.sender.send(msg)
+            self.n_sent += 1
+
+    def check_if_done(self):
+        if self.n_sent == self.received_count:
+            self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
+
+    def on_message(self, event):
+        self.received_count+=1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationsTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationsTest, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "ma/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            ma = event.message.annotations
+            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
+                self.error = None
+        self.accept(event.delivery)
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationsStripTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationsStripTest, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "message_annotations_strip_no/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            ingress_message_annotations = {'work': 'hard', 'stay': 'humble'}
+            msg.annotations = ingress_message_annotations
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            ma = event.message.annotations
+            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B'] \
+                    and ma['work'] == 'hard' and ma['stay'] == 'humble':
+                self.error = None
+        self.accept(event.delivery)
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationSstripMessageAnnotationsInn(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationSstripMessageAnnotationsInn, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "strip_message_annotations_in/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            #
+            # Pre-existing ingress and trace
+            #
+            ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
+            msg.annotations = ingress_message_annotations
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            if event.message.annotations['x-opt-qd.ingress'] == '0/QDR.A' \
+                    and event.message.annotations['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
+                self.error = None
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationsStripMessageAnnotationsOut(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationsStripMessageAnnotationsOut, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "strip_message_annotations_out/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            if event.message.annotations is None:
+                self.error = None
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationsStripBothAddIngressTrace(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationsStripBothAddIngressTrace, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "strip_message_annotations_both_add_ingress_trace/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            ingress_message_annotations = {'work': 'hard',
+                                           'x-opt-qd': 'humble',
+                                           'x-opt-qd.ingress': 'ingress-router',
+                                           'x-opt-qd.trace': ['0/QDR.A']}
+            msg.annotations = ingress_message_annotations
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            if event.message.annotations == {'work': 'hard', 'x-opt-qd': 'humble'}:
+                self.error = None
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotationsStripAddTraceTest(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotationsStripAddTraceTest, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "message_annotations_strip_no/1"
+        self.error = "Message annotations not found"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1']}
+            msg.annotations = ingress_message_annotations
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            ma = event.message.annotations
+            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.1', '0/QDR.A', '0/QDR.B']:
+                self.error = None
+        self.accept(event.delivery)
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+
+class SenderSettlesFirst(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(SenderSettlesFirst, self).__init__(auto_accept=False)
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "closest.senderfirst.1"
+        self.error = "Message body received differs from the one sent"
+        self.n_sent = 0
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.sent_count = 0
+        self.received_count = 0
+        self.receiver = None
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            dlv = event.sender.send(msg)
+            dlv.settle()
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            self.error = None
+        self.accept(event.delivery)
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MulticastUnsettled(MessagingHandler):
+    def __init__(self, address):
+        super(MulticastUnsettled, self).__init__()
+        self.address = address
+        self.dest = "multicast.2"
+        self.error = None
+        self.n_sent = 0
+        self.count = 3
+        self.n_received_a = 0
+        self.n_received_b = 0
+        self.n_received_c = 0
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver_a = None
+        self.receiver_b = None
+        self.receiver_c = None
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn, self.dest)
+        self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver_b = event.container.create_receiver(self.conn, self.dest, name="B")
+        self.receiver_c = event.container.create_receiver(self.conn, self.dest, name="C")
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d/%d/%d" % \
+                     (self.n_sent, self.n_received_a, self.n_received_b, self.n_received_c)
+        self.conn.close()
+
+    def check_if_done(self):
+        if self.n_received_a + self.n_received_b + self.n_received_c == self.count:
+            self.timer.cancel()
+            self.conn.close()
+
+    def on_sendable(self, event):
+        if self.n_sent == 0:
+            msg = Message(body="Appearance-Test")
+            self.sender.send(msg)
+            self.n_sent += 1
+
+    def on_message(self, event):
+        if event.receiver == self.receiver_a:
+            self.n_received_a += 1
+        if event.receiver == self.receiver_b:
+            self.n_received_b += 1
+        if event.receiver == self.receiver_c:
+            self.n_received_c += 1
+
+    def on_accepted(self, event):
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':
