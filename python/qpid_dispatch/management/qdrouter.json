@@ -486,8 +486,7 @@
 	            "id": {
 	                "description":"Router's unique identity. The router will fail to start without id.",
 	                "type": "string",
-	                "required": false,
-	                "create": true
+	                "required": false
 	            },
 	            "mode": {
 	                "type": [
@@ -495,8 +494,7 @@
 	                    "interior"
 	                ],
 	                "default": "standalone",
-	                "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.",
-	                "create": true
+	                "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network."
 	            },
 	            "version": {
 	                "type": "string",
