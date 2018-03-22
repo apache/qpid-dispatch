@@ -42,6 +42,7 @@
     "jquery-ui-dist": "^1.12.1",
     "jquery.fancytree": "^2.26.0",
     "notifyjs-browser": "^0.4.2",
-    "patternfly": "^3.30.0"
+    "patternfly": "^3.30.0",
+    "rhea": "^0.2.10"
   }
 }
