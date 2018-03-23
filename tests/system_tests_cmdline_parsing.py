@@ -51,8 +51,7 @@ class CommandLineTest(TestCase):
             ('log',{'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output': os.getcwd()+"/"+CommandLineTest.name+'.log'})
         ])
 
-    def run_qdrouterd_as_daemon(self, config_file_name,
-                                pid_file_name):
+    def run_qdrouterd_as_daemon(self, config_file_name, pid_file_name):
         """
         Runs qdrouterd as a daemon, using the provided config_file_name
         in order to ensure router is able to load it, be it using a
