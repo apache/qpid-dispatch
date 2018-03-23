@@ -1,0 +1,97 @@
+
+= Qpid Dispatch Router Documentation
+
+This directory contains the documentation for Qpid Dispatch Router.
+
+[source,bash,options="nowrap",subs="+quotes"]
+----
+/doc
+  ├── book    # Files for the Dispatch Router user guide
+  ├── common  # Common content shared between books
+  ├── man     # Man page source files and scripts
+----
+
+== Contributing to the Documentation
+
+Apache Qpid welcomes contributions from the community. You can contribute in the following ways:
+
+* xref:simple-change[Make a simple change to the documentation through the GitHub interface]. This method works well for quick fixes and simple additions.
+
+* xref:large-contribution[Make a large or complex contribution]. This method involves forking the repository, editing the documentation files, and submitting a pull request.
+
+* Submit a documentation issue to the link:https://issues.apache.org/jira/projects/DISPATCH[Apache Dispatch JIRA project]. When creating the issue, be sure to select the `Documentation` component, and be as specific as possible about the changes you would like to see.
+
+[id='simple-change']
+=== Making a Simple Change to the Dispatch Router User Guide
+
+Follow this process if you want to make a quick fix or simple addition to the user guide:
+
+. Find the file you want to edit in the GitHub web interface.
+
+. Click the file name to open it in GitHub.
+
+. Click the pencil icon near the top right of the page contents. 
+
+. Make your edits.
+
+. In the `Propose file change` section at the bottom of the page, enter a title and description of your changes. Enter enough detail for reviewers to know what you have changed and why.
+
+. Click *Propose file change* to create a new branch for this commit and start a pull request.
+
+. Click *Create pull request*.
+
+. Wait. The documentation team will typically review pull requests within a few days.
+
+[id='large-contribution']
+=== Making a Large Contribution to the Dispatch Router User Guide
+
+Use this method to make a large or complex contribution to the user guide.
+
+==== Initial Setup
+
+. If necessary, install `git`. For more information, see link:https://git-scm.com/book/en/v2/Getting-Started-Installing-Git[Installing Git].
+
+. link:https://help.github.com/articles/connecting-to-github-with-ssh/[Set up authentication] to the qpid-dispatch GitHub repository.
+
+. Fork the link:https://github.com/apache/qpid-dispatch[qpid-dispatch] GitHub repository.
+
+. Clone your fork onto your local machine.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git clone git@github.com:__<your-user-name>__/qpid-dispatch.git
+----
+
+. Navigate to the new directory.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ cd qpid-dispatch
+----
+
+. Add a git remote to your local repository to link to the upstream version of the documentation.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git remote add upstream git@github.com:apache/qpid-dispatch.git
+----
+
+. Verify that the remotes are set up properly.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git remote -v
+origin	git@github.com:__<your-user-name>__/qpid-dispatch.git (fetch)
+origin	git@github.com:__<your-user-name>__/qpid-dispatch.git (push)
+upstream	git@github.com:apache/qpid-dispatch.git (fetch)
+upstream	git@github.com:apache/qpid-dispatch.git (push)
+----
+
+
+
+
+
+
+== Building the Documentation
+
+
