@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdlib.h>
 #include <getopt.h>
 #include <errno.h>
 #include "config.h"
@@ -176,6 +177,46 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
             //
             umask(0);
 
+
+            //
+            // If config path is not represented by its full path, then
+            // save current path before changing to /
+            //
+            char *config_path_full = NULL;
+            if (strncmp("/", config_path, 1)) {
+                char *cur_path = NULL;
+                size_t path_size = 256;
+                int getcwd_error = 0;
+                cur_path = (char *) calloc(path_size, sizeof(char));
+
+                while ( getcwd(cur_path, path_size) == NULL ) {
+                    free(cur_path);
+                    if ( errno != ERANGE ) {
+                        // If unable to get current directory
+                        getcwd_error = 1;
+                        break;
+                    }
+                    // If current path does not fit, allocate more memory
+                    path_size += 256;
+                    cur_path = (char *) calloc(path_size, sizeof(char));
+                }
+
+                // Populating fully qualified config file name
+                if (!getcwd_error) {
+                    size_t cpf_len = path_size + strlen(config_path) + 1;
+                    config_path_full = calloc(cpf_len, sizeof(char));
+                    snprintf(config_path_full, cpf_len, "%s%s%s",
+                             cur_path,
+                             !strcmp("/", cur_path)? "":"/",
+                             config_path);
+                }
+
+                // Releasing temporary path variable
+                memset(cur_path, 0, path_size * sizeof(char));
+                free(cur_path);
+
+            }
+
             //
             // Set the current directory to "/" to avoid blocking
             // mount points
@@ -203,7 +244,9 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
                 //if (setgid(pwd->pw_gid) < 0) fail(pipefd[1], "Can't set group ID for user %s, errno=%d", user, errno);
             }
 
-            main_process(config_path, python_pkgdir, pipefd[1]);
+            main_process((config_path_full ? config_path_full : config_path), python_pkgdir, pipefd[1]);
+
+            free(config_path_full);
         } else
             //
             // Exit first child
