@@ -147,40 +147,9 @@ class TwoRouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_04_management(self):
-        M = self.messenger()
-        M.start()
-        M.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        sub = M.subscribe("amqp:/#")
-        reply = sub.address
-
-        request  = Message()
-        response = Message()
-
-        request.address    = "amqp:/_local/$management"
-        request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        assert response.properties['statusCode'] == 200, response.properties['statusDescription']
-        self.assertIn('amqp:/_topo/0/QDR.B/$management', response.body)
-
-        request.address    = "amqp:/_topo/0/QDR.B/$management"
-        request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        self.assertEqual(response.properties['statusCode'], 200)
-        self.assertTrue('amqp:/_topo/0/QDR.A/$management' in response.body)
-
-        M.stop()
+        test = ManagementTest(self.routers[0].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_05_semantics_multicast(self):
         addr = "amqp:/multicast.1"
@@ -979,6 +948,76 @@ class MessageAnnotationsStripTest(MessagingHandler):
         self.timer.cancel()
         self.conn1.close()
         self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class ManagementTest(MessagingHandler):
+    def __init__(self, address):
+        super(ManagementTest, self).__init__()
+        self.address = address
+        self.dest = "strip_message_annotations_in/1"
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+        self.error = None
+        self.num_messages = 0
+        self.response1 = False
+        self.response2 = False
+
+    def timeout(self):
+        if not self.response1:
+            self.error = "Incorrect response received for message with correlation id C1"
+        if not self.response1:
+            self.error = self.error + "Incorrect response received for message with correlation id C2"
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn)
+        self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
+
+    def on_sendable(self, event):
+        if self.num_messages < 2:
+            request = Message()
+            request.correlation_id = "C1"
+            request.address = "amqp:/_local/$management"
+            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            request.reply_to = self.receiver.remote_source.address
+            event.sender.send(request)
+            self.num_messages += 1
+
+            request = Message()
+            request.address = "amqp:/_topo/0/QDR.B/$management"
+            request.correlation_id = "C2"
+            request.reply_to = self.receiver.remote_source.address
+            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            event.sender.send(request)
+            self.num_messages += 1
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            if event.message.correlation_id == "C1":
+                if event.message.properties['statusCode'] == 200 and \
+                        event.message.properties['statusDescription'] is not None \
+                        and 'amqp:/_topo/0/QDR.B/$management' in event.message.body:
+                    self.response1 = True
+            elif event.message.correlation_id == "C2":
+                if event.message.properties['statusCode'] == 200 and \
+                        event.message.properties['statusDescription'] is not None \
+                        and 'amqp:/_topo/0/QDR.A/$management' in event.message.body:
+                    self.response2 = True
+
+        if self.response1 and self.response2:
+            self.error = None
+
+        if self.error is None:
+            self.timer.cancel()
+            self.conn.close()
 
     def run(self):
         Container(self).run()
