@@ -20,7 +20,7 @@
 from time import sleep
 import unittest2 as unittest
 import logging
-from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout
+from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout, Delivery
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -173,65 +173,8 @@ class TwoRouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_10_propagated_disposition(self):
-        addr = "amqp:/unsettled/2"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("unsettled/2", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        tm.body = {'number': 0}
-
-        ##
-        ## Test ACCEPT
-        ##
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(0, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.accept(rx_tracker)
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
-
-        ##
-        ## Test REJECT
-        ##
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(0, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.reject(rx_tracker)
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(REJECTED, M1.status(tx_tracker))
-
-        M1.stop()
-        M2.stop()
+        test = PropagatedDisposition(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
 
     def test_11_three_ack(self):
         addr = "amqp:/three_ack/1"
@@ -1286,6 +1229,49 @@ class SemanticsBalanced(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class PropagatedDisposition(MessagingHandler):
+    def __init__(self, test, address1, address2):
+        super(PropagatedDisposition, self).__init__(auto_accept=False)
+        self.addrs = [address1, address2]
+        self.settled = []
+        self.test = test
+
+    def on_start(self, event):
+        connections = [event.container.connect(a) for a in self.addrs]
+        addr = "unsettled/2"
+        self.sender = event.container.create_sender(connections[0], addr)
+        self.receiver = event.container.create_receiver(connections[1], addr)
+        self.receiver.flow(2)
+        self.trackers = {}
+        for b in ['accept', 'reject']:
+            self.trackers[self.sender.send(Message(body=b))] = b
+
+    def on_message(self, event):
+        if event.message.body == 'accept':
+            event.delivery.update(Delivery.ACCEPTED)
+            event.delivery.settle()
+        elif event.message.body == 'reject':
+            event.delivery.update(Delivery.REJECTED)
+            event.delivery.settle()
+            event.connection.close()
+
+    def on_accepted(self, event):
+        self.test.assertEqual(Delivery.ACCEPTED, event.delivery.remote_state)
+        self.test.assertEqual('accept', self.trackers[event.delivery])
+        self.settled.append('accept')
+
+    def on_rejected(self, event):
+        self.test.assertEqual(Delivery.REJECTED, event.delivery.remote_state)
+        self.test.assertEqual('reject', self.trackers[event.delivery])
+        self.settled.append('reject')
+        event.connection.close()
+
+    def run(self):
+        Container(self).run()
+        self.test.assertEqual(['accept', 'reject'], self.settled)
+
 
 
 if __name__ == '__main__':
