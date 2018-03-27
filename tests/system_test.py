@@ -30,8 +30,15 @@ Features:
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re
 from copy import copy
+try:
+    import queue as Queue   # 3.x
+except ImportError:
+    import Queue as Queue   # 2.7
+from threading import Thread
+
 import proton
-from proton import Message
+from proton import Message, Timeout
+from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
 
 # Optional modules
@@ -648,3 +655,67 @@ def main_module():
             unittest.main(module=main_module())
     """
     return os.path.splitext(os.path.basename(__main__.__file__))[0]
+
+
+class AsyncTestReceiver(object):
+    """
+    A simple receiver that runs in the background and queues any received
+    messages.  Messages can be retrieved from this thread via the queue member
+    """
+    Empty = Queue.Empty
+
+    def __init__(self, address, source, credit=100, timeout=0.1,
+                 conn_args=None, link_args=None):
+        """
+        Runs a BlockingReceiver in a separate thread.
+
+        :param address: address of router (URL)
+        :param source: the node address to consume from
+        :param credit: max credit for receiver
+        :param timeout: receive poll frequency in seconds
+        :param conn_args: map of BlockingConnection arguments
+        :param link_args: map of BlockingReceiver arguments
+        """
+        super(AsyncTestReceiver, self).__init__()
+        self.queue = Queue.Queue()
+        kwargs = {'url': address}
+        if conn_args:
+            kwargs.update(conn_args)
+        self._conn = BlockingConnection(**kwargs)
+        kwargs = {'address': source,
+                  'credit': credit}
+        if link_args:
+            kwargs.update(link_args)
+        self._rcvr = self._conn.create_receiver(**kwargs)
+        self._thread = Thread(target=self._poll)
+        self._run = True
+        self._timeout = timeout
+        self._thread.start()
+
+    def _poll(self):
+        """
+        Thread main loop
+        """
+
+        while self._run:
+            try:
+                msg = self._rcvr.receive(timeout=self._timeout)
+            except Timeout:
+                continue
+            try:
+                self._rcvr.accept()
+            except IndexError:
+                # PROTON-1743
+                pass
+            self.queue.put(msg)
+        self._rcvr.close()
+        self._conn.close()
+
+    def stop(self, timeout=10):
+        """
+        Called to terminate the AsyncTestReceiver
+        """
+        self._run = False
+        self._thread.join(timeout=timeout)
+
+

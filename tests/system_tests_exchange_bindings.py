@@ -19,16 +19,11 @@
 
 import ast
 import unittest2 as unittest
-from threading import Thread
 from time import sleep
 from subprocess import PIPE, STDOUT
 
-try:
-    import Queue as Queue   # 2.7
-except ImportError:
-    import queue as Queue   # 3.x
-
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import AsyncTestReceiver
 from proton import Message, Timeout
 from proton.reactor import AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SendException
@@ -36,45 +31,6 @@ from proton.utils import BlockingConnection, SendException
 #TIMEOUT=5
 _EXCHANGE_TYPE = "org.apache.qpid.dispatch.router.config.exchange"
 _BINDING_TYPE  = "org.apache.qpid.dispatch.router.config.binding"
-
-
-class _AsyncReceiver(object):
-    def __init__(self, address, source, credit=100, timeout=0.1,
-                 conn_args=None, link_args=None):
-        super(_AsyncReceiver, self).__init__()
-        kwargs = {'url': address}
-        if conn_args:
-            kwargs.update(conn_args)
-        self.conn = BlockingConnection(**kwargs)
-        kwargs = {'address': source,
-                  'credit': credit}
-        if link_args:
-            kwargs.update(link_args)
-        self.rcvr = self.conn.create_receiver(**kwargs)
-        self.thread = Thread(target=self._poll)
-        self.queue = Queue.Queue()
-        self._run = True
-        self._timeout = timeout
-        self.thread.start()
-
-    def _poll(self):
-        while self._run:
-            try:
-                msg = self.rcvr.receive(timeout=self._timeout)
-            except Timeout:
-                continue
-            try:
-                self.rcvr.accept()
-            except IndexError:
-                # PROTON-1743
-                pass
-            self.queue.put(msg)
-        self.rcvr.close()
-        self.conn.close()
-
-    def stop(self):
-        self._run = False
-        self.thread.join(timeout=TIMEOUT)
 
 
 class ExchangeBindingsTest(TestCase):
@@ -529,10 +485,10 @@ class ExchangeBindingsTest(TestCase):
         # create clients for message transfer
         conn = BlockingConnection(router.addresses[0])
         sender = conn.create_sender(address="Address3", options=AtLeastOnce())
-        nhop1 = _AsyncReceiver(address=router.addresses[0], source="nextHop1")
-        nhop2A = _AsyncReceiver(address=router.addresses[0], source="nextHop2")
-        nhop2B = _AsyncReceiver(address=router.addresses[0], source="nextHop2")
-        alt = _AsyncReceiver(address=router.addresses[0], source="altNextHop")
+        nhop1 = AsyncTestReceiver(address=router.addresses[0], source="nextHop1")
+        nhop2A = AsyncTestReceiver(address=router.addresses[0], source="nextHop2")
+        nhop2B = AsyncTestReceiver(address=router.addresses[0], source="nextHop2")
+        alt = AsyncTestReceiver(address=router.addresses[0], source="altNextHop")
 
         sender.send(Message(subject='a.b', body='A'))
         sender.send(Message(subject='x.y', body='B'))
@@ -572,7 +528,7 @@ class ExchangeBindingsTest(TestCase):
         # create clients for message transfer
         conn = BlockingConnection(router.addresses[0])
         sender = conn.create_sender(address="Address4", options=AtLeastOnce())
-        nhop1 = _AsyncReceiver(address=router.addresses[0], source="nextHop1")
+        nhop1 = AsyncTestReceiver(address=router.addresses[0], source="nextHop1")
 
         self.assertRaises(SendException,
                           sender.send,
@@ -652,10 +608,10 @@ class ExchangeBindingsTest(TestCase):
         self.routers[1].wait_address('AddressA')
 
         # connect clients to router B (no exchange)
-        nhop1A = _AsyncReceiver(self.routers[1].addresses[0], 'nextHop1')
-        nhop1B = _AsyncReceiver(self.routers[1].addresses[0], 'nextHop1')
-        nhop2  = _AsyncReceiver(self.routers[1].addresses[0], 'nextHop2')
-        nhop3  = _AsyncReceiver(self.routers[1].addresses[0], 'nextHop3')
+        nhop1A = AsyncTestReceiver(self.routers[1].addresses[0], 'nextHop1')
+        nhop1B = AsyncTestReceiver(self.routers[1].addresses[0], 'nextHop1')
+        nhop2  = AsyncTestReceiver(self.routers[1].addresses[0], 'nextHop2')
+        nhop3  = AsyncTestReceiver(self.routers[1].addresses[0], 'nextHop3')
 
         self.routers[0].wait_address('nextHop1', remotes=1)
         self.routers[0].wait_address('nextHop2', remotes=1)
@@ -708,10 +664,10 @@ class ExchangeBindingsTest(TestCase):
                                        wait=True)
 
         # connect clients to router B (no exchange)
-        nhop1A = _AsyncReceiver(router.addresses[0], 'nextHop1',
-                                conn_args={'max_frame_size': MAX_FRAME})
-        nhop1B = _AsyncReceiver(router.addresses[0], 'nextHop1',
-                                conn_args={'max_frame_size': MAX_FRAME})
+        nhop1A = AsyncTestReceiver(router.addresses[0], 'nextHop1',
+                                   conn_args={'max_frame_size': MAX_FRAME})
+        nhop1B = AsyncTestReceiver(router.addresses[0], 'nextHop1',
+                                   conn_args={'max_frame_size': MAX_FRAME})
 
         conn = BlockingConnection(router.addresses[0],
                                   max_frame_size=MAX_FRAME)

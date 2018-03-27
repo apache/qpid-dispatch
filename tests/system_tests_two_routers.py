@@ -22,8 +22,11 @@ import unittest2 as unittest
 import logging
 from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import AsyncTestReceiver
+
 from proton.handlers import MessagingHandler
-from proton.reactor import Container
+from proton.reactor import Container, AtLeastOnce
+from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
 
 
@@ -383,39 +386,32 @@ class TwoRouterTest(TestCase):
         receivers = []
         for a in addresses:
             for x in range(2):
-                M = self.messenger(timeout=0.1)
-                M.route("amqp:/*", self.routers[x].addresses[0]+"/$1")
-                M.start()
-                M.subscribe('amqp:/' + a[0])
-                receivers.append(M)
+                ar = AsyncTestReceiver(address=self.routers[x].addresses[0],
+                                       source=a[0])
+                receivers.append(ar)
+
+        # wait for the consumer info to propagate
+        for a in addresses:
             self.routers[0].wait_address(a[0], 1, 1)
             self.routers[1].wait_address(a[0], 1, 1)
 
-        # single sender sends one message to each address
-        M1 = self.messenger()
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M1.start()
+        # send one message to each address
+        conn = BlockingConnection(self.routers[0].addresses[0])
+        sender = conn.create_sender(address=None, options=AtLeastOnce())
         for a in addresses:
-            tm = Message()
-            tm.address = 'amqp:/' + a[0]
-            tm.body = {'address': a[0]}
-            M1.put(tm)
-            M1.send()
+            sender.send(Message(address=a[0], body={'address': a[0]}))
 
-        # gather all received messages
+        # count received messages by address
         msgs_recvd = {}
-        rm = Message()
         for M in receivers:
             try:
                 while True:
-                    M.recv(1)
-                    M.get(rm)
-                    index = rm.body.get('address', "ERROR")
-                    if index not in msgs_recvd:
-                        msgs_recvd[index] = 0
-                    msgs_recvd[index] += 1
-            except Exception as exc:
-                self.assertTrue("None" in str(exc))
+                    i = M.queue.get(timeout=0.2).body.get('address', "ERROR")
+                    if i not in msgs_recvd:
+                        msgs_recvd[i] = 0
+                    msgs_recvd[i] += 1
+            except AsyncTestReceiver.Empty:
+                pass
 
         # verify expected count == actual count
         self.assertTrue("ERROR" not in msgs_recvd)
@@ -423,9 +419,9 @@ class TwoRouterTest(TestCase):
             self.assertTrue(a[0] in msgs_recvd)
             self.assertEqual(a[1], msgs_recvd[a[0]])
 
-        M1.stop()
         for M in receivers:
             M.stop()
+        conn.close()
 
     def test_17_large_streaming_test(self):
         test = LargeMessageStreamTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
