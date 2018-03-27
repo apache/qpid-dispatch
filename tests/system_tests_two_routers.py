@@ -142,7 +142,7 @@ class TwoRouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_03a_test_strip_message_annotations_in(self):
-        test = MessageAnnotationSstripMessageAnnotationsInn(self.routers[0].addresses[4], self.routers[1].addresses[4])
+        test = MessageAnnotationStripMessageAnnotationsIn(self.routers[0].addresses[4], self.routers[1].addresses[4])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -167,43 +167,10 @@ class TwoRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_9_to_override(self):
-        addr = "amqp:/toov/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("toov/1", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-
-        ##
-        ## Pre-existing TO
-        ##
-        tm.annotations = {'x-opt-qd.to': 'toov/1'}
-        for i in range(10):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(10):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-            ma = rm.annotations
-            self.assertEqual(ma.__class__, dict)
-            self.assertEqual(ma['x-opt-qd.to'], 'toov/1')
-
-        M1.stop()
-        M2.stop()
+    def test_09_to_override(self):
+        test = MessageAnnotaionsPreExistingOverride(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_10_propagated_disposition(self):
         addr = "amqp:/unsettled/2"
@@ -333,36 +300,6 @@ class TwoRouterTest(TestCase):
         test = AttachOnInterRouterTest(self.routers[0].addresses[5])
         test.run()
         self.assertEqual(None, test.error)
-
-    def test_16_delivery_annotations(self):
-        addr = "amqp:/delivery_annotations.1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-
-        tm = Message()
-        rm = Message()
-
-        self.routers[0].wait_address("delivery_annotations.1", 0, 1)
-
-        tm.annotations = {'a1': 'a1', 'b1': 'b2'}
-        tm.address = addr
-        tm.instructions = {'work': 'hard', 'stay': 'humble'}
-        tm.body = {'number': 38}
-        M1.put(tm)
-        M1.send()
-
-        M2.recv(1)
-        M2.get(rm)
-        self.assertEqual(38, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
 
     def test_17_address_wildcard(self):
         # verify proper distribution is selected by wildcard
@@ -786,9 +723,9 @@ class ManagementTest(MessagingHandler):
         Container(self).run()
 
 
-class MessageAnnotationSstripMessageAnnotationsInn(MessagingHandler):
+class MessageAnnotationStripMessageAnnotationsIn(MessagingHandler):
     def __init__(self, address1, address2):
-        super(MessageAnnotationSstripMessageAnnotationsInn, self).__init__()
+        super(MessageAnnotationStripMessageAnnotationsIn, self).__init__()
         self.address1 = address1
         self.address2 = address2
         self.dest = "strip_message_annotations_in/1"
@@ -823,6 +760,47 @@ class MessageAnnotationSstripMessageAnnotationsInn(MessagingHandler):
         if 0 == event.message.body['number']:
             if event.message.annotations['x-opt-qd.ingress'] == '0/QDR.A' \
                     and event.message.annotations['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
+                self.error = None
+        self.timer.cancel()
+        self.conn1.close()
+        self.conn2.close()
+
+    def run(self):
+        Container(self).run()
+
+
+class MessageAnnotaionsPreExistingOverride(MessagingHandler):
+    def __init__(self, address1, address2):
+        super(MessageAnnotaionsPreExistingOverride, self).__init__()
+        self.address1 = address1
+        self.address2 = address2
+        self.dest = "toov/1"
+        self.error = "Pre-existing x-opt-qd.to has been stripped"
+        self.timer = None
+        self.conn1 = None
+        self.conn2 = None
+        self.sender = None
+        self.receiver = None
+        self.msg_not_sent = True
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn1 = event.container.connect(self.address1)
+        self.sender = event.container.create_sender(self.conn1, self.dest)
+        self.conn2 = event.container.connect(self.address2)
+        self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_sendable(self, event):
+        if self.msg_not_sent:
+            msg = Message(body={'number': 0})
+            msg.annotations = {'x-opt-qd.to': 'toov/1'}
+            event.sender.send(msg)
+            self.msg_not_sent = False
+
+    def on_message(self, event):
+        if 0 == event.message.body['number']:
+            ma = event.message.annotations
+            if ma['x-opt-qd.to'] == 'toov/1':
                 self.error = None
         self.timer.cancel()
         self.conn1.close()
