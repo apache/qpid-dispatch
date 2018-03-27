@@ -180,58 +180,8 @@ class TwoRouterTest(TestCase):
         test.run()
 
     def test_11_three_ack(self):
-        addr = "amqp:/three_ack/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.route("amqp:/*", self.routers[0].addresses[0]+"/$1")
-        M2.route("amqp:/*", self.routers[1].addresses[0]+"/$1")
-
-        M1.outgoing_window = 5
-        M2.incoming_window = 5
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-        self.routers[0].wait_address("three_ack/1", 0, 1)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        tm.body = {'number': 200}
-
-        tx_tracker = M1.put(tm)
-        M1.send(0)
-        M2.recv(1)
-        rx_tracker = M2.get(rm)
-        self.assertEqual(200, rm.body['number'])
-        self.assertEqual(PENDING, M1.status(tx_tracker))
-
-        M2.accept(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        self.assertEqual(ACCEPTED, M1.status(tx_tracker))
-
-        M1.settle(tx_tracker)
-
-        M1.flush()
-        M2.flush()
-
-        ##
-        ## We need a way to verify on M2 (receiver) that the tracker has been
-        ## settled on the M1 (sender).  [ See PROTON-395 ]
-        ##
-
-        M2.settle(rx_tracker)
-
-        M2.flush()
-        M1.flush()
-
-        M1.stop()
-        M2.stop()
+        test = ThreeAck(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
 
     def test_12_excess_deliveries_released(self):
         """
@@ -1268,6 +1218,52 @@ class PropagatedDisposition(MessagingHandler):
         Container(self).run()
         self.test.assertEqual(['accept', 'reject'], self.settled)
 
+
+class ThreeAck(MessagingHandler):
+    def __init__(self, test, address1, address2):
+        super(ThreeAck, self).__init__(auto_accept=False, auto_settle=False)
+        self.addrs = [address1, address2]
+        self.settled = []
+        self.test = test
+        self.phase = 0
+
+    def on_start(self, event):
+        connections = [event.container.connect(a) for a in self.addrs]
+        addr = "three_ack/1"
+        self.sender = event.container.create_sender(connections[0], addr)
+        self.receiver = event.container.create_receiver(connections[1], addr)
+        self.receiver.flow(1)
+        self.tracker = self.sender.send(Message('hello'))
+
+    def on_message(self, event):
+        self.test.assertEqual(0, self.phase)
+        self.phase = 1
+        self.test.assertFalse(event.delivery.settled)
+        self.test.assertEqual(0, self.tracker.local_state)
+        self.test.assertEqual(0, self.tracker.remote_state)
+        event.delivery.update(Delivery.ACCEPTED)
+        # NOTE: we don't settle yet for 3-ack
+
+    def on_accepted(self, event):
+        self.test.assertTrue(event.sender)
+        self.test.assertEqual(1, self.phase)
+        self.phase = 2
+        self.test.assertEqual(Delivery.ACCEPTED, event.delivery.remote_state)
+        self.test.assertFalse(event.delivery.settled)
+        self.test.assertEqual(0, event.delivery.local_state)
+        event.delivery.settle()
+        self.test.assertFalse(event.delivery.settled)
+        event.connection.close()
+
+    def on_settled(self, event):
+        self.test.assertTrue(event.receiver)
+        self.test.assertEqual(2, self.phase)
+        self.phase = 3
+        event.connection.close()
+
+    def run(self):
+        Container(self).run()
+        self.test.assertEqual(3, self.phase)
 
 
 if __name__ == '__main__':
