@@ -1216,7 +1216,7 @@ class PropagatedDisposition(MessagingHandler):
 
     def run(self):
         Container(self).run()
-        self.test.assertEqual(['accept', 'reject'], self.settled)
+        self.test.assertEqual(['accept', 'reject'], sorted(self.settled))
 
 
 class ThreeAck(MessagingHandler):
