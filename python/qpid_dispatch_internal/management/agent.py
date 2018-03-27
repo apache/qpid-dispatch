@@ -244,7 +244,7 @@ class EntityAdapter(SchemaEntity):
 
 
 class RouterEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None, validate=False):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
         super(RouterEntity, self).__init__(agent, entity_type, attributes, validate)
         # Router is a mix of configuration and operational entity.
         # The statistics attributes are operational not configured.
@@ -267,7 +267,7 @@ class RouterEntity(EntityAdapter):
 
 class LogEntity(EntityAdapter):
 
-    def __init__(self, agent, entity_type, attributes=None, validate=False):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
         # Special defaults for DEFAULT module.
         if attributes.get("module") == "DEFAULT":
             defaults = dict(enable="info+", timestamp=True, source=False, output="stderr")
@@ -291,7 +291,7 @@ class LogEntity(EntityAdapter):
 
 
 class PolicyEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None, validate=False):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
         super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate)
         # Policy is a mix of configuration and operational entity.
         # The statistics attributes are operational not configured.
