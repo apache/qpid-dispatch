@@ -178,7 +178,7 @@ router {
 * `interior` - Use this mode if the router is part of a router network and needs to collaborate with other routers.
 `id`:: The unique identifier for the router. This ID will also be the container name at the AMQP protocol level.
 
-For information about additional attributes, see xref:router-configuration-file-router[Router] in the _Configuration Reference_.
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_router[the `qdrouterd.conf` man page].
 --
 
 . If necessary for your environment, secure the router.
