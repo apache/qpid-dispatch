@@ -161,67 +161,628 @@ class OneRouterTest(TestCase):
     # This test will test the stripAnnotations = no option - meaning no annotations must be stripped.
     # We will send in a custom annotation and make that we get back 3 annotations on the received message
     def test_10_strip_message_annotations_custom(self):
-        pass
+        addr = self.router.addresses[1]+"/strip_message_annotations_no_custom/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+        ingress_message_annotations = {}
+        ingress_message_annotations['custom-annotation'] = '1/Custom_Annotation'
+
+        ingress_message.annotations = ingress_message_annotations
+
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        # Make sure 'Hello World!' is in the message body dict
+        self.assertEqual('Hello World!', egress_message.body['message'])
+
+        egress_message_annotations = egress_message.annotations
+
+        self.assertEqual(egress_message_annotations.__class__, dict)
+        self.assertEqual(egress_message_annotations['custom-annotation'], '1/Custom_Annotation')
+        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR')
+        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR'])
+
+        M1.stop()
+        M2.stop()
+
 
     # stripAnnotations property is set to "no"
     def test_11_test_strip_message_annotations_no(self):
-        pass
+        addr = self.router.addresses[1]+"/strip_message_annotations_no/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+        ingress_message_annotations = {}
+
+        ingress_message.annotations = ingress_message_annotations
+
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        #Make sure 'Hello World!' is in the message body dict
+        self.assertEqual('Hello World!', egress_message.body['message'])
+
+        egress_message_annotations = egress_message.annotations
+
+        self.assertEqual(egress_message_annotations.__class__, dict)
+        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR')
+        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR'])
+
+        M1.stop()
+        M2.stop()
+
 
     # stripAnnotations property is set to "no"
     def test_12_test_strip_message_annotations_no_add_trace(self):
-        pass
+        addr = self.router.addresses[1]+"/strip_message_annotations_no_add_trace/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+
+        #
+        # Pre-existing ingress and trace
+        #
+        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
+                                       'x-opt-qd.trace': ['0/QDR.1'],
+                                       'work': 'hard'}
+        ingress_message.annotations = ingress_message_annotations
+
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        # Make sure 'Hello World!' is in the message body dict
+        self.assertEqual('Hello World!', egress_message.body['message'])
+
+        egress_message_annotations = egress_message.annotations
+
+        self.assertEqual(egress_message_annotations.__class__, dict)
+        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], 'ingress-router')
+        # Make sure the user defined annotation also makes it out.
+        self.assertEqual(egress_message_annotations['work'], 'hard')
+        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR'])
+
+        M1.stop()
+        M2.stop()
+
 
     # Dont send any pre-existing ingress or trace annotations. Make sure that there are no outgoing message annotations
     # stripAnnotations property is set to "both"
     def test_13_test_strip_message_annotations_both(self):
-        pass
+        addr = self.router.addresses[2]+"/strip_message_annotations_both/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+
+        #Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        self.assertEqual(egress_message.annotations, None)
+
+        M1.stop()
+        M2.stop()
+
 
     # Dont send any pre-existing ingress or trace annotations. Send in a custom annotation.
     # Make sure that the custom annotation comes out and nothing else.
     # stripAnnotations property is set to "both"
     def test_14_test_strip_message_annotations_both_custom(self):
-        pass
+        addr = self.router.addresses[2]+"/strip_message_annotations_both/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+
+        # Only annotations with prefix "x-opt-qd." will be stripped
+        ingress_message_annotations = {'stay': 'humble', 'x-opt-qd': 'work'}
+        ingress_message.annotations = ingress_message_annotations
+
+        #Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        self.assertEqual(egress_message.annotations, ingress_message_annotations)
+
+        M1.stop()
+        M2.stop()
+
 
     #Dont send any pre-existing ingress or trace annotations. Make sure that there are no outgoing message annotations
     #stripAnnotations property is set to "out"
     def test_15_test_strip_message_annotations_out(self):
-        pass
+        addr = self.router.addresses[3]+"/strip_message_annotations_out/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+
+        #Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+        self.assertEqual(egress_message.annotations, None)
+
+        M1.stop()
+        M2.stop()
+
 
     #Send in pre-existing trace and ingress and annotations and make sure that they are not in the outgoing annotations.
     #stripAnnotations property is set to "in"
     def test_16_test_strip_message_annotations_in(self):
-        pass
+        addr = self.router.addresses[4]+"/strip_message_annotations_in/1"
+
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        ingress_message = Message()
+        ingress_message.address = addr
+        ingress_message.body = {'message': 'Hello World!'}
+
+        ##
+        ## Pre-existing ingress and trace
+        ##
+        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['0/QDR.1']}
+        ingress_message.annotations = ingress_message_annotations
+
+        #Put and send the message
+        M1.put(ingress_message)
+        M1.send()
+
+        # Receive the message
+        M2.recv(1)
+        egress_message = Message()
+        M2.get(egress_message)
+
+         #Make sure 'Hello World!' is in the message body dict
+        self.assertEqual('Hello World!', egress_message.body['message'])
+
+        egress_message_annotations = egress_message.annotations
+
+        self.assertEqual(egress_message_annotations.__class__, dict)
+        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR')
+        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR'])
+
+        M1.stop()
+        M2.stop()
+
 
 
     def test_17_management(self):
-        pass
+        addr  = "amqp:/$management"
+
+        M = self.messenger()
+        M.start()
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        request.address        = addr
+        request.reply_to       = reply
+        request.correlation_id = "C1"
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        assert response.properties['statusCode'] == 200, response.properties['statusCode']
+        self.assertEqual(response.correlation_id, "C1")
+        self.assertEqual(response.body, [])
+
+        request.address        = addr
+        request.reply_to       = reply
+        request.correlation_id = 135
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['statusCode'], 200)
+        self.assertEqual(response.correlation_id, 135)
+        self.assertEqual(response.body, [])
+
+        request.address        = addr
+        request.reply_to       = reply
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['statusCode'], 200)
+        self.assertEqual(response.body, [])
+
+        M.stop()
+
 
 
     def test_18_management_no_reply(self):
-        pass
+        addr  = "amqp:/$management"
+
+        M = self.messenger()
+        M.start()
+        M.route("amqp:/*", self.address+"/$1")
+
+        request  = Message()
+
+        request.address        = addr
+        request.correlation_id = "C1"
+        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
+
+        M.put(request)
+        M.send()
+
+        M.put(request)
+        M.send()
+
+        M.stop()
+
 
 
     def test_19_management_get_operations(self):
-        pass
+        addr  = "amqp:/_local/$management"
+
+        M = self.messenger()
+        M.start()
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Unrestricted request
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-OPERATIONS'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['statusCode'], 200)
+        self.assertEqual(response.body.__class__, dict)
+        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
+        self.assertTrue(len(response.body.keys()) > 2)
+        self.assertTrue(response.body['org.apache.qpid.dispatch.router'].__class__, list)
+
+        M.stop()
+
 
 
     def test_20_management_not_implemented(self):
-        pass
+        addr  = "amqp:/$management"
+
+        M = self.messenger()
+        M.start()
+        M.route("amqp:/*", self.address+"/$1")
+        sub = M.subscribe("amqp:/#")
+        reply = sub.address
+
+        request  = Message()
+        response = Message()
+
+        ##
+        ## Request with an invalid operation
+        ##
+        request.address    = addr
+        request.reply_to   = reply
+        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
+
+        M.put(request)
+        M.send()
+        M.recv()
+        M.get(response)
+
+        self.assertEqual(response.properties['statusCode'], 501)
+
+        M.stop()
+
+
+
 
 
     def test_21_semantics_multicast(self):
-        pass
+        addr = self.address+"/multicast.10"
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
+
+
+        M1.start()
+        M2.start()
+        M3.start()
+        M4.start()
+
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+        for i in range(100):
+            tm.body = {'number': i}
+            M1.put(tm)
+        M1.send()
+
+        for i in range(100):
+            M2.recv(1)
+            M2.get(rm)
+            self.assertEqual(i, rm.body['number'])
+
+            M3.recv(1)
+            M3.get(rm)
+            self.assertEqual(i, rm.body['number'])
+
+            M4.recv(1)
+            M4.get(rm)
+            self.assertEqual(i, rm.body['number'])
+
+        M1.stop()
+        M2.stop()
+        M3.stop()
+        M4.stop()
+
 
 
     def test_22_semantics_closest(self):
-        pass
+        addr = self.address+"/closest.1"
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
+
+
+        M1.start()
+        M2.start()
+        M3.start()
+        M4.start()
+
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+        for i in range(30):
+            tm.body = {'number': i}
+            M1.put(tm)
+        M1.send()
+
+        i = 0
+        rx_set = []
+        for i in range(10):
+            M2.recv(1)
+            M2.get(rm)
+            rx_set.append(rm.body['number'])
+
+            M3.recv(1)
+            M3.get(rm)
+            rx_set.append(rm.body['number'])
+
+            M4.recv(1)
+            M4.get(rm)
+            rx_set.append(rm.body['number'])
+
+        self.assertEqual(30, len(rx_set))
+        rx_set.sort()
+        for i in range(30):
+            self.assertEqual(i, rx_set[i])
+
+        M1.stop()
+        M2.stop()
+        M3.stop()
+        M4.stop()
+
 
     def test_23_semantics_spread(self):
-        pass
+        addr = self.address+"/spread.1"
+        M1 = self.messenger()
+        M2 = self.messenger()
+        M3 = self.messenger()
+        M4 = self.messenger()
+
+        M2.timeout = 0.1
+        M3.timeout = 0.1
+        M4.timeout = 0.1
+
+        M1.start()
+        M2.start()
+        M3.start()
+        M4.start()
+
+        M2.subscribe(addr)
+        M3.subscribe(addr)
+        M4.subscribe(addr)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+        for i in range(30):
+            tm.body = {'number': i}
+            M1.put(tm)
+        M1.send()
+
+        i = 0
+        rx_set = []
+        ca = 0
+        cb = 0
+        cc = 0
+
+        while len(rx_set) < 30:
+            try:
+                M2.recv(1)
+                M2.get(rm)
+                rx_set.append(rm.body['number'])
+                ca += 1
+            except:
+                pass
+
+            try:
+                M3.recv(1)
+                M3.get(rm)
+                rx_set.append(rm.body['number'])
+                cb += 1
+            except:
+                pass
+
+            try:
+                M4.recv(1)
+                M4.get(rm)
+                rx_set.append(rm.body['number'])
+                cc += 1
+            except:
+                pass
+
+        self.assertEqual(30, len(rx_set))
+        self.assertTrue(ca > 0)
+        self.assertTrue(cb > 0)
+        self.assertTrue(cc > 0)
+
+        rx_set.sort()
+        for i in range(30):
+            self.assertEqual(i, rx_set[i])
+
+        M1.stop()
+        M2.stop()
+        M3.stop()
+        M4.stop()
+
+
+
 
 
     def test_24_to_override(self):
-        pass
+        addr = self.address+"/toov/1"
+        M1 = self.messenger()
+        M2 = self.messenger()
+
+        M1.start()
+        M2.start()
+        M2.subscribe(addr)
+
+        tm = Message()
+        rm = Message()
+
+        tm.address = addr
+
+        ##
+        ## Pre-existing TO
+        ##
+        tm.annotations = {'x-opt-qd.to': 'toov/1'}
+        for i in range(10):
+            tm.body = {'number': i}
+            M1.put(tm)
+        M1.send()
+
+        for i in range(10):
+            M2.recv(1)
+            M2.get(rm)
+            self.assertEqual(i, rm.body['number'])
+            ma = rm.annotations
+            self.assertEqual(ma.__class__, dict)
+            self.assertEqual(ma['x-opt-qd.to'], 'toov/1')
+
+        M1.stop()
+        M2.stop()
+
 
     def test_25_send_settle_mode_settled(self):
         """
