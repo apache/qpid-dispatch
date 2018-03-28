@@ -159,46 +159,13 @@ class OneRouterTest(TestCase):
     # There is a property in qdrouter.json called stripAnnotations with possible values of ["in", "out", "both", "no"]
     # The default for stripAnnotations is "both" (which means strip annotations on both ingress and egress)
     # This test will test the stripAnnotations = no option - meaning no annotations must be stripped.
-    # We will send in a custom annotation and make that we get back 3 annotations on the received message
+    # We will send in a custom annotation and make sure that we get back 3 annotations on the received message
     def test_10_strip_message_annotations_custom(self):
-        addr = self.router.addresses[1]+"/strip_message_annotations_no_custom/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {}
-        ingress_message_annotations['custom-annotation'] = '1/Custom_Annotation'
-
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        # Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['custom-annotation'], '1/Custom_Annotation')
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR'])
-
-        M1.stop()
-        M2.stop()
-
+        addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
+        OneRouterTest.closest_count += 1
+        test = StripMessageAnnotationsCustom ( addr, n_messages = 10 )
+        test.run ( )
+        self.assertEqual ( None, test.error )
 
     # stripAnnotations property is set to "no"
     def test_11_test_strip_message_annotations_no(self):
@@ -1668,6 +1635,72 @@ class MessageAnnotations ( MessagingHandler ) :
             # success
             self.bail ( None )
 
+
+
+
+class StripMessageAnnotationsCustom ( MessagingHandler ) :
+    def __init__ ( self,
+                   addr,
+                   n_messages
+                 ) :
+        super ( StripMessageAnnotationsCustom, self ) . __init__ ( prefetch = n_messages )
+        self.addr        = addr
+        self.n_messages  = n_messages
+
+        self.test_timer  = None
+        self.sender      = None
+        self.receiver    = None
+        self.n_sent      = 0
+        self.n_received  = 0
+
+
+    def run ( self ) :
+        Container(self).run()
+
+
+    def bail ( self, travail ) :
+        self.bailing = True
+        self.error = travail
+        self.send_conn.close ( )
+        self.recv_conn.close ( )
+        self.test_timer.cancel ( )
+
+
+    def timeout ( self, name ):
+        self.bail ( "Timeout Expired" )
+
+
+    def on_start ( self, event ):
+        self.send_conn = event.container.connect ( self.addr )
+        self.recv_conn = event.container.connect ( self.addr )
+
+        self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
+        self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
+        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+
+
+    def on_sendable ( self, event ) :
+        while self.n_sent < self.n_messages :
+            if event.sender.credit < 1 :
+                break
+            msg = Message ( body = self.n_sent )
+            self.n_sent += 1
+            msg.annotations = { 'custom-annotation' : '1/Custom_Annotation' }
+
+            self.sender.send ( msg )
+
+
+    def on_message ( self, event ) :
+        self.n_received += 1
+        if not 'custom-annotation' in event.message.annotations :
+            self.bail ( 'custom annotation not found' )
+            return
+        if event.message.annotations [ 'custom-annotation'] != '1/Custom_Annotation' :
+            self.bail ( 'custom annotation bad value' )
+            return
+        if self.n_received >= self.n_messages :
+            # success
+            self.bail ( None )
 
 
 
