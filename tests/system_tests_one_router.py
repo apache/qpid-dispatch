@@ -82,6 +82,12 @@ class OneRouterTest(TestCase):
         cls.address = cls.router.addresses[0]
         cls.closest_count = 1
 
+        cls.no_strip_addr   = cls.router.addresses[1]
+        cls.both_strip_addr = cls.router.addresses[2]
+        cls.out_strip_addr  = cls.router.addresses[3]
+        cls.in_strip_addr   = cls.router.addresses[4]
+
+
     def test_01_listen_error(self):
         """Make sure a router exits if a initial listener fails, doesn't hang"""
         config = Qdrouterd.Config([
@@ -161,126 +167,36 @@ class OneRouterTest(TestCase):
     # This test will test the stripAnnotations = no option - meaning no annotations must be stripped.
     # We will send in a custom annotation and make sure that we get back 3 annotations on the received message
     def test_10_strip_message_annotations_custom(self):
-        addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
+        addr = self.no_strip_addr + "/strip_message_annotations_no_custom/1"
         OneRouterTest.closest_count += 1
         test = StripMessageAnnotationsCustom ( addr, n_messages = 10 )
         test.run ( )
         self.assertEqual ( None, test.error )
 
-    # stripAnnotations property is set to "no"
+
+    # stripAnnotations property is set to "no" 
     def test_11_test_strip_message_annotations_no(self):
-        addr = self.router.addresses[1]+"/strip_message_annotations_no/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-        ingress_message_annotations = {}
-
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        #Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], '0/QDR')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR'])
-
-        M1.stop()
-        M2.stop()
+        addr = self.no_strip_addr + "/strip_message_annotations_no/1"
+        test = StripMessageAnnotationsNo ( addr, n_messages = 10 )
+        test.run ( )
+        self.assertEqual ( None, test.error )
 
 
     # stripAnnotations property is set to "no"
     def test_12_test_strip_message_annotations_no_add_trace(self):
-        addr = self.router.addresses[1]+"/strip_message_annotations_no_add_trace/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        #
-        # Pre-existing ingress and trace
-        #
-        ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router',
-                                       'x-opt-qd.trace': ['0/QDR.1'],
-                                       'work': 'hard'}
-        ingress_message.annotations = ingress_message_annotations
-
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        # Make sure 'Hello World!' is in the message body dict
-        self.assertEqual('Hello World!', egress_message.body['message'])
-
-        egress_message_annotations = egress_message.annotations
-
-        self.assertEqual(egress_message_annotations.__class__, dict)
-        self.assertEqual(egress_message_annotations['x-opt-qd.ingress'], 'ingress-router')
-        # Make sure the user defined annotation also makes it out.
-        self.assertEqual(egress_message_annotations['work'], 'hard')
-        self.assertEqual(egress_message_annotations['x-opt-qd.trace'], ['0/QDR.1', '0/QDR'])
-
-        M1.stop()
-        M2.stop()
+        addr = self.no_strip_addr + "/strip_message_annotations_no_add_trace/1"
+        test = StripMessageAnnotationsNoAddTrace ( addr, n_messages = 10 )
+        test.run ( )
+        self.assertEqual ( None, test.error )
 
 
-    # Dont send any pre-existing ingress or trace annotations. Make sure that there are no outgoing message annotations
-    # stripAnnotations property is set to "both"
+    # Dont send any pre-existing ingress or trace annotations. Make sure that there 
+    # are no outgoing message annotations stripAnnotations property is set to "both"
     def test_13_test_strip_message_annotations_both(self):
-        addr = self.router.addresses[2]+"/strip_message_annotations_both/1"
-
-        M1 = self.messenger()
-        M2 = self.messenger()
-
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
-
-        ingress_message = Message()
-        ingress_message.address = addr
-        ingress_message.body = {'message': 'Hello World!'}
-
-        #Put and send the message
-        M1.put(ingress_message)
-        M1.send()
-
-        # Receive the message
-        M2.recv(1)
-        egress_message = Message()
-        M2.get(egress_message)
-
-        self.assertEqual(egress_message.annotations, None)
-
-        M1.stop()
-        M2.stop()
+        addr = self.both_strip_addr + "/strip_message_annotations_both/1"
+        test = StripMessageAnnotationsBoth ( addr, n_messages = 10 )
+        test.run ( )
+        self.assertEqual ( None, test.error )
 
 
     # Dont send any pre-existing ingress or trace annotations. Send in a custom annotation.
@@ -1805,6 +1721,253 @@ class StripMessageAnnotationsCustom ( MessagingHandler ) :
             self.bail ( None )
 
 
+
+class StripMessageAnnotationsNo ( MessagingHandler ) :
+    def __init__ ( self,
+                   addr,
+                   n_messages
+                 ) :
+        super ( StripMessageAnnotationsNo, self ) . __init__ ( prefetch = n_messages )
+        self.addr        = addr
+        self.n_messages  = n_messages
+
+        self.test_timer  = None
+        self.sender      = None
+        self.receiver    = None
+        self.n_sent      = 0
+        self.n_received  = 0
+
+
+    def run ( self ) :
+        Container(self).run()
+
+
+    def bail ( self, travail ) :
+        self.bailing = True
+        self.error = travail
+        self.send_conn.close ( )
+        self.recv_conn.close ( )
+        self.test_timer.cancel ( )
+
+
+    def timeout ( self, name ):
+        self.bail ( "Timeout Expired" )
+
+
+    def on_start ( self, event ):
+        self.send_conn = event.container.connect ( self.addr )
+        self.recv_conn = event.container.connect ( self.addr )
+
+        self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
+        self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
+        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+
+
+    def on_sendable ( self, event ) :
+        while self.n_sent < self.n_messages :
+            if event.sender.credit < 1 :
+                break
+            msg = Message ( body = self.n_sent )
+            self.n_sent += 1
+            # This test has no added annotations.
+            # The receiver should get the expected standard annotations anyway,
+            # because the address we are using has 'stripAnnotations' set to 'no'.
+            msg.annotations = { }
+            self.sender.send ( msg )
+
+
+    def on_message ( self, event ) :
+        self.n_received += 1
+
+        if event.message.annotations [ 'x-opt-qd.ingress' ] != '0/QDR' :
+            self.bail ( "x-opt-qd.ingress annotation has been stripped!" )
+            return
+
+        if event.message.annotations [ 'x-opt-qd.trace' ] != [ '0/QDR' ] :
+            self.bail ( "x-opt-qd.trace annotations has been stripped!" )
+            return
+
+        if self.n_received >= self.n_messages :
+            # success
+            self.bail ( None )
+
+
+
+class StripMessageAnnotationsNoAddTrace ( MessagingHandler ) :
+    def __init__ ( self,
+                   addr,
+                   n_messages
+                 ) :
+        super ( StripMessageAnnotationsNoAddTrace, self ) . __init__ ( prefetch = n_messages )
+        self.addr        = addr
+        self.n_messages  = n_messages
+
+        self.test_timer  = None
+        self.sender      = None
+        self.receiver    = None
+        self.n_sent      = 0
+        self.n_received  = 0
+
+
+    def run ( self ) :
+        Container(self).run()
+
+
+    def bail ( self, travail ) :
+        self.bailing = True
+        self.error = travail
+        self.send_conn.close ( )
+        self.recv_conn.close ( )
+        self.test_timer.cancel ( )
+
+
+    def timeout ( self, name ):
+        self.bail ( "Timeout Expired" )
+
+
+    def on_start ( self, event ):
+        self.send_conn = event.container.connect ( self.addr )
+        self.recv_conn = event.container.connect ( self.addr )
+
+        self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
+        self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
+        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+
+
+    def on_sendable ( self, event ) :
+        while self.n_sent < self.n_messages :
+            if event.sender.credit < 1 :
+                break
+            msg = Message ( body = self.n_sent )
+            annotations = { 'x-opt-qd.ingress': 'ingress-router',
+                            'x-opt-qd.trace': ['0/QDR.1'],
+                            'Canis_meus' : 'id_comedit'
+                          }
+            self.n_sent += 1
+            # This test has no added annotations.
+            # The receiver should get the expected standard annotations anyway,
+            # because the address we are using has 'stripAnnotations' set to 'no'.
+            msg.annotations = annotations
+            self.sender.send ( msg )
+
+
+    def on_message ( self, event ) :
+        self.n_received += 1
+
+        notes = event.message.annotations
+
+        if notes.__class__ != dict :
+            self.bail ( "annotations are not a dictionary" )
+            return
+        # No annotations should get stripped -- neither the
+        # ones that the router adds, not the custome one that
+        # I added.
+        if not 'x-opt-qd.ingress' in notes :
+            self.bail ( 'x-opt-qd.ingress annotation missing' )
+            return
+        if not 'x-opt-qd.trace' in notes :
+            self.bail ( 'x-opt-qd.trace annotation missing' )
+            return
+        if not 'Canis_meus' in notes :
+            self.bail ( 'Canis_meus annotation missing' )
+            return
+
+        if notes [ 'x-opt-qd.ingress' ] != 'ingress-router' :
+            self.bail ( "x-opt-qd.ingress bad value" )
+            return
+        if notes [ 'x-opt-qd.trace' ] != ['0/QDR.1', '0/QDR'] :
+            self.bail ( "x-opt-qd.trace bad value" )
+            return
+        if notes [ 'Canis_meus' ] != 'id_comedit' :
+            self.bail ( "Canis_meus bad value" )
+            return
+
+        if self.n_received >= self.n_messages :
+            # success
+            self.bail ( None )
+
+
+class StripMessageAnnotationsBoth ( MessagingHandler ) :
+    def __init__ ( self,
+                   addr,
+                   n_messages
+                 ) :
+        super ( StripMessageAnnotationsBoth, self ) . __init__ ( prefetch = n_messages )
+        self.addr        = addr
+        self.n_messages  = n_messages
+
+        self.test_timer  = None
+        self.sender      = None
+        self.receiver    = None
+        self.n_sent      = 0
+        self.n_received  = 0
+
+
+    def run ( self ) :
+        Container(self).run()
+
+
+    def bail ( self, travail ) :
+        self.bailing = True
+        self.error = travail
+        self.send_conn.close ( )
+        self.recv_conn.close ( )
+        self.test_timer.cancel ( )
+
+
+    def timeout ( self, name ):
+        self.bail ( "Timeout Expired" )
+
+
+    def on_start ( self, event ):
+        self.send_conn = event.container.connect ( self.addr )
+        self.recv_conn = event.container.connect ( self.addr )
+
+        self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
+        self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
+        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+
+
+    def on_sendable ( self, event ) :
+        while self.n_sent < self.n_messages :
+            if event.sender.credit < 1 :
+                break
+            msg = Message ( body = self.n_sent )
+            annotations = { 'x-opt-qd.ingress': 'ingress-router',
+                            'x-opt-qd.trace': ['0/QDR.1'],
+                            'Canis_meus' : 'id_comedit'
+                          }
+            self.n_sent += 1
+            # This test has no added annotations.
+            # The receiver should get the expected standard annotations anyway,
+            # because the address we are using has 'stripAnnotations' set to 'no'.
+            msg.annotations = annotations
+            self.sender.send ( msg )
+
+
+    def on_message ( self, event ) :
+        self.n_received += 1
+
+        # The annotations that the router adds should get stripped,
+        # but not the custom one that I added.
+        notes = event.message.annotations
+        if 'x-opt-qd.ingress' in notes :
+            self.bail ( 'x-opt-qd.ingress annotation not stripped' )
+            return
+        if 'x-opt-qd.trace' in notes :
+            self.bail ( 'x-opt-qd.trace annotation not stripped' )
+            return
+        if not 'Canis_meus' in notes :
+            self.bail ( 'Canis_meus annotation missing' )
+            return
+
+        if notes [ 'Canis_meus' ] != 'id_comedit' :
+            self.bail ( "Canis_meus bad value" )
+            return
+
+        if self.n_received >= self.n_messages :
+            # success
+            self.bail ( None )
 
 
 
