@@ -420,64 +420,14 @@ class OneRouterTest(TestCase):
         M.stop()
 
     def test_19_management_get_operations(self):
-        addr  = "amqp:/_local/$management"
-
-        M = self.messenger()
-        M.start()
-        M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#")
-        reply = sub.address
-
-        request  = Message()
-        response = Message()
-
-        ##
-        ## Unrestricted request
-        ##
-        request.address    = addr
-        request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-OPERATIONS'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        self.assertEqual(response.properties['statusCode'], 200)
-        self.assertEqual(response.body.__class__, dict)
-        self.assertTrue('org.apache.qpid.dispatch.router' in response.body.keys())
-        self.assertTrue(len(response.body.keys()) > 2)
-        self.assertTrue(response.body['org.apache.qpid.dispatch.router'].__class__, list)
-
-        M.stop()
+        test = ManagementGetOperationsTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_20_management_not_implemented(self):
-        addr  = "amqp:/$management"
-
-        M = self.messenger()
-        M.start()
-        M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#")
-        reply = sub.address
-
-        request  = Message()
-        response = Message()
-
-        ##
-        ## Request with an invalid operation
-        ##
-        request.address    = addr
-        request.reply_to   = reply
-        request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        self.assertEqual(response.properties['statusCode'], 501)
-
-        M.stop()
+        test = ManagementNotImplemented(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_21_semantics_multicast(self):
         addr = self.address+"/multicast.10"
@@ -809,6 +759,108 @@ class OneRouterTest(TestCase):
         client.connection.close()
 
 
+class ManagementNotImplemented(MessagingHandler):
+    def __init__(self, address):
+        super(ManagementNotImplemented, self).__init__()
+        self.address = address
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.error = None
+        self.num_messages = 0
+
+    def timeout(self):
+        self.error = "No response received for management request"
+        self.conn.close()
+
+    def bail(self, message):
+        self.error = message
+        self.conn.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn)
+        self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
+
+    def on_sendable(self, event):
+        if self.num_messages < 1:
+            request = Message()
+            request.address = "amqp:/_local/$management"
+            request.reply_to = self.receiver.remote_source.address
+            request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
+
+            event.sender.send(request)
+            self.num_messages += 1
+
+    def run(self):
+        Container(self).run()
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            if event.message.properties['statusCode'] == 501:
+                self.bail(None)
+            else:
+                self.bail("The return status code is %s. It should be 501" % str(event.message.properties['statusCode']))
+
+
+class ManagementGetOperationsTest(MessagingHandler):
+    def __init__(self, address):
+        super(ManagementGetOperationsTest, self).__init__()
+        self.address = address
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.error = None
+        self.num_messages = 0
+
+    def timeout(self):
+        self.error = "No response received for management request"
+        self.conn.close()
+
+    def bail(self, message):
+        self.error = message
+        self.conn.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn)
+        self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
+
+    def on_sendable(self, event):
+        if self.num_messages < 1:
+            request = Message()
+            request.address = "amqp:/_local/$management"
+            request.reply_to = self.receiver.remote_source.address
+            request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-OPERATIONS'}
+
+            event.sender.send(request)
+            self.num_messages += 1
+
+    def run(self):
+        Container(self).run()
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            if event.message.properties['statusCode'] == 200:
+                if 'org.apache.qpid.dispatch.router' in event.message.body.keys():
+                    if len(event.message.body.keys()) > 2:
+                        self.bail(None)
+                    else:
+                        self.bail('size of keys in message body less than or equal 2')
+                else:
+                    self.bail('org.apache.qpid.dispatch.router is not in the keys')
+            else:
+                self.bail("The return status code is %s. It should be 200" % str(event.message.properties['statusCode']))
+
+
 class ManagementTest(MessagingHandler):
     def __init__(self, address):
         super(ManagementTest, self).__init__()
@@ -829,6 +881,7 @@ class ManagementTest(MessagingHandler):
             self.error = "Incorrect response received for message with correlation id C1"
         if not self.response1:
             self.error = self.error + "and incorrect response received for message with correlation id C2"
+        self.conn.close()
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
