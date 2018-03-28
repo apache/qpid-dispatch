@@ -398,84 +398,22 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_18_management_no_reply(self):
-        addr  = "amqp:/$management"
-
-        M = self.messenger()
-        M.start()
-        M.route("amqp:/*", self.address+"/$1")
-
-        request  = Message()
-
-        request.address        = addr
-        request.correlation_id = "C1"
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-
-        M.put(request)
-        M.send()
-
-        M.stop()
-
-    def test_19_management_get_operations(self):
+    def test_18_management_get_operations(self):
         test = ManagementGetOperationsTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_20_management_not_implemented(self):
+    def test_19_management_not_implemented(self):
         test = ManagementNotImplemented(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_21_semantics_multicast(self):
-        addr = self.address+"/multicast.10"
-        M1 = self.messenger()
-        M2 = self.messenger()
-        M3 = self.messenger()
-        M4 = self.messenger()
+    def test_20_semantics_multicast(self):
+        test = SemanticsMulticast(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
-
-        M1.start()
-        M2.start()
-        M3.start()
-        M4.start()
-
-        M2.subscribe(addr)
-        M3.subscribe(addr)
-        M4.subscribe(addr)
-
-        tm = Message()
-        rm = Message()
-
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
-
-        for i in range(100):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M3.recv(1)
-            M3.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-            M4.recv(1)
-            M4.get(rm)
-            self.assertEqual(i, rm.body['number'])
-
-        M1.stop()
-        M2.stop()
-        M3.stop()
-        M4.stop()
-
-
-
-    def test_22_semantics_closest(self):
+    def test_21_semantics_closest(self):
         addr = self.address+"/closest.1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -526,12 +464,12 @@ class OneRouterTest(TestCase):
         M3.stop()
         M4.stop()
 
-    def test_23_semantics_balanced(self):
+    def test_22_semantics_balanced(self):
         test = SemanticsBalanced(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_24_to_override(self):
+    def test_23_to_override(self):
         addr = self.address+"/toov/1"
         M1 = self.messenger()
         M2 = self.messenger()
@@ -566,7 +504,7 @@ class OneRouterTest(TestCase):
         M2.stop()
 
 
-    def test_25_send_settle_mode_settled(self):
+    def test_24_send_settle_mode_settled(self):
         """
         The receiver sets a snd-settle-mode of settle thus indicating that it wants to receive settled messages from
         the sender. This tests make sure that the delivery that comes to the receiver comes as already settled.
@@ -576,7 +514,7 @@ class OneRouterTest(TestCase):
         self.assertTrue(send_settle_mode_test.message_received)
         self.assertTrue(send_settle_mode_test.delivery_already_settled)
 
-    def test_26_excess_deliveries_released(self):
+    def test_25_excess_deliveries_released(self):
         """
         Message-route a series of deliveries where the receiver provides credit for a subset and
         once received, closes the link.  The remaining deliveries should be released back to the sender.
@@ -585,7 +523,7 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_27_multicast_unsettled(self):
+    def test_26_multicast_unsettled(self):
         test = MulticastUnsettledTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
@@ -596,55 +534,55 @@ class OneRouterTest(TestCase):
     #    test.run()
     #    self.assertEqual(None, test.error)
 
-    def test_28_multicast_no_receivcer(self):
+    def test_27_multicast_no_receivcer(self):
         test = MulticastUnsettledNoReceiverTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_29_released_vs_modified(self):
+    def test_28_released_vs_modified(self):
         pass 
         # hanging 2018_03_28
         #test = ReleasedVsModifiedTest(self.address)
         #test.run()
         #self.assertEqual(None, test.error)
 
-    def test_30_appearance_of_balance(self):
+    def test_29_appearance_of_balance(self):
         test = AppearanceOfBalanceTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_31_batched_settlement(self):
+    def test_30_batched_settlement(self):
         test = BatchedSettlementTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
         self.assertTrue(test.accepted_count_match)
 
-    def test_32_presettled_overflow(self):
+    def test_31_presettled_overflow(self):
         test = PresettledOverflowTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_33_create_unavailable_sender(self):
+    def test_32_create_unavailable_sender(self):
         test = UnavailableSender(self.address)
         test.run()
         self.assertTrue(test.passed)
 
-    def test_34_create_unavailable_receiver(self):
+    def test_33_create_unavailable_receiver(self):
         test = UnavailableReceiver(self.address)
         test.run()
         self.assertTrue(test.passed)
 
-    def test_35_large_streaming_test(self):
+    def test_34_large_streaming_test(self):
         test = LargeMessageStreamTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_36_reject_coordinator(self):
+    def test_35_reject_coordinator(self):
         test = RejectCoordinatorTest(self.address)
         test.run()
         self.assertTrue(test.passed)
 
-    def test_37_reject_disposition(self):
+    def test_36_reject_disposition(self):
         pass
         # failing 2018_03_28
         # test = RejectDispositionTest(self.address)
@@ -652,7 +590,7 @@ class OneRouterTest(TestCase):
         # self.assertTrue(test.received_error)
         # self.assertTrue(test.reject_count_match)
 
-    def test_38_query_router(self):
+    def test_37_query_router(self):
         """
         Query the router with type='org.apache.qpid.dispatch.router' and make sure everything matches up as expected.
         """
@@ -684,7 +622,7 @@ class OneRouterTest(TestCase):
         self.assertEqual(outs.results[0][ra_interval], 30)
         self.assertEqual(outs.results[0][mode], 'standalone')
 
-    def test_39_connection_properties_unicode_string(self):
+    def test_38_connection_properties_unicode_string(self):
         """
         Tests connection property that is a map of unicode strings and integers
         """
@@ -707,7 +645,7 @@ class OneRouterTest(TestCase):
         self.assertTrue(found)
         client.connection.close()
 
-    def test_40_connection_properties_symbols(self):
+    def test_39_connection_properties_symbols(self):
         """
         Tests connection property that is a map of symbols
         """
@@ -731,7 +669,7 @@ class OneRouterTest(TestCase):
 
         client.connection.close()
 
-    def test_41_connection_properties_binary(self):
+    def test_40_connection_properties_binary(self):
         """
         Tests connection property that is a binary map. The router ignores AMQP binary data type.
         Router should not return anything for connection properties
@@ -757,6 +695,64 @@ class OneRouterTest(TestCase):
         self.assertFalse(results_found)
 
         client.connection.close()
+
+
+class SemanticsMulticast(MessagingHandler):
+    def __init__(self, address):
+        super(SemanticsMulticast, self).__init__()
+        self.address = address
+        self.dest = "multicast.2"
+        self.error = None
+        self.n_sent = 0
+        self.count = 3
+        self.n_received_a = 0
+        self.n_received_b = 0
+        self.n_received_c = 0
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver_a = None
+        self.receiver_b = None
+        self.receiver_c = None
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn, self.dest)
+        self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
+        self.receiver_b = event.container.create_receiver(self.conn, self.dest, name="B")
+        self.receiver_c = event.container.create_receiver(self.conn, self.dest, name="C")
+
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d rcvd=%d/%d/%d" % \
+                     (self.n_sent, self.n_received_a, self.n_received_b, self.n_received_c)
+        self.conn.close()
+
+    def check_if_done(self):
+        if self.n_received_a + self.n_received_b + self.n_received_c == self.count and \
+                self.n_received_a == self.n_received_b and self.n_received_c == self.n_received_b:
+            self.timer.cancel()
+            self.conn.close()
+
+    def on_sendable(self, event):
+        if self.n_sent == 0:
+            msg = Message(body="SemanticsMulticast-Test")
+            self.sender.send(msg)
+            self.n_sent += 1
+
+    def on_message(self, event):
+        if event.receiver == self.receiver_a:
+            self.n_received_a += 1
+        if event.receiver == self.receiver_b:
+            self.n_received_b += 1
+        if event.receiver == self.receiver_c:
+            self.n_received_c += 1
+
+    def on_accepted(self, event):
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
 
 
 class ManagementNotImplemented(MessagingHandler):
