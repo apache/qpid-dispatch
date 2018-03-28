@@ -393,63 +393,10 @@ class OneRouterTest(TestCase):
         M1.stop()
         M2.stop()
 
-
-
     def test_17_management(self):
-        addr  = "amqp:/$management"
-
-        M = self.messenger()
-        M.start()
-        M.route("amqp:/*", self.address+"/$1")
-        sub = M.subscribe("amqp:/#")
-        reply = sub.address
-
-        request  = Message()
-        response = Message()
-
-        request.address        = addr
-        request.reply_to       = reply
-        request.correlation_id = "C1"
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        assert response.properties['statusCode'] == 200, response.properties['statusCode']
-        self.assertEqual(response.correlation_id, "C1")
-        self.assertEqual(response.body, [])
-
-        request.address        = addr
-        request.reply_to       = reply
-        request.correlation_id = 135
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        self.assertEqual(response.properties['statusCode'], 200)
-        self.assertEqual(response.correlation_id, 135)
-        self.assertEqual(response.body, [])
-
-        request.address        = addr
-        request.reply_to       = reply
-        request.properties     = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-MGMT-NODES'}
-
-        M.put(request)
-        M.send()
-        M.recv()
-        M.get(response)
-
-        self.assertEqual(response.properties['statusCode'], 200)
-        self.assertEqual(response.body, [])
-
-        M.stop()
-
-
+        test = ManagementTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_18_management_no_reply(self):
         addr  = "amqp:/$management"
@@ -471,8 +418,6 @@ class OneRouterTest(TestCase):
         M.send()
 
         M.stop()
-
-
 
     def test_19_management_get_operations(self):
         addr  = "amqp:/_local/$management"
@@ -506,8 +451,6 @@ class OneRouterTest(TestCase):
 
         M.stop()
 
-
-
     def test_20_management_not_implemented(self):
         addr  = "amqp:/$management"
 
@@ -535,10 +478,6 @@ class OneRouterTest(TestCase):
         self.assertEqual(response.properties['statusCode'], 501)
 
         M.stop()
-
-
-
-
 
     def test_21_semantics_multicast(self):
         addr = self.address+"/multicast.10"
@@ -868,6 +807,77 @@ class OneRouterTest(TestCase):
         self.assertFalse(results_found)
 
         client.connection.close()
+
+
+class ManagementTest(MessagingHandler):
+    def __init__(self, address):
+        super(ManagementTest, self).__init__()
+        self.address = address
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.receiver = None
+        self.sent_count = 0
+        self.msg_not_sent = True
+        self.error = None
+        self.num_messages = 0
+        self.response1 = False
+        self.response2 = False
+
+    def timeout(self):
+        if not self.response1:
+            self.error = "Incorrect response received for message with correlation id C1"
+        if not self.response1:
+            self.error = self.error + "and incorrect response received for message with correlation id C2"
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn)
+        self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
+
+    def on_sendable(self, event):
+        if self.num_messages < 2:
+            request = Message()
+            request.address = "amqp:/$management"
+            request.reply_to = self.receiver.remote_source.address
+            request.correlation_id = "C1"
+            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+
+            event.sender.send(request)
+            self.num_messages += 1
+
+            request = Message()
+            request.address = "amqp:/_topo/0/QDR.B/$management"
+            request.correlation_id = "C2"
+            request.reply_to = self.receiver.remote_source.address
+            request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
+            event.sender.send(request)
+            self.num_messages += 1
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            if event.message.correlation_id == "C1":
+                if event.message.properties['statusCode'] == 200 and \
+                        event.message.properties['statusDescription'] is not None \
+                        and event.message.body == []:
+                    self.response1 = True
+            elif event.message.correlation_id == "C2":
+                if event.message.properties['statusCode'] == 200 and \
+                        event.message.properties['statusDescription'] is not None \
+                        and event.message.body == []:
+                    self.response2 = True
+
+        if self.response1 and self.response2:
+            self.error = None
+
+        if self.error is None:
+            self.timer.cancel()
+            self.conn.close()
+
+    def run(self):
+        Container(self).run()
+
 
 
 class CustomTimeout(object):

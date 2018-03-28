@@ -546,7 +546,6 @@ class ManagementTest(MessagingHandler):
     def __init__(self, address):
         super(ManagementTest, self).__init__()
         self.address = address
-        self.dest = "strip_message_annotations_in/1"
         self.timer = None
         self.conn = None
         self.sender = None
