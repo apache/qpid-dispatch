@@ -42,7 +42,7 @@ under the License
 :FragmentDir: common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
-:RouterVersion: 1.0
+:RouterVersion: 1.0.1
 
 // Book names
 
@@ -50,7 +50,7 @@ under the License
 
 // Doc links
 
-:BookUrlBase: https://qpid.apache.org/releases/qpid-dispatch-1.0.0
+:BookUrlBase: https://qpid.apache.org/releases/qpid-dispatch-{RouterVersion}
 
 :ManagementEntitiesUrl: {BookUrlBase}/man/managementschema.html
 :ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^] 
