@@ -9,7 +9,7 @@ This directory contains the documentation for Qpid Dispatch Router. The document
   ├── book  # Files for the Dispatch Router user guide
   ├── common  # Common content shared between books
   ├── internal-resources  # Guidelines for writing documentation
-  ├── man  # Man page source files and scripts
+  └── man  # Man page source files and scripts
 ----
 
 == Contributing to the Documentation

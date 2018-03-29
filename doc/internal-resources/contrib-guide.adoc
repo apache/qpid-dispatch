@@ -1,20 +1,14 @@
 
 = Contributor's Guide
 
+Use this guide to learn how to contribute to the Qpid Dispatch Router documentation. The documentation consists of a user guide, man pages, and a configuration reference. There are two contribution methods:
 
-
-
-
-* xref:internalsimple-change[Make a simple change to the documentation through the GitHub interface]. This method works well for quick fixes and simple additions.
+* xref:simple-change[Make a simple change to the documentation through the GitHub interface]. This method works well for quick fixes and simple additions.
 
 * xref:large-contribution[Make a large or complex contribution]. This method involves forking the repository, editing the documentation files, and submitting a pull request.
 
-
-
-
-
 [id='simple-change']
-=== Making a Simple Change to the Documentation
+== Making a Simple Change to the Documentation
 
 Follow this process if you want to make a quick fix or simple addition to the user guide:
 
@@ -35,11 +29,11 @@ Follow this process if you want to make a quick fix or simple addition to the us
 . Wait. The documentation team will typically review pull requests within a few days.
 
 [id='large-contribution']
-=== Making a Large Contribution to the Documentation
+== Making a Large Contribution to the Documentation
 
 To make a large or complex contribution to the user guide, follow this method.
 
-==== Setting Up Your Environment
+=== Setting Up Your Environment
 
 Before making a documentation contribution, you must set up your environment. This involves forking the upstream GitHub repository and cloning the fork to your local machine.
 
@@ -81,7 +75,7 @@ upstream	git@github.com:apache/qpid-dispatch.git (fetch)
 upstream	git@github.com:apache/qpid-dispatch.git (push)
 ----
 
-==== Updating the Documentation
+=== Updating the Documentation
 
 Updating the documentation involves fetching the latest code from the upstream repository, making your documentation changes, and submitting a pull request. The following procedure describes how this workflow typically works:
 
@@ -136,7 +130,15 @@ The branch name should include the ID of the JIRA for which you are creating the
 
 . Make your changes to the documentation.
 +
-TODO: Add link to doc standards
+--
+Use the following resources to make your changes:
+
+* Templates:
+** link:template-procedure.adoc[Procedure] (_I want to do x..._)
+** link:template-concept[Concept] (_I need to understand x..._)
+** link:template-reference[Reference] (_I want to know x..._)
+* link:style-guide.adoc[Style Guide]
+--
 
 . Build the documentation locally to test your changes.
 +
@@ -199,23 +201,3 @@ $ git push origin HEAD
 ====
 After the pull request has been merged or rejected, you can remove your feature branch from both the remote fork and your local machine. GitHub provides a button for removing from the fork in the UI of the PR once it is merged. To remove the branch from your local machine, enter `git branch -d _<branch-name>_`.
 ====
-
-[id='updating-man-pages']
-=== Updating Man Pages
-
-Like the Dispatch Router user guide, man pages are written in `asciidoc` markup. Some of the content is generated from Python scripts. 
-
-[source,bash,options="nowrap",subs="+quotes"]
-----
-/doc
-  ...
-  ├── man
-      ├── qdmanage.8.adoc <1>
-      ├── qdrouterd.8.adoc <2>
-      ├── qdstat.8.adoc <3>
-----
-<1> `qdmanage` - Management client for controlling and querying the Dispatch Router daemon.
-<2> `qdrouterd` - The Qpid Dispatch Router daemon.
-<3> `qdstat` - Monitoring client for displaying information about Dispatch Router networks.
-
-To update a man page, follow the process for making a xref:simple-change[simple change] or xref:large-contribution[large contribution].
