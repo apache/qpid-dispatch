@@ -756,8 +756,41 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     sys_mutex_lock(node->container->lock);
     DEQ_INSERT_TAIL(node->container->links, link);
     sys_mutex_unlock(node->container->lock);
-    link->pn_sess = pn_session(qd_connection_pn(conn));
-    pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+
+    bool open_new_session = true;
+    bool is_conn_route_container = strcmp(conn->role, "route-container") == 0;
+
+    //
+    // A route container connection is made to an external container like a broker.
+    // We don't want to create one session for every link we create when communicating with a broker because the
+    // you can only have a maximum of 32,768 sessions per connection. There is a danger of us running out of sessions
+    // if the number of sessions exceed 32,768 (one link per session)
+    // To avoid this problem, if this is a route container connection, we will store the session in the route-container connection object
+    // and every new link will be created in that session.
+    //
+    //
+
+    if (is_conn_route_container) {
+        // dont close the session with link because all links in the route-container case are sharing a single session.
+        link->close_sess_with_link = false;
+        // Use the pn_session if it is already available in the connection and set is_conn_route_container to false since we don't want to open a new session.
+        if (conn->route_container_sess) {
+            link->pn_sess = conn->route_container_sess;
+            open_new_session = false;
+        }
+        else {
+            // pn_session is not available in the connection. Create a new one.
+            link->pn_sess = pn_session(qd_connection_pn(conn));
+            pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+            conn->route_container_sess = link->pn_sess;
+        }
+    }
+    else {
+        // We will still continue having one session per link in the non-route container cases.
+        link->close_sess_with_link = true;
+        link->pn_sess = pn_session(qd_connection_pn(conn));
+        pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+    }
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);
@@ -769,11 +802,11 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
-    link->close_sess_with_link = true;
 
     pn_link_set_context(link->pn_link, link);
 
-    pn_session_open(link->pn_sess);
+    if (open_new_session)
+        pn_session_open(link->pn_sess);
 
     return link;
 }
