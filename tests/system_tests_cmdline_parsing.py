@@ -62,8 +62,9 @@ class CommandLineTest(TestCase):
         :return:
         """
         pipe = self.popen(
-            ['qdrouterd', '-d', '-c',
-             self.config.write(config_file_name), '-P', pid_file_name],
+            [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
+             '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
+             '-c', self.config.write(config_file_name), '-P', pid_file_name],
             stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
         out = pipe.communicate()[0]
         wait_port(CommandLineTest.testport)
@@ -122,8 +123,9 @@ class CommandLineTest2(TestCase):
         :return:
         """
         pipe = self.popen(
-            ['qdrouterd', '-d', '-c',
-             self.config.write(config_file_name), '-P', pid_file_name],
+            [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
+             '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
+             '-c', self.config.write(config_file_name), '-P', pid_file_name],
             stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
         out = pipe.communicate()[0]
         wait_port(CommandLineTest2.testport)

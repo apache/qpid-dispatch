@@ -108,7 +108,7 @@ foreach(py_test_module
     system_tests_topology_addition
     system_tests_disallow_link_resumable_link_route
     system_tests_exchange_bindings
-    # DISPATCH-940 test fails if dispatch not installed: system_tests_cmdline_parsing
+    system_tests_cmdline_parsing
     ${SYSTEM_TESTS_HTTP}
     )
 
