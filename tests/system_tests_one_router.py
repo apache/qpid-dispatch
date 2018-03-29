@@ -290,11 +290,9 @@ class OneRouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_27_released_vs_modified(self):
-        pass 
-        # hanging 2018_03_28
-        #test = ReleasedVsModifiedTest(self.address)
-        #test.run()
-        #self.assertEqual(None, test.error)
+        test = ReleasedVsModifiedTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_28_appearance_of_balance(self):
         test = AppearanceOfBalanceTest(self.address)
@@ -333,12 +331,10 @@ class OneRouterTest(TestCase):
         self.assertTrue(test.passed)
 
     def test_35_reject_disposition(self):
-        pass
-        # failing 2018_03_28
-        # test = RejectDispositionTest(self.address)
-        # test.run()
-        # self.assertTrue(test.received_error)
-        # self.assertTrue(test.reject_count_match)
+        test = RejectDispositionTest(self.address)
+        test.run()
+        self.assertTrue(test.received_error)
+        self.assertTrue(test.reject_count_match)
 
     def test_36_query_router(self):
         """
@@ -2397,14 +2393,22 @@ class ReleasedVsModifiedTest(MessagingHandler):
         self.n_received = 0
         self.n_released = 0
         self.n_modified = 0
+        self.node_modified_at_start = 0
+
+    def get_modified_deliveries ( self ) :
+        local_node = Node.connect(self.address, timeout=TIMEOUT)
+        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        pos = outs.attribute_names.index("modifiedDeliveries")
+        results = outs.results[0]
+        n_modified_deliveries = results [ pos ]
+        return n_modified_deliveries
+
 
     def check_if_done(self):
         if self.n_received == self.accept and self.n_released == self.count - self.accept and self.n_modified == self.accept:
-            local_node = Node.connect(self.address, timeout=TIMEOUT)
-            outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
-            pos = outs.attribute_names.index("modifiedDeliveries")
-            results = outs.results[0]
-            if results[pos] == self.accept:
+            node_modified_now = self.get_modified_deliveries ( )
+            this_test_modified_deliveries = node_modified_now - self.node_modified_at_start
+            if this_test_modified_deliveries == self.accept:
                 self.timer.cancel()
                 self.conn.close()
 
@@ -2419,6 +2423,7 @@ class ReleasedVsModifiedTest(MessagingHandler):
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
         self.receiver.flow(self.accept)
+        self.node_modified_at_start = self.get_modified_deliveries ( )
 
     def on_sendable(self, event):
         for i in range(self.count - self.n_sent):
@@ -2691,11 +2696,20 @@ class RejectDispositionTest(MessagingHandler):
         self.error_description = 'you were out of luck this time!'
         self.error_name = u'amqp:internal-error'
         self.reject_count_match = False
+        self.rejects_at_start = 0
+
+    def count_rejects ( self ) :
+        local_node = Node.connect(self.address, timeout=TIMEOUT)
+        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        pos = outs.attribute_names.index("rejectedDeliveries")
+        results = outs.results[0]
+        return results[pos]
 
     def on_start(self, event):
         conn = event.container.connect(self.address)
         event.container.create_sender(conn, self.dest)
         event.container.create_receiver(conn, self.dest)
+        self.rejects_at_start = self.count_rejects ( )
 
     def on_sendable(self, event):
         if not self.sent:
@@ -2706,14 +2720,10 @@ class RejectDispositionTest(MessagingHandler):
         if event.delivery.remote.condition.description == self.error_description \
                 and event.delivery.remote.condition.name == self.error_name:
             self.received_error = True
-
-        local_node = Node.connect(self.address, timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
-        pos = outs.attribute_names.index("rejectedDeliveries")
-        results = outs.results[0]
-        if results[pos] == 2:
+        rejects_now = self.count_rejects ( )
+        rejects_for_this_test = rejects_now - self.rejects_at_start
+        if rejects_for_this_test == 1:
             self.reject_count_match = True
-
         event.connection.close()
 
     def on_message(self, event):
