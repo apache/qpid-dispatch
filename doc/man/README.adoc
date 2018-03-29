@@ -10,10 +10,12 @@ Like the Dispatch Router user guide, man pages are written in `asciidoc` markup.
   ├── man
       ├── qdmanage.8.adoc <1>
       ├── qdrouterd.8.adoc <2>
-      └── qdstat.8.adoc <3>
+      ├── qdrouterd.conf.5.py <3>
+      └── qdstat.8.adoc <4>
 ----
 <1> `qdmanage` - Management client for controlling and querying the Dispatch Router daemon.
 <2> `qdrouterd` - The Qpid Dispatch Router daemon.
-<3> `qdstat` - Monitoring client for displaying information about Dispatch Router networks.
+<3> `qdrouterd.conf` - A Python script to generate the Dispatch Router configuration reference. This man page is generated from the `qdrouter.json` management schema (`qpid-dispatch/python/qpid_dispatch/management/qdrouter.json`).
+<4> `qdstat` - Monitoring client for displaying information about Dispatch Router networks.
 
 To update a man page, see the link:contrib-guide.adoc[Contributor's Guide].
