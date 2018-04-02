@@ -209,12 +209,11 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
                              cur_path,
                              !strcmp("/", cur_path)? "":"/",
                              config_path);
+
+                    // Releasing temporary path variable
+                    memset(cur_path, 0, path_size * sizeof(char));
+                    free(cur_path);
                 }
-
-                // Releasing temporary path variable
-                memset(cur_path, 0, path_size * sizeof(char));
-                free(cur_path);
-
             }
 
             //
