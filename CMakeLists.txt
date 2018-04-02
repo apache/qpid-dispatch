@@ -116,6 +116,8 @@ find_library(dl_lib dl)
 find_library(rt_lib rt)
 find_package(Proton REQUIRED Core Proactor)
 
+message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
+
 ## Optional dependencies
 include(FindLibWebSockets)
 option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
