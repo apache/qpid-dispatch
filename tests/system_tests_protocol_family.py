@@ -19,6 +19,8 @@
 
 import unittest2 as unittest
 from proton import Message
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
 from system_test import TestCase, Qdrouterd, main_module
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
@@ -108,35 +110,42 @@ class ProtocolFamilyTest(TestCase):
     # Without at least one test the setUpClass does not execute
     # If this test has started executing, it means that the setUpClass() has successfully executed which means that
     # the routers were able to communicate with each other successfully using the specified protocol family.
-    def test_simple_pre_settled(self):
+
+    def test_simple_send_receive(self):
 
         if not is_ipv6_enabled():
             return self.skipTest("Skipping test..IPV6 not enabled")
 
-        addr = self.routers[0].addresses[4]+"/test/1"
-        M1 = self.messenger()
-        M2 = self.messenger()
+        simple_send_receive_test = SimpleSndRecv(self.routers[0].addresses[4])
+        simple_send_receive_test.run()
+        self.assertTrue(simple_send_receive_test.message_received)
 
-        M1.start()
-        M2.start()
-        M2.subscribe(addr)
 
-        tm = Message()
-        rm = Message()
+class SimpleSndRecv(MessagingHandler):
+    def __init__(self, address):
+        super(SimpleSndRecv, self).__init__()
+        self.address = address
+        self.sender = None
+        self.receiver = None
+        self.conn = None
+        self.message_received = False
 
-        tm.address = addr
-        for i in range(100):
-            tm.body = {'number': i}
-            M1.put(tm)
-        M1.send()
+    def on_start(self, event):
+        self.conn = event.container.connect(self.address)
+        self.receiver = event.container.create_receiver(self.conn, "test_addr")
+        self.sender = event.container.create_sender(self.conn, "test_addr")
 
-        for i in range(100):
-            M2.recv(1)
-            M2.get(rm)
-            self.assertEqual(i, rm.body['number'])
+    def on_sendable(self, event):
+        msg = Message(body="Hello World")
+        event.sender.send(msg)
 
-        M1.stop()
-        M2.stop()
+    def on_message(self, event):
+        if "Hello World" == event.message.body:
+            self.message_received = True
+            self.conn.close()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':

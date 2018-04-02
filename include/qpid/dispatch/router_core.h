@@ -329,6 +329,18 @@ bool qdr_terminus_is_coordinator(qdr_terminus_t *term);
 bool qdr_terminus_is_dynamic(qdr_terminus_t *term);
 
 /**
+ * qdr_terminus_survives_disconnect
+ *
+ * Indicate whether this terminus will survive disconnection (i.e. if
+ * state is expected to be kept).
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return true iff the terminus has a timeout greater than 0 or an
+ * expiry-policy of never
+ */
+bool qdr_terminus_survives_disconnect(qdr_terminus_t *term);
+
+/**
  * qdr_terminus_set_address
  *
  * Set the terminus address
@@ -641,7 +653,7 @@ typedef enum {
     QD_ROUTER_CONFIG_LINK_ROUTE,
     QD_ROUTER_CONFIG_AUTO_LINK,
     QD_ROUTER_CONNECTION,
-    QD_ROUTER_ROUTER,
+    QD_ROUTER_ROUTER_STATS,
     QD_ROUTER_LINK,
     QD_ROUTER_ADDRESS,
     QD_ROUTER_EXCHANGE,

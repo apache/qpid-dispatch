@@ -17,45 +17,35 @@
  * under the License.
  */
 
-#include "agent_router.h"
+#include "agent_router_stats.h"
 #include "config.h"
 #include <inttypes.h>
 #include <stdio.h>
 
-#define QDR_ROUTER_NAME                   0
-#define QDR_ROUTER_IDENTITY               1
-#define QDR_ROUTER_ID                     2
-#define QDR_ROUTER_TYPE                   3
-#define QDR_ROUTER_MODE                   4
-#define QDR_ROUTER_AREA                   5
-#define QDR_ROUTER_VERSION                6
-#define QDR_ROUTER_HELLO_INTERVAL         7
-#define QDR_ROUTER_HELLO_MAX_AGE          8
-#define QDR_ROUTER_RA_INTERVAL            9
-#define QDR_ROUTER_RA_INTERVAL_FLUX       10
-#define QDR_ROUTER_REMOTE_LS_MAX_AGE      11
-#define QDR_ROUTER_ADDR_COUNT             12
-#define QDR_ROUTER_LINK_COUNT             13
-#define QDR_ROUTER_NODE_COUNT             14
-#define QDR_ROUTER_LINK_ROUTE_COUNT       15
-#define QDR_ROUTER_AUTO_LINK_COUNT        16
-#define QDR_ROUTER_WORKER_THREADS         17
-#define QDR_ROUTER_DEBUG_DUMP             18
-#define QDR_ROUTER_SASL_CONFIG_PATH       19
-#define QDR_ROUTER_SASL_CONFIG_NAME       20
-#define QDR_ROUTER_CONNECTION_COUNT       21
 
-#define QDR_ROUTER_PRESETTLED_DELIVERIES              22
-#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES      23
-#define QDR_ROUTER_ACCEPTED_DELIVERIES                24
-#define QDR_ROUTER_REJECTED_DELIVERIES                25
-#define QDR_ROUTER_RELEASED_DELIVERIES                26
-#define QDR_ROUTER_MODIFIED_DELIVERIES                27
-#define QDR_ROUTER_DELIVERIES_INGRESS                 28
-#define QDR_ROUTER_DELIVERIES_EGRESS                  29
-#define QDR_ROUTER_DELIVERIES_TRANSIT                 30
-#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER 31
-#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER  32
+#define QDR_ROUTER_NAME                                0
+#define QDR_ROUTER_IDENTITY                            1
+#define QDR_ROUTER_ID                                  2
+#define QDR_ROUTER_STATS_TYPE                          3
+#define QDR_ROUTER_MODE                                4
+#define QDR_ROUTER_VERSION                             5
+#define QDR_ROUTER_ADDR_COUNT                          6
+#define QDR_ROUTER_LINK_COUNT                          7
+#define QDR_ROUTER_NODE_COUNT                          8
+#define QDR_ROUTER_LINK_ROUTE_COUNT                    9
+#define QDR_ROUTER_AUTO_LINK_COUNT                    10
+#define QDR_ROUTER_CONNECTION_COUNT                   11
+#define QDR_ROUTER_PRESETTLED_DELIVERIES              12
+#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES      13
+#define QDR_ROUTER_ACCEPTED_DELIVERIES                14
+#define QDR_ROUTER_REJECTED_DELIVERIES                15
+#define QDR_ROUTER_RELEASED_DELIVERIES                16
+#define QDR_ROUTER_MODIFIED_DELIVERIES                17
+#define QDR_ROUTER_DELIVERIES_INGRESS                 18
+#define QDR_ROUTER_DELIVERIES_EGRESS                  19
+#define QDR_ROUTER_DELIVERIES_TRANSIT                 20
+#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER 21
+#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER  22
 
 
 const char *qdr_router_columns[] =
@@ -64,22 +54,12 @@ const char *qdr_router_columns[] =
      "id",
      "type",
      "mode",
-     "area",
      "version",
-     "helloInterval",
-     "helloMaxAge",
-     "raInterval",
-     "raIntervalFlux",
-     "remoteLsMaxAge",
      "addrCount",
      "linkCount",
      "nodeCount",
      "linkRouteCount",
-     "autoLinkCount", // The connection id of the owner connection
-     "workerThreads",
-     "debugDump",
-     "saslConfigPath",
-     "saslConfigName",
+     "autoLinkCount",
      "connectionCount",
      "presettledDeliveries",
      "droppedPresettledDeliveries",
@@ -116,27 +96,16 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         // There is only one instance of router. Just give it an identity of 1
         qd_compose_insert_string(body, "1");
         break;
-    case QDR_ROUTER_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router");
+    case QDR_ROUTER_STATS_TYPE:
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.routerStats");
         break;
 
     case QDR_ROUTER_MODE:
         qd_compose_insert_string(body, router_mode(core->router_mode));
         break;
 
-    case QDR_ROUTER_AREA:
-        if (core->router_area)
-            qd_compose_insert_string(body, core->router_area);
-        else
-            qd_compose_insert_null(body);
-        break;
-
     case QDR_ROUTER_VERSION:
         qd_compose_insert_string(body, QPID_DISPATCH_VERSION);
-        break;
-
-    case QDR_ROUTER_HELLO_INTERVAL:
-        qd_compose_insert_null(body);
         break;
 
     case QDR_ROUTER_ADDR_COUNT:

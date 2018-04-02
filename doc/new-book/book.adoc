@@ -57,8 +57,5 @@ include::technical-details-specifications.adoc[leveloffset=+1]
 [appendix]
 include::cyrus-sasl.adoc[leveloffset=+1]
 
-[appendix]
-include::configuration-reference.adoc[leveloffset=+1]
-
 // Revision information
 include::revision-info.adoc[]

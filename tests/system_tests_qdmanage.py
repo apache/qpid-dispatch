@@ -177,15 +177,19 @@ class QdmanageTest(TestCase):
 
     def test_get_types(self):
         out = json.loads(self.run_qdmanage("get-types"))
-        self.assertEqual(len(out), 26)
+        self.assertEqual(len(out), 29)
 
     def test_get_attributes(self):
         out = json.loads(self.run_qdmanage("get-attributes"))
-        self.assertEqual(len(out), 26)
+        self.assertEqual(len(out), 28)
+
+    def test_get_attributes(self):
+        out = json.loads(self.run_qdmanage("get-attributes"))
+        self.assertEqual(len(out), 29)
 
     def test_get_operations(self):
         out = json.loads(self.run_qdmanage("get-operations"))
-        self.assertEqual(len(out), 26)
+        self.assertEqual(len(out), 29)
         self.assertEqual(out['org.apache.qpid.dispatch.sslProfile'], [u'CREATE', u'DELETE', u'READ'])
 
     def test_get_types_with_ssl_profile_type(self):

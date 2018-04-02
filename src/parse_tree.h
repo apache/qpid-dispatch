@@ -53,9 +53,10 @@ typedef enum {
 
 qd_parse_tree_t *qd_parse_tree_new(qd_parse_tree_type_t type);
 void qd_parse_tree_free(qd_parse_tree_t *tree);
+qd_parse_tree_type_t qd_parse_tree_type(const qd_parse_tree_t *tree);
 
 // verify the pattern is in a legal format for the given tree's match algorithm
-bool qd_parse_tree_validate_pattern(qd_parse_tree_type_t type,
+bool qd_parse_tree_validate_pattern(const qd_parse_tree_t *tree,
                                     const qd_iterator_t *pattern);
 
 // returns old payload or NULL if new

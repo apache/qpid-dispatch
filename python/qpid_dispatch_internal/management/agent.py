@@ -479,6 +479,13 @@ class LogStatsEntity(EntityAdapter):
     def __str__(self):
         return super(LogStatsEntity, self).__str__().replace("Entity(", "LogStatsEntity(")
 
+class RouterStatsEntity(EntityAdapter):
+    def _identifier(self):
+        return self.attributes.get('identity')
+
+    def __str__(self):
+        return super(RouterStatsEntity, self).__str__().replace("Entity(", "RouterStatsEntity(")
+
 
 class AllocatorEntity(EntityAdapter):
     def _identifier(self):
@@ -486,6 +493,20 @@ class AllocatorEntity(EntityAdapter):
 
     def __str__(self):
         return super(AllocatorEntity, self).__str__().replace("Entity(", "AllocatorEntity(")
+
+class ExchangeEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_exchange(self._dispatch, self)
+
+    def __str__(self):
+        return super(ExchangeEntity, self).__str__().replace("Entity(", "ExchangeEntity(")
+
+class BindingEntity(EntityAdapter):
+    def create(self):
+        self._qd.qd_dispatch_configure_binding(self._dispatch, self)
+
+    def __str__(self):
+        return super(BindingEntity, self).__str__().replace("Entity(", "BindingEntity(")
 
 
 class EntityCache(object):

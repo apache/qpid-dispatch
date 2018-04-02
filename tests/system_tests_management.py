@@ -20,7 +20,10 @@
 """System tests for management of qdrouter"""
 
 import unittest2 as unittest
-import system_test, re, os, json, sys
+import system_test, re, os, json
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
+from proton import Message
 from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
@@ -249,13 +252,10 @@ class ManagementTest(system_test.TestCase):
         self.assert_create_ok(CONFIG_ADDRESS, 'myConfigAddr', dict(prefix='prefixA'))
         self.assert_read_ok(CONFIG_ADDRESS, 'myConfigAddr',
                             dict(prefix='prefixA', pattern=None))
-        msgr = self.messenger()
-        address = self.router.addresses[0]+'/prefixA/other'
-        msgr.subscribe(address)
-        msgr.put(message(address=address, body='hello'))
-        self.assertEqual('hello', msgr.fetch().body)
-        msgr.stop()
-        del msgr
+        simple_send_receive_test = SimpleSndRecv(self.router.addresses[0], '/prefixA/other')
+        simple_send_receive_test.run()
+        self.assertTrue(simple_send_receive_test.message_received)
+
         self.node.delete(CONFIG_ADDRESS, name='myConfigAddr')
         self.assertRaises(NotFoundStatus, self.node.read,
                           type=CONFIG_ADDRESS, name='myConfigAddr')
@@ -264,13 +264,10 @@ class ManagementTest(system_test.TestCase):
         self.assert_create_ok(CONFIG_ADDRESS, 'patternAddr', dict(pattern='a.*.b'))
         self.assert_read_ok(CONFIG_ADDRESS, 'patternAddr',
                             dict(prefix=None, pattern='a.*.b'))
-        msgr = self.messenger()
-        address = self.router.addresses[0]+'/a.HITHERE.b'
-        msgr.subscribe(address)
-        msgr.put(message(address=address, body='hello'))
-        self.assertEqual('hello', msgr.fetch().body)
-        msgr.stop()
-        del msgr
+        simple_send_receive_test = SimpleSndRecv(self.router.addresses[0], '/a.HITHERE.b')
+        simple_send_receive_test.run()
+        self.assertTrue(simple_send_receive_test.message_received)
+
         self.node.delete(CONFIG_ADDRESS, name='patternAddr')
         self.assertRaises(NotFoundStatus, self.node.read,
                           type=CONFIG_ADDRESS, name='patternAddr')
@@ -359,9 +356,6 @@ class ManagementTest(system_test.TestCase):
         entities = self.node.query().get_entities()
         routers = [e for e in entities if e.type == ROUTER]
         self.assertEqual(1, len(routers))
-        router = routers[0]
-        self.assertEqual(router.linkCount, len([e for e in entities if e.type == LINK]))
-        self.assertEqual(router.addrCount, len([e for e in entities if e.type == ADDRESS]))
 
     def test_router_node(self):
         """Test node entity in a trio of linked routers"""
@@ -464,6 +458,34 @@ class ManagementTest(system_test.TestCase):
         self.assertEquals(schema, dictify(json.loads(got)))
         got = self.node.call(self.node.request(operation="GET-SCHEMA", identity="self")).body
         self.assertEquals(schema, got)
+
+
+class SimpleSndRecv(MessagingHandler):
+    def __init__(self, conn_address, address):
+        super(SimpleSndRecv, self).__init__()
+        self.conn_address = conn_address
+        self.address = address
+        self.sender = None
+        self.receiver = None
+        self.conn = None
+        self.message_received = False
+
+    def on_start(self, event):
+        self.conn = event.container.connect(self.conn_address)
+        self.receiver = event.container.create_receiver(self.conn, self.address)
+        self.sender = event.container.create_sender(self.conn, self.address)
+
+    def on_sendable(self, event):
+        msg = Message(body="Hello World")
+        event.sender.send(msg)
+
+    def on_message(self, event):
+        if "Hello World" == event.message.body:
+            self.message_received = True
+            self.conn.close()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':

@@ -185,9 +185,8 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
             char *config_path_full = NULL;
             if (strncmp("/", config_path, 1)) {
                 char *cur_path = NULL;
-                int path_size = 256;
+                size_t path_size = 256;
                 int getcwd_error = 0;
-                cur_path = (char *) calloc(path_size, sizeof(char));
                 cur_path = (char *) calloc(path_size, sizeof(char));
 
                 while ( getcwd(cur_path, path_size) == NULL ) {
@@ -204,7 +203,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
 
                 // Populating fully qualified config file name
                 if (!getcwd_error) {
-                    int cpf_len = path_size + strlen(config_path) + 1;
+                    size_t cpf_len = path_size + strlen(config_path) + 1;
                     config_path_full = calloc(cpf_len, sizeof(char));
                     snprintf(config_path_full, cpf_len, "%s%s%s",
                              cur_path,
@@ -245,7 +244,9 @@ static void daemon_process(const char *config_path, const char *python_pkgdir,
                 //if (setgid(pwd->pw_gid) < 0) fail(pipefd[1], "Can't set group ID for user %s, errno=%d", user, errno);
             }
 
-            main_process((config_path_full)? config_path_full:config_path, python_pkgdir, pipefd[1]);
+            main_process((config_path_full ? config_path_full : config_path), python_pkgdir, pipefd[1]);
+
+            free(config_path_full);
         } else
             //
             // Exit first child

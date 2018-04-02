@@ -431,37 +431,105 @@
                     "description": "Time in seconds after which link state is declared stale if no RA is received.",
                     "create": true
                 },
-                "addrCount": {
+                "workerThreads": {
                     "type": "integer",
-                    "description":"Number of addresses known to the router.",
-                    "graph": true
+                    "default": 4,
+                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
+                    "create": true
                 },
-                "linkCount": {
-                    "type": "integer",
-                    "description":"Number of links attached to the router node.",
-                    "graph": true
+                "debugDump": {
+                    "type": "path",
+                    "description": "The absolute path to the location for the debug dump file. The router writes debug-level information to this file if the logger is not available.",
+                    "create": true
                 },
-                "nodeCount": {
-                    "type": "integer",
-                    "description":"Number of known peer router nodes.",
-                    "graph": true
+                "saslConfigPath": {
+                    "type": "path",
+                    "description": "Absolute path to the SASL configuration file.",
+                    "required": false,
+                    "create": true
                 },
-                "linkRouteCount": {
-                    "type": "integer",
-                    "description":"Number of link routes attached to the router node.",
-                    "graph": true
+                "saslConfigName": {
+                    "type": "string",
+                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
+                    "default": "qdrouterd",
+                    "required": false,
+                    "create": true
                 },
-                "autoLinkCount": {
-                    "type": "integer",
-                    "description":"Number of auto links attached to the router node.",
-                    "graph": true
+                "allowResumableLinkRoute": {
+                    "type": "boolean",
+                    "description": "Whether links can be routed where timeout is non-zero or expiry-policy is not link-detach",
+                    "create": true,
+                    "required": false,
+                    "default": true
+                },                
+                "allowUnsettledMulticast": {
+                    "type": "boolean",
+                    "description": "If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 },
-                "connectionCount": {
-                    "type": "integer",
-                    "description":"Number of open connections to the router node.",
-                    "graph": true
-                },
-
+                "defaultDistribution": {
+                    "type": ["multicast", "closest", "balanced", "unavailable"],
+                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",
+                    "create": true,
+                    "required": false,
+                    "default": "balanced"
+                }
+            }
+        },
+        
+        "routerStats": {
+            "description": "Overall router statistics.",
+            "extends": "operationalEntity",
+            "attributes": {
+	            "id": {
+	                "description":"Router's unique identity. The router will fail to start without id.",
+	                "type": "string",
+	                "required": false
+	            },
+	            "mode": {
+	                "type": [
+	                    "standalone",
+	                    "interior"
+	                ],
+	                "default": "standalone",
+	                "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network."
+	            },
+	            "version": {
+	                "type": "string",
+	                "description": "Software Version"
+	            },
+	            "addrCount": {
+	                "type": "integer",
+	                "description":"Number of addresses known to the router.",
+	                "graph": true
+	            },
+	            "linkCount": {
+	                "type": "integer",
+	                "description":"Number of links attached to the router node.",
+	                "graph": true
+	            },
+	            "nodeCount": {
+	                "type": "integer",
+	                "description":"Number of known peer router nodes.",
+	                "graph": true
+	            },
+	            "linkRouteCount": {
+	                "type": "integer",
+	                "description":"Number of link routes attached to the router node.",
+	                "graph": true
+	            },
+	            "autoLinkCount": {
+	                "type": "integer",
+	                "description":"Number of auto links attached to the router node.",
+	                "graph": true
+	            },
+	            "connectionCount": {
+	                "type": "integer",
+	                "description":"Number of open connections to the router node.",
+	                "graph": true
+	            },
                 "presettledDeliveries": {
                     "type": "integer",
                     "description":"Number of presettled deliveries handled by the router.",
@@ -516,48 +584,9 @@
                     "type": "integer",
                     "description":"Number of deliveries that were sent to route container connections.",
                     "graph": true
-                },                
-                "workerThreads": {
-                    "type": "integer",
-                    "default": 4,
-                    "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
-                    "create": true
-                },
-                "debugDump": {
-                    "type": "path",
-                    "description": "A file to dump debugging information that can't be logged normally.",
-                    "create": true
-                },
-                "saslConfigPath": {
-                    "type": "path",
-                    "description": "Absolute path to the SASL configuration file.",
-                    "required": false,
-                    "create": true
-                },
-                "saslConfigName": {
-                    "type": "string",
-                    "description": "Name of the SASL configuration.  This string + '.conf' is the name of the configuration file.",
-                    "default": "qdrouterd",
-                    "required": false,
-                    "create": true
-                },
-                "allowUnsettledMulticast": {
-                    "type": "boolean",
-                    "description": "If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
-                    "create": true,
-                    "required": false,
-                    "default": false
-                },
-                "defaultDistribution": {
-                    "type": ["multicast", "closest", "balanced", "unavailable"],
-                    "description": "Default forwarding treatment for any address without a specified treatment. multicast - one copy of each message delivered to all subscribers; closest - messages delivered to only the closest subscriber; balanced - messages delivered to one subscriber with load balanced across subscribers; unavailable - this address is unavailable, link attaches to an address of unavilable distribution will be rejected.",
-                    "create": true,
-                    "required": false,
-                    "default": "balanced"
-                }
-            }
-        },
-
+                }                
+            }        
+        },        
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "referential": true,
@@ -1177,6 +1206,106 @@
                     "type": "string",
                     "description": "The error description from the last attach failure",
                     "create": false
+                }
+            }
+        },
+
+        "router.config.exchange": {
+            "description":"[EXPERIMENTAL] Defines a topic exchange.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "address": {
+                    "description": "The address of the exchange. Used by the message publisher as the target for sending messages.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "phase": {
+                    "type": "integer",
+                    "description": "The address phase for the exchange.  Defaults to '0'.",
+                    "create": true,
+                    "required": false
+                },
+                "alternateAddress": {
+                    "description": "The address to forward the message to if no bindings are matched.",
+                    "type": "string",
+                    "create": true,
+                    "required": false
+                },
+                "alternatePhase": {
+                    "type": "integer",
+                    "description": "The address phase for the alternateAddress.  Defaults to '0'.",
+                    "create": true,
+                    "required": false
+                },
+                "matchMethod": {
+                    "description": "Key matching algorithm used. 'amqp' uses the legacy AMQP topic exchange wildcard match method as described in the pre-1.0 drafts. 'mqtt' uses the MQTT topic filter wildcard match method.",
+                    "type": ["amqp", "mqtt"],
+                    "default": "amqp",
+                    "required": false,
+                    "create": true
+                },
+                "bindingCount": {
+                    "description": "The number of bindings associated with this exchange.",
+                    "type": "integer",
+                    "create": false
+                },
+                "receivedCount": {
+                    "description": "The total number of deliveries received by this exchange.",
+                    "type": "integer",
+                    "create": false
+                },
+                "droppedCount": {
+                    "description": "The total number of deliveries dropped due to the lack of an outgoing subscription.",
+                    "type": "integer",
+                    "create": false
+                },
+                "forwardedCount": {
+                    "description": "The total number of deliveries forwarded via matched bindings or to the alternateAddress",
+                    "type": "integer",
+                    "create": false
+                },
+                "divertedCount": {
+                    "description": "A count of those deliveries that were forwarded via the alternateAddress only.  This is a subset of the forwardedCount.",
+                    "type": "integer",
+                    "create": false
+                }
+            }
+        },
+
+        "router.config.binding": {
+            "description":"[EXPERIMENTAL] Defines a keyed next hop binding for a topic exchange. The subject field of the messages arriving at the exchange is compared against the binding's key value using the exchange's matchMethod.  If the subject matches the key the message is forwarded to the nextHopAddress. The nextHopAddress overrides the message's original destination.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "exchangeName": {
+                    "description": "The name of the exchange to bind.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "bindingKey": {
+                    "description": "Pattern to compare against incoming message's subject.  The key is a string of zero or more tokens and wildcards. The format depends on the matchMethod configured for the exchange. For AMQP each token is delimited by the '.' character and wild-card tokens '*' matches a single token and '#' matches zero or more tokens. For MQTT each token is delimited by the '/' character and wildcard tokens '+' matches a single token and '#' matches zero or more tokens at the end of the topic. If a key is not provided the binding will match all messages arriving at the exchange (fanout behavior).",
+                    "type": "string",
+                    "create": true,
+                    "required": false
+                },
+                "nextHopAddress": {
+                    "description": "The address to forward the message to when the message's topic string matches the binding key pattern.  This address is used by message consumers as the source of incoming messages.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "nextHopPhase": {
+                    "type": "integer",
+                    "description": "The address phase used when forwarding messages that match this binding.",
+                    "create": true,
+                    "required": false
+                },
+                "matchedCount": {
+                    "description": "Total number of deliveries that matched this binding.",
+                    "type": "integer"
                 }
             }
         },

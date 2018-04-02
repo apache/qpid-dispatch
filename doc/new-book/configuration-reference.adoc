@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[router_configuration_reference]]
+[id='router-configuration-reference']
 
 // This config reference could stand to be cleaned up. Also, some of the introductory content is no longer necessary since it's covered in the introductory chapter about configuration. We should just link to it instead of repeating it here.
 
@@ -68,7 +68,7 @@ In the above example, the _sslProfile_ section named _ssl-profile-one_ is used t
 
 === Configuration Sections
 
-[[router_configuration_file_sslprofile]]
+[id='router-configuration-file-sslprofile']
 ==== sslProfile
 
 Attributes for setting SSL/TLS configuration for connections.
@@ -84,7 +84,7 @@ Attributes for setting SSL/TLS configuration for connections.
 
 *Used by* : _listener_, _connector_.
 
-[[router_configuration_file_router]]
+[id='router-configuration-file-router']
 ==== router
 
 Describe main information about the router related to identity, internal processes and inter routers communication.
@@ -102,7 +102,7 @@ Describe main information about the router related to identity, internal process
 * *_saslConfigPath_* (path) : The absolute path to the SASL configuration file.
 * *_saslConfigName_* (string, default=`qdrouterd`) : Name of the SASL configuration. This string + ‘.conf’ is the name of the configuration file.
 
-[[router_configuration_file_listener]]
+[id='router-configuration-file-listener']
 ==== listener
 
 Listens for incoming connections to the router.
@@ -125,7 +125,7 @@ Listens for incoming connections to the router.
 * *_sslProfile_* (string) : The name of the _sslProfile_ entity to use in order to have SSL/TLS configuration.
 * *_http_* (boolean): If set to `yes`, the listener will accept HTTP connections using AMQP over WebSockets.
 
-[[router_configuration_file_connector]]
+[id='router-configuration-file-connector']
 ==== connector
 
 Establishes an outgoing connection from the router.
@@ -147,7 +147,7 @@ Establishes an outgoing connection from the router.
 * *_saslPassword_* (string) : The password that the connector is using to connect to a peer.
 * *_sslProfile_* (string) : The name of the _sslProfile_ entity to use in order to have SSL/TLS configuration.
 
-[[router_configuration_file_log]]
+[id='router-configuration-file-log']
 ==== log
 
 Configure logging for a particular module which is part of the router. You can use the UPDATE operation to change log settings while the router is running.
@@ -158,7 +158,7 @@ Configure logging for a particular module which is part of the router. You can u
 * *_source_* (boolean) : Include source file and line number in log messages.
 * *_output_* (string) : Where to send log messages. Can be `stderr`, `syslog` or a file name.
 
-[[router_configuration_file_address]]
+[id='router-configuration-file-address']
 ==== address
 
 Entity type for address configuration. This is used to configure the treatment of message-routed deliveries within a particular address-space. The configuration controls distribution and address phasing.
@@ -169,7 +169,7 @@ Entity type for address configuration. This is used to configure the treatment o
 * *_ingressPhase_* (integer) : Advanced - Override the ingress phase for this address.
 * *_egressPhase_* (integer) : Advanced - Override the egress phase for this address.
 
-[[router_configuration_file_linkroute]]
+[id='router-configuration-file-linkroute']
 ==== linkRoute
 
 Entity type for link-route configuration. This is used to identify remote containers that shall be destinations for routed link-attaches. The link-routing configuration applies to an addressing space defined by a prefix.
@@ -180,7 +180,7 @@ Entity type for link-route configuration. This is used to identify remote contai
 * *_distribution_* (One of [`linkBalanced`], default=`linkBalanced`) : Treatment of traffic associated with the address.
 * *_direction_* (One of [`in`, `out`], required) : The permitted direction of links. It is defined from a router point of view so ‘in’ means client senders (router ingress) and ‘out’ means client receivers (router egress).
 
-[[router_configuration_file_autolink]]
+[id='router-configuration-file-autolink']
 ==== autoLink
 
 Entity type for configuring auto-links. Auto-links are links whose lifecycle is managed by the router. These are typically used to attach to waypoints on remote containers (brokers, and so on.).

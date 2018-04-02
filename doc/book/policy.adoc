@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-[[policy]]
+[id='policy']
 = Policy
 
 The Policy module is an optional authorization mechanism enforcing
@@ -218,7 +218,7 @@ Policy is disabled when no policy configuation objects are defined.
 Any number of connections are allowed and all users have
 access to all AMQP resources in the network.
 
-[[example2]]
+[id='example2']
 === Example 2. All Users Have Simple Connection Limits
 
 This example shows how to keep users from overwhelming the router with

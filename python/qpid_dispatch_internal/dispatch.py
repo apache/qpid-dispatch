@@ -70,6 +70,8 @@ class QdDll(ctypes.PyDLL):
         self._prototype(self.qd_dispatch_configure_address, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_link_route, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_configure_auto_link, None, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_exchange, None, [self.qd_dispatch_p, py_object])
+        self._prototype(self.qd_dispatch_configure_binding, None, [self.qd_dispatch_p, py_object])
 
         self._prototype(self.qd_dispatch_configure_policy, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_register_policy_manager, None, [self.qd_dispatch_p, py_object])
