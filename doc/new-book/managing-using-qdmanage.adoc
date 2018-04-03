@@ -659,7 +659,7 @@ qdmanage read --type=log --module=_LOGGING_MODULE_NAME_
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage create --type=log --module=DEFAULT --enable=_LOGGING_LEVEL_ --timestamp=yes --_ATTRIBUTE_=_VALUE_ 
+qdmanage create --type=log --module=DEFAULT --enable=_LOGGING_LEVEL_ --includeTimestamp=yes --_ATTRIBUTE_=_VALUE_
 ----
 
 |Enable logging for a logging module

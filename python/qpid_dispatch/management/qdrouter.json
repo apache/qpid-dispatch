@@ -1008,19 +1008,22 @@
                     "description": "Levels are: trace, debug, info, notice, warning, error, critical. The enable string is a comma-separated list of levels. A level may have a trailing '\\+' to enable that level and above. For example 'trace,debug,warning+' means enable trace, debug, warning, error and critical. The value 'none' means disable logging for the module.",
                     "update": true
                 },
-                "timestamp": {
+                "includeTimestamp": {
                     "type": "boolean",
                     "description": "Include timestamp in log messages.",
+                    "deprecationName": "timestamp",
                     "update": true
                 },
-                "source": {
+                "includeSource": {
                     "type": "boolean",
                     "description": "Include source file and line number in log messages.",
+                    "deprecationName": "source",
                     "update": true
                 },
-                "output": {
+                "outputFile": {
                     "type": "string",
                     "description": "Where to send log messages. Can be 'stderr', 'stdout', 'syslog' or a file name.",
+                    "deprecationName": "output",
                     "update": true
                 }
             }

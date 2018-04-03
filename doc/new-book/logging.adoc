@@ -269,7 +269,7 @@ You can specify the types of events that should be logged, the format of the log
 log {
     module: DEFAULT
     enable: _LOGGING_LEVEL_
-    timestamp: yes
+    includeTimestamp: yes
     ...
 }
 ----
@@ -289,7 +289,7 @@ log {
 +
 To specify multiple levels, use a comma-separated list. You can also use `+` to specify a level and all levels above it. For example, `trace,debug,warning+` enables trace, debug, warning, error, and critical levels. For default logging, you should typically use the `info+` or `notice+` level. These levels will provide general information, warnings, and errors for all modules without affecting the performance of {RouterName}.
 //end::logging-levels[]
-`timestamp`:: Set this to `yes` to include the timestamp in all logs.
+`includeTimestamp`:: Set this to `yes` to include the timestamp in all logs.
 
 For information about additional log attributes, see link:{qdrouterdConfManPageUrl}#_log[the `qdrouterd.conf` man page].
 --

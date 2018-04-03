@@ -48,7 +48,7 @@ class CommandLineTest(TestCase):
         cls.config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': CommandLineTest.name}),
             ('listener', {'port': CommandLineTest.testport}),
-            ('log',{'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output': os.getcwd()+"/"+CommandLineTest.name+'.log'})
+            ('log',{'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'outputFile': os.getcwd()+"/"+CommandLineTest.name+'.log'})
         ])
 
     def run_qdrouterd_as_daemon(self, config_file_name, pid_file_name):
@@ -106,10 +106,11 @@ class CommandLineTest2(TestCase):
         cls.name = "test-router-2"
         CommandLineTest2.testname = cls.name
         CommandLineTest2.testport = cls.tester.get_port()
+        # output has been deprecated. We are using it here to test backward compatibility.
         cls.config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': CommandLineTest2.testname}),
             ('listener', {'port': CommandLineTest2.testport}),
-            ('log',{'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output': os.getcwd()+"/"+CommandLineTest2.name+'.log'})
+            ('log',{'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'output': os.getcwd()+"/"+CommandLineTest2.name+'.log'})
         ])
 
     def run_qdrouterd_as_daemon(self, config_file_name, pid_file_name):

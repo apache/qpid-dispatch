@@ -320,7 +320,7 @@ class Qdrouterd(Process):
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
             config.append(
-                ('log', {'module':'DEFAULT', 'enable':'trace+', 'source': 'true', 'output':name+'.log'}))
+                ('log', {'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'outputFile':name+'.log'}))
         args = ['qdrouterd', '-c', config.write(name)]
         env_home = os.environ.get('QPID_DISPATCH_HOME')
         if pyinclude:

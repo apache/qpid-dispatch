@@ -165,8 +165,8 @@ struct qd_log_source_t {
     DEQ_LINKS(qd_log_source_t);
     char *module;
     int mask;
-    int timestamp;              /* boolean or -1 means not set */
-    int source;                 /* boolean or -1 means not set */
+    int includeTimestamp;       /* boolean or -1 means not set */
+    int includeSource;          /* boolean or -1 means not set */
     bool syslog;
     log_sink_t *sink;
     uint64_t severity_histogram[N_LEVEL_INDICES];
@@ -298,7 +298,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         qd_error_clear();
     }
 
-    if (default_bool(log_source->timestamp, default_log_source->timestamp)) {
+    if (default_bool(log_source->includeTimestamp, default_log_source->includeTimestamp)) {
         char buf[100];
         buf[0] = '\0';
 
@@ -311,7 +311,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         aprintf(&begin, end, "%s ", buf);
     }
     aprintf(&begin, end, "%s (%s) %s", entry->module, level->name, entry->text);
-    if (default_bool(log_source->source, default_log_source->source) && entry->file)
+    if (default_bool(log_source->includeSource, default_log_source->includeSource) && entry->file)
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
     aprintf(&begin, end, "\n");
 
@@ -334,8 +334,8 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 /// Reset the log source to the default state
 static void qd_log_source_defaults(qd_log_source_t *log_source) {
     log_source->mask = -1;
-    log_source->timestamp = -1;
-    log_source->source = -1;
+    log_source->includeTimestamp = -1;
+    log_source->includeSource = -1;
     log_source->sink = 0;
     memset ( log_source->severity_histogram, 0, sizeof(uint64_t) * (N_LEVEL_INDICES) );
 }
@@ -483,8 +483,8 @@ void qd_log_initialize(void)
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
     default_log_source->mask = levels[INFO].mask;
-    default_log_source->timestamp = true;
-    default_log_source->source = 0;
+    default_log_source->includeTimestamp = true;
+    default_log_source->includeSource = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
 }
 
@@ -516,8 +516,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
 
         qd_log_source_t *src = qd_log_source_lh(module); /* The original(already existing) log source */
 
-        if (qd_entity_has(entity, "output")) {
-            output = qd_entity_get_string(entity, "output");
+        if (qd_entity_has(entity, "outputFile")) {
+            output = qd_entity_get_string(entity, "outputFile");
             QD_ERROR_BREAK();
             log_sink_t* sink = log_sink_lh(output);
             QD_ERROR_BREAK();
@@ -529,7 +529,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
             src->sink = sink;           /* Assign the new sink   */
 
             if (src->sink->syslog) /* Timestamp off for syslog. */
-                src->timestamp = 0;
+                src->includeTimestamp = 0;
         }
 
         if (qd_entity_has(entity, "enable")) {
@@ -539,12 +539,12 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         }
         QD_ERROR_BREAK();
 
-        if (qd_entity_has(entity, "timestamp"))
-            src->timestamp = qd_entity_get_bool(entity, "timestamp");
+        if (qd_entity_has(entity, "includeTimestamp"))
+            src->includeTimestamp = qd_entity_get_bool(entity, "includeTimestamp");
         QD_ERROR_BREAK();
 
-        if (qd_entity_has(entity, "source"))
-            src->source = qd_entity_get_bool(entity, "source");
+        if (qd_entity_has(entity, "includeSource"))
+            src->includeSource = qd_entity_get_bool(entity, "includeSource");
         QD_ERROR_BREAK();
 
     } while(0);

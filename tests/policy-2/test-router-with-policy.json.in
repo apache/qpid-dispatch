@@ -20,7 +20,7 @@
 	"port": 21001
     }],
     ["log", {
-	"source": "true",
+	"includeTimestamp": "true",
 	"enable": "trace+",
 	"module": "DEFAULT"
     }],

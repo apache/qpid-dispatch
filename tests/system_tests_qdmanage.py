@@ -257,7 +257,7 @@ class QdmanageTest(TestCase):
         exception = False
         try:
             # Try to not set 'output'
-            json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT output="))
+            json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT outputFile="))
         except Exception as e:
             exception = True
             self.assertTrue("InternalServerErrorStatus: CError: Configuration: Failed to open log file ''" in e.message)
@@ -265,8 +265,8 @@ class QdmanageTest(TestCase):
 
         # Set a valid 'output'
         output = json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT "
-                                              "enable=trace+ output=A.log"))
-        self.assertEqual("A.log", output['output'])
+                                              "enable=trace+ outputFile=A.log"))
+        self.assertEqual("A.log", output['outputFile'])
         self.assertEqual("trace+", output['enable'])
 
     def create(self, type, name, port):

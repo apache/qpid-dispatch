@@ -195,9 +195,9 @@ class ManagementTest(system_test.TestCase):
                           u'enable': u'trace+',
                           u'module': u'DEFAULT',
                           u'name': u'log/DEFAULT',
-                          u'output': u'logrouter.log',
-                          u'source': True,
-                          u'timestamp': True,
+                          u'outputFile': u'logrouter.log',
+                          u'includeSource': True,
+                          u'includeTimestamp': True,
                           u'type': u'org.apache.qpid.dispatch.log'})
 
 
@@ -219,7 +219,7 @@ class ManagementTest(system_test.TestCase):
         def update_check_log(attributes, error=True, debug=False):
             log_count[0] += 1
             log = os.path.abspath("test_log.log%s" % log_count[0])
-            attributes["output"] = log
+            attributes["outputFile"] = log
             attributes["identity"] = "log/AGENT"
             node.update(attributes)
             check_log(log, error, debug)
