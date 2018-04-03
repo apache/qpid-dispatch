@@ -92,14 +92,14 @@ Describe main information about the router related to identity, internal process
 
 * *_id_* (string) : Router’s unique identity. It is required and the router will fail to start without it.
 * *_mode_* (One of [`standalone`, `interior`], default=`standalone`) : In standalone mode, the router operates as a single component. It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.
-* *_helloInterval_* (integer, default=`1`) : Interval in seconds between HELLO messages sent to neighbor routers in order to announce its presence (as a keep alive).
-* *_helloMaxAge_* (integer, default=`3`) : Time in seconds after which a neighbor router is declared lost if no HELLO is received.
-* *_raInterval_* (integer, default=`30`) : Interval in seconds between Router-Advertisements sent to all routers in a stable network.
-* *_raIntervalFlux_* (integer, default=`4`) : Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations.
-* *_remoteLsMaxAge_* (integer, default=`60`) : Time in seconds after which link state is declared stale if no RA is received.
+* *_helloIntervalSeconds_* (integer, default=`1`) : Interval in seconds between HELLO messages sent to neighbor routers in order to announce its presence (as a keep alive).
+* *_helloMaxAgeSeconds_* (integer, default=`3`) : Time in seconds after which a neighbor router is declared lost if no HELLO is received.
+* *_raIntervalSeconds_* (integer, default=`30`) : Interval in seconds between Router-Advertisements sent to all routers in a stable network.
+* *_raIntervalFluxSeconds_* (integer, default=`4`) : Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations.
+* *_remoteLsMaxAgeSeconds_* (integer, default=`60`) : Time in seconds after which link state is declared stale if no RA is received.
 * *_workerThreads_* (integer, default=`4`) : The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, and so on).
 * *_debugDump_* (path) : The absolute path for a file to dump debugging information that can’t be logged normally.
-* *_saslConfigPath_* (path) : The absolute path to the SASL configuration file.
+* *_saslConfigDir_* (path) : The absolute path to the SASL configuration file.
 * *_saslConfigName_* (string, default=`qdrouterd`) : Name of the SASL configuration. This string + ‘.conf’ is the name of the configuration file.
 
 [id='router-configuration-file-listener']

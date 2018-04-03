@@ -151,10 +151,10 @@ class NeighborTest(unittest.TestCase):
         self.instance = 0
         # Fake configuration
         self.config = EntityBase({
-            'helloInterval'    :  1.0,
-            'helloMaxAge'      :  3.0,
-            'raInterval'       : 30.0,
-            'remoteLsMaxAge'   : 60.0 })
+            'helloIntervalSeconds'    :  1.0,
+            'helloMaxAgeSeconds'      :  3.0,
+            'raIntervalSeconds'       : 30.0,
+            'remoteLsMaxAgeSeconds'   : 60.0 })
         self.neighbors = {}
 
     def test_hello_sent(self):

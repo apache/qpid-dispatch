@@ -30,8 +30,8 @@ class HelloProtocol(object):
         self.id               = self.container.id
         self.ticks            = 0.0
         self.last_hello_ticks = 0.0
-        self.hello_interval   = container.config.helloInterval
-        self.hello_max_age    = container.config.helloMaxAge
+        self.hello_interval   = container.config.helloIntervalSeconds
+        self.hello_max_age    = container.config.helloMaxAgeSeconds
         self.hellos           = {}
         self.dup_reported     = False
 

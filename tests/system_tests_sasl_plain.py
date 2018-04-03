@@ -87,6 +87,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
                                  'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
+                                 # Leave as saslConfigPath for testing backward compatibility
                                  'saslConfigPath': os.getcwd()}),
         ])
 
@@ -233,7 +234,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                  'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
-                                 'saslConfigPath': os.getcwd()}),
+                                 'saslConfigDir': os.getcwd()}),
         ])
 
         super(RouterTestPlainSaslOverSsl, cls).router('Y', [
@@ -363,7 +364,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                  'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
-                                 'saslConfigPath': os.getcwd()}),
+                                 'saslConfigDir': os.getcwd()}),
         ])
 
         super(RouterTestVerifyHostNameYes, cls).router('Y', [
@@ -457,7 +458,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                  'id': 'QDR.X',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
-                                 'saslConfigPath': os.getcwd()}),
+                                 'saslConfigDir': os.getcwd()}),
         ])
 
         super(RouterTestVerifyHostNameNo, cls).router('Y', [

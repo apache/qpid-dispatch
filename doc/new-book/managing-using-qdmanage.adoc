@@ -388,7 +388,7 @@ include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage update --type=router --saslConfigPath=_PATH_ --saslConfigName=_NAME_
+qdmanage update --type=router --saslConfigDir=_PATH_ --saslConfigName=_NAME_
 ----
 
 |Add SASL authentication to an incoming connection
@@ -444,7 +444,7 @@ qdmanage update --name=_LISTENER_NAME_ --requireEncryption=no --saslMechanisms
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage update --type=router --saslConfigPath --saslConfigName
+qdmanage update --type=router --saslConfigDir --saslConfigName
 ----
 
 |===

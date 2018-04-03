@@ -148,18 +148,18 @@ include::{FragmentDir}/fragment-router-sasl-para.adoc[]
 ----
 router {
     ...
-    saslConfigPath: _PATH_
+    saslConfigDir: _PATH_
     saslConfigName: _FILE_NAME_
 }
 ----
 
-`saslConfigPath`:: The absolute path to the SASL configuration file.
+`saslConfigDir`:: The absolute path to the SASL configuration file.
 +
 For example:
 +
 [options="nowrap"]
 ----
-saslConfigPath: /qdrouterd/security
+saslConfigDir: /qdrouterd/security
 ----
 
 `saslConfigName`:: The name of the SASL configuration file. This name should _not_ include the `.conf` file extension.

@@ -45,9 +45,9 @@ class NodeTracker(object):
         for i in range(max_routers):
             self.maskbits.append(None)
         self.maskbits[0]      = True
-        self.neighbor_max_age = self.container.config.helloMaxAge
-        self.ls_max_age       = self.container.config.remoteLsMaxAge
-        self.flux_interval    = self.container.config.raIntervalFlux * 2
+        self.neighbor_max_age = self.container.config.helloMaxAgeSeconds
+        self.ls_max_age       = self.container.config.remoteLsMaxAgeSeconds
+        self.flux_interval    = self.container.config.raIntervalFluxSeconds * 2
         self.container.router_adapter.get_agent().add_implementation(self, "router.node")
 
 

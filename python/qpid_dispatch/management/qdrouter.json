@@ -401,34 +401,39 @@
                     "type": "string",
                     "description": "hostName of machine on which router is running"
                 },
-                "helloInterval": {
+                "helloIntervalSeconds": {
                     "type": "integer",
                     "default": 1,
                     "description": "Interval in seconds between HELLO messages sent to neighbor routers.",
+                    "deprecationName": "helloInterval",
                     "create": true
                 },
-                "helloMaxAge": {
+                "helloMaxAgeSeconds": {
                     "type": "integer",
                     "default": 3,
                     "description": "Time in seconds after which a neighbor is declared lost if no HELLO is received.",
+                    "deprecationName": "helloMaxAge",
                     "create": true
                 },
-                "raInterval": {
+                "raIntervalSeconds": {
                     "type": "integer",
                     "default": 30,
                     "description": "Interval in seconds between Router-Advertisements sent to all routers in a stable network.",
+                    "deprecationName": "raInterval",
                     "create": true
                 },
-                "raIntervalFlux": {
+                "raIntervalFluxSeconds": {
                     "type": "integer",
                     "default": 4,
                     "description": "Interval in seconds between Router-Advertisements sent to all routers during topology fluctuations.",
+                    "deprecationName": "raIntervalFlux",
                     "create": true
                 },
-                "remoteLsMaxAge": {
+                "remoteLsMaxAgeSeconds": {
                     "type": "integer",
                     "default": 60,
                     "description": "Time in seconds after which link state is declared stale if no RA is received.",
+                    "deprecationName": "remoteLsMaxAge",
                     "create": true
                 },
                 "workerThreads": {
@@ -437,14 +442,16 @@
                     "description": "The number of threads that will be created to process message traffic and other application work (timers, non-amqp file descriptors, etc.) .",
                     "create": true
                 },
-                "debugDump": {
+                "debugDumpFile": {
                     "type": "path",
                     "description": "The absolute path to the location for the debug dump file. The router writes debug-level information to this file if the logger is not available.",
+                    "deprecationName": "debugDump",
                     "create": true
                 },
-                "saslConfigPath": {
+                "saslConfigDir": {
                     "type": "path",
                     "description": "Absolute path to the SASL configuration file.",
+                    "deprecationName": "saslConfigPath",
                     "required": false,
                     "create": true
                 },

@@ -49,7 +49,10 @@ class TwoRouterTest(TestCase):
         def router(name, client_server, connection):
 
             config = [
-                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name, 'allowUnsettledMulticast': 'yes'}),
+                # Use the deprecated attributes helloInterval, raInterval, raIntervalFlux, remoteLsMaxAge
+                # The routers should still start successfully after using these deprecated entities.
+                ('router', {'remoteLsMaxAge': 60, 'helloInterval': 1, 'raInterval': 30, 'raIntervalFlux': 4,
+                            'mode': 'interior', 'id': 'QDR.%s'%name, 'allowUnsettledMulticast': 'yes'}),
 
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'linkCapacity': 500}),
 
