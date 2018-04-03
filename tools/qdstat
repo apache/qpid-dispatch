@@ -276,8 +276,6 @@ class BusManager(Node):
         heads.append(Header("del"))
         heads.append(Header("presett"))
 
-        if self.opts.verbose:
-            heads.append(Header("name"))
         rows = []
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
@@ -303,6 +301,8 @@ class BusManager(Node):
         heads.append(Header("mod"))
         heads.append(Header("admin"))
         heads.append(Header("oper"))
+        if self.opts.verbose:
+            heads.append(Header("name"))
 
         for link in objects:
             row = []
