@@ -126,7 +126,7 @@ class TopologyAdditionTests ( TestCase ):
                               {  'name': 'AB_connector',
                                  'role': 'inter-router',
                                  'port': cls.inter_router_ports['A'],
-                                 'verifyHostName': 'no',
+                                 'verifyHostname': 'no',
                                  'cost':  initial_cost,
                                  'stripAnnotations': 'no'
                               }
@@ -160,7 +160,7 @@ class TopologyAdditionTests ( TestCase ):
                                   {  'name': 'AC_connector',
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
-                                     'verifyHostName': 'no',
+                                     'verifyHostname': 'no',
                                      'cost':  lower_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
@@ -170,7 +170,7 @@ class TopologyAdditionTests ( TestCase ):
                                   {  'name': 'BC_connector',
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
-                                     'verifyHostName': 'no',
+                                     'verifyHostname': 'no',
                                      'cost':  lower_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
@@ -192,7 +192,7 @@ class TopologyAdditionTests ( TestCase ):
                                   {  'name': 'AD_connector',
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
-                                     'verifyHostName': 'no',
+                                     'verifyHostname': 'no',
                                      'cost':  higher_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
@@ -202,7 +202,7 @@ class TopologyAdditionTests ( TestCase ):
                                   {  'name': 'BD_connector',
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
-                                     'verifyHostName': 'no',
+                                     'verifyHostname': 'no',
                                      'cost':  higher_cost / 2,
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000

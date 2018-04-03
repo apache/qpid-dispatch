@@ -66,8 +66,9 @@ class RouterTestHttp(TestCase):
 
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTP'}),
+            # httpRoot has been deprecated. We are using it here to test backward compatibility.
             ('listener', {'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)}),
-            ('listener', {'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)}),
+            ('listener', {'port': self.get_port(), 'httpRootDir': os.path.dirname(__file__)}),
         ])
         r = self.qdrouterd('http-test-router', config)
 
@@ -101,7 +102,7 @@ class RouterTestHttp(TestCase):
 
         def listener(**kwargs):
             args = dict(kwargs)
-            args.update({'port': self.get_port(), 'httpRoot': os.path.dirname(__file__)})
+            args.update({'port': self.get_port(), 'httpRootDir': os.path.dirname(__file__)})
             return ('listener', args)
 
         config = Qdrouterd.Config([

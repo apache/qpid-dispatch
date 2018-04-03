@@ -594,7 +594,7 @@ class ExchangeBindingsTest(TestCase):
                [('connector', {'name': 'connectorToA',
                                'role': 'inter-router',
                                'port': self.inter_router_port,
-                               'verifyHostName': 'no'}),
+                               'verifyHostname': 'no'}),
                 ('address', {'pattern': 'nextHop1/#',
                              'distribution': 'multicast'}),
                 ('address', {'pattern': 'nextHop2/#',

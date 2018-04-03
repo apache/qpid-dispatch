@@ -242,7 +242,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                      # we will have SASL plain authentication over SSL.
                      ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
                                     'sslProfile': 'client-ssl-profile',
-                                    'verifyHostName': 'no',
+                                    'verifyHostname': 'no',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
@@ -331,9 +331,9 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
     @classmethod
     def setUpClass(cls):
         """
-        Tests the verifyHostName property of the connector. The hostname on the server certificate we use is
+        Tests the verifyHostname property of the connector. The hostname on the server certificate we use is
         A1.Good.Server.domain.com and the host is 0.0.0.0 on the client router initiating the SSL connection.
-        Since the host names do not match and the verifyHostName is set to true, the client router
+        Since the host names do not match and the verifyHostname is set to true, the client router
         will NOT be able make a successful SSL connection the server router.
         """
         super(RouterTestVerifyHostNameYes, cls).setUpClass()
@@ -370,6 +370,8 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         super(RouterTestVerifyHostNameYes, cls).router('Y', [
                      ('connector', {'host': '127.0.0.1', 'role': 'inter-router', 'port': x_listener_port,
                                     'sslProfile': 'client-ssl-profile',
+                                    # verifyHostName has been deprecated. We are using it here to test
+                                    # backward compatibility.
                                     'verifyHostName': 'yes',
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
@@ -397,7 +399,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         """
         Tests to make sure that there are no 'inter-router' connections.
         The connection to the other router will not happen because the connection failed
-        due to setting 'verifyHostName': 'yes'
+        due to setting 'verifyHostname': 'yes'
         """
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
@@ -424,9 +426,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
     @classmethod
     def setUpClass(cls):
         """
-        Tests the verifyHostName property of the connector. The hostname on the server certificate we use is
+        Tests the verifyHostname property of the connector. The hostname on the server certificate we use is
         A1.Good.Server.domain.com and the host is 0.0.0.0 on the client router initiating the SSL connection.
-        Since the host names do not match but verifyHostName is set to false, the client router
+        Since the host names do not match but verifyHostname is set to false, the client router
         will be successfully able to make an SSL connection the server router.
         """
         super(RouterTestVerifyHostNameNo, cls).setUpClass()
@@ -470,7 +472,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                     'sslProfile': 'client-ssl-profile',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
-                                    'verifyHostName': 'no',
+                                    'verifyHostname': 'no',
                                     'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
@@ -517,7 +519,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
     def test_inter_router_plain_over_ssl_exists(self):
         """
-        Tests to make sure that an inter-router connection exists between the routers since verifyHostName is 'no'.
+        Tests to make sure that an inter-router connection exists between the routers since verifyHostname is 'no'.
         """
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
@@ -560,7 +562,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      'saslMechanisms': 'PLAIN',
                      'sslProfile': 'client-ssl-profile',
                      'role': 'inter-router',
-                     'verifyHostName': False,
+                     'verifyHostname': False,
                      'saslUsername': 'test@domain.com',
                      'saslPassword': 'password'})
         self.routers[1].wait_connectors()

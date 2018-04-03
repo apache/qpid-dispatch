@@ -42,8 +42,9 @@ class RouterTest(TestCase):
             config = [
                 ('router', {'mode': 'standalone', 'id': name}),
                 ('listener', {'port': cls.tester.get_port()}),
+                # failoverList has been deprecated. We are using it here to test backward compatibility.
                 ('listener', {'port': cls.tester.get_port(), 'failoverList': 'other-host:25000'}),
-                ('listener', {'port': cls.tester.get_port(), 'failoverList': 'second-host:25000, amqps://third-host:5671'})
+                ('listener', {'port': cls.tester.get_port(), 'failoverUrls': 'second-host:25000, amqps://third-host:5671'})
             ]
 
             config = Qdrouterd.Config(config)

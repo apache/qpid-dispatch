@@ -58,7 +58,7 @@ class FailoverTest(TestCase):
         router('QDR.B', [
                         ('router', {'mode': 'interior', 'id': 'QDR.B'}),
                         ('listener', {'role': 'inter-router', 'port': inter_router_port,
-                                      'failoverList': cls.failover_list}),
+                                      'failoverUrls': cls.failover_list}),
                         ('listener', {'role': 'normal', 'port': cls.tester.get_port()}),
                         ]
               )
@@ -67,7 +67,7 @@ class FailoverTest(TestCase):
                         ('router', {'mode': 'interior', 'id': 'QDR.A'}),
                         ('listener', {'role': 'normal', 'port': cls.tester.get_port()}),
                         ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': inter_router_port, 'verifyHostName': 'no'}),
+                                       'port': inter_router_port, 'verifyHostname': 'no'}),
                     ]
                )
 
@@ -114,7 +114,7 @@ class FailoverTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
-        self.assertIn(FailoverTest.failover_list, output[0]['failoverList'])
+        self.assertIn(FailoverTest.failover_list, output[0]['failoverUrls'])
 
     def test_remove_router_B(self):
         # First make sure there are no inter-router connections on router C
@@ -134,9 +134,9 @@ class FailoverTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
-        # The failoverList must now be gone since the backup router does not send a failoverList in its
+        # The failoverUrls must now be gone since the backup router does not send a failoverUrls in its
         # connection properties.
-        self.assertTrue(output[0].get('failoverList') == None)
+        self.assertTrue(output[0].get('failoverUrls') is None)
 
         # Since router B has been killed, router A should now try to connect to a listener on router C.
         # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.

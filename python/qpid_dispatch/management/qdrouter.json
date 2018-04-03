@@ -697,9 +697,10 @@
                     "create": true
 
                 },
-                "protocolFamily": {
+                "socketAddressFamily": {
                     "type": ["IPv4", "IPv6"],
                     "required": false,
+                    "deprecationName": "protocolFamily",
                     "description": "['IPv4', 'IPv6'] IPv4: Internet Protocol version 4; IPv6: Internet Protocol version 6.  If not specified, the protocol family will be automatically determined from the address.",
                     "create": true
                 },
@@ -756,9 +757,10 @@
                     "description": "yes: Require the use of SSL or TLS on the connection; no: Allow clients to connect without SSL or TLS.",
                     "create": true
                 },
-                "trustedCerts": {
+                "trustedCertsFile": {
                     "type": "path",
                     "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide the absolute path to a PEM file that contains the trusted certificates.",
+                    "deprecationName": "trustedCerts",
                     "create": true
                 },
                 "maxFrameSize": {
@@ -812,10 +814,11 @@
                     "default": false,
                     "description": "If true, apply multi-tenancy to endpoints connected at this listener.  The address space is defined by the virtual host (hostname field in the Open)."
                 },
-                "failoverList": {
+                "failoverUrls": {
                     "type": "string",
                     "create": true,
                     "required": false,
+                    "deprecationName": "failoverList",
                     "description": "A comma-separated list of failover urls to be supplied to connected clients.  Form: [(amqp|amqps|ws|wss)://]host_or_ip[:port]"
                 },
                 "http": {
@@ -824,15 +827,17 @@
                     "description": "Accept HTTP connections that can upgrade to AMQP over WebSocket. Plain AMQP connections are not accepted on this listener.",
                     "create": true
                 },
-                "httpRoot": {
+                "httpRootDir": {
                     "type": "path",
                     "description": "Serve HTTP files from this directory, defaults to the installed stand-alone console directory",
+                    "deprecationName": "httpRoot",
                     "create": true
                 },
-                "logMessage": {
+                "messageLoggingComponents": {
                     "type": "string",
                     "default": "none",
                     "description": "A comma separated list that indicates which components of the message should be logged. Defaults to 'none' (log nothing). If you want all properties and application properties of the message logged use 'all'. Specific components of the message can be logged by indicating the components via a comma separated list. The components are message-id, user-id, to, subject, reply-to, correlation-id, content-type, content-encoding, absolute-expiry-time, creation-time, group-id, group-sequence, reply-to-group-id, app-properties. The application-data part of the bare message will not be logged. No spaces are allowed",
+                    "deprecationName": "logMessage",
                     "create": true
                 }
             }
@@ -934,10 +939,11 @@
                     "required": false,
                     "description": "The capacity of links within this connection, in terms of message deliveries.  The capacity is the number of messages that can be in-flight concurrently for each link."
                 },
-                "verifyHostName": {
+                "verifyHostname": {
                     "type": "boolean",
                     "default": true,
                     "description": "yes: Ensures that when initiating a connection (as a client) the host name in the URL to which this connector connects to matches the host name in the digital certificate that the peer sends back as part of the SSL connection; no: Does not perform host name verification",
+                    "deprecationName": "verifyHostName",
                     "create": true
                 },
                 "saslUsername": {
@@ -953,15 +959,17 @@
                     "create": true,
                     "hidden": true
                 },
-                "logMessage": {
+                "messageLoggingComponents": {
                     "type": "string",
                     "default": "none",
                     "description": "A comma separated list that indicates which components of the message should be logged (no spaces allowed between list components). Defaults to 'none' (log nothing). If you want all properties and application properties of the message logged use 'all'. Specific components of the message can be logged by indicating the components via a comma separated list. The components are message-id, user-id, to, subject, reply-to, correlation-id, content-type, content-encoding, absolute-expiry-time, creation-time, group-id, group-sequence, reply-to-group-id, app-properties. The application-data part of the bare message will not be logged. This log message is written to the MESSAGE logging module. In the 'log' entity, set 'module' property to MESSAGE or DEFAULT and 'enable' to trace+ to see this log message",
+                    "deprecationName": "logMessage",
                     "create": true
                 },
-                "failoverList": {
+                "failoverUrls": {
                     "type": "string",
                     "description": "A read-only, comma-separated list of failover urls. ",
+                    "deprecationName": "failoverList",
                     "create": false
                     
                 }            

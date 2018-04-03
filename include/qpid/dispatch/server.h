@@ -140,7 +140,7 @@ typedef struct qd_server_config_t {
     /**
      * Directory for HTTP content
      */
-    char *http_root;
+    char *http_root_dir;
 
     /**
      * Connection name, used as a reference from other parts of the configuration.

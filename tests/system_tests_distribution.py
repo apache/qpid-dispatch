@@ -410,7 +410,7 @@ class DistributionTests ( TestCase ):
                       {  'name': 'connectorToA',
                          'role': 'inter-router',
                          'port': A_inter_router_port_1,
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost':  cls.A_B_cost
                       }
                     )
@@ -435,7 +435,7 @@ class DistributionTests ( TestCase ):
                       {  'name': 'connectorToB',
                          'role': 'inter-router',
                          'port': B_inter_router_port_1,
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.B_C_cost
                       }
                     )
@@ -460,7 +460,7 @@ class DistributionTests ( TestCase ):
                       {  'name': 'connectorToA',
                          'role': 'inter-router',
                          'port': A_inter_router_port_2,
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.A_D_cost
                       }
                     ),
@@ -468,7 +468,7 @@ class DistributionTests ( TestCase ):
                       {  'name': 'connectorToB',
                          'role': 'inter-router',
                          'port': B_inter_router_port_2,
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.B_D_cost
                       }
                     )

@@ -127,7 +127,7 @@ void qd_server_config_free(qd_server_config_t *cf)
     free(cf->port);
     free(cf->host_port);
     free(cf->role);
-    if (cf->http_root)       free(cf->http_root);
+    if (cf->http_root_dir)   free(cf->http_root_dir);
     if (cf->name)            free(cf->name);
     if (cf->protocol_family) free(cf->protocol_family);
     if (cf->sasl_username)   free(cf->sasl_username);
@@ -292,12 +292,12 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     qd_error_clear();
 
     bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false);    CHECK();
-    bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostName",    true);     CHECK();
+    bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostname",    true);     CHECK();
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
     bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false);    CHECK();
 
     memset(config, 0, sizeof(*config));
-    config->log_message          = qd_entity_opt_string(entity, "logMessage", 0);     CHECK();
+    config->log_message          = qd_entity_opt_string(entity, "messageLoggingComponents", 0);     CHECK();
     config->log_bits             = populate_log_message(config);
     config->port                 = qd_entity_get_string(entity, "port");              CHECK();
     config->name                 = qd_entity_opt_string(entity, "name", 0);           CHECK();
@@ -305,8 +305,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
     config->http                 = qd_entity_opt_bool(entity, "http", false);         CHECK();
-    config->http_root            = qd_entity_opt_string(entity, "httpRoot", false);   CHECK();
-    config->http = config->http || config->http_root; /* httpRoot implies http */
+    config->http_root_dir        = qd_entity_opt_string(entity, "httpRootDir", false);   CHECK();
+    config->http = config->http || config->http_root_dir; /* httpRoot implies http */
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
     uint64_t ssn_frames          = qd_entity_opt_long(entity, "maxSessionFrames", 0); CHECK();
@@ -546,7 +546,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
     ssl_profile->ssl_protocols = qd_entity_opt_string(entity, "protocols", 0);                 CHECK();
     ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "certDb", 0);       CHECK();
-    ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCerts", 0); CHECK();
+    ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCertsFile", 0); CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0);    CHECK();
     ssl_profile->ssl_display_name_file      = qd_entity_opt_string(entity, "displayNameFile", 0); CHECK();
 
@@ -605,7 +605,7 @@ qd_listener_t *qd_dispatch_configure_listener(qd_dispatch_t *qd, qd_entity_t *en
         qd_listener_decref(li);
         return 0;
     }
-    char *fol = qd_entity_opt_string(entity, "failoverList", 0);
+    char *fol = qd_entity_opt_string(entity, "failoverUrls", 0);
     if (fol) {
         li->config.failover_list = qd_failover_list(fol);
         free(fol);
@@ -693,11 +693,11 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
             }
         }
 
-        if (qd_entity_set_string(entity, "failoverList", failover_info) == 0)
+        if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0)
             return QD_ERROR_NONE;
     }
     else {
-        if (qd_entity_clear(entity, "failoverList") == 0)
+        if (qd_entity_clear(entity, "failoverUrls") == 0)
             return QD_ERROR_NONE;
     }
 

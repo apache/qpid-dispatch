@@ -53,7 +53,7 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR'}),
 
-            ('listener', {'port': cls.tester.get_port(), 'logMessage': 'all'}),
+            ('listener', {'port': cls.tester.get_port(), 'messageLoggingComponents': 'all'}),
 
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
@@ -135,7 +135,8 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
         name = "test-router"
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR'}),
-
+            # logMessage has been deprecated. We are using it here so we can make sure that it is still
+            # backward compatible.
             ('listener', {'port': cls.tester.get_port(), 'logMessage': 'message-id,user-id,subject,reply-to'}),
 
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),

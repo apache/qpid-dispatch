@@ -199,7 +199,7 @@ In this example, on `Router.A`, `address`, `linkRoute`, and `autoLink` entities 
 
 [options="nowrap"]
 ----
-Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: ConnectorEntity(addr=127.0.0.1, allowRedirect=True, cost=1, host=127.0.0.1, identity=connector/127.0.0.1:5672:BROKER, idleTimeoutSeconds=16, maxFrameSize=65536, name=BROKER, port=5672, role=route-container, stripAnnotations=both, type=org.apache.qpid.dispatch.connector, verifyHostName=True)
+Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: ConnectorEntity(addr=127.0.0.1, allowRedirect=True, cost=1, host=127.0.0.1, identity=connector/127.0.0.1:5672:BROKER, idleTimeoutSeconds=16, maxFrameSize=65536, name=BROKER, port=5672, role=route-container, stripAnnotations=both, type=org.apache.qpid.dispatch.connector, verifyHostname=True)
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAddressEntity(distribution=closest, identity=router.config.address/0, name=router.config.address/0, prefix=my_address, type=org.apache.qpid.dispatch.router.config.address, waypoint=False)
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAddressEntity(distribution=balanced, identity=router.config.address/1, name=router.config.address/1, prefix=my_queue_wp, type=org.apache.qpid.dispatch.router.config.address, waypoint=True)
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigLinkrouteEntity(connection=BROKER, direction=in, distribution=linkBalanced, identity=router.config.linkRoute/0, name=router.config.linkRoute/0, prefix=my_queue, type=org.apache.qpid.dispatch.router.config.linkRoute)

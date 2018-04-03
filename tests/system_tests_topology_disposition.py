@@ -242,7 +242,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'AB_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'A' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost':  cls.cost['AB'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -272,7 +272,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'AC_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'A' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['AC'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -282,7 +282,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'BC_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'B' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['BC'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -305,7 +305,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'AD_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'A' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['AD'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -315,7 +315,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'AD2_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'A' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['AD2'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -325,7 +325,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'BD_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'B' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['BD'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity
@@ -335,7 +335,7 @@ class TopologyDispositionTests ( TestCase ):
                       {  'name': 'CD_connector',
                          'role': 'inter-router',
                          'port': inter_router_ports [ 'C' ],
-                         'verifyHostName': 'no',
+                         'verifyHostname': 'no',
                          'cost' : cls.cost['CD'],
                          'stripAnnotations': 'no',
                          'linkCapacity' : inter_router_link_capacity

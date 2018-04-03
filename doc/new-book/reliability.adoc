@@ -416,7 +416,7 @@ Using the `qdmanage` tool, it is possible to configure the waypoint on `my_queue
 ]
 [
   {
-    "verifyHostName": true,
+    "verifyHostname": true,
     "stripAnnotations": "both",
     "name": "BROKER",
     "allowRedirect": true,
