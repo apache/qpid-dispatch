@@ -317,7 +317,7 @@ qdmanage query --type=sslProfile
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage create --type=sslProfile --name=_NAME_ --certDB=_PATH_ --certFile=_PATH_ --keyFile=_PATH_ --_ATTRIBUTE_=_VALUE_ ...
+qdmanage create --type=sslProfile --name=_NAME_ --certDB=_PATH_ --certFile=_PATH_ --privateKeyFile=_PATH_ --_ATTRIBUTE_=_VALUE_ ...
 ----
 
 |Add SSL/TLS encryption to an incoming connection

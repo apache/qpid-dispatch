@@ -40,9 +40,9 @@ class QdmanageTest(TestCase):
         config_1 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'R1'}),
             ('sslProfile', {'name': 'server-ssl',
-                             'certDb': cls.ssl_file('ca-certificate.pem'),
+                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
                              'certFile': cls.ssl_file('server-certificate.pem'),
-                             'keyFile': cls.ssl_file('server-private-key.pem'),
+                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'password': 'server-password'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port}),
@@ -414,8 +414,8 @@ class QdmanageTest(TestCase):
     def test_create_delete_ssl_profile(self):
         ssl_profile_name = 'ssl-profile-test'
         ssl_create_command = 'CREATE --type=sslProfile certFile=' + self.ssl_file('server-certificate.pem') + \
-                         ' keyFile=' + self.ssl_file('server-private-key.pem') + ' password=server-password' + \
-                         ' name=' + ssl_profile_name + ' certDb=' + self.ssl_file('ca-certificate.pem')
+                         ' privateKeyFile=' + self.ssl_file('server-private-key.pem') + ' password=server-password' + \
+                         ' name=' + ssl_profile_name + ' caCertFile=' + self.ssl_file('ca-certificate.pem')
         output = json.loads(self.run_qdmanage(ssl_create_command))
         self.assertEqual(output['name'], ssl_profile_name)
         self.run_qdmanage('DELETE --type=sslProfile --name=' +

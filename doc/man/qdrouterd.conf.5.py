@@ -115,9 +115,9 @@ attribute of 'sslProfile' sections.
 ----
 sslProfile {
     name: my-ssl
-    certDb: ca-certificate-1.pem
+    caCertFile: ca-certificate-1.pem
     certFile: server-certificate-1.pem
-    keyFile: server-private-key.pem
+    privateKeyFile: server-private-key.pem
 }
 
 listener {

@@ -52,9 +52,9 @@ You must have the following files in PEM format:
 sslProfile {
     name: _NAME_
     ciphers: _CIPHERS_
-    certDb: _PATH_.pem
+    caCertFile: _PATH_.pem
     certFile: _PATH_.pem
-    keyFile: _PATH_.pem
+    privateKeyFile: _PATH_.pem
     password: _PASSWORD/PATH_TO_PASSWORD_FILE_
     ...
 }
@@ -80,13 +80,13 @@ ciphers: ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
 +
 To see the full list of available ciphers, use the `openssl ciphers` command. For more information about each cipher, see the link:https://www.openssl.org/docs/manmaster/man1/ciphers.html[ciphers man page^].
 
-`certDb`:: The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).
+`caCertFile`:: The absolute path to the file that contains the public certificates of trusted certificate authorities (CA).
 +
 For example:
 +
 [options="nowrap"]
 ----
-certDb: /qdrouterd/ssl_certs/ca-cert.pem
+caCertFile: /qdrouterd/ssl_certs/ca-cert.pem
 ----
 
 `certFile`:: The absolute path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.
@@ -98,13 +98,13 @@ For example:
 certFile: /qdrouterd/ssl_certs/router-cert-pwd.pem
 ----
 
-`keyFile`:: The absolute path to the file containing the PEM-formatted private key for the above certificate.
+`privateKeyFile`:: The absolute path to the file containing the PEM-formatted private key for the above certificate.
 +
 For example:
 +
 [options="nowrap"]
 ----
-keyFile: /qdrouterd/ssl_certs/router-key-pwd.pem
+privateKeyFile: /qdrouterd/ssl_certs/router-key-pwd.pem
 ----
 
 `passwordFile` or `password`:: If the private key is password-protected, you must provide the password by either specifying the absolute path to a file containing the password that unlocks the certificate key, or entering the password directly in the configuration file.

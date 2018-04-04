@@ -274,7 +274,7 @@ typedef struct qd_server_config_t {
     /**
      * Full path to the file that contains the uid to display name mapping.
      */
-    char *ssl_display_name_file;
+    char *ssl_uid_name_mapping_file;
 
     /**
      * The password used to sign the private key, or NULL if the key is not protected.

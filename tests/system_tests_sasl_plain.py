@@ -224,9 +224,9 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                    'sslProfile':'server-ssl-profile',
                                    'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
-                                     'keyFile': cls.ssl_file('server-private-key.pem'),
+                                     'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                      'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                                      'protocols': 'TLSv1.1 TLSv1.2',
                                      'password': 'server-password'}),
@@ -252,9 +252,9 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'keyFile': cls.ssl_file('client-private-key.pem'),
+                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 
@@ -356,9 +356,9 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
-                                     'keyFile': cls.ssl_file('server-private-key.pem'),
+                                     'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
                                  'id': 'QDR.X',
@@ -381,9 +381,9 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'keyFile': cls.ssl_file('client-private-key.pem'),
+                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 
@@ -452,8 +452,10 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
+                                     # certDb has been deprecated. We are using it here to test backward compatibility.
                                      'certDb': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
+                                     # keyFile has been deprecated. We are using it here to test backward compatibility.
                                      'keyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
                      ('router', {'workerThreads': 1,
@@ -479,9 +481,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'certDb': cls.ssl_file('ca-certificate.pem'),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'keyFile': cls.ssl_file('client-private-key.pem'),
+                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
                                      'password': 'client-password'}),
         ])
 
@@ -551,9 +553,9 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         local_node.create({'type': 'sslProfile',
                      'name': 'client-ssl-profile',
                      'certFile': self.ssl_file('client-certificate.pem'),
-                     'keyFile': self.ssl_file('client-private-key.pem'),
+                     'privateKeyFile': self.ssl_file('client-private-key.pem'),
                      'password': 'client-password',
-                     'certDb': self.ssl_file('ca-certificate.pem')})
+                     'caCertFile': self.ssl_file('ca-certificate.pem')})
         # re-create connector
         local_node.create({'type': 'connector',
                      'name': 'connectorToX',

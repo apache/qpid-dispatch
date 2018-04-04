@@ -184,7 +184,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
         for a in config.by_type(t):
             configure(a)
             if t == "sslProfile":
-                display_file_name = a.get('displayNameFile')
+                display_file_name = a.get('uidNameMappingFile')
                 if display_file_name:
                     ssl_profile_name = a.get('name')
                     displayname_service.add(ssl_profile_name, display_file_name)

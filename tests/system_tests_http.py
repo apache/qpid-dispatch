@@ -108,9 +108,9 @@ class RouterTestHttp(TestCase):
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTPS'}),
             ('sslProfile', {'name': 'simple-ssl',
-                            'certDb': self.ssl_file('ca-certificate.pem'),
+                            'caCertFile': self.ssl_file('ca-certificate.pem'),
                             'certFile': self.ssl_file('server-certificate.pem'),
-                            'keyFile': self.ssl_file('server-private-key.pem'),
+                            'privateKeyFile': self.ssl_file('server-private-key.pem'),
                             'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'password': 'server-password'
             }),

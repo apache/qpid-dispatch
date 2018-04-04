@@ -51,9 +51,9 @@ A section could be referenced by another section using its `name` attribute. An 
 ----
 sslProfile {
     name: ssl-profile-one
-    certDb: ca-certificate-1.pem
+    caCertFile: ca-certificate-1.pem
     certFile: server-certificate-1.pem
-    keyFile: server-private-key.pem
+    privateKeyFile: server-private-key.pem
 }
 
 listener {
@@ -73,13 +73,13 @@ In the above example, the _sslProfile_ section named _ssl-profile-one_ is used t
 
 Attributes for setting SSL/TLS configuration for connections.
 
-* *_certDb_* (path) : The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).
+* *_caCertFile_* (path) : The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).
 * *_certFile_* (path) : The absolute path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.
-* *_keyFile_* (path) : The absolute path to the file containing the PEM-formatted private key for the above certificate.
+* *_privateKeyFile_* (path) : The absolute path to the file containing the PEM-formatted private key for the above certificate.
 * *_passwordFile_* (path) : If the above private key is password protected, this is the absolute path to a file containing the password that unlocks the certificate key.
 * *_password_* (string) : An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file. This option can be used by supplying the password in the ‘password’ option. Don’t use both password and passwordFile in the same profile.
 * *_uidFormat_* (string) : A list of x509 client certificate fields that will be used to build a string that will uniquely identify the client certificate owner. For example, a value of ‘cou’ indicates that the uid will consist of c - common name concatenated with o - organization-company name concatenated with u - organization unit; or a value of ‘oF’ indicates that the uid will consist of o (organization name) concatenated with F (the sha256 fingerprint of the entire certificate) . Allowed values can be any combination of comma separated ‘c’( ISO3166 two character country code), ‘s’(state or province), ‘l’(Locality; generally - city), ‘o’(Organization - Company Name), ‘u’(Organization Unit - typically certificate type or brand), ‘n’(CommonName - typically a username for client certificates) and ‘1’(sha1 certificate fingerprint, as displayed in the fingerprints section when looking at a certificate with say a web browser is the hash of the entire certificate) and 2 (sha256 certificate fingerprint) and 5 (sha512 certificate fingerprint).
-* *_displayNameFile_* (string) : The absolute path to the file containing the unique id to display name mapping.
+* *_uidNameMappingFile_* (string) : The absolute path to the file containing the unique id to display name mapping.
 * *_name_* (string) : The name of the profile used for referencing it from _listener_ and _connector_ sections.
 
 *Used by* : _listener_, _connector_.

@@ -30,9 +30,9 @@ router {
 
 sslProfile {
     name: test-ssl
-    certDb: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
+    caCertFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/ca-certificate.pem
     certFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-certificate.pem
-    keyFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-private-key.pem
+    privateKeyFile: ${QPID_DISPATCH_HOME_INSTALLED}/tests/config-2/server-private-key.pem
     password: server-password
 }
 

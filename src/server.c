@@ -297,7 +297,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
                     }
                 }
             }
-            if (config->ssl_display_name_file) {
+            if (config->ssl_uid_name_mapping_file) {
                 // Translate extracted id into display name
                 qd_python_lock_state_t lock_state = qd_python_lock();
                 PyObject *result = PyObject_CallMethod((PyObject *)conn->server->py_displayname_obj, "query", "(ss)", config->ssl_profile, user_id );

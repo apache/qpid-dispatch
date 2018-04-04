@@ -610,9 +610,10 @@
                     "description": "The TLS protocols that this sslProfile can use. You can specify a list of one or more of TLSv1, TLSv1.1, or TLSv1.2. To specify multiple protocols, separate the protocols with a space. For example, to permit the sslProfile to use TLS v1.1 and TLS v1.2 only, you would set the value to TLSv1.1 TLSv1.2. If you do not specify a value, the sslProfile uses the TLS protocol specified by the system-wide configuration.",
                     "create": true
                 },                            
-                "certDb": {
+                "caCertFile": {
                     "type": "path",
                     "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
+                    "deprecationName": "certDb",
                     "create": true
                 },
                 "certFile": {
@@ -621,9 +622,10 @@
                     "create": true
 
                 },
-                "keyFile": {
+                "privateKeyFile": {
                     "type": "path",
                     "description": "The absolute path to the file containing the PEM-formatted private key for the above certificate.",
+                    "deprecationName": "keyFile",
                     "create": true
 
                 },
@@ -644,9 +646,10 @@
                     "description": "A list of x509 client certificate fields that will be used to build a string that will uniquely identify the client certificate owner. For e.g. a value of 'cou' indicates that the uid will consist of c - common name concatenated with o - organization-company name concatenated with u - organization unit; or a value of 'o2' indicates that the uid will consist of o (organization name) concatenated with 2 (the sha256 fingerprint of the entire certificate) . Allowed values can be any combination of 'c'( ISO3166 two character country code), 's'(state or province), 'l'(Locality; generally - city), 'o'(Organization - Company Name), 'u'(Organization Unit - typically certificate type or brand), 'n'(CommonName - typically a user name for client certificates) and '1'(sha1 certificate fingerprint, as displayed in the fingerprints section when looking at a certificate with say a web browser is the hash of the entire certificate) and 2 (sha256 certificate fingerprint) and 5 (sha512 certificate fingerprint). The user identifier (uid) that is generated based on the uidFormat is a string which has a semi-colon as a separator between the components",
                     "create": true
                 },
-                "displayNameFile": {
+                "uidNameMappingFile": {
                     "type": "string",
                     "description": "The absolute path to the file containing the unique id to display name mapping",
+                    "deprecationName": "displayNameFile",
                     "create": true
                 }
             }
