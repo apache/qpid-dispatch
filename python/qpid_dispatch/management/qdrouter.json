@@ -681,7 +681,7 @@
                     "create": true
 
                 },                
-                "hostname": {
+                "realm": {
                     "type": "string",
                     "description": "Value to set for hostname field on sasl-init",
                     "required": false,
