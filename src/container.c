@@ -767,8 +767,6 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 
     link->pn_sess = conn->pn_sess;
 
-    printf("link->pn_sess=%p\n", (void *)link->pn_sess );
-
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);
     else
@@ -783,10 +781,8 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
 
     pn_link_set_context(link->pn_link, link);
 
-    if (open_session) {
+    if (open_session)
         pn_session_open(link->pn_sess);
-        printf ("Session opened ***********\n");
-    }
 
     return link;
 }
