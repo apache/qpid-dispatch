@@ -631,13 +631,14 @@
                 },
                 "passwordFile": {
                     "type": "path",
-                    "description": "If the above private key is password protected, this is the absolute path to a file containing the password that unlocks the certificate key.",
+                    "description": "If the above private key is password protected, this is the absolute path to a file containing the password that unlocks the certificate key. This file should be permission protected to limit access",
                     "create": true
 
                 },
                 "password": {
                     "type": "string",
-                    "description": "An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This takes precedence over the passwordFile if both are specified.",
+                    "description": "(DEPRECATED) An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This takes precedence over the passwordFile if both are specified. This attribute has been deprecated because it is unsafe to store plain text passwords in config files. Use the passwordFile instead",
+                    "deprecated": true,
                     "create": true
 
                 },
@@ -663,20 +664,35 @@
             "attributes": {
                 "authService": {
                     "type": "string",
-                    "description": "Address of a service to delegate authentication to.",
-                    "required": true,
+                    "description": "(DEPRECATED) Address of a service to delegate authentication to. This attribute has been deprecated. Use the host and port attributes instead.",
+                    "deprecated": true,
                     "create": true
                 },
-                "saslInitHostname": {
+                "host": {
+                    "description":"A host name, IPV4 or IPV6 literal, of the service to delegate to.",
+                    "type": "string",
+                    "default": "",
+                    "create": true
+                },
+                "port": {
+                    "description": "Port number of the service delegated host.",
+                    "type": "string",
+                    "default": "amqp",
+                    "create": true
+
+                },                
+                "hostname": {
                     "type": "string",
                     "description": "Value to set for hostname field on sasl-init",
                     "required": false,
+                    "deprecationName": "saslInitHostname",
                     "create": true
                 },
-                "authSslProfile": {
+                "sslProfile": {
                     "type": "string",
                     "required": false,
                     "description": "Name of the sslProfile to use for the authentication service.",
+                    "deprecationName": "authSslProfile",
                     "create": true
                 }
             }

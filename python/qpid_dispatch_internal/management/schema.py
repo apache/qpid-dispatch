@@ -324,21 +324,28 @@ class EntityType(object):
 
             self.deprecated_attributes = OrderedDict()
             for key, value in self.attributes.items():
-                if value.deprecation_name:
-                    self.deprecated_attributes[value.deprecation_name] = AttributeType(value.deprecation_name,
-                                                                                       type=value.type, defined_in=self,
-                                                                                       default=value.default,
-                                                                                       required=value.required,
-                                                                                       unique=value.unique,
-                                                                                       hidden=value.hidden,
-                                                                                       deprecated=True,
-                                                                                       deprecationName=None,
-                                                                                       value=value.value,
-                                                                                       description="(DEPRECATED) " + value.description,
-                                                                                       create=value.create,
-                                                                                       update=value.update,
-                                                                                       graph=value.graph)
+                if value.deprecation_name or value.deprecated:
+                    attr_type = AttributeType(value.deprecation_name or key,
+                                              type=value.type,
+                                              defined_in=self,
+                                              default=value.default,
+                                              required=value.required,
+                                              unique=value.unique,
+                                              hidden=value.hidden,
+                                              deprecated=True,
+                                              deprecationName=None,
+                                              value=value.value,
+                                              description="(DEPRECATED) " + value.description,
+                                              create=value.create,
+                                              update=value.update,
+                                              graph=value.graph)
+                    if value.deprecation_name:
+                        self.deprecated_attributes[value.deprecation_name] = attr_type
+                    else:
+                        self.deprecated_attributes[key] = attr_type
+
             self.operations = operations or []
+
             # Bases are resolved in self.init()
             self.base = extends
             self.all_bases = []
@@ -418,7 +425,7 @@ class EntityType(object):
                     deprecation_name = attr.deprecation_name
                     if deprecation_name:
                         value = attributes.get(deprecation_name)
-                        if not value is None:
+                        if value is not None:
                             if logger_available:
                                 self.log(LOG_WARNING, "Attribute '%s' of entity '%s' has been deprecated."
                                                       " Use '%s' instead"%(deprecation_name, self.short_name, attr.name))
@@ -447,7 +454,7 @@ class EntityType(object):
                     value = self.schema.long_name(value)
                 attributes[name] = self.attribute(name).validate(value)
         except ValidationError, e:
-            raise  ValidationError, "%s: %s"%(self, e), sys.exc_info()[2]
+            raise ValidationError, "%s: %s"%(self, e), sys.exc_info()[2]
 
         return attributes
 

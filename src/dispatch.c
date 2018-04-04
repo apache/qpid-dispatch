@@ -192,9 +192,8 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
     if (! qd->sasl_config_name) {
         qd->sasl_config_name = qd_entity_opt_string(entity, "saslConfigName", "qdrouterd"); QD_ERROR_RET();
     }
-    qd->auth_service = qd_entity_opt_string(entity, "authService", 0); QD_ERROR_RET();
 
-    char *dump_file = qd_entity_opt_string(entity, "debugDump", 0); QD_ERROR_RET();
+    char *dump_file = qd_entity_opt_string(entity, "debugDumpFile", 0); QD_ERROR_RET();
     if (dump_file) {
         qd_alloc_debug_dump(dump_file); QD_ERROR_RET();
         free(dump_file);

@@ -70,7 +70,9 @@ mech_list: SCRAM-SHA-1 PLAIN
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
                      ('sslProfile', {'name':'myssl'}),
-                     ('authServicePlugin', {'name':'myauth', 'authSslProfile':'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
+                     # authService attribute has been deprecated. We are using it here to make sure that we are
+                     # still backward compatible.
+                     ('authServicePlugin', {'name':'myauth', 'sslProfile':'myssl', 'port': cls.auth_service_port, 'host': '127.0.0.1'}),
                      ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1 PLAIN'}),
                      ('router', {'mode': 'standalone', 'id': 'router',
                                  'saslConfigName': 'tests-mech-SCRAM',
@@ -127,6 +129,33 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(0, len(client.errors))
 
 
+class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
+    @classmethod
+    def setUpClass(cls):
+        """
+        Tests the delegation of sasl auth to an external auth service.
+        """
+        super(AuthServicePluginAuthzTest, cls).setUpClass()
+
+        if not SASL.extended():
+            return
+
+        cls.createSaslFiles()
+
+        cls.auth_service_port = cls.tester.get_port()
+        cls.tester.popen(['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
+
+        cls.router_port = cls.tester.get_port()
+        cls.tester.qdrouterd('router', Qdrouterd.Config([
+                     ('sslProfile', {'name':'myssl'}),
+                     # authService and authSslProfile attributea have been deprecated.
+                     # We are using it here to make sure that we are backward compatible.
+                     ('authServicePlugin', {'name':'myauth', 'authSslProfile':'myssl', 'authService': '127.0.0.1:%d' % cls.auth_service_port}),
+                     ('listener', {'host': '0.0.0.0', 'port': cls.router_port, 'role': 'normal', 'saslPlugin':'myauth', 'saslMechanisms':'SCRAM-SHA-1 PLAIN'}),
+                     ('router', {'mode': 'standalone', 'id': 'router',
+                                 'saslConfigName': 'tests-mech-SCRAM',
+                                 'saslConfigPath': os.getcwd()})
+        ])).wait_ready()
 class ConnectionHandler(MessagingHandler):
     def __init__(self, address, count):
         super(ConnectionHandler, self).__init__()

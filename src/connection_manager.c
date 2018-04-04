@@ -513,6 +513,11 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_private_key_file       = qd_entity_opt_string(entity, "privateKeyFile", 0); CHECK();
     ssl_profile->ssl_password               = qd_entity_opt_string(entity, "password", 0); CHECK();
 
+    if (ssl_profile->ssl_password) {
+        qd_log(cm->log_source, QD_LOG_WARNING, "Attribute password of entity sslProfile has been deprecated. Use passwordFile instead.");
+    }
+
+
     if (!ssl_profile->ssl_password) {
         // SSL password not provided. Check if passwordFile property is specified.
         char *password_file = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
@@ -573,9 +578,31 @@ qd_config_sasl_plugin_t *qd_dispatch_configure_sasl_plugin(qd_dispatch_t *qd, qd
     DEQ_ITEM_INIT(sasl_plugin);
     DEQ_INSERT_TAIL(cm->config_sasl_plugins, sasl_plugin);
     sasl_plugin->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
-    sasl_plugin->auth_service               = qd_entity_opt_string(entity, "authService", 0); CHECK();
-    sasl_plugin->sasl_init_hostname         = qd_entity_opt_string(entity, "saslInitHostname", 0); CHECK();
-    sasl_plugin->auth_ssl_profile           = qd_entity_opt_string(entity, "authSslProfile", 0); CHECK();
+
+    char *auth_host = qd_entity_opt_string(entity, "host", 0);
+    char *auth_port = qd_entity_opt_string(entity, "port", 0);
+
+    if (auth_host && auth_port) {
+        int strlen_auth_host = strlen(auth_host);
+        int strlen_auth_port = strlen(auth_port);
+
+        if (strlen_auth_host > 0 && strlen_auth_port > 0) {
+
+            int hplen = strlen(auth_host) + strlen(auth_port) + 2;
+            if (hplen > 2) {
+                sasl_plugin->auth_service = malloc(hplen);
+                snprintf(sasl_plugin->auth_service, hplen, "%s:%s", auth_host, auth_port);
+            }
+        }
+    }
+
+    if (!sasl_plugin->auth_service) {
+        sasl_plugin->auth_service               = qd_entity_opt_string(entity, "authService", 0); CHECK();
+        qd_log(cm->log_source, QD_LOG_WARNING, "Attribute authService of entity authServicePlugin has been deprecated. Use host and port instead.");
+    }
+
+    sasl_plugin->sasl_init_hostname         = qd_entity_opt_string(entity, "hostname", 0); CHECK();
+    sasl_plugin->auth_ssl_profile           = qd_entity_opt_string(entity, "sslProfile", 0); CHECK();
 
     qd_log(cm->log_source, QD_LOG_INFO, "Created SASL plugin config with name %s", sasl_plugin->name);
     return sasl_plugin;
