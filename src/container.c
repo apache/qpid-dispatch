@@ -756,8 +756,18 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     sys_mutex_lock(node->container->lock);
     DEQ_INSERT_TAIL(node->container->links, link);
     sys_mutex_unlock(node->container->lock);
-    link->pn_sess = pn_session(qd_connection_pn(conn));
-    pn_session_set_incoming_capacity(link->pn_sess, cf->incoming_capacity);
+
+    bool open_session = false;
+
+    if (!conn->pn_sess) {
+        open_session = true;
+        conn->pn_sess = pn_session(qd_connection_pn(conn));
+        pn_session_set_incoming_capacity(conn->pn_sess, cf->incoming_capacity);
+    }
+
+    link->pn_sess = conn->pn_sess;
+
+    printf("link->pn_sess=%p\n", (void *)link->pn_sess );
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);
@@ -769,11 +779,14 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
-    link->close_sess_with_link = true;
+    link->close_sess_with_link = false;
 
     pn_link_set_context(link->pn_link, link);
 
-    pn_session_open(link->pn_sess);
+    if (open_session) {
+        pn_session_open(link->pn_sess);
+        printf ("Session opened ***********\n");
+    }
 
     return link;
 }
