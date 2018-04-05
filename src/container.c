@@ -59,7 +59,6 @@ struct qd_link_t {
     void                       *context;
     qd_node_t                  *node;
     bool                        drain_mode;
-    bool                        close_sess_with_link;
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
 };
@@ -122,7 +121,6 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
     link->drain_mode             = pn_link_get_drain(pn_link);
-    link->close_sess_with_link   = false;
 
     pn_link_set_context(pn_link, link);
     node->ntype->outgoing_handler(node->context, link);
@@ -161,7 +159,6 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->node       = node;
     link->drain_mode = pn_link_get_drain(pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
-    link->close_sess_with_link = false;
 
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);
@@ -510,7 +507,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
                 }
 
                 if (pn_link_state(pn_link) & PN_LOCAL_CLOSED) {
-                    if (qd_link->close_sess_with_link && sess)
+                    if (sess)
                         pn_session_close(sess);
                     pn_link_set_context(pn_link, NULL);
                     pn_link_free(pn_link);
@@ -777,7 +774,6 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->node       = node;
     link->drain_mode = pn_link_get_drain(link->pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
-    link->close_sess_with_link = false;
 
     pn_link_set_context(link->pn_link, link);
 
@@ -913,7 +909,7 @@ void qd_link_close(qd_link_t *link)
     if (link->pn_link)
         pn_link_close(link->pn_link);
 
-    if (link->close_sess_with_link && link->pn_sess &&
+    if (link->pn_sess &&
         pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
         pn_session_close(link->pn_sess);
     }
@@ -927,7 +923,7 @@ void qd_link_detach(qd_link_t *link)
         pn_link_close(link->pn_link);
     }
 
-    if (link->close_sess_with_link && link->pn_sess &&
+    if (link->pn_sess &&
         pn_link_state(link->pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
         pn_session_close(link->pn_sess);
     }
