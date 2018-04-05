@@ -575,6 +575,7 @@ qd_config_sasl_plugin_t *qd_dispatch_configure_sasl_plugin(qd_dispatch_t *qd, qd
     qd_connection_manager_t *cm = qd->connection_manager;
 
     qd_config_sasl_plugin_t *sasl_plugin = NEW(qd_config_sasl_plugin_t);
+    ZERO(sasl_plugin);
     DEQ_ITEM_INIT(sasl_plugin);
     DEQ_INSERT_TAIL(cm->config_sasl_plugins, sasl_plugin);
     sasl_plugin->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
