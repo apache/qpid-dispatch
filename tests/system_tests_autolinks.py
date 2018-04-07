@@ -50,6 +50,12 @@ class AutolinkTest(TestCase):
             ('listener', {'port': cls.tester.get_port(), 'role': 'route-container'}),
 
             #
+            # Create a route-container listener and give it a name myListener.
+            # Later on we will create an autoLink which has a connection property of myListener.
+            #
+            ('listener', {'role': 'route-container', 'name': 'myListener', 'port': cls.tester.get_port()}),
+
+            #
             # Set up the prefix 'node' as a prefix for waypoint addresses
             #
             ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
@@ -72,12 +78,20 @@ class AutolinkTest(TestCase):
             #
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
             ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
+
+            #
+            # Note here that the connection is set to a previously declared 'myListener'
+            #
+            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
+            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
+
         ])
 
         cls.router = cls.tester.qdrouterd(name, config)
         cls.router.wait_ready()
         cls.normal_address = cls.router.addresses[0]
-        cls.route_address  = cls.router.addresses[1]
+        cls.route_address = cls.router.addresses[1]
+        cls.ls_route_address = cls.router.addresses[2]
 
     def run_qdstat_general(self):
         cmd = ['qdstat', '--bus', str(AutolinkTest.normal_address), '--timeout', str(TIMEOUT)] + ['-g']
@@ -166,7 +180,6 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_06_manage_autolinks(self):
         """
         Create a route-container connection and a normal receiver.  Ensure that messages sent from the
@@ -175,7 +188,6 @@ class AutolinkTest(TestCase):
         test = ManageAutolinksTest(self.normal_address, self.route_address)
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_07_autolink_attach_with_ext_addr(self):
         """
@@ -187,7 +199,6 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-
     def test_08_autolink_sender_with_ext_addr(self):
         """
         Create a route-container connection and a normal sender.  Ensure that messages sent on the sender
@@ -196,7 +207,6 @@ class AutolinkTest(TestCase):
         test = AutolinkSenderTest('container.4', self.normal_address, self.route_address, 'node.2', 'ext.2')
         test.run()
         self.assertEqual(None, test.error)
-
 
     def test_09_autolink_receiver_with_ext_addr(self):
         """
@@ -207,6 +217,25 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_10_autolink_attach_to_listener(self):
+        """
+        Create two route-container receivers with the same connection name (myListener) and verify that the appropriate
+        links over both connections are attached. Disconnect, reconnect, and verify that the links are re-attached.
+        """
+        test = AutolinkAttachTestWithListenerName(self.ls_route_address, 'myListener.1')
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_11_autolink_multiple_receivers_on_listener(self):
+        """
+        Create two receivers connecting into a route container listener. Create one sender to a normal listener
+        Have the sender send two messages to the address on which the route container listeners are listening and
+        make sure that each receiver gets one message.
+        """
+        test = AutolinkMultipleReceiverUsingMyListenerTest(self.normal_address, self.ls_route_address, 'myListener.1')
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -214,6 +243,67 @@ class Timeout(object):
 
     def on_timer_task(self, event):
         self.parent.timeout()
+
+
+class AutolinkAttachTestWithListenerName(MessagingHandler):
+    def __init__(self, address, node_addr):
+        super(AutolinkAttachTestWithListenerName, self).__init__(prefetch=0)
+        self.address = address
+        self.node_addr = node_addr
+        self.error = None
+        self.sender = None
+        self.receiver = None
+        self.timer = None
+        self.n_rx_attach = 0
+        self.n_tx_attach = 0
+        self.conn = None
+        self.conn1 = None
+        self.conns_reopened = False
+
+    def timeout(self):
+        self.error = "Timeout Expired: n_rx_attach=%d n_tx_attach=%d" % (self.n_rx_attach, self.n_tx_attach)
+        self.conn.close()
+        self.conn1.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+
+        # We create teo connections to the same listener here and we expect attaches to be sent on both connections
+        self.conn = event.container.connect(self.address)
+        self.conn1 = event.container.connect(self.address)
+
+    def on_connection_closed(self, event):
+        if self.n_tx_attach == 2 and not self.conns_reopened:
+            self.conns_reopened = True
+            # Re-connect on connection closure
+            self.conn = event.container.connect(self.address)
+            self.conn1 = event.container.connect(self.address)
+
+    def on_link_opened(self, event):
+        if event.sender:
+            self.n_tx_attach += 1
+            if event.sender.remote_source.address != self.node_addr:
+                self.error = "Expected sender address '%s', got '%s'" % (self.node_addr, event.sender.remote_source.address)
+                self.timer.cancel()
+                self.conn.close()
+        elif event.receiver:
+            self.n_rx_attach += 1
+            if event.receiver.remote_target.address != self.node_addr:
+                self.error = "Expected receiver address '%s', got '%s'" % (self.node_addr, event.receiver.remote_target.address)
+                self.timer.cancel()
+                self.conn.close()
+
+        if self.n_tx_attach == 2 and self.n_rx_attach == 2:
+            self.conn.close()
+            self.conn1.close()
+
+        if self.n_tx_attach == 4 and self.n_rx_attach == 4:
+            self.timer.cancel()
+            self.conn.close()
+            self.conn1.close()
+
+    def run(self):
+        Container(self).run()
 
 
 class AutolinkAttachTest(MessagingHandler):
@@ -295,7 +385,7 @@ class AutolinkCreditTest(MessagingHandler):
         res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
         results = res.results[0]
         attribute_names = res.attribute_names
-        if 6 == results[attribute_names.index('autoLinkCount')]:
+        if 8 == results[attribute_names.index('autoLinkCount')]:
             self.autolink_count_ok = True
 
     def on_link_opening(self, event):
@@ -453,6 +543,83 @@ class AutolinkReceiverTest(MessagingHandler):
     def run(self):
         container = Container(self)
         container.container_id = self.cid
+        container.run()
+
+
+class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
+    def __init__(self, normal_address, route_address, addr):
+        super(AutolinkMultipleReceiverUsingMyListenerTest, self).__init__()
+        self.normal_address = normal_address
+        self.route_address = route_address
+        self.dest = addr
+        self.count = 2
+        self.normal_conn = None
+        self.route_conn1 = None
+        self.route_conn2 = None
+        self.error = None
+        self.last_action = "None"
+        self.n_sent = 0
+        self.rcv1_received = 0
+        self.rcv2_received = 0
+        self.n_settled = 0
+        self.timer = None
+        self.route_conn_rcv1 = None
+        self.route_conn_rcv2 = None
+        self.n_rx_attach1 = 0
+        self.n_rx_attach2 = 0
+        self.sender = None
+        self.ready_to_send = False
+
+    def timeout(self):
+        self.error = "Timeout Expired: messages received by receiver 1=%d messages received by " \
+                     "receiver 2=%d" % (self.rcv1_received, self.rcv2_received)
+        self.normal_conn.close()
+        self.route_conn1.close()
+        self.route_conn2.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.normal_conn = event.container.connect(self.normal_address)
+        self.route_conn1 = event.container.connect(self.route_address)
+        self.route_conn2 = event.container.connect(self.route_address)
+        self.route_conn_rcv1 = event.container.create_receiver(self.route_conn1, self.dest, name="R1")
+        self.route_conn_rcv2 = event.container.create_receiver(self.route_conn2, self.dest, name="R2")
+
+    def on_link_opened(self, event):
+        if event.receiver == self.route_conn_rcv1:
+            self.n_rx_attach1 += 1
+        if event.receiver == self.route_conn_rcv2:
+            self.n_rx_attach2 += 1
+
+        if event.sender and event.sender == self.sender:
+            self.ready_to_send = True
+
+        if self.n_rx_attach1 == 1 and self.n_rx_attach2 == 1:
+            # Both attaches have been received, create a sender
+            if not self.sender:
+                self.sender = event.container.create_sender(self.normal_conn, self.dest)
+
+    def on_sendable(self, event):
+        if self.ready_to_send:
+            if self.n_sent < self.count:
+                msg = Message(body="AutolinkMultipleReceiverUsingMyListenerTest")
+                self.sender.send(msg)
+                self.n_sent += 1
+
+    def on_message(self, event):
+        if event.receiver == self.route_conn_rcv1:
+            self.rcv1_received += 1
+        if event.receiver == self.route_conn_rcv2:
+            self.rcv2_received += 1
+
+        if self.rcv1_received == 1 and self.rcv2_received == 1:
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn1.close()
+            self.route_conn2.close()
+
+    def run(self):
+        container = Container(self)
         container.run()
 
 
