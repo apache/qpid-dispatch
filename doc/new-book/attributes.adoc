@@ -42,7 +42,7 @@ under the License
 :FragmentDir: common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
-:RouterVersion: 1.0.1
+:DispatchRouterVersion: 1.0.1
 
 // Book names
 
@@ -50,24 +50,24 @@ under the License
 
 // Doc links
 
-:BookUrlBase: https://qpid.apache.org/releases/qpid-dispatch-{RouterVersion}
+:DispatchRouterUrlBase: https://qpid.apache.org/releases/qpid-dispatch-{DispatchRouterVersion}
 
-:ManagementEntitiesUrl: {BookUrlBase}/man/managementschema.html
+:ManagementEntitiesUrl: {DispatchRouterUrlBase}/man/managementschema.html
 :ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^] 
 
-:RouterBookUrl: {BookUrlBase}/book/book.html
+:RouterBookUrl: {DispatchRouterUrlBase}/book/book.html
 :RouterBookLink: link:{RouterBookUrl}[{RouterBook}]
 
-:qdmanageManPageUrl: {BookUrlBase}/man/qdmanage.html
+:qdmanageManPageUrl: {DispatchRouterUrlBase}/man/qdmanage.html
 :qdmanageManPageLink: link:{qdmanageManPageUrl}[qdmanage man page^]
 
-:qdrouterdManPageUrl: {BookUrlBase}/man/qdrouterd.html
+:qdrouterdManPageUrl: {DispatchRouterUrlBase}/man/qdrouterd.html
 :qdrouterdManPageLink: link:{qdrouterdManPageUrl}[qdrouterd man page^]
 
-:qdrouterdConfManPageUrl: {BookUrlBase}/man/qdrouterd.conf.html
-:qdrouterdConfManPageLink: link:{qdrouterdManPageUrl}[qdrouterd.conf man page]
+:qdrouterdConfManPageUrl: {DispatchRouterUrlBase}/man/qdrouterd.conf.html
+:qdrouterdConfManPageLink: link:{qdrouterdConfManPageUrl}[qdrouterd.conf man page^]
 
-:qdstatManPageUrl: {BookUrlBase}/man/qdstat.html
+:qdstatManPageUrl: {DispatchRouterUrlBase}/man/qdstat.html
 :qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page^]
 
 :ClientAmqpPythonUrl: https://qpid.apache.org/proton/
