@@ -552,7 +552,7 @@ class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
         self.normal_address = normal_address
         self.route_address = route_address
         self.dest = addr
-        self.count = 2
+        self.count = 10
         self.normal_conn = None
         self.route_conn1 = None
         self.route_conn2 = None
@@ -578,6 +578,9 @@ class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
         self.route_conn2.close()
 
     def on_start(self, event):
+        if self.count % 2 != 0:
+            self.error = "Count must be a multiple of 2"
+            return
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.normal_conn = event.container.connect(self.normal_address)
         self.route_conn1 = event.container.connect(self.route_address)
@@ -612,7 +615,7 @@ class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
         if event.receiver == self.route_conn_rcv2:
             self.rcv2_received += 1
 
-        if self.rcv1_received == 1 and self.rcv2_received == 1:
+        if self.rcv1_received == self.count/2 and self.rcv2_received == self.count/2:
             self.timer.cancel()
             self.normal_conn.close()
             self.route_conn1.close()
