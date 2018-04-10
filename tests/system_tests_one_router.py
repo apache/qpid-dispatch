@@ -2673,8 +2673,13 @@ class PresettledOverflowTest(MessagingHandler):
                             self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
                         else:
                             outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+                            pos_presett = outs.attribute_names.index("presettledDeliveries")
                             pos = outs.attribute_names.index("droppedPresettledDeliveries")
                             results = outs.results[0]
+                            # Enforce presettledDeliveries metric is updated
+                            if results[pos_presett] < 500:
+                                self.error = "When querying router, expected 500 presettled " \
+                                             "deliveries but got " + str(results[pos_presett])
                             # There is 250 from a previous test
                             if results[pos] < 500:
                                 self.error = "When querying router, expected 500 dropped presettled " \
