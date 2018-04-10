@@ -615,7 +615,8 @@ class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
         if event.receiver == self.route_conn_rcv2:
             self.rcv2_received += 1
 
-        if self.rcv1_received == self.count/2 and self.rcv2_received == self.count/2:
+        if (self.rcv1_received + self.rcv2_received == self.count) and \
+                self.rcv2_received > 0 and self.rcv1_received > 0:
             self.timer.cancel()
             self.normal_conn.close()
             self.route_conn1.close()
