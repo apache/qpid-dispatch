@@ -153,7 +153,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
 
     def configure(attributes):
         """Configure an entity and remove it from config"""
-        agent.configure(attributes)
+        agent.configure(attributes, False)
         config.remove(attributes)
 
     modules = set(agent.schema.entity_type("log").attributes["module"].atype.tags)
@@ -166,6 +166,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
         agent.configure(attributes=dict(type="log", module=m))
 
     # Configure and prepare the router before we can activate the agent.
+
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
     qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.

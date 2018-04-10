@@ -175,6 +175,7 @@ def _dump_dict(items):
     """
     return OrderedDict((k, v) for k, v in items if v)
 
+
 class AttributeType(object):
     """
     Definition of an attribute.
@@ -415,7 +416,8 @@ class EntityType(object):
         @param attributes: Map attributes name:value or Entity with attributes property.
             Modifies attributes: adds defaults, converts values.
         """
-        if isinstance(attributes, SchemaEntity): attributes = attributes.attributes
+        if isinstance(attributes, SchemaEntity):
+            attributes = attributes.attributes
 
         try:
             # Add missing values
@@ -447,7 +449,6 @@ class EntityType(object):
                             # illegal. Just fail.
                             raise ValidationError("Both '%s' and '%s' cannot be specified for entity '%s'" %
                                                   (deprecation_name, attr.name, self.short_name))
-
             # Validate attributes.
             for name, value in attributes.iteritems():
                 if name == 'type':
@@ -595,13 +596,15 @@ class Schema(object):
             self.validate_add(a, entities)
             entities.append(a);
 
-    def validate_add(self, attributes, entities):
+    def validate_add(self, attributes, entities, validate=True):
         """
         Validate that attributes would be valid when added to entities.
         Assumes entities are already valid
         @raise ValidationError if adding e violates a global constraint like uniqueness.
         """
-        self.validate_entity(attributes)
+        if validate:
+            self.validate_entity(attributes)
+
         entity_type = self.entity_type(attributes['type'])
         # Find all the unique attribute types present in attributes
         unique = [a for a in entity_type.attributes.values() if a.unique and a.name in attributes]
@@ -642,13 +645,15 @@ class Schema(object):
         else:
             return self.filter(lambda t: t.is_a(type))
 
+
 class SchemaEntity(EntityBase):
     """A map of attributes associated with an L{EntityType}"""
     def __init__(self, entity_type, attributes=None, validate=True, **kwattrs):
         super(SchemaEntity, self).__init__(attributes, **kwattrs)
         self.__dict__['entity_type'] = entity_type
         self.attributes.setdefault('type', entity_type.name)
-        if validate: self.validate()
+        if validate:
+            self.validate()
 
     def _set(self, name, value):
         super(SchemaEntity, self)._set(name, value)

@@ -136,6 +136,7 @@ class PythonImplementation(Implementation):
 
 
 class EntityAdapter(SchemaEntity):
+
     """
     Base class for agent entities with operations as well as attributes.
     """
@@ -156,20 +157,6 @@ class EntityAdapter(SchemaEntity):
         self.__dict__['_policy'] = agent.policy
         self.__dict__['_implementations'] = []
 
-    def validate(self, **kwargs):
-        """Set default identity and name if not already set, then do schema validation"""
-        identity = self.attributes.get("identity")
-        name = self.attributes.get("name")
-        if identity:
-            if not name:
-                self.attributes[u"name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
-        else:
-            self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
-            if not name:
-                self.attributes.setdefault(u'name', self.attributes[u'identity'])
-
-        super(EntityAdapter, self).validate(**kwargs)
-
     def _identifier(self):
         """
         Generate identifier. identity=type/identifier.
@@ -177,7 +164,33 @@ class EntityAdapter(SchemaEntity):
         """
         try: counter = type(self)._identifier_count
         except AttributeError: counter = type(self)._identifier_count = AtomicCount()
+
         return str(counter.next())
+
+    def default_name_identifier(self):
+        identity = self.attributes.get("identity")
+        name = self.attributes.get("name")
+
+        if identity:
+            if not name:
+                self.attributes[u"name"] = "%s/%s" % (self.entity_type.short_name, self._identifier())
+        else:
+            idx = self._identifier()
+            if not idx:
+                try:
+                    counter = type(self)._identifier_count
+                except AttributeError:
+                    counter = type(self)._identifier_count = AtomicCount()
+
+                idx = str(counter.next())
+
+            self.attributes[u"identity"] = "%s/%s" % (self.entity_type.short_name, idx)
+            if not name:
+                self.attributes[u'name'] = self.attributes[u'identity']
+
+    def validate(self, **kwargs):
+        """Set default identity and name if not already set, then do schema validation"""
+        super(EntityAdapter, self).validate(**kwargs)
 
     def _refresh(self):
         """Refresh self.attributes from implementation object(s)."""
@@ -231,8 +244,8 @@ class EntityAdapter(SchemaEntity):
 
 
 class RouterEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None):
-        super(RouterEntity, self).__init__(agent, entity_type, attributes, validate=False)
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        super(RouterEntity, self).__init__(agent, entity_type, attributes, validate)
         # Router is a mix of configuration and operational entity.
         # The statistics attributes are operational not configured.
         self._add_implementation(
@@ -259,7 +272,7 @@ class LogEntity(EntityAdapter):
         if attributes.get("module") == "DEFAULT":
             defaults = dict(enable="info+", includeTimestamp=True, includeSource=False, outputFile="stderr")
             attributes = dict(defaults, **attributes)
-        super(LogEntity, self).__init__(agent, entity_type, attributes, validate=True)
+        super(LogEntity, self).__init__(agent, entity_type, attributes, validate)
 
     def _identifier(self): return self.attributes.get('module')
 
@@ -278,8 +291,8 @@ class LogEntity(EntityAdapter):
 
 
 class PolicyEntity(EntityAdapter):
-    def __init__(self, agent, entity_type, attributes=None):
-        super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate=False)
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        super(PolicyEntity, self).__init__(agent, entity_type, attributes, validate)
         # Policy is a mix of configuration and operational entity.
         # The statistics attributes are operational not configured.
         self._add_implementation(
@@ -355,6 +368,7 @@ class AuthServicePluginEntity(EntityAdapter):
     def __str__(self):
         return super(AuthServicePluginEntity, self).__str__().replace("Entity(", "AuthServicePluginEntity(")
 
+
 class ListenerEntity(EntityAdapter):
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
@@ -369,6 +383,7 @@ class ListenerEntity(EntityAdapter):
 
     def _delete(self):
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
+
 
 class ConnectorEntity(EntityAdapter):
     def create(self):
@@ -385,12 +400,14 @@ class ConnectorEntity(EntityAdapter):
     def __str__(self):
         return super(ConnectorEntity, self).__str__().replace("Entity(", "ConnectorEntity(")
 
+
 class AddressEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_address(self._dispatch, self)
 
     def __str__(self):
         return super(AddressEntity, self).__str__().replace("Entity(", "AddressEntity(")
+
 
 class LinkRouteEntity(EntityAdapter):
     def create(self):
@@ -399,12 +416,14 @@ class LinkRouteEntity(EntityAdapter):
     def __str__(self):
         return super(LinkRouteEntity, self).__str__().replace("Entity(", "LinkRouteEntity(")
 
+
 class AutoLinkEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
 
     def __str__(self):
         return super(AutoLinkEntity, self).__str__().replace("Entity(", "AutoLinkEntity(")
+
 
 class ConsoleEntity(EntityAdapter):
     def __str__(self):
@@ -457,6 +476,7 @@ class RouterLinkEntity(EntityAdapter):
 
 
 class RouterNodeEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('id')
 
@@ -488,6 +508,7 @@ class RouterStatsEntity(EntityAdapter):
 
 
 class AllocatorEntity(EntityAdapter):
+
     def _identifier(self):
         return self.attributes.get('typeName')
 
@@ -534,26 +555,30 @@ class EntityCache(object):
             if not isinstance(type, EntityType): type = self.schema.entity_type(type)
             return map(function, ifilter(lambda e: e.entity_type.is_a(type), self.entities))
 
-    def add(self, entity):
+    def add(self, entity, validate=True):
         """Add an entity to the agent"""
         self.log(LOG_DEBUG, "Add entity: %s" % entity)
-        entity.validate()       # Fill in defaults etc.
+        if validate:
+            entity.validate()       # Fill in defaults etc.
         # Validate in the context of the existing entities for uniqueness
-        self.schema.validate_add(entity, self.entities)
+        entity.default_name_identifier()
+        self.schema.validate_add(entity, self.entities, validate)
         self.entities.append(entity)
 
-    def _add_implementation(self, implementation, adapter=None):
+    def _add_implementation(self, implementation, adapter=None, validate=True):
         """Create an adapter to wrap the implementation object and add it"""
         cls = self.agent.entity_class(implementation.entity_type)
+
         if not adapter:
-            adapter = cls(self.agent, implementation.entity_type, validate=False)
+            adapter = cls(self.agent, implementation.entity_type, validate=validate)
+
         self.implementations[implementation.key] = adapter
         adapter._add_implementation(implementation)
         adapter._refresh()
-        self.add(adapter)
+        self.add(adapter, validate)
 
-    def add_implementation(self, implementation, adapter=None):
-        self._add_implementation(implementation, adapter=adapter)
+    def add_implementation(self, implementation, adapter=None, validate=True):
+        self._add_implementation(implementation, adapter=adapter, validate=validate)
 
     def _remove(self, entity):
         try:
@@ -764,7 +789,7 @@ class Agent(object):
                 "Can't find implementation '%s' for '%s'" % (class_name, entity_type.name))
         return entity_class
 
-    def create_entity(self, attributes):
+    def create_entity(self, attributes, validate=True):
         """Create an instance of the implementation class for an entity"""
 
         if attributes.get('identity') is not None:
@@ -772,7 +797,7 @@ class Agent(object):
         if attributes.get('type') is None:
             raise BadRequestStatus("No 'type' attribute in %s" % attributes)
         entity_type = self.schema.entity_type(attributes['type'])
-        return self.entity_class(entity_type)(self, entity_type, attributes)
+        return self.entity_class(entity_type)(self, entity_type, attributes, validate)
 
     def respond(self, request, status=OK, description=None, body=None):
         """Send a response to the client"""
@@ -838,15 +863,17 @@ class Agent(object):
                 not_implemented(operation, target.type)
             return method(request)
 
-    def _create(self, attributes):
+    def _create(self, attributes, validate=True):
         """Create an entity, called externally or from configuration file."""
-        entity = self.create_entity(attributes)
+        entity = self.create_entity(attributes, validate)
         pointer = entity.create()
         if pointer:
             cimplementation = CImplementation(self.qd, entity.entity_type, pointer)
-            self.entities.add_implementation(cimplementation, entity)
+            self.entities.add_implementation(cimplementation, entity, validate)
         else:
-            self.add_entity(entity)
+            # We have already validated the attributes, there is no need to validate the entity again.
+            self.add_entity(entity, False)
+
         return entity
 
     def create(self, request):
@@ -871,21 +898,21 @@ class Agent(object):
         et.create_check(attributes)
         return (CREATED, self._create(attributes).attributes)
 
-    def configure(self, attributes):
+    def configure(self, attributes, validate=True):
         """Created via configuration file"""
-        self._create(attributes)
+        self._create(attributes, validate)
 
-    def add_entity(self, entity):
+    def add_entity(self, entity, validate=True):
         """Add an entity adapter"""
-        self.entities.add(entity)
+        self.entities.add(entity, validate)
 
     def remove(self, entity):
         self.entities.remove(entity)
 
-    def add_implementation(self, implementation, entity_type_name):
+    def add_implementation(self, implementation, entity_type_name, validate=True):
         """Add an internal python implementation object, it will be wrapped with an entity adapter"""
         self.entities.add_implementation(
-            PythonImplementation(self.entity_type(entity_type_name), implementation))
+            PythonImplementation(self.entity_type(entity_type_name), implementation), validate=validate)
 
     def remove_implementation(self, implementation):
         """Remove and internal python implementation object."""

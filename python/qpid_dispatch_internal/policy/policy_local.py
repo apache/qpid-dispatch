@@ -378,7 +378,7 @@ class AppStats(object):
                 ruleset[PolicyKeys.KW_MAXCONNPERUSER],
                 ruleset[PolicyKeys.KW_MAXCONNPERHOST])
         self._cstats = self._manager.get_agent().qd.qd_dispatch_policy_c_counts_alloc()
-        self._manager.get_agent().add_implementation(self, "vhostStats")
+        self._manager.get_agent().add_implementation(self, "vhostStats", validate=False)
 
     def update_ruleset(self, ruleset):
         """

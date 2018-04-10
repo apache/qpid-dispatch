@@ -44,13 +44,13 @@ class QdSchema(schema.Schema):
         self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
         self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)
 
-    def validate_add(self, attributes, entities):
+    def validate_add(self, attributes, entities, validate=True):
         """
         Check that listeners and connectors can only have role=inter-router if the router has
         mode=interior.
         """
         entities = list(entities) # Iterate twice
-        super(QdSchema, self).validate_add(attributes, entities)
+        super(QdSchema, self).validate_add(attributes, entities, validate)
         entities.append(attributes)
         inter_router = not_interior = None
         for e in entities:
