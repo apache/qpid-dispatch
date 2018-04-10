@@ -21,6 +21,9 @@
 #include <errno.h>
 #include <stdlib.h>
 #include <string.h>
+#include <netdb.h>
+#include <sys/types.h>
+#include <sys/socket.h>
 
 const char * const QD_MA_PREFIX  = "x-opt-qd.";
 const char * const QD_MA_INGRESS = "x-opt-qd.ingress";
@@ -73,11 +76,25 @@ const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL = "amqp:frame-size-too-smal
 const char * const QD_AMQP_PORT_STR = "5672";
 const char * const QD_AMQPS_PORT_STR = "5671";
 
+const char * const QD_AMQP_DFLT_PROTO = "tcp";
+
 int qd_port_int(const char* port_str) {
     if (!strcmp(port_str, QD_AMQP_PORT_STR)) return QD_AMQP_PORT_INT;
     if (!strcmp(port_str, QD_AMQPS_PORT_STR)) return QD_AMQPS_PORT_INT;
     errno = 0;
     unsigned long n = strtoul(port_str, NULL, 10);
     if (errno || n > 0xFFFF) return -1;
+
+    // Port is not an integer (port = 'amqp' or 'amqps')
+    if ( !n && strlen(port_str) > 0 ) {
+        // Resolve service port
+        struct servent *serv_info = getservbyname(port_str, QD_AMQP_DFLT_PROTO);
+        // Service port is resolved
+        if ( serv_info ) {
+
+            return ntohs(serv_info->s_port);
+        }
+    }
+
     return n;
 }
