@@ -17,8 +17,6 @@
  * under the License.
  */
 
-#include <Python.h>
-
 #include "log_private.h"
 #include "entity.h"
 #include "entity_cache.h"
@@ -34,6 +32,7 @@
 #include <string.h>
 #include <time.h>
 #include <syslog.h>
+#include "python_private.h"
 
 #define TEXT_MAX QD_LOG_TEXT_MAX
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)
@@ -444,11 +443,11 @@ PyObject *qd_log_recent_py(long limit) {
         if (!py_entry) goto error;
         int i = 0;
         // NOTE: PyList_SetItem steals a reference so no leak here.
-        PyList_SetItem(py_entry, i++, PyString_FromString(entry->module));
+        PyList_SetItem(py_entry, i++, PyUnicode_FromString(entry->module));
         const char* level = level_name(entry->level);
-        PyList_SetItem(py_entry, i++, level ? PyString_FromString(level) : inc_none());
-        PyList_SetItem(py_entry, i++, PyString_FromString(entry->text));
-        PyList_SetItem(py_entry, i++, entry->file ? PyString_FromString(entry->file) : inc_none());
+        PyList_SetItem(py_entry, i++, level ? PyUnicode_FromString(level) : inc_none());
+        PyList_SetItem(py_entry, i++, PyUnicode_FromString(entry->text));
+        PyList_SetItem(py_entry, i++, entry->file ? PyUnicode_FromString(entry->file) : inc_none());
         PyList_SetItem(py_entry, i++, entry->file ? PyLong_FromLong(entry->line) : inc_none());
         PyList_SetItem(py_entry, i++, PyLong_FromLongLong((PY_LONG_LONG)entry->time.tv_sec));
         assert(i == ENTRY_SIZE);

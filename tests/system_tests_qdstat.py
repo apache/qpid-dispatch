@@ -40,7 +40,8 @@ class QdstatTest(system_test.TestCase):
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
             ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
@@ -140,7 +141,8 @@ try:
             p = self.popen(
                 ['qdstat', '--bus', str(address or self.router.addresses[0]), '--ssl-disable-peer-name-verify',
                  '--timeout', str(system_test.TIMEOUT) ] + args,
-                name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+                name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                universal_newlines=True)
 
             out = p.communicate()[0]
             assert p.returncode == 0, \
@@ -164,11 +166,10 @@ try:
             See test_ssl_* below.
             """
             args = self.get_ssl_args()
-            addrs = [self.router.addresses[i] for i in xrange(4)];
-            urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
-                        zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
+            addrs = [self.router.addresses[i] for i in range(4)];
+            urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs))
+            urls.update(zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
                             (Url(a, scheme="amqps") for a in addrs)))
-
             self.run_qdstat(['--general'] + sum([args[n] for n in arg_names], []),
                             regexp=r'(?s)Router Statistics.*Mode\s*Standalone',
                             address=str(urls[url_name]))
@@ -313,7 +314,8 @@ try:
         def run_qdstat(self, args, regexp=None, address=None):
             p = self.popen(
                 ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
-                name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+                name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+                universal_newlines=True)
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
@@ -332,9 +334,9 @@ try:
                 client_pass = ['--ssl-password', 'client-password'])
             args['client_cert_all'] = args['client_cert'] + args['client_key'] + args['client_pass']
 
-            addrs = [self.router.addresses[i] for i in xrange(4)];
-            urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs) +
-                        zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
+            addrs = [self.router.addresses[i] for i in range(4)];
+            urls = dict(zip(['none', 'strict', 'unsecured', 'auth'], addrs))
+            urls.update(zip(['none_s', 'strict_s', 'unsecured_s', 'auth_s'],
                             (Url(a, scheme="amqps") for a in addrs)))
 
             self.run_qdstat(['--general'] + sum([args[n] for n in arg_names], []),

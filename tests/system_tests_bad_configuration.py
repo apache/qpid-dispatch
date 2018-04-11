@@ -141,10 +141,11 @@ class RouterTestBadConfiguration(TestCase):
         """
         p = self.popen(
             ['qdmanage', '-b', self.address(), 'query', '--type=router', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK,
+            universal_newlines=True)
         out = p.communicate()[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out

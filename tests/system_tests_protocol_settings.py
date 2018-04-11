@@ -25,7 +25,8 @@ X86_64_ARCH = "x86_64"
 skip_test = True
 
 # Dont skip tests on 64 bit architectures.
-p = subprocess.Popen("uname -m", shell=True, stdout=subprocess.PIPE)
+p = subprocess.Popen("uname -m", shell=True, stdout=subprocess.PIPE,
+                     universal_newlines=True)
 if X86_64_ARCH in p.communicate()[0]:
     skip_test = False
 

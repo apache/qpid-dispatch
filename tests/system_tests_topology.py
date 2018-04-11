@@ -17,6 +17,7 @@
 # under the License.
 #
 
+from __future__ import print_function
 
 import unittest2 as unittest
 from proton          import Message, Timeout
@@ -399,7 +400,7 @@ class TopologyFailover ( MessagingHandler ):
 
     def debug_print ( self, text ) :
         if self.debug == True:
-            print time.time(), text
+            print("%s %s" % (time.time(), text))
 
 
     # Shut down everything and exit.

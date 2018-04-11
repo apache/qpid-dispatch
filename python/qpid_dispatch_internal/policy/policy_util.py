@@ -88,7 +88,7 @@ class HostStruct(object):
             self.family = sfamily
             self.binary = socket.inet_pton(family, saddr)
             return
-        except Exception, e:
+        except Exception as e:
             raise PolicyError("HostStruct: '%s' failed to resolve: '%s'" %
                               (hostname, e))
 
@@ -201,7 +201,7 @@ class HostAddr(object):
             return c0 >= 0 and c1 <= 0
         except PolicyError:
             return False
-        except Exception, e:
+        except Exception as e:
             assert isinstance(candidate, HostStruct), \
                 ("Wrong type. Expected HostStruct but received %s" % candidate.__class__.__name__)
             return False

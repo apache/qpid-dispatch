@@ -116,6 +116,29 @@ foreach(py_test_module
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
 endforeach()
 
+# Use tox to run the flake8 python linter tool on all the python
+# sources. Highly recommended if you're hacking the python code
+#
+find_program(TOX_EXE "tox")
+if (TOX_EXE)
+  add_test (NAME python-checker
+            COMMAND ${TOX_EXE}
+            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+  # Once we move to tox >= v1.7.2 we can remove the next
+  # line.  See tox.ini file for details
+  set_tests_properties(python-checker
+                       PROPERTIES
+                       PASS_REGULAR_EXPRESSION "commands succeeded"
+                       FAIL_REGULAR_EXPRESSION "commands failed")
+
+else (TOX_EXE)
+  message(STATUS "Could NOT find 'tox' tool - unable to validate python code")
+endif ()
+
+
+
+
+
 # Additional files to install for running system tests.
 # NOTE: Don't install run.py. A system test of a dispatch installation should pick everything
 # up from standard install locations.

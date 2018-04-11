@@ -22,8 +22,9 @@ Convert --help output of a program into asciidoc text format.
 """
 from __future__ import print_function
 import re, sys
-from qpid_dispatch_internal.compat.subproc import check_output, STDOUT, CalledProcessError
-from os import path
+from qpid_dispatch_internal.compat import PY_STRING_TYPE
+from qpid_dispatch_internal.compat.subproc import check_output
+
 
 def help2txt(help_out):
     VALUE = r"(?:[\w-]+|<[^>]+>)"
@@ -33,6 +34,10 @@ def help2txt(help_out):
     HELP = r"(?:[ \t]+\w.*$)|(?:(?:\n[ \t]+[^-\s].*$)+)" # same line or following lines indented.
     OPT_HELP = r"^\s+(%s)(%s)" % (OPTIONS, HELP)
     SUBHEAD = r"^((?: +\w+)*):$"
+
+    # check_output returns binary in py3
+    if not isinstance(help_out, PY_STRING_TYPE):
+        help_out = help_out.decode()
 
     options = re.search("^Options:$", help_out, re.IGNORECASE | re.MULTILINE)
     if (options): help_out = help_out[options.end():]
@@ -49,7 +54,8 @@ def help2txt(help_out):
     return result
 
 def main(argv):
-    if len(argv) < 2: raise ValueError("Wrong number of arguments: "+usage)
+    if len(argv) < 2: raise ValueError("Wrong number of arguments\nUsage %s"
+                                       " <program> [args,...]" % argv[0])
     program = argv[1:]
     print(help2txt(check_output(program)))
 

@@ -101,6 +101,7 @@ set(qpid_dispatch_SOURCES
   server.c
   timer.c
   trace_mask.c
+  python_utils.c
   )
 
 # USE_LIBWEBSOCKETS is true only if LIBWEBSOCKETS_FOUND

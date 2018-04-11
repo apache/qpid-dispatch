@@ -94,18 +94,20 @@ class FailoverTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
             ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(TIMEOUT) ] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \

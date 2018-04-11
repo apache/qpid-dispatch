@@ -67,12 +67,13 @@ class QdmanageTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
-            raise Exception("%s\n%s" % (e, out))
+        except Exception as e:
+            raise Exception(out if out else str(e))
         return out
 
     def assert_entity_equal(self, expect, actual, copy=None):
@@ -122,14 +123,14 @@ class QdmanageTest(TestCase):
         expect = {'type': DUMMY, 'name': 'mydummyx', 'arg1': 'foo'}
         check('create', expect, json.dumps(expect), copy=['identity'])
 
-        expect_list = [{'type': DUMMY, 'name': 'mydummyx%s' % i} for i in xrange(3)]
+        expect_list = [{'type': DUMMY, 'name': 'mydummyx%s' % i} for i in range(3)]
         check_list('create', expect_list, json.dumps(expect_list), copy=['identity'])
 
         expect['arg1'] = 'bar'
         expect['num1'] = 42
         check('update', expect, json.dumps(expect))
 
-        for i in xrange(3):
+        for i in range(3):
             expect_list[i]['arg1'] = 'bar'
             expect_list[i]['num1'] = i
         check_list('update', expect_list, json.dumps(expect_list))
@@ -260,7 +261,7 @@ class QdmanageTest(TestCase):
             json.loads(self.run_qdmanage("UPDATE --type org.apache.qpid.dispatch.log --name log/DEFAULT outputFile="))
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: CError: Configuration: Failed to open log file ''" in e.message)
+            self.assertTrue("InternalServerErrorStatus: CError: Configuration: Failed to open log file ''" in str(e))
         self.assertTrue(exception)
 
         # Set a valid 'output'
@@ -407,7 +408,7 @@ class QdmanageTest(TestCase):
             self.run_qdmanage(delete_command)
         except Exception as e:
             exception_occurred = True
-            self.assertTrue("NotFoundStatus: No entity with name='" + name + "'" in e.message)
+            self.assertTrue("NotFoundStatus: No entity with name='" + name + "'" in str(e))
 
         self.assertTrue(exception_occurred)
 

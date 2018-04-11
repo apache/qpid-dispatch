@@ -469,11 +469,11 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
         }
     }
 
-    int phase = 0;
+    long phase = 0;
     qd_parsed_field_t *phase_field = qd_parse_value_by_key(in_body,
                                                            qdr_config_exchange_columns[QDR_CONFIG_EXCHANGE_PHASE]);
     if (phase_field) {
-        phase = qd_parse_as_int(phase_field);
+        phase = qd_parse_as_long(phase_field);
         if (phase < 0 || phase > 9) {
             query->status.description = "phase must be in the range 0-9";
             goto exit;
@@ -481,7 +481,7 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
     }
 
     qd_iterator_t *alternate = NULL;
-    int alt_phase = 0;
+    long alt_phase = 0;
     qd_parsed_field_t *alternate_field = qd_parse_value_by_key(in_body,
                                                                qdr_config_exchange_columns[QDR_CONFIG_EXCHANGE_ALTERNATE]);
     if (alternate_field) {
@@ -489,7 +489,7 @@ void qdra_config_exchange_create_CT(qdr_core_t         *core,
         qd_parsed_field_t *alt_phase_field = qd_parse_value_by_key(in_body,
                                                                    qdr_config_exchange_columns[QDR_CONFIG_EXCHANGE_ALT_PHASE]);
         if (alt_phase_field) {
-            alt_phase = qd_parse_as_int(alt_phase_field);
+            alt_phase = qd_parse_as_long(alt_phase_field);
             if (alt_phase < 0 || alt_phase > 9) {
                 query->status.description = "phase must be in the range 0-9";
                 goto exit;
@@ -725,7 +725,7 @@ void qdra_config_binding_create_CT(qdr_core_t         *core,
 
     qd_parsed_field_t *phase_field = qd_parse_value_by_key(in_body,
                                                          qdr_config_binding_columns[QDR_CONFIG_BINDING_NHOP_PHASE]);
-    int phase = (phase_field ? qd_parse_as_int(phase_field) : 0);
+    long phase = (phase_field ? qd_parse_as_long(phase_field) : 0);
     if (phase < 0 || phase > 9) {
         query->status.description = "phase must be in the range 0-9";
         goto exit;

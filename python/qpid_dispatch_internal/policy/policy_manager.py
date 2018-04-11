@@ -23,7 +23,8 @@
 
 import json
 import traceback
-from policy_local import PolicyLocal
+
+from .policy_local import PolicyLocal
 from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR, LOG_WARNING
 
 

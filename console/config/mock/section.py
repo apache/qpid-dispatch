@@ -103,9 +103,9 @@ if __name__ == '__main__':
     c = ConnectorSection(20001)
     s = SslProfileSection()
     g = LogSection(module="ROUTER", enable="trace+")
-    print r
-    print l
-    print c
-    print s
-    print g
+    print(r)
+    print(l)
+    print(c)
+    print(s)
+    print(g)
 

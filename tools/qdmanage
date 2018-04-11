@@ -19,6 +19,8 @@
 # under the License.
 #
 
+from __future__ import print_function
+
 import sys, json, re
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Node, Url
@@ -27,6 +29,8 @@ from optparse import OptionGroup
 from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, \
     main, opts_ssl_domain, opts_url, opts_sasl
 from qpid_dispatch_internal.management.qdrouter import QdSchema
+from qpid_dispatch_internal.compat import PY_TEXT_TYPE
+from qpid_dispatch_internal.compat import PY_STRING_TYPE
 
 INTEGER_TYPE = "integer"
 
@@ -78,7 +82,9 @@ class QdManage():
 
     def run(self, argv):
         # Make all args unicode to avoid encoding arg values as AMQP bytes.
-        self.opts, self.args = self.op.parse_args([unicode(x) for x in argv[1:]])
+        al = [x.decode() if not isinstance(x, PY_TEXT_TYPE) else x
+              for x in argv[1:]]
+        self.opts, self.args = self.op.parse_args(al)
         self.clean_opts()
         if self.opts.indent == -1:
             self.opts.indent = None
@@ -100,18 +106,18 @@ class QdManage():
 
     def print_json(self, data):
         """Print data as JSON"""
-        print json.dumps(data, indent=self.opts.indent)
+        print("%s" % json.dumps(data, indent=self.opts.indent))
 
     def print_result(self, result):
         """Print a string result as-is, else try json dump, else print as-is"""
         if not result: return
-        if isinstance(result, basestring):
-            print result
+        if isinstance(result, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+            print("%s" % result)
         else:
             try:
                 self.print_json(result)
             except ValueError:
-                print result
+                print("%s" % result)
 
     def long_type(self, type):
         if not type or "." in type:
@@ -213,7 +219,7 @@ class QdManage():
     def json_arg(self, value):
         try:
             return json.loads(value)
-        except ValueError, e:
+        except ValueError as e:
             if not re.search(r'["{}\[\]]', value): # Doesn't look like attempted JSON.
                 return value    # Just treat as plain string
             raise ValueError("Invalid JSON '%s': %s" % (value, e))

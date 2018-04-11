@@ -22,6 +22,7 @@ from proton import Message, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
+from qpid_dispatch_internal.compat import UNICODE
 
 # PROTON-828:
 try:
@@ -707,7 +708,8 @@ class LinkRouteTest(MessagingHandler):
         if self.dynamic:
             self.first_receiver = event.container.create_receiver(self.first_conn,
                                                                   dynamic=True,
-                                                                  options=DynamicNodeProperties({"x-opt-qd.address": unicode(self.first_address)}))
+                                                                  options=DynamicNodeProperties({"x-opt-qd.address":
+                                                                                                 UNICODE(self.first_address)}))
         else:
             self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 

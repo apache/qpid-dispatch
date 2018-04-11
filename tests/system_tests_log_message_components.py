@@ -24,6 +24,7 @@ from system_test import TestCase, Qdrouterd, Process, TIMEOUT
 from subprocess import PIPE, STDOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+from qpid_dispatch_internal.compat import BINARY
 
 
 
@@ -35,11 +36,12 @@ class RouterMessageLogTestBase(TestCase):
             ['--bus',
              address or self.address(),
              '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -181,7 +183,7 @@ class LogMessageTest(MessagingHandler):
             msg = Message()
             msg.address = self.address
             msg.id = '123455'
-            msg.user_id = 'testuser'
+            msg.user_id = BINARY('testuser')
             msg.subject = 'test-subject'
             msg.content_type = 'text/html; charset=utf-8'
             msg.correlation_id = 89
@@ -208,4 +210,4 @@ class LogMessageTest(MessagingHandler):
 
 
 if __name__ == '__main__':
-    unittest.main(main_module())
+    unittest.main()

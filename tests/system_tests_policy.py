@@ -24,6 +24,7 @@ from subprocess import PIPE, STDOUT
 from proton import ConnectionException
 from proton.utils import BlockingConnection, LinkDetached
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
+from qpid_dispatch_internal.compat import dict_iteritems
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -89,7 +90,7 @@ class LoadPolicyFromFolder(TestCase):
                 with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
-                            for src, target in replacements.iteritems():
+                            for src, target in dict_iteritems(replacements):
                                 if ipv6_enabled:
                                     line = line.replace(src, target)
                                 else:
@@ -110,11 +111,12 @@ class LoadPolicyFromFolder(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -371,7 +373,7 @@ class VhostPolicyNameField(TestCase):
                 with open(policy_config_path+"/"+f[:-3], 'w') as outfile:
                     with open(policy_config_path + "/" + f) as infile:
                         for line in infile:
-                            for src, target in replacements.iteritems():
+                            for src, target in dict_iteritems(replacements):
                                 if ipv6_enabled:
                                     line = line.replace(src, target)
                                 else:
@@ -392,11 +394,12 @@ class VhostPolicyNameField(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -542,8 +545,8 @@ class VhostPolicyNameField(TestCase):
         try:
             self.run_qdmanage('update --type=vhost --name=dispatch-918 --stdin',
                               input=self.both_policy())
-            self.assertTrue(false) # should not be able to update 'id'
-        except Exception,  e:
+            self.assertTrue(False) # should not be able to update 'id'
+        except Exception as e:
             pass
 
         # update using neither
@@ -585,7 +588,7 @@ class PolicyWarnings(TestCase):
         cls.router = cls.tester.qdrouterd('PolicyWarnings', config, wait=False)
         try:
             cls.router.wait_ready(timeout = 5)
-        except Exception,  e:
+        except Exception as e:
             pass
 
     def test_03_policy_warnings(self):
@@ -615,7 +618,7 @@ class PolicyLinkNamePatternTest(TestCase):
         cls.router = cls.tester.qdrouterd('PolicyLinkNamePatternTest', config, wait=False)
         try:
             cls.router.wait_ready(timeout = 5)
-        except Exception,  e:
+        except Exception as e:
             pass
 
     def address(self):
@@ -624,11 +627,12 @@ class PolicyLinkNamePatternTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -720,8 +724,8 @@ class PolicyLinkNamePatternTest(TestCase):
         qdm_out = "<not written>"
         try:
             qdm_out = self.run_qdmanage('update --type=vhost --name=vhost/$default --stdin', input=self.default_patterns())
-        except Exception, e:
-            self.assertTrue(False, msg=('Error running qdmanage %s' % e.message))
+        except Exception as e:
+            self.assertTrue(False, msg=('Error running qdmanage %s' % str(e)))
         self.assertFalse("PolicyError" in qdm_out)
 
         # attempt an create that should be rejected
@@ -729,9 +733,9 @@ class PolicyLinkNamePatternTest(TestCase):
         exception = False
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-2 --stdin', input=self.disallowed_source())
-        except Exception, e:
+        except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-2' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-2' is invalid:" in str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected
@@ -739,9 +743,9 @@ class PolicyLinkNamePatternTest(TestCase):
         exception = False
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_target())
-        except Exception, e:
+        except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in str(e))
         self.assertTrue(exception)
 
 

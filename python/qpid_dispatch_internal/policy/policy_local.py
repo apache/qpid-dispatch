@@ -23,7 +23,12 @@
 
 import json
 import pdb
-from policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
+from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
+from ..compat import PY_STRING_TYPE
+from ..compat import PY_TEXT_TYPE
+from ..compat import dict_iteritems
+from ..compat import dict_keys
+
 
 """
 Entity implementing the business logic of user connection/access policy.
@@ -148,7 +153,7 @@ class PolicyCompiler(object):
         """
         try:
             v_int = int(val)
-        except Exception, e:
+        except Exception as e:
             errors.append("Value '%s' does not resolve to an integer." % val)
             return False
         if v_int < v_min:
@@ -178,15 +183,11 @@ class PolicyCompiler(object):
         """
         key = PolicyKeys.KW_REMOTE_HOSTS
         # convert val string to list of host specs
-        if type(val) is str:
-            # 'abc, def, mytarget'
-            val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
-        elif type(val) is list:
+        if isinstance(val, list):
             # ['abc', 'def', 'mytarget']
             pass
-        elif type(val) is unicode:
-            # u'abc, def, mytarget'
-            val = [x.strip(' ') for x in str(val).split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+        elif isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+            val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
         else:
             errors.append(
                 "Policy vhost '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
@@ -196,7 +197,7 @@ class PolicyCompiler(object):
             try:
                 coha = HostAddr(coname, PolicyKeys.KC_CONFIG_IP_SEP)
                 list_out.append(coha)
-            except Exception, e:
+            except Exception as e:
                 errors.append("Policy vhost '%s' user group '%s' option '%s' connectionOption '%s' failed to translate: '%s'." %
                                 (vhostname, groupname, key, coname, e))
                 return False
@@ -238,7 +239,7 @@ class PolicyCompiler(object):
         user_targets = False
         user_src_pattern = False
         user_tgt_pattern = False
-        for key, val in policy_in.iteritems():
+        for key, val in dict_iteritems(policy_in):
             if key not in self.allowed_settings_options:
                 warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
                                 (vhostname, usergroup, key))
@@ -277,15 +278,12 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_TARGET_PATTERN
                          ]:
                 # accept a string or list
-                if type(val) is str:
-                    # 'abc, def, mytarget'
-                    val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
-                elif type(val) is list:
+                if isinstance(val, list):
                     # ['abc', 'def', 'mytarget']
                     pass
-                elif type(val) is unicode:
-                    # u'abc, def, mytarget'
-                    val = [x.strip(' ') for x in str(val).split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                elif isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)):
+                    # 'abc, def, mytarget'
+                    val = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                 else:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal value '%s'. Type must be 'str' or 'list' but is '%s;" %
                                   (vhostname, usergroup, key, val, type(val)))
@@ -335,7 +333,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_GROUPS] = {}
 
         # validate the options
-        for key, val in policy_in.iteritems():
+        for key, val in dict_iteritems(policy_in):
             if key not in self.allowed_ruleset_options:
                 warnings.append("Policy vhost '%s' option '%s' is ignored." %
                                 (name, key))
@@ -360,7 +358,7 @@ class PolicyCompiler(object):
                     errors.append("Policy vhost '%s' option '%s' must be of type 'dict' but is '%s'" %
                                   (name, key, type(val)))
                     return False
-                for skey, sval in val.iteritems():
+                for skey, sval in dict_iteritems(val):
                     newsettings = {}
                     if not self.compile_app_settings(name, skey, sval, newsettings, warnings, errors):
                         return False
@@ -371,7 +369,7 @@ class PolicyCompiler(object):
         # Create user-to-group map for looking up user's group
         policy_out[PolicyKeys.RULESET_U2G_MAP] = {}
         if PolicyKeys.KW_GROUPS in policy_out:
-            for group, groupsettings in policy_out[PolicyKeys.KW_GROUPS].iteritems():
+            for group, groupsettings in dict_iteritems(policy_out[PolicyKeys.KW_GROUPS]):
                 if PolicyKeys.KW_USERS in groupsettings:
                     users = [x.strip(' ') for x in groupsettings[PolicyKeys.KW_USERS].split(PolicyKeys.KC_CONFIG_LIST_SEP)]
                     for user in users:
@@ -449,7 +447,7 @@ class AppStats(object):
 
 #
 #
-class ConnectionFacts:
+class ConnectionFacts(object):
     def __init__(self, user, host, app, conn_name):
         self.user = user
         self.host = host
@@ -554,7 +552,7 @@ class PolicyLocal(object):
         """
         Return a list of vhost names in this policy
         """
-        return self.rulesetdb.keys()
+        return dict_keys(self.rulesetdb)
 
     def set_default_vhost(self, name):
         """
@@ -662,7 +660,7 @@ class PolicyLocal(object):
             # Return success
             return usergroup
 
-        except Exception, e:
+        except Exception as e:
             self._manager.log_info(
                 "DENY AMQP Open lookup_user failed for user '%s', rhost '%s', vhost '%s': "
                 "Internal error: %s" % (user, rhost, vhost, e))
@@ -702,7 +700,7 @@ class PolicyLocal(object):
             upolicy.update(ruleset[PolicyKeys.KW_GROUPS][groupname])
             upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[vhost].get_cstats()
             return True
-        except Exception, e:
+        except Exception as e:
             return False
 
     def close_connection(self, conn_id):
@@ -717,7 +715,7 @@ class PolicyLocal(object):
                 stats = self.statsdb[facts.app]
                 stats.disconnect(facts.conn_name, facts.user, facts.host)
                 del self._connections[conn_id]
-        except Exception, e:
+        except Exception as e:
             self._manager.log_trace(
                 "Policy internal error closing connection id %s. %s" % (conn_id, str(e)))
 

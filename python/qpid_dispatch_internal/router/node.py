@@ -18,8 +18,10 @@
 #
 
 from ..dispatch import LOG_INFO, LOG_TRACE, LOG_DEBUG
-from data import LinkState, ProtocolVersion
+from .data import LinkState, ProtocolVersion
 from .address import Address
+from ..compat import dict_items
+
 
 class NodeTracker(object):
     """
@@ -70,7 +72,7 @@ class NodeTracker(object):
         """
         Run through the list of routers and check for expired conditions
         """
-        for node_id, node in self.nodes.items():
+        for node_id, node in dict_items(self.nodes):
             ##
             ## If the node is a neighbor, check the neighbor refresh time to see
             ## if we've waited too long for a refresh.  If so, disconnect the link
@@ -275,7 +277,7 @@ class NodeTracker(object):
         ##
         ## Add the version if we haven't already done so.
         ##
-        if node.version == None:
+        if node.version is None:
             node.version = version
 
         ##
@@ -328,7 +330,7 @@ class NodeTracker(object):
         ##
         ## Add the version if we haven't already done so.
         ##
-        if node.version == None:
+        if node.version is None:
             node.version = version
 
         ##
@@ -361,13 +363,13 @@ class NodeTracker(object):
 
 
     def _allocate_maskbit(self):
-        if self.next_maskbit == None:
+        if self.next_maskbit is None:
             raise Exception("Exceeded Maximum Router Count")
         result = self.next_maskbit
         self.next_maskbit = None
         self.maskbits[result] = True
         for n in range(result + 1, self.max_routers):
-            if self.maskbits[n] == None:
+            if self.maskbits[n] is None:
                 self.next_maskbit = n
                 break
         return result
@@ -375,7 +377,7 @@ class NodeTracker(object):
 
     def _free_maskbit(self, i):
         self.maskbits[i] = None
-        if self.next_maskbit == None or i < self.next_maskbit:
+        if self.next_maskbit is None or i < self.next_maskbit:
             self.next_maskbit = i
 
 
@@ -444,7 +446,7 @@ class RouterNode(object):
 
 
     def remove_link(self):
-        if self.peer_link_id != None:
+        if self.peer_link_id is not None:
             self.peer_link_id = None
             self.adapter.remove_link(self.maskbit)
             self.log(LOG_TRACE, "Node %s link removed" % self.id)
@@ -498,7 +500,7 @@ class RouterNode(object):
 
 
     def is_neighbor(self):
-        return self.peer_link_id != None
+        return self.peer_link_id is not None
 
 
     def request_link_state(self):
@@ -515,7 +517,8 @@ class RouterNode(object):
         reachable.  There's no point in sending it a request if we don't know how to
         reach it.
         """
-        if self.need_ls_request and (self.peer_link_id != None or self.next_hop_router != None):
+        if self.need_ls_request and (self.peer_link_id is not None or
+                                     self.next_hop_router is not None):
             self.need_ls_request = False
             return True
         return False
@@ -526,7 +529,8 @@ class RouterNode(object):
 
 
     def mobile_address_requested(self):
-        if self.need_mobile_request and (self.peer_link_id != None or self.next_hop_router != None):
+        if self.need_mobile_request and (self.peer_link_id is not None or
+                                         self.next_hop_router is not None):
             self.need_mobile_request = False
             return True
         return False
@@ -566,9 +570,9 @@ class RouterNode(object):
 
 
     def update_instance(self, instance, version):
-        if instance == None:
+        if instance is None:
             return False
-        if self.instance == None:
+        if self.instance is None:
             self.instance = instance
             return False
         if self.instance == instance:

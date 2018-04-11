@@ -97,8 +97,8 @@ class Generator(object):
 
     def generate_enums(self):
         enums = [self.EnumGenerator(self, entity, attribute)
-                 for entity in self.schema.entity_types.itervalues()
-                 for attribute in entity.attributes.itervalues()
+                 for entity in self.schema.entity_types.values()
+                 for attribute in entity.attributes.values()
                  if isinstance(attribute.atype, EnumType)]
         self.header('schema_enum', '\n'.join(e.decl() for e in enums))
         self.source('schema_enum', '#include "schema_enum.h"\n\n' + '\n'.join(e.defn() for e in enums))

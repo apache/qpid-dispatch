@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from data import MessageMAR, MessageMAU
+from .data import MessageMAR, MessageMAU
 from ..dispatch import LOG_TRACE
 
 MAX_KEPT_DELTAS = 10

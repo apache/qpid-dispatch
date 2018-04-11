@@ -17,7 +17,7 @@
 # under the License.
 #
 
-from data import MessageRA, MessageLSU, MessageLSR
+from .data import MessageRA, MessageLSU, MessageLSR
 from ..dispatch import LOG_TRACE
 
 class LinkStateEngine(object):

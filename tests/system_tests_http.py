@@ -87,7 +87,7 @@ class RouterTestHttp(TestCase):
                 self.start()
             def run(self):
                 try: test(self.port)
-                except Exception, e: self.ex = e
+                except Exception as e: self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
         for t in threads: t.join()
         for t in threads:

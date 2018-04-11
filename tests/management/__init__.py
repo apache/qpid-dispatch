@@ -18,7 +18,6 @@
 ##
 
 """Management unit test package"""
-
-from schema import *
-from qdrouter import *
-from entity import *
+from .schema import *
+from .qdrouter import *
+from .entity import *

@@ -48,7 +48,8 @@ class DefaultDistributionTest(TestCase):
     def run_qdstat(self, args, regexp=None, address=None):
         p = self.popen(
             ['qdstat', '--bus', str(address or self.address), '--timeout', str(TIMEOUT) ] + args,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \

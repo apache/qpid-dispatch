@@ -65,7 +65,8 @@ class CommandLineTest(TestCase):
             [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
              '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
              '-c', self.config.write(config_file_name), '-P', pid_file_name],
-            stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
+            stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK,
+            universal_newlines=True)
         out = pipe.communicate()[0]
         wait_port(CommandLineTest.testport)
 
@@ -127,7 +128,8 @@ class CommandLineTest2(TestCase):
             [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
              '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
              '-c', self.config.write(config_file_name), '-P', pid_file_name],
-            stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
+            stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK,
+            universal_newlines=True)
         out = pipe.communicate()[0]
         wait_port(CommandLineTest2.testport)
 

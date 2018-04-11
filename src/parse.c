@@ -22,6 +22,10 @@
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/amqp.h>
 
+#include <stdio.h>
+#include <limits.h>
+#include <assert.h>
+
 DEQ_DECLARE(qd_parsed_field_t, qd_parsed_field_list_t);
 
 struct qd_parsed_field_t {
@@ -357,29 +361,9 @@ qd_iterator_t *qd_parse_typed(qd_parsed_field_t *field)
 uint32_t qd_parse_as_uint(qd_parsed_field_t *field)
 {
     uint32_t result = 0;
-
-    qd_iterator_reset(field->raw_iter);
-
-    switch (field->tag) {
-    case QD_AMQP_UINT:
-        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 24;
-        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 16;
-        // fallthrough
-
-    case QD_AMQP_USHORT:
-        result |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 8;
-        // Fall Through...
-
-    case QD_AMQP_UBYTE:
-    case QD_AMQP_SMALLUINT:
-    case QD_AMQP_BOOLEAN:
-        result |= (uint32_t) qd_iterator_octet(field->raw_iter);
-        break;
-
-    case QD_AMQP_TRUE:
-        result = 1;
-        break;
-    }
+    uint64_t tmp = qd_parse_as_ulong(field);
+    if (tmp <= UINT_MAX)
+        result = tmp;
 
     return result;
 }
@@ -398,17 +382,50 @@ uint64_t qd_parse_as_ulong(qd_parsed_field_t *field)
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 48;
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 40;
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 32;
+        // Fall Through...
+
+    case QD_AMQP_UINT:
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 24;
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 16;
+        // Fall Through...
+
+    case QD_AMQP_USHORT:
         result |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 8;
         // Fall Through...
 
+    case QD_AMQP_BOOLEAN:
+    case QD_AMQP_UBYTE:
+    case QD_AMQP_SMALLUINT:
     case QD_AMQP_SMALLULONG:
         result |= (uint64_t) qd_iterator_octet(field->raw_iter);
-        // Fall Through...
-
-    case QD_AMQP_ULONG0:
         break;
+
+    case QD_AMQP_TRUE:
+        result = 1;
+        break;
+
+    case QD_AMQP_FALSE:
+    case QD_AMQP_UINT0:
+    case QD_AMQP_ULONG0:
+        // already zeroed
+        break;
+
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
+        {
+            char buf[72];
+            unsigned long tmp;
+            qd_iterator_strncpy(field->raw_iter, buf, sizeof(buf));
+            if (sscanf(buf, "%lu", &tmp) == 1)
+                result = tmp;
+        }
+        break;
+
+    default:
+        // catch any missing types during development
+        assert(false);
     }
 
     return result;
@@ -418,32 +435,9 @@ uint64_t qd_parse_as_ulong(qd_parsed_field_t *field)
 int32_t qd_parse_as_int(qd_parsed_field_t *field)
 {
     int32_t result = 0;
-
-    qd_iterator_reset(field->raw_iter);
-
-    switch (field->tag) {
-    case QD_AMQP_INT:
-        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 24;
-        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 16;
-        // Fall Through...
-
-    case QD_AMQP_SHORT:
-        result |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 8;
-        // Fall Through...
-
-    case QD_AMQP_BYTE:
-    case QD_AMQP_BOOLEAN:
-        result |= (int32_t) qd_iterator_octet(field->raw_iter);
-        break;
-
-    case QD_AMQP_SMALLINT:
-        result = (int8_t) qd_iterator_octet(field->raw_iter);
-        break;
-
-    case QD_AMQP_TRUE:
-        result = 1;
-        break;
-    }
+    int64_t tmp = qd_parse_as_long(field);
+    if (INT_MIN <= tmp && tmp <= INT_MAX)
+        result = tmp;
 
     return result;
 }
@@ -467,9 +461,56 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field)
         result |= (uint64_t) qd_iterator_octet(field->raw_iter);
         break;
 
+    case QD_AMQP_INT:
+        {
+            int32_t i32 = ((int32_t) qd_iterator_octet(field->raw_iter)) << 24;
+            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 16;
+            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 8;
+            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter));
+            result = i32;
+        }
+        break;
+
+    case QD_AMQP_SHORT:
+        {
+            int16_t i16 = ((int16_t) qd_iterator_octet(field->raw_iter)) << 8;
+            i16 |= ((int16_t) qd_iterator_octet(field->raw_iter));
+            result = i16;
+        } break;
+
+    case QD_AMQP_BYTE:
+    case QD_AMQP_BOOLEAN:
     case QD_AMQP_SMALLLONG:
+    case QD_AMQP_SMALLINT:
         result = (int8_t) qd_iterator_octet(field->raw_iter);
         break;
+
+    case QD_AMQP_TRUE:
+        result = 1;
+        break;
+
+    case QD_AMQP_FALSE:
+    case QD_AMQP_UINT0:
+    case QD_AMQP_ULONG0:
+        // already zeroed
+        break;
+
+    case QD_AMQP_STR8_UTF8:
+    case QD_AMQP_STR32_UTF8:
+    case QD_AMQP_SYM8:
+    case QD_AMQP_SYM32:
+        {
+            char buf[64];
+            long int tmp;
+            qd_iterator_strncpy(field->raw_iter, buf, sizeof(buf));
+            if (sscanf(buf, "%li", &tmp) == 1)
+                result = tmp;
+        }
+        break;
+
+    default:
+        // catch any missing types during development
+        assert(false);
     }
 
     return result;

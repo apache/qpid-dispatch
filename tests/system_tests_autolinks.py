@@ -97,7 +97,8 @@ class AutolinkTest(TestCase):
         cmd = ['qdstat', '--bus', str(AutolinkTest.normal_address), '--timeout', str(TIMEOUT)] + ['-g']
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, "qdstat exit status %s, output:\n%s" % (p.returncode, out)
@@ -106,11 +107,12 @@ class AutolinkTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', AutolinkTest.normal_address, '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -766,7 +768,7 @@ class ManageAutolinksTest(MessagingHandler):
             self.send_ops()
 
     def on_message(self, event):
-        if event.message.properties['statusCode'] / 100 != 2:
+        if event.message.properties['statusCode'] // 100 != 2:
             self.error = 'Op Error: %d %s' % (event.message.properties['statusCode'],
                                               event.message.properties['statusDescription'])
             self.timer.cancel()

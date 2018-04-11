@@ -413,7 +413,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         // Use the specified phase if present.  Otherwise default based on the direction:
         // Phase 0 for outgoing links and phase 1 for incoming links.
         //
-        int phase = phase_field ? qd_parse_as_int(phase_field) : (dir == QD_OUTGOING ? 0 : 1);
+        long phase = phase_field ? qd_parse_as_long(phase_field) : (dir == QD_OUTGOING ? 0 : 1);
 
         //
         // Validate the phase

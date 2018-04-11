@@ -17,6 +17,8 @@
 # under the License.
 #
 
+from __future__ import print_function
+
 import unittest2 as unittest
 
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
