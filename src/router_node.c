@@ -1200,6 +1200,18 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
         qdr_error_copy(error, cond);
     }
 
+    //
+    // If the link is only half open, then this DETACH constitutes the rejection of
+    // an incoming ATTACH.  We must nullify the source and target in order to be
+    // compliant with the AMQP specification.  This is because Proton will generate
+    // the missing ATTACH before the DETACH and will include spurious terminus data
+    // if we don't nullify it here.
+    //
+    if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
+        pn_terminus_set_type(pn_link_source(pn_link), PN_UNSPECIFIED);
+        pn_terminus_set_type(pn_link_target(pn_link), PN_UNSPECIFIED);
+    }
+
     if (close)
         qd_link_close(qlink);
     else
