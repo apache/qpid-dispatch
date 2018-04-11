@@ -182,8 +182,9 @@ class AutolinkTest(TestCase):
 
     def test_06_manage_autolinks(self):
         """
-        Create a route-container connection and a normal receiver.  Ensure that messages sent from the
-        route-container are received by the receiver and that settlement propagates back to the sender.
+        Create a route-container connection and a normal receiver.  Use the management API to create
+        autolinks to the route container.  Verify that the links are created.  Delete the autolinks.
+        Verify that the links are closed without error.
         """
         test = ManageAutolinksTest(self.normal_address, self.route_address)
         test.run()
@@ -726,6 +727,12 @@ class ManageAutolinksTest(MessagingHandler):
                 self.send_ops()
 
     def on_link_remote_close(self, event):
+        if event.link.remote_condition != None:
+            self.error = "Received unexpected error on link-close: %s" % event.link.remote_condition.name
+            self.timer.cancel()
+            self.normal_conn.close()
+            self.route_conn.close()
+
         self.n_detached += 1
         if self.n_detached == self.count:
             self.timer.cancel()
