@@ -1208,8 +1208,10 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
     // if we don't nullify it here.
     //
     if (pn_link_state(pn_link) & PN_LOCAL_UNINIT) {
-        pn_terminus_set_type(pn_link_source(pn_link), PN_UNSPECIFIED);
-        pn_terminus_set_type(pn_link_target(pn_link), PN_UNSPECIFIED);
+        if (pn_link_is_receiver(pn_link))
+            pn_terminus_set_type(pn_link_target(pn_link), PN_UNSPECIFIED);
+        else
+            pn_terminus_set_type(pn_link_source(pn_link), PN_UNSPECIFIED);
     }
 
     if (close)
