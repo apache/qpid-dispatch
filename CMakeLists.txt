@@ -47,8 +47,8 @@ include(FindPythonLibs)
 
 # Find python-unittest2
 execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-			RESULT_VARIABLE UNITTEST2_MISSING
-			ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+  RESULT_VARIABLE UNITTEST2_MISSING
+  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 enable_testing()
 if(UNITTEST2_MISSING)
   message(STATUS "WARNING: python-unittest2 is not installed. ***unit tests cannot be run***" )
@@ -60,7 +60,7 @@ endif(UNITTEST2_MISSING)
 
 
 if (NOT PYTHONLIBS_FOUND)
-     message(FATAL_ERROR "Python Development Libraries are needed.")
+  message(FATAL_ERROR "Python Development Libraries are needed.")
 endif (NOT PYTHONLIBS_FOUND)
 
 set (SO_VERSION_MAJOR 2)
@@ -68,12 +68,12 @@ set (SO_VERSION_MINOR 0)
 set (SO_VERSION "${SO_VERSION_MAJOR}.${SO_VERSION_MINOR}")
 
 if (NOT DEFINED LIB_SUFFIX)
-    get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
-    if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
-        set(LIB_SUFFIX 64)
-    else()
-        set(LIB_SUFFIX "")
-    endif()
+  get_property(LIB64 GLOBAL PROPERTY FIND_LIBRARY_USE_LIB64_PATHS)
+  if ("${LIB64}" STREQUAL "TRUE" AND ${CMAKE_SIZEOF_VOID_P} STREQUAL "8")
+    set(LIB_SUFFIX 64)
+  else()
+    set(LIB_SUFFIX "")
+  endif()
 endif()
 
 set(INCLUDE_INSTALL_DIR include CACHE PATH "Include file directory")
@@ -93,11 +93,11 @@ set(RUN ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/run.py)
 
 # define the configuration directory based on whether or not the install prefix is defined
 if(NOT DEFINED SYSCONF_INSTALL_DIR)
-    if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
-        set(SYSCONF_INSTALL_DIR "/etc")
-    else()
-        set(SYSCONF_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/etc")
-    endif()
+  if(CMAKE_INSTALL_PREFIX STREQUAL "/usr")
+    set(SYSCONF_INSTALL_DIR "/etc")
+  else()
+    set(SYSCONF_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/etc")
+  endif()
 endif()
 
 set(QPID_DISPATCH_CONFDIR ${SYSCONF_INSTALL_DIR}/qpid-dispatch)
@@ -156,42 +156,42 @@ endif (USE_TSAN)
 ## Include directories used by all sub-directories.
 ##
 include_directories(
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_BINARY_DIR}/include
-    ${Proton_Proactor_INCLUDE_DIRS}
-    ${Proton_Core_INCLUDE_DIRS}
-    ${PYTHON_INCLUDE_PATH}
-    )
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+  ${CMAKE_CURRENT_BINARY_DIR}/include
+  ${Proton_Proactor_INCLUDE_DIRS}
+  ${Proton_Core_INCLUDE_DIRS}
+  ${PYTHON_INCLUDE_PATH}
+  )
 
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-Werror)
- add_compile_options(-Wall)
- include(CheckCCompilerFlag)
- check_c_compiler_flag(-Wpedantic HAS_PEDANTIC_FLAG)
- if (HAS_PEDANTIC_FLAG)
+  add_compile_options(-Werror)
+  add_compile_options(-Wall)
+  include(CheckCCompilerFlag)
+  check_c_compiler_flag(-Wpedantic HAS_PEDANTIC_FLAG)
+  if (HAS_PEDANTIC_FLAG)
     add_compile_options(-Wpedantic)
- endif(HAS_PEDANTIC_FLAG)
- add_compile_options(-std=gnu99)
- add_compile_options(-pthread)
- if (CMAKE_BUILD_TYPE MATCHES "Coverage")
-   set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
-   set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
-   set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
-   set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
-   mark_as_advanced(
-     CMAKE_C_FLAGS_COVERAGE
-     CMAKE_EXE_LINKER_FLAGS_COVERAGE
-     CMAKE_MODULE_LINKER_FLAGS_COVERAGE
-     CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
-   make_directory(${CMAKE_BINARY_DIR}/coverage_results)
-   add_custom_target(coverage
-     WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
-     COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
- endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
+  endif(HAS_PEDANTIC_FLAG)
+  add_compile_options(-std=gnu99)
+  add_compile_options(-pthread)
+  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
+    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
+    set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
+    set (CMAKE_MODULE_LINKER_FLAGS_COVERAGE "--coverage")
+    set (CMAKE_SHARED_LINKER_FLAGS_COVERAGE "--coverage")
+    mark_as_advanced(
+      CMAKE_C_FLAGS_COVERAGE
+      CMAKE_EXE_LINKER_FLAGS_COVERAGE
+      CMAKE_MODULE_LINKER_FLAGS_COVERAGE
+      CMAKE_SHARED_LINKER_FLAGS_COVERAGE)
+    make_directory(${CMAKE_BINARY_DIR}/coverage_results)
+    add_custom_target(coverage
+      WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
+      COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
+  endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
 else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
- add_compile_options(-xc99)
- add_compile_options(-errwarn=%all)
- add_compile_options(-lpthread)
+  add_compile_options(-xc99)
+  add_compile_options(-errwarn=%all)
+  add_compile_options(-lpthread)
 endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 
 if (CMAKE_C_COMPILER_ID MATCHES "Clang")
@@ -213,9 +213,9 @@ install(FILES etc/sasl2/qdrouterd.conf DESTINATION ${SYSCONF_INSTALL_DIR}/sasl2)
 
 # Tools
 install(PROGRAMS
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat
-    ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdmanage
-    DESTINATION bin)
+  ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdstat
+  ${CMAKE_CURRENT_SOURCE_DIR}/tools/qdmanage
+  DESTINATION bin)
 
 
 # Doc files
