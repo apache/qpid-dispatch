@@ -78,7 +78,7 @@ if(BUILD_DOCS)
     list(APPEND GENERATED_TXT "${output}")
   endmacro()
 
-  help2txt(${CMAKE_BINARY_DIR}/router/qdrouterd)
+  help2txt(${CMAKE_BINARY_DIR}/bin/qdrouterd)
   help2txt(${tools}/qdmanage)
   help2txt(${tools}/qdstat)
 

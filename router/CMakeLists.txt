@@ -23,8 +23,6 @@ set(DEFAULT_DISPATCH_PYTHON_DIR ${QPID_DISPATCH_PYTHON_DIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
 
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
 ##
 ## Build the router application
 ##
@@ -35,6 +33,9 @@ set(router_SOURCES
 SET(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/${QPID_DISPATCH_HOME}")
 
 add_executable(qdrouterd ${router_SOURCES})
-target_link_libraries(qdrouterd qpid-dispatch)
+target_link_libraries(qdrouterd PUBLIC qpid-dispatch)
+target_include_directories(qdrouterd
+    PRIVATE
+    ${CMAKE_CURRENT_BINARY_DIR})
 
 install(TARGETS qdrouterd RUNTIME DESTINATION sbin)

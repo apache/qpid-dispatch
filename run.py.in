@@ -46,7 +46,11 @@ def dedup(l):
 sys.path = dedup([
     "${CMAKE_SOURCE_DIR}/python",
     "${CMAKE_BINARY_DIR}/python",
-    "${CMAKE_SOURCE_DIR}/tests"
+    "${CMAKE_SOURCE_DIR}/tests",
+    os.path.join(os.path.dirname("${Proton_LIBRARY}"),
+                                 'proton',
+                                 'bindings',
+                                 'python')
 ] + sys.path)
 
 def getpath(env):
@@ -60,8 +64,11 @@ test_runner = "${TEST_RUNNER}"
 
 env_vars = {
     'PYTHONPATH': os.pathsep.join(sys.path),
+    'LD_LIBRARY_PATH': os.pathsep.join(getpath('LD_LIBRARY_PATH')
+                                       + [os.path.dirname("${Proton_LIBRARY}")]),
     'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tests'),
+                                   os.path.join("${CMAKE_BINARY_DIR}", 'bin'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'router'),
                                    os.path.join("${CMAKE_SOURCE_DIR}", 'tools'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tools'),

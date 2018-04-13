@@ -17,6 +17,9 @@
 ## under the License.
 ##
 
+cmake_minimum_required(VERSION 3.4)
+project(qpid-dispatch C)
+
 # Set default build type. Must come before project() which sets default to ""
 if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
@@ -27,9 +30,7 @@ if (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
 message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
-project(qpid-dispatch C)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules")
 
 # Build time switch to turn off memory pooling.
 option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
@@ -37,13 +38,22 @@ option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
-cmake_minimum_required(VERSION 2.6)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
 include(CheckIncludeFiles)
-include(FindPythonInterp)
-include(FindPythonLibs)
+
+find_package(PythonInterp REQUIRED)
+find_package(PythonLibs REQUIRED)
+if (PYTHONLIBS_FOUND)
+  if(NOT TARGET PythonLibs::PythonLibs)
+    add_library(PythonLibs::PythonLibs UNKNOWN IMPORTED)
+    set_target_properties(PythonLibs::PythonLibs PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${PYTHON_INCLUDE_DIRS}")
+    set_target_properties(PythonLibs::PythonLibs PROPERTIES
+      IMPORTED_LOCATION ${PYTHON_LIBRARIES})
+  endif()
+endif()
 
 # Find python-unittest2
 execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
@@ -111,26 +121,26 @@ endif (NOT COMMAND add_compile_options)
 ##
 ## Find dependencies
 ##
-find_library(pthread_lib pthread)
-find_library(dl_lib dl)
-find_library(rt_lib rt)
+if (UNIX)
+  find_package(Glibc REQUIRED dl rt)
+endif()
+find_package(Threads REQUIRED)
 find_package(Proton REQUIRED Core Proactor)
 
-message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
-
 ## Optional dependencies
-include(FindLibWebSockets)
+find_package(LibWebSockets)
 option(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ${LIBWEBSOCKETS_FOUND})
 
-##
-## Find Valgrind
-##
-find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
-mark_as_advanced(VALGRIND_EXECUTABLE)
-find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
 option(USE_VALGRIND "Use valgrind when running tests" OFF)
 
-if (USE_VALGRIND)
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows" AND USE_VALGRIND)
+  ##
+  ## Find Valgrind
+  ##
+  find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program")
+  mark_as_advanced(VALGRIND_EXECUTABLE)
+  find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
+
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     message(WARNING "Building for coverage analysis; disabling valgrind run-time error detection")
   else ()
@@ -138,32 +148,24 @@ if (USE_VALGRIND)
   endif ()
 endif()
 
-option(USE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
-if (USE_SANITIZERS)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined")
-  add_compile_options(-g)
-  add_compile_options(-fno-omit-frame-pointer)
-endif (USE_SANITIZERS)
+if (NOT USE_VALGRIND AND (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "GNU"))
+  option(USE_SANITIZERS "Compile with sanitizers (ASan, UBSan, TSan); incompatible with Valgrind" OFF)
+  if (USE_SANITIZERS)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=address -fsanitize=leak -fsanitize=undefined")
+  endif (USE_SANITIZERS)
 
-option(USE_TSAN "Compile with ThreadSanitizer (TSan); incompatible with Valgrind" OFF)
-if (USE_TSAN)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
-  add_compile_options(-g)
-  add_compile_options(-fno-omit-frame-pointer)
-endif (USE_TSAN)
+  option(USE_TSAN "Compile with ThreadSanitizer (TSan); incompatible with Valgrind" OFF)
+  if (USE_TSAN)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fsanitize=thread")
+  endif (USE_TSAN)
 
-##
-## Include directories used by all sub-directories.
-##
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}/include
-  ${CMAKE_CURRENT_BINARY_DIR}/include
-  ${Proton_Proactor_INCLUDE_DIRS}
-  ${Proton_Core_INCLUDE_DIRS}
-  ${PYTHON_INCLUDE_PATH}
-  )
+  if (USE_SANITIZERS OR USE_TSAN)
+    add_compile_options(-g)
+    add_compile_options(-fno-omit-frame-pointer)
+  endif()
+endif()
 
-if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
+if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_C_COMPILER_ID MATCHES "GNU")
   add_compile_options(-Werror)
   add_compile_options(-Wall)
   include(CheckCCompilerFlag)
@@ -172,7 +174,11 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
     add_compile_options(-Wpedantic)
   endif(HAS_PEDANTIC_FLAG)
   add_compile_options(-std=gnu99)
-  add_compile_options(-pthread)
+
+  if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wno-gnu-statement-expression)
+  endif()
+
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
     set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
@@ -188,19 +194,20 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
       WORKING_DIRECTORY ${CMAKE_BINARY_DIR}/coverage_results
       COMMAND ${CMAKE_SOURCE_DIR}/bin/record-coverage.sh ${CMAKE_SOURCE_DIR} ${CMAKE_BINARY_DIR})
   endif(CMAKE_BUILD_TYPE MATCHES "Coverage")
-else (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
+
+  if (NOT (USE_SANITIZERS OR USE_TSAN))
+    set(CATCH_UNDEFINED "-Wl,-z,defs")
+  endif()
+
+elseif (CMAKE_C_COMPILER_ID MATCHES "SunPro")
   add_compile_options(-xc99)
   add_compile_options(-errwarn=%all)
   add_compile_options(-lpthread)
-endif (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
 
-if (CMAKE_C_COMPILER_ID MATCHES "Clang")
-  add_compile_options(-Wno-gnu-statement-expression)
+elseif(CMAKE_C_COMPILER_ID MATCHES "MSVC")
+  # empty for now
 endif()
 
-if (NOT (USE_SANITIZERS OR USE_TSAN))
-  set(CATCH_UNDEFINED "-Wl,-z,defs")
-endif ()
 
 ##
 ## Header file installation

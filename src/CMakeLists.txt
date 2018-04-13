@@ -36,19 +36,6 @@ add_custom_command (
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   DEPENDS ${GENERATOR_DEPENDS})
   
-if(NOT LIBWEBSOCKETS_FOUND)
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
-  )
-else()
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${LIBWEBSOCKETS_INCLUDE_DIRS}
-  )
-endif()
-
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
   amqp.c
@@ -123,17 +110,35 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-if(NOT LIBWEBSOCKETS_FOUND)
-  target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
-else()
-  target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
+target_link_libraries(qpid-dispatch
+  PUBLIC
+  PythonLibs::PythonLibs
+  Threads::Threads
+  Glibc::dl
+  Glibc::rt
+  Proton::Proactor)
+
+target_include_directories(qpid-dispatch
+    PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
+    PUBLIC
+    ${CMAKE_SOURCE_DIR}/include)
+
+if(LIBWEBSOCKETS_FOUND)
+  target_link_libraries(qpid-dispatch PUBLIC  WebSockets::WebSockets)
 endif()
-set_target_properties(qpid-dispatch PROPERTIES
-  LINK_FLAGS "${CATCH_UNDEFINED}"
-  )
+if (CATCH_UNDEFINED)
+  set_target_properties(qpid-dispatch PROPERTIES LINK_FLAGS "${CATCH_UNDEFINED}")
+endif()
+
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so")
+if (UNIX)
+  set (QPID_DISPATCH_LIB "libqpid-dispatch.so")
+else()
+  set (QPID_DISPATCH_LIB "qpid-dispatch.dll")
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)

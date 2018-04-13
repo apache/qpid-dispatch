@@ -62,7 +62,7 @@ class CommandLineTest(TestCase):
         :return:
         """
         pipe = self.popen(
-            [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
+            ['qdrouterd', '-d',
              '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
              '-c', self.config.write(config_file_name), '-P', pid_file_name],
             stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
@@ -124,7 +124,7 @@ class CommandLineTest2(TestCase):
         :return:
         """
         pipe = self.popen(
-            [os.path.join(os.environ.get('BUILD_DIR'), 'router', 'qdrouterd'), '-d',
+            ['qdrouterd', '-d',
              '-I', os.path.join(os.environ.get('SOURCE_DIR'), 'python'),
              '-c', self.config.write(config_file_name), '-P', pid_file_name],
             stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
