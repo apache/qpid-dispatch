@@ -24,7 +24,7 @@
 import json
 import traceback
 from policy_local import PolicyLocal
-from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR
+from ..dispatch import LogAdapter, LOG_INFO, LOG_TRACE, LOG_DEBUG, LOG_ERROR, LOG_WARNING
 
 
 
@@ -63,6 +63,9 @@ class PolicyManager(object):
 
     def log_error(self, text):
         self._log(LOG_ERROR, text)
+
+    def log_warning(self, text):
+        self._log(LOG_WARNING, text)
 
     def get_agent(self):
         return self._agent

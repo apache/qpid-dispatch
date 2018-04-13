@@ -565,6 +565,35 @@ class VhostPolicyNameField(TestCase):
         self.assertFalse(isoFound)
 
 
+class PolicyWarnings(TestCase):
+    """
+    Verify that specifying a policy that generates a warning does
+    not cause the router to exit without showing the warning.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyWarnings, cls).setUpClass()
+        listen_port = cls.tester.get_port()
+        policy_config_path = os.path.join(DIR, 'policy-6')
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': listen_port}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('PolicyWarnings', config, wait=False)
+        try:
+            cls.router.wait_ready(timeout = 5)
+        except Exception,  e:
+            pass
+
+    def test_03_policy_warnings(self):
+        with  open('../setUpClass/PolicyWarnings.log', 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            critical_lines = [s for s in log_lines if "'PolicyManager' object has no attribute 'log_warning'" in s]
+            self.assertTrue(len(critical_lines) == 0, msg='Policy manager does not forward policy warnings and shuts down instead.')
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
