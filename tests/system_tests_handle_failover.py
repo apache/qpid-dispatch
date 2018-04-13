@@ -17,12 +17,13 @@
 # under the License.
 #
 
+from threading import Timer
 import unittest2 as unittest
 import json, re
-from time import sleep
 from system_test import main_module, TIMEOUT
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
 from subprocess import PIPE, STDOUT
+
 
 class FailoverTest(TestCase):
     inter_router_port = None
@@ -80,6 +81,13 @@ class FailoverTest(TestCase):
 
         cls.routers[1].wait_router_connected('QDR.B')
 
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+        self.success = False
+        self.timer_delay = 2
+        self.max_attempts = 5
+        self.attempts = 0
+
     def address(self):
         return self.routers[1].addresses[0]
 
@@ -116,6 +124,33 @@ class FailoverTest(TestCase):
         output = json.loads(self.run_qdmanage(query_command))
         self.assertIn(FailoverTest.failover_list, output[0]['failoverUrls'])
 
+    def schedule_failover_test(self):
+        if self.attempts < self.max_attempts:
+            if not self.success:
+                Timer(self.timer_delay, self.check_connector).start()
+                self.attempts += 1
+
+    def check_connector(self):
+        # Router A should now try to connect to Router C. Router C does NOT have failoverUrls.
+        # Query Router A which previously had failoverUrls in its connector (because Router B sent it failoverUrls)
+        # does not have it anymore.
+        long_type = 'org.apache.qpid.dispatch.connector'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
+        if output[0].get('failoverUrls') is None:
+            self.success = True
+        else:
+            self.schedule_failover_test()
+
+    def can_terminate(self):
+        if self.attempts == self.max_attempts:
+            return True
+
+        if self.success:
+            return True
+
+        return False
+
     def test_remove_router_B(self):
         # First make sure there are no inter-router connections on router C
         outs = self.run_qdstat(['--connections'], address=self.routers[2].addresses[1])
@@ -126,17 +161,13 @@ class FailoverTest(TestCase):
         # Kill the router B
         FailoverTest.routers[0].teardown()
 
-        # Make sure that the router B is gone
-        # You need to sleep 5 seconds for the router to cycle thru the failover urls and make a successful connection
-        # to Router C
-        sleep(4)
+        # Schedule a test to make sure that the failover url is empty
+        self.schedule_failover_test()
 
-        long_type = 'org.apache.qpid.dispatch.connector'
-        query_command = 'QUERY --type=' + long_type
-        output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
-        # The failoverUrls must now be gone since the backup router does not send a failoverUrls in its
-        # connection properties.
-        self.assertTrue(output[0].get('failoverUrls') is None)
+        while not self.can_terminate():
+            pass
+
+        self.assertTrue(self.success)
 
         # Since router B has been killed, router A should now try to connect to a listener on router C.
         # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.
