@@ -31,6 +31,7 @@
     "angular-ui-grid": "^4.0.8",
     "angular-ui-slider": "^0.4.0",
     "bluebird": "^3.5.1",
+    "bootstrap": "^3.3.7",
     "c3": "^0.4.18",
     "d3": "^3.5.14",
     "d3-queue": "^3.0.7",

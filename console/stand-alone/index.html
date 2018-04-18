@@ -24,7 +24,7 @@ under the License.
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Qpid Dispatch Console</title>
+    <title>Red Hat AMQ Interconnect Console</title>
 
     <link rel="shortcut icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 
@@ -61,13 +61,14 @@ under the License.
             <span class="icon-bar"></span>
         </button>
         <a class="navbar-brand" href="/">
-            <span class="logo">Qpid Dispatch Router Console</span>
+            <span class="logo">Red Hat AMQ Interconnect Console</span>
         </a>
     </div>
+    
     <div class="collapse navbar-collapse navbar-collapse-1">
         <ul class="nav navbar-nav navbar-primary" ng-controller="QDR.NavBarController">
             <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
-                <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.name"></a>
+                <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.content"></a>
             </li>
         </ul>
     </div>
@@ -108,7 +109,8 @@ under the License.
 <script src="node_modules/angular-route/angular-route.min.js"></script>
 <script src="node_modules/angular-resource/angular-resource.min.js"></script>
 
-<!-- ui-bootstrap -->
+<!-- Bootstrap -->
+<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
 <script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap.js"></script>
 <script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap-tpls.js"></script>
 
