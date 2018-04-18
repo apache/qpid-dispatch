@@ -61,6 +61,13 @@ var QDR = (function (QDR) {
       name: 'Charts'
     },
     {
+      content: '<i class="chord-diagram"></i> Message Flow',
+      title: 'Chord chart',
+      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+      href: '#/chord',
+      name: 'Message Flow'
+    },
+    {
       content: '<i class="icon-align-left"></i> Schema',
       title: 'View dispatch schema',
       isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },

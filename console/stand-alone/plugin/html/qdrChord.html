@@ -1,0 +1,218 @@
+<style>
+  path.chord {
+    fill-opacity: .67;
+  }
+  #circle circle {
+    fill: none;
+    pointer-events: all;
+  }
+  path.fade {
+    opacity: 0.1;
+  }
+ 
+  .routers rect {
+    fill: white;
+  }
+  
+  g.arc text {
+    fill: black;
+    stroke-width: 0;
+  }
+  #chord {
+    position: absolute;
+  }
+
+  #switches {
+    position: absolute;
+    top: 1em;
+    margin-right: 1em;
+    padding-right: 1em;
+    opacity: 0;
+  }
+  #switches ul {
+    list-style: none;
+  }
+
+  #switches li {
+    margin-bottom: 1em;
+  }
+  #legend {
+    position: absolute;
+    right: 1em;
+    top: 1em;
+    padding: 0 1em;
+    border: 1px solid black;
+    border-radius: 4px;
+    min-width: 10em;
+    background-color: white;
+  }
+  #legend .legend-color {
+    width: 19.6667px;
+    height: 18.1667px;
+    display: inline-block;
+  }
+  #legend .legend-address {
+    white-space: nowrap;
+    padding: 0.1em 0.5em 0.2em;
+    position: absolute;
+    left: 10px;
+    top: -5px;
+  }
+
+  #legend .legend-router {
+    white-space: nowrap;
+    position: relative;
+    top: -5px;
+  }
+
+  #legend .legend-line {
+    margin: 0.5em 1em;
+    border: 1px solid white;
+  }
+  #legend .legend-line:hover {
+    border: 1px dashed lightslategray;
+  }
+  #legend ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0.5em;
+  }
+  #legend ul li label input[type='checkbox'] {
+    position: relative;
+    top: 2px;
+    padding-right: 1em;
+  }
+  #legend ul li label {
+    margin-bottom: 0;
+    font-weight: normal;
+  }
+  /* the checkboxes for the addresses */
+  #legend ul li input[type=checkbox]:checked + label::before {
+    content:'\2713';
+    font-weight: bold;
+    font-size: 16px;
+    display:inline-block;
+    /* padding:0 6px 0 0; */
+    color: black;
+    position: absolute;
+    top: -8px;
+    left: -1px;
+  }
+  /* The aggregate addresses need a black checkbox on the white background */
+  #legend ul li input[type=checkbox]:checked + label.aggregate::before {
+    color: black;
+    /* left: 1px; */
+  }
+  .bootstrap-switch {
+      border: 0px;
+  }
+  .bootstrap-switch.bootstrap-switch-small {
+      min-width: 72px;
+  }
+  .legend-address {
+    color: black;
+  }
+
+  .arrows path {
+    stroke: black;
+    opacity: 0.25;
+    stroke-width: 3;
+  }
+
+  path.empty {
+    fill: rgb(31, 119, 180);
+    fill-opacity: .67;
+  }
+
+#legend ul.addresses li, #legend ul.routers li {
+  margin-top: 0.5em;
+}
+
+#legend ul.routers li {
+  margin-bottom: 0.5em;
+}
+#legend ul.addresses {
+  margin-bottom: 1.5em;
+}
+
+.code-branch:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f126";
+}
+
+  .legend-min-address {
+    padding-left: 15px;
+    opacity: 0;
+    z-index: 0;
+  }
+
+  div#debugging {
+    width: 20em;
+  }
+
+  .addresses .btn, #switches .btn {
+    padding: 0px 4px !important;
+    background-image: none;
+    box-shadow: 0 0 0;
+    border-color: black;
+  }
+
+  #popover-div {
+    position: absolute;
+    z-index: 200;
+    border-radius: 4px;
+    background-color: black;
+    color: white;
+    opacity: .95;
+    padding: 12px;
+    font-size: 14px;
+    display: none;
+  }
+
+  #chord text {
+    pointer-events: all;
+  }
+
+  #noTraffic {
+    position:absolute;
+  }
+  </style>
+  
+  <div ng-controller="QDR.ChordController">
+    <div id="popover-div" ng-bind-html="trustedpopoverContent"></div>
+    <div id="noTraffic"></div>
+    <div id="chord"></div>
+    <div id="legend">
+      <div ng-hide="arcColorsEmpty()">
+        <h4>Routers</h4>
+        <ul class="routers">
+          <li ng-repeat="(router, color) in arcColors" class="legend-line" ng-mouseover="enterRouter(router)" ng-mouseleave="leaveLegend()">
+            <span class='legend-color' ng-style="{'background-color': color}"></span>
+            <span class='legend-router' title="{{router}}">{{router | limitTo:15}}{{router.length>15 ? '…' : ''}}</span>
+          </li>
+        </ul>
+      </div>
+      <h4>Addresses</h4>
+      <ul class="addresses">
+        <li ng-repeat="(address, color) in addresses" class="legend-line">
+          <checkbox style="background-color: {{chordColors[address]}};"
+            title="{{address}}" ng-change="addressFilterChanged()"
+            ng-model="addresses[address]"></checkbox>
+          <span ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+        </li>
+      </ul>
+    </div>
+    <div id="switches">
+      <ul>
+        <li>
+            <checkbox title="Select to show message rates" ng-model="legendOptions.isRate"></checkbox>
+            <span title="Select to show message rates">Show rates</span>
+        </li>
+        <li>
+            <checkbox title="Select to break out traffic by address" ng-model="legendOptions.byAddress"></checkbox>
+            <span title="Select to break out traffic by address">Show by address</span>
+        </li>
+      </ul>
+    </div>
+  </div>

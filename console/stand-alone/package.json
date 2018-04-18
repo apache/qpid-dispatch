@@ -24,6 +24,7 @@
   "dependencies": {
     "angular": "1.5.11",
     "angular-animate": "1.5.11",
+    "angular-bootstrap-checkbox": "^0.5.0",
     "angular-resource": "1.5.11",
     "angular-route": "1.5.11",
     "angular-sanitize": "1.5.11",
@@ -34,6 +35,7 @@
     "bootstrap": "^3.3.7",
     "c3": "^0.4.18",
     "d3": "^3.5.14",
+    "d3-path": "^1.0.5",
     "d3-queue": "^3.0.7",
     "d3-time-format": "^2.1.1",
     "dispatch-console-pages": "~0.1.6",
