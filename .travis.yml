@@ -25,8 +25,11 @@ cache: ccache
 
 addons:
   apt:
+    sources:
+      - george-edison55-precise-backports
     packages:
     # Proton requirements
+    - cmake-data
     - cmake
     - libsasl2-dev
     - libssl-dev
