@@ -31,7 +31,7 @@ To generate a SASL database to store credentials, enter the following command:
 
 [options="nowrap",subs="+quotes"]
 ----
-# saslpasswd2 -c -f _SASL_DATABASE_NAME_.sasldb -u _DOMAIN_NAME_ _USER_NAME_
+$ sudo saslpasswd2 -c -f _SASL_DATABASE_NAME_.sasldb -u _DOMAIN_NAME_ _USER_NAME_
 ----
 
 This command creates or updates the specified SASL database, and adds the specified user name to it. The command also prompts you for the user name's password.
@@ -46,7 +46,7 @@ To view the user names stored in the SASL database:
 
 [options="nowrap",subs="+quotes"]
 ----
-# sasldblistusers2 -f qdrouterd.sasldb
+$ sudo sasldblistusers2 -f qdrouterd.sasldb
 user2@domain.com: __PASSWORD__
 user1@domain.com: __PASSWORD__
 ----
