@@ -462,8 +462,7 @@ class ExchangeBindingsTest(TestCase):
         Forward unsettled messages to multiple subscribers
         """
         config = [
-            ('router',   {'mode': 'standalone', 'id': 'QDR.mcast',
-                          'allowUnsettledMulticast': True}),
+            ('router',   {'mode': 'standalone', 'id': 'QDR.mcast'}),
             ('listener', {'role': 'normal', 'host': '0.0.0.0',
                           'port': self.tester.get_port(),
                           'saslMechanisms':'ANONYMOUS'}),
@@ -507,36 +506,6 @@ class ExchangeBindingsTest(TestCase):
         self.assertTrue(nhop2A.queue.empty())
         self.assertTrue(nhop2B.queue.empty())
         self.assertTrue(alt.queue.empty())
-
-        # ensure failure if unsettled multicast not allowed:
-
-        config = [
-            ('router',   {'mode': 'standalone', 'id': 'QDR.mcast2',
-                          'allowUnsettledMulticast': False}),
-            ('listener', {'role': 'normal', 'host': '0.0.0.0',
-                          'port': self.tester.get_port(),
-                          'saslMechanisms':'ANONYMOUS'}),
-            ('exchange', {'address': 'Address4',
-                          'name': 'Exchange1'}),
-            ('binding', {'name':           'binding1',
-                         'exchangeName':   'Exchange1',
-                         'bindingKey':     'a.b',
-                         'nextHopAddress': 'nextHop1'})
-        ]
-        router = self.tester.qdrouterd('QDR.mcast2', Qdrouterd.Config(config))
-
-        # create clients for message transfer
-        conn = BlockingConnection(router.addresses[0])
-        sender = conn.create_sender(address="Address4", options=AtLeastOnce())
-        nhop1 = AsyncTestReceiver(address=router.addresses[0], source="nextHop1")
-
-        self.assertRaises(SendException,
-                          sender.send,
-                          Message(subject='a.b', body='A'))
-        nhop1.stop()
-        conn.close()
-
-        self.assertTrue(nhop1.queue.empty())
 
     def test_remote_exchange(self):
         """

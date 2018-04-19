@@ -471,7 +471,7 @@
                 },                
                 "allowUnsettledMulticast": {
                     "type": "boolean",
-                    "description": "If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
+                    "description": "(DEPRECATED) If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",
                     "create": true,
                     "required": false,
                     "default": false

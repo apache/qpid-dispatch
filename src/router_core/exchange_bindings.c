@@ -188,18 +188,8 @@ int qdr_forward_exchange_CT(qdr_core_t     *core,
     // NOTE:  This is the only multicast mode currently supported.  Others will likely be
     //        implemented in the future.
     //
-    if (!presettled) {
+    if (!presettled)
         in_delivery->settled = true;
-        //
-        // If the router is configured to reject unsettled multicasts, settle and reject this delivery.
-        //
-        if (!core->qd->allow_unsettled_multicast) {
-            in_delivery->disposition = PN_REJECTED;
-            in_delivery->error = qdr_error("qd:forbidden", "Deliveries to an exchange must be pre-settled");
-            qdr_delivery_push_CT(core, in_delivery);
-            return 0;
-        }
-    }
 
     qd_iterator_t *subject = qd_message_check(msg, QD_DEPTH_PROPERTIES)
         ? qd_message_field_iterator(msg, QD_FIELD_SUBJECT)

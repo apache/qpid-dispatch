@@ -56,11 +56,6 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->agent_log = qd_log_source("AGENT");
 
     //
-    // Report on the configuration for unsettled multicasts
-    //
-    qd_log(core->log, QD_LOG_INFO, "Allow Unsettled Multicast: %s", qd->allow_unsettled_multicast ? "yes" : "no");
-
-    //
     // Set up the threading support
     //
     core->action_cond = sys_cond();

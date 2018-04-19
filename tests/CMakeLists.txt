@@ -99,7 +99,6 @@ foreach(py_test_module
     system_tests_dynamic_terminus
     system_tests_log_message_components
     system_tests_failover_list
-    system_tests_denied_unsettled_multicast
     system_tests_auth_service_plugin
     system_tests_authz_service_plugin
     system_tests_delivery_abort

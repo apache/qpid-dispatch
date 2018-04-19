@@ -183,7 +183,6 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 
     qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     qd->thread_count = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
-    qd->allow_unsettled_multicast = qd_entity_opt_bool(entity, "allowUnsettledMulticast", false); QD_ERROR_RET();
     qd->allow_resumable_link_route = qd_entity_opt_bool(entity, "allowResumableLinkRoute", true); QD_ERROR_RET();
 
     if (! qd->sasl_config_path) {
