@@ -78,7 +78,7 @@ If you created a new configuration file, you must specify the path using the `--
 +
 [options="nowrap"]
 ----
-# qdrouterd -d --conf /etc/qpid-dispatch/new-configuration-file.conf
+$ sudo qdrouterd -d --conf /etc/qpid-dispatch/new-configuration-file.conf
 ----
 
 [id='changing-configuration-for-running-router']
