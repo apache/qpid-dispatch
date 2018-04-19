@@ -246,15 +246,65 @@ used. Address semantics include the following considerations:
 
 === Routing Patterns
 
-Routing patterns define the paths that a message with a mobile address can take across a network. These routing patterns can be used for both direct routing, in which the router distributes messages between clients without a broker, and indirect routing, in which the router enables clients to exchange messages through a broker.
+Routing patterns define the paths that a message with a mobile address
+can take across a network. These routing patterns can be used for both
+direct routing, in which the router distributes messages between
+clients without a broker, and indirect routing, in which the router
+enables clients to exchange messages through a broker.
 
-[cols="20,80"]
-|===
-|Pattern | Description
-| Balanced  | An anycast method which allows multiple receivers to use the same address. In this case, messages (or links) are routed to exactly one of the receivers and the network attempts to balance the traffic load across the set of receivers using the same address. This routing delivers messages to receivers based on how quickly they settle the deliveries. Faster receivers get more messages.
-| Closest | An anycast method in which even if there are more receivers for the same address, every message is sent along the shortest path to reach the destination. This means that only one receiver will get the message. Each message is delivered to the closest receivers in terms of topology cost. If there are multiple receivers with the same lowest cost, deliveries will be spread evenly among those receivers.
-| Multicast | Having multiple consumers on the same address at the same time, messages are routed such that each consumer receives one copy of the message.
-|===
+Note that the routing patterns fall into two categories:  Anycast
+(Balanced and Closest) and Multicast.  There is no concept of
+"unicast" in which there is only one consumer for an address.
+
+Anycast distribution delivers each message to one consumer whereas
+multicast distribution delivers each message to all consumers.
+
+Anycast delivery is reliable when the message deliveries are
+unsettled.  There is a reliability contract that the router network
+abides by when delivering unsettled messages to anycast addresses.
+For every such delivery sent by a producer, the router network
+guarantees that one of the following outcomes will occur:
+
+* The delivery shall be settled with ACCEPTED or REJECTED disposition
+  where the disposition is supplied by the consumer.
+* The delivery shall be settled with RELEASED disposition, meaning
+  that the message was not delivered to any consumer.
+* The delivery shall be settled with MODIFIED disposition, meaning
+  that the message may have been delivered to a consumer but should be
+  considered in-doubt and re-sent.
+* The connection to the producer shall be dropped, signifying that all
+  unsettled deliveries should now be considered in-doubt by the
+  producer and later re-sent.
+
+Multicast delivery is not reliable.  If a producer sends an unsettled
+delivery, the ingress router shall settle the delivery with ACCEPTED
+disposition regardless of whether the message was delivered to any
+consumers.
+
+===== Balanced
+
+An anycast method which allows multiple receivers to use the same
+address. In this case, messages (or links) are routed to exactly one
+of the receivers and the network attempts to balance the traffic load
+across the set of receivers using the same address. This routing
+delivers messages to receivers based on how quickly they settle the
+deliveries. Faster receivers get more messages.
+
+===== Closest
+
+An anycast method in which even if there are more receivers for the
+same address, every message is sent along the shortest path to reach
+the destination. This means that only one receiver will get the
+message. Each message is delivered to the closest receivers in terms
+of topology cost. If there are multiple receivers with the same lowest
+cost, deliveries will be spread evenly among those receivers.
+
+===== Multicast
+
+Having multiple consumers on the same address at the same time,
+messages are routed such that each consumer receives one copy of the
+message.
+
 
 === Routing Mechanisms
 
