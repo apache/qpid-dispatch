@@ -281,7 +281,7 @@ delivery, the ingress router shall settle the delivery with ACCEPTED
 disposition regardless of whether the message was delivered to any
 consumers.
 
-===== Balanced
+==== Balanced
 
 An anycast method which allows multiple receivers to use the same
 address. In this case, messages (or links) are routed to exactly one
@@ -290,7 +290,7 @@ across the set of receivers using the same address. This routing
 delivers messages to receivers based on how quickly they settle the
 deliveries. Faster receivers get more messages.
 
-===== Closest
+==== Closest
 
 An anycast method in which even if there are more receivers for the
 same address, every message is sent along the shortest path to reach
@@ -299,7 +299,7 @@ message. Each message is delivered to the closest receivers in terms
 of topology cost. If there are multiple receivers with the same lowest
 cost, deliveries will be spread evenly among those receivers.
 
-===== Multicast
+==== Multicast
 
 Having multiple consumers on the same address at the same time,
 messages are routed such that each consumer receives one copy of the
