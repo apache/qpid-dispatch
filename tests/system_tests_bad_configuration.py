@@ -63,7 +63,7 @@ class RouterTestBadConfiguration(TestCase):
         TestCase.__init__(self, test_method)
         self.error_caught = False
         self.timer_delay = 1
-        self.max_attempts = 3
+        self.max_attempts = 5
         self.attempts_made = 0
         self.schedule_timer()
 
