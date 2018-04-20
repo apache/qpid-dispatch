@@ -248,7 +248,7 @@ You can convert a `prefix` value to a `pattern` by appending `/\#` to it. For ex
 +
 For more information about message distribution patterns, see xref:routing-patterns-overview[Routing Patterns].
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_address[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_address[address] in the `qdrouterd.conf` man page.
 --
 
 . Add the same `address` section to any other routers that need to use the address.
@@ -346,7 +346,7 @@ connector {
 `port`:: The port number or symbolic service name on which the router should connect to the broker.
 `role`:: Specify `route-container` to indicate that this connection is for an external container (broker).
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[connector] in the `qdrouterd.conf` man page.
 --
 
 . If you want to send messages to the broker queue, create an outgoing autolink to the broker queue:
@@ -367,7 +367,7 @@ autoLink {
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `out` to specify that this autolink can send messages from the router to the broker.
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[autoLink] in the `qdrouterd.conf` man page.
 --
 
 . If you want to receive messages from the broker queue, create an incoming autolink from the broker queue:
@@ -388,7 +388,7 @@ autoLink {
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `in` to specify that this autolink can receive messages from the broker to the router.
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[autoLink] in the `qdrouterd.conf` man page.
 --
 
 === Example: Routing Messages Through Broker Queues
@@ -572,7 +572,7 @@ connector {
 `port`:: The port number or symbolic service name on which the router should connect to the broker.
 `role`:: Specify `route-container` to indicate that this connection is for an external container (broker).
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[connector] in the `qdrouterd.conf` man page.
 --
 
 . If you want clients to send messages on this link route, create an incoming link route:
@@ -600,7 +600,7 @@ If multiple brokers are connected to the router through this connection, request
 
 `direction`:: Set this attribute to `in` to specify that clients can send messages into the router network on this link route.
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[linkRoute] in the `qdrouterd.conf` man page.
 --
 
 . If you want clients to receive messages on this link route, create an outgoing link route:
@@ -627,7 +627,7 @@ include::routing.adoc[tags=pattern-matching]
 If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
 `direction`:: Set this attribute to `out` to specify that this link route is for receivers.
 
-For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[the `qdrouterd.conf` man page].
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[linkRoute] in the `qdrouterd.conf` man page.
 --
 
 === Example: Using a Link Route to Provide Client Isolation
