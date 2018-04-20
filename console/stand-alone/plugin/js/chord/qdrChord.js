@@ -184,19 +184,16 @@ var QDR = (function (QDR) {
     //startOver();
     //};
     //d3.select(window).on('resize.updatesvg', updateWindow);
-    let offBy = 6;
     let windowResized = function () {
       let legendPos = $('#legend').position();
       let switches = $('#switches');
       let outerWidth = switches.outerWidth();
-      switches.css({left: (legendPos.left - outerWidth - offBy), opacity: 1});
-      offBy = 0;
+      switches.css({left: (legendPos.left - outerWidth), opacity: 1});
     };
     window.addEventListener('resize', function () {
-      windowResized()
+      windowResized();
       setTimeout(windowResized, 1);
     });
-    $().ready(windowResized);
 
     // used for animation duration and the data refresh interval 
     let transitionDuration = 1000;
@@ -806,7 +803,11 @@ var QDR = (function (QDR) {
     });
 
     // get the raw data and render the svg
-    chordData.getMatrix().then(render, function (e) {
+    chordData.getMatrix().then(function (matrix) {
+      // now that we have the routers and addresses, move the control switches and legend
+      $timeout(windowResized);
+      render(matrix);
+    }, function (e) {
       console.log(ERROR_RENDERING + e);
     });
     // called periodically to refresh the data
