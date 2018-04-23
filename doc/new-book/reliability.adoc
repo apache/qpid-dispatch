@@ -141,14 +141,14 @@ Starting the receiver, it waits for messages with no output on the console.
 
 [options="nowrap"]
 ----
-# python simple_recv.py -a localhost:6001/my_queue -m 10
+$ sudo python simple_recv.py -a localhost:6001/my_queue -m 10
 ----
 
 Starting the sender, all the messages flow through "Router.A" and "Router.B" reaching the receiver; at this point the messages are all confirmed at sender side.
 
 [options="nowrap"]
 ----
-# python simple_send.py -a localhost:6001/my_queue -m 10
+$ sudo python simple_send.py -a localhost:6001/my_queue -m 10
 all messages confirmed
 ----
 
@@ -179,7 +179,7 @@ The receiver is still reachable in order to get messages from the sender as disp
 
 [options="nowrap"]
 ----
-# python simple_recv.py -a localhost:6002/my_queue -m 10
+$ sudo python simple_recv.py -a localhost:6002/my_queue -m 10
 {u'sequence': 1L}
 {u'sequence': 2L}
 {u'sequence': 3L}
@@ -325,7 +325,7 @@ First of all, thanks to the broker and its "store and forward" feature, the send
 
 [options="nowrap"]
 ----
-# python simple_send.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_send.py -a localhost:6000/my_queue -m 10
 all messages confirmed
 ----
 
@@ -333,7 +333,7 @@ All messages are confirmed because they reached the queue inside the broker thro
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6001 -a
+$ sudo qdstat -b localhost:6001 -a
 Router Addresses
   class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
   =================================================================================================================
@@ -359,7 +359,7 @@ Starting the receiver connected to the "Router.A", it gets all the available mes
 
 [options="nowrap"]
 ----
-# python simple_recv.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_recv.py -a localhost:6000/my_queue -m 10
 {u'sequence': 1L}
 {u'sequence': 2L}
 {u'sequence': 3L}
@@ -376,7 +376,7 @@ Using the `qdstat` tool on the "Router.B" another time, the output is like follo
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6001 -a
+$ sudo qdstat -b localhost:6001 -a
 Router Addresses
   class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
   =================================================================================================================
@@ -407,7 +407,7 @@ Using the `qdmanage` tool, it is possible to configure the waypoint on `my_queue
 
 [options="nowrap"]
 ----
-[root@localhost /]# qdmanage -b localhost:6002 create --stdin
+$ sudo qdmanage -b localhost:6002 create --stdin
 [
 { "type":"connector", "name":"BROKER", "port":5672, "role":"route-container" },
 { "type":"address", "prefix":"my_queue", "waypoint":"yes" },
@@ -478,7 +478,7 @@ At this point, the sender can connect to the "Router.A" for sending messages to 
 
 [options="nowrap"]
 ----
-# python simple_send.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_send.py -a localhost:6000/my_queue -m 10
 all messages confirmed
 ----
 
@@ -486,7 +486,7 @@ All messages are confirmed because they reached the queue inside the broker thro
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6002 -a
+$ sudo qdstat -b localhost:6002 -a
 Router Addresses
   class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
   =================================================================================================================
@@ -512,7 +512,7 @@ Starting the receiver connected to the "Router.A", it gets all the available mes
 
 [options="nowrap"]
 ----
-# python simple_recv.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_recv.py -a localhost:6000/my_queue -m 10
 {u'sequence': 1L}
 {u'sequence': 2L}
 {u'sequence': 3L}
@@ -529,7 +529,7 @@ Using the `qdstat` tool on the "Router.C" another time, the output is like follo
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6002 -a
+$ sudo qdstat -b localhost:6002 -a
 Router Addresses
   class   addr                   phs  distrib    in-proc  local  remote  cntnr  in  out  thru  to-proc  from-proc
   =================================================================================================================
@@ -641,7 +641,7 @@ Using the Python sample from the Qpid Proton library, the sender can connect to 
 
 [options="nowrap"]
 ----
-# python simple_send.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_send.py -a localhost:6000/my_queue -m 10
 all messages confirmed
 ----
 
@@ -649,7 +649,7 @@ All messages are confirmed because they reached the queue and, thanks to the def
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6000 -l
+$ sudo qdstat -b localhost:6000 -l
 Router Links
   type      dir  conn id  id  peer  class   addr                  phs  cap  undel  unsettled  deliveries  admin    oper
   =======================================================================================================================
@@ -667,7 +667,7 @@ Starting the receiver connected to the "Router.A", it gets all the available mes
 
 [options="nowrap"]
 ----
-# python simple_recv.py -a localhost:6000/my_queue -m 10
+$ sudo python simple_recv.py -a localhost:6000/my_queue -m 10
 {u'sequence': 1L}
 {u'sequence': 2L}
 {u'sequence': 3L}
@@ -684,7 +684,7 @@ As for the sender, they are received through both the brokers and related shards
 
 [options="nowrap"]
 ----
-# qdstat -b localhost:6000 -l
+$ sudo qdstat -b localhost:6000 -l
 Router Links
   type      dir  conn id  id  peer  class   addr                  phs  cap  undel  unsettled  deliveries  admin    oper
   =======================================================================================================================
