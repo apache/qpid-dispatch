@@ -2728,14 +2728,14 @@ class MulticastTest ( MessagingHandler ):
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
-        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
+        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="7" )
+        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="8" )
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="3" )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="4" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="9" )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="10" )
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="5" )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="6" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="11" )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="12" )
 
         self.recv_1_a.flow ( self.n_to_send )
         self.recv_2_a.flow ( self.n_to_send )
