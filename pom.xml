@@ -28,7 +28,7 @@
     <artifactId>qpid-dispatch</artifactId>
     <version>1.1.0</version>
     <name>QpidDispatch</name>
-    <inceptionYear>2017</inceptionYear>
+    <inceptionYear>2018</inceptionYear>
     <url>https://qpid.apache.org</url>   
     
     <prerequisites>
