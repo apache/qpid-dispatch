@@ -41,12 +41,13 @@ qd_iovec_t *qd_iovec(int vector_count)
     if (!iov)
         return 0;
 
-    memset(iov, 0, sizeof(qd_iovec_t));
+    ZERO(iov);
 
     iov->iov_count = vector_count;
-    if (vector_count > QD_IOVEC_MAX)
+    if (vector_count > QD_IOVEC_MAX) {
         iov->iov = (struct iovec*) malloc(sizeof(struct iovec) * vector_count);
-    else
+        memset(iov->iov, 0, sizeof(struct iovec) * vector_count);
+    } else
         iov->iov = &iov->iov_array[0];
 
     return iov;

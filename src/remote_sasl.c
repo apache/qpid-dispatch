@@ -122,27 +122,12 @@ static void copy_bytes(const pn_bytes_t* from, qdr_owned_bytes_t* to)
 
 static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* sasl_init_hostname)
 {
-    qdr_sasl_relay_t* instance = (qdr_sasl_relay_t*) malloc(sizeof(qdr_sasl_relay_t));
+    qdr_sasl_relay_t* instance = NEW(qdr_sasl_relay_t);
+    ZERO(instance);
     instance->authentication_service_address = strdup(address);
     if (sasl_init_hostname) {
         instance->sasl_init_hostname = strdup(sasl_init_hostname);
-    } else {
-        instance->sasl_init_hostname = 0;
     }
-    instance->selected_mechanism = 0;
-    instance->response.start = 0;
-    instance->response.size = 0;
-    instance->mechlist = 0;
-    instance->challenge.start = 0;
-    instance->challenge.size = 0;
-    instance->upstream_state = 0;
-    instance->downstream_state = 0;
-    instance->upstream_released = false;
-    instance->downstream_released = false;
-    instance->complete = false;
-    instance->upstream = 0;
-    instance->downstream = 0;
-    instance->username = 0;
     init_permissions(&instance->permissions);
     return instance;
 }

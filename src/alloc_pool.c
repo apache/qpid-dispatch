@@ -87,12 +87,13 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         assert (desc->config->local_free_list_max >= desc->config->transfer_batch_size);
 
         desc->global_pool = NEW(qd_alloc_pool_t);
+        DEQ_ITEM_INIT(desc->global_pool);
         DEQ_INIT(desc->global_pool->free_list);
         desc->lock = sys_mutex();
         DEQ_INIT(desc->tpool_list);
 #if QD_MEMORY_STATS
         desc->stats = NEW(qd_alloc_stats_t);
-        memset(desc->stats, 0, sizeof(qd_alloc_stats_t));
+        ZERO(desc->stats);
 #endif
 
         qd_alloc_type_t *type_item = NEW(qd_alloc_type_t);

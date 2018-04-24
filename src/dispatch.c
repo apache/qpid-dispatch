@@ -61,7 +61,7 @@ const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
-    memset(qd, 0, sizeof(qd_dispatch_t));
+    ZERO(qd);
 
     qd_entity_cache_initialize();   /* Must be first */
     qd_alloc_initialize();

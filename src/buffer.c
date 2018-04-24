@@ -24,8 +24,7 @@
 #include <string.h>
 
 
-size_t BUFFER_SIZE                 = 512;
-
+size_t BUFFER_SIZE     = 512;
 static int size_locked = 0;
 
 ALLOC_DECLARE(qd_buffer_t);

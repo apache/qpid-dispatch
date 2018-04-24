@@ -35,7 +35,6 @@
 
 struct qd_config_ssl_profile_t {
     DEQ_LINKS(qd_config_ssl_profile_t);
-    uint64_t     identity;
     char        *name;
     char        *ssl_password;
     char        *ssl_trusted_certificate_db;
@@ -52,7 +51,6 @@ DEQ_DECLARE(qd_config_ssl_profile_t, qd_config_ssl_profile_list_t);
 
 struct qd_config_sasl_plugin_t {
     DEQ_LINKS(qd_config_sasl_plugin_t);
-    uint64_t     identity;
     char        *name;
     char        *auth_service;
     char        *sasl_init_hostname;

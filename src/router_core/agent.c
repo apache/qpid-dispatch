@@ -84,7 +84,6 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
 {
     qdr_query_t *query = new_qdr_query_t();
 
-    DEQ_ITEM_INIT(query);
     ZERO(query);
     query->core        = core;
     query->entity_type = type;

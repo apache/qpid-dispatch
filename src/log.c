@@ -347,8 +347,7 @@ static qd_log_source_t *qd_log_source_lh(const char *module)
     if (!log_source)
     {
         log_source = NEW(qd_log_source_t);
-        memset(log_source, 0, sizeof(qd_log_source_t));
-        DEQ_ITEM_INIT(log_source);
+        ZERO(log_source);
         log_source->module = (char*) malloc(strlen(module) + 1);
         strcpy(log_source->module, module);
         qd_log_source_defaults(log_source);

@@ -79,6 +79,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 65535;
+    policy->py_policy_manager    = 0;
     policy->policyDir            = 0;
     policy->enableVhostPolicy    = false;
     policy->connections_processed= 0;
@@ -137,7 +138,7 @@ long qd_policy_c_counts_alloc()
 {
     qd_policy_denial_counts_t * dc = NEW(qd_policy_denial_counts_t);
     assert(dc);
-    memset(dc, 0, sizeof(qd_policy_denial_counts_t));
+    ZERO(dc);
     return (long)dc;
 }
 
@@ -693,7 +694,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
         uint32_t conn_id = qd_conn->connection_id;
         if (!qd_conn->policy_settings) {
             qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
-            memset(qd_conn->policy_settings, 0, sizeof(qd_policy_settings_t));
+            ZERO(qd_conn->policy_settings);
         }
 
         if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,

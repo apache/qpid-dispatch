@@ -1370,14 +1370,14 @@ void qd_listener_decref(qd_listener_t* li)
 
 qd_connector_t *qd_server_connector(qd_server_t *server)
 {
-    qd_connector_t *ct        = new_qd_connector_t();
+    qd_connector_t *ct = new_qd_connector_t();
     if (!ct) return 0;
+    ZERO(ct);
     sys_atomic_init(&ct->ref_count, 1);
     ct->server  = server;
     qd_failover_item_list_t conn_info_list;
     DEQ_INIT(conn_info_list);
     ct->conn_info_list = conn_info_list;
-    ct->conn_index = 0;
     ct->lock = sys_mutex();
     ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
     if (!ct->lock || !ct->timer) {
