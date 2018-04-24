@@ -1747,6 +1747,8 @@ class TargetedSenderTest ( MessagingHandler ):
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % \
                      (self.n_sent, self.n_received, self.n_accepted)
+        self.sender.close()
+        self.receiver.close()
         self.send_conn.close()
         self.recv_conn.close()
 
@@ -1780,6 +1782,7 @@ class TargetedSenderTest ( MessagingHandler ):
         self.n_received += 1
         if self.n_received == self.n_expected:
             self.receiver.close()
+            self.sender.close()
             self.send_conn.close()
             self.recv_conn.close()
             self.timer.cancel()
@@ -1827,6 +1830,8 @@ class AnonymousSenderTest ( MessagingHandler ):
     def timeout ( self ):
         self.error = "Timeout Expired: n_sent=%d n_received=%d n_accepted=%d" % \
                      (self.n_sent, self.n_received, self.n_accepted)
+        self.sender.close()
+        self.receiver.close()
         self.send_conn.close()
         self.recv_conn.close()
 
@@ -1864,6 +1869,7 @@ class AnonymousSenderTest ( MessagingHandler ):
     def on_accepted(self, event):
         self.n_accepted += 1
         if self.n_accepted == self.expected:
+            self.sender.close()
             self.send_conn.close()
             self.recv_conn.close()
             self.timer.cancel()
@@ -1907,6 +1913,10 @@ class DynamicReplyTo(MessagingHandler):
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d received_by_server=%d received_by_client=%d" % \
                      (self.n_sent, self.received_by_server, self.received_by_client)
+        self.server_sender.close()
+        self.sender.close()
+        self.server_receiver.close()
+        self.client_receiver.close()
         self.client_connection.close()
         self.server_connection.close()
 
@@ -1952,6 +1962,8 @@ class DynamicReplyTo(MessagingHandler):
             self.received_by_client += 1
             if self.received_by_client == self.n_expected:
                 self.timer.cancel()
+                self.server_sender.close()
+                self.sender.close()
                 self.server_receiver.close()
                 self.client_receiver.close()
                 self.client_connection.close()
@@ -2011,6 +2023,8 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
     def bail ( self, text ):
         self.debug_print ( "bail -------------" )
         self.error = text
+        self.linkroute_check_receiver.close()
+        self.linkroute_check_sender.close()
         self.linkroute_container_cnx.close()
         self.client_cnx.close()
         self.timer.cancel()
@@ -2132,6 +2146,8 @@ class LinkAttachRouting ( MessagingHandler ):
 
     def bail ( self, text ):
         self.error = text
+        self.linkroute_check_receiver.close()
+        self.linkroute_check_sender.close()
         self.farside_cnx.close()
         self.nearside_cnx.close()
         self.timer.cancel()
@@ -2301,6 +2317,9 @@ class ClosestTest ( MessagingHandler ):
     def bail ( self, text ):
         self.timer.cancel()
         self.error = text
+        self.addr_check_receiver.close()
+        self.addr_check_sender.close()
+        self.sender.close()
         self.send_cnx.close()
         self.cnx_1.close()
         self.cnx_2.close()
@@ -2324,11 +2343,11 @@ class ClosestTest ( MessagingHandler ):
         self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
         self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="1" )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="2" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="3" )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="4" )
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="1" )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="2" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="5" )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="6" )
 
         self.recv_1_a.flow ( self.n_expected )
         self.recv_2_a.flow ( self.n_expected )
@@ -2338,8 +2357,8 @@ class ClosestTest ( MessagingHandler ):
         self.recv_2_b.flow ( self.n_expected )
         self.recv_3_b.flow ( self.n_expected )
 
-        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
+        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True , name="ZZ")
+        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management", name="X" )
 
 
     def on_link_opened(self, event):
@@ -2516,6 +2535,10 @@ class BalancedTest ( MessagingHandler ):
 
     def bail ( self, text ):
         self.timer.cancel()
+        self.recv_3.close()
+        self.recv_1.close()
+        self.address_check_receiver.close()
+        self.address_check_sender.close()
         self.error = text
         self.cnx_3.close()
         self.cnx_2.close()
@@ -2677,6 +2700,14 @@ class MulticastTest ( MessagingHandler ):
     def bail ( self, text ):
         self.timer.cancel()
         self.error = text
+        self.recv_1_a.close()
+        self.recv_1_b.close()
+        self.recv_2_a.close()
+        self.recv_3_a.close()
+        self.recv_2_b.close()
+        self.recv_3_b.close()
+        self.addr_check_receiver.close()
+        self.addr_check_sender.close()
         self.send_cnx.close()
         self.cnx_1.close()
         self.cnx_2.close()
@@ -2700,11 +2731,11 @@ class MulticastTest ( MessagingHandler ):
         self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
         self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="1" )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="2" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="3" )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="4" )
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="1" )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="2" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="5" )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="6" )
 
         self.recv_1_a.flow ( self.n_to_send )
         self.recv_2_a.flow ( self.n_to_send )
@@ -2715,7 +2746,7 @@ class MulticastTest ( MessagingHandler ):
         self.recv_3_b.flow ( self.n_to_send )
 
         self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
+        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management", name="AA" )
 
 
     def on_link_opened(self, event):
@@ -2939,6 +2970,10 @@ class RoutingTest ( MessagingHandler ):
 
     def finish ( self ):
         self.done = True
+        for sen in self.my_senders:
+            sen.close()
+        self.linkroute_check_receiver.close()
+        self.linkroute_check_sender.close()
         self.sender_cnx.close()
         self.timer.cancel()
         if self.linkroute_check_timer:
@@ -2985,7 +3020,7 @@ class RoutingTest ( MessagingHandler ):
         #          it, we will be handed its address -- which we will then use as the reply-to
         #          address for the management queries we send.
         self.linkroute_check_receiver = event.container.create_receiver ( self.sender_cnx, dynamic=True )
-        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management" )
+        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management", name="BB" )
 
 
     #=================================================
@@ -3411,6 +3446,11 @@ class WaypointTest ( MessagingHandler ):
 
     def bail ( self, text ):
         self.error = text
+        for sender in self.senders:
+            sender['sender'].close()
+        for receiver in self.receivers:
+            receiver['receiver'].close()
+
         self.route_container_connection.close()
         self.client_connection.close()
         self.timer.cancel()
@@ -3655,6 +3695,10 @@ class SerialWaypointTest ( MessagingHandler ):
 
     def bail ( self, text ):
         self.error = text
+        for sender in self.senders:
+            sender['sender'].close()
+        for receiver in self.receivers:
+            receiver['receiver'].close()
         self.route_container_connection.close()
         for cnx in self.sender_connections :
           cnx.close()
@@ -3970,6 +4014,10 @@ class ParallelWaypointTest ( MessagingHandler ):
 
     def bail ( self, text ):
         self.error = text
+        for sender in self.senders:
+            sender['sender'].close()
+        for receiver in self.receivers:
+            receiver['receiver'].close()
         self.route_container_connection.close()
         for cnx in self.sender_connections :
           cnx.close()
