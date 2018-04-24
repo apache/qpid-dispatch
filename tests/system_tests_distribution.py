@@ -2321,14 +2321,14 @@ class ClosestTest ( MessagingHandler ):
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
-        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
+        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" + self.test_name )
+        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" + self.test_name )
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="1" )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="2" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="3" + self.test_name )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="4" + self.test_name )
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="1" )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="2" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="5" + self.test_name )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="6" + self.test_name )
 
         self.recv_1_a.flow ( self.n_expected )
         self.recv_2_a.flow ( self.n_expected )
@@ -2697,14 +2697,14 @@ class MulticastTest ( MessagingHandler ):
         # explicit distinct names, or we will in fact only get
         # one link.  And then wonder why receiver 2 on each
         # router isn't getting any messages.
-        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="1" )
-        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="2" )
+        self.recv_1_a  = event.container.create_receiver  ( self.cnx_1, self.dest, name="10" + self.test_name  )
+        self.recv_1_b  = event.container.create_receiver  ( self.cnx_1, self.dest, name="11" + self.test_name )
 
-        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="1" )
-        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="2" )
+        self.recv_2_a  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="12" + self.test_name )
+        self.recv_2_b  = event.container.create_receiver  ( self.cnx_2,  self.dest, name="13" + self.test_name )
 
-        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="1" )
-        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="2" )
+        self.recv_3_a  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="14" + self.test_name )
+        self.recv_3_b  = event.container.create_receiver  ( self.cnx_3,  self.dest, name="15" + self.test_name )
 
         self.recv_1_a.flow ( self.n_to_send )
         self.recv_2_a.flow ( self.n_to_send )
@@ -3251,7 +3251,7 @@ class RoutingTest ( MessagingHandler ):
     def make_senders ( self, n ):
         self.debug_print ( "making %d senders" % n )
         for i in xrange(n):
-            sender_name = "sender_A_%d" % len ( self.my_senders )
+            sender_name =  self.test_name  + "sender_A_%d" % len ( self.my_senders )
             sender = self.sender_container.create_sender ( self.sender_cnx,
                                                            self.link_routable_address,
                                                            name=sender_name
@@ -3471,13 +3471,13 @@ class WaypointTest ( MessagingHandler ):
 
             sender['sender'] = event.container.create_sender ( self.client_connection,
                                                                self.destination,
-                                                               name="sender_%d" % i)
+                                                               name=self.test_name + "sender_%d" % i)
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
 
             receiver['receiver'] = event.container.create_receiver ( self.client_connection,
                                                                      self.destination,
-                                                                     name="receiver_%d" % i)
+                                                                     name=self.test_name + "receiver_%d" % i)
             receiver['n_received'] = 0
 
 
@@ -3709,13 +3709,13 @@ class SerialWaypointTest ( MessagingHandler ):
 
             sender['sender'] = event.container.create_sender ( cnx,
                                                                self.destination,
-                                                               name="sender_%d" % i)
+                                                               name=self.test_name  + "sender_%d" % i)
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
 
             receiver['receiver'] = event.container.create_receiver ( cnx,
                                                                      self.destination,
-                                                                     name="receiver_%d" % i)
+                                                                     name=self.test_name + "receiver_%d" % i)
             receiver['n_received'] = 0
 
 
@@ -4024,12 +4024,12 @@ class ParallelWaypointTest ( MessagingHandler ):
 
             sender['sender'] = event.container.create_sender ( cnx,
                                                                self.destination,
-                                                               name="sender_%d" % i)
+                                                               name=self.test_name + "sender_%d" % i)
             sender['to_send'] = self.messages_per_sender
             sender['n_sent']  = 0
             receiver['receiver'] = event.container.create_receiver ( cnx,
                                                                      self.destination,
-                                                                     name="receiver_%d" % i)
+                                                                     name=self.test_name + "receiver_%d" % i)
             receiver['n_received'] = 0
 
 
