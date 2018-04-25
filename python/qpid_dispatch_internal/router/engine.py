@@ -162,7 +162,8 @@ class RouterEngine:
                 self.mobile_address_engine.handle_mar(msg, now)
 
         except Exception:
-            self.log(LOG_ERROR, "Control message error: opcode=%s body=%r\n%s" % (opcode, body, format_exc(LOG_STACK_LIMIT)))
+            self.log(LOG_ERROR, "Exception in control message processing\n%s" % format_exc(LOG_STACK_LIMIT))
+            self.log(LOG_ERROR, "Control message error: opcode=%s body=%r" % (opcode, body))
 
     def receive(self, message, link_id, cost):
         """
@@ -171,8 +172,9 @@ class RouterEngine:
         try:
             self.handleControlMessage(message.properties['opcode'], message.body, link_id, cost)
         except Exception:
-            self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r\n%s" %
-                     (message.properties, message.body, format_exc(LOG_STACK_LIMIT)))
+            self.log(LOG_ERROR, "Exception in raw message processing\n%s" % format_exc(LOG_STACK_LIMIT))
+            self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r" %
+                     (message.properties, message.body))
 
     def getRouterData(self, kind):
         """
