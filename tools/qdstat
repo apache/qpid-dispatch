@@ -229,7 +229,7 @@ class BusManager(Node):
         heads.append(Header("value"))
         rows = []
 
-        objects = self.query('org.apache.qpid.dispatch.routerStats')
+        objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
         rows.append(('Version',       router.version))

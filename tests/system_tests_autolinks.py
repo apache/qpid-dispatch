@@ -142,7 +142,7 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-        long_type = 'org.apache.qpid.dispatch.routerStats'
+        long_type = 'org.apache.qpid.dispatch.router'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
         self.assertEqual(output[0]['deliveriesEgressRouteContainer'], 275)
@@ -161,7 +161,7 @@ class AutolinkTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-        long_type = 'org.apache.qpid.dispatch.routerStats'
+        long_type = 'org.apache.qpid.dispatch.router'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
         self.assertEqual(output[0]['deliveriesEgressRouteContainer'], 275)
@@ -383,7 +383,7 @@ class AutolinkCreditTest(MessagingHandler):
         self.last_action = "Attached normal sender"
 
         local_node = Node.connect(self.normal_address, timeout=TIMEOUT)
-        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        res = local_node.query(type='org.apache.qpid.dispatch.router')
         results = res.results[0]
         attribute_names = res.attribute_names
         if 8 == results[attribute_names.index('autoLinkCount')]:
