@@ -356,6 +356,9 @@ class ManagementTest(system_test.TestCase):
         entities = self.node.query().get_entities()
         routers = [e for e in entities if e.type == ROUTER]
         self.assertEqual(1, len(routers))
+        router = routers[0]
+        self.assertEqual(router.linkCount, len([e for e in entities if e.type == LINK]))
+        self.assertEqual(router.addrCount, len([e for e in entities if e.type == ADDRESS]))
 
     def test_router_node(self):
         """Test node entity in a trio of linked routers"""

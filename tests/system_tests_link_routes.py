@@ -579,7 +579,7 @@ class LinkRouteTest(TestCase):
         """
 
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
-        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        res = local_node.query(type='org.apache.qpid.dispatch.router')
         results = res.results[0]
         attribute_list = res.attribute_names
 
@@ -617,7 +617,7 @@ class LinkRouteTest(TestCase):
         out = self.run_qdmanage(cmd=cmd, address=addr)
         self.assertEquals(out.rstrip(), '[]')
 
-        res = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        res = local_node.query(type='org.apache.qpid.dispatch.router')
         results = res.results[0]
         attribute_list = res.attribute_names
         self.assertEqual(results[attribute_list.index('linkRouteCount')], 0)

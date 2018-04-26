@@ -336,38 +336,6 @@ class OneRouterTest(TestCase):
         self.assertTrue(test.received_error)
         self.assertTrue(test.reject_count_match)
 
-    def test_36_query_router(self):
-        """
-        Query the router with type='org.apache.qpid.dispatch.router' and make sure everything matches up as expected.
-        """
-        local_node = Node.connect(self.address, timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.router')
-        debug_dump = outs.attribute_names.index('debugDumpFile')
-        ra_interval_flux = outs.attribute_names.index('raIntervalFluxSeconds')
-        worker_threads = outs.attribute_names.index('workerThreads')
-        name = outs.attribute_names.index('name')
-        hello_interbval = outs.attribute_names.index('helloIntervalSeconds')
-        area = outs.attribute_names.index('area')
-        hello_max_age = outs.attribute_names.index('helloMaxAgeSeconds')
-        sasl_config_name = outs.attribute_names.index('saslConfigName')
-        remote_ls_max_age = outs.attribute_names.index('remoteLsMaxAgeSeconds')
-        default_distribution = outs.attribute_names.index('defaultDistribution')
-        ra_interval = outs.attribute_names.index('raIntervalSeconds')
-        mode = outs.attribute_names.index('mode')
-
-        self.assertEqual(outs.results[0][debug_dump], 'qddebug.txt')
-        self.assertEqual(outs.results[0][ra_interval_flux], 4)
-        self.assertEqual(outs.results[0][worker_threads], 4)
-        self.assertEqual(outs.results[0][name], 'router/QDR')
-        self.assertEqual(outs.results[0][hello_interbval], 1)
-        self.assertEqual(outs.results[0][area], '0')
-        self.assertEqual(outs.results[0][hello_max_age], 3)
-        self.assertEqual(outs.results[0][sasl_config_name], 'qdrouterd')
-        self.assertEqual(outs.results[0][remote_ls_max_age], 60)
-        self.assertEqual(outs.results[0][default_distribution], 'balanced')
-        self.assertEqual(outs.results[0][ra_interval], 30)
-        self.assertEqual(outs.results[0][mode], 'standalone')
-
     def test_37_connection_properties_unicode_string(self):
         """
         Tests connection property that is a map of unicode strings and integers
@@ -2342,7 +2310,7 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
                         if result[16] != 250:
                             self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
                         else:
-                            outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+                            outs = local_node.query(type='org.apache.qpid.dispatch.router')
                             pos = outs.attribute_names.index("droppedPresettledDeliveries")
                             results = outs.results[0]
                             if results[pos] != 250:
@@ -2397,7 +2365,7 @@ class ReleasedVsModifiedTest(MessagingHandler):
 
     def get_modified_deliveries ( self ) :
         local_node = Node.connect(self.address, timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        outs = local_node.query(type='org.apache.qpid.dispatch.router')
         pos = outs.attribute_names.index("modifiedDeliveries")
         results = outs.results[0]
         n_modified_deliveries = results [ pos ]
@@ -2522,7 +2490,7 @@ class BatchedSettlementTest(MessagingHandler):
     def check_if_done(self):
         if self.n_settled == self.count:
             local_node = Node.connect(self.address, timeout=TIMEOUT)
-            outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+            outs = local_node.query(type='org.apache.qpid.dispatch.router')
             pos = outs.attribute_names.index("acceptedDeliveries")
             results = outs.results[0]
             if results >= self.count:
@@ -2672,7 +2640,7 @@ class PresettledOverflowTest(MessagingHandler):
                         if result[16] != 250:
                             self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
                         else:
-                            outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+                            outs = local_node.query(type='org.apache.qpid.dispatch.router')
                             pos_presett = outs.attribute_names.index("presettledDeliveries")
                             pos = outs.attribute_names.index("droppedPresettledDeliveries")
                             results = outs.results[0]
@@ -2705,7 +2673,7 @@ class RejectDispositionTest(MessagingHandler):
 
     def count_rejects ( self ) :
         local_node = Node.connect(self.address, timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        outs = local_node.query(type='org.apache.qpid.dispatch.router')
         pos = outs.attribute_names.index("rejectedDeliveries")
         results = outs.results[0]
         return results[pos]

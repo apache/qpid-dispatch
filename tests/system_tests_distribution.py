@@ -1762,8 +1762,8 @@ class TargetedSenderTest ( MessagingHandler ):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.send_conn = event.container.connect(self.send_addr)
         self.recv_conn = event.container.connect(self.recv_addr)
-        self.sender   = event.container.create_sender(self.send_conn, self.dest)
-        self.receiver = event.container.create_receiver(self.recv_conn, self.dest)
+        self.sender   = event.container.create_sender(self.send_conn, self.dest, name=link_name())
+        self.receiver = event.container.create_receiver(self.recv_conn, self.dest, name=link_name())
         self.receiver.flow(self.n_expected)
 
 
@@ -1842,7 +1842,7 @@ class AnonymousSenderTest ( MessagingHandler ):
         self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.send_conn = event.container.connect(self.send_addr)
         self.recv_conn = event.container.connect(self.recv_addr)
-        self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget())
+        self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget(), name=link_name())
 
 
     def send(self):
@@ -1856,7 +1856,7 @@ class AnonymousSenderTest ( MessagingHandler ):
         if event.sender == self.sender:
             # Here we are told the address that we will use for the sender.
             self.address = self.sender.remote_target.address
-            self.receiver = event.container.create_receiver(self.recv_conn, self.address)
+            self.receiver = event.container.create_receiver(self.recv_conn, self.address, name=link_name())
 
 
     def on_sendable(self, event):
@@ -1924,11 +1924,11 @@ class DynamicReplyTo(MessagingHandler):
         self.client_connection = event.container.connect(self.client_addr)
         self.server_connection = event.container.connect(self.server_addr)
 
-        self.sender            = event.container.create_sender(self.client_connection, self.dest)
-        self.server_sender     = event.container.create_sender(self.server_connection, None)
+        self.sender            = event.container.create_sender(self.client_connection, self.dest, name=link_name())
+        self.server_sender     = event.container.create_sender(self.server_connection, None, name=link_name())
 
-        self.server_receiver   = event.container.create_receiver(self.server_connection, self.dest)
-        self.client_receiver   = event.container.create_receiver(self.client_connection, None, dynamic=True)
+        self.server_receiver   = event.container.create_receiver(self.server_connection, self.dest, name=link_name())
+        self.client_receiver   = event.container.create_receiver(self.client_connection, None, dynamic=True, name=link_name())
 
 
     def on_sendable(self, event):
@@ -2037,8 +2037,8 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
         # I will get a remote_source address for it. I then pass that address to the
         # Address Checker object, which uses that as the reply-to address for the queries
         # that it sends.
-        self.linkroute_check_receiver = event.container.create_receiver(self.client_cnx, dynamic=True)
-        self.linkroute_check_sender   = event.container.create_sender(self.client_cnx, "$management")
+        self.linkroute_check_receiver = event.container.create_receiver(self.client_cnx, dynamic=True, name=link_name())
+        self.linkroute_check_sender   = event.container.create_sender(self.client_cnx, "$management", name=link_name())
 
 
     def on_link_opened ( self, event ) :
@@ -2062,7 +2062,7 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
                 # Step 3: got confirmation of link-attach knowledge fully propagated
                 # to Nearside router.  Now we can make the client sender without getting
                 # a No Path To Destination error.
-                self.client_sender = event.container.create_sender(self.client_cnx, self.link_routable_address)
+                self.client_sender = event.container.create_sender(self.client_cnx, self.link_routable_address, name=link_name())
                 # And we can quit checking.
                 self.bail ( None )
             else:
@@ -2158,8 +2158,8 @@ class LinkAttachRouting ( MessagingHandler ):
         # I will get a remote_source address for it. I then pass that address to the
         # Address Checker object, which uses that as the reply-to address for the queries
         # that it sends.
-        self.linkroute_check_receiver = event.container.create_receiver(self.nearside_cnx, dynamic=True)
-        self.linkroute_check_sender   = event.container.create_sender(self.nearside_cnx, "$management")
+        self.linkroute_check_receiver = event.container.create_receiver(self.nearside_cnx, dynamic=True, name=link_name())
+        self.linkroute_check_sender   = event.container.create_sender(self.nearside_cnx, "$management", name=link_name())
 
 
     def on_link_opened(self, event):
@@ -2182,7 +2182,7 @@ class LinkAttachRouting ( MessagingHandler ):
                 # Step 3: got confirmation of link-attach knowledge fully propagated
                 # to Nearside router.  Now we can make the nearside sender without getting
                 # a No Path To Destination error.
-                self.nearside_sender = event.container.create_sender(self.nearside_cnx, self.link_routable_address)
+                self.nearside_sender = event.container.create_sender(self.nearside_cnx, self.link_routable_address, name=link_name())
                 # And we can quit checking.
                 if self.linkroute_check_timer:
                     self.linkroute_check_timer.cancel()
@@ -2345,8 +2345,8 @@ class ClosestTest ( MessagingHandler ):
         self.recv_2_b.flow ( self.n_expected )
         self.recv_3_b.flow ( self.n_expected )
 
-        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
+        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True, name=link_name() )
+        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management", name=link_name() )
 
 
     def on_link_opened(self, event):
@@ -2375,7 +2375,7 @@ class ClosestTest ( MessagingHandler ):
                 # routers that know about the address. The network is ready.
                 # Now we can make the sender without getting a
                 # "No Path To Destination" error.
-                self.sender = event.container.create_sender ( self.send_cnx, self.dest )
+                self.sender = event.container.create_sender ( self.send_cnx, self.dest, name=link_name() )
 
                 # And we can quit checking.
                 if self.addr_check_timer:
@@ -2537,18 +2537,18 @@ class BalancedTest ( MessagingHandler ):
         self.cnx_2    = event.container.connect ( self.router_2 )
         self.cnx_1    = event.container.connect ( self.router_1 )
 
-        self.recv_3  = event.container.create_receiver ( self.cnx_3,  self.dest )
+        self.recv_3  = event.container.create_receiver ( self.cnx_3,  self.dest, name=link_name() )
         if self.omit_middle_receiver is False :
-            self.recv_2 = event.container.create_receiver ( self.cnx_2,  self.dest )
-        self.recv_1  = event.container.create_receiver ( self.cnx_1,  self.dest )
+            self.recv_2 = event.container.create_receiver ( self.cnx_2,  self.dest, name=link_name() )
+        self.recv_1  = event.container.create_receiver ( self.cnx_1,  self.dest, name=link_name() )
 
         self.recv_3.flow ( self.total_messages )
         if self.omit_middle_receiver is False :
             self.recv_2.flow ( self.total_messages )
         self.recv_1.flow ( self.total_messages )
 
-        self.address_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.address_check_sender   = event.container.create_sender   ( self.cnx_1, "$management" )
+        self.address_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True , name=link_name())
+        self.address_check_sender   = event.container.create_sender   ( self.cnx_1, "$management", name=link_name() )
 
 
     def on_link_opened(self, event):
@@ -2578,7 +2578,7 @@ class BalancedTest ( MessagingHandler ):
                 # Since I have 3 nodes, I want to see 1 subscriber (which is on the local router) and
                 # 2 remote routers that know about my destination address.
                 # Now we can safely make the payload sender without getting a 'No Path To Destination' error.
-                self.payload_sender = event.container.create_sender ( self.cnx_1, self.dest )
+                self.payload_sender = event.container.create_sender ( self.cnx_1, self.dest, name=link_name() )
                 # And we can quit checking.
                 if self.address_check_timer:
                     self.address_check_timer.cancel()
@@ -2721,8 +2721,8 @@ class MulticastTest ( MessagingHandler ):
         self.recv_2_b.flow ( self.n_to_send )
         self.recv_3_b.flow ( self.n_to_send )
 
-        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True )
-        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
+        self.addr_check_receiver = event.container.create_receiver ( self.cnx_1, dynamic=True, name=link_name() )
+        self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management", name=link_name() )
 
 
     def on_link_opened(self, event):
@@ -2757,7 +2757,7 @@ class MulticastTest ( MessagingHandler ):
                 # routers that know about the address. The network is ready.
                 # Now we can make the sender without getting a
                 # "No Path To Destination" error.
-                self.sender = event.container.create_sender ( self.send_cnx, self.dest )
+                self.sender = event.container.create_sender ( self.send_cnx, self.dest, name=link_name() )
 
                 # And we can quit checking.
                 if self.addr_check_timer:
@@ -2991,8 +2991,8 @@ class RoutingTest ( MessagingHandler ):
         #          dynamic.  That means that when we receive the on_link_opened event for
         #          it, we will be handed its address -- which we will then use as the reply-to
         #          address for the management queries we send.
-        self.linkroute_check_receiver = event.container.create_receiver ( self.sender_cnx, dynamic=True )
-        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management" )
+        self.linkroute_check_receiver = event.container.create_receiver ( self.sender_cnx, dynamic=True, name=link_name() )
+        self.linkroute_check_sender   = event.container.create_sender   ( self.sender_cnx, "$management", name=link_name() )
 
 
     #=================================================

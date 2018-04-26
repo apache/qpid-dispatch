@@ -105,7 +105,7 @@ class TwoRouterTest(TestCase):
         self.assertEqual(None, test.error)
 
         local_node = Node.connect(self.routers[0].addresses[0], timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.routerStats')
+        outs = local_node.query(type='org.apache.qpid.dispatch.router')
 
         # deliveriesTransit must most surely be greater than num_msgs
         pos = outs.attribute_names.index("deliveriesTransit")
