@@ -17,7 +17,8 @@
  * under the License.
  */
 
-#include "agent_router_stats.h"
+#include "agent_router.h"
+
 #include "config.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -26,7 +27,7 @@
 #define QDR_ROUTER_NAME                                0
 #define QDR_ROUTER_IDENTITY                            1
 #define QDR_ROUTER_ID                                  2
-#define QDR_ROUTER_STATS_TYPE                          3
+#define QDR_ROUTER_TYPE                                3
 #define QDR_ROUTER_MODE                                4
 #define QDR_ROUTER_VERSION                             5
 #define QDR_ROUTER_ADDR_COUNT                          6
@@ -96,8 +97,8 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         // There is only one instance of router. Just give it an identity of 1
         qd_compose_insert_string(body, "1");
         break;
-    case QDR_ROUTER_STATS_TYPE:
-        qd_compose_insert_string(body, "org.apache.qpid.dispatch.routerStats");
+    case QDR_ROUTER_TYPE:
+        qd_compose_insert_string(body, "org.apache.qpid.dispatch.router");
         break;
 
     case QDR_ROUTER_MODE:

@@ -482,31 +482,7 @@
                     "create": true,
                     "required": false,
                     "default": "balanced"
-                }
-            }
-        },
-        
-        "routerStats": {
-            "description": "Overall router statistics.",
-            "extends": "operationalEntity",
-            "attributes": {
-	            "id": {
-	                "description":"Router's unique identity. The router will fail to start without id.",
-	                "type": "string",
-	                "required": false
-	            },
-	            "mode": {
-	                "type": [
-	                    "standalone",
-	                    "interior"
-	                ],
-	                "default": "standalone",
-	                "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network."
-	            },
-	            "version": {
-	                "type": "string",
-	                "description": "Software Version"
-	            },
+                },
 	            "addrCount": {
 	                "type": "integer",
 	                "description":"Number of addresses known to the router.",
@@ -592,8 +568,8 @@
                     "description":"Number of deliveries that were sent to route container connections.",
                     "graph": true
                 }                
-            }        
-        },        
+            }
+        },       
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "referential": true,
