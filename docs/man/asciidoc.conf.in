@@ -25,7 +25,7 @@ QPID_DISPATCH_VERSION=${QPID_DISPATCH_VERSION}
 
 generated=${CMAKE_CURRENT_BINARY_DIR}
 generated_book=${CMAKE_CURRENT_BINARY_DIR}/book
-generated_man=${CMAKE_CURRENT_BINARY_DIR}/man
+generated_man=${CMAKE_CURRENT_BINARY_DIR}
 
 [footer-text]
 Qpid Dispatch ${QPID_DISPATCH_VERSION} - generated {localdate} {localtime}

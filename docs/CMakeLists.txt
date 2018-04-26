@@ -17,6 +17,11 @@
 ## under the License.
 ##
 
+option(DOC_VERBOSE "Verbose output from doc tools for debugging" OFF)
+option(DOC_XMLLINT "Use xmllint to verify XML output" OFF)
+
 add_custom_target(docs)
+add_custom_target(doc DEPENDS docs)
 
 add_subdirectory(books)
+add_subdirectory(man)
