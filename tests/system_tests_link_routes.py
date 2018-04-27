@@ -713,6 +713,25 @@ class LinkRouteTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def _multi_link_send_receive(self, send_host, receive_host, name):
+        senders = ["%s/%s" % (send_host, address) for address in ["org.apache.foo", "org.apache.bar"]]
+        receivers = ["%s/%s" % (receive_host, address) for address in ["org.apache.foo", "org.apache.bar"]]
+        test = MultiLinkSendReceive(senders, receivers, name)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_same_name_route_receivers_through_B(self):
+        self._multi_link_send_receive(self.routers[0].addresses[0], self.routers[1].addresses[0], "recv_through_B")
+
+    def test_same_name_route_senders_through_B(self):
+        self._multi_link_send_receive(self.routers[1].addresses[0], self.routers[0].addresses[0], "send_through_B")
+
+    def test_same_name_route_receivers_through_C(self):
+        self._multi_link_send_receive(self.routers[0].addresses[0], self.routers[2].addresses[0], "recv_through_C")
+
+    def test_same_name_route_senders_through_C(self):
+        self._multi_link_send_receive(self.routers[2].addresses[0], self.routers[0].addresses[0], "send_through_C")
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -1194,6 +1213,116 @@ class TerminusAddrTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class MultiLinkSendReceive(MessagingHandler):
+    class SendState(object):
+        def __init__(self, link):
+            self.link = link
+            self.sent = False
+            self.accepted = False
+            self.done = False
+            self.closed = False
+
+        def send(self, subject, body):
+            if not self.sent:
+                self.link.send(Message(subject=subject,body=body,address=self.link.target.address))
+                self.sent = True
+
+        def on_accepted(self):
+            self.accepted = True
+            self.done = True
+
+        def close(self):
+            if not self.closed:
+                self.closed = True
+                self.link.close()
+                self.link.connection.close()
+
+    class RecvState(object):
+        def __init__(self, link):
+            self.link = link
+            self.received = False
+            self.done = False
+            self.closed = False
+
+        def on_message(self):
+            self.received = True
+            self.done = True
+
+        def close(self):
+            if not self.closed:
+                self.closed = True
+                self.link.close()
+                self.link.connection.close()
+
+    def __init__(self, send_urls, recv_urls, name, message=None):
+        super(MultiLinkSendReceive, self).__init__()
+        self.send_urls = send_urls
+        self.recv_urls = recv_urls
+        self.senders = {}
+        self.receivers = {}
+        self.message = message or "SendReceiveTest"
+        self.sent = False
+        self.error = None
+        self.name = name
+
+    def close(self):
+        for sender in self.senders.values():
+            sender.close()
+        for receiver in self.receivers.values():
+            receiver.close()
+
+    def all_done(self):
+        for sender in self.senders.values():
+            if not sender.done:
+                return False
+        for receiver in self.receivers.values():
+            if not receiver.done:
+                return False
+        return True
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.close()
+
+    def stop_if_all_done(self):
+        if self.all_done():
+            self.stop()
+
+    def stop(self):
+        self.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        event.container.container_id = None
+        for u in self.send_urls:
+            s = self.SendState(event.container.create_sender(u, name=self.name))
+            self.senders[s.link.connection.container] = s
+        for u in self.recv_urls:
+            r = self.RecvState(event.container.create_receiver(u, name=self.name))
+            self.receivers[r.link.connection.container] = r
+
+    def on_link_remote_open(self, event):
+        print("link opened: %s %s %s" % (event.link.source.address, event.link.target.address, event.connection.container))
+
+    def on_sendable(self, event):
+        print("sendable: %s %s" % (event.link.target.address, event.connection.container))
+        self.senders[event.connection.container].send(self.name, self.message)
+
+    def on_message(self, event):
+        print("message received: %s %s" % (event.link.source.address, event.connection.container))
+        if self.message != event.message.body:
+            error = "Incorrect message. Got %s, expected %s" % (event.message.body, self.message.body)
+        self.receivers[event.connection.container].on_message()
+        self.stop_if_all_done()
+
+    def on_accepted(self, event):
+        print("accepted: %s %s" % (event.link.target.address, event.connection.container))
+        self.senders[event.connection.container].on_accepted()
+        self.stop_if_all_done()
+
+    def run(self):
+        Container(self).run()
 
 if __name__ == '__main__':
     unittest.main(main_module())

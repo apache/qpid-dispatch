@@ -675,7 +675,6 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     return 0;
 }
 
-
 bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
                                   qdr_address_t  *addr,
                                   qdr_link_t     *in_link,
@@ -750,8 +749,7 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
 
         out_link->oper_status    = QDR_LINK_OPER_DOWN;
 
-        out_link->name = (char*) malloc(strlen(in_link->name) + 1);
-        strcpy(out_link->name, in_link->name);
+        out_link->name = strdup(in_link->disambiguated_name ? in_link->disambiguated_name : in_link->name);
 
         out_link->connected_link = in_link;
         in_link->connected_link  = out_link;
