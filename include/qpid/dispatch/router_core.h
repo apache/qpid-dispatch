@@ -363,6 +363,26 @@ void qdr_terminus_set_address_iterator(qdr_terminus_t *term, qd_iterator_t *addr
 qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term);
 
 /**
+ * qdr_terminus_insert_address_prefix
+ *
+ * Insert the given prefix into the terminus address
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param prefix null-terminated string
+ */
+void qdr_terminus_insert_address_prefix(qdr_terminus_t *term, const char *prefix);
+
+/**
+ * qdr_terminus_strip_address_prefix
+ *
+ * Remove the given prefix from the terminus address
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @param prefix null-terminated string
+ */
+void qdr_terminus_strip_address_prefix(qdr_terminus_t *term, const char *prefix);
+
+/**
  * qdr_terminus_dnp_address
  *
  * Return the address field in the dynamic-node-properties if it is there.

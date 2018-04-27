@@ -406,6 +406,8 @@ struct qdr_link_t {
     bool                     strip_annotations_out;
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
+    char                    *strip_prefix;
+    char                    *insert_prefix;
 
     uint64_t  total_deliveries;
     uint64_t  presettled_deliveries;
@@ -475,6 +477,12 @@ struct qdr_address_t {
     // State for "exchange" treatment
     //
     qdr_exchange_t      *exchange;  // weak ref
+
+    //
+    // State for "link balanced" treatment
+    //
+    char *add_prefix;
+    char *del_prefix;
 
     /**@name Statistics */
     ///@{
@@ -590,6 +598,8 @@ struct qdr_link_route_t {
     bool                    active;
     bool                    is_prefix;
     char                   *pattern;
+    char                   *add_prefix;
+    char                   *del_prefix;
 };
 
 ALLOC_DECLARE(qdr_link_route_t);

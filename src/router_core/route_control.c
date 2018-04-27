@@ -270,6 +270,8 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
                                               qd_parsed_field_t      *prefix_field,
                                               qd_parsed_field_t      *pattern_field,
+                                              qd_parsed_field_t      *add_prefix_field,
+                                              qd_parsed_field_t      *del_prefix_field,
                                               qd_parsed_field_t      *container_field,
                                               qd_parsed_field_t      *connection_field,
                                               qd_address_treatment_t  treatment,
@@ -308,6 +310,18 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     lr->is_prefix = is_prefix;
     lr->pattern   = pattern;
 
+    if (!!add_prefix_field) {
+        qd_iterator_t *ap_iter = qd_parse_raw(add_prefix_field);
+        int ap_len = qd_iterator_length(ap_iter);
+        lr->add_prefix = malloc(ap_len + 1);
+        qd_iterator_strncpy(ap_iter, lr->add_prefix, ap_len + 1);
+    }
+    if (!!del_prefix_field) {
+        qd_iterator_t *ap_iter = qd_parse_raw(del_prefix_field);
+        int ap_len = qd_iterator_length(ap_iter);
+        lr->del_prefix = malloc(ap_len + 1);
+        qd_iterator_strncpy(ap_iter, lr->del_prefix, ap_len + 1);
+    }
     //
     // Add the address to the routing hash table and map it as a pattern in the
     // wildcard pattern parse tree
@@ -318,6 +332,14 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
         qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
         if (!lr->addr) {
             lr->addr = qdr_address_CT(core, treatment);
+            if (lr->add_prefix) {
+                lr->addr->add_prefix = (char*) malloc(strlen(lr->add_prefix) + 1);
+                strcpy(lr->addr->add_prefix, lr->add_prefix);
+            }
+            if (lr->del_prefix) {
+                lr->addr->del_prefix = (char*) malloc(strlen(lr->del_prefix) + 1);
+                strcpy(lr->addr->del_prefix, lr->del_prefix);
+            }
             //treatment will not be undefined for link route so above will not return null
             DEQ_INSERT_TAIL(core->addrs, lr->addr);
             qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);

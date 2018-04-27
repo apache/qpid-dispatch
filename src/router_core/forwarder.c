@@ -703,12 +703,23 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
 {
     qdr_connection_ref_t *conn_ref = DEQ_HEAD(addr->conns);
     qdr_connection_t     *conn     = 0;
+    char                 *strip    = 0;
+    char                 *insert   = 0;
 
     //
     // Check for locally connected containers that can handle this link attach.
     //
     if (conn_ref) {
         conn = conn_ref->conn;
+        qdr_terminus_t *remote_terminus = in_link->link_direction == QD_OUTGOING ? source : target;
+        if (addr->del_prefix) {
+            insert = strdup(addr->del_prefix);
+            qdr_terminus_strip_address_prefix(remote_terminus, addr->del_prefix);
+        }
+        if (addr->add_prefix) {
+            strip = strdup(addr->add_prefix);
+            qdr_terminus_insert_address_prefix(remote_terminus, addr->add_prefix);
+        }
 
         //
         // If there are more than one local connections available for handling this link,
@@ -766,6 +777,13 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
         out_link->admin_enabled  = true;
         out_link->terminus_addr  = 0;
+
+        if (strip) {
+            out_link->strip_prefix = strip;
+        }
+        if (insert) {
+            out_link->insert_prefix = insert;
+        }
 
         out_link->oper_status    = QDR_LINK_OPER_DOWN;
 

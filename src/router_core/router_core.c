@@ -295,6 +295,8 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment
     addr->treatment = treatment;
     addr->forwarder = qdr_forwarder_CT(core, treatment);
     addr->rnodes    = qd_bitmask(0);
+    addr->add_prefix = 0;
+    addr->del_prefix = 0;
     return addr;
 }
 
@@ -334,6 +336,8 @@ bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
 {
     DEQ_REMOVE(core->link_routes, lr);
+    free(lr->add_prefix);
+    free(lr->del_prefix);
     free(lr->name);
     free(lr->pattern);
     free_qdr_link_route_t(lr);

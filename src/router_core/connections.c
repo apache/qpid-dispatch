@@ -844,6 +844,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     free(link->disambiguated_name);
     free(link->terminus_addr);
     free(link->ingress_histogram);
+    free(link->insert_prefix);
+    free(link->strip_prefix);
     link->name = 0;
 }
 
@@ -875,6 +877,8 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
+    link->insert_prefix = 0;
+    link->strip_prefix = 0;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -1602,6 +1606,14 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     // Handle attach-routed links
     //
     if (link->connected_link) {
+        qdr_terminus_t *remote_terminus = link->link_direction == QD_OUTGOING ? target : source;
+        if (link->strip_prefix) {
+            qdr_terminus_strip_address_prefix(remote_terminus, link->strip_prefix);
+        }
+        if (link->insert_prefix) {
+            qdr_terminus_insert_address_prefix(remote_terminus, link->insert_prefix);
+        }
+
         qdr_link_outbound_second_attach_CT(core, link->connected_link, source, target);
         return;
     }

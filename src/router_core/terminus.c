@@ -187,6 +187,34 @@ qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
     return term->address->iterator;
 }
 
+void qdr_terminus_insert_address_prefix(qdr_terminus_t *term, const char *prefix)
+{
+    qd_iterator_t *orig = qdr_terminus_get_address(term);
+    char *rewrite_addr = 0;
+
+    size_t prefix_len = strlen(prefix);
+    size_t orig_len = qd_iterator_length(orig);
+    rewrite_addr = malloc(prefix_len + orig_len + 1);
+    strcpy(rewrite_addr, prefix);
+    qd_iterator_strncpy(orig, rewrite_addr+prefix_len, orig_len + 1);
+
+    qdr_terminus_set_address(term, rewrite_addr);
+    free(rewrite_addr);
+}
+
+void qdr_terminus_strip_address_prefix(qdr_terminus_t *term, const char *prefix)
+{
+    qd_iterator_t *orig = qdr_terminus_get_address(term);
+    size_t prefix_len = strlen(prefix);
+    size_t orig_len = qd_iterator_length(orig);
+    if (orig_len > prefix_len && qd_iterator_prefix(orig, prefix)) {
+        char *rewrite_addr = malloc(orig_len + 1);
+        qd_iterator_strncpy(orig, rewrite_addr, orig_len + 1);
+        qdr_terminus_set_address(term, rewrite_addr + prefix_len);
+        free(rewrite_addr);
+    }
+}
+
 
 qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term)
 {

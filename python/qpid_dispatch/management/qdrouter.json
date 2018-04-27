@@ -1129,6 +1129,18 @@
                     "create": true,
                     "required": false
                 },
+                "addExternalPrefix": {
+                    "type": "string",
+                    "description": "add the specified prefix to the address of the remote terminus on the route container link",
+                    "create": true,
+                    "required": false
+                },
+                "delExternalPrefix": {
+                    "type": "string",
+                    "description": "remove the specified prefix to the address of the remote terminus on the route container link",
+                    "create": true,
+                    "required": false
+                },
                 "containerId": {
                     "type": "string",
                     "description": "ContainerID for the target container. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created.",

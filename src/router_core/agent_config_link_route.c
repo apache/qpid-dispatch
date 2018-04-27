@@ -34,6 +34,8 @@
 #define QDR_CONFIG_LINK_ROUTE_DIR           8
 #define QDR_CONFIG_LINK_ROUTE_OPER_STATUS   9
 #define QDR_CONFIG_LINK_ROUTE_PATTERN       10
+#define QDR_CONFIG_LINK_ROUTE_ADD_EXTERNAL_PREFIX 11
+#define QDR_CONFIG_LINK_ROUTE_DEL_EXTERNAL_PREFIX 12
 
 const char *qdr_config_link_route_columns[] =
     {"name",
@@ -47,6 +49,8 @@ const char *qdr_config_link_route_columns[] =
      "dir",
      "operStatus",
      "pattern",
+     "addExternalPrefix",
+     "delExternalPrefix",
      0};
 
 const char *CONFIG_LINKROUTE_TYPE = "org.apache.qpid.dispatch.router.config.linkRoute";
@@ -95,6 +99,20 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
             assert(len > 2);
             qd_compose_insert_string_n(body, lr->pattern, len - 2);
         } else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_LINK_ROUTE_ADD_EXTERNAL_PREFIX:
+        if (lr->add_prefix)
+            qd_compose_insert_string(body, lr->add_prefix);
+        else
+            qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_LINK_ROUTE_DEL_EXTERNAL_PREFIX:
+        if (lr->del_prefix)
+            qd_compose_insert_string(body, lr->del_prefix);
+        else
             qd_compose_insert_null(body);
         break;
 
@@ -392,6 +410,8 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         //
         qd_parsed_field_t *prefix_field     = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_PREFIX]);
         qd_parsed_field_t *pattern_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_PATTERN]);
+        qd_parsed_field_t *add_prefix_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_ADD_EXTERNAL_PREFIX]);
+        qd_parsed_field_t *del_prefix_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DEL_EXTERNAL_PREFIX]);
         qd_parsed_field_t *distrib_field    = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DISTRIBUTION]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONTAINER_ID]);
@@ -456,7 +476,7 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         // The request is good.  Create the entity.
         //
 
-        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, container_field, connection_field, trt, dir);
+        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, add_prefix_field, del_prefix_field, container_field, connection_field, trt, dir);
 
         //
         // Compose the result map for the response.

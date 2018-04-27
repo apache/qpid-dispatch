@@ -139,6 +139,8 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
     char *name      = 0;
     char *prefix    = 0;
     char *pattern   = 0;
+    char *add_prefix= 0;
+    char *del_prefix= 0;
     char *container = 0;
     char *c_name    = 0;
     char *distrib   = 0;
@@ -153,6 +155,8 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
         prefix    = qd_entity_opt_string(entity, "prefix", 0);
         pattern   = qd_entity_opt_string(entity, "pattern", 0);
+        add_prefix= qd_entity_opt_string(entity, "addExternalPrefix", 0);
+        del_prefix= qd_entity_opt_string(entity, "delExternalPrefix", 0);
 
         if (prefix && pattern) {
             qd_log(router->log_source, QD_LOG_WARNING,
@@ -187,6 +191,16 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
             qd_compose_insert_string(body, pattern);
         }
 
+        if (add_prefix) {
+            qd_compose_insert_string(body, "addExternalPrefix");
+            qd_compose_insert_string(body, add_prefix);
+        }
+
+        if (del_prefix) {
+            qd_compose_insert_string(body, "delExternalPrefix");
+            qd_compose_insert_string(body, del_prefix);
+        }
+
         if (container) {
             qd_compose_insert_string(body, "containerId");
             qd_compose_insert_string(body, container);
@@ -215,6 +229,8 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 
     free(name);
     free(prefix);
+    free(add_prefix);
+    free(del_prefix);
     free(container);
     free(c_name);
     free(distrib);
