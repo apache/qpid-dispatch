@@ -510,13 +510,13 @@ class DistributionTests ( TestCase ):
                      'test_13' : 0,
                      'test_14' : 0,
                      'test_15' : 0,
-                     'test_16' : 0,
-                     'test_17' : 0,
-                     'test_18' : 0,
-                     'test_19' : 0,
-                     'test_20' : 0,
-                     'test_21' : 0,
-                     'test_22' : 0,
+                     'test_16' : 1,
+                     'test_17' : 1,
+                     'test_18' : 1,
+                     'test_19' : 1,
+                     'test_20' : 1,
+                     'test_21' : 1,
+                     'test_22' : 1,
                      'test_23' : 0,
                      'test_24' : 0,
                      'test_25' : 0
@@ -890,7 +890,7 @@ class DistributionTests ( TestCase ):
     def test_16_linkroute_linear_all_local ( self ) :
         name = 'test_16'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest ( "" )
         """
         This test should route all senders' link-attaches
         to the local containers on router A.
@@ -980,7 +980,7 @@ class DistributionTests ( TestCase ):
     def test_17_linkroute_linear_all_B ( self ) :
         name = 'test_17'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest ( "" )
         """
         This test should route all senders' link-attaches
         to the remote connections on router B.
@@ -1070,7 +1070,7 @@ class DistributionTests ( TestCase ):
     def test_18_linkroute_linear_all_C ( self ) :
         name = 'test_18'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest (  ""  )
         """
         This test should route all senders' link-attaches
         to the remote connections on router C.
@@ -1159,7 +1159,7 @@ class DistributionTests ( TestCase ):
     def test_19_linkroute_linear_kill ( self ) :
         name = 'test_19'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest (  ""  )
         """
         Start out as usual, making four senders and seeing their link-attaches
         routed to router A (local). But then kill the two route-container
@@ -1309,7 +1309,7 @@ class DistributionTests ( TestCase ):
     def test_20_linkroute_mesh_all_local ( self ) :
         name = 'test_20'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest ( '' )
         """
                        c           c
         senders --->   A --------- B
@@ -1412,7 +1412,7 @@ class DistributionTests ( TestCase ):
     def test_21_linkroute_mesh_nonlocal ( self ) :
         name = 'test_21'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest (  ""  )
         """
                                    c
         senders --->   A --------- B
@@ -1517,7 +1517,7 @@ class DistributionTests ( TestCase ):
     def test_22_linkroute_mesh_kill ( self ) :
         name = 'test_22'
         if self.skip [ name ] :
-            self.skipTest ( "Test skipped during development." )
+            self.skipTest (  ""  )
         """
                        c           c
         senders --->   A --------- B
