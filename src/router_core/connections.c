@@ -840,6 +840,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // Free the link's name and terminus_addr
     //
     free(link->name);
+    free(link->disambiguated_name);
     free(link->terminus_addr);
     free(link->ingress_histogram);
     link->name = 0;
@@ -867,6 +868,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
+    link->disambiguated_name = 0;
     link->terminus_addr  = 0;
     qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
@@ -1346,6 +1348,18 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_free(conn);
 }
 
+static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original)
+{
+    size_t olen = strlen(original);
+    size_t clen = strlen(conn->container);
+    char *name = (char*) malloc(olen + clen + 2);
+    memset(name, 0, olen + clen + 2);
+    strcat(name, original);
+    name[olen] = '@';
+    strcat(name + olen + 1, conn->container);
+    return name;
+}
+
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
@@ -1429,6 +1443,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                         qdr_terminus_free(source);
                         qdr_terminus_free(target);
                     } else {
+                        if (conn->role != QDR_ROLE_INTER_ROUTER && conn->connection_info) {
+                            link->disambiguated_name = disambiguated_link_name(conn->connection_info, link->name);
+                        }
                         success = qdr_forward_attach_CT(core, addr, link, source, target);
 
                         if (!success) {
@@ -1522,6 +1539,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 } else {
+                    if (conn->role != QDR_ROLE_INTER_ROUTER && conn->connection_info) {
+                        link->disambiguated_name = disambiguated_link_name(conn->connection_info, link->name);
+                    }
                     bool success = qdr_forward_attach_CT(core, addr, link, source, target);
                     if (!success) {
                         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
