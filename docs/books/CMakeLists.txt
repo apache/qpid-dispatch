@@ -25,10 +25,9 @@ set (
   ${CMAKE_CURRENT_BINARY_DIR}/old-user-guide/index.html
   )
 
-# Don't follow symlinks and don't warn about it
-cmake_policy(SET CMP0009 NEW)
-
 if (ASCIIDOCTOR_EXE)
+  # Don't follow symlinks and don't warn about it
+  cmake_policy(SET CMP0009 NEW)
   file (GLOB_RECURSE png_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.png)
 
   foreach (file ${png_files})
