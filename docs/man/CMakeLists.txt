@@ -67,8 +67,6 @@ help2txt (${tools}/qdstat)
 
 add_custom_target (doc_gen ALL DEPENDS ${generated_txt})
 
-install (FILES ${bin}/qdrouterd.conf.5.adoc DESTINATION ${QD_DOC_INSTALL_DIR})
-
 execute_process (COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin})  
 
 find_program (ASCIIDOC_EXE asciidoc DOC "Generate HTML documentation")
@@ -98,7 +96,6 @@ if (ASCIIDOC_EXE)
       WORKING_DIRECTORY ${bin}
       )
     list (APPEND docs_deps ${output})
-    install (FILES ${output} DESTINATION ${QD_DOC_INSTALL_DIR} OPTIONAL)
   endforeach ()
 
   find_program(A2X_EXE a2x DOC DOC "Generate Unix man pages")
