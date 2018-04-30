@@ -94,8 +94,8 @@ class Config(object):
     def _parserawjson(lines):
         """Parse raw json config file format into a section list"""
         def sub(line):
-            """Do substitutions to make line json-friendly"""
-            line = line.split('#')[0].strip() # Strip comments
+            # ignore comment lines that start with "[whitespace] #"
+            line = "" if line.strip().startswith('#') else line
             return line
         js_text = "%s"%("\n".join([sub(l) for l in lines]))
         sections = json.loads(js_text)
