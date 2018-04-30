@@ -34,6 +34,8 @@ var QDR = (function (QDR) {
     const DOUGHNUT =        '#chord svg .empty';
     const ERROR_RENDERING = 'Error while rendering ';
     const ARCPADDING = .06;
+    const SMALL_OFFSET = 210;
+    const MIN_RADIUS = 200;
 
     // flag to show/hide the router section of the legend
     $scope.noValues = true;
@@ -45,6 +47,7 @@ var QDR = (function (QDR) {
     $scope.chordColors = {};
     $scope.arcColors = {};
 
+    $scope.legend = {status: {addressesOpen: true, routersOpen: true, optionsOpen: true}};
     // get notified when the byAddress checkbox is toggled
     let switchedByAddress = false;
     $scope.$watch('legendOptions.byAddress', function (newValue, oldValue) {
@@ -163,7 +166,7 @@ var QDR = (function (QDR) {
         b = d.getElementsByTagName('body')[0],
         x = w.innerWidth || e.clientWidth || b.clientWidth,
         y = w.innerHeight|| e.clientHeight|| b.clientHeight;
-      return Math.max(Math.floor((Math.min(x, y) * 0.9) / 2), 300);
+      return Math.max(Math.floor((Math.min(x, y) * 0.9) / 2), MIN_RADIUS);
     };
 
     // diagram sizes that change when browser is resized
@@ -178,6 +181,14 @@ var QDR = (function (QDR) {
     };
     setSizes();
 
+    $scope.navbutton_toggle = function () {
+      let legendPos = $('#legend').position();
+      console.log(legendPos);
+      if (legendPos.left === 0)
+        setTimeout(windowResized, 10);
+      else
+        $('#switches').css({left: -legendPos.left, opacity: 1});
+    };
     // TODO: handle window resizes
     //let updateWindow  = function () {
     //setSizes();
@@ -188,7 +199,8 @@ var QDR = (function (QDR) {
       let legendPos = $('#legend').position();
       let switches = $('#switches');
       let outerWidth = switches.outerWidth();
-      switches.css({left: (legendPos.left - outerWidth), opacity: 1});
+      if (switches && legendPos)
+        switches.css({left: (legendPos.left - outerWidth), opacity: 1});
     };
     window.addEventListener('resize', function () {
       windowResized();
@@ -249,17 +261,17 @@ var QDR = (function (QDR) {
     // global pointer to the diagram
     let svg;
 
-    // called once when the page loads and again
-    // whenever the number of routers that have egressed messages changes
+    // called once when the page loads
     let initSvg = function () {
       d3.select('#chord svg').remove();
 
+      let xtrans = outerRadius === MIN_RADIUS ? SMALL_OFFSET : outerRadius;
       svg = d3.select('#chord').append('svg')
         .attr('width', outerRadius * 2)
         .attr('height', outerRadius * 2)
         .append('g')
         .attr('id', 'circle')
-        .attr('transform', 'translate(' + outerRadius + ',' + outerRadius + ')');
+        .attr('transform', 'translate(' + xtrans + ',' + outerRadius + ')');
 
       // mouseover target for when the mouse leaves the diagram
       svg.append('circle')
@@ -413,7 +425,9 @@ var QDR = (function (QDR) {
             let msg = 'There is no message traffic';
             if (addressLen !== 0)
               msg += ' for the selected addresses';
-            $.notify($('#noTraffic'), msg, {clickToHide: false, autoHide: false, arrowShow: false, className: 'Warning'});
+            let autoHide = outerRadius === MIN_RADIUS;
+            $.notify($('#noTraffic'), msg, {clickToHide: autoHide, autoHide: autoHide, arrowShow: false, className: 'Warning'});
+            $('.notifyjs-wrapper').css('z-index', autoHide ? 3 : 0);
           }
         });
         emptyCircle();

@@ -48,6 +48,7 @@
     padding-right: 1em;
     opacity: 0;
     background-color: white;
+    z-index: 2;
   }
   #switches ul {
     list-style: none;
@@ -57,16 +58,14 @@
   #switches li {
     margin-bottom: 1em;
   }
+  
   #legend {
-    position: absolute;
     right: 1em;
     top: 1em;
-    padding: 0 1em;
-    border: 1px solid black;
-    border-radius: 4px;
     min-width: 10em;
     background-color: white;
   }
+
   #legend .legend-color {
     width: 19.6667px;
     height: 18.1667px;
@@ -145,17 +144,18 @@
     fill-opacity: .67;
   }
 
-#legend ul.addresses li, #legend ul.routers li {
+#legend ul.addresses li, #legend ul.routers li, #legend ul.options li {
   margin-top: 0.5em;
+  margin-bottom: 1em;
 }
 
-#legend ul.routers li {
-  margin-bottom: 0.5em;
-}
 #legend ul.addresses {
   margin-bottom: 1.5em;
 }
 
+#legend .panel-body {
+  padding: 4px 15px;
+}
 .code-branch:before {
   font-style: normal;
   font-family: FontAwesome;
@@ -166,10 +166,6 @@
     padding-left: 15px;
     opacity: 0;
     z-index: 0;
-  }
-
-  div#debugging {
-    width: 20em;
   }
 
   .addresses .btn, #switches .btn {
@@ -198,43 +194,89 @@
   #noTraffic {
     position:absolute;
   }
+
+.legend-button {
+  color: black;
+  background: white;
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 2;
+  width: 1em;
+  padding: 4px 0 0 4px;
+  margin: 4px 0 0 4px;
+}
+.legend-button span.icon-bar {
+  display: block;
+  color: black;
+  background-color: black;
+  height: 4px;
+  width: 4px;
+  font-weight: bold;
+  border-radius: 2px;
+}
+
+.page-menu {
+  position: absolute;
+  right: 1em;
+  top: 1em;
+  left: auto;
+  width: auto;
+}
+
+@media (max-width: 768px) {
+  .navbar-collapse.page-menu {
+    left: 1em;
+    right: auto;
+  }
+}
+
+.navbar-collapse {
+  padding-right: 0;
+}
+
+.panel-group {
+    margin-bottom: 0;
+}
   </style>
   
-  <div ng-controller="QDR.ChordController">
-    <div id="popover-div" ng-bind-html="trustedpopoverContent"></div>
-    <div id="noTraffic"></div>
-    <div id="chord"></div>
-    <div id="legend">
-      <div ng-hide="arcColorsEmpty()">
-        <h4>Routers</h4>
-        <ul class="routers">
-          <li ng-repeat="(router, color) in arcColors" class="legend-line" ng-mouseover="enterRouter(router)" ng-mouseleave="leaveLegend()">
-            <span class='legend-color' ng-style="{'background-color': color}"></span>
-            <span class='legend-router' title="{{router}}">{{router | limitTo:15}}{{router.length>15 ? '…' : ''}}</span>
-          </li>
+<div ng-controller="QDR.ChordController">
+  <div id="popover-div" ng-bind-html="trustedpopoverContent"></div>
+  <div id="noTraffic"></div>
+  <div id="chord"></div>
+
+  <div class="page-menu navbar-collapse collapse">
+    <uib-accordion id="legend" close-others="false">
+      <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Options">
+        <ul class="options">
+            <li>
+              <checkbox title="Select to show message rates" ng-model="legendOptions.isRate"></checkbox>
+              <span title="Select to show message rates">Show rates</span>
+            </li>
+            <li>
+              <checkbox title="Select to break out traffic by address" ng-model="legendOptions.byAddress"></checkbox>
+              <span title="Select to break out traffic by address">Show by address</span>
+            </li>
         </ul>
       </div>
-      <h4>Addresses</h4>
-      <ul class="addresses">
-        <li ng-repeat="(address, color) in addresses" class="legend-line">
-          <checkbox style="background-color: {{chordColors[address]}};"
-            title="{{address}}" ng-change="addressFilterChanged()"
-            ng-model="addresses[address]"></checkbox>
-          <span ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
-        </li>
-      </ul>
-    </div>
-    <div id="switches">
-      <ul>
-        <li>
-            <checkbox title="Select to show message rates" ng-model="legendOptions.isRate"></checkbox>
-            <span title="Select to show message rates">Show rates</span>
-        </li>
-        <li>
-            <checkbox title="Select to break out traffic by address" ng-model="legendOptions.byAddress"></checkbox>
-            <span title="Select to break out traffic by address">Show by address</span>
-        </li>
-      </ul>
-    </div>
+      <div uib-accordion-group class="panel-default" is-open="legend.status.routersOpen" ng-hide="arcColorsEmpty()" heading="Routers">
+        <ul class="routers">
+            <li ng-repeat="(router, color) in arcColors" class="legend-line" ng-mouseover="enterRouter(router)" ng-mouseleave="leaveLegend()">
+              <span class='legend-color' ng-style="{'background-color': color}"></span>
+              <span class='legend-router' title="{{router}}">{{router | limitTo:15}}{{router.length>15 ? '…' : ''}}</span>
+            </li>
+        </ul>
+      </div>
+      <div uib-accordion-group class="panel-default" is-open="legend.status.addressesOpen" heading="Addresses">
+          <ul class="addresses">
+              <li ng-repeat="(address, color) in addresses" class="legend-line">
+                <checkbox style="background-color: {{chordColors[address]}};"
+                  title="{{address}}" ng-change="addressFilterChanged()"
+                  ng-model="addresses[address]"></checkbox>
+                <span ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+              </li>
+          </ul>
+      </div>
+    </uib-accordion>
   </div>
-  <div ng-init="loaded=true"></div>
+</div>

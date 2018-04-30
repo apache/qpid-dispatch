@@ -26,7 +26,7 @@ var QDR = (function (QDR) {
 
   QDR.breadcrumbs = [
     {
-      content: '<i class="icon-cogs"></i> Connect',
+      content: '<i class="icon-power"></i> Connect',
       title: 'Connect to a router',
       isValid: function () { return true; },
       href: '#/connect',
@@ -47,7 +47,7 @@ var QDR = (function (QDR) {
       name: 'Entities'
     },
     {
-      content: '<i class="icon-star-empty"></i> Topology',
+      content: '<i class="code-branch"></i> Topology',
       title: 'View router network topology',
       isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
       href: '#/topology',
@@ -68,11 +68,10 @@ var QDR = (function (QDR) {
       name: 'Message Flow'
     },
     {
-      content: '<i class="icon-align-left"></i> Schema',
+      content: '<i class="icon-schema"></i> Schema',
       title: 'View dispatch schema',
       isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
       href: '#/schema',
-      right: true,
       name: 'Schema'
     }
   ];
