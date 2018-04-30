@@ -205,6 +205,7 @@ const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *l
 int qdr_connection_process(qdr_connection_t *conn)
 {
     qdr_connection_work_list_t  work_list;
+    qdr_link_ref_list_t         links_with_work;
     qdr_core_t                 *core = conn->core;
 
     qdr_link_ref_t *ref;
@@ -215,6 +216,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
+    DEQ_MOVE(conn->links_with_work, links_with_work);
     sys_mutex_unlock(conn->work_lock);
 
     event_count += DEQ_SIZE(work_list);
@@ -244,10 +246,10 @@ int qdr_connection_process(qdr_connection_t *conn)
         free_link = false;
 
         sys_mutex_lock(conn->work_lock);
-        ref = DEQ_HEAD(conn->links_with_work);
+        ref = DEQ_HEAD(links_with_work);
         if (ref) {
             link = ref->link;
-            qdr_del_link_ref(&conn->links_with_work, ref->link, QDR_LINK_LIST_CLASS_WORK);
+            qdr_del_link_ref(&links_with_work, ref->link, QDR_LINK_LIST_CLASS_WORK);
 
             link_work = DEQ_HEAD(link->work_list);
             if (link_work) {
