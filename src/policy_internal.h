@@ -100,4 +100,16 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
  * @param[in] proposed the link target name to be approved
  */
 bool _qd_policy_approve_link_name(const char *username, const char *allowed, const char *proposed);
+
+
+/** Approve link by source/target name.
+ * This match supports a parse_tree match.
+ *    proposed 'temp-305' matches allowed 'temp-*'
+ * This match supports username substitution:
+ *    user 'joe', proposed 'temp-joe' matches allowed 'temp-${user}'
+ * @param[in] username authenticated user name
+ * @param[in] allowed policy settings source/target string in packed CSV form.
+ * @param[in] proposed the link target name to be approved
+ */
+bool _qd_policy_approve_link_name_tree(const char *username, qd_parse_tree_t *tree, const char *proposed);
 #endif

@@ -22,6 +22,7 @@
 #include <string.h>
 #include "policy.h"
 #include "policy_internal.h"
+#include "parse_tree.h"
 
 static char *test_link_name_lookup(void *context)
 {
@@ -74,9 +75,32 @@ static char *test_link_name_lookup(void *context)
     // Combine user name and wildcard
     if (!_qd_policy_approve_link_name("chuck", "ab${user}*", "abchuckzyxw"))
         return "proposed link 'abchuckzyxw' should match allowed links with ${user}* but does not";
-    
+
     return 0;
 }
+
+
+static char *test_link_name_tree_lookup(void *context)
+{
+    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    void *payload = (void*)1;
+
+    qd_parse_tree_add_pattern_str(node, "ab${user}xyz", payload);
+
+    if (!_qd_policy_approve_link_name_tree("chuck", node, "abchuckxyz"))
+        return "proposed link 'abchuckxyz' should tree-match allowed links with ${user} but does not";
+
+    qd_parse_tree_add_pattern_str(node, "${user}.#", payload);
+
+    if (!_qd_policy_approve_link_name_tree("motronic", node, "motronic"))
+        return "proposed link 'motronic' should tree-match allowed links with ${user} but does not";
+
+    if (!_qd_policy_approve_link_name_tree("motronic", node, "motronic.stubs.wobbler"))
+        return "proposed link 'motronic.stubs.wobbler' should tree-match allowed links with ${user} but does not";
+
+    return 0;
+}
+
 
 int policy_tests(void)
 {
@@ -84,6 +108,7 @@ int policy_tests(void)
     char *test_group = "policy_tests";
 
     TEST_CASE(test_link_name_lookup, 0);
+    TEST_CASE(test_link_name_tree_lookup, 0);
 
     return result;
 }

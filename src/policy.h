@@ -166,4 +166,15 @@ void qd_policy_amqp_open(qd_connection_t *conn);
  */
 void qd_policy_settings_free(qd_policy_settings_t *settings);
 
+/** Approve link by source/target name.
+ * @param[in] username authenticated user name
+ * @param[in] settings policy settings
+ * @param[in] proposed the link target name to be approved
+ * @param[in] isReceiver indication to check using receiver settings
+ */
+bool qd_policy_approve_link_name(const char *username,
+                                  const qd_policy_settings_t *settings,
+                                  const char *proposed,
+                                  bool isReceiver
+                                );
 #endif

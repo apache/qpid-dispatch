@@ -609,6 +609,28 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 }
 
 
+bool _qd_policy_approve_link_name_tree(const char *username, qd_parse_tree_t *tree, const char *proposed)
+{
+    // Verify string sizes are usable
+    size_t p_len = strlen(proposed);
+    if (p_len == 0) {
+        // degenerate case of blank name being opened. will never match anything.
+        return false;
+    }
+    void * unused_payload = 0;
+
+    if (qd_parse_tree_retrieve_match_str(tree, proposed, &unused_payload))
+        return true;
+
+    // Do reverse user substitution into proposed
+    char substbuf[QPALN_USERBUFSIZE];
+    char * prop2 = _qd_policy_link_user_name_subst(username, proposed, substbuf, QPALN_USERBUFSIZE);
+    if (prop2 && qd_parse_tree_retrieve_match_str(tree, prop2, &unused_payload))
+        return true;
+    return false;
+}
+
+
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
     const char *hostip = qd_connection_remote_ip(qd_conn);
@@ -777,4 +799,29 @@ void qd_policy_settings_free(qd_policy_settings_t *settings)
     if (settings->sourceParseTree) qd_parse_tree_free(settings->sourceParseTree);
     if (settings->targetParseTree) qd_parse_tree_free(settings->targetParseTree);
     free (settings);
+}
+
+
+bool qd_policy_approve_link_name(const char *username,
+                                 const qd_policy_settings_t *settings,
+                                 const char *proposed,
+                                 bool isReceiver)
+{
+    if (isReceiver) {
+        if (settings->sourceParseTree) {
+            return _qd_policy_approve_link_name_tree(username, settings->sourceParseTree, proposed);
+        } else if (settings->sourcePattern) {
+            return _qd_policy_approve_link_name(username, settings->sources, proposed);
+        } else {
+            return false;
+        }
+    } else {
+        if (settings->targetParseTree) {
+            return _qd_policy_approve_link_name_tree(username, settings->sourceParseTree, proposed);
+        } else if (settings->sourcePattern) {
+            return _qd_policy_approve_link_name(username, settings->sources, proposed);
+        } else {
+            return false;
+        }
+    }
 }
