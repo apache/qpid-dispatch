@@ -63,6 +63,8 @@ class PolicyKeys(object):
     KW_ALLOW_USERID_PROXY       = "allowUserIdProxy"
     KW_SOURCES                  = "sources"
     KW_TARGETS                  = "targets"
+    KW_SOURCE_PATTERN           = "sourcePattern"
+    KW_TARGET_PATTERN           = "targetPattern"
 
     # Policy stats key words
     KW_CONNECTIONS_APPROVED     = "connectionsApproved"
@@ -86,6 +88,7 @@ class PolicyKeys(object):
 
     # policy stats controlled by C code but referenced by settings
     KW_CSTATS                   = "denialCounts"
+
 #
 #
 class PolicyCompiler(object):
@@ -122,7 +125,9 @@ class PolicyCompiler(object):
         PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
         PolicyKeys.KW_ALLOW_USERID_PROXY,
         PolicyKeys.KW_SOURCES,
-        PolicyKeys.KW_TARGETS
+        PolicyKeys.KW_TARGETS,
+        PolicyKeys.KW_SOURCE_PATTERN,
+        PolicyKeys.KW_TARGET_PATTERN
         ]
 
     def __init__(self):
@@ -223,10 +228,16 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_ALLOW_USERID_PROXY] = False
-        policy_out[PolicyKeys.KW_SOURCES] = ''
-        policy_out[PolicyKeys.KW_TARGETS] = ''
+        policy_out[PolicyKeys.KW_SOURCES] = None
+        policy_out[PolicyKeys.KW_TARGETS] = None
+        policy_out[PolicyKeys.KW_SOURCE_PATTERN] = None
+        policy_out[PolicyKeys.KW_TARGET_PATTERN] = None
 
         cerror = []
+        user_sources = False
+        user_targets = False
+        user_src_pattern = False
+        user_tgt_pattern = False
         for key, val in policy_in.iteritems():
             if key not in self.allowed_settings_options:
                 warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
@@ -261,7 +272,9 @@ class PolicyCompiler(object):
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_USERS,
                          PolicyKeys.KW_SOURCES,
-                         PolicyKeys.KW_TARGETS
+                         PolicyKeys.KW_TARGETS,
+                         PolicyKeys.KW_SOURCE_PATTERN,
+                         PolicyKeys.KW_TARGET_PATTERN
                          ]:
                 # accept a string or list
                 if type(val) is str:
@@ -280,6 +293,27 @@ class PolicyCompiler(object):
                 val = list(set(val))
                 # output result is CSV string with no white space between values: 'abc,def,mytarget'
                 policy_out[key] = ','.join(val)
+
+                if key == PolicyKeys.KW_SOURCES:
+                    user_sources = True
+                if key == PolicyKeys.KW_TARGETS:
+                    user_targets = True
+                if key == PolicyKeys.KW_SOURCE_PATTERN:
+                    user_src_pattern = True
+                if key == PolicyKeys.KW_TARGET_PATTERN:
+                    user_tgt_pattern = True
+
+        if user_sources:
+            warnings.append("Policy vhost '%s' user group '%s' uses deprecated 'sources' attribute. Use 'sourcePattern' instead" % (vhostname, usergroup))
+        if user_targets:
+            warnings.append("Policy vhost '%s' user group '%s' uses deprecated 'targets' attribute. Use 'targetPattern' instead" % (vhostname, usergroup))
+        if user_sources and user_src_pattern:
+            errors.append("Policy vhost '%s' user group '%s' specifies conflicting  'sources' and 'sourcePattern' attributes. Use only 'sourcePattern' instead" % (vhostname, usergroup))
+            return False
+        if user_targets and user_tgt_pattern:
+            errors.append("Policy vhost '%s' user group '%s' specifies conflicting  'targets' and 'targetPattern' attributes. Use only 'targetPattern' instead" % (vhostname, usergroup))
+            return False
+
         return True
 
 

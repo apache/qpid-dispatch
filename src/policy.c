@@ -322,10 +322,10 @@ bool qd_policy_open_lookup_user(
                     settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
                     settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                     settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                    if (settings->sources == 0)
-                        settings->sources          = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
-                    if (settings->targets == 0)
-                        settings->targets          = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                    settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    settings->sourcePattern        = qd_entity_get_string((qd_entity_t*)upolicy, "sourcePattern");
+                    settings->targetPattern        = qd_entity_get_string((qd_entity_t*)upolicy, "targetPattern");
                     settings->denialCounts         = (qd_policy_denial_counts_t*)
                                                     qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
                     Py_XDECREF(result2);

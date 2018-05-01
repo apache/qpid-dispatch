@@ -52,6 +52,8 @@ struct qd_policy__settings_s {
     bool allowUserIdProxy;
     char *sources;
     char *targets;
+    char *sourcePattern;
+    char *targetPattern;
     qd_policy_denial_counts_t *denialCounts;
 };
 
