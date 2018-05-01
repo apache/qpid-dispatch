@@ -812,16 +812,13 @@ bool qd_policy_approve_link_name(const char *username,
             return _qd_policy_approve_link_name_tree(username, settings->sourceParseTree, proposed);
         } else if (settings->sources) {
             return _qd_policy_approve_link_name(username, settings->sources, proposed);
-        } else {
-            return false;
         }
     } else {
         if (settings->targetParseTree) {
             return _qd_policy_approve_link_name_tree(username, settings->targetParseTree, proposed);
         } else if (settings->targets) {
             return _qd_policy_approve_link_name(username, settings->targets, proposed);
-        } else {
-            return false;
         }
     }
+    return false;
 }

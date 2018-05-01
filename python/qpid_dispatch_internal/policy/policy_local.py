@@ -303,15 +303,11 @@ class PolicyCompiler(object):
                 if key == PolicyKeys.KW_TARGET_PATTERN:
                     user_tgt_pattern = True
 
-        if user_sources:
-            warnings.append("Policy vhost '%s' user group '%s' uses deprecated 'sources' attribute. Use 'sourcePattern' instead" % (vhostname, usergroup))
-        if user_targets:
-            warnings.append("Policy vhost '%s' user group '%s' uses deprecated 'targets' attribute. Use 'targetPattern' instead" % (vhostname, usergroup))
         if user_sources and user_src_pattern:
-            errors.append("Policy vhost '%s' user group '%s' specifies conflicting  'sources' and 'sourcePattern' attributes. Use only 'sourcePattern' instead" % (vhostname, usergroup))
+            errors.append("Policy vhost '%s' user group '%s' specifies conflicting 'sources' and 'sourcePattern' attributes. Use only one or the other." % (vhostname, usergroup))
             return False
         if user_targets and user_tgt_pattern:
-            errors.append("Policy vhost '%s' user group '%s' specifies conflicting  'targets' and 'targetPattern' attributes. Use only 'targetPattern' instead" % (vhostname, usergroup))
+            errors.append("Policy vhost '%s' user group '%s' specifies conflicting 'targets' and 'targetPattern' attributes. Use only one or the other." % (vhostname, usergroup))
             return False
 
         return True
