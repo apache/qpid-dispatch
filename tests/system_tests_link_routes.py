@@ -1302,8 +1302,6 @@ class MultiLinkSendReceive(MessagingHandler):
             r = self.RecvState(event.container.create_receiver(u, name=self.name))
             self.receivers[r.link.connection.container] = r
 
-    def on_link_remote_open(self, event):
-
     def on_sendable(self, event):
         self.senders[event.connection.container].send(self.name, self.message)
 
