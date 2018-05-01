@@ -66,6 +66,32 @@ static char *test_add_remove(void *context)
     return NULL;
 }
 
+static char *test_add_and_match_str(void *context)
+{
+    const char *str1 = "I.am.Sam";
+    const char *str2 = "Sam.I.Am";
+    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    void *payload;
+
+    if (qd_parse_tree_add_pattern_str(node, str1, "Hi Sam"))
+        return "Add returned existing value (1)";
+
+    if (qd_parse_tree_add_pattern_str(node, str2, "Bye Sam"))
+        return "Add returned existing value (2)";
+
+    if (!qd_parse_tree_retrieve_match_str(node, str1, &payload))
+        return "Failed to get expected match (1)";
+
+    if (!qd_parse_tree_retrieve_match_str(node, str2, &payload))
+        return "Failed to get expected match (2)";
+
+    if (qd_parse_tree_retrieve_match_str(node, "notSoFast", &payload))
+        return "Match pattern should not match but did match";
+
+    qd_parse_tree_free(node);
+    return NULL;
+}
+
 // for pattern match callback
 typedef struct {
     int count;
@@ -600,6 +626,7 @@ int parse_tree_tests(void)
     char *test_group = "parse_tree_tests";
 
     TEST_CASE(test_add_remove, 0);
+    TEST_CASE(test_add_and_match_str, 0);
     TEST_CASE(test_normalization, 0);
     TEST_CASE(test_matches, 0);
     TEST_CASE(test_multiple_matches, 0);

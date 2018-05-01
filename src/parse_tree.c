@@ -771,3 +771,57 @@ void qd_parse_tree_free(qd_parse_node_t *node)
 }
 #endif
 
+//
+// parse tree functions using string interface
+//
+
+// returns old payload or NULL if new
+void *qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
+                                    const char *pattern,
+                                    void *payload)
+{
+    token_iterator_t key;
+    void *rc = NULL;
+    char *str = strdup(pattern);
+
+    normalize_pattern(node->type, str);
+    qd_log(node->log_source, QD_LOG_TRACE,
+           "Parse tree(str) add address pattern '%s'", str);
+
+    token_iterator_init(&key, node->type, str);
+    rc = parse_node_add_pattern(node, &key, str, payload);
+    free(str);
+    return rc;
+}
+
+
+// visit each matching pattern that matches value in the order based on the
+// precedence rules
+void qd_parse_tree_search_str(qd_parse_tree_t *node,
+                              const char *value,
+                              qd_parse_tree_visit_t *callback, void *handle)
+{
+    token_iterator_t t_iter;
+    // @TODO(kgiusti) for now:
+    char *str = strdup(value);
+    qd_log(node->log_source, QD_LOG_TRACE, "Parse tree(str) search for '%s'", str);
+
+    token_iterator_init(&t_iter, node->type, str);
+    parse_node_find(node, &t_iter, callback, handle);
+
+    free(str);
+}
+
+
+// returns true on match and sets *payload
+bool qd_parse_tree_retrieve_match_str(qd_parse_tree_t *tree,
+                                      const char *value,
+                                      void **payload)
+{
+    *payload = NULL;
+    qd_parse_tree_search_str(tree, value, get_first, payload);
+    if (*payload == NULL)
+        qd_log(tree->log_source, QD_LOG_TRACE, "Parse tree(str) match not found");
+    return *payload != NULL;
+}
+

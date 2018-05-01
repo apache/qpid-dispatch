@@ -111,4 +111,18 @@ void qd_parse_tree_search(qd_parse_tree_t *tree, const qd_iterator_t *value,
 // visit each terminal node on the tree, returns last value returned by callback
 bool qd_parse_tree_walk(qd_parse_tree_t *tree, qd_parse_tree_visit_t *callback, void *handle);
 
+//
+// parse tree functions using string interface
+//
+
+// returns old payload or NULL if new
+void *qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
+                                    const char *pattern,
+                                    void *payload);
+
+// returns true on match and sets *payload
+bool qd_parse_tree_retrieve_match_str(qd_parse_tree_t *tree,
+                                      const char *value,
+                                      void **payload);
+
 #endif /* parse_tree.h */
