@@ -655,7 +655,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     bool lookup;
     if (target && *target) {
         // a target is specified
-        lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->targets, target);
+        lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, target, false);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach sender link '%s' for user '%s', rhost '%s', vhost '%s' based on link target name",
@@ -717,7 +717,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
     if (source && *source) {
         // a source is specified
-        bool lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->sources, source);
+        bool lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, source, true);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "%s AMQP Attach receiver link '%s' for user '%s', rhost '%s', vhost '%s' based on link source name",
@@ -810,16 +810,16 @@ bool qd_policy_approve_link_name(const char *username,
     if (isReceiver) {
         if (settings->sourceParseTree) {
             return _qd_policy_approve_link_name_tree(username, settings->sourceParseTree, proposed);
-        } else if (settings->sourcePattern) {
+        } else if (settings->sources) {
             return _qd_policy_approve_link_name(username, settings->sources, proposed);
         } else {
             return false;
         }
     } else {
         if (settings->targetParseTree) {
-            return _qd_policy_approve_link_name_tree(username, settings->sourceParseTree, proposed);
-        } else if (settings->sourcePattern) {
-            return _qd_policy_approve_link_name(username, settings->sources, proposed);
+            return _qd_policy_approve_link_name_tree(username, settings->targetParseTree, proposed);
+        } else if (settings->targets) {
+            return _qd_policy_approve_link_name(username, settings->targets, proposed);
         } else {
             return false;
         }

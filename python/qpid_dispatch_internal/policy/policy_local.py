@@ -228,10 +228,10 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_ALLOW_USERID_PROXY] = False
-        policy_out[PolicyKeys.KW_SOURCES] = None
-        policy_out[PolicyKeys.KW_TARGETS] = None
-        policy_out[PolicyKeys.KW_SOURCE_PATTERN] = None
-        policy_out[PolicyKeys.KW_TARGET_PATTERN] = None
+        #policy_out[PolicyKeys.KW_SOURCES] = None
+        #policy_out[PolicyKeys.KW_TARGETS] = None
+        #policy_out[PolicyKeys.KW_SOURCE_PATTERN] = None
+        #policy_out[PolicyKeys.KW_TARGET_PATTERN] = None
 
         cerror = []
         user_sources = False

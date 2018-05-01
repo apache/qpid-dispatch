@@ -595,5 +595,155 @@ class PolicyWarnings(TestCase):
             self.assertTrue(len(critical_lines) == 0, msg='Policy manager does not forward policy warnings and shuts down instead.')
 
 
+class PolicyLinkNamePatternTest(TestCase):
+    """
+    Verify that specifying a policy that generates a warning does
+    not cause the router to exit without showing the warning.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyLinkNamePatternTest, cls).setUpClass()
+        listen_port = cls.tester.get_port()
+        policy_config_path = os.path.join(DIR, 'policy-7')
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': listen_port}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('PolicyLinkNamePatternTest', config, wait=False)
+        try:
+            cls.router.wait_ready(timeout = 5)
+        except Exception,  e:
+            pass
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def default_patterns(self):
+        return """
+{
+    "hostname": "$default",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sourcePattern": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targetPattern": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def disallowed_source(self):
+        return """
+{
+    "hostname": "DISPATCH-1993-2",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sources":       "public, private, $management",
+            "sourcePattern": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targetPattern": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def disallowed_target(self):
+        return """
+{
+    "id": "DISPATCH-1993-3",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sourcePattern": "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targetPattern": "public, private, $management",
+            "targets": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def test_link_name_parse_tree_patterns(self):
+        # update to replace source/target match patterns
+        qdm_out = "<not written>"
+        try:
+            qdm_out = self.run_qdmanage('update --type=vhost --name=vhost/$default --stdin', input=self.default_patterns())
+        except Exception, e:
+            self.assertTrue(False, msg=('Error running qdmanage %s' % e.message))
+        self.assertFalse("PolicyError" in qdm_out)
+
+        # attempt an create that should be rejected
+        qdm_out = "<not written>"
+        exception = False
+        try:
+            qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-2 --stdin', input=self.disallowed_source())
+        except Exception, e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-2' is invalid:" in e.message)
+        self.assertTrue(exception)
+
+        # attempt another create that should be rejected
+        qdm_out = "<not written>"
+        exception = False
+        try:
+            qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_target())
+        except Exception, e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+        self.assertTrue(exception)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
