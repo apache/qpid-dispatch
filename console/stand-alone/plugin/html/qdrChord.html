@@ -238,6 +238,10 @@
 .panel-group {
     margin-bottom: 0;
 }
+
+span.legend-text {
+  padding-left: 0.25em;
+}
   </style>
   
 <div ng-controller="QDR.ChordController">
@@ -249,13 +253,13 @@
     <uib-accordion id="legend" close-others="false">
       <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Options">
         <ul class="options">
-            <li>
+            <li class="legend-line">
               <checkbox title="Select to show message rates" ng-model="legendOptions.isRate"></checkbox>
-              <span title="Select to show message rates">Show rates</span>
+              <span class="legend-text" title="Select to show message rates">Show rates</span>
             </li>
-            <li>
+            <li class="legend-line">
               <checkbox title="Select to break out traffic by address" ng-model="legendOptions.byAddress"></checkbox>
-              <span title="Select to break out traffic by address">Show by address</span>
+              <span class="legend-text" title="Select to break out traffic by address">Show by address</span>
             </li>
         </ul>
       </div>
@@ -263,17 +267,17 @@
         <ul class="routers">
             <li ng-repeat="(router, color) in arcColors" class="legend-line" ng-mouseover="enterRouter(router)" ng-mouseleave="leaveLegend()">
               <span class='legend-color' ng-style="{'background-color': color}"></span>
-              <span class='legend-router' title="{{router}}">{{router | limitTo:15}}{{router.length>15 ? '…' : ''}}</span>
+              <span class='legend-router legend-text' title="{{router}}">{{router | limitTo:15}}{{router.length>15 ? '…' : ''}}</span>
             </li>
         </ul>
       </div>
-      <div uib-accordion-group class="panel-default" is-open="legend.status.addressesOpen" heading="Addresses">
+      <div uib-accordion-group class="panel-default" is-open="legend.status.addressesOpen" ng-hide="arcColorsEmpty()" heading="Addresses">
           <ul class="addresses">
               <li ng-repeat="(address, color) in addresses" class="legend-line">
                 <checkbox style="background-color: {{chordColors[address]}};"
                   title="{{address}}" ng-change="addressFilterChanged()"
                   ng-model="addresses[address]"></checkbox>
-                <span ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
               </li>
           </ul>
       </div>
