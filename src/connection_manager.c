@@ -595,6 +595,9 @@ qd_config_sasl_plugin_t *qd_dispatch_configure_sasl_plugin(qd_dispatch_t *qd, qd
         }
     }
 
+    free(auth_host);
+    free(auth_port);
+
     if (!sasl_plugin->auth_service) {
         sasl_plugin->auth_service               = qd_entity_opt_string(entity, "authService", 0); CHECK();
         qd_log(cm->log_source, QD_LOG_WARNING, "Attribute authService of entity authServicePlugin has been deprecated. Use host and port instead.");
