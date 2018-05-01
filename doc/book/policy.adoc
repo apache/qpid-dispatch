@@ -189,7 +189,7 @@ substitution token
 
 [options="nowrap"]
 ----
-    {user}
+    ${user}
 ----
 
 or a trailing asterisk.
@@ -205,7 +205,7 @@ link name.
 
 [options="nowrap"]
 ----
-    sources: tmp_{user}, temp*, {user}-home-*
+    sources: tmp_${user}, temp*, ${user}-home-*
 ----
 
 == Composing Policies

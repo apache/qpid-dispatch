@@ -566,7 +566,7 @@ vhost {
 
 <4> A list of AMQP source addresses from which users in this group may receive messages. To specify multiple AMQP addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses.
 +
-You can use the substitution token `{user}` to specify an AMQP address that contains a user's authenticated user name. This enables you to allow access to resources specific to each user in the user group without having to name each user individually. You can only specify the `{user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
+You can use the substitution token `${user}` to specify an AMQP address that contains a user's authenticated user name. This enables you to allow access to resources specific to each user in the user group without having to name each user individually. You can only specify the `${user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
 +
 You can use an asterisk (`*`) wildcard to match one or more characters in an AMQP address. However, this wildcard is only recognized if it is the last character in the address name.
 +
@@ -604,7 +604,7 @@ This definition allows access to any address that meets any of the following rul
 
 [options="nowrap"]
 ----
-sources: tmp_{user}, temp*, {user}-home-*
+sources: tmp_${user}, temp*, ${user}-home-*
 ----
 ====
 
