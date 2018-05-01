@@ -163,6 +163,8 @@ This object is the data value contained in entries in the policy/groups map.
 | allowUserIdProxy     | false   | This connection is allowed to send messages with a user_id property that differs from the connection's authenticated user id.
 | sources              | ""      | List of Source addresses allowed when creating receiving links. This list may be expressed as a CSV string or as a list of strings. An empty list denies all access.
 | targets              | ""      | List of Target addresses allowed when creating sending links. This list may be expressed as a CSV string or as a list of strings. An empty list denies all access.
+| sourcePattern        | ""      | List of Source address patterns allowed when creating receiving links. This list must be expressed as a CSV string. An empty string denies all access. 
+| targetPattern        | ""      | List of Target address patterns allowed when creating sending links. This list must be expressed as a CSV string. An empty string denies all access. 
 |====
 
 == Policy Wildcard and User Name Substitution
@@ -182,9 +184,10 @@ specify all hosts.
 The asterisk must stand alone and cannot be appended to a host name
 or to an IP address fragment.
 
-=== AMQP Source and Target Wildcard and Name Substitution
+=== AMQP Source and Target User Name Substitution
 
-The rule definitions for `sources` and `targets` may include the username
+The rule definitions for `sources`, `targets`, `sourcePattern`, and
+`targetPattern` may include the username
 substitution token
 
 [options="nowrap"]
@@ -192,14 +195,16 @@ substitution token
     ${user}
 ----
 
-or a trailing asterisk.
-
 The username substitution token is replaced with the authenticated user name for
 the connection. Using this token, an administrator may allow access to
 some resources specific to each user without having to name each user
 individually. This token is substituted once for the leftmost
 occurrence in the link name.
 
+=== AMQP Source and Target Link Name Match Wildcard
+
+The rule definitions for `sources` and `targets` may contain a trailing
+asterisk character.
 The asterisk is recognized only if it is the last character in the
 link name.
 
@@ -207,6 +212,29 @@ link name.
 ----
     sources: tmp_${user}, temp*, ${user}-home-*
 ----
+
+The rule definitions for `sourcePattern` and `targetPattern` use the same
+patterns defined for router addresses and link routes. The patterns consist of one or more
+tokens separated by a forward slash /. A token can be one of the following: 
+a * character, a # character, or a sequence of characters that do not 
+include /, *, or #. The * token matches any single token. The # token 
+matches zero or more tokens.
+
+For each rule definition multiple patterns may be specified in a comma
+separated list.
+
+[options="nowrap"]
+----
+    sourcePattern: tmp_${user}, temp/#, ${user}-home/*
+----
+
+[NOTE]
+====
+A rule definition may contain `sources` or `sourcePattern` but not both.
+A rule definition may contain `targets` or `targetPattern` but not both.
+====
+
+
 
 == Composing Policies
 
