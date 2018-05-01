@@ -1303,21 +1303,17 @@ class MultiLinkSendReceive(MessagingHandler):
             self.receivers[r.link.connection.container] = r
 
     def on_link_remote_open(self, event):
-        print("link opened: %s %s %s" % (event.link.source.address, event.link.target.address, event.connection.container))
 
     def on_sendable(self, event):
-        print("sendable: %s %s" % (event.link.target.address, event.connection.container))
         self.senders[event.connection.container].send(self.name, self.message)
 
     def on_message(self, event):
-        print("message received: %s %s" % (event.link.source.address, event.connection.container))
         if self.message != event.message.body:
             error = "Incorrect message. Got %s, expected %s" % (event.message.body, self.message.body)
         self.receivers[event.connection.container].on_message()
         self.stop_if_all_done()
 
     def on_accepted(self, event):
-        print("accepted: %s %s" % (event.link.target.address, event.connection.container))
         self.senders[event.connection.container].on_accepted()
         self.stop_if_all_done()
 
