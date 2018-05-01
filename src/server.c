@@ -804,16 +804,7 @@ static void qd_connection_free(qd_connection_t *ctx)
 
     invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
     sys_mutex_free(ctx->deferred_call_lock);
-
-    if (ctx->policy_settings) {
-        if (ctx->policy_settings->sources)
-            free(ctx->policy_settings->sources);
-        if (ctx->policy_settings->targets)
-            free(ctx->policy_settings->targets);
-        free (ctx->policy_settings);
-        ctx->policy_settings = 0;
-    }
-
+    qd_policy_settings_free(ctx->policy_settings);
     if (ctx->free_user_id) free((char*)ctx->user_id);
     if (ctx->timer) qd_timer_free(ctx->timer);
     free(ctx->name);

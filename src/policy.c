@@ -21,6 +21,7 @@
 #include "qpid/dispatch/python_embedded.h"
 #include "policy.h"
 #include "policy_internal.h"
+#include "parse_tree.h"
 #include <stdio.h>
 #include <string.h>
 #include "dispatch_private.h"
@@ -240,6 +241,44 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
 }
 
 
+// C in the CSV string
+static const char* QPALN_COMMA_SEP =",";
+
+//
+// Given a CSV string defining parser tree specs for allowed sender or
+// receiver links, return a parse_tree
+//
+//  @param config_spec CSV string with link name match patterns
+//  @return pointer to parse tree
+//
+qd_parse_tree_t * qd_policy_parse_tree(const char *config_spec)
+{
+    if (!config_spec || strlen(config_spec) == 0)
+        // empty config specs never match so don't even create parse tree
+        return NULL;
+
+    qd_parse_tree_t *tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    if (!tree)
+        return NULL;
+
+    // Add CSV's values to the tree.
+    // Note that tree's pattern is unused. This code uses a dummy '1'.
+    char * dup = strdup(config_spec);
+    char * dupend = dup + strlen(dup);
+    char * pch = dup;
+    while (pch < dupend) {
+        size_t vsize = strcspn(pch, QPALN_COMMA_SEP);
+        if (vsize > 0) {
+            pch[vsize] = '\0';
+            qd_parse_tree_add_pattern_str(tree, pch, (void *)1);
+        }
+        pch += vsize + 1;
+    }
+    free(dup);
+    return tree;
+}
+
+
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
@@ -326,6 +365,8 @@ bool qd_policy_open_lookup_user(
                     settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
                     settings->sourcePattern        = qd_entity_get_string((qd_entity_t*)upolicy, "sourcePattern");
                     settings->targetPattern        = qd_entity_get_string((qd_entity_t*)upolicy, "targetPattern");
+                    settings->sourceParseTree      = qd_policy_parse_tree(settings->sourcePattern);
+                    settings->targetParseTree      = qd_policy_parse_tree(settings->targetPattern);
                     settings->denialCounts         = (qd_policy_denial_counts_t*)
                                                     qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
                     Py_XDECREF(result2);
@@ -505,8 +546,6 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
 #define QPALN_SIZE 1024
 // Size of user-name-substituted proposed string.
 #define QPALN_USERBUFSIZE 300
-// C in the CSV string
-#define QPALN_COMMA_SEP ","
 // Wildcard character
 #define QPALN_WILDCARD '*'
 
@@ -530,6 +569,9 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
     if (a_len > QPALN_SIZE) {
         pa = (char *)malloc(a_len + 1); // malloc a buffer for larger allow lists
     }
+    if (!pa)
+        return false;
+
     strncpy(pa, allowed, a_len);
     pa[a_len] = 0;
     // Do reverse user substitution into proposed
@@ -722,4 +764,17 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
     } else {
         qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
     }
+}
+
+
+void qd_policy_settings_free(qd_policy_settings_t *settings)
+{
+    if (!settings) return;
+    if (settings->sources)         free(settings->sources);
+    if (settings->targets)         free(settings->targets);
+    if (settings->sourcePattern)   free(settings->sourcePattern);
+    if (settings->targetPattern)   free(settings->targetPattern);
+    if (settings->sourceParseTree) qd_parse_tree_free(settings->sourceParseTree);
+    if (settings->targetParseTree) qd_parse_tree_free(settings->targetParseTree);
+    free (settings);
 }

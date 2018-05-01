@@ -28,6 +28,7 @@
 #include "config.h"
 #include "entity.h"
 #include "entity_cache.h"
+#include "parse_tree.h"
 #include <dlfcn.h>
 
 typedef struct qd_policy_denial_counts_s qd_policy_denial_counts_t;
@@ -54,6 +55,8 @@ struct qd_policy__settings_s {
     char *targets;
     char *sourcePattern;
     char *targetPattern;
+    qd_parse_tree_t *sourceParseTree;
+    qd_parse_tree_t *targetParseTree;
     qd_policy_denial_counts_t *denialCounts;
 };
 
@@ -156,5 +159,11 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
  * Allowed connections are signaled through qd_connection_manager.
  **/
 void qd_policy_amqp_open(qd_connection_t *conn);
+
+/** Dispose of policy settings
+ * 
+ * @param settings the settings to be destroyed
+ */
+void qd_policy_settings_free(qd_policy_settings_t *settings);
 
 #endif
