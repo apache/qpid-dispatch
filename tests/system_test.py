@@ -28,7 +28,7 @@ Features:
 - Sundry other tools.
 """
 
-import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re
+import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
 from copy import copy
 try:
     import queue as Queue   # 3.x
@@ -645,6 +645,47 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         def assertRegexpMatches(self, text, regexp, msg=None):
             """For python < 2.7: assert re.search(regexp, text)"""
             assert re.search(regexp, text), msg or "Can't find %r in '%s'" %(regexp, text)
+
+
+class SkipIfNeeded(object):
+    """
+    Decorator class that can be used along with test methods
+    to provide skip test behavior when using both python2.6 or
+    a greater version.
+    This decorator can be used with sub-classes of TestCase and the
+    sub-class must contain a dictionary named "skip" (test_name as key
+    and 0[run] or 1[skip] as the value).
+    """
+    def __init__(self, test_name, reason):
+        self.test_name = test_name
+        self.reason = reason
+
+    def __call__(self, f):
+
+        def wrap(*args, **kwargs):
+            """
+            Wraps original test method's invocation looking for an instance
+            attribute named "skip" (should be a dictionary composed by
+            "test_name" as a key and value of 0 [run] or 1 [skip]).
+            When running test with python < 2.7, if the "skip" dictionary
+            contains the given test_name with a value of 1, the original
+            method won't be called. If running python >= 2.7, then
+            skipTest will be called with given "reason" and original method
+            will be invoked.
+            :param args:
+            :return:
+            """
+            instance = args[0]
+            if isinstance(instance, TestCase) and hasattr(instance, "skip") and instance.skip[self.test_name]:
+                if sys.version_info < (2, 7):
+                    print "%s -> skipping (python<2.7) ..." % self.test_name
+                    return
+                else:
+                    instance.skipTest(self.reason)
+            return f(*args, **kwargs)
+
+        return wrap
+
 
 def main_module():
     """
