@@ -17,6 +17,7 @@
 # under the License.
 #
 
+import sys
 import unittest2 as unittest
 from proton          import Message, Timeout
 from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT
@@ -889,6 +890,10 @@ class DistributionTests ( TestCase ):
 
     def test_16_linkroute_linear_all_local ( self ) :
         name = 'test_16'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest ( "" )
         """
@@ -979,6 +984,10 @@ class DistributionTests ( TestCase ):
 
     def test_17_linkroute_linear_all_B ( self ) :
         name = 'test_17'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest ( "" )
         """
@@ -1069,6 +1078,10 @@ class DistributionTests ( TestCase ):
 
     def test_18_linkroute_linear_all_C ( self ) :
         name = 'test_18'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest (  ""  )
         """
@@ -1158,6 +1171,10 @@ class DistributionTests ( TestCase ):
 
     def test_19_linkroute_linear_kill ( self ) :
         name = 'test_19'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest (  ""  )
         """
@@ -1308,6 +1325,10 @@ class DistributionTests ( TestCase ):
 
     def test_20_linkroute_mesh_all_local ( self ) :
         name = 'test_20'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest ( '' )
         """
@@ -1411,6 +1432,10 @@ class DistributionTests ( TestCase ):
 
     def test_21_linkroute_mesh_nonlocal ( self ) :
         name = 'test_21'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest (  ""  )
         """
@@ -1516,6 +1541,10 @@ class DistributionTests ( TestCase ):
 
     def test_22_linkroute_mesh_kill ( self ) :
         name = 'test_22'
+
+        if sys.version_info < (2, 7):
+            return
+
         if self.skip [ name ] :
             self.skipTest (  ""  )
         """
