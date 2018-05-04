@@ -32,6 +32,7 @@ from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHand
 from qpid_dispatch.management.client import Node
 from qpid_dispatch.management.error import NotFoundStatus
 
+
 class LinkRouteTest(TestCase):
     """
     Tests the linkRoute property of the dispatch router.
@@ -732,6 +733,18 @@ class LinkRouteTest(TestCase):
     def test_same_name_route_senders_through_C(self):
         self._multi_link_send_receive(self.routers[2].addresses[0], self.routers[0].addresses[0], "send_through_C")
 
+    def test_echo_detach_received(self):
+        """
+        Create two receivers to link routed address org.apache.dev
+        Create a sender to the same address that the receiver is listening on and send 10 messages.
+        After the receivers receive 5 messages each, the receivers will detach and expect to receive two
+        detaches in response.
+
+        """
+        test = EchoDetachReceived(self.routers[2].addresses[0], self.routers[2].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -1101,6 +1114,106 @@ class DetachMixedCloseTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+# Test to validate fix for DISPATCH-927
+class EchoDetachReceived(MessagingHandler):
+    def __init__(self, sender_address, recv_address):
+        super(EchoDetachReceived, self).__init__()
+        self.sender_address = sender_address
+        self.recv_address = recv_address
+        self.dest = "org.apache.dev"
+        self.num_msgs = 10
+        self.msgs_sent = 0
+        self.msgs_received = 0
+        self.receiver_conn = None
+        self.sender_conn = None
+        self.sender = None
+        self.receiver_1 = None
+        self.receiver_2 = None
+        self.error = None
+        self.receiver_attaches = 0
+        self.timer = None
+        self.sender_attached = False
+        self.receiver_1_msgs = 0
+        self.receiver_2_msgs = 0
+        self.receiver_1_detach = False
+        self.receiver_2_detach = False
+        self.num_detaches_echoed = 0
+
+    def timeout(self):
+
+        self.bail("Timeout Expired: msgs_sent=%d msgs_received=%d, number of detaches received=%d"
+                  % (self.msgs_sent, self.msgs_received, self.num_detaches_echoed))
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+
+        # Create two separate connections for sender and receivers
+        self.receiver_conn = event.container.connect(self.recv_address)
+        self.sender_conn = event.container.connect(self.sender_address)
+        self.receiver_1 = event.container.create_receiver(self.receiver_conn, self.dest, name="A")
+        self.receiver_2 = event.container.create_receiver(self.receiver_conn, self.dest, name="B")
+
+    def bail(self, text=None):
+        self.error = text
+        self.sender_conn.close()
+        self.receiver_conn.close()
+        self.timer.cancel()
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            if event.receiver == self.receiver_1 or event.receiver == self.receiver_2:
+                self.receiver_attaches+=1
+            # The response receiver attaches have been received. The receiver sent attaches which was link routed
+            # all the way to the 'broker' router and the response attaches have come back.
+            # It is now time to create the sender.
+            if self.receiver_attaches == 2:
+                self.sender = event.container.create_sender(self.sender_conn, self.dest)
+
+        elif event.sender:
+            if not self.sender_attached:
+                if event.sender == self.sender:
+                    # The sender attaches were link routed as well and the response attach has been received.
+                    self.sender_attached = True
+
+    def on_sendable(self, event):
+        # The sender will send 10 messages
+        if self.receiver_attaches == 2 and self.sender_attached:
+            if self.msgs_sent < self.num_msgs:
+                msg = Message(body="Hello World")
+                self.sender.send(msg)
+                self.msgs_sent += 1
+
+    def on_message(self, event):
+        if event.receiver and event.receiver == self.receiver_1:
+            self.receiver_1_msgs += 1
+        if event.receiver and event.receiver == self.receiver_2:
+            self.receiver_2_msgs += 1
+
+        if self.receiver_1_msgs + self.receiver_2_msgs == self.num_msgs:
+            # The receivers have received a total of 10 messages. Close the receivers. The detach sent by these
+            # receivers will travel all the way over the link route and the 'broker' router will respond with a
+            # detach
+            self.receiver_1.close()
+            self.receiver_2.close()
+
+    def on_link_closed(self, event):
+        if event.receiver == self.receiver_1:
+            self.receiver_1_detach = True
+            self.num_detaches_echoed += 1
+
+        if event.receiver == self.receiver_2:
+            self.receiver_2_detach = True
+            self.num_detaches_echoed += 1
+
+        # Terminate the test only if both detach frames have been received.
+        if self.receiver_2_detach and self.receiver_1_detach:
+            self.bail()
+
+    def run(self):
+        Container(self).run()
+
 
 class TerminusAddrTest(MessagingHandler):
     """
