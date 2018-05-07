@@ -1688,7 +1688,7 @@
                 "defaultVhost": {
                     "type": "string",
                     "default": "$default",
-                    "description": "The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. If 'defaultVhost' is not defined, then default vhost processing is disabled.",
+                    "description": "The name of the default vhost policy. This policy rule set is applied to a connection for which a vhost policy has not otherwise been configured. Processing for the default vhost is enabled by default and set to select vhost '$default'. To disable default vhost processing set defaultVhost to blank or do not define a vhost named '$default'.",
                     "required": false,
                     "create": true
                 },
