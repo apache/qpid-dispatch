@@ -29,24 +29,25 @@
 #define QDR_ROUTER_ID                                  2
 #define QDR_ROUTER_TYPE                                3
 #define QDR_ROUTER_MODE                                4
-#define QDR_ROUTER_VERSION                             5
-#define QDR_ROUTER_ADDR_COUNT                          6
-#define QDR_ROUTER_LINK_COUNT                          7
-#define QDR_ROUTER_NODE_COUNT                          8
-#define QDR_ROUTER_LINK_ROUTE_COUNT                    9
-#define QDR_ROUTER_AUTO_LINK_COUNT                    10
-#define QDR_ROUTER_CONNECTION_COUNT                   11
-#define QDR_ROUTER_PRESETTLED_DELIVERIES              12
-#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES      13
-#define QDR_ROUTER_ACCEPTED_DELIVERIES                14
-#define QDR_ROUTER_REJECTED_DELIVERIES                15
-#define QDR_ROUTER_RELEASED_DELIVERIES                16
-#define QDR_ROUTER_MODIFIED_DELIVERIES                17
-#define QDR_ROUTER_DELIVERIES_INGRESS                 18
-#define QDR_ROUTER_DELIVERIES_EGRESS                  19
-#define QDR_ROUTER_DELIVERIES_TRANSIT                 20
-#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER 21
-#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER  22
+#define QDR_ROUTER_AREA                                5
+#define QDR_ROUTER_VERSION                             6
+#define QDR_ROUTER_ADDR_COUNT                          7
+#define QDR_ROUTER_LINK_COUNT                          8
+#define QDR_ROUTER_NODE_COUNT                          9
+#define QDR_ROUTER_LINK_ROUTE_COUNT                    10
+#define QDR_ROUTER_AUTO_LINK_COUNT                     11
+#define QDR_ROUTER_CONNECTION_COUNT                    12
+#define QDR_ROUTER_PRESETTLED_DELIVERIES               13
+#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES       14
+#define QDR_ROUTER_ACCEPTED_DELIVERIES                 15
+#define QDR_ROUTER_REJECTED_DELIVERIES                 16
+#define QDR_ROUTER_RELEASED_DELIVERIES                 17
+#define QDR_ROUTER_MODIFIED_DELIVERIES                 18
+#define QDR_ROUTER_DELIVERIES_INGRESS                  19
+#define QDR_ROUTER_DELIVERIES_EGRESS                   20
+#define QDR_ROUTER_DELIVERIES_TRANSIT                  21
+#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  22
+#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   23
 
 
 const char *qdr_router_columns[] =
@@ -55,6 +56,7 @@ const char *qdr_router_columns[] =
      "id",
      "type",
      "mode",
+     "area",
      "version",
      "addrCount",
      "linkCount",
@@ -103,6 +105,13 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_MODE:
         qd_compose_insert_string(body, router_mode(core->router_mode));
+        break;
+
+    case QDR_ROUTER_AREA:
+        if (core->router_area)
+            qd_compose_insert_string(body, core->router_area);
+        else
+            qd_compose_insert_null(body);
         break;
 
     case QDR_ROUTER_VERSION:
