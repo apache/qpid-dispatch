@@ -213,7 +213,7 @@ class MessageRouteTruncateTest(MessagingHandler):
     def stream(self):
         self.sender1.stream(self.long_data)
         self.sent_stream += len(self.long_data)
-        if self.sent_stream >= 100000:
+        if self.sent_stream >= 1000000:
             self.streaming = False
             self.sender1.close()
             self.send()
@@ -318,7 +318,7 @@ class LinkRouteTruncateTest(MessagingHandler):
     def stream(self):
         self.sender1.stream(self.long_data)
         self.sent_stream += len(self.long_data)
-        if self.sent_stream >= 100000:
+        if self.sent_stream >= 1000000:
             self.streaming = False
             self.sender1.close()
 
@@ -524,7 +524,7 @@ class MulticastTruncateTest(MessagingHandler):
     def stream(self):
         self.sender1.stream(self.long_data)
         self.sent_stream += len(self.long_data)
-        if self.sent_stream >= 100000:
+        if self.sent_stream >= 1000000:
             self.streaming = False
             self.sender1.close()
             self.send()
