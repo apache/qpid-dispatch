@@ -114,8 +114,15 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
         qd_entity_opt_string(entity, "policyDir", 0); CHECK();
     policy->enableVhostPolicy = qd_entity_opt_bool(entity, "enableVhostPolicy", false); CHECK();
     policy->useVhostNamePatterns = qd_entity_opt_bool(entity, "useVhostNamePatterns", false); CHECK();
-    qd_log(policy->log_source, QD_LOG_INFO, "Policy configured maxConnections: %d, policyDir: '%s', access rules enabled: '%s', use hostname patterns: '%s'",
-           policy->max_connection_limit, policy->policyDir, (policy->enableVhostPolicy ? "true" : "false"), (policy->useVhostNamePatterns ? "true" : "false"));
+    qd_log(policy->log_source, QD_LOG_INFO,
+           "Policy configured maxConnections: %d, "
+           "policyDir: '%s',"
+           "access rules enabled: '%s', "
+           "use hostname patterns: '%s'",
+           policy->max_connection_limit,
+           policy->policyDir,
+           (policy->enableVhostPolicy ? "true" : "false"),
+           (policy->useVhostNamePatterns ? "true" : "false"));
     return QD_ERROR_NONE;
 
 error:
