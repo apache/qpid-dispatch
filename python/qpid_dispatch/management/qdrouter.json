@@ -1678,6 +1678,13 @@
                     "required": false,
                     "create": true
                 },
+                "useVhostNamePatterns": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Use Vhost name patterns.",
+                    "required": false,
+                    "create": true
+                },
                 "policyDir": {
                     "type": "path",
                     "default": "",
