@@ -825,3 +825,12 @@ bool qd_parse_tree_retrieve_match_str(qd_parse_tree_t *tree,
     return *payload != NULL;
 }
 
+// returns old payload or NULL if not present
+void *qd_parse_tree_remove_pattern_str(qd_parse_tree_t *node,
+                                       const char *pattern)
+{
+    qd_iterator_t *piter = qd_iterator_string(pattern, ITER_VIEW_ALL);
+    void *result = qd_parse_tree_remove_pattern(node, piter);
+    qd_iterator_free(piter);
+    return result;
+}

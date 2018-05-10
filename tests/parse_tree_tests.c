@@ -88,6 +88,12 @@ static char *test_add_and_match_str(void *context)
     if (qd_parse_tree_retrieve_match_str(node, "notSoFast", &payload))
         return "Match pattern should not match but did match";
 
+    if (!qd_parse_tree_remove_pattern_str(node, str1))
+        return "Failed to remove an existing pattern str";
+
+    if (qd_parse_tree_retrieve_match_str(node, str1, &payload))
+        return "Removed pattern should not match but did match";
+
     qd_parse_tree_free(node);
     return NULL;
 }

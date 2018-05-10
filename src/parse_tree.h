@@ -125,4 +125,7 @@ bool qd_parse_tree_retrieve_match_str(qd_parse_tree_t *tree,
                                       const char *value,
                                       void **payload);
 
+// returns old payload or NULL if not present
+void *qd_parse_tree_remove_pattern_str(qd_parse_tree_t *node,
+                                       const char *pattern);
 #endif /* parse_tree.h */
