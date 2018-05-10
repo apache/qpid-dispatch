@@ -508,6 +508,11 @@ class PolicyLocal(object):
         #  open.hostname is not found in the rulesetdb
         self._default_vhost = ""
 
+        # _use_hostname_patterns
+        #  holds policy setting.
+        #  When true policy ruleset definitions are propagated to C code
+        self.use_hostname_patterns = False
+
     #
     # Service interfaces
     #

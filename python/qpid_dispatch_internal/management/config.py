@@ -174,13 +174,21 @@ def configure_dispatch(dispatch, lib_handle, filename):
     from qpid_dispatch_internal.display_name.display_name import DisplayNameService
     displayname_service = DisplayNameService()
     qd.qd_dispatch_register_display_name_service(dispatch, displayname_service)
-    policyDir = config.by_type('policy')[0]['policyDir']
-    policyDefaultVhost = config.by_type('policy')[0]['defaultVhost']
+
+    # Configure policy and policy manager before vhosts
+    policyDir           = config.by_type('policy')[0]['policyDir']
+    policyDefaultVhost  = config.by_type('policy')[0]['defaultVhost']
+    useHostnamePatterns = config.by_type('policy')[0]['useVhostNamePatterns']
+    for a in config.by_type("policy"):
+        configure(a)
+    agent.policy.set_default_vhost(policyDefaultVhost)
+    agent.policy.set_use_hostname_patterns(useHostnamePatterns)
+
     # Remaining configuration
     for t in "sslProfile", "authServicePlugin", "listener", "connector", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "router.config.exchange", "router.config.binding", \
-             "policy", "vhost":
+             "vhost":
         for a in config.by_type(t):
             configure(a)
             if t == "sslProfile":
@@ -201,6 +209,3 @@ def configure_dispatch(dispatch, lib_handle, filename):
                 pconfig = PolicyConfig(os.path.join(apath, i))
                 for a in pconfig.by_type("vhost"):
                     agent.configure(a)
-
-    # Set policy default application after all rulesets loaded
-    agent.policy.set_default_vhost(policyDefaultVhost)

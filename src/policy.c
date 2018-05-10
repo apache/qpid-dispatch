@@ -61,6 +61,7 @@ struct qd_policy_t {
     qd_dispatch_t        *qd;
     qd_log_source_t      *log_source;
     void                 *py_policy_manager;
+    sys_mutex_t          *tree_lock;
     qd_parse_tree_t      *hostname_tree;
                           // configured settings
     int                   max_connection_limit;
@@ -83,6 +84,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 65535;
+    policy->tree_lock            = sys_mutex();
     policy->hostname_tree        = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
 
     qd_log(policy->log_source, QD_LOG_TRACE, "Policy Initialized");
