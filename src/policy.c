@@ -831,3 +831,41 @@ bool qd_policy_approve_link_name(const char *username,
     }
     return false;
 }
+
+
+// Add a hostname to the lookup parse_tree
+void qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern)
+{
+    sys_mutex_lock(policy->tree_lock);
+    void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, (void*)hostPattern);
+    sys_mutex_unlock(policy->tree_lock);
+    if (oldp) {
+        qd_log(policy->log_source, QD_LOG_INFO, "vhost hostname pattern '%s' replaced existing pattern", hostPattern);
+    }
+}
+
+
+// Remove a hostname from the lookup parse_tree
+void qd_policy_host_pattern_remove(qd_policy_t *policy, const char *hostPattern)
+{
+    sys_mutex_lock(policy->tree_lock);
+    void *oldp = qd_parse_tree_remove_pattern_str(policy->hostname_tree, hostPattern);
+    sys_mutex_unlock(policy->tree_lock);
+    if (!oldp) {
+        qd_log(policy->log_source, QD_LOG_INFO, "vhost hostname pattern '%s' for removal not found", hostPattern);
+    }
+}
+
+
+// Look up a hostname in the lookup parse_tree
+const char *qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPattern)
+{
+    void *payload = 0;
+    sys_mutex_lock(policy->tree_lock);
+    bool matched = qd_parse_tree_retrieve_match_str(policy->hostname_tree, hostPattern, &payload);
+    sys_mutex_unlock(policy->tree_lock);
+    if (!matched) payload = 0;
+    qd_log(policy->log_source, QD_LOG_TRACE, "vhost hostname pattern '%s' lookup returned '%s'", 
+           hostPattern, (payload ? (char *)payload : "null"));
+    return (const char *)payload;
+}
