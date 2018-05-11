@@ -607,15 +607,24 @@ class PolicyLocal(object):
         """
         try:
             # choose rule set based on incoming vhost or default vhost
+            # or potential vhost found by pattern matching
             vhost = vhost_in
-            if vhost_in not in self.rulesetdb:
+            if self.use_hostname_patterns:
+                agent = self._manager.get_agent()
+                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
+            if vhost not in self.rulesetdb:
                 if self.default_vhost_enabled():
                     vhost = self._default_vhost
                 else:
                     self._manager.log_info(
                         "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
-                        "No policy defined for vhost" % (user, rhost, vhost))
+                        "No policy defined for vhost" % (user, rhost, vhost_in))
                     return ""
+            if vhost != vhost_in:
+                self._manager.log_debug(
+                    "AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                    "proceeds using vhost '%s' ruleset" % (user, rhost, vhost_in, vhost))
+
             ruleset = self.rulesetdb[vhost]
 
             # look up the stats
