@@ -539,6 +539,13 @@ class PolicyLocal(object):
             self.statsdb[name].update_ruleset(candidate)
             self._manager.log_info("Updated policy rules for vhost %s" % name)
         # TODO: ruleset lock
+        if self.use_hostname_patterns:
+            agent = self._manager.get_agent()
+            if name in self.rulesetdb:
+                # an update. remove existing hostname pattern
+                agent.qd.qd_dispatch_policy_host_pattern_remove(agent.dispatch, name)
+            # add new pattern
+            agent.qd.qd_dispatch_policy_host_pattern_add(agent.dispatch, name)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
 
@@ -550,6 +557,9 @@ class PolicyLocal(object):
         if name not in self.rulesetdb:
             raise PolicyError("Policy '%s' does not exist" % name)
         # TODO: ruleset lock
+        if self.use_hostname_patterns:
+            agent = self._manager.get_agent()
+            agent.qd.qd_dispatch_policy_host_pattern_remove(agent.dispatch, name)
         del self.rulesetdb[name]
 
     #

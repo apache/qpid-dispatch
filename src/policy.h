@@ -182,18 +182,18 @@ bool qd_policy_approve_link_name(const char *username,
  * @param[in] policy qd_policy_t
  * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
  */
-void qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern);
+void qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern);
 
 /** Remove a hostname from the lookup parse_tree
  * @param[in] policy qd_policy_t
  * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
  */
-void qd_policy_host_pattern_remove(qd_policy_t *policy, const char *hostPattern);
+void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern);
 
 /** Look up a hostname in the lookup parse_tree
  * @param[in] policy qd_policy_t
  * @param[in] hostname a concrete vhost name
  * @return the name of the ruleset whose hostname pattern matched this actual hostname
  */
-const char *qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPattern);
+char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
 #endif
