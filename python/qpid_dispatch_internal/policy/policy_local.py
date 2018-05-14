@@ -703,9 +703,16 @@ class PolicyLocal(object):
         """
         try:
             vhost = vhost_in
+            if self.use_hostname_patterns:
+                agent = self._manager.get_agent()
+                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
             if vhost not in self.rulesetdb:
                 if self.default_vhost_enabled():
                     vhost = self._default_vhost
+            if vhost != vhost_in:
+                self._manager.log_debug(
+                    "AMQP Open lookup settings for user '%s', rhost '%s', vhost '%s': "
+                    "proceeds using vhost '%s' ruleset" % (user, rhost, vhost_in, vhost))
 
             if vhost not in self.rulesetdb:
                 self._manager.log_info(
