@@ -711,8 +711,8 @@ class PolicyLocal(object):
                     vhost = self._default_vhost
             if vhost != vhost_in:
                 self._manager.log_debug(
-                    "AMQP Open lookup settings for user '%s', rhost '%s', vhost '%s': "
-                    "proceeds using vhost '%s' ruleset" % (user, rhost, vhost_in, vhost))
+                    "AMQP Open lookup settings for vhost '%s': "
+                    "proceeds using vhost '%s' ruleset" % (vhost_in, vhost))
 
             if vhost not in self.rulesetdb:
                 self._manager.log_info(
