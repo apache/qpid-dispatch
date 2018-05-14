@@ -838,17 +838,16 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
 {
     sys_mutex_lock(policy->tree_lock);
     void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, hostPattern);
-    sys_mutex_unlock(policy->tree_lock);
     if (oldp) {
-        qd_log(policy->log_source,
-               QD_LOG_WARNING,
-               "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
-               hostPattern, oldp);
-        sys_mutex_lock(policy->tree_lock);
         void *recovered = qd_parse_tree_add_pattern_str(policy->hostname_tree, (char *)oldp, oldp);
-        sys_mutex_unlock(policy->tree_lock);
-        assert (recovered && !strcmp((char *)recovered, hostPattern));
+        assert (recovered);
     }
+    sys_mutex_unlock(policy->tree_lock);
+    if (oldp)
+        qd_log(policy->log_source,
+            QD_LOG_WARNING,
+            "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
+            hostPattern, oldp);
     return oldp == 0;
 }
 
