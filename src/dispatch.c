@@ -270,9 +270,9 @@ void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
     qd_policy_c_counts_refresh(ccounts, entity);
 }
 
-void qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, char *hostPattern)
+bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, char *hostPattern)
 {
-    qd_policy_host_pattern_add(qd->policy, hostPattern);
+    return qd_policy_host_pattern_add(qd->policy, hostPattern);
 }
 
 void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, char *hostPattern)

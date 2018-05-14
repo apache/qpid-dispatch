@@ -834,14 +834,22 @@ bool qd_policy_approve_link_name(const char *username,
 
 
 // Add a hostname to the lookup parse_tree
-void qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
+bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
 {
     sys_mutex_lock(policy->tree_lock);
     void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, hostPattern);
     sys_mutex_unlock(policy->tree_lock);
     if (oldp) {
-        qd_log(policy->log_source, QD_LOG_INFO, "vhost hostname pattern '%s' replaced existing pattern", hostPattern);
+        qd_log(policy->log_source,
+               QD_LOG_WARNING,
+               "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
+               hostPattern, oldp);
+        sys_mutex_lock(policy->tree_lock);
+        void *recovered = qd_parse_tree_add_pattern_str(policy->hostname_tree, (char *)oldp, oldp);
+        sys_mutex_unlock(policy->tree_lock);
+        assert (recovered && !strcmp((char *)recovered, hostPattern));
     }
+    return oldp == 0;
 }
 
 
@@ -852,7 +860,7 @@ void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern)
     void *oldp = qd_parse_tree_remove_pattern_str(policy->hostname_tree, hostPattern);
     sys_mutex_unlock(policy->tree_lock);
     if (!oldp) {
-        qd_log(policy->log_source, QD_LOG_INFO, "vhost hostname pattern '%s' for removal not found", hostPattern);
+        qd_log(policy->log_source, QD_LOG_WARNING, "vhost hostname pattern '%s' for removal not found", hostPattern);
     }
 }
 

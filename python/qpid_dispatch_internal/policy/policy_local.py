@@ -531,6 +531,11 @@ class PolicyLocal(object):
         if len(warnings) > 0:
             for warning in warnings:
                 self._manager.log_warning(warning)
+        # Reject if parse tree optimized name collision
+        if self.use_hostname_patterns:
+            agent = self._manager.get_agent()
+            if not agent.qd.qd_dispatch_policy_host_pattern_add(agent.dispatch, name):
+                raise PolicyError("Policy '%s' optimized pattern conflicts with existing pattern" % name)
         if name not in self.rulesetdb:
             if name not in self.statsdb:
                 self.statsdb[name] = AppStats(name, self._manager, candidate)
@@ -539,13 +544,6 @@ class PolicyLocal(object):
             self.statsdb[name].update_ruleset(candidate)
             self._manager.log_info("Updated policy rules for vhost %s" % name)
         # TODO: ruleset lock
-        if self.use_hostname_patterns:
-            agent = self._manager.get_agent()
-            if name in self.rulesetdb:
-                # an update. remove existing hostname pattern
-                agent.qd.qd_dispatch_policy_host_pattern_remove(agent.dispatch, name)
-            # add new pattern
-            agent.qd.qd_dispatch_policy_host_pattern_add(agent.dispatch, name)
         self.rulesetdb[name] = {}
         self.rulesetdb[name].update(candidate)
 
