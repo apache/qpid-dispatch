@@ -17,11 +17,11 @@
  * under the License.
  */
 
+#include "python_private.h"  // must be first!
 
 #include <qpid/dispatch/error.h>
 #include "dispatch_private.h"
 #include "entity.h"
-#include "python_private.h"
 
 struct qd_entity_t {
     PyObject py_object;      /* Any object supporting __set/get_item__, e.g. dict. */

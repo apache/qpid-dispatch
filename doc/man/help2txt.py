@@ -21,6 +21,11 @@
 Convert --help output of a program into asciidoc text format.
 """
 from __future__ import print_function
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+
+
 import re, sys
 from qpid_dispatch_internal.compat import PY_STRING_TYPE
 from qpid_dispatch_internal.compat.subproc import check_output

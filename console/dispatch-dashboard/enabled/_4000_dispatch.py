@@ -10,6 +10,11 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 # The name of the dashboard to be added to HORIZON['dashboards']. Required.
 DASHBOARD = 'dispatch'
 

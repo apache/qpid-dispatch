@@ -17,19 +17,15 @@
  * under the License.
  */
 
-
-/* Make sure we get the XSI compliant strerror_r from string.h not the GNU one. */
-/*#define _POSIX_C_SOURCE 200112L
-  #undef _GNU_SOURCE*/
-#include <string.h>
+#include <qpid/dispatch/python_embedded.h>  // must be first!
 
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/python_embedded.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include "log_private.h"
 #include "aprintf.h"
 #include "python_private.h"

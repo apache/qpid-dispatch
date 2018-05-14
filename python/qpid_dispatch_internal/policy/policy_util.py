@@ -17,6 +17,11 @@
 # under the License
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import socket
 import binascii
 
@@ -26,7 +31,7 @@ class PolicyError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return repr(self.value)
+        return str(self.value)
 
 def is_ipv6_enabled():
     """

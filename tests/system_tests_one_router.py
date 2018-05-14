@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
@@ -2664,7 +2669,9 @@ class RejectDispositionTest(MessagingHandler):
         self.sent = False
         self.received_error = False
         self.dest = "rejectDispositionTest"
-        self.error_description = 'you were out of luck this time!'
+        # explicitly convert to str due to
+        # https://issues.apache.org/jira/browse/PROTON-1843
+        self.error_description = str('you were out of luck this time!')
         self.error_name = u'amqp:internal-error'
         self.reject_count_match = False
         self.rejects_at_start = 0

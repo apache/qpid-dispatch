@@ -21,6 +21,11 @@
 Generate the qdrouterd.conf. man page from the qdrouterd management schema.
 """
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import sys
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.management.schema_doc import SchemaWriter

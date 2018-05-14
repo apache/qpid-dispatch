@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
 from .hello import HelloProtocol
 from .link import LinkStateEngine

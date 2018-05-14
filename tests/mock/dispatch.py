@@ -19,7 +19,12 @@
 """
 Mock implementation of the dispatch C extension module for use in unit tests.
 """
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 from __future__ import print_function
+
 
 LOG_TRACE    = 1
 LOG_DEBUG    = 2

@@ -61,6 +61,10 @@ When refreshing attributes, the agent must also read C implementation object
 data that may be updated in other threads.
 
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import traceback, json, pstats
 import socket
@@ -96,7 +100,7 @@ from qpid_dispatch_internal.compat import dict_iteritems
 
 def dictstr(d):
     """Stringify a dict in the form 'k=v, k=v ...' instead of '{k:v, ...}'"""
-    return ", ".join("%s=%r" % (k, v) for k, v in dict_iteritems(d))
+    return ", ".join("%s=%s" % (k, v) for k, v in dict_iteritems(d))
 
 def required_property(prop, request):
     """Raise exception if required property is missing"""
@@ -923,7 +927,7 @@ class Agent(object):
 
         def attrvals():
             """String form of the id attribute values for error messages"""
-            return " ".join(["%s=%r" % (k, v) for k, v in dict_iteritems(ids)])
+            return " ".join(["%s=%s" % (k, v) for k, v in dict_iteritems(ids)])
 
         k, v = next(dict_iteritems(ids)) # Get the first id attribute
         found = self.entities.map_filter(None, lambda e: e.attributes.get(k) == v)
@@ -931,7 +935,7 @@ class Agent(object):
             entity = found[0]
         elif len(found) > 1:
             raise InternalServerErrorStatus(
-                "Duplicate (%s) entities with %s=%r" % (len(found), k, v))
+                "Duplicate (%s) entities with %s=%s" % (len(found), k, v))
         else:
             raise NotFoundStatus("No entity with %s" % attrvals())
 

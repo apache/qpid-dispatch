@@ -21,8 +21,15 @@
 ## Define the current protocol version.  Any messages that do not contain version
 ## information shall be considered to be coming from routers using version 0.
 ##
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 from ..compat import PY_LONG_TYPE
 from ..compat import LONG
+from ..compat import PY_TEXT_TYPE
 
 ProtocolVersion = LONG(1)
 
@@ -58,7 +65,7 @@ class LinkState(object):
     def __init__(self, body, _id=None, _ls_seq=None, _peers=None):
         self.last_seen = 0
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', PY_LONG_TYPE)
             self.peers = getMandatory(body, 'peers', dict)
@@ -112,7 +119,7 @@ class MessageHELLO(object):
     """
     def __init__(self, body, _id=None, _seen_peers=None, _instance=LONG(0)):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
             self.seen_peers = getMandatory(body, 'seen', list)
             self.instance = getOptional(body, 'instance', 0, PY_LONG_TYPE)
@@ -150,7 +157,7 @@ class MessageRA(object):
     """
     def __init__(self, body, _id=None, _ls_seq=None, _mobile_seq=None, _instance=LONG(0)):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', PY_LONG_TYPE)
             self.mobile_seq = getMandatory(body, 'mobile_seq', PY_LONG_TYPE)
@@ -185,7 +192,7 @@ class MessageLSU(object):
     """
     def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=LONG(0)):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
             self.ls_seq = getMandatory(body, 'ls_seq', PY_LONG_TYPE)
             self.ls = LinkState(getMandatory(body, 'ls', dict))
@@ -220,7 +227,7 @@ class MessageLSR(object):
     """
     def __init__(self, body, _id=None):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
             self.area = '0'
         else:
@@ -245,7 +252,7 @@ class MessageMAU(object):
     """
     def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
             self.area = '0'
             self.mobile_seq = getMandatory(body, 'mobile_seq', PY_LONG_TYPE)
@@ -290,7 +297,7 @@ class MessageMAR(object):
     """
     def __init__(self, body, _id=None, _have_seq=None):
         if body:
-            self.id = getMandatory(body, 'id', str)
+            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
             self.area = '0'
             self.have_seq = getMandatory(body, 'have_seq', PY_LONG_TYPE)

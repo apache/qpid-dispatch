@@ -21,6 +21,12 @@
 # Passes Python2.7's test suite and incorporates all the latest updates.
 # From http://code.activestate.com/recipes/576693/
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 try:
     from thread import get_ident as _get_ident
 except ImportError:

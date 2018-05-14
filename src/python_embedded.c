@@ -17,9 +17,10 @@
  * under the License.
  */
 
-#include "entity_cache.h"
-#include "python_private.h"
 #include <qpid/dispatch/python_embedded.h>
+#include "python_private.h"
+
+#include "entity_cache.h"
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/error.h>
@@ -27,6 +28,8 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/error.h>
+
+#include <ctype.h>
 
 
 #define DISPATCH_MODULE "qpid_dispatch_internal.dispatch"
@@ -164,7 +167,7 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         qd_compose_insert_null(field);
     }
     else if (PyBool_Check(value)) {
-        qd_compose_insert_bool(field, PyLong_AS_LONG(value) ? 1 : 0);
+        qd_compose_insert_bool(field, PyLong_AsLong(value) ? 1 : 0);
     }
     else if (QD_PY_INT_CHECK(value)) {
         // We are now sure that the value is an integer type
@@ -549,27 +552,25 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     char aclass    = 'L';
     char phase     = '0';
     int  treatment = QD_TREATMENT_ANYCAST_CLOSEST;
-    if (PY_MAJOR_VERSION == 2) {
-        if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &treatment))
-            return -1;
-    } else {
-        // In Python3 all string text is unicode.  Therefore the ParseTuple format
-        // no longer allows use of a char byte for extracted characters since a
-        // single character may be up to 4 bytes in length.  Since class and
-        // phase can only be ascii we can simply downcast the returned value
-        // (being careful we do not overflow a single character).
-        unsigned int i_aclass = (int) aclass;
-        unsigned int i_phase = (int) phase;
-        if (!PyArg_ParseTuple(args, "OO|CCi", &self->handler, &addr, &i_aclass, &i_phase, &treatment))
-            return -1;
-        if (i_aclass > 0x7F || i_phase > 0x7F) {
-            PyErr_SetString(PyExc_TypeError, "Address class or phase not a single alpha character");
+
+    const char *aclass_str = NULL;
+    const char *phase_str = NULL;
+    if (!PyArg_ParseTuple(args, "OO|ssi", &self->handler, &addr, &aclass_str, &phase_str, &treatment))
+        return -1;
+    if (aclass_str) {
+        if (strlen(aclass_str) != 1 || !isalpha(*aclass_str)) {
+            PyErr_SetString(PyExc_TypeError, "Address class not a single character");
             return -1;
         }
-        aclass = (char) i_aclass;
-        phase = (char) i_phase;
+        aclass = *aclass_str;
     }
-
+    if (phase_str) {
+        if (strlen(phase_str) != 1 || !isdigit(*phase_str)) {
+            PyErr_SetString(PyExc_TypeError, "Phase not a single numeric character");
+            return -1;
+        }
+        phase = *phase_str;
+    }
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
         return -1;

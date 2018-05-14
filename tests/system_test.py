@@ -27,6 +27,10 @@ Features:
 - Tools to manipulate qdrouter configuration files.
 - Sundry other tools.
 """
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
 from __future__ import print_function
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys

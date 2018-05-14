@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest as unittest
 import os, json
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
@@ -735,7 +740,7 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-2 --stdin', input=self.disallowed_source())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-2' is invalid:" in str(e))
+            self.assertTrue("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-2' is invalid:" in str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected
@@ -745,7 +750,7 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_target())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in str(e))
+            self.assertTrue("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-3' is invalid:" in str(e))
         self.assertTrue(exception)
 
 

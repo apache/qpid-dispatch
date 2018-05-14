@@ -17,6 +17,11 @@
 # under the License
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import json, unittest2 as unittest, os
 
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
@@ -408,7 +413,7 @@ class QdmanageTest(TestCase):
             self.run_qdmanage(delete_command)
         except Exception as e:
             exception_occurred = True
-            self.assertTrue("NotFoundStatus: No entity with name='" + name + "'" in str(e))
+            self.assertTrue(("NotFoundStatus: No entity with name=%s" % name) in str(e))
 
         self.assertTrue(exception_occurred)
 

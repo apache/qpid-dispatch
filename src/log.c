@@ -17,6 +17,8 @@
  * under the License.
  */
 
+#include "python_private.h"   // must be first!
+
 #include "log_private.h"
 #include "entity.h"
 #include "entity_cache.h"
@@ -32,7 +34,6 @@
 #include <string.h>
 #include <time.h>
 #include <syslog.h>
-#include "python_private.h"
 
 #define TEXT_MAX QD_LOG_TEXT_MAX
 #define LOG_MAX (QD_LOG_TEXT_MAX+128)

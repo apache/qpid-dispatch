@@ -18,8 +18,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-#include <stdint.h>
 #include <Python.h>
+#include <stdint.h>
 
 #if PY_MAJOR_VERSION <= 2
 // deal with the two integer types in Python2

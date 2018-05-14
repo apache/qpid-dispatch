@@ -17,6 +17,9 @@
  * under the License.
  */
 
+#include "python_private.h"             // must be first!
+#include <qpid/dispatch/python_embedded.h>
+
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
@@ -31,7 +34,7 @@
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 
-#include "qpid/dispatch/python_embedded.h"
+
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -40,7 +43,6 @@
 #include "timer_private.h"
 #include "config.h"
 #include "remote_sasl.h"
-#include "python_private.h"
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>

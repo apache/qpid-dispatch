@@ -20,6 +20,10 @@
 """
 Generate the schema.md chapter for the dispatch book from the qdrouter.json schema.
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import sys, re
 from qpid_dispatch_internal.management.qdrouter import QdSchema

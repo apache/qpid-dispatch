@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
@@ -771,7 +776,7 @@ class DeliveryTagsTest(MessagingHandler):
         self.delivery_tag_verified = False
         # The delivery tag we are going to send in the transfer frame
         # We will later make sure that the same delivery tag shows up on the receiving end in the link routed case.
-        self.delivery_tag = '92319'
+        self.delivery_tag = b'92319'
         self.error = None
 
     def timeout(self):

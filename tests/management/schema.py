@@ -20,6 +20,11 @@
 
 #pylint: disable=wildcard-import,missing-docstring,too-many-public-methods
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest, json
 from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
 from qpid_dispatch_internal.compat import OrderedDict
