@@ -67,7 +67,7 @@ struct qd_policy_t {
     int                   max_connection_limit;
     char                 *policyDir;
     bool                  enableVhostPolicy;
-    bool                  useVhostNamePatterns;
+    bool                  enableVhostNamePatterns;
                           // live statistics
     int                   connections_processed;
     int                   connections_denied;
@@ -115,7 +115,7 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
     policy->policyDir =
         qd_entity_opt_string(entity, "policyDir", 0); CHECK();
     policy->enableVhostPolicy = qd_entity_opt_bool(entity, "enableVhostPolicy", false); CHECK();
-    policy->useVhostNamePatterns = qd_entity_opt_bool(entity, "useVhostNamePatterns", false); CHECK();
+    policy->enableVhostNamePatterns = qd_entity_opt_bool(entity, "enableVhostNamePatterns", false); CHECK();
     qd_log(policy->log_source, QD_LOG_INFO,
            "Policy configured maxConnections: %d, "
            "policyDir: '%s',"
@@ -124,7 +124,7 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
            policy->max_connection_limit,
            policy->policyDir,
            (policy->enableVhostPolicy ? "true" : "false"),
-           (policy->useVhostNamePatterns ? "true" : "false"));
+           (policy->enableVhostNamePatterns ? "true" : "false"));
     return QD_ERROR_NONE;
 
 error:

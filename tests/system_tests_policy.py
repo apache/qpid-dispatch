@@ -758,7 +758,7 @@ class PolicyHostamePatternTest(TestCase):
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy8'}),
             ('listener', {'port': listen_port}),
-            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true', 'useVhostNamePatterns': 'true'})
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true', 'enableVhostNamePatterns': 'true'})
         ])
 
         cls.router = cls.tester.qdrouterd('PolicyVhostNamePatternTest', config, wait=True)

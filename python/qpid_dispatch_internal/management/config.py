@@ -178,7 +178,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     # Configure policy and policy manager before vhosts
     policyDir           = config.by_type('policy')[0]['policyDir']
     policyDefaultVhost  = config.by_type('policy')[0]['defaultVhost']
-    useHostnamePatterns = config.by_type('policy')[0]['useVhostNamePatterns']
+    useHostnamePatterns = config.by_type('policy')[0]['enableVhostNamePatterns']
     for a in config.by_type("policy"):
         configure(a)
     agent.policy.set_default_vhost(policyDefaultVhost)
