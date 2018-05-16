@@ -24,7 +24,7 @@ from __future__ import absolute_import
 
 import json
 import re
-from schema import Schema
+from .schema import Schema
 import pdb
 
 class ConfigSection(object):
