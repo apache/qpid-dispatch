@@ -23,12 +23,19 @@
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/log.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <errno.h>
 #include <string.h>
 #include "log_private.h"
 #include "aprintf.h"
 #include "python_private.h"
+
+// force the use of the non-gnu version of strerror_r
+#undef _POSIX_C_SOURCE
+#undef _GNU_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#define _GNU_SOURCE 0
+#include <stdio.h>
+
 
 static const char *qd_error_names[] = {
  "No Error",
@@ -198,8 +205,11 @@ qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const cha
         vaprintf(&begin, end, fmt, arglist);
         va_end(arglist);
         aprintf(&begin, end, ": ", errnum);
-        (void)strerror_r(errnum, begin, end - begin);
-        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", ts.error_message);
+        char *em = ts.error_message;
+        if(strerror_r(errnum, begin, end - begin) != 0) {
+            snprintf(begin, end - begin, "Unknown error %d", errnum);
+        }
+        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", em);
         return qd_error_code();
     }
     else
