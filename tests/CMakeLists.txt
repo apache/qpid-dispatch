@@ -117,19 +117,36 @@ foreach(py_test_module
 endforeach()
 
 # Use tox to run the flake8 python linter tool on all the python
-# sources. Highly recommended if you're hacking the python code
+# sources. Highly recommended if you're hacking the python code.
+# Unfortunately this can only be done for versions of tox >= 1.9.0
+# since that version allows us to skip the install step (we have
+# no modules thus no setup.py)
 #
 find_program(TOX_EXE "tox")
 if (TOX_EXE)
-  add_test (NAME python-checker
-            COMMAND ${TOX_EXE}
-            WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
-  # Once we move to tox >= v1.7.2 we can remove the next
-  # line.  See tox.ini file for details
-  set_tests_properties(python-checker
-                       PROPERTIES
-                       PASS_REGULAR_EXPRESSION "commands succeeded"
-                       FAIL_REGULAR_EXPRESSION "commands failed")
+  set(TOX_MIN_VERSION 1.9.0)
+  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tox, sys; print('%s' % tox.__version__); sys.exit(0)"
+                  RESULT_VARIABLE TOX_STATUS
+                  OUTPUT_VARIABLE TOX_VERSION)
+  if (TOX_STATUS EQUAL 0)
+    string(STRIP ${TOX_VERSION} TOX_VERSION)
+    if (TOX_VERSION STRLESS TOX_MIN_VERSION)
+      message( STATUS "tox version ${TOX_VERSION} < required version ${TOX_MIN_VERSION} - skipping python-checker")
+    else (TOX_VERSION STRLESS TOX_MIN_VERSION)
+      configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tox.ini.in ${CMAKE_CURRENT_BINARY_DIR}/tox.ini)
+      add_test (NAME python-checker
+                COMMAND ${TOX_EXE}
+                WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+      # Once we move to tox >= v1.7.2 we can remove the next
+      # line.  See tox.ini file for details
+      set_tests_properties(python-checker
+                           PROPERTIES
+                           PASS_REGULAR_EXPRESSION "commands succeeded"
+                           FAIL_REGULAR_EXPRESSION "commands failed")
+    endif (TOX_VERSION STRLESS TOX_MIN_VERSION)
+  else (TOX_STATUS EQUAL 0)
+    message(STATUS "Cannot determine tox version - skipping python-checker")
+  endif (TOX_STATUS EQUAL 0)
 
 else (TOX_EXE)
   message(STATUS "Could NOT find 'tox' tool - unable to validate python code")

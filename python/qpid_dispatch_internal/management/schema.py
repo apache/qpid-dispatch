@@ -116,6 +116,7 @@ class EnumValue(str):
 
     def __hash__(self): return super(EnumValue, self).__hash__()
     def __int__(self): return self.value
+    def __long__(self): return self.value
     def __eq__(self, x): return str(self) == x or int(self) == x
     def __ne__(self, x): return not self == x
     def __repr__(self): return "EnumValue('%s', %s)"%(str(self), int(self))

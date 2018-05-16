@@ -54,6 +54,13 @@ char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
 long qd_entity_get_long(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
+    if (py_obj && !PyLong_Check(py_obj)) {
+        // 2.6 PyLong_AsLong fails to 'cast' non-long types
+        // so we have to manually cast it first:
+        PyObject *py_tmp = PyNumber_Long(py_obj);
+        Py_XDECREF(py_obj);
+        py_obj = py_tmp;
+    }
     long result = py_obj ? PyLong_AsLong(py_obj) : -1;
     Py_XDECREF(py_obj);
     qd_error_py();
