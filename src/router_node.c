@@ -631,15 +631,17 @@ static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
 
-    char *terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_target((pn_link_t  *)qd_link_pn(link)));
+    if (qdr_conn) {
+        char *terminus_addr = (char*)pn_terminus_get_address(pn_link_remote_target((pn_link_t  *)qd_link_pn(link)));
 
-    qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_INCOMING,
-                                                       qdr_terminus(qd_link_remote_source(link)),
-                                                       qdr_terminus(qd_link_remote_target(link)),
-                                                       pn_link_name(qd_link_pn(link)),
-                                                       terminus_addr);
-    qdr_link_set_context(qdr_link, link);
-    qd_link_set_context(link, qdr_link);
+        qdr_link_t       *qdr_link = qdr_link_first_attach(qdr_conn, QD_INCOMING,
+                                                           qdr_terminus(qd_link_remote_source(link)),
+                                                           qdr_terminus(qd_link_remote_target(link)),
+                                                           pn_link_name(qd_link_pn(link)),
+                                                           terminus_addr);
+        qdr_link_set_context(qdr_link, link);
+        qd_link_set_context(link, qdr_link);
+    }
 
     return 0;
 }
@@ -677,6 +679,10 @@ static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
 static int AMQP_link_attach_handler(void* context, qd_link_t *link)
 {
     qdr_link_t *qlink = (qdr_link_t*) qd_link_get_context(link);
+
+    if (!qlink)
+        return 0;
+
     qdr_link_second_attach(qlink,
                            qdr_terminus(qd_link_remote_source(link)),
                            qdr_terminus(qd_link_remote_target(link)));
@@ -695,6 +701,9 @@ static int AMQP_link_flow_handler(void* context, qd_link_t *link)
     pn_link_t   *pnlink = qd_link_pn(link);
 
     if (!rlink)
+        return 0;
+
+    if (!pnlink)
         return 0;
 
     qdr_link_flow(router->router_core, rlink, pn_link_remote_credit(pnlink), pn_link_get_drain(pnlink));
@@ -746,6 +755,9 @@ static void bind_connection_context(qdr_connection_t *qdrc, void* token)
 
 static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool inbound)
 {
+    if (!conn)
+        return;
+
     qdr_connection_role_t  role = 0;
     int                    cost = 1;
     int                    remote_cost = 1;
@@ -1014,7 +1026,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 static int AMQP_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
-    AMQP_opened_handler(router, conn, true);
+    if (conn)
+        AMQP_opened_handler(router, conn, true);
     return 0;
 }
 
@@ -1022,7 +1035,8 @@ static int AMQP_inbound_opened_handler(void *type_context, qd_connection_t *conn
 static int AMQP_outbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)
 {
     qd_router_t *router = (qd_router_t*) type_context;
-    AMQP_opened_handler(router, conn, false);
+    if (conn)
+        AMQP_opened_handler(router, conn, false);
     return 0;
 }
 

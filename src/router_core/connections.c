@@ -117,7 +117,8 @@ void qdr_connection_closed(qdr_connection_t *conn)
 {
     qdr_action_t *action = qdr_action(qdr_connection_closed_CT, "connection_closed");
     action->args.connection.conn = conn;
-    qdr_action_enqueue(conn->core, action);
+    if (conn)
+        qdr_action_enqueue(conn->core, action);
 }
 
 bool qdr_connection_route_container(qdr_connection_t *conn)
@@ -473,7 +474,8 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
     action->args.connection.link   = link;
     action->args.connection.source = source;
     action->args.connection.target = target;
-    qdr_action_enqueue(link->core, action);
+    if (link)
+        qdr_action_enqueue(link->core, action);
 }
 
 
@@ -485,7 +487,8 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error)
     action->args.connection.link   = link;
     action->args.connection.error  = error;
     action->args.connection.dt     = dt;
-    qdr_action_enqueue(link->core, action);
+    if (link)
+        qdr_action_enqueue(link->core, action);
 }
 
 
@@ -494,7 +497,8 @@ void qdr_link_delete(qdr_link_t *link)
     qdr_action_t *action = qdr_action(qdr_link_delete_CT, "link_delete");
 
     action->args.connection.link = link;
-    qdr_action_enqueue(link->core, action);
+    if (link)
+        qdr_action_enqueue(link->core, action);
 }
 
 
