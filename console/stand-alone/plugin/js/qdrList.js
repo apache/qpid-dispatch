@@ -376,6 +376,7 @@ var QDR = (function(QDR) {
         });
         let h = $scope.detailFields.length * 30 + 46;
         $('.ui-grid-viewport').height(h);
+        $scope.details.excessRows = $scope.detailFields.length;
       };
       $(window).resize(resizer);
 
@@ -731,6 +732,7 @@ var QDR = (function(QDR) {
         enableVerticalScrollbar: 0,
         multiSelect: false,
         jqueryUIDraggable: true,
+        excessRows: 20,
         onRegisterApi: function(gridApi) {
           $scope.gridApi = gridApi;
         }

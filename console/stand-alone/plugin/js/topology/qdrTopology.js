@@ -18,7 +18,7 @@ under the License.
 */
 'use strict';
 
-/* global angular d3 */
+/* global angular d3 separateAddresses Traffic */
 /**
  * @module QDR
  */
@@ -48,11 +48,6 @@ var QDR = (function(QDR) {
       if (!$scope.$$phase) $scope.$apply();
 
     });
-    $scope.infoStyle = function () {
-      return {
-        height: (Math.max($scope.attributes.length, 15) * 30 + 46) + 'px'
-      };
-    };
 
     $scope.panelVisible = true;  // show/hide the panel on the left
     $scope.hideLeftPane = function () {
@@ -85,8 +80,6 @@ var QDR = (function(QDR) {
           div.style('padding-left', '300px');
         });
     };
-
-
   });
   /**
    * @method TopologyController
@@ -96,10 +89,53 @@ var QDR = (function(QDR) {
   QDR.module.controller('QDR.TopologyController', ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$uibModal', '$sce',
     function($scope, $rootScope, QDRService, $location, $timeout, $uibModal, $sce) {
 
+      const TOPOOPTIONSKEY = 'topoOptions';
+      const radius = 25;
+      const radiusNormal = 15;
+
+      //  - nodes is an array of router/client info. these are the circles
+      //  - links is an array of connections between the routers. these are the lines with arrows
+      let nodes = [];
+      let links = [];
+      let forceData = {nodes: nodes, links: links};
+
       $scope.multiData = [];
       $scope.quiesceState = {};
       let dontHide = false;
       $scope.crosshtml = $sce.trustAsHtml('');
+      $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false};
+      $scope.legend = {status: {legendOpen: true, optionsOpen: true}};
+      let traffic = new Traffic($scope, $timeout, QDRService, separateAddresses, 
+        radius, forceData, nextHop);
+
+      // the showTraaffic checkbox was just toggled (or initialized)
+      $scope.$watch('legendOptions.showTraffic', function () {
+        localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
+        if ($scope.legendOptions.showTraffic) {
+          traffic.start();
+        } else {
+          traffic.stop();
+          traffic.remove();
+        }
+      });
+      // event notification that an address checkbox has changed
+      $scope.addressFilterChanged = function () {
+        traffic.updateAddresses();
+      };
+
+      // called by angular when mouse enters one of the address legends
+      $scope.enterLegend = function (address) {
+        // fade all flows that aren't for this address
+        traffic.fadeOtherAddresses(address);
+      };
+      // called when the mouse leaves one of the address legends
+      $scope.leaveLegend = function () {
+        traffic.unFadeAll();
+      };
+      // clicked on the address name. toggle the address checkbox
+      $scope.addressClick = function (address) {
+        traffic.toggleAddress(address);
+      };
 
       $scope.quiesceConnection = function(row) {
         let entity = row.entity;
@@ -373,8 +409,6 @@ var QDR = (function(QDR) {
         'on-demand': 15,
         'route-container': 15,
       };
-      let radius = 25;
-      let radiusNormal = 15;
       let svg, lsvg;
       let force;
       let animate = false; // should the force graph organize itself when it is displayed
@@ -385,7 +419,7 @@ var QDR = (function(QDR) {
 
       var getSizes = function() {
         let legendWidth = 143;
-        let display = $('#svg_legend').css('display');
+        let display = $('#topo_svg_legend').css('display');
         if (display === 'none')
           legendWidth = 0;
         const gap = 5;
@@ -422,13 +456,6 @@ var QDR = (function(QDR) {
       height = sizes[1];
       if (width <= 0 || height <= 0)
         return;
-
-      // set up initial nodes and links
-      //  - nodes are known by 'id', not by index in array.
-      //  - selected edges are indicated on the node (as a bold red circle).
-      //  - links are always source < target; edge directions are set by 'left' and 'right'.
-      let nodes = [];
-      let links = [];
 
       var nodeExists = function (connectionContainer) {
         return nodes.findIndex( function (node) {
@@ -520,7 +547,7 @@ var QDR = (function(QDR) {
       var initializeNodes = function (nodeInfo) {
         let nodeCount = Object.keys(nodeInfo).length;
         let yInit = 50;
-        nodes = [];
+        forceData.nodes = nodes = [];
         for (let id in nodeInfo) {
           let name = QDRService.management.topology.nameFromId(id);
           // if we have any new nodes, animate the force graph to position them
@@ -543,7 +570,7 @@ var QDR = (function(QDR) {
       };
 
       var initializeLinks = function (nodeInfo, unknowns) {
-        links = [];
+        forceData.links = links = [];
         let source = 0;
         let client = 1.0;
         for (let id in nodeInfo) {
@@ -669,8 +696,8 @@ var QDR = (function(QDR) {
       };
       // initialize the nodes and links array from the QDRService.topology._nodeInfo object
       var initForceGraph = function() {
-        nodes = [];
-        links = [];
+        forceData.nodes = nodes = [];
+        forceData.links = links = [];
         let nodeInfo = QDRService.management.topology.nodeInfo();
         let nodeCount = Object.keys(nodeInfo).length;
 
@@ -698,8 +725,8 @@ var QDR = (function(QDR) {
         });
 
         // the legend
-        d3.select('#svg_legend svg').remove();
-        lsvg = d3.select('#svg_legend')
+        d3.select('#topo_svg_legend svg').remove();
+        lsvg = d3.select('#topo_svg_legend')
           .append('svg')
           .attr('id', 'svglegend');
         lsvg = lsvg.append('svg:g')
@@ -737,6 +764,7 @@ var QDR = (function(QDR) {
           .enter().append('svg:marker') // This section adds in the arrows
           .attr('id', String)
           .attr('viewBox', '0 -5 10 10')
+          .attr('refX', 24)
           .attr('markerWidth', 4)
           .attr('markerHeight', 4)
           .attr('orient', 'auto')
@@ -749,7 +777,7 @@ var QDR = (function(QDR) {
           .enter().append('svg:marker') // This section adds in the arrows
           .attr('id', String)
           .attr('viewBox', '0 -5 10 10')
-          .attr('refX', 5)
+          .attr('refX', function (d) { return d !== 'start-arrow-small' ? -14 : -24;})
           .attr('markerWidth', 4)
           .attr('markerHeight', 4)
           .attr('orient', 'auto')
@@ -958,17 +986,8 @@ var QDR = (function(QDR) {
         path.attr('d', function(d) {
           let sourcePadding, targetPadding, r;
 
-          if (d.target.nodeType == 'inter-router') {
-            r = radius;
-            //                       right arrow  left line start
-            sourcePadding = d.left ? radius + 8 : radius;
-            //                      left arrow      right line start
-            targetPadding = d.right ? radius + 16 : radius;
-          } else {
-            r = radiusNormal - 18;
-            sourcePadding = d.left ? radiusNormal + 18 : radiusNormal;
-            targetPadding = d.right ? radiusNormal + 16 : radiusNormal;
-          }
+          r = d.target.nodeType === 'inter-router' ? radius : radiusNormal - 18;
+          sourcePadding = targetPadding = 0;
           let dtx = Math.max(targetPadding, Math.min(width - r, d.target.x)),
             dty = Math.max(targetPadding, Math.min(height - r, d.target.y)),
             dsx = Math.max(sourcePadding, Math.min(width - r, d.source.x)),
@@ -991,7 +1010,10 @@ var QDR = (function(QDR) {
           targetY = Math.max(0, targetY);
 
           return 'M' + sourceX + ',' + sourceY + 'L' + targetX + ',' + targetY;
-        });
+        })
+          .attr('id', function (d) {
+            return ['path', d.source.index, d.target.index].join('-');
+          });
 
         if (!animate) {
           animate = true;
@@ -1379,58 +1401,9 @@ var QDR = (function(QDR) {
         let g = circle.enter().append('svg:g')
           .classed('multiple', function(d) {
             return (d.normals && d.normals.length > 1);
-          });
+          })
+          .attr('id', function (d) { return (d.nodeType !== 'normal' ? 'router' : 'client') + '-' + d.index; });
 
-        var appendCircle = function(g) {
-          // add new circles and set their attr/class/behavior
-          return g.append('svg:circle')
-            .attr('class', 'node')
-            .attr('r', function(d) {
-              return radii[d.nodeType];
-            })
-            .attr('fill', function (d) {
-              if (d.cdir === 'both' && !QDRService.utilities.isConsole(d)) {
-                return 'url(' + urlPrefix + '#half-circle)';
-              }
-              return null;
-            })
-            .classed('fixed', function(d) {
-              return d.fixed & 1;
-            })
-            .classed('normal', function(d) {
-              return d.nodeType == 'normal' || QDRService.utilities.isConsole(d);
-            })
-            .classed('in', function(d) {
-              return d.cdir == 'in';
-            })
-            .classed('out', function(d) {
-              return d.cdir == 'out';
-            })
-            .classed('inout', function(d) {
-              return d.cdir == 'both';
-            })
-            .classed('inter-router', function(d) {
-              return d.nodeType == 'inter-router';
-            })
-            .classed('on-demand', function(d) {
-              return d.nodeType == 'on-demand';
-            })
-            .classed('console', function(d) {
-              return QDRService.utilities.isConsole(d);
-            })
-            .classed('artemis', function(d) {
-              return QDRService.utilities.isArtemis(d);
-            })
-            .classed('qpid-cpp', function(d) {
-              return QDRService.utilities.isQpid(d);
-            })
-            .classed('route-container', function (d) {
-              return (!QDRService.utilities.isArtemis(d) && !QDRService.utilities.isQpid(d) && d.nodeType === 'route-container');
-            })
-            .classed('client', function(d) {
-              return d.nodeType === 'normal' && !d.properties.console_identifier;
-            });
-        };
         appendCircle(g)
           .on('mouseover', function(d) {  // mouseover a circle
             if (!selected_node && !mousedown_node) {
@@ -1555,80 +1528,8 @@ var QDR = (function(QDR) {
             d3.event.stopPropagation();
             startUpdateConnectionsGrid(d);
           });
-        //.attr("transform", function (d) {return "scale(" + (d.nodeType === 'normal' ? .5 : 1) + ")"})
-        //.transition().duration(function (d) {return d.nodeType === 'normal' ? 3000 : 0}).ease("elastic").attr("transform", "scale(1)")
-
-        var appendContent = function(g) {
-          // show node IDs
-          g.append('svg:text')
-            .attr('x', 0)
-            .attr('y', function(d) {
-              let y = 7;
-              if (QDRService.utilities.isArtemis(d))
-                y = 8;
-              else if (QDRService.utilities.isQpid(d))
-                y = 9;
-              else if (d.nodeType === 'inter-router')
-                y = 4;
-              else if (d.nodeType === 'route-container')
-                y = 5;
-              return y;
-            })
-            .attr('class', 'id')
-            .classed('console', function(d) {
-              return QDRService.utilities.isConsole(d);
-            })
-            .classed('normal', function(d) {
-              return d.nodeType === 'normal';
-            })
-            .classed('on-demand', function(d) {
-              return d.nodeType === 'on-demand';
-            })
-            .classed('artemis', function(d) {
-              return QDRService.utilities.isArtemis(d);
-            })
-            .classed('qpid-cpp', function(d) {
-              return QDRService.utilities.isQpid(d);
-            })
-            .text(function(d) {
-              if (QDRService.utilities.isConsole(d)) {
-                return '\uf108'; // icon-desktop for this console
-              } else if (QDRService.utilities.isArtemis(d)) {
-                return '\ue900';
-              } else if (QDRService.utilities.isQpid(d)) {
-                return '\ue901';
-              } else if (d.nodeType === 'route-container') {
-                return d.properties.product ? d.properties.product[0].toUpperCase() : 'S';
-              } else if (d.nodeType === 'normal')
-                return '\uf109'; // icon-laptop for clients
-              return d.name.length > 7 ? d.name.substr(0, 6) + '...' : d.name;
-            });
-        };
 
         appendContent(g);
-
-        var appendTitle = function(g) {
-          g.append('svg:title').text(function(d) {
-            let x = '';
-            if (d.normals && d.normals.length > 1)
-              x = ' x ' + d.normals.length;
-            if (QDRService.utilities.isConsole(d)) {
-              return 'Dispatch console' + x;
-            } else if (QDRService.utilities.isArtemis(d)) {
-              return 'Broker - Artemis' + x;
-            } else if (d.properties.product == 'qpid-cpp') {
-              return 'Broker - qpid-cpp' + x;
-            } else if (d.properties.product) {
-              return d.properties.product;
-            } else if (d.cdir === 'in')
-              return 'Sender' + x;
-            else if (d.cdir === 'out')
-              return 'Receiver' + x;
-            else if (d.cdir === 'both')
-              return 'Sender/Receiver' + x;
-            return d.nodeType == 'normal' ? 'client' + x : (d.nodeType == 'on-demand' ? 'broker' : 'Router ' + d.name);
-          });
-        };
         appendTitle(g);
 
         // remove old nodes
@@ -1646,11 +1547,26 @@ var QDR = (function(QDR) {
                 .attr('transform', 'translate(' + 4 * (i + 1) + ', 0)');
           }, d3.select(this));
         });
+        // call createLegend in timeout because:
+        // If we create the legend right away, then it will be destroyed when the accordian
+        // gets initialized as the page loads.
+        $timeout(createLegend);
 
+        if (!mousedown_node || !selected_node)
+          return;
+
+        if (!start)
+          return;
+        // set the graph in motion
+        //QDR.log.debug("mousedown_node is " + mousedown_node);
+        force.start();
+
+      }
+      let createLegend = function () {
         // dynamically create the legend based on which node types are present
         // the legend
-        d3.select('#svg_legend svg').remove();
-        lsvg = d3.select('#svg_legend')
+        d3.select('#topo_svg_legend svg').remove();
+        lsvg = d3.select('#topo_svg_legend')
           .append('svg')
           .attr('id', 'svglegend');
         lsvg = lsvg.append('svg:g')
@@ -1729,17 +1645,125 @@ var QDR = (function(QDR) {
           svgEl.style.height = (bb.y + bb.height) + 'px';
           svgEl.style.width = (bb.x + bb.width) + 'px';
         }
-
-        if (!mousedown_node || !selected_node)
-          return;
-
-        if (!start)
-          return;
-        // set the graph in motion
-        //QDR.log.debug("mousedown_node is " + mousedown_node);
-        force.start();
-
-      }
+      };
+      let appendCircle = function(g) {
+        // add new circles and set their attr/class/behavior
+        return g.append('svg:circle')
+          .attr('class', 'node')
+          .attr('r', function(d) {
+            return radii[d.nodeType];
+          })
+          .attr('fill', function (d) {
+            if (d.cdir === 'both' && !QDRService.utilities.isConsole(d)) {
+              return 'url(' + urlPrefix + '#half-circle)';
+            }
+            return null;
+          })
+          .classed('fixed', function(d) {
+            return d.fixed & 1;
+          })
+          .classed('normal', function(d) {
+            return d.nodeType == 'normal' || QDRService.utilities.isConsole(d);
+          })
+          .classed('in', function(d) {
+            return d.cdir == 'in';
+          })
+          .classed('out', function(d) {
+            return d.cdir == 'out';
+          })
+          .classed('inout', function(d) {
+            return d.cdir == 'both';
+          })
+          .classed('inter-router', function(d) {
+            return d.nodeType == 'inter-router';
+          })
+          .classed('on-demand', function(d) {
+            return d.nodeType == 'on-demand';
+          })
+          .classed('console', function(d) {
+            return QDRService.utilities.isConsole(d);
+          })
+          .classed('artemis', function(d) {
+            return QDRService.utilities.isArtemis(d);
+          })
+          .classed('qpid-cpp', function(d) {
+            return QDRService.utilities.isQpid(d);
+          })
+          .classed('route-container', function (d) {
+            return (!QDRService.utilities.isArtemis(d) && !QDRService.utilities.isQpid(d) && d.nodeType === 'route-container');
+          })
+          .classed('client', function(d) {
+            return d.nodeType === 'normal' && !d.properties.console_identifier;
+          });
+      };
+      let appendContent = function(g) {
+        // show node IDs
+        g.append('svg:text')
+          .attr('x', 0)
+          .attr('y', function(d) {
+            let y = 7;
+            if (QDRService.utilities.isArtemis(d))
+              y = 8;
+            else if (QDRService.utilities.isQpid(d))
+              y = 9;
+            else if (d.nodeType === 'inter-router')
+              y = 4;
+            else if (d.nodeType === 'route-container')
+              y = 5;
+            return y;
+          })
+          .attr('class', 'id')
+          .classed('console', function(d) {
+            return QDRService.utilities.isConsole(d);
+          })
+          .classed('normal', function(d) {
+            return d.nodeType === 'normal';
+          })
+          .classed('on-demand', function(d) {
+            return d.nodeType === 'on-demand';
+          })
+          .classed('artemis', function(d) {
+            return QDRService.utilities.isArtemis(d);
+          })
+          .classed('qpid-cpp', function(d) {
+            return QDRService.utilities.isQpid(d);
+          })
+          .text(function(d) {
+            if (QDRService.utilities.isConsole(d)) {
+              return '\uf108'; // icon-desktop for this console
+            } else if (QDRService.utilities.isArtemis(d)) {
+              return '\ue900';
+            } else if (QDRService.utilities.isQpid(d)) {
+              return '\ue901';
+            } else if (d.nodeType === 'route-container') {
+              return d.properties.product ? d.properties.product[0].toUpperCase() : 'S';
+            } else if (d.nodeType === 'normal')
+              return '\uf109'; // icon-laptop for clients
+            return d.name.length > 7 ? d.name.substr(0, 6) + '...' : d.name;
+          });
+      };
+      let appendTitle = function(g) {
+        g.append('svg:title').text(function(d) {
+          let x = '';
+          if (d.normals && d.normals.length > 1)
+            x = ' x ' + d.normals.length;
+          if (QDRService.utilities.isConsole(d)) {
+            return 'Dispatch console' + x;
+          } else if (QDRService.utilities.isArtemis(d)) {
+            return 'Broker - Artemis' + x;
+          } else if (d.properties.product == 'qpid-cpp') {
+            return 'Broker - qpid-cpp' + x;
+          } else if (d.properties.product) {
+            return d.properties.product;
+          } else if (d.cdir === 'in')
+            return 'Sender' + x;
+          else if (d.cdir === 'out')
+            return 'Receiver' + x;
+          else if (d.cdir === 'both')
+            return 'Sender/Receiver' + x;
+          return d.nodeType == 'normal' ? 'client' + x : (d.nodeType == 'on-demand' ? 'broker' : 'Router ' + d.name);
+        });
+      };
 
       var startUpdateConnectionsGrid = function(d) {
         // called after each topology update
@@ -1861,9 +1885,7 @@ var QDR = (function(QDR) {
         if (d.normals.length === 1) {
           // simulate a click on the connection to popup the link details
           QDRService.management.topology.ensureEntities(d.key, {entity: 'router.link', force: true}, function () {
-            $scope.multiDetails.showLinksList({
-              entity: d
-            });
+            $scope.multiDetails.showLinksList({entity: d});
           });
         }
       };
@@ -1882,7 +1904,7 @@ var QDR = (function(QDR) {
         }
       };
 
-      function nextHop(thisNode, d) {
+      function nextHop(thisNode, d, cb) {
         if ((thisNode) && (thisNode != d)) {
           let target = findNextHopNode(thisNode, d);
           //QDR.log.debug("highlight link from node ");
@@ -1894,15 +1916,19 @@ var QDR = (function(QDR) {
             //QDR.log.debug("need to highlight");
             //console.dump(hlLink);
             if (hlLink) {
-              hlLink['highlighted'] = true;
-              hnode['highlighted'] = true;
+              if (cb) {
+                cb(hlLink, hnode, target);
+              } else {
+                hlLink['highlighted'] = true;
+                hnode['highlighted'] = true;
+              }
             }
             else
               target = null;
           }
-          nextHop(target, d);
+          nextHop(target, d, cb);
         }
-        if (thisNode == d) {
+        if (thisNode == d && !cb) {
           let hnode = nodeFor(thisNode.name);
           hnode['highlighted'] = true;
         }
@@ -1970,6 +1996,7 @@ var QDR = (function(QDR) {
 
         d3.select('#SVG_ID').remove();
         window.removeEventListener('resize', resize);
+        traffic.stop();
       });
 
       function handleInitialUpdate() {

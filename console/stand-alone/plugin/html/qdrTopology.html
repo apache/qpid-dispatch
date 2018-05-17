@@ -93,15 +93,88 @@ button.page-menu-button {
   .page-menu {
       width: 300px;
   }
-  
+
+  .legend-container {
+      position: absolute;
+      top: 1em;
+      right: 1em;
+  }
+
+  .legend-container ul {
+    list-style: none;
+    padding-left: 0;
+    margin-bottom: 0.5em;
+  }
+
+  span.legend-text {
+    padding-left: 0.25em;
+    font-weight: bold;
+  }
+
+  span.legend-text:disabled {
+    color: darkgray;
+  }
+
+  li:disabled * {
+      color: darkgray;
+  }
+  circle.flow {
+    opacity: 1;
+    pointer-events: none;
+    /*fill: green; */
+  }
+
+  circle.flow.fade {
+    opacity: 0.1;
+  }
+
+  #topo_legend ul.addresses li, #topo_legend ul.options li {
+    margin-top: 0.5em;
+    margin-bottom: 1em;
+  }
+
+#topo_legend ul.addresses {
+  margin-bottom: 1.5em;
+}
+
+  /* the checkboxes for the addresses */
+  #topo_legend ul li input[type=checkbox]:checked + label::before {
+    content:'\2713';
+    font-weight: bold;
+    font-size: 16px;
+    display:inline-block;
+    /* padding:0 6px 0 0; */
+    color: black;
+    position: absolute;
+    top: -8px;
+    left: -1px;
+  }
+  /* The aggregate addresses need a black checkbox on the white background */
+  #topo_legend ul li input[type=checkbox]:checked + label.aggregate::before {
+    color: black;
+    /* left: 1px; */
+  }
+#topo_legend ul.addresses button.btn-default {
+    background-image: none;
+    color: white;
+    border-radius: 10px;
+}
+
+#topo_legend li.legend-sublist ul {
+        margin-bottom: 0.5em;
+    }
+
+#topo_legend li.legend-sublist ul.addresses{
+    max-height: 11.6em;   /* show up to 4 addresses */
+    overflow-y: auto;
+}
 </style>
-<div class="qdrTopology row" ng-controller="QDR.TopologyController">
+<div class="qdrTopology" ng-controller="QDR.TopologyController">
     <div  ng-controller="QDR.TopologyFormController">
         <div class="page-menu navbar-collapse collapse">
             <div id="topologyForm">
                 <div>
                     <h4>{{form}} Info</h4>
-                    <!-- <div id="routerInfo" class="grid" ui-grid="topoGridRouter" ng-style="infoStyle()"></div> -->
                     <div id="formInfo"></div>
                 </div>
             </div>
@@ -110,7 +183,32 @@ button.page-menu-button {
         <button ng-if="!panelVisible" ng-click="showLeftPane()" class="showLeft" title="Show"><i class="icon-step-forward"></i></button>
     </div>
 
-    <div class="diagram col-xs-12">
+    <div class="legend-container hidden-xs">
+        <uib-accordion id="topo_legend" close-others="false">
+            <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Options">
+              <ul class="options">
+                  <li class="legend-line">
+                    <checkbox title="Show message traffic" ng-model="legendOptions.showTraffic"></checkbox>
+                    <span class="legend-text" title="Select to show message traffic">Show traffic</span>
+                  </li>
+                  <li class="legend-sublist" ng-hide="!legendOptions.showTraffic">
+                    <ul class="addresses">
+                        <li ng-repeat="(address, color) in addresses" class="legend-line">
+                          <checkbox style="background-color: {{addressColors[address]}};"
+                            title="{{address}}" ng-change="addressFilterChanged()"
+                            ng-model="addresses[address]"></checkbox>
+                          <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                        </li>
+                    </ul>
+                  </li>
+              </ul>
+            </div>
+            <div uib-accordion-group class="panel-default" is-open="legend.status.legendOpen" heading="Legend">
+                <div id="topo_svg_legend"></div>
+            </div>
+          </uib-accordion>
+    </div>
+    <div class="diagram">
         <div id="topology"><!-- d3 toplogy here --></div>
         <div id="crosssection"></div><div id="crosshtml" ng-bind-html="crosshtml"></div>
 
@@ -120,7 +218,6 @@ button.page-menu-button {
                 <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
             </ul>
         </div>
-        <div id="svg_legend" class="hidden-xs"></div>
         <div id="multiple_details">
             <h4 class="grid-title">Connections</h4>
             <div class="grid" ui-grid="multiDetails" ui-grid-selection ui-grid-auto-resize ng-style="connectionsStyle()"></div>
