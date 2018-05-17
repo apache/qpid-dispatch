@@ -45,10 +45,14 @@ var QDR = (function(QDR) {
       password: '',
       autostart: false
     };
+    $scope.formEntity.password = '';
 
     $scope.$watch('formEntity', function(newValue, oldValue) {
       if (newValue !== oldValue) {
+        let pass = newValue.password;
+        newValue.password = '';
         localStorage[QDR.SETTINGS_KEY] = angular.toJson(newValue);
+        newValue.password = pass;
       }
     }, true);
 

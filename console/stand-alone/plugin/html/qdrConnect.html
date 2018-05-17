@@ -22,6 +22,12 @@ under the License.
         margin-top: 4em;
     }
 
+    .login:after {
+    content: '';
+    display: block;
+    clear: both;
+}
+
 </style>
 <div class="row-fluid" ng-controller="QDR.SettingsController">
     <div class="login" ng-hide="connecting">
@@ -49,6 +55,18 @@ under the License.
                             <div class="col-md-6">
                                 <input tabindex="2" id="port" posint type="number" placeholder="5673" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
                                 <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label tabindex="-1" class="col-md-2 control-label" title="User name" for="username">User name: </label>
+                            <div class="col-md-6">
+                                <input tabindex="3" id="username" type="text" placeholder="username" tooltip="User name" ng-model="formEntity.username" name="username" title="User name">
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label tabindex="-1" class="col-md-2 control-label" title="Password" for="password">Password: </label>
+                            <div class="col-md-6">
+                                <input tabindex="4" id="password" type="password" placeholder="password" tooltip="Password" ng-model="formEntity.password" name="password" title="Password">
                             </div>
                         </div>
 <!--
