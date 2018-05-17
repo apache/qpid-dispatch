@@ -1,0 +1,473 @@
+/*
+ Licensed to the Apache Software Foundation (ASF) under one
+ or more contributor license agreements.  See the NOTICE file
+ distributed with this work for additional information
+ regarding copyright ownership.  The ASF licenses this file
+ to you under the Apache License, Version 2.0 (the
+ "License"); you may not use this file except in compliance
+ with the License.  You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+ Unless required by applicable law or agreed to in writing,
+ software distributed under the License is distributed on an
+ "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+ KIND, either express or implied.  See the License for the
+ specific language governing permissions and limitations
+ under the License
+*/
+
+/* The following are for matching Patternfly styles */
+span.logo {
+  letter-spacing: 3px;
+}
+
+.navbar-pf .navbar-brand {
+  padding: 2px 0 2px;
+}
+/* using fancytree instead of treeview */
+
+#overtree ul.fancytree-container,
+#entityTree ul.fancytree-container,
+#schema ul.fancytree-container {
+    background-color: transparent;
+    border: 0px;
+}
+
+span.fancytree-folder a {
+    font-weight: normal;
+    font-size: 12px;
+}
+
+ul.fancytree-container li,
+span.fancytree-icon {
+  background-image: none;
+}
+
+.fancytree-exp-c span.fa-angle, .fancytree-exp-e span.fa-angle,
+.fancytree-exp-cl span.fa-angle, .fancytree-exp-el span.fa-angle {
+  margin-right: 5px;
+}
+.fancytree-exp-c span.fa-angle:before, .fancytree-exp-cl span.fa-angle:before {
+  font-family: FontAwesome;
+  content: "\f105";
+}
+.fancytree-exp-e .fancytree-expander:before, .fancytree-exp-el .fancytree-expander:before {
+  font-family: FontAwesome;
+  content: "\f107";
+}
+.fancytree-exp-c .fancytree-expander:before, .fancytree-exp-cl .fancytree-expander:before {
+  font-family: FontAwesome;
+  content: "\f105";
+}
+.fancytree-exp-e span.fa-angle:before, .fancytree-exp-el span.fa-angle:before {
+  font-family: FontAwesome;
+  content: "\f107";
+}
+
+.fancytree-ico-ef span.fancytree-icon, .fancytree-ico-cf span.fancytree-icon {
+  background-image: initial;
+  font-family: FontAwesome;
+}
+
+/* closed folder */
+.fancytree-ico-cf span.fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f07b";
+}
+/* expanded folder */
+.fancytree-ico-ef span.fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f07c";
+}
+/* chart */
+.fancytree-ico-cf.charts span.fancytree-icon:before, .fancytree-ico-ef.charts span.fancytree-icon:before {
+  font-family: FontAwesome;
+  content: "\f080";
+}
+
+
+ul.fancytree-container a {
+    color: #363636;
+}
+
+/* override left and right pane styles */
+#schema .col-sm-3,
+.qdr-topology-form.col-sm-3 {
+  padding-left: 0px;
+}
+
+.qdr-topology-form.col-sm-3 {
+  padding-right: 0px;
+}
+
+#overview-controller .ngViewport {
+  height: auto !important;
+}
+
+.pane-wrapper {
+  padding-top: 0.5em;
+}
+
+.pane-viewport {
+    position: relative;
+    /* height: calc(100vh - 20px); */
+    overflow: auto;
+}
+
+[class^="icon-"],
+[class*=" icon-"] {
+  display: inline;
+  width: auto;
+  height: auto;
+  line-height: normal;
+  vertical-align: baseline;
+  background-image: none;
+  background-position: 0% 0%;
+  background-repeat: repeat;
+  margin-top: 0;
+}
+[class^="icon-"],
+[class*=" icon-"] {
+  font-family: FontAwesome;
+  font-weight: normal;
+  font-style: normal;
+  text-decoration: inherit;
+  -webkit-font-smoothing: antialiased;
+  *margin-right: .3em;
+}
+
+[class^="icon-"]:before,
+[class*=" icon-"]:before {
+  text-decoration: inherit;
+  display: inline-block;
+  speak: none;
+}
+
+.icon-bar-chart:before {
+  font-family: FontAwesome;
+    content: "\f080";
+}
+
+.icon-step-forward:before {
+  font-family: FontAwesome;
+  content: "\f051";
+}
+.icon-step-backward:before {
+  font-family: FontAwesome;
+  content: "\f048";
+}
+
+.icon-close:before {
+  font-family: FontAwesome;
+  content: "\f410";
+}
+
+[class^="icon-"]:before, [class*=" icon-"]:before {
+    text-decoration: inherit;
+    display: inline-block;
+    speak: none;
+}
+
+#svg_legend {
+  top: 10px;
+}
+
+#topologyForm > div {
+  width: auto;
+}
+
+div.chartContainer {
+  width: auto;
+  margin-top: 1em;
+}
+
+#dispatch-login-container {
+  width: 90em;
+}
+
+#dispatch-login-container .alert {
+  padding-right: 47px;
+}
+
+.fa-edit:before, .fa-trash-o:before {
+  font-family: FontAwesome;
+}
+
+div.qdr-topology.pane.left {
+  width: 400px;
+  top: 0;
+}
+/*
+.treeview .list-group-item.node-selected {
+  color: #FFFFFF !important;
+  background-color: #428bca !important;
+}
+*/
+span.fancytree-expander {
+  display: none;
+}
+
+#overview-controller span.fancytree-expander {
+  display: inline-block;
+}
+
+.fancytree-active .fancytree-title,
+.fancytree-active .fancytree-icon,
+.fancytree-active .fancytree-expander {
+  color: white;
+}
+
+.ui-grid {
+  border: 0px;
+}
+
+.ui-grid-header {
+  border: 1px solid #d4d4d4;
+}
+
+#overview-controller .sidebar-pf-left, #list-controller .sidebar-pf-left {
+  padding-right: 0px;
+}
+
+#crosshtml {
+  position: absolute;
+  display: none;
+  padding: 1em;
+  border: 1px solid grey;
+  background-color: white;
+  border-radius: 4px;
+}
+
+.pane-bar {
+  float: right;
+  height: calc(100vh - 75px);
+  width: 6px;
+  background-color: white;
+  border: 1px solid #e0e0e0;
+  position: absolute;
+  top: 0;
+  right: -6px;
+  cursor: ew-resize;
+
+
+  display: none;
+}
+
+.dispatch-c3-tooltip {
+  border-collapse: collapse;
+  border-spacing: 0;
+  background-color: #fff;
+  empty-cells: show;
+  -webkit-box-shadow: 7px 7px 12px -9px #777777;
+  -moz-box-shadow: 7px 7px 12px -9px #777777;
+  box-shadow: 7px 7px 12px -9px #777777;
+  opacity: 0.9;
+
+}
+
+.dispatch-c3-tooltip tr {
+  border: 1px solid #CCC;
+}
+
+.dispatch-c3-tooltip th {
+  background-color: #aaa;
+  font-size: 13px;
+  padding: 2px 5px;
+  text-align: left;
+  color: #FFF;
+  font-weight: normal;
+}
+
+.dispatch-c3-tooltip td {
+  font-size: 13px;
+  padding: 3px 6px;
+  background-color: #fff;
+  border-left: 1px dotted #999;
+}
+
+.chart-tip-legend {
+  width: 10px;
+  height: 10px;
+  display: inline-block;
+  margin-right: 4px;
+}
+
+th.text-center {
+  text-align: center;
+}
+
+.clearfix:after {
+  content: "";
+  display: table;
+  clear: both;
+}
+
+#topAddresses.grid {
+  min-height: 190px;
+}
+
+circle.c3-circle {
+  display: none;
+}
+
+circle.c3-circle._expanded_ {
+  display: inline;
+}
+
+#main.container-fluid {
+  position: relative;
+}
+
+.chord-diagram:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f021";
+}
+
+.code-branch:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  /* content: "\f126"; */
+  content: "\f085"; /* cogs */
+}
+
+.icon-list:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f0db";
+}
+
+.icon-power:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f011";
+}
+
+.icon-ellipsis-v:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f142";
+}
+
+.icon-schema:before {
+  font-style: normal;
+  font-family: FontAwesome;
+  content: "\f0ca";
+}
+
+/* convert fancytree theme to dark */
+span.fancytree-title {
+  color: white;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  width: 16em;
+}
+
+span.fancytree-node:hover {
+  color: black;
+  background-color: white;
+}
+span.fancytree-node:hover span.fancytree-title {
+  color: black;
+}
+
+span.fancytree-node.fancytree-active:hover, 
+span.fancytree-node.fancytree-active:hover span.fancytree-title {
+  color: white;
+}
+
+span.fancytree-expanded.fancytree-has-children, span.fancytree-expanded.fancytree-has-children + ul {
+  background-color: #444444;
+}
+span.fancytree-expanded.fancytree-has-children:hover {
+  background-color: white;
+}
+
+span.fancytree-node.fancytree-active {
+  background-color: #6aa3d5;
+}
+
+.navbar-fixed-top + .container-fluid {
+  padding-top: 71px;
+}
+
+@media (max-width: 768px) {
+  .navbar-fixed-top + .container-fluid {
+    padding-top: 38px;
+  }
+}
+
+.navbar-pf .navbar-nav>li>a {
+  padding: 14px 16px;
+}
+
+@media (min-width: 768px) {
+  .navbar-collapse.page-menu {
+    padding-right: 0;
+    /* height: calc(100vh - 74px) !important; */
+  }
+}
+@media (max-width: 768px) {
+  .navbar-collapse.page-menu {
+    position: absolute;
+    z-index: 1;
+    height: auto;
+    left: 0;
+  }
+}
+
+.page-menu {
+    padding-left: 0;
+    background: #333333;
+    z-index: 1;
+    transition: all .2s cubic-bezier(.35,0,.25,1);
+    position: absolute;
+    left: 0;
+    color: white;
+    width: 300px;
+}
+
+.page-menu-button {
+  /*color: black;
+  background: white; */
+  top: 0;
+  z-index: 2;
+  width: 1em;
+  padding: 4px 0 0 4px;
+  margin: 4px 0 0 4px;
+}
+.page-menu-button span.icon-bar {
+  display: block;
+  color: black;
+  background-color: black;
+  height: 4px;
+  width: 4px;
+  font-weight: bold;
+  border-radius: 2px;
+}
+
+.navbar-toggle.left {
+  float: left;
+}
+
+.hideLeft {
+  position: absolute;
+  right: -1.5em;
+  top: 0em;
+  border: 0;
+  color: white;
+  background-color: #444444;
+}
+
+.showLeft {
+  position: absolute;
+  top: 0em;
+  left: 0;
+  border: 0;
+  z-index: 3;
+  color: white;
+  background-color: #444444;
+}
+
