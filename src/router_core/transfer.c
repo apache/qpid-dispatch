@@ -1144,9 +1144,9 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action");
 
     //
-    // If it is already in the undelivered list or it has no peers, don't try to deliver this again.
+    // If it is already in the undelivered list, don't try to deliver this again.
     //
-    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED || !qdr_delivery_has_peer_CT(in_dlv))
+    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED)
         return;
 
     qdr_deliver_continue_peers_CT(core, in_dlv);
