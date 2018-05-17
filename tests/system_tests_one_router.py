@@ -278,11 +278,10 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    # Will uncomment this test once https://issues.apache.org/jira/browse/PROTON-1514 is fixed
-    #def test_17_multiframe_presettled(self):
-    #    test = MultiframePresettledTest(self.address)
-    #    test.run()
-    #    self.assertEqual(None, test.error)
+    def test_17_multiframe_presettled(self):
+        test = MultiframePresettledTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_26_multicast_no_receivcer(self):
         test = MulticastUnsettledNoReceiverTest(self.address)
