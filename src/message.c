@@ -1933,21 +1933,21 @@ int qd_message_get_phase_val(qd_message_t *msg)
 }
 
 
-void qd_message_set_Q2_input_holdoff(qd_message_t *msg, bool holdoff)
+void qd_message_Q2_holdoff_disable(qd_message_t *msg)
 {
-    ((qd_message_pvt_t*)msg)->content->q2_input_holdoff = holdoff;
-}
-
-
-bool qd_message_get_Q2_input_holdoff(qd_message_t *msg)
-{
-    return ((qd_message_pvt_t*)msg)->content->q2_input_holdoff;
+    if (!msg)
+        return;
+    qd_message_pvt_t *msg_pvt = (qd_message_pvt_t*) msg;
+    msg_pvt->content->disable_q2_holdoff = true;
 }
 
 
 bool qd_message_Q2_holdoff_should_block(qd_message_t *msg)
 {
-    return DEQ_SIZE(((qd_message_pvt_t*)msg)->content->buffers) >= QD_QLIMIT_Q2_UPPER;
+    if (!msg)
+        return false;
+    qd_message_pvt_t *msg_pvt = (qd_message_pvt_t*) msg;
+    return !msg_pvt->content->disable_q2_holdoff && DEQ_SIZE(msg_pvt->content->buffers) >= QD_QLIMIT_Q2_UPPER;
 }
 
 

@@ -365,19 +365,11 @@ size_t qd_message_fanout(qd_message_t *msg);
 void qd_message_add_fanout(qd_message_t *msg);
 
 /**
- * Setter for message Q2 input_holdoff state
+ * Disable the Q2-holdoff for this message.
  *
  * @param msg A pointer to the message
  */
-void qd_message_set_Q2_input_holdoff(qd_message_t *msg, bool holdoff);
-
-/**
- * Accessor for message Q2 input_holdoff state
- *
- * @param msg A pointer to the message
- * @return true if input is being held off
- */
-bool qd_message_get_Q2_input_holdoff(qd_message_t *msg);
+void qd_message_Q2_holdoff_disable(qd_message_t *msg);
 
 /**
  * Test if attempt to retreive message data through qd_message_recv should block

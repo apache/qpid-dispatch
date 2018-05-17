@@ -346,13 +346,14 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             //
             if (receive_complete)
                 qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
-            else
+            else {
                 //
                 // Receive is not complete, we will store the sub in in_delivery->subscriptions so we can send the message to the subscription
                 // after the message fully arrives
                 //
                 DEQ_INSERT_TAIL(in_delivery->subscriptions, sub);
-
+                qd_message_Q2_holdoff_disable(msg);
+            }
 
             fanout++;
             addr->deliveries_to_container++;
@@ -408,12 +409,14 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             //
             if (receive_complete)
                 qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
-            else
+            else {
                 //
                 // Receive is not complete, we will store the sub in in_delivery->subscriptions so we can send the message to the subscription
                 // after the message fully arrives
                 //
                 DEQ_INSERT_TAIL(in_delivery->subscriptions, sub);
+                qd_message_Q2_holdoff_disable(msg);
+            }
 
             //
             // If the incoming delivery is not settled, it should be accepted and settled here.
