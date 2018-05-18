@@ -840,9 +840,8 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
     void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, hostPattern);
     if (oldp) {
         void *recovered = qd_parse_tree_add_pattern_str(policy->hostname_tree, (char *)oldp, oldp);
-        if (!recovered) {
-            assert (recovered);
-        }
+        assert (recovered);
+        (void)recovered;        /* Silence compiler complaints of unused variable */
     }
     sys_mutex_unlock(policy->tree_lock);
     if (oldp)
