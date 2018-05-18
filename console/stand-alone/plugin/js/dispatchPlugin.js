@@ -51,7 +51,7 @@ var QDR = (function(QDR) {
    *
    * The top level path to this plugin's partials
    */
-  QDR.srcBase = 'node_modules/dispatch-console-pages/dist/';
+  QDR.srcBase = 'plugin/';
   QDR.templatePath = QDR.srcBase + 'html/';
   /**
    * @property SETTINGS_KEY
@@ -98,7 +98,7 @@ var QDR = (function(QDR) {
         templateUrl: QDR.templatePath + 'qdrCharts.html'
       })
       .when('/chord', {
-        templateUrl: 'plugin/html/qdrChord.html'
+        templateUrl: QDR.templatePath + 'qdrChord.html'
       })
       .when('/connect', {
         templateUrl: QDR.templatePath + 'qdrConnect.html'
