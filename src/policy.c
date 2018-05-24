@@ -517,7 +517,7 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
     if (strlen(uname) == 0)
         return NULL;
 
-    const char *duser = "${user}";
+    const char duser[] = "${user}";
     char *retptr = obuf;
     const char *wiptr = proposed;
     const char *findptr = strstr(proposed, uname);
@@ -535,7 +535,7 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
     obuf  += copysize;
 
     // Copy the substitution string
-    segsize = strlen(duser);
+    segsize = sizeof(duser);
     copysize = MIN(osize, segsize);
     if (copysize)
         strncpy(obuf, duser, copysize);
@@ -581,7 +581,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
     if (!pa)
         return false;
 
-    strncpy(pa, allowed, a_len);
+    strcpy(pa, allowed);        /* We know we have allocated enoough space */
     pa[a_len] = 0;
     // Do reverse user substitution into proposed
     char substbuf[QPALN_USERBUFSIZE];
