@@ -75,7 +75,8 @@ class LinkRouteTest(TestCase):
                    ('linkRoute', {'prefix': 'org.apache', 'containerId': 'QDR.A', 'dir': 'out'}),
                ]
                )
-        sleep(2)
+        cls.routers[0].wait_ports()
+        cls.routers[1].wait_ports()
 
 
     def test_normal_receiver_allowed(self):
