@@ -20,8 +20,6 @@
 """
 Provides tests related with allowed TLS protocol version restrictions.
 """
-import socket
-import ssl
 import os
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
@@ -235,7 +233,7 @@ class RouterTestSslClient(RouterTestSslBase):
         cls.routers.append(cls.tester.qdrouterd("A", config, wait=False))
         cls.routers[0].wait_ports()
 
-    def is_all_proto_allowed(self, listener_port):
+    def get_allowed_protocols(self, listener_port):
         """
         Loops through TLSv1, TLSv1.1 and TLSv1.2 and attempts to connect
         to the listener_port using each version. The result is a boolean list
@@ -244,32 +242,37 @@ class RouterTestSslClient(RouterTestSslBase):
         :return:
         """
         results = []
-        for proto in [ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLSv1_1, ssl.PROTOCOL_TLSv1_2]:
+
+        for proto in ['TLSv1', 'TLSv1.1', 'TLSv1.2']:
             results.append(self.is_proto_allowed(listener_port, proto))
         return results
 
     def is_proto_allowed(self, listener_port, tls_protocol):
         """
-        Opens a simple SSL Connection to the provided TCP port using
+        Opens a simple proton client connection to the provided TCP port using
         a specific TLS protocol version and returns True in case connection
         was established and accepted or False otherwise.
         :param listener_port: TCP port number
-        :param tls_protocol: ssl.PROTOCOL_TLSv1, ssl.PROTOCOL_TLSv1_1 or ssl.PROTOCOL_TLSv1_2
+        :param tls_protocol: TLSv1, TLSv1.1 or TLSv1.2 (string)
         :return:
         """
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(self.TIMEOUT)
-        ssl_sock = ssl.wrap_socket(sock, ssl_version=tls_protocol)
+        # Management address to connect using the given TLS protocol
+        url = Url("amqps://0.0.0.0:%d/$management" % listener_port)
+        # Preparing SSLDomain (client cert) and SASL authentication info
+        domain = SSLDomain(SSLDomain.MODE_CLIENT)
+        # Enforcing given TLS protocol
+        cproton.pn_ssl_domain_set_protocols(domain._domain, tls_protocol)
 
+        # Try opening the secure and authenticated connection
         try:
-            ssl_sock.connect(("0.0.0.0", listener_port))
-        except ssl.SSLError:
+            connection = BlockingConnection(url, sasl_enabled=False, ssl_domain=domain, timeout=self.TIMEOUT)
+        except proton.Timeout:
             return False
-        except socket.error:
+        except proton.ConnectionException:
             return False
-        finally:
-            ssl_sock.close()
 
+        # TLS version provided was accepted
+        connection.close()
         return True
 
     def is_ssl_sasl_client_accepted(self, listener_port, tls_protocol):
@@ -310,49 +313,56 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1 only is allowed
         """
-        self.assertEquals([True, False, False], self.is_all_proto_allowed(self.PORT_TLS1))
+        self.assertEquals([True, False, False],
+                          self.get_allowed_protocols(self.PORT_TLS1))
 
     def test_tls11_only(self):
         """
         Expects TLSv1.1 only is allowed
         """
-        self.assertEquals([False, True, False], self.is_all_proto_allowed(self.PORT_TLS11))
+        self.assertEquals([False, True, False],
+                          self.get_allowed_protocols(self.PORT_TLS11))
 
     def test_tls12_only(self):
         """
         Expects TLSv1.2 only is allowed
         """
-        self.assertEquals([False, False, True], self.is_all_proto_allowed(self.PORT_TLS12))
+        self.assertEquals([False, False, True],
+                          self.get_allowed_protocols(self.PORT_TLS12))
 
     def test_tls1_tls11_only(self):
         """
         Expects TLSv1 and TLSv1.1 only are allowed
         """
-        self.assertEquals([True, True, False], self.is_all_proto_allowed(self.PORT_TLS1_TLS11))
+        self.assertEquals([True, True, False],
+                          self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
     def test_tls1_tls12_only(self):
         """
         Expects TLSv1 and TLSv1.2 only are allowed
         """
-        self.assertEquals([True, False, True], self.is_all_proto_allowed(self.PORT_TLS1_TLS12))
+        self.assertEquals([True, False, True],
+                          self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
     def test_tls11_tls12_only(self):
         """
         Expects TLSv1.1 and TLSv1.2 only are allowed
         """
-        self.assertEquals([False, True, True], self.is_all_proto_allowed(self.PORT_TLS11_TLS12))
+        self.assertEquals([False, True, True],
+                          self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
     def test_tls_all(self):
         """
         Expects all supported versions: TLSv1, TLSv1.1 and TLSv1.2 to be allowed
         """
-        self.assertEquals([True, True, True], self.is_all_proto_allowed(self.PORT_TLS_ALL))
+        self.assertEquals([True, True, True],
+                          self.get_allowed_protocols(self.PORT_TLS_ALL))
 
     def test_ssl_invalid(self):
         """
         Expects connection is rejected as SSL is no longer supported
         """
-        self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, ssl.PROTOCOL_SSLv23))
+        self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, 'SSLv3'))
 
     def test_ssl_sasl_client_valid(self):
         """
