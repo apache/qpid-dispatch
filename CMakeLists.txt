@@ -37,7 +37,7 @@ option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.6.2)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
