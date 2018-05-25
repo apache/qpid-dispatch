@@ -26,8 +26,8 @@ import unittest as unittest
 import os, json
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException
-from proton.utils import BlockingConnection, LinkDetached
+from proton import ConnectionException, Timeout
+from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
 
@@ -903,6 +903,78 @@ class PolicyHostamePatternTest(TestCase):
         except Exception as e:
             self.assertTrue("pattern conflicts" in e.message, msg=('Error running qdmanage %s' % e.message))
         self.assertFalse("222222" in qdm_out)
+
+
+class VhostPolicyFromRouterConfig(TestCase):
+    """
+    Verify that connections beyond the vhost limit are denied.
+    Differently than global maxConnections, opening a connection
+    does not raise a ConnectionException, but when an attempt to
+    create a sync request and response client is made after limit
+    is reached, the connection times out.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyFromRouterConfig, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('vhost', {
+                'hostname': '0.0.0.0', 'maxConnections': 2,
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true'
+                    }
+                ), (
+                    'anonymous', {
+                        'users': 'anonymous', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true',
+                        'allowAnonymousSender': 'true'
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-conn-limit-router', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_vhost_maximum_connections(self):
+        addr = "%s/$management" % self.address()
+        timeout = 5
+
+        # two connections should be ok
+        denied = False
+        try:
+            bc1 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc2 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertFalse(denied)  # assert connections were opened
+
+        # third connection should be denied
+        denied = False
+        try:
+            bc3 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertTrue(denied)  # assert if connection that should not open did open
+
+        bc1.connection.close()
+        bc2.connection.close()
 
 
 if __name__ == '__main__':

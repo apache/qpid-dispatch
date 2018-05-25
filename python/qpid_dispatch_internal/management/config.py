@@ -41,6 +41,9 @@ from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 class Config(object):
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
 
+    # static property to control depth level while reading the entities
+    child_level = 0
+
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         self.schema = schema
         self.config_types = [et for et in dict_itervalues(schema.entity_types)
@@ -68,9 +71,10 @@ class Config(object):
     @staticmethod
     def _parse(lines):
         """Parse config file format into a section list"""
-        begin = re.compile(r'([\w-]+)[ \t]*{') # WORD {
-        end = re.compile(r'}')                 # }
-        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)') # WORD1: VALUE
+        begin = re.compile(r'([\w-]+)[ \t]*{[ \t]*($|#)')             # WORD {
+        end = re.compile(r'^}')                                       # }
+        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)')               # WORD1: VALUE
+        child = re.compile(r'([\$]*[\w-]+)[ \t]*:[ \t]*{[ \t]*($|#)') # WORD: {
 
         # The 'pattern:' and 'bindingKey:' attributes in the schema are special
         # snowflakes. They allow '#' characters in their value, so they cannot
@@ -85,6 +89,14 @@ class Config(object):
                 return ""
             if line.split(':')[0].strip() in special_snowflakes:
                 line = re.sub(hash_ok, r'"\1": "\2",', line)
+            elif child.search(line):
+                line = line.split('#')[0].strip()
+                line = re.sub(child, r'"\1": {', line)
+                Config.child_level += 1
+            elif end.search(line) and Config.child_level > 0:
+                line = line.split('#')[0].strip()
+                line = re.sub(end, r'},', line)
+                Config.child_level -= 1
             else:
                 line = line.split('#')[0].strip()
                 line = re.sub(begin, r'["\1", {', line)
