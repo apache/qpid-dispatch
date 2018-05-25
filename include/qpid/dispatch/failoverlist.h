@@ -32,6 +32,7 @@ typedef struct qd_failover_item_t {
     char *port;
     char *hostname;
     char *host_port;
+    int   retries;
 } qd_failover_item_t;
 
 DEQ_DECLARE(qd_failover_item_t, qd_failover_item_list_t);
