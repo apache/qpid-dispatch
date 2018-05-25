@@ -39,10 +39,12 @@ class FailoverTest(TestCase):
 
         cls.routers = []
 
-        inter_router_port = cls.tester.get_port()
+        cls.inter_router_port = cls.tester.get_port()
         cls.inter_router_port_1 = cls.tester.get_port()
         cls.backup_port = cls.tester.get_port()
-        cls.failover_list = 'amqp://third-host:5671, ' + 'amqp://localhost:' + str(cls.backup_port)
+        cls.backup_url = 'amqp://0.0.0.0:' + str(cls.backup_port)
+
+        cls.failover_list = 'amqp://third-host:5671, ' + cls.backup_url
 
         #
         # Router A tries to connect to Router B via its connectorToB. Router B responds with an open frame which will
@@ -51,35 +53,36 @@ class FailoverTest(TestCase):
         # idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY",
         # properties={:product="qpid-dispatch-router", :version="1.0.0",
         #  :"failover-server-list"=[{:"network-host"="some-host", :port="35000"},
-        #  {:"network-host"="localhost", :port="25000"}]}]
+        #  {:"network-host"="0.0.0.0", :port="25000"}]}]
         #
         # The suite of tests determine if the router receiving this open frame stores it properly and if the
         # original connection goes down, check that the router is trying to make connections to the failover urls.
         #
-        router('QDR.B', [
-                        ('router', {'mode': 'interior', 'id': 'QDR.B'}),
-                        ('listener', {'role': 'inter-router', 'port': inter_router_port,
+        router('B', [
+                        ('router', {'mode': 'interior', 'id': 'B'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port,
                                       'failoverUrls': cls.failover_list}),
-                        ('listener', {'role': 'normal', 'port': cls.tester.get_port()}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ]
               )
-        router('QDR.A',
+
+        router('A',
                     [
-                        ('router', {'mode': 'interior', 'id': 'QDR.A'}),
-                        ('listener', {'role': 'normal', 'port': cls.tester.get_port()}),
+                        ('router', {'mode': 'interior', 'id': 'A'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': inter_router_port, 'verifyHostname': 'no'}),
+                                       'port': cls.inter_router_port, 'verifyHostname': 'no'}),
                     ]
                )
 
-        router('QDR.C', [
-                            ('router', {'mode': 'interior', 'id': 'QDR.C'}),
-                            ('listener', {'role': 'inter-router', 'port': cls.backup_port}),
-                            ('listener', {'role': 'normal', 'port': cls.tester.get_port()}),
+        router('C', [
+                            ('router', {'mode': 'interior', 'id': 'C'}),
+                            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.backup_port}),
+                            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ]
               )
 
-        cls.routers[1].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('B')
 
     def __init__(self, test_method):
         TestCase.__init__(self, test_method)
@@ -137,7 +140,10 @@ class FailoverTest(TestCase):
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
-        if output[0].get('failoverUrls') is None:
+
+        expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port)
+
+        if output[0].get('failoverUrls') == expected:
             self.success = True
         else:
             self.schedule_failover_test()
@@ -171,7 +177,7 @@ class FailoverTest(TestCase):
 
         # Since router B has been killed, router A should now try to connect to a listener on router C.
         # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.
-        self.run_qdstat(['--connections'], regexp=r'QDR.A.*inter-router.*', address=self.routers[2].addresses[1])
+        self.run_qdstat(['--connections'], regexp=r'A.*inter-router.*', address=self.routers[2].addresses[1])
 
 
 if __name__ == '__main__':

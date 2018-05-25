@@ -660,12 +660,18 @@ qd_error_t qd_entity_refresh_listener(qd_entity_t* entity, void *impl)
 }
 
 
+/**
+ * Calculates the total length of the failover  list string.
+ * For example, the failover list string can look like this - "amqp://0.0.0.0:62616, amqp://0.0.0.0:61616"
+ * This function calculates the length of the above string by adding up the scheme (amqp or qmqps) and host_port for each failover item.
+ * It also assumes that there will be a comma and a space between each failover item.
+ *
+ */
 static int get_failover_info_length(qd_failover_item_list_t   conn_info_list)
 {
     int arr_length = 0;
     qd_failover_item_t *item = DEQ_HEAD(conn_info_list);
 
-    item = DEQ_NEXT(item);
     while(item) {
         if (item->scheme) {
             // The +3 is for the '://'
@@ -676,7 +682,7 @@ static int get_failover_info_length(qd_failover_item_list_t   conn_info_list)
         }
         item = DEQ_NEXT(item);
         if (item) {
-            // This is for the comma between the items
+            // This is for the comma and space between the items
             arr_length += 2;
         }
     }
@@ -688,27 +694,50 @@ static int get_failover_info_length(qd_failover_item_list_t   conn_info_list)
     return arr_length;
 }
 
+/**
+ *
+ * Creates a failover url list. This comma separated failover list shows a list of urls that the router will attempt
+ * to connect to in case the primary connection fails. The router will attempt these failover connections to urls in
+ * the order that they appear in the list.
+ *
+ */
 qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 {
     qd_connector_t *ct = (qd_connector_t*) impl;
 
-    if (DEQ_SIZE(ct->conn_info_list) > 1) {
-        qd_failover_item_list_t   conn_info_list = ct->conn_info_list;
+    int conn_index = ct->conn_index;
 
-        qd_failover_item_t *item = DEQ_HEAD(conn_info_list);
+    int i = 1;
+    int num_items = 0;
 
-        //
-        // As you can see we are skipping the head of the list. The
-        // first item in the list is always the original connection information
-        // and we dont want to display that information as part of the failover list.
-        //
-        int arr_length = get_failover_info_length(conn_info_list);
-        char failover_info[arr_length];
-        memset(failover_info, 0, sizeof(failover_info));
+    qd_failover_item_list_t   conn_info_list = ct->conn_info_list;
 
-        item = DEQ_NEXT(item);
+    int conn_info_len = DEQ_SIZE(conn_info_list);
 
-        while(item) {
+    qd_failover_item_t *item = DEQ_HEAD(conn_info_list);
+
+    int arr_length = get_failover_info_length(conn_info_list);
+
+    // This is the string that will contain the comma separated failover list
+    char failover_info[arr_length];
+
+    memset(failover_info, 0, sizeof(failover_info));
+
+    while(item) {
+
+        // Break out of the loop when we have hit all items in the list.
+        if (num_items >= conn_info_len)
+            break;
+
+        if (num_items >= 1) {
+            strcat(failover_info, ", ");
+        }
+
+        // We need to go to the elements in the list to get to the
+        // element that matches the connection index. This is the first
+        // url that the router will try to connect on ffailover.
+        if (conn_index == i) {
+            num_items += 1;
             if (item->scheme) {
                 strcat(failover_info, item->scheme);
                 strcat(failover_info, "://");
@@ -716,19 +745,29 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
             if (item->host_port) {
                 strcat(failover_info, item->host_port);
             }
-            item = DEQ_NEXT(item);
-            if (item) {
-                strcat(failover_info, ", ");
+        }
+        else {
+            if (num_items > 0) {
+                num_items += 1;
+                if (item->scheme) {
+                    strcat(failover_info, item->scheme);
+                    strcat(failover_info, "://");
+                }
+                if (item->host_port) {
+                    strcat(failover_info, item->host_port);
+                }
             }
         }
 
-        if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0)
-            return QD_ERROR_NONE;
+        i += 1;
+
+        item = DEQ_NEXT(item);
+        if (item == 0)
+            item = DEQ_HEAD(conn_info_list);
     }
-    else {
-        if (qd_entity_clear(entity, "failoverUrls") == 0)
-            return QD_ERROR_NONE;
-    }
+
+    if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0)
+        return QD_ERROR_NONE;
 
     return qd_error_code();
 }
@@ -749,10 +788,13 @@ qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *
         //
         qd_failover_item_t *item = NEW(qd_failover_item_t);
         ZERO(item);
-        item->scheme   = 0;
+        if (ct->config.ssl_required)
+            item->scheme   = strdup("amqps");
+        else
+            item->scheme   = strdup("amqp");
+
         item->host     = strdup(ct->config.host);
         item->port     = strdup(ct->config.port);
-        item->hostname = 0;
 
         int hplen = strlen(item->host) + strlen(item->port) + 2;
         item->host_port = malloc(hplen);
