@@ -253,7 +253,7 @@ class PolicyCompiler(object):
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has error '%s'." %
                                   (vhostname, usergroup, key, cerror[0]))
                     return False
-                policy_out[key] = val
+                policy_out[key] = int(val)
             elif key == PolicyKeys.KW_REMOTE_HOSTS:
                 # Conection groups are lists of IP addresses that need to be
                 # converted into binary structures for comparisons.
@@ -265,6 +265,8 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
                          PolicyKeys.KW_ALLOW_USERID_PROXY
                          ]:
+                if type(val) in [unicode, str] and val.lower() in ['true', 'false']:
+                    val = True if val == 'true' else False
                 if not type(val) is bool:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
                                   (vhostname, usergroup, key, val))
@@ -336,6 +338,7 @@ class PolicyCompiler(object):
 
         # validate the options
         for key, val in policy_in.iteritems():
+
             if key not in self.allowed_ruleset_options:
                 warnings.append("Policy vhost '%s' option '%s' is ignored." %
                                 (name, key))

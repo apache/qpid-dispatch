@@ -302,10 +302,21 @@ class Qdrouterd(Process):
 
         def __str__(self):
             """Generate config file content. Calls default() first."""
-            def props(p):
-                return "".join(["    %s: %s\n"%(k, v) for k, v in p.iteritems()])
+            def tabs(level):
+                return "    " * level
+
+            def sub_elem(l, level):
+                return "".join(["%s%s: {\n%s%s}\n" % (tabs(level), n, props(p, level + 1), tabs(level)) for n, p in l])
+
+            def child(v, level):
+                return "{\n%s%s}" % (sub_elem(v, level), tabs(level - 1))
+
+            def props(p, level):
+                return "".join(
+                    ["%s%s: %s\n" % (tabs(level), k, v if not isinstance(v, list) else child(v, level + 1)) for k, v in
+                     p.iteritems()])
             self.defaults()
-            return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
+            return "".join(["%s {\n%s}\n"%(n, props(p, 1)) for n, p in self])
 
     def __init__(self, name=None, config=Config(), pyinclude=None, wait=True, perform_teardown=True):
         """
