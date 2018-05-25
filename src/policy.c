@@ -535,7 +535,7 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
     obuf  += copysize;
 
     // Copy the substitution string
-    segsize = sizeof(duser);
+    segsize = sizeof(duser) - 1;
     copysize = MIN(osize, segsize);
     if (copysize)
         strncpy(obuf, duser, copysize);
