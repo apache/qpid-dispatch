@@ -340,20 +340,14 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
                          void *user, void *in, size_t len)
 {
     switch (reason) {
-
     case LWS_CALLBACK_PROTOCOL_DESTROY:
         qd_http_listener_free(wsi_listener(wsi));
-        return -1;
-
-    case LWS_CALLBACK_HTTP: {
-        /* Called if file mount can't find the file */
-        lws_return_http_status(wsi, HTTP_STATUS_NOT_FOUND, (char*)in);
-        return -1;
+        break;
+      default:
+        break;
     }
-
-    default:
-        return 0;
-    }
+    /* Do default HTTP handling for all the cases we don't care about. */
+    return lws_callback_http_dummy(wsi, reason, user, in, len);
 }
 
 /* Wake up a connection managed by the http server thread */
