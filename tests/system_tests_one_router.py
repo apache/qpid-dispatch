@@ -283,7 +283,7 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_26_multicast_no_receivcer(self):
+    def test_26_multicast_no_receiver(self):
         test = MulticastUnsettledNoReceiverTest(self.address)
         test.run()
         self.assertEqual(None, test.error)
@@ -408,6 +408,51 @@ class OneRouterTest(TestCase):
         self.assertFalse(results_found)
 
         client.connection.close()
+
+
+class Entity(object):
+    def __init__(self, status_code, status_description, attrs):
+        self.status_code        = status_code
+        self.status_description = status_description
+        self.attrs              = attrs
+
+    def __getattr__(self, key):
+        return self.attrs[key]
+
+
+class RouterProxy(object):
+    def __init__(self, reply_addr):
+        self.reply_addr = reply_addr
+
+    def response(self, msg):
+        ap = msg.properties
+        bd = msg.body
+        if bd.__class__ == dict and 'results' in bd and 'attributeNames' in bd:
+            ##
+            ## This is a query response
+            ##
+            response = []
+            anames = bd['attributeNames']
+            for row in bd['results']:
+                cols = {}
+                for i in range(len(row)):
+                    cols[anames[i]] = row[i]
+                response.append(Entity(ap['statusCode'], ap['statusDescription'], cols))
+            return response
+
+        return Entity(ap['statusCode'], ap['statusDescription'], msg.body)
+
+    def read_address(self, name):
+        ap = {'operation': 'READ', 'type': 'org.apache.qpid.dispatch.router.address', 'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def query_addresses(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.address'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def query_links(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.link'}
+        return Message(properties=ap, reply_to=self.reply_addr)
 
 
 class SemanticsClosest(MessagingHandler):
@@ -2282,10 +2327,10 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
     these messages since there is no receiver.
     """
     def __init__(self, address):
-        super(MulticastUnsettledNoReceiverTest, self).__init__(prefetch=0)
+        super(MulticastUnsettledNoReceiverTest, self).__init__()
         self.address = address
         self.dest = "multicast.MulticastNoReceiverTest"
-        self.error = "Some error"
+        self.error = None
         self.n_sent = 0
         self.max_send = 250
         self.n_released = 0
@@ -2293,55 +2338,59 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
         self.timer = None
         self.conn = None
         self.sender = None
+        self.query_sent = False
+
+    def timeout(self):
+        self.error = "Timeout expired: n_sent=%d n_released=%d n_accepted=%d" % \
+                     (self.n_sent, self.n_released, self.n_accepted)
+        self.conn.close()
 
     def check_if_done(self):
         if self.n_accepted > 0:
             self.error = "Messages should not be accepted as there are no receivers"
             self.timer.cancel()
             self.conn.close()
-        elif self.n_sent == self.n_released:
-            self.error = None
-
-            if not self.error:
-                local_node = Node.connect(self.address, timeout=TIMEOUT)
-                for result in local_node.query(type='org.apache.qpid.dispatch.router.link').results:
-                    if result[5] == 'in' and 'multicast.MulticastNoReceiverTest' in result[6]:
-                        if result[16] != 250:
-                            self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
-                        else:
-                            outs = local_node.query(type='org.apache.qpid.dispatch.router')
-                            pos = outs.attribute_names.index("droppedPresettledDeliveries")
-                            results = outs.results[0]
-                            if results[pos] != 250:
-                                self.error = "When querying router, expected 250 dropped presettled " \
-                                             "deliveries but got " + str(results[pos])
-                            else:
-                                pos = outs.attribute_names.index("releasedDeliveries")
-                                if results[pos] < 250:
-                                    self.error = "The number of released deliveries cannot be less that 250 " \
-                                                 "but it is " + str(results[pos])
-
-            self.timer.cancel()
-            self.conn.close()
+        elif self.max_send == self.n_released and not self.query_sent:
+            self.mgmt_tx.send(self.proxy.query_links())
+            self.query_sent = True
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        self.sender = event.container.create_sender(self.conn, self.dest)
+        self.mgmt_rx = event.container.create_receiver(self.conn, dynamic=True)
+        self.mgmt_tx = event.container.create_sender(self.conn, '$management')
+
+    def on_link_opened(self, event):
+        if event.receiver == self.mgmt_rx:
+            self.proxy  = RouterProxy(self.mgmt_rx.remote_source.address)
+            self.sender = event.container.create_sender(self.conn, self.dest)
+
+    def on_message(self, event):
+        if event.receiver == self.mgmt_rx:
+            results = self.proxy.response(event.message)
+            for link in results:
+                if link.linkDir == 'in' and link.owningAddr == 'M0' + self.dest:
+                    if link.releasedCount != self.max_send:
+                        self.error = "Released count expected %d, got %d" % (self.max_send, link.droppedPresettledCount)
+            self.timer.cancel()
+            self.conn.close()
 
     def on_sendable(self, event):
-        if self.n_sent >= self.max_send:
-            return
-        self.n_sent += 1
-        msg = Message(body=self.n_sent)
-        event.sender.send(msg)
+        if event.sender == self.sender:
+            if self.n_sent >= self.max_send:
+                return
+            self.n_sent += 1
+            msg = Message(body=self.n_sent)
+            event.sender.send(msg)
 
     def on_accepted(self, event):
-        self.n_accepted += 1
+        if event.sender == self.sender:
+            self.n_accepted += 1
         self.check_if_done()
 
     def on_released(self, event):
-        self.n_released += 1
+        if event.sender == self.sender:
+            self.n_released += 1
         self.check_if_done()
 
     def run(self):
@@ -2638,19 +2687,6 @@ class PresettledOverflowTest(MessagingHandler):
                     if result[5] == 'out' and 'balanced.PresettledOverflow' in result[6]:
                         if result[16] != 250:
                             self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
-                        else:
-                            outs = local_node.query(type='org.apache.qpid.dispatch.router')
-                            pos_presett = outs.attribute_names.index("presettledDeliveries")
-                            pos = outs.attribute_names.index("droppedPresettledDeliveries")
-                            results = outs.results[0]
-                            # Enforce presettledDeliveries metric is updated
-                            if results[pos_presett] < 500:
-                                self.error = "When querying router, expected 500 presettled " \
-                                             "deliveries but got " + str(results[pos_presett])
-                            # There is 250 from a previous test
-                            if results[pos] < 500:
-                                self.error = "When querying router, expected 500 dropped presettled " \
-                                             "deliveries but got " + str(results[pos])
             self.conn.close()
             self.timer.cancel()
 

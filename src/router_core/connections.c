@@ -442,6 +442,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
+    link->credit_pending = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
 
@@ -867,6 +868,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->link_type      = link_type;
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
+    link->credit_pending = conn->link_capacity;
     link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
     link->disambiguated_name = 0;
     link->terminus_addr  = 0;
