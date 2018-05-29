@@ -34,27 +34,32 @@ svg:not(.active):not(.ctrl) {
 	stroke: #33F;
 	fill: #33F;
 }
-path.link.selected {
+path.link.selected:not(.traffic) {
   /* stroke-dasharray: 10,2; */
   stroke: #33F  !important;
 }
 
 path.link {
   fill: #000;
-  stroke: #000;
+  /* stroke: #000; */
   stroke-width: 4px;
   cursor: default;
 }
 
+path:not(.traffic) {
+    stroke: #000;
+}
 svg:not(.active):not(.ctrl) path.link {
   cursor: pointer;
 }
 
 path.link.small {
   stroke-width: 2.5;
-  stroke: darkgray;
 }
-path.link.highlighted {
+path.link.small:not(.traffic) {
+    stroke: darkgray;
+}
+path.link.highlighted:not(.traffic) {
     stroke: #6F6 !important;
 }
 marker#start-arrow-highlighted,
@@ -65,7 +70,9 @@ marker#start-arrow-small,
 marker#end-arrow-small {
     fill: darkgray;
 }
-
+marker {
+    stroke-width: 0;
+}
 path.link.dragline {
   pointer-events: none;
 }

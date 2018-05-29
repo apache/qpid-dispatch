@@ -128,7 +128,7 @@ button.page-menu-button {
     opacity: 0.1;
   }
 
-  #topo_legend ul.addresses li, #topo_legend ul.options li {
+  #topo_legend ul.addresses li {
     margin-top: 0.5em;
     margin-bottom: 1em;
   }
@@ -137,6 +137,10 @@ button.page-menu-button {
   margin-bottom: 1.5em;
 }
 
+#topo_logend ul.congestion, #topo_logend ul.congestion li {
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
   /* the checkboxes for the addresses */
   #topo_legend ul li input[type=checkbox]:checked + label::before {
     content:'\2713';
@@ -168,6 +172,15 @@ button.page-menu-button {
     max-height: 11.6em;   /* show up to 4 addresses */
     overflow-y: auto;
 }
+
+li.legend-sublist > ul ul {
+    margin-left: 1em;
+}
+
+#popover-div h4 {
+    margin-top: 0;
+    margin-bottom: 0;
+}
 </style>
 <div class="qdrTopology" ng-controller="QDR.TopologyController">
     <div  ng-controller="QDR.TopologyFormController">
@@ -185,22 +198,52 @@ button.page-menu-button {
 
     <div class="legend-container hidden-xs">
         <uib-accordion id="topo_legend" close-others="false">
-            <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Options">
+            <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Show Traffic">
               <ul class="options">
-                  <li class="legend-line">
-                    <checkbox title="Show message traffic" ng-model="legendOptions.showTraffic"></checkbox>
-                    <span class="legend-text" title="Select to show message traffic">Show traffic</span>
-                  </li>
                   <li class="legend-sublist" ng-hide="!legendOptions.showTraffic">
-                    <ul class="addresses">
-                        <li ng-repeat="(address, color) in addresses" class="legend-line">
-                          <checkbox style="background-color: {{addressColors[address]}};"
-                            title="{{address}}" ng-change="addressFilterChanged()"
-                            ng-model="addresses[address]"></checkbox>
-                          <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                    <ul>
+                        <li><label>
+                            <input type='radio' ng-model="legendOptions.trafficType" value="dots" />
+                        Message path by address
+                        </label></li>
+                        <li>
+                            <ul class="addresses" ng-show="legendOptions.trafficType === 'dots'">
+                                    <li ng-repeat="(address, color) in addresses" class="legend-line">
+                                        <checkbox style="background-color: {{addressColors[address]}};"
+                                        title="{{address}}" ng-change="addressFilterChanged()"
+                                        ng-model="addresses[address]"></checkbox>
+                                        <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                                    </li>
+                            </ul>
                         </li>
                     </ul>
-                  </li>
+                    <ul>
+                        <li><label>
+                            <input type='radio' ng-model="legendOptions.trafficType" value="congestion" />
+                        Link utilization
+                        </label></li>
+                        <li>
+                            <ul class="congestion" ng-show="legendOptions.trafficType === 'congestion'">
+                                    <li>
+                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" preserveAspectRatio="xMidYMid meet" width="140" height="40">
+                                            <defs>
+                                                <linearGradient xmlns="http://www.w3.org/2000/svg" id="gradienta1bEihLEHL" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop style="stop-color: #cccccc;stop-opacity: 1" offset="0"/>
+                                                    <stop style="stop-color: #cccccc;stop-opacity: 1" offset="0.06"/>
+                                                    <stop style="stop-color: #00FF00;stop-opacity: 1" offset="0.333"/>
+                                                    <stop style="stop-color: #FFA500;stop-opacity: 1" offset="0.666"/>
+                                                    <stop style="stop-color: #FF0000;stop-opacity: 1" offset="1"/></linearGradient>
+                                            </defs>
+                                            <g>
+                                                <rect width="140" height="20" x="0" y="0" fill="url(#gradienta1bEihLEHL)"></rect>
+                                                <text x="1" y="30" class="label">Idle</text>
+                                                <text x="110" y="30" class="label">Busy</text>
+                                            </g>
+                                        </svg></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </li>
               </ul>
             </div>
             <div uib-accordion-group class="panel-default" is-open="legend.status.legendOpen" heading="Legend">

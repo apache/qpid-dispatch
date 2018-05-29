@@ -118,14 +118,11 @@ ul.fancytree-container a {
 [class^="icon-"],
 [class*=" icon-"] {
   display: inline;
-  width: auto;
-  height: auto;
   line-height: normal;
   vertical-align: baseline;
   background-image: none;
   background-position: 0% 0%;
   background-repeat: repeat;
-  margin-top: 0;
 }
 [class^="icon-"],
 [class*=" icon-"] {
@@ -141,7 +138,6 @@ ul.fancytree-container a {
 [class*=" icon-"]:before {
   text-decoration: inherit;
   display: inline-block;
-  speak: none;
 }
 
 .icon-bar-chart:before {
@@ -166,7 +162,6 @@ ul.fancytree-container a {
 [class^="icon-"]:before, [class*=" icon-"]:before {
     text-decoration: inherit;
     display: inline-block;
-    speak: none;
 }
 
 #svg_legend {

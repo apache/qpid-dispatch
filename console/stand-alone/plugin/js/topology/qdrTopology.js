@@ -98,44 +98,42 @@ var QDR = (function(QDR) {
       let nodes = [];
       let links = [];
       let forceData = {nodes: nodes, links: links};
+      let urlPrefix = $location.absUrl();
+      urlPrefix = urlPrefix.split('#')[0];
+      QDR.log.debug('started QDR.TopologyController with urlPrefix: ' + urlPrefix);
 
       $scope.multiData = [];
       $scope.quiesceState = {};
       let dontHide = false;
       $scope.crosshtml = $sce.trustAsHtml('');
-      $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false};
+      $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots'};
+      if (!$scope.legendOptions.trafficType)
+        $scope.legendOptions.trafficType = 'dots';
       $scope.legend = {status: {legendOpen: true, optionsOpen: true}};
+      $scope.legend.status.optionsOpen = $scope.legendOptions.showTraffic;
       let traffic = new Traffic($scope, $timeout, QDRService, separateAddresses, 
-        radius, forceData, nextHop);
+        radius, forceData, nextHop, $scope.legendOptions.trafficType, urlPrefix);
 
       // the showTraaffic checkbox was just toggled (or initialized)
-      $scope.$watch('legendOptions.showTraffic', function () {
+      $scope.$watch('legend.status.optionsOpen', function () {
+        $scope.legendOptions.showTraffic = $scope.legend.status.optionsOpen;
         localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
-        if ($scope.legendOptions.showTraffic) {
+        if ($scope.legend.status.optionsOpen) {
           traffic.start();
         } else {
           traffic.stop();
           traffic.remove();
+          restart();
         }
       });
-      // event notification that an address checkbox has changed
-      $scope.addressFilterChanged = function () {
-        traffic.updateAddresses();
-      };
-
-      // called by angular when mouse enters one of the address legends
-      $scope.enterLegend = function (address) {
-        // fade all flows that aren't for this address
-        traffic.fadeOtherAddresses(address);
-      };
-      // called when the mouse leaves one of the address legends
-      $scope.leaveLegend = function () {
-        traffic.unFadeAll();
-      };
-      // clicked on the address name. toggle the address checkbox
-      $scope.addressClick = function (address) {
-        traffic.toggleAddress(address);
-      };
+      $scope.$watch('legendOptions.trafficType', function () {
+        localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
+        if ($scope.legendOptions.showTraffic) {
+          restart();
+          traffic.setAnimationType($scope.legendOptions.trafficType, separateAddresses, radius);
+          traffic.start();
+        }
+      });
 
       $scope.quiesceConnection = function(row) {
         let entity = row.entity;
@@ -341,10 +339,6 @@ var QDR = (function(QDR) {
                 }*/
         ]
       };
-
-      let urlPrefix = $location.absUrl();
-      urlPrefix = urlPrefix.split('#')[0];
-      QDR.log.debug('started QDR.TopologyController with urlPrefix: ' + urlPrefix);
 
       // mouse event vars
       let selected_node = null,
@@ -759,31 +753,28 @@ var QDR = (function(QDR) {
           .on('end', function () {savePositions();})
           .start();
 
-        svg.append('svg:defs').selectAll('marker')
-          .data(['end-arrow', 'end-arrow-selected', 'end-arrow-small', 'end-arrow-highlighted']) // Different link/path types can be defined here
-          .enter().append('svg:marker') // This section adds in the arrows
-          .attr('id', String)
+        // This section adds in the arrows
+        svg.append('svg:defs').attr('class', 'marker-defs').selectAll('marker')
+          .data(['end-arrow', 'end-arrow-selected', 'end-arrow-small', 'end-arrow-highlighted', 
+            'start-arrow', 'start-arrow-selected', 'start-arrow-small', 'start-arrow-highlighted'])
+          .enter().append('svg:marker') 
+          .attr('id', function (d) { return d; })
           .attr('viewBox', '0 -5 10 10')
-          .attr('refX', 24)
+          .attr('refX', function (d) { 
+            if (d.substr(0, 3) === 'end') {
+              return 24;
+            }
+            return d !== 'start-arrow-small' ? -14 : -24;})
           .attr('markerWidth', 4)
           .attr('markerHeight', 4)
           .attr('orient', 'auto')
           .classed('small', function (d) {return d.indexOf('small') > -1;})
           .append('svg:path')
-          .attr('d', 'M 0 -5 L 10 0 L 0 5 z');
+          .attr('d', function (d) {
+            return d.substr(0, 3) === 'end' ? 'M 0 -5 L 10 0 L 0 5 z' : 'M 10 -5 L 0 0 L 10 5 z';
+          });
 
-        svg.append('svg:defs').selectAll('marker')
-          .data(['start-arrow', 'start-arrow-selected', 'start-arrow-small', 'start-arrow-highlighted']) // Different link/path types can be defined here
-          .enter().append('svg:marker') // This section adds in the arrows
-          .attr('id', String)
-          .attr('viewBox', '0 -5 10 10')
-          .attr('refX', function (d) { return d !== 'start-arrow-small' ? -14 : -24;})
-          .attr('markerWidth', 4)
-          .attr('markerHeight', 4)
-          .attr('orient', 'auto')
-          .append('svg:path')
-          .attr('d', 'M 10 -5 L 0 0 L 10 5 z');
-
+        // gradient for sender/receiver client
         let grad = svg.append('svg:defs').append('linearGradient')
           .attr('id', 'half-circle')
           .attr('x1', '0%')
@@ -1127,6 +1118,8 @@ var QDR = (function(QDR) {
       // takes the nodes and links array of objects and adds svg elements for everything that hasn't already
       // been added
       function restart(start) {
+        if (!circle)
+          return;
         circle.call(force.drag);
 
         // path (link) group
@@ -1138,19 +1131,22 @@ var QDR = (function(QDR) {
         })
           .classed('highlighted', function(d) {
             return d.highlighted;
-          })
-          .attr('marker-start', function(d) {
-            let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-            if (d.highlighted)
-              sel = '-highlighted';
-            return d.left ? 'url(' + urlPrefix + '#start-arrow' + sel + ')' : '';
-          })
-          .attr('marker-end', function(d) {
-            let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-            if (d.highlighted)
-              sel = '-highlighted';
-            return d.right ? 'url(' + urlPrefix + '#end-arrow' + sel + ')' : '';
           });
+        if (!$scope.legend.status.optionsOpen || $scope.legendOptions.trafficType === 'dots') {
+          path
+            .attr('marker-start', function(d) {
+              let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
+              if (d.highlighted)
+                sel = '-highlighted';
+              return d.left ? 'url(' + urlPrefix + '#start-arrow' + sel + ')' : '';
+            })
+            .attr('marker-end', function(d) {
+              let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
+              if (d.highlighted)
+                sel = '-highlighted';
+              return d.right ? 'url(' + urlPrefix + '#end-arrow' + sel + ')' : '';
+            });
+        }
         // add new links. if a link with a new uid is found in the data, add a new path
         path.enter().append('svg:path')
           .attr('class', 'link')
@@ -1198,16 +1194,27 @@ var QDR = (function(QDR) {
             restart();
           })
           .on('mousemove', function (d) {
+            let updateTooltip = function () {
+              $timeout(function () {
+                $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d));
+              });
+            };
+            // update the contents of the popup tooltip each time the data is polled
+            QDRService.management.topology.addUpdatedAction('connectionPopupHTML', updateTooltip);
+
+            // show the tooltip
             let top = $('#topology').offset().top - 5;
-            $timeout(function () {
-              $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d));
-            });
             d3.select('#popover-div')
               .style('display', 'block')
               .style('left', (d3.event.pageX+5)+'px')
               .style('top', (d3.event.pageY-top)+'px');
+
+            // update the tooltip right now
+            updateTooltip();
+
           })
           .on('mouseout', function() { // mouse out of a path
+            QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
             d3.select('#popover-div')
               .style('display', 'none');
             selected_link = null;
@@ -1993,6 +2000,7 @@ var QDR = (function(QDR) {
         QDRService.management.topology.stopUpdating();
         QDRService.management.topology.delUpdatedAction('normalsStats');
         QDRService.management.topology.delUpdatedAction('topology');
+        QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
 
         d3.select('#SVG_ID').remove();
         window.removeEventListener('resize', resize);
@@ -2094,16 +2102,23 @@ var QDR = (function(QDR) {
         });
         if (rightIndex < 0) {
           // we have a connection to a client/service
-          rightIndex = +left.connectionId;
+          rightIndex = +left.resultIndex;
         }
         if (isNaN(rightIndex)) {
           // we have a connection to a console
-          rightIndex = +right.connectionId;
+          rightIndex = +right.resultIndex;
         }
         let HTML = '';
         if (rightIndex >= 0) {
           let conn = onode['connection'].results[rightIndex];
           conn = QDRService.utilities.flatten(onode['connection'].attributeNames, conn);
+          if ($scope.legend.status.optionsOpen && traffic) {
+            HTML = traffic.connectionPopupHTML(onode, conn, d);
+            if (HTML)
+              return HTML;
+            else
+              HTML = '';
+          }
           HTML += '<table class="popupTable">';
           HTML += ('<tr><td>Security</td><td>' + connSecurity(conn) + '</td></tr>');
           HTML += ('<tr><td>Authentication</td><td>' + connAuth(conn) + '</td></tr>');
