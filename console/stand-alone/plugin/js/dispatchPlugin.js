@@ -246,7 +246,7 @@ var QDR = (function(QDR) {
     });
   }]);
 
-  QDR.module.controller ('QDR.Core', function ($scope) {
+  QDR.module.controller ('QDR.Core', function ($scope, $rootScope) {
     $scope.alerts = [];
     $scope.breadcrumb = {};
     $scope.closeAlert = function(index) {
@@ -263,7 +263,9 @@ var QDR = (function(QDR) {
       $scope.alerts = [];
       $scope.$apply();
     });
-
+    $scope.pageMenuClicked = function () {
+      $rootScope.$broadcast('pageMenuClicked');
+    };
   });
 
   return QDR;

@@ -1638,7 +1638,11 @@ svg {
       #overview-controller .btn {padding: 4px 12px !important;}
       #overview-controller .btn.filter-close {padding: 0 !important;}
   }
-  
+
+  @-moz-document url-prefix() {
+    ul.options .btn {padding:0 3px !important;}
+  }
+
   .ui-fancytree.fancytree-container {
       font-size: 14px;
   }

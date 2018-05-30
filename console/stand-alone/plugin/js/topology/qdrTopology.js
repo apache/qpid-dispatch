@@ -24,68 +24,12 @@ under the License.
  */
 var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.TopologyFormController', function($scope, $timeout) {
-
-    $scope.attributes = [];
-    $scope.attributesConnections = [];
-
-    $scope.form = 'Router';
-    $scope.$on('showEntityForm', function(event, args) {
-      let attributes = args.attributes;
-      // capitalize 1st letter
-      $scope.form = args.entity.charAt(0).toUpperCase() + args.entity.slice(1);
-
-      let H = '<div class="infoGrid">';
-      attributes.forEach( function (a, i) {
-        let even = (i % 2) ? 'even' : 'odd';
-        if (a.attributeName === 'Listening on')
-          even += ' listening-on';
-        H += ('<div class="'+ even +'"><span title="'+a.attributeName+'">' + a.attributeName + '</span><span title="'+a.attributeValue+'">' + a.attributeValue + '</span></div>');
-      });
-      H += '</div>';
-      $('#formInfo').html(H);
-
-      if (!$scope.$$phase) $scope.$apply();
-
-    });
-
-    $scope.panelVisible = true;  // show/hide the panel on the left
-    $scope.hideLeftPane = function () {
-      d3.select('.page-menu')
-        .style('left' , '-360px')
-        .style('z-index', '1');
-
-      d3.select('.diagram')
-        .transition().duration(300).ease('sin-in')
-        .style('margin-left', '-360px')
-        .each('end', function () {
-          $timeout(function () {$scope.panelVisible = false;});
-          let div = d3.select(this);
-          div.style('margin-left', '0');
-          div.style('padding-left', 0);
-        });
-    };
-    $scope.showLeftPane = function () {
-      d3.select('.page-menu')
-        .style('left' , '0px');
-
-      $timeout(function () {$scope.panelVisible = true;});
-      d3.select('.diagram')
-        .style('margin-left', '0px')
-        .transition().duration(300).ease('sin-out')
-        .style('margin-left', '300px')
-        .each('end', function () {
-          let div = d3.select(this);
-          div.style('margin-left', '0');
-          div.style('padding-left', '300px');
-        });
-    };
-  });
   /**
    * @method TopologyController
    *
    * Controller that handles the QDR topology page
    */
+
   QDR.module.controller('QDR.TopologyController', ['$scope', '$rootScope', 'QDRService', '$location', '$timeout', '$uibModal', '$sce',
     function($scope, $rootScope, QDRService, $location, $timeout, $uibModal, $sce) {
 
@@ -102,10 +46,6 @@ var QDR = (function(QDR) {
       urlPrefix = urlPrefix.split('#')[0];
       QDR.log.debug('started QDR.TopologyController with urlPrefix: ' + urlPrefix);
 
-      $scope.multiData = [];
-      $scope.quiesceState = {};
-      let dontHide = false;
-      $scope.crosshtml = $sce.trustAsHtml('');
       $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots'};
       if (!$scope.legendOptions.trafficType)
         $scope.legendOptions.trafficType = 'dots';
@@ -134,211 +74,6 @@ var QDR = (function(QDR) {
           traffic.start();
         }
       });
-
-      $scope.quiesceConnection = function(row) {
-        let entity = row.entity;
-        let state = $scope.quiesceState[entity.connectionId].state;
-        if (state === 'enabled') {
-          // start quiescing all links
-          $scope.quiesceState[entity.connectionId].state = 'quiescing';
-        } else if (state === 'quiesced') {
-          // start reviving all links
-          $scope.quiesceState[entity.connectionId].state = 'reviving';
-        }
-        $scope.multiDetails.updateState(entity);
-        dontHide = true;
-        $scope.multiDetails.selectRow(row.rowIndex, true);
-        $scope.multiDetails.showLinksList(row);
-      };
-      $scope.quiesceDisabled = function(row) {
-        return $scope.quiesceState[row.entity.connectionId].buttonDisabled;
-      };
-      $scope.quiesceText = function(row) {
-        return $scope.quiesceState[row.entity.connectionId].buttonText;
-      };
-      $scope.quiesceClass = function(row) {
-        const stateClassMap = {
-          enabled: 'btn-primary',
-          quiescing: 'btn-warning',
-          reviving: 'btn-warning',
-          quiesced: 'btn-danger'
-        };
-        return stateClassMap[$scope.quiesceState[row.entity.connectionId].state];
-      };
-
-      // This is the grid that shows each connection when a client node that represents multiple connections is clicked
-      $scope.multiData = [];
-      $scope.multiDetails = {
-        data: 'multiData',
-        enableColumnResize: true,
-        enableHorizontalScrollbar: 0,
-        enableVerticalScrollbar: 0,
-        jqueryUIDraggable: true,
-        enablePaging: false,
-        multiSelect: false,
-        enableSelectAll: false,
-        enableSelectionBatchEvent: false,
-        enableRowHeaderSelection: false,
-        noUnselect: true,
-        onRegisterApi: function (gridApi) {
-          if (gridApi.selection) {
-            gridApi.selection.on.rowSelectionChanged($scope, function(row){
-              let detailsDiv = d3.select('#link_details');
-              let isVis = detailsDiv.style('display') === 'block';
-              if (!dontHide && isVis && $scope.connectionId === row.entity.connectionId) {
-                hideLinkDetails();
-                return;
-              }
-              dontHide = false;
-              $scope.multiDetails.showLinksList(row);
-            });
-          }
-        },
-        showLinksList: function(obj) {
-          $scope.linkData = obj.entity.linkData;
-          $scope.connectionId = obj.entity.connectionId;
-          let visibleLen = Math.min(obj.entity.linkData.length, 10);
-          //QDR.log.debug("visibleLen is " + visibleLen)
-          let left = parseInt(d3.select('#multiple_details').style('left'), 10);
-          let offset = $('#topology').offset();
-          let detailsDiv = d3.select('#link_details');
-          detailsDiv
-            .style({
-              display: 'block',
-              opacity: 1,
-              left: (left + 20) + 'px',
-              top: (mouseY - offset.top + 20 + $(document).scrollTop()) + 'px',
-              height: ((visibleLen + 1) * 30) + 40 + 'px', // +1 for the header row
-              'overflow-y': obj.entity.linkData > 10 ? 'scroll' : 'hidden'
-            });
-        },
-        updateState: function(entity) {
-          let state = $scope.quiesceState[entity.connectionId].state;
-
-          // count enabled and disabled links for this connection
-          let enabled = 0,
-            disabled = 0;
-          entity.linkData.forEach(function(link) {
-            if (link.adminStatus === 'enabled')
-              ++enabled;
-            if (link.adminStatus === 'disabled')
-              ++disabled;
-          });
-
-          let linkCount = entity.linkData.length;
-          // if state is quiescing and any links are enabled, button should say 'Quiescing' and be disabled
-          if (state === 'quiescing' && (enabled > 0)) {
-            $scope.quiesceState[entity.connectionId].buttonText = 'Quiescing';
-            $scope.quiesceState[entity.connectionId].buttonDisabled = true;
-          } else
-          // if state is enabled and all links are disabled, button should say Revive and be enabled. set state to quisced
-          // if state is quiescing and all links are disabled, button should say 'Revive' and be enabled. set state to quiesced
-          if ((state === 'quiescing' || state === 'enabled') && (disabled === linkCount)) {
-            $scope.quiesceState[entity.connectionId].buttonText = 'Revive';
-            $scope.quiesceState[entity.connectionId].buttonDisabled = false;
-            $scope.quiesceState[entity.connectionId].state = 'quiesced';
-          } else
-          // if state is reviving and any links are disabled, button should say 'Reviving' and be disabled
-          if (state === 'reviving' && (disabled > 0)) {
-            $scope.quiesceState[entity.connectionId].buttonText = 'Reviving';
-            $scope.quiesceState[entity.connectionId].buttonDisabled = true;
-          } else
-          // if state is reviving or quiesced and all links are enabled, button should say 'Quiesce' and be enabled. set state to enabled
-          if ((state === 'reviving' || state === 'quiesced') && (enabled === linkCount)) {
-            $scope.quiesceState[entity.connectionId].buttonText = 'Quiesce';
-            $scope.quiesceState[entity.connectionId].buttonDisabled = false;
-            $scope.quiesceState[entity.connectionId].state = 'enabled';
-          }
-        },
-        columnDefs: [{
-          field: 'host',
-          cellTemplate: 'titleCellTemplate.html',
-          //headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'Connection host'
-        }, {
-          field: 'user',
-          cellTemplate: 'titleCellTemplate.html',
-          //headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'User'
-        }, {
-          field: 'properties',
-          cellTemplate: 'titleCellTemplate.html',
-          //headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'Properties'
-        }
-          /*,
-                {
-                  cellClass: 'gridCellButton',
-                  cellTemplate: '<button title="{{quiesceText(row)}} the links" type="button" ng-class="quiesceClass(row)" class="btn" ng-click="$event.stopPropagation();quiesceConnection(row)" ng-disabled="quiesceDisabled(row)">{{quiesceText(row)}}</button>'
-                }*/
-        ]
-      };
-      $scope.quiesceLinkClass = function(row) {
-        const stateClassMap = {
-          enabled: 'btn-primary',
-          disabled: 'btn-danger'
-        };
-        return stateClassMap[row.entity.adminStatus];
-      };
-      $scope.quiesceLink = function(row) {
-        QDRService.management.topology.quiesceLink(row.entity.nodeId, row.entity.name)
-          .then( function (results, context) {
-            let statusCode = context.message.application_properties.statusCode;
-            if (statusCode < 200 || statusCode >= 300) {
-              QDR.Core.notification('error', context.message.statusDescription);
-              QDR.log.info('Error ' + context.message.statusDescription);
-            }
-          });
-      };
-      $scope.quiesceLinkDisabled = function(row) {
-        return (row.entity.operStatus !== 'up' && row.entity.operStatus !== 'down');
-      };
-      $scope.quiesceLinkText = function(row) {
-        return row.entity.operStatus === 'down' ? 'Revive' : 'Quiesce';
-      };
-      $scope.linkData = [];
-      $scope.linkDetails = {
-        data: 'linkData',
-        jqueryUIDraggable: true,
-        columnDefs: [{
-          field: 'adminStatus',
-          cellTemplate: 'titleCellTemplate.html',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'Admin state'
-        }, {
-          field: 'operStatus',
-          cellTemplate: 'titleCellTemplate.html',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'Oper state'
-        }, {
-          field: 'dir',
-          cellTemplate: 'titleCellTemplate.html',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'dir'
-        }, {
-          field: 'owningAddr',
-          cellTemplate: 'titleCellTemplate.html',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          displayName: 'Address'
-        }, {
-          field: 'deliveryCount',
-          displayName: 'Delivered',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          cellClass: 'grid-values'
-
-        }, {
-          field: 'uncounts',
-          displayName: 'Outstanding',
-          headerCellTemplate: 'titleHeaderCellTemplate.html',
-          cellClass: 'grid-values'
-        }
-          /*,
-                {
-                  cellClass: 'gridCellButton',
-                  cellTemplate: '<button title="{{quiesceLinkText(row)}} this link" type="button" ng-class="quiesceLinkClass(row)" class="btn" ng-click="quiesceLink(row)" ng-disabled="quiesceLinkDisabled(row)">{{quiesceLinkText(row)}}</button>'
-                }*/
-        ]
-      };
 
       // mouse event vars
       let selected_node = null,
@@ -412,15 +147,14 @@ var QDR = (function(QDR) {
       let height = 0;
 
       var getSizes = function() {
-        let legendWidth = 143;
-        let display = $('#topo_svg_legend').css('display');
-        if (display === 'none')
-          legendWidth = 0;
         const gap = 5;
+        let legendWidth = 194;
+        let topoWidth = $('#topology').width();
+        if (topoWidth < 768)
+          legendWidth = 0;
         let width = $('#topology').width() - gap - legendWidth;
         let top = $('#topology').offset().top;
-        let tpformHeight = $('#topologyForm').height();
-        let height = Math.max(window.innerHeight, tpformHeight + top) - top - gap;
+        let height = window.innerHeight - top - gap;
         if (width < 10) {
           QDR.log.info('page width and height are abnormal w:' + width + ' height:' + height);
           return [0, 0];
@@ -439,11 +173,15 @@ var QDR = (function(QDR) {
           svg.attr('height', height);
           force.size(sizes).resume();
         }
+        $timeout(createLegend);
       };
 
-      $scope.$on('panel-resized', function () {
-        resize();
+      // the window is narrow and the page menu icon was clicked.
+      // Re-create the legend
+      $scope.$on('pageMenuClicked', function () {
+        $timeout(createLegend);
       });
+
       window.addEventListener('resize', resize);
       let sizes = getSizes();
       width = sizes[0];
@@ -707,16 +445,7 @@ var QDR = (function(QDR) {
           .append('svg')
           .attr('id', 'SVG_ID')
           .attr('width', width)
-          .attr('height', height)
-          .on('click', function() {
-            removeCrosssection();
-          });
-
-        $(document).keyup(function(e) {
-          if (e.keyCode === 27) {
-            removeCrosssection();
-          }
-        });
+          .attr('height', height);
 
         // the legend
         d3.select('#topo_svg_legend svg').remove();
@@ -811,9 +540,6 @@ var QDR = (function(QDR) {
             }
           });
         }
-        setTimeout(function () {
-          updateForm(Object.keys(QDRService.management.topology.nodeInfo())[0], 'router', 0);
-        });
 
         // if any clients don't yet have link directions, get the links for those nodes and restart the graph
         if (unknowns.length > 0)
@@ -837,7 +563,8 @@ var QDR = (function(QDR) {
         }
         unknownNodes = Object.keys(unknownNodes);
         //QDR.log.info("-- resolveUnknowns: ensuring .connection and .router.link are present for each node")
-        QDRService.management.topology.ensureEntities(unknownNodes, [{entity: 'connection', force: true}, {entity: 'router.link', attrs: ['linkType','connectionId','linkDir'], force: true}], function () {
+        QDRService.management.topology.ensureEntities(unknownNodes, [{entity: 'connection', force: true}, 
+          {entity: 'router.link', attrs: ['linkType','connectionId','linkDir'], force: true}], function () {
           nodeInfo = QDRService.management.topology.nodeInfo();
           initializeLinks(nodeInfo, []);
           // collapse any router-container nodes that are duplicates
@@ -846,68 +573,6 @@ var QDR = (function(QDR) {
           restart(false);
         });
       };
-
-      function updateForm(key, entity, resultIndex) {
-        if (!angular.isDefined(resultIndex))
-          return;
-        let nodeList = QDRService.management.topology.nodeIdList();
-        if (nodeList.indexOf(key) > -1) {
-          QDRService.management.topology.fetchEntities(key, [
-            {entity: entity},
-            {entity: 'listener', attrs: ['role', 'port']}], function (results) {
-            let onode = results[key];
-            if (!onode[entity]) {
-              console.log('requested ' + entity + ' but didn\'t get it');
-              return;
-            }
-            let nodeResults = onode[entity].results[resultIndex];
-            let nodeAttributes = onode[entity].attributeNames;
-            let attributes = nodeResults.map(function(row, i) {
-              return {
-                attributeName: nodeAttributes[i],
-                attributeValue: row
-              };
-            });
-            // sort by attributeName
-            attributes.sort(function(a, b) {
-              return a.attributeName.localeCompare(b.attributeName);
-            });
-
-            // move the Name first
-            let nameIndex = attributes.findIndex(function(attr) {
-              return attr.attributeName === 'name';
-            });
-            if (nameIndex >= 0)
-              attributes.splice(0, 0, attributes.splice(nameIndex, 1)[0]);
-
-            // get the list of ports this router is listening on
-            if (entity === 'router') {
-              let listeners = onode['listener'].results;
-              let listenerAttributes = onode['listener'].attributeNames;
-              let normals = listeners.filter(function(listener) {
-                return QDRService.utilities.valFor(listenerAttributes, listener, 'role') === 'normal';
-              });
-              let ports = [];
-              normals.forEach(function(normalListener) {
-                ports.push(QDRService.utilities.valFor(listenerAttributes, normalListener, 'port'));
-              });
-              // add as 2nd row
-              if (ports.length) {
-                attributes.splice(1, 0, {
-                  attributeName: 'Listening on',
-                  attributeValue: ports,
-                  description: 'The port(s) on which this router is listening for connections'
-                });
-              }
-            }
-            $rootScope.$broadcast('showEntityForm', {
-              entity: entity,
-              attributes: attributes
-            });
-            if (!$scope.$$phase) $scope.$apply();
-          });
-        }
-      }
 
       function getContainerIndex(_id, nodeInfo) {
         let nodeIndex = 0;
@@ -1063,10 +728,6 @@ var QDR = (function(QDR) {
             return links[i];
         }
         // the selected node was a client/broker
-        //QDR.log.debug("failed to find a link between ");
-        //console.dump(source);
-        //QDR.log.debug(" and ");
-        //console.dump(target);
         return null;
       }
 
@@ -1077,34 +738,6 @@ var QDR = (function(QDR) {
         d3.select('#link_details').style('display', 'none');
         d3.select('#node_context_menu').style('display', 'none');
 
-      }
-
-      function removeCrosssection() {
-        d3.select('#crosssection svg g').transition()
-          .duration(1000)
-          .attr('transform', 'scale(0)')
-          .style('opacity', 0)
-          .each('end', function () {
-            d3.select('#crosssection svg').remove();
-            d3.select('#crosssection').style('display','none');
-          });
-        d3.select('#multiple_details').transition()
-          .duration(500)
-          .style('opacity', 0)
-          .each('end', function() {
-            d3.select('#multiple_details').style('display', 'none');
-            stopUpdateConnectionsGrid();
-          });
-        hideLinkDetails();
-      }
-
-      function hideLinkDetails() {
-        d3.select('#link_details').transition()
-          .duration(500)
-          .style('opacity', 0)
-          .each('end', function() {
-            d3.select('#link_details').style('display', 'none');
-          });
       }
 
       function clerAllHighlights() {
@@ -1162,55 +795,25 @@ var QDR = (function(QDR) {
             return d.cls == 'small';
           })
           .on('mouseover', function(d) { // mouse over a path
-            let resultIndex = 0; // the connection to use
-            let left = d.left ? d.target : d.source;
-            // right is the node that the arrow points to, left is the other node
-            let right = d.left ? d.source : d.target;
-            let onode = QDRService.management.topology.nodeInfo()[left.key];
-            // loop through all the connections for left, and find the one for right
-            if (!onode || !onode['connection'])
-              return;
-            // update the info dialog for the link the mouse is over
-            if (!selected_node && !selected_link) {
-              for (resultIndex = 0; resultIndex < onode['connection'].results.length; ++resultIndex) {
-                let conn = onode['connection'].results[resultIndex];
-                /// find the connection whose container is the right's name
-                let name = QDRService.utilities.valFor(onode['connection'].attributeNames, conn, 'container');
-                if (name == right.routerId) {
-                  break;
-                }
-              }
-              // did not find connection. this is a connection to a non-interrouter node
-              if (resultIndex === onode['connection'].results.length) {
-                // use the non-interrouter node's connection info
-                left = d.target;
-                resultIndex = left.resultIndex;
-              }
-              updateForm(left.key, 'connection', resultIndex);
-            }
-
+            let event = d3.event;
             mousedown_link = d;
             selected_link = mousedown_link;
-            restart();
-          })
-          .on('mousemove', function (d) {
             let updateTooltip = function () {
               $timeout(function () {
                 $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d));
+                if (selected_link)
+                  displayTooltip(event);
               });
             };
             // update the contents of the popup tooltip each time the data is polled
             QDRService.management.topology.addUpdatedAction('connectionPopupHTML', updateTooltip);
-
+            QDRService.management.topology.ensureAllEntities(
+              [{ entity: 'router.link', force: true},{entity: 'connection'}], function () {
+                updateTooltip();
+              });
             // show the tooltip
-            let top = $('#topology').offset().top - 5;
-            d3.select('#popover-div')
-              .style('display', 'block')
-              .style('left', (d3.event.pageX+5)+'px')
-              .style('top', (d3.event.pageY-top)+'px');
-
-            // update the tooltip right now
             updateTooltip();
+            restart();
 
           })
           .on('mouseout', function() { // mouse out of a path
@@ -1221,166 +824,9 @@ var QDR = (function(QDR) {
             restart();
           })
           // left click a path
-          .on('click', function (d) {
-            let clickPos = d3.mouse(this);
+          .on('click', function () {
             d3.event.stopPropagation();
             clearPopups();
-            var showCrossSection = function() {
-              const diameter = 400;
-              let pack = d3.layout.pack()
-                .size([diameter - 4, diameter - 4])
-                .padding(-10)
-                .value(function(d) { return d.size; });
-
-              d3.select('#crosssection svg').remove();
-              let svg = d3.select('#crosssection').append('svg')
-                .attr('width', diameter)
-                .attr('height', diameter);
-
-              let rg = svg.append('svg:defs')
-                .append('radialGradient')
-                .attr('id', 'cross-gradient')
-                .attr('gradientTransform', 'scale(2.0) translate(-0.5,-0.5)');
-
-              rg
-                .append('stop')
-                .attr('offset', '0%')
-                .attr('stop-color', '#feffff');
-              rg
-                .append('stop')
-                .attr('offset', '40%')
-                .attr('stop-color', '#cfe2f3');
-
-              let svgg = svg.append('g')
-                .attr('transform', 'translate(2,2)');
-
-              svgg
-                .append('rect')
-                .attr('x', 0)
-                .attr('y', 0)
-                .attr('width', 200)
-                .attr('height', 200)
-                .attr('class', 'cross-rect')
-                .attr('fill', 'url('+urlPrefix+'#cross-gradient)');
-
-              svgg
-                .append('line')
-                .attr('class', 'cross-line')
-                .attr({x1: 2, y1: 0, x2: 200, y2: 0});
-              svgg
-                .append('line')
-                .attr('class', 'cross-line')
-                .attr({x1: 2, y1: 0, x2: 0, y2: 200});
-
-              /*
-              let simpleLine = d3.svg.line();
-              svgg
-                .append('path')
-                .attr({
-                  d: simpleLine([[0,0],[0,200]]),
-                  stroke: '#000',
-                  'stroke-width': '4px'
-                });
-              svgg
-                .append('path')
-                .attr({
-                  d: simpleLine([[0,0],[200,0]]),
-                  stroke: '#000',
-                  'stroke-width': '4px'
-                });
-*/
-              let root = {
-                name: ' Links between ' + d.source.name + ' and ' + d.target.name,
-                children: []
-              };
-              let nodeInfo = QDRService.management.topology.nodeInfo();
-              let connections = nodeInfo[d.source.key]['connection'];
-              let containerIndex = connections.attributeNames.indexOf('container');
-              connections.results.some ( function (connection) {
-                if (connection[containerIndex] == d.target.routerId) {
-                  root.attributeNames = connections.attributeNames;
-                  root.obj = connection;
-                  root.desc = 'Connection';
-                  return true;    // stop looping after 1 match
-                }
-                return false;
-              });
-
-              // find router.links where link.remoteContainer is d.source.name
-              let links = nodeInfo[d.source.key]['router.link'];
-              let identityIndex = connections.attributeNames.indexOf('identity');
-              let roleIndex = connections.attributeNames.indexOf('role');
-              let connectionIdIndex = links.attributeNames.indexOf('connectionId');
-              let linkTypeIndex = links.attributeNames.indexOf('linkType');
-              let nameIndex = links.attributeNames.indexOf('name');
-              let linkDirIndex = links.attributeNames.indexOf('linkDir');
-
-              if (roleIndex < 0 || identityIndex < 0 || connectionIdIndex < 0
-                || linkTypeIndex < 0 || nameIndex < 0 || linkDirIndex < 0)
-                return;
-              links.results.forEach ( function (link) {
-                if (root.obj && link[connectionIdIndex] == root.obj[identityIndex] && link[linkTypeIndex] == root.obj[roleIndex])
-                  root.children.push (
-                    { name: ' ' + link[linkDirIndex] + ' ',
-                      size: 100,
-                      obj: link,
-                      desc: 'Link',
-                      attributeNames: links.attributeNames
-                    });
-              });
-              if (root.children.length == 0)
-                return;
-              let node = svgg.datum(root).selectAll('.node')
-                .data(pack.nodes)
-                .enter().append('g')
-                .attr('class', function(d) { return d.children ? 'parent node hastip' : 'leaf node hastip'; })
-                .attr('transform', function(d) { return 'translate(' + d.x + ',' + d.y + ')' + (!d.children ? 'scale(0.9)' : ''); });
-              node.append('circle')
-                .attr('r', function(d) { return d.r; });
-
-              node.on('mouseenter', function (d) {
-                let title = '<h4>' + d.desc + '</h4><table class=\'tiptable\'><tbody>';
-                if (d.attributeNames)
-                  d.attributeNames.forEach( function (n, i) {
-                    title += '<tr><td>' + n + '</td><td>';
-                    title += d.obj[i] != null ? d.obj[i] : '';
-                    title += '</td></tr>';
-                  });
-                title += '</tbody></table>';
-                $timeout( (function () {
-                  $scope.crosshtml = $sce.trustAsHtml(title);
-                  $('#crosshtml').show();
-                  let parent = $('#crosssection');
-                  let ppos = parent.position();
-                  let mleft = ppos.left + parent.width();
-                  $('#crosshtml').css({left: mleft, top: ppos.top});
-                }).bind(this));
-              });
-              node.on('mouseout', function () {
-                $('#crosshtml').hide();
-              });
-
-              node.append('text')
-                .attr('dy', function (d) { return d.children ? '-10em' : '.5em';})
-                .style('text-anchor', 'middle')
-                .text(function(d) {
-                  return d.name.substring(0, d.r / 3);
-                });
-              svgg.attr('transform', 'translate(2,2) scale(0.01)');
-
-              let bounds = $('#topology').position();
-              d3.select('#crosssection')
-                .style('display', 'block')
-                .style('left', (clickPos[0] + bounds.left) + 'px')
-                .style('top', (clickPos[1] + bounds.top) + 'px');
-
-              svgg.transition()
-                .attr('transform', 'translate(2,2) scale(1)')
-                .each('end', function ()  {
-                  d3.selectAll('#crosssection g.leaf text').attr('dy', '.3em');
-                });
-            };
-            QDRService.management.topology.ensureEntities(d.source.key, {entity: 'router.link', force: true}, showCrossSection);
           });
         // remove old links
         path.exit().remove();
@@ -1404,7 +850,7 @@ var QDR = (function(QDR) {
             return d.fixed & 1;
           });
 
-        // add new circle nodes. if nodes[] is longer than the existing paths, add a new path for each new element
+        // add new circle nodes
         let g = circle.enter().append('svg:g')
           .classed('multiple', function(d) {
             return (d.normals && d.normals.length > 1);
@@ -1413,28 +859,19 @@ var QDR = (function(QDR) {
 
         appendCircle(g)
           .on('mouseover', function(d) {  // mouseover a circle
-            if (!selected_node && !mousedown_node) {
-              if (d.nodeType === 'inter-router') {
-                //QDR.log.debug("showing general form");
-                updateForm(d.key, 'router', 0);
-              } else if (d.nodeType === 'normal' || d.nodeType === 'on-demand' || d.nodeType === 'route-container') {
-                //QDR.log.debug("showing connections form");
-                updateForm(d.key, 'connection', d.resultIndex);
-              }
-            }
-
+            QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
+            if (d.nodeType === 'normal') {
+              showClientTooltip(d, d3.event);
+            } else
+              showRouterTooltip(d, d3.event);
             if (d === mousedown_node)
               return;
-            //if (d === selected_node)
-            //    return;
             // enlarge target node
             d3.select(this).attr('transform', 'scale(1.1)');
-            // highlight the next-hop route from the selected node to this node
-            //mousedown_node = null;
-
             if (!selected_node) {
               return;
             }
+            // highlight the next-hop route from the selected node to this node
             clerAllHighlights();
             // we need .router.node info to highlight hops
             QDRService.management.topology.ensureAllEntities([{entity: 'router.node', attrs: ['id','nextHop']}], function () {
@@ -1445,6 +882,8 @@ var QDR = (function(QDR) {
           })
           .on('mouseout', function() { // mouse out for a circle
             // unenlarge target node
+            d3.select('#popover-div')
+              .style('display', 'none');
             d3.select(this).attr('transform', '');
             clerAllHighlights();
             mouseover_node = null;
@@ -1533,26 +972,24 @@ var QDR = (function(QDR) {
               return;
             }
             d3.event.stopPropagation();
-            startUpdateConnectionsGrid(d);
           });
 
         appendContent(g);
-        appendTitle(g);
+        //appendTitle(g);
 
         // remove old nodes
         circle.exit().remove();
 
-        // add subcircles
-        svg.selectAll('.subcircle').remove();
+        // add text to client circles if there are any that represent multiple clients
+        svg.selectAll('.subtext').remove();
         let multiples = svg.selectAll('.multiple');
         multiples.each(function(d) {
-          d.normals.forEach(function(n, i) {
-            if (i < d.normals.length - 1 && i < 3) // only show a few shadow circles
-              this.insert('svg:circle', ':first-child')
-                .attr('class', 'subcircle node')
-                .attr('r', 15 - i)
-                .attr('transform', 'translate(' + 4 * (i + 1) + ', 0)');
-          }, d3.select(this));
+          let g = d3.select(this);
+          g.append('svg:text')
+            .attr('x', radiusNormal + 3)
+            .attr('y', Math.floor(radiusNormal / 2))
+            .attr('class', 'subtext')
+            .text('x ' + d.normals.length);
         });
         // call createLegend in timeout because:
         // If we create the legend right away, then it will be destroyed when the accordian
@@ -1751,164 +1188,99 @@ var QDR = (function(QDR) {
       };
       let appendTitle = function(g) {
         g.append('svg:title').text(function(d) {
-          let x = '';
-          if (d.normals && d.normals.length > 1)
-            x = ' x ' + d.normals.length;
-          if (QDRService.utilities.isConsole(d)) {
-            return 'Dispatch console' + x;
-          } else if (QDRService.utilities.isArtemis(d)) {
-            return 'Broker - Artemis' + x;
-          } else if (d.properties.product == 'qpid-cpp') {
-            return 'Broker - qpid-cpp' + x;
-          } else if (d.properties.product) {
-            return d.properties.product;
-          } else if (d.cdir === 'in')
-            return 'Sender' + x;
-          else if (d.cdir === 'out')
-            return 'Receiver' + x;
-          else if (d.cdir === 'both')
-            return 'Sender/Receiver' + x;
-          return d.nodeType == 'normal' ? 'client' + x : (d.nodeType == 'on-demand' ? 'broker' : 'Router ' + d.name);
+          return generateTitle(d);
         });
       };
 
-      var startUpdateConnectionsGrid = function(d) {
-        // called after each topology update
-        var extendConnections = function() {
-          // force a fetch of the links for this node
-          QDRService.management.topology.ensureEntities(d.key, {entity: 'router.link', force: true}, function () {
-            // the links for this node are now available
-            $scope.multiData = [];
-            let normals = d.normals;
-            // find updated normals for d
-            d3.selectAll('.normal')
-              .each(function(newd) {
-                if (newd.id == d.id && newd.name == d.name) {
-                  normals = newd.normals;
-                }
-              });
-            if (normals) {
-              normals.forEach(function(n) {
-                let nodeInfo = QDRService.management.topology.nodeInfo();
-                let links = nodeInfo[n.key]['router.link'];
-                let linkTypeIndex = links.attributeNames.indexOf('linkType');
-                let connectionIdIndex = links.attributeNames.indexOf('connectionId');
-                n.linkData = [];
-                links.results.forEach(function(link) {
-                  if (link[linkTypeIndex] === 'endpoint' && link[connectionIdIndex] === n.connectionId) {
-                    let l = {};
-                    let ll = QDRService.utilities.flatten(links.attributeNames, link);
-                    l.owningAddr = ll.owningAddr;
-                    l.dir = ll.linkDir;
-                    if (l.owningAddr && l.owningAddr.length > 2)
-                      if (l.owningAddr[0] === 'M')
-                        l.owningAddr = l.owningAddr.substr(2);
-                      else
-                        l.owningAddr = l.owningAddr.substr(1);
+      let generateTitle = function (d) {
+        let x = '';
+        if (d.normals && d.normals.length > 1)
+          x = ' x ' + d.normals.length;
+        if (QDRService.utilities.isConsole(d))
+          return 'Dispatch console' + x;
+        else if (QDRService.utilities.isArtemis(d))
+          return 'Broker - Artemis' + x;
+        else if (d.properties.product == 'qpid-cpp')
+          return 'Broker - qpid-cpp' + x;
+        else if (d.cdir === 'in')
+          return 'Sender' + x;
+        else if (d.cdir === 'out')
+          return 'Receiver' + x;
+        else if (d.cdir === 'both')
+          return 'Sender/Receiver' + x;
+        else if (d.nodeType === 'normal')
+          return 'client' + x;
+        else if (d.nodeType === 'on-demand')
+          return 'broker';
+        else if (d.properties.product) {
+          return d.properties.product;
+        }
+        else {
+          return '';
+        }
+      };
 
-                    l.deliveryCount = ll.deliveryCount;
-                    l.uncounts = QDRService.utilities.pretty(ll.undeliveredCount + ll.unsettledCount);
-                    l.adminStatus = ll.adminStatus;
-                    l.operStatus = ll.operStatus;
-                    l.identity = ll.identity;
-                    l.connectionId = ll.connectionId;
-                    l.nodeId = n.key;
-                    l.type = ll.type;
-                    l.name = ll.name;
+      let showClientTooltip = function (d, event) {
+        let type = generateTitle(d);
+        let title = '<table class="popupTable"><tr><td>Type</td><td>' + type + '</td></tr>';
+        if (!d.normals || d.normals.length < 2)
+          title += ('<tr><td>Host</td><td>' + d.host + '</td></tr>');
+        title += '</table>';
+        showToolTip(title, event);
+      };
 
-                    // TODO: remove this fake quiescing/reviving logic when the routers do the work
-                    initConnState(n.connectionId);
-                    if ($scope.quiesceState[n.connectionId].linkStates[l.identity])
-                      l.adminStatus = $scope.quiesceState[n.connectionId].linkStates[l.identity];
-                    if ($scope.quiesceState[n.connectionId].state == 'quiescing') {
-                      if (l.adminStatus === 'enabled') {
-                        // 25% chance of switching
-                        let chance = Math.floor(Math.random() * 2);
-                        if (chance == 1) {
-                          l.adminStatus = 'disabled';
-                          $scope.quiesceState[n.connectionId].linkStates[l.identity] = 'disabled';
-                        }
-                      }
-                    }
-                    if ($scope.quiesceState[n.connectionId].state == 'reviving') {
-                      if (l.adminStatus === 'disabled') {
-                        // 25% chance of switching
-                        let chance = Math.floor(Math.random() * 2);
-                        if (chance == 1) {
-                          l.adminStatus = 'enabled';
-                          $scope.quiesceState[n.connectionId].linkStates[l.identity] = 'enabled';
-                        }
-                      }
-                    }
-                    QDR.log.debug('pushing link state for ' + l.owningAddr + ' status: ' + l.adminStatus);
-
-                    n.linkData.push(l);
-                  }
-                });
-                $scope.multiData.push(n);
-                if (n.connectionId == $scope.connectionId)
-                  $scope.linkData = n.linkData;
-                initConnState(n.connectionId);
-                $scope.multiDetails.updateState(n);
-              });
+      let showRouterTooltip = function (d, event) {
+        QDRService.management.topology.ensureEntities(d.key, [
+          {entity: 'listener', attrs: ['role', 'port', 'http']},
+          {entity: 'router', attrs: ['name', 'version', 'hostName']}
+        ], function () {
+          // update all the router title text
+          let nodes = QDRService.management.topology.nodeInfo();
+          let node = nodes[d.key];
+          let listeners = node['listener'];
+          let router = node['router'];
+          let r = QDRService.utilities.flatten(router.attributeNames, router.results[0]);
+          let title = '<table class="popupTable">';
+          title += ('<tr><td>Router</td><td>' + r.name + '</td></tr>');
+          if (r.hostName)
+            title += ('<tr><td>Host Name</td><td>' + r.hostHame + '</td></tr>');
+          title += ('<tr><td>Version</td><td>' + r.version + '</td></tr>');
+          let ports = [];
+          for (let l=0; l<listeners.results.length; l++) {
+            let listener = QDRService.utilities.flatten(listeners.attributeNames, listeners.results[l]);
+            if (listener.role === 'normal') {
+              ports.push(listener.port+'');
             }
-            $scope.$apply();
-
-            d3.select('#multiple_details')
-              .style({
-                height: ((normals.length + 1) * 30) + 40 + 'px',
-                'overflow-y': normals.length > 10 ? 'scroll' : 'hidden'
-              });
-          });
-        };
-        $scope.connectionsStyle = function () {
-          return {
-            height: ($scope.multiData.length * 30 + 40) + 'px'
-          };
-        };
-        $scope.linksStyle = function () {
-          return {
-            height: ($scope.linkData.length * 30 + 40) + 'px'
-          };
-        };
-        // register a notification function for when the topology is updated
-        QDRService.management.topology.addUpdatedAction('normalsStats', extendConnections);
-        // call the function that gets the links right now
-        extendConnections();
-        clearPopups();
-        let display = 'block';
-        if (d.normals.length === 1) {
-          display = 'none';
-          mouseY = mouseY - 20;
-        }
-        let rm = relativeMouse();
-        d3.select('#multiple_details')
-          .style({
-            display: display,
-            opacity: 1,
-            left: rm.left + 'px',
-            top: (rm.top - rm.offset.top) + 'px'
-          });
-        if (d.normals.length === 1) {
-          // simulate a click on the connection to popup the link details
-          QDRService.management.topology.ensureEntities(d.key, {entity: 'router.link', force: true}, function () {
-            $scope.multiDetails.showLinksList({entity: d});
-          });
-        }
+          }
+          if (ports.length > 0) {
+            title += ('<tr><td>Ports</td><td>' + ports.join(', ') + '</td></tr>');
+          }
+          title += '</table>';
+          showToolTip(title, event);
+        });
       };
-      var stopUpdateConnectionsGrid = function() {
-        QDRService.management.topology.delUpdatedAction('normalsStats');
+      let showToolTip = function (title, event) {
+        // show the tooltip
+        $timeout ( function () {
+          $scope.trustedpopoverContent = $sce.trustAsHtml(title);
+          displayTooltip(event);
+        });
       };
 
-      var initConnState = function(id) {
-        if (!angular.isDefined($scope.quiesceState[id])) {
-          $scope.quiesceState[id] = {
-            state: 'enabled',
-            buttonText: 'Quiesce',
-            buttonDisabled: false,
-            linkStates: {}
-          };
-        }
+      let displayTooltip = function (event) {
+        $timeout( function () {
+          let top = $('#topology').offset().top - 5;
+          let width = $('#topology').width();
+          d3.select('#popover-div')
+            .style('visibility', 'hidden')
+            .style('display', 'block')
+            .style('left', (event.pageX+5)+'px')
+            .style('top', (event.pageY-top)+'px');
+          let pwidth = $('#popover-div').width();
+          d3.select('#popover-div')
+            .style('visibility', 'visible')
+            .style('left',(Math.min(width-pwidth, event.pageX+5) + 'px'));
+        });
       };
 
       function nextHop(thisNode, d, cb) {
@@ -2040,7 +1412,6 @@ var QDR = (function(QDR) {
               force.nodes(nodes).links(links).start();
               restart();
             }
-
             //initForceGraph();
           } else {
             //QDR.log.debug("topology didn't change")
@@ -2048,13 +1419,10 @@ var QDR = (function(QDR) {
 
         });
       }
-
       function setupInitialUpdate() {
         // make sure all router nodes have .connection info. if not then fetch any missing info
         QDRService.management.topology.ensureAllEntities(
-          //          [{entity: ".connection"}, {entity: ".router.lin.router.link", attrs: ["linkType","connectionId","linkDir"]}],
           [{entity: 'connection'}],
-          //[{entity: ".connection"}],
           handleInitialUpdate);
       }
       if (!QDRService.management.connection.is_connected()) {
@@ -2064,6 +1432,102 @@ var QDR = (function(QDR) {
       }
 
       let connectionPopupHTML = function (d) {
+        let getConnsArray = function (d, conn) {
+          let conns = [conn];
+          if (d.cls === 'small') {
+            conns = [];
+            let normals = d.target.normals ? d.target.normals : d.source.normals;
+            for (let n=0; n<normals.length; n++) {
+              if (normals[n].resultIndex !== undefined) {
+                conns.push(QDRService.utilities.flatten(onode['connection'].attributeNames,
+                  onode['connection'].results[normals[n].resultIndex]));
+              }
+            }
+          }
+          return conns;
+        };
+        // construct HTML to be used in a popup when the mouse is moved over a link.
+        // The HTML is sanitized elsewhere before it is displayed
+        let linksHTML = function (onode, conn, d) {
+          const max_links = 10;
+          const fields = ['undelivered', 'unsettled', 'rejected', 'released', 'modified'];
+          // local function to determine if a link's connectionId is in any of the connections
+          let isLinkFor = function (connectionId, conns) {
+            for (let c=0; c<conns.length; c++) {
+              if (conns[c].identity === connectionId)
+                return true;
+            }
+            return false;
+          };
+          let fnJoin = function (ar, sepfn) {
+            let out = '';
+            out = ar[0];
+            for (let i=1; i<ar.length; i++) {
+              let sep = sepfn(ar[i]);
+              out += (sep[0] + sep[1]);
+            }
+            return out;
+          };
+          let conns = getConnsArray(d, conn);
+          // if the data for the line is from a client (small circle), we may have multiple connections
+          // loop through all links for this router and accumulate those belonging to the connection(s)
+          let nodeLinks = onode['router.link'];
+          if (!nodeLinks)
+            return '';
+          let links = [];
+          let hasAddress = false;
+          for (let n=0; n<nodeLinks.results.length; n++) {
+            let link = QDRService.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
+            if (link.linkType !== 'router-control') {
+              if (isLinkFor(link.connectionId, conns)) {
+                if (link.owningAddr)
+                  hasAddress = true;
+                links.push(link);
+              }
+            }
+          }
+          // we may need to limit the number of links displayed, so sort descending by the sum of the field values
+          links.sort( function (a, b) {
+            let asum = a.undeliveredCount + a.unsettledCount + a.rejectedCount + a.releasedCount + a.modifiedCount;
+            let bsum = b.undeliveredCount + b.unsettledCount + b.rejectedCount + b.releasedCount + b.modifiedCount;
+            return asum < bsum ? 1 : asum > bsum ? -1 : 0;
+          });
+          let HTMLHeading = '<h5>Links</h5>';
+          let HTML = '<table class="popupTable">';
+          // copy of fields since we may be prepending an address
+          let th = fields.slice();
+          // convert to actual attribute names
+          let td = fields.map( function (f) {return f + 'Count';});
+          th.unshift('dir');
+          td.unshift('linkDir');
+          // add an address field if any of the links had an owningAddress
+          if (hasAddress) {
+            th.unshift('address');
+            td.unshift('owningAddr');
+          }
+          HTML += ('<tr class="header"><td>' + th.join('</td><td>') + '</td></tr>');
+          // add rows to the table for each link
+          for (let l=0; l<links.length; l++) {
+            if (l>=max_links) {
+              HTMLHeading = '<h4>Top ' + max_links + ' Links</h4>';
+              break;
+            }
+            let link = links[l];
+            let vals = td.map( function (f) {
+              if (f === 'owningAddr') {
+                let identity = QDRService.utilities.identity_clean(link.owningAddr);
+                return QDRService.utilities.addr_text(identity);
+              }
+              return link[f];
+            });
+            let joinedVals = fnJoin(vals, function (v1) {
+              return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', QDRService.utilities.pretty(v1 || '0')];
+            });
+            HTML += ('<tr><td>' + joinedVals + '</td></tr>');
+          }
+          HTML += '</table>';
+          return HTMLHeading + HTML;
+        };
         let left = d.left ? d.source : d.target;
         // left is the connection with dir 'in'
         let right = d.left ? d.target : d.source;
@@ -2112,21 +1576,25 @@ var QDR = (function(QDR) {
         if (rightIndex >= 0) {
           let conn = onode['connection'].results[rightIndex];
           conn = QDRService.utilities.flatten(onode['connection'].attributeNames, conn);
-          if ($scope.legend.status.optionsOpen && traffic) {
-            HTML = traffic.connectionPopupHTML(onode, conn, d);
-            if (HTML)
-              return HTML;
-            else
-              HTML = '';
+          let conns = getConnsArray(d, conn);
+          if (conns.length === 1) {
+            HTML += '<h5>Connection'+(conns.length > 1 ? 's' : '')+'</h5>';
+            HTML += '<table class="popupTable"><tr class="header"><td>Security</td><td>Authentication</td><td>Tenant</td><td>Host</td>';
+
+            for (let c=0; c<conns.length; c++) {
+              HTML += ('<tr><td>' + connSecurity(conns[c]) + '</td>');
+              HTML += ('<td>' + connAuth(conns[c]) + '</td>');
+              HTML += ('<td>' + (connTenant(conns[c]) || '--') + '</td>');
+              HTML += ('<td>' + conns[c].host + '</td>');
+              HTML += '</tr>';
+            }
+            HTML += '</table>';
           }
-          HTML += '<table class="popupTable">';
-          HTML += ('<tr><td>Security</td><td>' + connSecurity(conn) + '</td></tr>');
-          HTML += ('<tr><td>Authentication</td><td>' + connAuth(conn) + '</td></tr>');
-          HTML += ('<tr><td>Tenant</td><td>' + connTenant(conn) + '</td></tr>');
-          HTML += '</table>';
+          HTML += linksHTML(onode, conn, d);
         }
         return HTML;
       };
+
 
       animate = true;
       setupInitialUpdate();

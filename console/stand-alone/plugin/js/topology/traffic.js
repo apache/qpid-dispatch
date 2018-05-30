@@ -66,9 +66,6 @@ Traffic.prototype.setAnimationType = function (type, converter, radius) {
 Traffic.prototype.doUpdate = function () {
   this.vis.doUpdate();
 };
-Traffic.prototype.connectionPopupHTML = function (onode, conn, d) {
-  return this.vis.connectionPopupHTML(onode, conn, d);
-};
 
 /* Base class for congestion and dots visualizations */
 function TrafficAnimation (traffic) {
@@ -81,9 +78,6 @@ TrafficAnimation.prototype.nodeIndexFor = function (nodes, name) {
       return i;
   }
   return -1;
-};
-TrafficAnimation.prototype.connectionPopupHTML = function () {
-  return null;
 };
 
 /* Color the links between router to show how heavily used the links are. */
@@ -206,97 +200,6 @@ Congestion.prototype.remove = function () {
     .classed('traffic', false);
   d3.select('#SVG_ID').select('defs.custom-markers')
     .selectAll('marker').remove();
-};
-
-// construct HTML to be used in a popup when the mouse is moved over a link.
-// The HTML is sanitized elsewhere before it is displayed
-Congestion.prototype.connectionPopupHTML = function (onode, conn, d) {
-  const max_links = 10;
-  const fields = ['undelivered', 'unsettled', 'rejected', 'released', 'modified'];
-  // local function to determine if a link's connectionId is in any of the connections
-  let isLinkFor = function (connectionId, conns) {
-    for (let c=0; c<conns.length; c++) {
-      if (conns[c].identity === connectionId)
-        return true;
-    }
-    return false;
-  };
-  let fnJoin = function (ar, sepfn) {
-    let out = '';
-    out = ar[0];
-    for (let i=1; i<ar.length; i++) {
-      let sep = sepfn(ar[i]);
-      out += (sep[0] + sep[1]);
-    }
-    return out;
-  };
-  let conns = [conn];
-  // if the data for the line is from a client (small circle), we may have multiple connections
-  if (d.cls === 'small') {
-    conns = [];
-    let normals = d.target.normals ? d.target.normals : d.source.normals;
-    for (let n=0; n<normals.length; n++) {
-      if (normals[n].resultIndex !== undefined) {
-        conns.push(this.traffic.QDRService.utilities.flatten(onode['connection'].attributeNames,
-          onode['connection'].results[normals[n].resultIndex]));
-      }
-    }
-  }
-  // loop through all links for this router and accumulate those belonging to the connection(s)
-  let nodeLinks = onode['router.link'];
-  let links = [];
-  let hasAddress = false;
-  for (let n=0; n<nodeLinks.results.length; n++) {
-    let link = this.traffic.QDRService.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
-    if (link.linkType !== 'router-control') {
-      if (isLinkFor(link.connectionId, conns)) {
-        if (link.owningAddr)
-          hasAddress = true;
-        links.push(link);
-      }
-    }
-  }
-  // we may need to limit the number of links displayed, so sort descending by the sum of the field values
-  links.sort( function (a, b) {
-    let asum = a.undeliveredCount + a.unsettledCount + a.rejectedCount + a.releasedCount + a.modifiedCount;
-    let bsum = b.undeliveredCount + b.unsettledCount + b.rejectedCount + b.releasedCount + b.modifiedCount;
-    return asum < bsum ? 1 : asum > bsum ? -1 : 0;
-  });
-  let HTMLHeading = '<h4>Links</h4>';
-  let HTML = '<table class="popupTable">';
-  // copy of fields since we may be prepending an address
-  let th = fields.slice();
-  // convert to actual attribute names
-  let td = fields.map( function (f) {return f + 'Count';});
-  th.unshift('dir');
-  td.unshift('linkDir');
-  // add an address field if any of the links had an owningAddress
-  if (hasAddress) {
-    th.unshift('address');
-    td.unshift('owningAddr');
-  }
-  // add rows to the table for each link
-  HTML += ('<tr><td>' + th.join('</td><td>') + '</tr></td>');
-  for (let l=0; l<links.length; l++) {
-    if (l>=max_links) {
-      HTMLHeading = '<h4>Top ' + max_links + ' Links</h4>';
-      break;
-    }
-    let link = links[l];
-    let vals = td.map( function (f) {
-      if (f === 'owningAddr') {
-        let identity = this.traffic.QDRService.utilities.identity_clean(link.owningAddr);
-        return this.traffic.QDRService.utilities.addr_text(identity);
-      }
-      return link[f];
-    }.bind(this));
-    let joinedVals = fnJoin(vals, function (v1) {
-      return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', this.traffic.QDRService.utilities.pretty(v1 || '0')];
-    }.bind(this));
-    HTML += ('<tr><td>' + joinedVals + '</td></tr>');
-  }
-  HTML += '</table>';
-  return HTMLHeading + HTML;
 };
 
 /* Create animated dots moving along the links between routers

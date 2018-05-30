@@ -19,33 +19,30 @@ under the License.
 
 <style>
 @media (min-width: 768px) {
-  .diagram {
-    padding-left: 300px;
-  }
   .showLeft {
       display: block;
   }
 }
-@media (max-width: 768px) {
-  .diagram {
-      padding-left: 0 !important;
-  }
+@media (max-width: 767px) {
   .showLeft {
       display: none;
   }
-
+  div.qdrTopology div.legend-container.page-menu {
+      top: 0;
+      right: auto;
+      left: 0;
+      padding-right: 0;
+  }
 }
 
-button.page-menu-button {
-    display: none;
-}
-  #popover-div {
+#popover-div {
     position: absolute;
     z-index: 200;
     border-radius: 4px;
-    background-color: black;
-    color: white;
-    opacity: .95;
+    border: 1px solid gray;
+    background-color: white;
+    color: black;
+    opacity: 1;
     padding: 12px;
     font-size: 14px;
     display: none;
@@ -89,9 +86,6 @@ button.page-menu-button {
 
   #topologyForm .infoGrid div.listening-on {
       background-color: #336633;
-  }
-  .page-menu {
-      width: 300px;
   }
 
   .legend-container {
@@ -177,26 +171,34 @@ li.legend-sublist > ul ul {
     margin-left: 1em;
 }
 
-#popover-div h4 {
-    margin-top: 0;
+#popover-div h5 {
+    margin-top: 1em;
     margin-bottom: 0;
+}
+#popover-div h5:first-of-type {
+    margin-top:0;
+}
+
+div.qdrTopology div.page-menu {
+    left: auto;
+    width: auto;
+    background-color: white;
+}
+
+table.popupTable {
+    width: 100%;
+}
+table.popupTable tr.header {
+    color: black;
+    background-color: #EAEAEA;
+}
+
+table.popupTable td {
+    padding: 0 4px;
 }
 </style>
 <div class="qdrTopology" ng-controller="QDR.TopologyController">
-    <div  ng-controller="QDR.TopologyFormController">
-        <div class="page-menu navbar-collapse collapse">
-            <div id="topologyForm">
-                <div>
-                    <h4>{{form}} Info</h4>
-                    <div id="formInfo"></div>
-                </div>
-            </div>
-            <button ng-if="panelVisible" ng-click="hideLeftPane()" class="hideLeft" title="Hide"><i class="icon-step-backward"></i></button>
-        </div>
-        <button ng-if="!panelVisible" ng-click="showLeftPane()" class="showLeft" title="Show"><i class="icon-step-forward"></i></button>
-    </div>
-
-    <div class="legend-container hidden-xs">
+    <div class="legend-container page-menu navbar-collapse collapse">
         <uib-accordion id="topo_legend" close-others="false">
             <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Show Traffic">
               <ul class="options">
@@ -260,14 +262,6 @@ li.legend-sublist > ul ul {
                 <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
                 <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
             </ul>
-        </div>
-        <div id="multiple_details">
-            <h4 class="grid-title">Connections</h4>
-            <div class="grid" ui-grid="multiDetails" ui-grid-selection ui-grid-auto-resize ng-style="connectionsStyle()"></div>
-        </div>
-        <div id="link_details">
-            <h4 class="grid-title">Links</h4>
-            <div class="grid" ui-grid="linkDetails" ui-grid-auto-resize ng-style="linksStyle()"></div>
         </div>
     </div>
     <div id="popover-div" ng-bind-html="trustedpopoverContent"></div>
