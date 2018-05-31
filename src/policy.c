@@ -65,12 +65,6 @@ static const char * const user_subst_i_embed    = "e";
 static const char * const user_subst_i_suffix   = "s";
 static const char * const user_subst_i_wildcard = "*";
 
-// interface shared with parse tree
-// TODO: get parse_tree to export these values
-static const char parse_spec_sep1 = '.';
-static const char parse_spec_sep2 = '/';
-
-
 //
 // Policy configuration/statistics management interface
 //
@@ -563,6 +557,18 @@ void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_
 }
 
 
+/**
+ * Given a char return true if it is a parse_tree token separater
+ */
+bool is_token_sep(char testc)
+{
+    for (const char *ptr = qd_parse_address_token_sep(); *ptr != '\0'; ptr++) {
+        if (*ptr == testc)
+            return true;
+    }
+    return false;
+}
+
 //
 //
 // Size of 'easy' temporary copy of allowed input string
@@ -801,8 +807,7 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
             } else {
                 // Proposed is longer than username. Make sure that proposed
                 // is delimited after user name.
-                if (proposed[username_len] != parse_spec_sep1 &&
-                    proposed[username_len] != parse_spec_sep2) {
+                if (!is_token_sep(proposed[username_len])) {
                     continue; // denied. proposed has username prefix it it not a delimited user name
                 }
             }
@@ -821,27 +826,15 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
                 // if (username_len == proposed_len) { ... }
                 // unreachable code. substitution-only rule clause is handled by prefix
                 //---
-                if (proposed[proposed_len - username_len - 1] != parse_spec_sep1 &&
-                    proposed[proposed_len - username_len - 1] != parse_spec_sep2) {
+                if (!is_token_sep(proposed[proposed_len - username_len - 1])) {
                     continue; // denied. proposed suffix it it not a delimited user name
                 }
-                if (strncmp(&proposed[proposed_len - username_len], username, username_len) != 0)
+                if (strncmp(&proposed[proposed_len - username_len], username, username_len) != 0) {
                     continue; // denied. username is not the suffix
-            }
-            if (strncmp(proposed, username, username_len) != 0)
-                continue; // denied. proposed does not have username suffix
-            // check that username is not part of a larger token
-            if (username_len == proposed_len) {
-                // if username is the whole link name. this is allowed.
-            } else {
-                // proposed is longer than username. make sure that proposed
-                // is delimited after user name
-                if (proposed[username_len] != parse_spec_sep1 &&
-                    proposed[username_len] != parse_spec_sep2) {
-                    continue; // denied. proposed has username prefix it it not a delimited user name
                 }
             }
-            strncat(pName, proposed, proposed_len - usersubst_len);
+            pName[0] = '\0';
+            strncat(pName, proposed, proposed_len - username_len);
             strcat(pName, user_subst_key);
         }
         else {
