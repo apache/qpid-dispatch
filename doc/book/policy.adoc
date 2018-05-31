@@ -279,12 +279,19 @@ a * character, a # character, or a sequence of characters that do not
 include /, *, or #. The * token matches any single token. The # token 
 matches zero or more tokens.
 
+The user name substitution token may be used in a sourcePattern or in a
+targetPattern subject to the following restrictions:
+
+* The user name substitution token must be the first or last token in the rule clause.
+* The user name substitution token must stand alone within its delimited field.
+  It may not be concatenated with literal text prefixes or suffixes.
+
 For each rule definition multiple patterns may be specified in a comma
 separated list.
 
 [options="nowrap"]
 ----
-    sourcePattern: tmp_${user}, temp/#, ${user}-home/*
+    sourcePattern: tmp.${user}, temp/#, ${user}.home/*
 ----
 
 [NOTE]
