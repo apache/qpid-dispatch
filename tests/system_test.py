@@ -28,6 +28,11 @@ Features:
 - Sundry other tools.
 """
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
 from copy import copy
 try:
@@ -40,19 +45,20 @@ import proton
 from proton import Message, Timeout
 from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
+from qpid_dispatch_internal.compat import dict_iteritems
 
 # Optional modules
 MISSING_MODULES = []
 
 try:
     import qpidtoollibs
-except ImportError, err:
+except ImportError as err:
     qpidtoollibs = None         # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
 
 try:
     import qpid_messaging as qm
-except ImportError, err:
+except ImportError as err:
     qm = None                   # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
 
@@ -126,7 +132,7 @@ def retry_exception(function, timeout=TIMEOUT, delay=.001, max_delay=1, exceptio
     while True:
         try:
             return function()
-        except Exception, e:    # pylint: disable=broad-except
+        except Exception as e:    # pylint: disable=broad-except
             if exception_test:
                 exception_test(e)
             delay = retry_delay(deadline, delay, max_delay)
@@ -150,7 +156,7 @@ def port_available(port, protocol_family='IPv4'):
     try:
         s.connect((host, port))
         s.close()
-    except socket.error, e:
+    except socket.error as e:
         return e.errno == errno.ECONNREFUSED
     except:
         pass
@@ -167,7 +173,7 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     try:
         retry_exception(lambda: s.connect((host, port)), exception_test=check,
                         **retry_kwargs)
-    except Exception, e:
+    except Exception as e:
         raise Exception("wait_port timeout on host %s port %s: %s"%(host, port, e))
 
     finally: s.close()
@@ -175,13 +181,13 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
     Takes same keyword arguments as retry to control the timeout"""
-    for port, protocol_family in ports.iteritems():
+    for port, protocol_family in dict_iteritems(ports):
         wait_port(port=port, protocol_family=protocol_family, **retry_kwargs)
 
 def message(**properties):
     """Convenience to create a proton.Message with properties set"""
     m = Message()
-    for name, value in properties.iteritems():
+    for name, value in dict_iteritems(properties):
         getattr(m, name)        # Raise exception if not a valid message attribute.
         setattr(m, name, value)
     return m
@@ -227,7 +233,7 @@ class Process(subprocess.Popen):
                 super(Process, self).__init__(args, **kwargs)
                 with open(self.outfile + '.cmd', 'w') as f:
                     f.write("%s\npid=%s\n" % (' '.join(args), self.pid))
-            except Exception, e:
+            except Exception as e:
                 raise Exception("subprocess.Popen(%s, %s) failed: %s: %s" %
                                 (args, kwargs, type(e).__name__, e))
 
@@ -297,13 +303,13 @@ class Qdrouterd(Process):
             """Fill in default values in gconfiguration"""
             for name, props in self:
                 if name in Qdrouterd.Config.DEFAULTS:
-                    for n,p in Qdrouterd.Config.DEFAULTS[name].iteritems():
+                    for n,p in dict_iteritems(Qdrouterd.Config.DEFAULTS[name]):
                         props.setdefault(n,p)
 
         def __str__(self):
             """Generate config file content. Calls default() first."""
             def props(p):
-                return "".join(["    %s: %s\n"%(k, v) for k, v in p.iteritems()])
+                return "".join(["    %s: %s\n"%(k, v) for k, v in dict_iteritems(p)])
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p)) for n, p in self])
 
@@ -523,8 +529,8 @@ class Tester(object):
                     if cleanup:
                         cleanup()
                         break
-            except Exception, e:
-                errors.append(e)
+            except Exception as exc:
+                errors.append(exc)
         if errors:
             raise RuntimeError("Errors during teardown: \n\n%s" % "\n\n".join([str(e) for e in errors]))
 
@@ -542,14 +548,6 @@ class Tester(object):
     def qdrouterd(self, *args, **kwargs):
         """Return a Qdrouterd that will be cleaned up on teardown"""
         return self.cleanup(Qdrouterd(*args, **kwargs))
-
-    def messenger(self, name=None, cleanup=True, **kwargs):
-        """Return a started Messenger that will be cleaned up on teardown."""
-        m = Messenger(name or os.path.basename(self.directory), **kwargs)
-        m.start()
-        if cleanup:
-            self.cleanup(m)
-        return m
 
     port_range = (20000, 30000)
     next_port = random.randint(port_range[0], port_range[1])
@@ -621,7 +619,7 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         if hasattr(unittest.TestCase, 'skipTest'):
             unittest.TestCase.skipTest(self, reason)
         else:
-            print "Skipping test", self.id(), reason
+            print("Skipping test %s: %s" % (self.id(), reason))
 
     # Hack to support tearDownClass on older versions of python.
     # The default TestLoader sorts tests alphabetically so we insert
@@ -678,7 +676,7 @@ class SkipIfNeeded(object):
             instance = args[0]
             if isinstance(instance, TestCase) and hasattr(instance, "skip") and instance.skip[self.test_name]:
                 if sys.version_info < (2, 7):
-                    print "%s -> skipping (python<2.7) ..." % self.test_name
+                    print("%s -> skipping (python<2.7) ..." % self.test_name)
                     return
                 else:
                     instance.skipTest(self.reason)

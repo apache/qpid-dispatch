@@ -19,6 +19,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import os
 from optparse import OptionGroup
 import sys
@@ -32,6 +37,7 @@ from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
 from qpid_dispatch_internal.tools.command import connection_options, main, OptionParser, opts_ssl_domain, opts_sasl, \
         opts_url
+from qpid_dispatch_internal.compat import UNICODE
 
 def parse_args(argv):
     """ Set global variables for options, return arguments """
@@ -88,7 +94,7 @@ class BusManager(Node):
         if attribute_names:
             unames = []
             for a in attribute_names:
-                unames.append(unicode(a))
+                unames.append(UNICODE(a))
             attribute_names = unames
         return super(BusManager, self).query(entity_type, attribute_names, count=limit).get_entities()
 
@@ -386,7 +392,7 @@ class BusManager(Node):
             dispRows = sort.getSorted()
             disp.formattedTable(title, heads, dispRows)
         else:
-            print "Router is Standalone - No Router List"
+            print("Router is Standalone - No Router List")
 
     def displayAddresses(self):
         disp = Display(prefix="  ")
@@ -517,7 +523,7 @@ class BusManager(Node):
             rows.append(row)
         if not rows:
             # router built w/o memory pools:
-            print "No memory statistics available"
+            print("No memory statistics available")
             return
         title = "Types"
         sorter = Sorter(heads, rows, 'type', 0, True)
@@ -527,7 +533,7 @@ class BusManager(Node):
     def displayLog(self):
         log = self.get_log(limit=self.opts.limit)
         for line in log:
-            print "%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2])
+            print("%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2]))
 
     def displayMain(self, identitys, main):
         if   main == 'l': self.displayRouterLinks()

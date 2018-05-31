@@ -17,6 +17,12 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 import unittest2 as unittest
 import os
 from subprocess import PIPE, Popen
@@ -31,7 +37,7 @@ class AuthServicePluginTest(TestCase):
     def createSaslFiles(cls):
         # Create a sasl database.
         p = Popen(['saslpasswd2', '-c', '-p', '-f', 'qdrouterd.sasldb', '-u', 'domain.com', 'test'],
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         result = p.communicate('password')
         assert p.returncode == 0, \
             "saslpasswd2 exit status %s, output:\n%s" % (p.returncode, result)

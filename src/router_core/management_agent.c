@@ -465,13 +465,13 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
     // Obtain the count and offset.
     parsed_field = qd_parse_value_by_key(properties_fld, COUNT);
     if (parsed_field)
-        (*count) = qd_parse_as_int(parsed_field);
+        (*count) = (int)qd_parse_as_long(parsed_field);
     else
         (*count) = -1;
 
     parsed_field = qd_parse_value_by_key(properties_fld, OFFSET);
     if (parsed_field)
-        (*offset) = qd_parse_as_int(parsed_field);
+        (*offset) = (int)qd_parse_as_long(parsed_field);
     else
         (*offset) = 0;
 

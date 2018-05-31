@@ -17,7 +17,12 @@
 # under the License.
 #
 
-from data import MessageMAR, MessageMAU
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+from .data import MessageMAR, MessageMAU
 from ..dispatch import LOG_TRACE
 
 MAX_KEPT_DELTAS = 10

@@ -17,11 +17,17 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from proton import Message, Timeout
 from system_test import TestCase, Qdrouterd, main_module
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+from qpid_dispatch_internal.compat import BINARY
 
 # PROTON-828:
 try:
@@ -211,7 +217,7 @@ class MessageRouteTruncateTest(MessagingHandler):
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
 
     def stream(self):
-        self.sender1.stream(self.long_data)
+        self.sender1.stream(BINARY(self.long_data))
         self.sent_stream += len(self.long_data)
         if self.sent_stream >= 1000000:
             self.streaming = False
@@ -316,7 +322,7 @@ class LinkRouteTruncateTest(MessagingHandler):
         self.sender1 = event.container.create_sender(self.sender_conn, self.address, name="S1")
 
     def stream(self):
-        self.sender1.stream(self.long_data)
+        self.sender1.stream(BINARY(self.long_data))
         self.sent_stream += len(self.long_data)
         if self.sent_stream >= 1000000:
             self.streaming = False
@@ -434,7 +440,7 @@ class MessageRouteAbortTest(MessagingHandler):
         if op == 'F':
             body = "FINISH"
         else:
-            for i in range(size / 10):
+            for i in range(size // 10):
                 body += "0123456789"
         msg = Message(body=body)
         
@@ -522,7 +528,7 @@ class MulticastTruncateTest(MessagingHandler):
         self.receiver2      = event.container.create_receiver(self.receiver2_conn, self.address)
 
     def stream(self):
-        self.sender1.stream(self.long_data)
+        self.sender1.stream(BINARY(self.long_data))
         self.sent_stream += len(self.long_data)
         if self.sent_stream >= 1000000:
             self.streaming = False

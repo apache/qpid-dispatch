@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
@@ -167,7 +172,8 @@ class LinkRouteTest(TestCase):
             cmd = cmd + args
         p = self.popen(
             cmd,
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, "qdstat exit status %s, output:\n%s" % (p.returncode, out)
@@ -176,11 +182,12 @@ class LinkRouteTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -216,9 +223,9 @@ class LinkRouteTest(TestCase):
             # This identity should not be found
             cmd = 'READ --type=linkRoute --identity=9999'
             out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        except Exception, e:
+        except Exception as e:
             exception_occurred = True
-            self.assertTrue("NotFoundStatus: Not Found" in e.message)
+            self.assertTrue("NotFoundStatus: Not Found" in str(e))
 
         self.assertTrue(exception_occurred)
 
@@ -227,9 +234,9 @@ class LinkRouteTest(TestCase):
             # There is no identity specified, this is a bad request
             cmd = 'READ --type=linkRoute'
             out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        except Exception, e:
+        except Exception as e:
             exception_occurred = True
-            self.assertTrue("BadRequestStatus: No name or identity provided" in e.message)
+            self.assertTrue("BadRequestStatus: No name or identity provided" in str(e))
 
         self.assertTrue(exception_occurred)
 
@@ -769,7 +776,10 @@ class DeliveryTagsTest(MessagingHandler):
         self.delivery_tag_verified = False
         # The delivery tag we are going to send in the transfer frame
         # We will later make sure that the same delivery tag shows up on the receiving end in the link routed case.
-        self.delivery_tag = '92319'
+        # KAG: force the literal to type 'str' due to SWIG weirdness: on 2.X a
+        # delivery tag cannot be unicode (must be binary), but on 3.X it must
+        # be unicode!  See https://issues.apache.org/jira/browse/PROTON-1843
+        self.delivery_tag = str('92319')
         self.error = None
 
     def timeout(self):

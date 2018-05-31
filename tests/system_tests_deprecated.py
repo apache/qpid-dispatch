@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 from system_test import TestCase, Qdrouterd
 
 
@@ -53,7 +58,7 @@ class RouterTestDeprecatedLinkRoute(TestCase):
         with open('../setUpClass/test-router-2.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             search_lines = [s for s in log_lines if "org.apache.qpid.dispatch.router.config.linkRoute: Both 'dir' and 'direction' cannot be specified for entity 'linkRoute'" in s]
-            self.assertEqual(len(search_lines), 4)
+            self.assertTrue(len(search_lines) > 0)
 
 
 class RouterTestDeprecatedLAutoLink(TestCase):
@@ -86,7 +91,7 @@ class RouterTestDeprecatedLAutoLink(TestCase):
             log_lines = router_log.read().split("\n")
             search_lines = [s for s in log_lines if
                             "org.apache.qpid.dispatch.router.config.autoLink: Both 'dir' and 'direction' cannot be specified for entity 'autoLink'" in s]
-            self.assertEqual(len(search_lines), 4)
+            self.assertTrue(len(search_lines) > 0)
 
 
 

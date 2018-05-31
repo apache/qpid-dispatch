@@ -17,8 +17,10 @@
  * under the License.
  */
 
-#include "entity_cache.h"
 #include <qpid/dispatch/python_embedded.h>
+#include "python_private.h"
+
+#include "entity_cache.h"
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/error.h>
@@ -26,6 +28,8 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/router.h>
 #include <qpid/dispatch/error.h>
+
+#include <ctype.h>
 
 
 #define DISPATCH_MODULE "qpid_dispatch_internal.dispatch"
@@ -51,7 +55,7 @@ void qd_python_initialize(qd_dispatch_t *qd, const char *python_pkgdir)
     dispatch = qd;
     ilock = sys_mutex();
     if (python_pkgdir)
-        dispatch_python_pkgdir = PyString_FromString(python_pkgdir);
+        dispatch_python_pkgdir = PyUnicode_FromString(python_pkgdir);
 
     qd_python_lock_state_t ls = qd_python_lock();
     Py_Initialize();
@@ -89,7 +93,8 @@ void qd_python_check_lock(void)
 
 static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 {
-    switch (qd_parse_tag(field)) {
+    uint8_t tag = qd_parse_tag(field);
+    switch (tag) {
       case QD_AMQP_VBIN8:
       case QD_AMQP_VBIN32:
       case QD_AMQP_STR8_UTF8:
@@ -103,7 +108,7 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
 
 #define SHORT_BUF 1024
     uint8_t short_buf[SHORT_BUF];
-    PyObject *result;
+    PyObject *result = NULL;
     qd_iterator_t *raw = qd_parse_raw(field);
     qd_iterator_reset(raw);
     uint32_t length = qd_iterator_remaining(raw);
@@ -119,9 +124,36 @@ static PyObject *parsed_to_py_string(qd_parsed_field_t *field)
     ptr = buffer;
     while (!qd_iterator_end(raw))
         *(ptr++) = qd_iterator_octet(raw);
-    result = PyString_FromStringAndSize((char*) buffer, ptr - buffer);
+
+    switch (tag) {
+      case QD_AMQP_VBIN8:
+      case QD_AMQP_VBIN32:
+          result = PyBytes_FromStringAndSize((char *)buffer,
+                                             ptr - buffer);
+          break;
+
+      case QD_AMQP_STR8_UTF8:
+      case QD_AMQP_STR32_UTF8:
+          // UTF-8 decoding
+          result = PyUnicode_FromStringAndSize((char *)buffer,
+                                               ptr - buffer);
+          break;
+
+      case QD_AMQP_SYM8:
+      case QD_AMQP_SYM32:
+          // ascii
+          result = PyUnicode_DecodeASCII((char *)buffer,
+                                         ptr - buffer, NULL);
+          break;
+    }
+
     if (alloc)
         free(buffer);
+
+    if (!result)
+        qd_log(log_source, QD_LOG_DEBUG,
+               "Cannot convert field type 0x%X to python string object",
+               tag);
 
     return result;
 }
@@ -135,17 +167,43 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         qd_compose_insert_null(field);
     }
     else if (PyBool_Check(value)) {
-        qd_compose_insert_bool(field, PyInt_AS_LONG(value) ? 1 : 0);
+        qd_compose_insert_bool(field, PyLong_AsLong(value) ? 1 : 0);
     }
-    else if (PyInt_Check(value)) {
-        // We are now sure that the value is an int
-        qd_compose_insert_int(field, (int32_t) PyInt_AS_LONG(value));
+    else if (QD_PY_INT_CHECK(value)) {
+        // We are now sure that the value is an integer type
+        int64_t ival = QD_PY_INT_2_INT64(value);
+        if (INT32_MIN <= ival && ival <= INT32_MAX) {
+            qd_compose_insert_int(field, (int32_t) ival);
+        } else {
+            qd_compose_insert_long(field, ival);
+        }
     }
-    else if (PyLong_Check(value)) {
-        qd_compose_insert_long(field, (int64_t) PyLong_AsLongLong(value));
+    else if (PyUnicode_Check(value)) {
+        char *data = py_string_2_c(value);
+        if (data) {
+            qd_compose_insert_string(field, data);
+            free(data);
+        } else {
+            qd_log(log_source, QD_LOG_ERROR,
+                   "Unable to convert python unicode object");
+        }
     }
-    else if (PyString_Check(value) || PyUnicode_Check(value)) {
-        qd_compose_insert_string(field, PyString_AsString(value));
+    else if (PyBytes_Check(value)) {
+        // Note: In python 2.X PyBytes is simply an alias for the PyString
+        // type. In python 3.x PyBytes is a distinct type (may contain zeros),
+        // and all strings are PyUnicode types.  Historically
+        // this code has just assumed this data is always a null terminated
+        // UTF8 string. We continue that tradition for Python2, but ending up
+        // here in Python3 means this is actually binary data which may have
+        // embedded zeros.
+        if (PY_MAJOR_VERSION <= 2) {
+            qd_compose_insert_string(field, PyBytes_AsString(value));
+        } else {
+            ssize_t len = 0;
+            char *data = NULL;
+            PyBytes_AsStringAndSize(value, &data, &len);
+            qd_compose_insert_binary(field, (uint8_t *)data, len);
+        }
     }
     else if (PyDict_Check(value)) {
         Py_ssize_t  iter = 0;
@@ -191,10 +249,15 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
         PyObject *type=0, *typestr=0, *repr=0;
         if ((type = PyObject_Type(value)) &&
             (typestr = PyObject_Str(type)) &&
-            (repr = PyObject_Repr(value)))
+            (repr = PyObject_Repr(value))) {
+            char *t_str = py_string_2_c(typestr);
+            char *r_str = py_string_2_c(repr);
             qd_error(QD_ERROR_TYPE, "Can't compose object of type %s: %s",
-                     PyString_AsString(typestr), PyString_AsString(repr));
-        else
+                     t_str ? t_str : "Unknown",
+                     r_str ? r_str : "Unknown");
+            free(t_str);
+            free(r_str);
+        } else
             qd_error(QD_ERROR_TYPE, "Can't compose python object of unknown type");
 
         Py_XDECREF(type);
@@ -239,7 +302,7 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
       case QD_AMQP_UINT:
       case QD_AMQP_SMALLUINT:
       case QD_AMQP_UINT0:
-        result = PyInt_FromLong((long) qd_parse_as_uint(field));
+        result = PyLong_FromLong((long) qd_parse_as_uint(field));
         break;
 
       case QD_AMQP_ULONG:
@@ -253,7 +316,7 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
       case QD_AMQP_SHORT:
       case QD_AMQP_INT:
       case QD_AMQP_SMALLINT:
-        result = PyInt_FromLong((long) qd_parse_as_int(field));
+        result = PyLong_FromLong((long) qd_parse_as_int(field));
         break;
 
       case QD_AMQP_LONG:
@@ -337,7 +400,7 @@ static int LogAdapter_init(LogAdapter *self, PyObject *args, PyObject *kwds)
     if (!PyArg_ParseTuple(args, "s", &text))
         return -1;
 
-    self->module_name = PyString_FromString(text);
+    self->module_name = PyUnicode_FromString(text);
     self->log_source  = qd_log_source(text);
     return 0;
 }
@@ -346,7 +409,7 @@ static int LogAdapter_init(LogAdapter *self, PyObject *args, PyObject *kwds)
 static void LogAdapter_dealloc(LogAdapter* self)
 {
     Py_XDECREF(self->module_name);
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 
@@ -376,54 +439,14 @@ static PyMethodDef LogAdapter_methods[] = {
 };
 
 static PyTypeObject LogAdapterType = {
-    PyObject_HEAD_INIT(0)
-    0,                         /* ob_size*/
-    DISPATCH_MODULE ".LogAdapter",  /* tp_name*/
-    sizeof(LogAdapter),        /* tp_basicsize*/
-    0,                         /* tp_itemsize*/
-    (destructor)LogAdapter_dealloc, /* tp_dealloc*/
-    0,                         /* tp_print*/
-    0,                         /* tp_getattr*/
-    0,                         /* tp_setattr*/
-    0,                         /* tp_compare*/
-    0,                         /* tp_repr*/
-    0,                         /* tp_as_number*/
-    0,                         /* tp_as_sequence*/
-    0,                         /* tp_as_mapping*/
-    0,                         /* tp_hash */
-    0,                         /* tp_call*/
-    0,                         /* tp_str*/
-    0,                         /* tp_getattro*/
-    0,                         /* tp_setattro*/
-    0,                         /* tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /* tp_flags*/
-    "Dispatch Log Adapter",    /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
-    0,                         /* tp_richcompare */
-    0,                         /* tp_weaklistoffset */
-    0,                         /* tp_iter */
-    0,                         /* tp_iternext */
-    LogAdapter_methods,        /* tp_methods */
-    0,                         /* tp_members */
-    0,                         /* tp_getset */
-    0,                         /* tp_base */
-    0,                         /* tp_dict */
-    0,                         /* tp_descr_get */
-    0,                         /* tp_descr_set */
-    0,                         /* tp_dictoffset */
-    (initproc)LogAdapter_init, /* tp_init */
-    0,                         /* tp_alloc */
-    0,                         /* tp_new */
-    0,                         /* tp_free */
-    0,                         /* tp_is_gc */
-    0,                         /* tp_bases */
-    0,                         /* tp_mro */
-    0,                         /* tp_cache */
-    0,                         /* tp_subclasses */
-    0,                         /* tp_weaklist */
-    0,                         /* tp_del */
-    0                          /* tp_version_tag */
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name      = DISPATCH_MODULE ".LogAdapter",
+    .tp_doc       = "Dispatch Log Adapter",
+    .tp_basicsize = sizeof(LogAdapter),
+    .tp_dealloc   = (destructor)LogAdapter_dealloc,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_methods   = LogAdapter_methods,
+    .tp_init      = (initproc)LogAdapter_init
 };
 
 
@@ -463,7 +486,7 @@ static PyObject *py_iter_copy(qd_iterator_t *iter)
 {
     unsigned char *bytes = 0;
     PyObject *value = 0;
-    (void)(iter && (bytes = qd_iterator_copy(iter)) && (value = PyString_FromString((char*)bytes)));
+    (void)(iter && (bytes = qd_iterator_copy(iter)) && (value = PyUnicode_FromString((char*)bytes)));
     if (bytes) free(bytes);
     return value;
 }
@@ -529,8 +552,25 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     char aclass    = 'L';
     char phase     = '0';
     int  treatment = QD_TREATMENT_ANYCAST_CLOSEST;
-    if (!PyArg_ParseTuple(args, "OO|cci", &self->handler, &addr, &aclass, &phase, &treatment))
+
+    const char *aclass_str = NULL;
+    const char *phase_str = NULL;
+    if (!PyArg_ParseTuple(args, "OO|ssi", &self->handler, &addr, &aclass_str, &phase_str, &treatment))
         return -1;
+    if (aclass_str) {
+        if (strlen(aclass_str) != 1 || !isalpha(*aclass_str)) {
+            PyErr_SetString(PyExc_TypeError, "Address class not a single character");
+            return -1;
+        }
+        aclass = *aclass_str;
+    }
+    if (phase_str) {
+        if (strlen(phase_str) != 1 || !isdigit(*phase_str)) {
+            PyErr_SetString(PyExc_TypeError, "Phase not a single numeric character");
+            return -1;
+        }
+        phase = *phase_str;
+    }
     if (!PyCallable_Check(self->handler)) {
         PyErr_SetString(PyExc_TypeError, "IoAdapter.__init__ handler is not callable");
         return -1;
@@ -542,10 +582,11 @@ static int IoAdapter_init(IoAdapter *self, PyObject *args, PyObject *kwds)
     Py_INCREF(self->handler);
     self->qd   = dispatch;
     self->core = qd_router_core(self->qd);
-    const char *address = PyString_AsString(addr);
+    char *address = py_string_2_c(addr);
     if (!address) return -1;
     qd_error_clear();
     self->sub = qdr_core_subscribe(self->core, address, aclass, phase, treatment, qd_io_rx_handler, self);
+    free(address);
     if (qd_error_code()) {
         PyErr_SetString(PyExc_RuntimeError, qd_error_message());
         return -1;
@@ -557,7 +598,7 @@ static void IoAdapter_dealloc(IoAdapter* self)
 {
     qdr_core_unsubscribe(self->sub);
     Py_DECREF(self->handler);
-    self->ob_type->tp_free((PyObject*)self);
+    Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
 static qd_error_t compose_python_message(qd_composed_field_t **field, PyObject *message,
@@ -618,7 +659,14 @@ static PyObject *qd_python_send(PyObject *self, PyObject *args)
 
         PyObject *address = PyObject_GetAttrString(message, "address");
         if (address) {
-            qdr_send_to2(ioa->core, msg, PyString_AsString(address), (bool) no_echo, (bool) control);
+            char *a_str = py_obj_2_c_string(address);
+            if (a_str) {
+                qdr_send_to2(ioa->core, msg, a_str, (bool) no_echo, (bool) control);
+                free(a_str);
+            } else {
+                qd_log(log_source, QD_LOG_ERROR,
+                       "Unable to convert message address to C string");
+            }
             Py_DECREF(address);
         }
         qd_compose_free(field);
@@ -638,54 +686,14 @@ static PyMethodDef IoAdapter_methods[] = {
 
 
 static PyTypeObject IoAdapterType = {
-    PyObject_HEAD_INIT(0)
-    0,                         /* ob_size*/
-    DISPATCH_MODULE ".IoAdapter",  /* tp_name*/
-    sizeof(IoAdapter),         /* tp_basicsize*/
-    0,                         /* tp_itemsize*/
-    (destructor)IoAdapter_dealloc, /* tp_dealloc*/
-    0,                         /* tp_print*/
-    0,                         /* tp_getattr*/
-    0,                         /* tp_setattr*/
-    0,                         /* tp_compare*/
-    0,                         /* tp_repr*/
-    0,                         /* tp_as_number*/
-    0,                         /* tp_as_sequence*/
-    0,                         /* tp_as_mapping*/
-    0,                         /* tp_hash */
-    0,                         /* tp_call*/
-    0,                         /* tp_str*/
-    0,                         /* tp_getattro*/
-    0,                         /* tp_setattro*/
-    0,                         /* tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /* tp_flags*/
-    "Dispatch IO Adapter",     /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
-    0,                         /* tp_richcompare */
-    0,                         /* tp_weaklistoffset */
-    0,                         /* tp_iter */
-    0,                         /* tp_iternext */
-    IoAdapter_methods,         /* tp_methods */
-    0,                         /* tp_members */
-    0,                         /* tp_getset */
-    0,                         /* tp_base */
-    0,                         /* tp_dict */
-    0,                         /* tp_descr_get */
-    0,                         /* tp_descr_set */
-    0,                         /* tp_dictoffset */
-    (initproc)IoAdapter_init,  /* tp_init */
-    0,                         /* tp_alloc */
-    0,                         /* tp_new */
-    0,                         /* tp_free */
-    0,                         /* tp_is_gc */
-    0,                         /* tp_bases */
-    0,                         /* tp_mro */
-    0,                         /* tp_cache */
-    0,                         /* tp_subclasses */
-    0,                         /* tp_weaklist */
-    0,                         /* tp_del */
-    0                          /* tp_version_tag */
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name      = DISPATCH_MODULE ".IoAdapter",
+    .tp_doc       = "Dispatch IO Adapter",
+    .tp_basicsize = sizeof(IoAdapter),
+    .tp_dealloc   = (destructor)IoAdapter_dealloc,
+    .tp_flags     = Py_TPFLAGS_DEFAULT,
+    .tp_methods   = IoAdapter_methods,
+    .tp_init      = (initproc)IoAdapter_init,
 };
 
 
@@ -695,7 +703,7 @@ static PyTypeObject IoAdapterType = {
 
 static void qd_register_constant(PyObject *module, const char *name, uint32_t value)
 {
-    PyObject *const_object = PyInt_FromLong((long) value);
+    PyObject *const_object = PyLong_FromLong((long) value);
     Py_INCREF(const_object);
     PyModule_AddObject(module, name, const_object);
 }

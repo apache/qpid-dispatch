@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest, os, json
 from subprocess      import PIPE, STDOUT
 from proton          import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
@@ -25,6 +30,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor  import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils    import BlockingConnection
 from qpid_dispatch.management.client import Node
+from qpid_dispatch_internal.compat import UNICODE
 
 import time
 import datetime
@@ -95,17 +101,17 @@ class ManagementMessageHelper ( object ) :
                   'type':       'org.amqp.management'
                 }
         attrs = []
-        attrs.append ( unicode('linkType') )
-        attrs.append ( unicode('linkDir') )
-        attrs.append ( unicode('linkName') )
-        attrs.append ( unicode('owningAddr') )
-        attrs.append ( unicode('capacity') )
-        attrs.append ( unicode('undeliveredCount') )
-        attrs.append ( unicode('unsettledCount') )
-        attrs.append ( unicode('acceptedCount') )
-        attrs.append ( unicode('rejectedCount') )
-        attrs.append ( unicode('releasedCount') )
-        attrs.append ( unicode('modifiedCount') )
+        attrs.append ( UNICODE('linkType') )
+        attrs.append ( UNICODE('linkDir') )
+        attrs.append ( UNICODE('linkName') )
+        attrs.append ( UNICODE('owningAddr') )
+        attrs.append ( UNICODE('capacity') )
+        attrs.append ( UNICODE('undeliveredCount') )
+        attrs.append ( UNICODE('unsettledCount') )
+        attrs.append ( UNICODE('acceptedCount') )
+        attrs.append ( UNICODE('rejectedCount') )
+        attrs.append ( UNICODE('releasedCount') )
+        attrs.append ( UNICODE('modifiedCount') )
 
         msg_body = { }
         msg_body [ 'attributeNames' ] = attrs
@@ -435,7 +441,7 @@ class DeleteSpuriousConnector ( MessagingHandler ):
 
     def debug_print ( self, text ) :
         if self.debug == True:
-            print "%.6lf %s" % ( time.time(), text )
+            print("%.6lf %s" % ( time.time(), text ))
 
 
     # Shut down everything and exit.
@@ -568,7 +574,7 @@ class DeleteSpuriousConnector ( MessagingHandler ):
         if self.n_sent >= self.n_messages :
             return
 
-        for _ in xrange ( self.burst_size ) :
+        for _ in range ( self.burst_size ) :
             if self.sender.credit > 0 and self.n_sent < self.n_messages :
                 msg = Message ( body=self.n_sent )
                 self.n_sent += 1
@@ -764,7 +770,7 @@ class TopologyDisposition ( MessagingHandler ):
 
     def debug_print ( self, text ) :
         if self.debug == True:
-            print "%.6lf %s" % ( time.time(), text )
+            print("%.6lf %s" % ( time.time(), text ))
 
 
     # Shut down everything and exit.
@@ -899,7 +905,7 @@ class TopologyDisposition ( MessagingHandler ):
             self.debug_print ( "send called while state is %s" % self.state )
             return
 
-        for _ in xrange ( self.send_burst_size ) :
+        for _ in range ( self.send_burst_size ) :
             if self.sender.credit > 0 :
                 msg = Message ( body=self.n_sent )
                 msg_tag=str(self.n_sent)
@@ -1031,25 +1037,25 @@ class TopologyDisposition ( MessagingHandler ):
     def print_message_status ( self ) :
         for i in range ( self.n_sent ) :
             tag = str ( i )
-            print tag, self.message_status [ tag ]
+            print("%s %s" % (tag, self.message_status [ tag ]))
 
 
     # Used during debugging.
     def print_unknown_messages ( self ) :
         count = 0
-        print "Messages with unknown status: "
+        print("Messages with unknown status: ")
         for i in range ( self.n_sent ) :
             tag = str ( i )
             if self.message_status [ tag ] == 'sent' :
               count = count + 1
-              print '    ', tag, 'sent:', self.message_times [ tag ]
-        print "    total: ", count
+              print('    %s sent: %s' % (tag, self.message_times [ tag ]))
+        print("    total: %s" % count)
 
 
     # Used during debugging.
     def quick_print_unknown_messages ( self ) :
         count = 0
-        print "Messages with unknown status: "
+        print("Messages with unknown status: ")
 
         first = -1
         last  =  0
@@ -1063,9 +1069,9 @@ class TopologyDisposition ( MessagingHandler ):
               if i > last :
                 last = i
 
-        print '    first : ', first, 'sent : %.6lf' % self.message_times [ str(first) ]
-        print '    last  : ', last,  'sent : %.6lf' % self.message_times [ str(last)  ]
-        print "    total : ", count
+        print('    first : %s sent : %.6lf' % (first, self.message_times[str(first)]))
+        print('    last  : %s sent : %.6lf' % (last, self.message_times[str(last)]))
+        print("    total : %s" % count)
 
 
     def run(self):

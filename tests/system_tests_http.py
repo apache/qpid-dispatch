@@ -16,6 +16,10 @@
 # specific language governing permissions and limitations
 # under the License.
 #
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import unittest2 as unittest
 import os, threading, sys, urllib2
@@ -87,7 +91,7 @@ class RouterTestHttp(TestCase):
                 self.start()
             def run(self):
                 try: test(self.port)
-                except Exception, e: self.ex = e
+                except Exception as e: self.ex = e
         threads = [TestThread(p) for p in r.ports + r.ports]
         for t in threads: t.join()
         for t in threads:

@@ -17,22 +17,25 @@
  * under the License.
  */
 
+#include <qpid/dispatch/python_embedded.h>  // must be first!
 
-/* Make sure we get the XSI compliant strerror_r from string.h not the GNU one. */
-#define _POSIX_C_SOURCE 200112L
-#undef _GNU_SOURCE
-#include <string.h>
-
-#include <Python.h>
 #include <qpid/dispatch/error.h>
 #include <qpid/dispatch/enum.h>
 #include <qpid/dispatch/log.h>
-#include <qpid/dispatch/python_embedded.h>
 #include <stdarg.h>
-#include <stdio.h>
 #include <errno.h>
+#include <string.h>
 #include "log_private.h"
 #include "aprintf.h"
+#include "python_private.h"
+
+// force the use of the non-gnu version of strerror_r
+#undef _POSIX_C_SOURCE
+#undef _GNU_SOURCE
+#define _POSIX_C_SOURCE 200112L
+#define _GNU_SOURCE 0
+#include <stdio.h>
+
 
 static const char *qd_error_names[] = {
  "No Error",
@@ -108,7 +111,7 @@ qd_error_t qd_error_code() {
 }
 
 static void py_set_item(PyObject *dict, const char* name, PyObject *value) {
-    PyObject *py_name = PyString_FromString(name);
+    PyObject *py_name = PyUnicode_FromString(name);
     PyDict_SetItem(dict, py_name, value);
     Py_DECREF(py_name);
 }
@@ -138,17 +141,21 @@ static void log_trace_py(PyObject *type, PyObject *value, PyObject* trace, qd_lo
 
 
     if (result) {
-        const char* trace = PyString_AsString(result);
-        if (strlen(trace) < QD_LOG_TEXT_MAX) {
-            qd_log_impl(log_source, level, file, line, "%s", trace);
-        } else {
-            // Keep as much of the the tail of the trace as we can.
-            const char *tail = trace;
-            while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
-                tail = strchr(tail, '\n');
-                if (tail) ++tail;
+	char *trace = py_string_2_c(result);
+	if (trace) {
+            if (strlen(trace) < QD_LOG_TEXT_MAX) {
+                qd_log_impl(log_source, level, file, line, "%s", trace);
+            } else {
+                // Keep as much of the the tail of the trace as we can.
+                const char *tail = trace;
+                while (tail && strlen(tail) > QD_LOG_TEXT_MAX) {
+                    tail = strchr(tail, '\n');
+                    if (tail) ++tail;
+                }
+                qd_log_impl(log_source, level, file, line,
+                            "Traceback truncated:\n%s", tail ? tail : "");
             }
-            qd_log_impl(log_source, level, file, line, "Traceback truncated:\n%s", tail ? tail : "");
+            free(trace);
         }
         Py_DECREF(result);
     }
@@ -161,19 +168,21 @@ qd_error_t qd_error_py_impl(const char *file, int line) {
         PyErr_Fetch(&type, &value, &trace); /* Note clears the python error indicator */
 
         PyObject *py_type_name = type ? PyObject_GetAttrString(type, "__name__") : NULL;
-        const char *type_name = py_type_name ? PyString_AsString(py_type_name) : NULL;
-
+        char *type_name = py_type_name ? py_string_2_c(py_type_name) : NULL;
         PyObject *py_value_str = value ? PyObject_Str(value) : NULL;
-        const char *value_str = py_value_str ? PyString_AsString(py_value_str) : NULL;
-        if (!value_str) value_str = "Unknown";
+        char *value_str = py_string_2_c(py_value_str);
 
         PyErr_Clear(); /* Ignore errors while we're trying to build the values. */
         if (type_name)
-            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", type_name, value_str);
+            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s: %s", type_name,
+                          (value_str) ? value_str : "Unknown");
         else
-            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s", value_str);
+            qd_error_impl(QD_ERROR_PYTHON, file, line, "%s",
+                          (value_str) ? value_str : "Unknown");
         Py_XDECREF(py_value_str);
+        free(value_str);
         Py_XDECREF(py_type_name);
+        free(type_name);
 
         log_trace_py(type, value, trace, QD_LOG_ERROR, file, line);
 
@@ -196,8 +205,11 @@ qd_error_t qd_error_errno_impl(int errnum, const char *file, int line, const cha
         vaprintf(&begin, end, fmt, arglist);
         va_end(arglist);
         aprintf(&begin, end, ": ", errnum);
-        (void)strerror_r(errnum, begin, end - begin);
-        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", ts.error_message);
+        char *em = ts.error_message;
+        if(strerror_r(errnum, begin, end - begin) != 0) {
+            snprintf(begin, end - begin, "Unknown error %d", errnum);
+        }
+        qd_log_impl(log_source, QD_LOG_ERROR, file, line, "%s", em);
         return qd_error_code();
     }
     else

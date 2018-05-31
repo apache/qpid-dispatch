@@ -19,6 +19,11 @@
 
 """System tests for management of qdrouter"""
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 import system_test, re, os, json
 from proton.handlers import MessagingHandler
@@ -27,6 +32,7 @@ from proton import Message
 from qpid_dispatch.management.client import Node, ManagementError, Url, BadRequestStatus, NotImplementedStatus, NotFoundStatus
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import dictify
+from qpid_dispatch_internal.compat import BINARY
 from system_test import Qdrouterd, message, Process
 from itertools import chain
 
@@ -138,7 +144,7 @@ class ManagementTest(system_test.TestCase):
         attribute_names=['type', 'name', 'port']
         response = self.node.query(type=LISTENER, attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
-        expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
+        expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
             self.assertTrue(dict(zip(attribute_names, r)) in response.get_dicts())
@@ -148,7 +154,7 @@ class ManagementTest(system_test.TestCase):
         attribute_names=['type', 'name', 'port']
         response = self.node.query(attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
-        expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in xrange(3)]
+        expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertTrue(r in response.results)
         for name in ['router/' + self.router.name, 'log/DEFAULT']:
@@ -322,15 +328,14 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(dummy.attributes, dummy2.attributes)
 
         integers = [0, 1, 42, (2**63)-1, -1, -42, -(2**63)]
-        test_data = ["bytes", u"string"] + integers
+        test_data = [BINARY("bytes"), u"string"] + integers
         for data in test_data:
             try:
                 self.assertEqual(
                     {u'operation': u'callme', u'type': DUMMY, u'identity': identity, u'data': data},
                     dummy.call('callme', data=data))
-            except TypeError:
-                extype, value, trace = sys.exc_info()
-                raise extype, "data=%r: %s" % (data, value), trace
+            except TypeError as exc:
+                raise TypeError("data=%r: %s" % (data, exc))
 
         dummy.badattribute = 'Bad'
         self.assertRaises(BadRequestStatus, dummy.update)

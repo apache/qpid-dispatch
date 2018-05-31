@@ -17,6 +17,11 @@
 # under the License
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import socket
 import binascii
 
@@ -26,7 +31,7 @@ class PolicyError(Exception):
     def __init__(self, value):
         self.value = value
     def __str__(self):
-        return repr(self.value)
+        return str(self.value)
 
 def is_ipv6_enabled():
     """
@@ -88,7 +93,7 @@ class HostStruct(object):
             self.family = sfamily
             self.binary = socket.inet_pton(family, saddr)
             return
-        except Exception, e:
+        except Exception as e:
             raise PolicyError("HostStruct: '%s' failed to resolve: '%s'" %
                               (hostname, e))
 
@@ -201,7 +206,7 @@ class HostAddr(object):
             return c0 >= 0 and c1 <= 0
         except PolicyError:
             return False
-        except Exception, e:
+        except Exception as e:
             assert isinstance(candidate, HostStruct), \
                 ("Wrong type. Expected HostStruct but received %s" % candidate.__class__.__name__)
             return False

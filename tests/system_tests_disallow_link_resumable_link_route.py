@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
@@ -93,7 +98,8 @@ class LinkRouteTest(TestCase):
         try:
             receiver = connection.create_receiver(address="org.apache", options=[DurableSubscription()])
             self.fail("link should have been detached")
-        except LinkDetached, e: None
+        except LinkDetached:
+            pass
         connection.close()
 
     def test_normal_sender_allowed(self):
@@ -110,7 +116,8 @@ class LinkRouteTest(TestCase):
         try:
             sender = connection.create_sender(address="org.apache", options=[SenderExpiry(Terminus.EXPIRE_NEVER)])
             self.fail("link should have been detached")
-        except LinkDetached, e: None
+        except LinkDetached:
+            pass
         connection.close()
 
     def test_non_zero_timeout_sender_disallowed(self):
@@ -120,7 +127,8 @@ class LinkRouteTest(TestCase):
         try:
             sender = connection.create_sender(address="org.apache", options=[SenderTimeout(10)])
             self.fail("link should have been detached")
-        except LinkDetached, e: None
+        except LinkDetached:
+            pass
         connection.close()
 
 

@@ -17,6 +17,10 @@
 # under the License
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import os
 import unittest2 as unittest
@@ -24,6 +28,7 @@ from system_test import TestCase, Qdrouterd, DIR, main_module
 import proton
 from proton import SSLDomain, Delivery
 from proton.utils import BlockingConnection
+from qpid_dispatch_internal.compat import BINARY
 
 
 class QdSSLUseridTest(TestCase):
@@ -252,7 +257,7 @@ class QdSSLUseridProxy(QdSSLUseridTest):
         blocking_sender = blocking_connection.create_sender("$management")
 
         request = proton.Message()
-        request.user_id = u"bad-user-id"
+        request.user_id = BINARY("bad-user-id")
 
         result = Delivery.ACCEPTED
         try:
@@ -284,7 +289,7 @@ class QdSSLUseridProxy(QdSSLUseridTest):
         blocking_sender = blocking_connection.create_sender("$management")
 
         request = proton.Message()
-        request.user_id = u"bad-user-id"
+        request.user_id = BINARY("bad-user-id")
 
         for i in range(0, credit_limit+1):
             result = Delivery.ACCEPTED

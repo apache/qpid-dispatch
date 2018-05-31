@@ -17,7 +17,9 @@
  * under the License.
  */
 
-#include <Python.h>
+#include "python_private.h"             // must be first!
+#include <qpid/dispatch/python_embedded.h>
+
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/log.h>
@@ -32,7 +34,7 @@
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 
-#include "qpid/dispatch/python_embedded.h"
+
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -302,11 +304,8 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
                 qd_python_lock_state_t lock_state = qd_python_lock();
                 PyObject *result = PyObject_CallMethod((PyObject *)conn->server->py_displayname_obj, "query", "(ss)", config->ssl_profile, user_id );
                 if (result) {
-                    const char *res_string = PyString_AsString(result);
                     free(user_id);
-                    user_id = malloc(strlen(res_string) + 1);
-                    user_id[0] = '\0';
-                    strcat(user_id, res_string);
+                    user_id = py_string_2_c(result);
                     Py_XDECREF(result);
                 } else {
                     qd_log(conn->server->log_source, QD_LOG_DEBUG, "Internal: failed to read displaynameservice query result");

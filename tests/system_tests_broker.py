@@ -21,6 +21,13 @@
 System tests involving one or more brokers and dispatch routers integrated
 with waypoints.
 """
+
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 import unittest2 as unittest
 import system_test
 from system_test import Qdrouterd, message, MISSING_REQUIREMENTS
@@ -39,7 +46,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             """Start 3 qpidd brokers, wait for them to be ready."""
             super(DistributedQueueTest, cls).setUpClass()
             cls.qpidds = [cls.tester.qpidd('qpidd%s'%i, port=cls.get_port(), wait=False)
-                        for i in xrange(3)]
+                        for i in range(3)]
             for q in cls.qpidds:
                 q.wait_ready()
 
@@ -98,7 +105,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
                     rconf += [
                         ('connector', {'name':q.name, 'port':q.port})]
                 return self.qdrouterd(name, rconf, wait=False)
-            routers = [router(i) for i in xrange(len(self.qpidds))]
+            routers = [router(i) for i in range(len(self.qpidds))]
             for r in routers: r.wait_ready()
             addrs = [r.addresses[0]+"/"+self.testq for r in routers]
             self.verify_equal_spread(addrs, addrs)

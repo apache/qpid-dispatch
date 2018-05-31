@@ -20,11 +20,15 @@
 """
 Qpid Dispatch Router management schema and config file parsing.
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import json
 from pkgutil import get_data
 from . import schema
-from ..compat import JSON_LOAD_KWARGS
+from qpid_dispatch_internal.compat import JSON_LOAD_KWARGS
 
 class QdSchema(schema.Schema):
     """
@@ -39,7 +43,7 @@ class QdSchema(schema.Schema):
         qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
         try:
             super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
-        except Exception,e:
+        except Exception as e:
             raise ValueError("Invalid schema qdrouter.json: %s" % e)
         self.configuration_entity = self.entity_type(self.CONFIGURATION_ENTITY)
         self.operational_entity = self.entity_type(self.OPERATIONAL_ENTITY)

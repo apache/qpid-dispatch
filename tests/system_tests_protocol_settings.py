@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, main_module
 from proton.utils import BlockingConnection
@@ -25,7 +30,8 @@ X86_64_ARCH = "x86_64"
 skip_test = True
 
 # Dont skip tests on 64 bit architectures.
-p = subprocess.Popen("uname -m", shell=True, stdout=subprocess.PIPE)
+p = subprocess.Popen("uname -m", shell=True, stdout=subprocess.PIPE,
+                     universal_newlines=True)
 if X86_64_ARCH in p.communicate()[0]:
     skip_test = False
 

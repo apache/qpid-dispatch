@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest, os
 from subprocess import PIPE, Popen
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT
@@ -36,7 +41,7 @@ class RouterTestPlainSaslCommon(TestCase):
     def createSaslFiles(cls):
         # Create a sasl database.
         p = Popen(['saslpasswd2', '-c', '-p', '-f', 'qdrouterd.sasldb', '-u', 'domain.com', 'test'],
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         result = p.communicate('password')
         assert p.returncode == 0, \
             "saslpasswd2 exit status %s, output:\n%s" % (p.returncode, result)
@@ -121,7 +126,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[1]), '-c'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
@@ -140,7 +146,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
              '--sasl-username=test@domain.com', '--sasl-password=password'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
@@ -171,7 +178,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
              '--sasl-username=test@domain.com', '--sasl-password-file=' + password_file],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \
@@ -279,7 +287,8 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
              '--ssl-certificate=' + self.ssl_file('client-certificate.pem'),
              '--ssl-key=' + self.ssl_file('client-private-key.pem'),
              '--ssl-password=client-password'],
-            name='qdstat-'+self.id(), stdout=PIPE, expect=None)
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
 
         out = p.communicate()[0]
         assert p.returncode == 0, \

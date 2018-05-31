@@ -17,13 +17,18 @@
 # under the License.
 #
 
-from data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
-from hello import HelloProtocol
-from link import LinkStateEngine
-from path import PathEngine
-from mobile import MobileAddressEngine
-from node import NodeTracker
-from message import Message
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
+from .hello import HelloProtocol
+from .link import LinkStateEngine
+from .path import PathEngine
+from .mobile import MobileAddressEngine
+from .node import NodeTracker
+from .message import Message
 
 from traceback import format_exc, extract_stack
 import time
@@ -35,7 +40,7 @@ import time
 from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
 from ..dispatch import TREATMENT_MULTICAST_FLOOD, TREATMENT_MULTICAST_ONCE
 
-class RouterEngine:
+class RouterEngine(object):
     """
     """
 
@@ -60,7 +65,7 @@ class RouterEngine:
                                IoAdapter(self.receive, "qdhello",     'L', '0', TREATMENT_MULTICAST_FLOOD)]
         self.max_routers    = max_routers
         self.id             = router_id
-        self.instance       = long(time.time())
+        self.instance       = int(time.time())
         self.area           = area
         self.log(LOG_INFO, "Router Engine Instantiated: id=%s instance=%d max_routers=%d" %
                  (self.id, self.instance, self.max_routers))
@@ -87,8 +92,10 @@ class RouterEngine:
     @property
     def config(self):
         if not self._config:
-            try: self._config = self.router_adapter.get_agent().find_entity_by_type('router')[0]
-            except IndexError: raise ValueError("No router configuration found")
+            try:
+                self._config = self.router_adapter.get_agent().find_entity_by_type('router')[0]
+            except IndexError:
+                raise ValueError("No router configuration found")
         return self._config
 
     def addressAdded(self, addr):

@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import os
 import sys
 import unittest2 as unittest
@@ -34,20 +39,20 @@ class Adapter(object):
         self._domain = domain
 
     def log(self, level, text):
-        print "Adapter.log(%d): domain=%s, text=%s" % (level, self._domain, text)
+        print("Adapter.log(%d): domain=%s, text=%s" % (level, self._domain, text))
 
     def send(self, dest, opcode, body):
-        print "Adapter.send: domain=%s, dest=%s, opcode=%s, body=%s" % (self._domain, dest, opcode, body)
+        print("Adapter.send: domain=%s, dest=%s, opcode=%s, body=%s" % (self._domain, dest, opcode, body))
 
     def remote_bind(self, subject, peer):
-        print "Adapter.remote_bind: subject=%s, peer=%s" % (subject, peer)
+        print("Adapter.remote_bind: subject=%s, peer=%s" % (subject, peer))
 
     def remote_unbind(self, subject, peer):
-        print "Adapter.remote_unbind: subject=%s, peer=%s" % (subject, peer)
+        print("Adapter.remote_unbind: subject=%s, peer=%s" % (subject, peer))
 
     def node_updated(self, address, reachable, neighbor, link_bit, router_bit):
-        print "Adapter.node_updated: address=%s, reachable=%r, neighbor=%r, link_bit=%d, router_bit=%d" % \
-            (address, reachable, neighbor, link_bit, router_bit)
+        print("Adapter.node_updated: address=%s, reachable=%r, neighbor=%r, link_bit=%d, router_bit=%d" % \
+              (address, reachable, neighbor, link_bit, router_bit))
 
 
 class DataTest(unittest.TestCase):
@@ -189,7 +194,7 @@ class NeighborTest(unittest.TestCase):
         self.engine.tick(2.0)
         self.engine.tick(3.0)
         self.assertEqual(len(self.neighbors), 1)
-        self.assertEqual(self.neighbors.keys(), ['R2'])
+        self.assertEqual(list(self.neighbors.keys()), ['R2'])
 
     def test_establish_multiple_peers(self):
         self.sent = []
@@ -203,7 +208,7 @@ class NeighborTest(unittest.TestCase):
         self.engine.handle_hello(MessageHELLO(None, 'R5', ['R2']), 2.5, 0, 1)
         self.engine.handle_hello(MessageHELLO(None, 'R6', ['R1']), 2.5, 0, 1)
         self.engine.tick(3.0)
-        keys = self.neighbors.keys()
+        keys = [k for k in self.neighbors.keys()]
         keys.sort()
         self.assertEqual(keys, ['R2', 'R3', 'R4', 'R6'])
 

@@ -17,7 +17,6 @@
  * under the License.
  */
 
-#include <Python.h>
 #include "qpid/dispatch/python_embedded.h"
 #include "policy.h"
 #include "policy_internal.h"
@@ -33,6 +32,7 @@
 #include <proton/transport.h>
 #include <proton/error.h>
 #include <proton/event.h>
+#include "python_private.h"
 
 
 //
@@ -321,6 +321,7 @@ bool qd_policy_open_lookup_user(
 {
     // Lookup the user/host/vhost for allow/deny and to get settings name
     bool res = false;
+    name_buf[0] = 0;
     qd_python_lock_state_t lock_state = qd_python_lock();
     PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
     if (module) {
@@ -330,10 +331,17 @@ bool qd_policy_open_lookup_user(
                                                      (PyObject *)policy->py_policy_manager,
                                                      username, hostip, vhost, conn_name, conn_id);
             if (result) {
-                const char *res_string = PyString_AsString(result);
-                strncpy(name_buf, res_string, name_buf_size);
+                char *res_string = py_obj_2_c_string(result);
+                const size_t res_len = res_string ? strlen(res_string) : 0;
+                if (res_len < name_buf_size) {
+                    strcpy(name_buf, res_string);
+                } else {
+                    qd_log(policy->log_source, QD_LOG_ERROR,
+                           "Internal: lookup_user: insufficient buffer for name");
+                }
                 Py_XDECREF(result);
-                res = true; // settings name returned
+                free(res_string);
+                res = !!name_buf[0]; // settings name returned
             } else {
                 qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: result");
             }
@@ -512,6 +520,7 @@ void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_
 //
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
+// substitute "${user}" in place of uname in proposed
 char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, char *obuf, int osize)
 {
     if (strlen(uname) == 0)
@@ -574,13 +583,14 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
 
     // Create a temporary writable copy of incoming allowed list
     char t_allow[QPALN_SIZE + 1]; // temporary buffer for normal allow lists
+    int buflen = sizeof(t_allow);
     char * pa = t_allow;
-    if (a_len > QPALN_SIZE) {
-        pa = (char *)malloc(a_len + 1); // malloc a buffer for larger allow lists
+    if (a_len >= buflen) {
+        buflen = a_len + 1;
+        pa = (char *)malloc(buflen); // malloc a buffer for larger allow lists
+        if (!pa)
+            return false;
     }
-    if (!pa)
-        return false;
-
     strcpy(pa, allowed);        /* We know we have allocated enoough space */
     pa[a_len] = 0;
     // Do reverse user substitution into proposed

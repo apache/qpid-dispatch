@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from proton          import Message, Timeout
 from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded
@@ -1978,7 +1983,7 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
 
     def debug_print ( self, message ) :
         if self.debug :
-            print message
+            print(message)
 
 
     def timeout ( self ):
@@ -2886,7 +2891,7 @@ class RoutingTest ( MessagingHandler ):
 
     def debug_print ( self, message ) :
         if self.debug :
-            print message
+            print(message)
 
 
     # If this happens, the test is hanging.
@@ -2950,13 +2955,13 @@ class RoutingTest ( MessagingHandler ):
         for router in range(len(self.where_to_make_connections)) :
             how_many_for_this_router = self.where_to_make_connections[router]
             for j in range(how_many_for_this_router) :
-              route_container_addr = self.route_container_addrs[router]
-              cnx = event.container.connect ( route_container_addr )
-              # In the dict of connections and actual receiver
-              # counts, store this cnx, and 0.
-              self.router_cnx_counts[router][cnx] = 0
-              self.cnx_status[cnx] = 1
-              self.debug_print ( "on_start: made cnx %s on router %d" % ( str(cnx), router ) )
+                route_container_addr = self.route_container_addrs[router]
+                cnx = event.container.connect ( route_container_addr )
+                # In the dict of connections and actual receiver
+                # counts, store this cnx, and 0.
+                self.router_cnx_counts[router][cnx] = 0
+                self.cnx_status[cnx] = 1
+                self.debug_print ( "on_start: made cnx %s on router %d" % ( str(cnx), router ) )
 
         # STEP 2 : Make a sender and receiver that we will use to tell when the router
         #          network is ready to handle our reoutable address. This sender will
@@ -3092,12 +3097,14 @@ class RoutingTest ( MessagingHandler ):
 
 
     def print_receiver_distribution ( self ) :
-        print "receiver distribution:"
+        print("receiver distribution:")
         for router in range(len(self.router_cnx_counts)) :
-            print "    router", router
+            print("    router %s" % router)
             cnx_dict = self.router_cnx_counts[router]
             for cnx in cnx_dict :
-                print "        cnx:", cnx, "receivers: " , cnx_dict[cnx]
+                print("        cnx: %s receivers: %s"
+                      % (cnx, cnx_dict[cnx]))
+
 
     def get_receiver_distribution ( self ) :
         threeple = ()
@@ -3232,7 +3239,7 @@ class RoutingTest ( MessagingHandler ):
     #=================================================
     def make_senders ( self, n ):
         self.debug_print ( "making %d senders" % n )
-        for i in xrange(n):
+        for i in range(n):
             sender = self.sender_container.create_sender ( self.sender_cnx,
                                                            self.link_routable_address,
                                                            name=link_name()
@@ -3400,7 +3407,7 @@ class WaypointTest ( MessagingHandler ):
 
     def debug_print ( self, message ) :
         if self.debug :
-            print message
+            print(message)
 
 
 
@@ -3644,7 +3651,7 @@ class SerialWaypointTest ( MessagingHandler ):
 
     def debug_print ( self, message ) :
         if self.debug :
-            print message
+            print(message)
 
 
     def send_from_client ( self, sender, n_messages, sender_index ):
@@ -3828,23 +3835,23 @@ class SerialWaypointTest ( MessagingHandler ):
 
 
     def report ( self ) :
-        print "\n\n==========================================================\nreport\n"
+        print("\n\n==========================================================\nreport\n")
 
         for i in range(len(self.senders)) :
-            print "    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent'] )
+            print("    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent']))
 
-        print "\n"
+        print("\n")
 
         for i in range(len(self.waypoints)) :
-            print "    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received'] )
-            print "    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent'] )
+            print("    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received']))
+            print("    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent']))
 
-        print "\n"
+        print("\n")
 
         for i in range(len(self.receivers)) :
-            print "    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] )
+            print("    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] ))
 
-        print "\nend report\n=========================================================\n\n"
+        print("\nend report\n=========================================================\n\n")
 
 
 
@@ -3959,7 +3966,7 @@ class ParallelWaypointTest ( MessagingHandler ):
 
     def debug_print ( self, message ) :
         if self.debug :
-            print message
+            print(message)
 
 
     def send_from_client ( self, sender, n_messages, sender_index ):
@@ -4148,23 +4155,23 @@ class ParallelWaypointTest ( MessagingHandler ):
 
 
     def report ( self ) :
-        print "\n\n==========================================================\nreport\n"
+        print("\n\n==========================================================\nreport\n")
 
         for i in range(len(self.senders)) :
-            print "    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent'] )
+            print("    client sender %d sent %d messages." % ( i, self.senders[i]['n_sent'] ))
 
-        print "\n"
+        print("\n")
 
         for i in range(len(self.waypoints)) :
-            print "    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received'] )
-            print "    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent'] )
+            print("    waypoint %d received %d messages." % ( i, self.waypoints[i]['n_received'] ))
+            print("    waypoint %d sent     %d messages." % ( i, self.waypoints[i]['n_sent'] ))
 
-        print "\n"
+        print("\n")
 
         for i in range(len(self.receivers)) :
-            print "    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] )
+            print( "    client receiver %d received %d messages." % ( i, self.receivers[i]['n_received'] ))
 
-        print "\nend report\n=========================================================\n\n"
+        print("\nend report\n=========================================================\n\n")
 
 
 

@@ -21,15 +21,36 @@
 AMQP Managment Entity
 """
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import itertools, re
+import sys
+
+
+if sys.version_info[0] > 2:
+    # Python 3 does not have a unicode() builtin method,
+    # luckily all strings are unicode to start with
+    def unicode(s):
+        return s
+    def dict_iteritems(d):
+        return iter(d.items())
+else:
+    def dict_iteritems(d):
+        return d.iteritems()
+
+
 
 def clean_dict(items, **kwargs):
     """
     @param items: A mapping or iterable of pairs.
     @return: dict containing items + kwargs without any None values. All keys are unicode.
     """
-    if hasattr(items, 'iteritems'): items = items.iteritems()
-    return dict((unicode(k), v) for k, v in itertools.chain(items, kwargs.iteritems())
+    if isinstance(items, dict): items = dict_iteritems(items)
+    return dict((unicode(k), v) for k, v in itertools.chain(items,
+                                                            dict_iteritems(kwargs))
                 if v is not None)
 
 class EntityBase(object):
@@ -50,10 +71,10 @@ class EntityBase(object):
     def __init__(self, attributes=None, **kwargs):
         self.__dict__['attributes'] = {}
         if attributes:
-            for k, v in attributes.iteritems():
+            for k, v in dict_iteritems(attributes):
                 self.attributes[k] = v
                 self.__dict__[self._pyname(k)] = v
-        for k, v in kwargs.iteritems():
+        for k, v in dict_iteritems(kwargs):
             self._set(k, v)
 
     def __getitem__(self, name):
@@ -88,22 +109,24 @@ class EntityBase(object):
 
     def __repr__(self): return "EntityBase(%r)" % self.attributes
 
-    SPECIAL = [u"name", u"identity", u"type"]
-    N_SPECIAL = len(SPECIAL)
-    PRIORITY = dict([(SPECIAL[i], i) for i in xrange(N_SPECIAL)])
+    # attributes name, identity and type are special snowflake
+    # attributes that we print before all the not so special
+    # attributes.  Assign each a priority for the sort
+    _SPECIAL = {u"name": 0, u"identity": 1, u"type": 2}
 
     def __str__(self):
-        # Print the name and identity first.
-        keys = sorted(self.attributes.keys(), key=lambda k: self.PRIORITY.get(k, self.N_SPECIAL))
+        # Sort so the _SPECIAL attributes are printed first, 3 ==
+        # lower priority than special
+        keys = sorted(self.attributes.keys(),
+                      key=lambda k: self._SPECIAL.get(k, 3))
         return "Entity(%s)" % ", ".join("%s=%s" % (k, self.attributes[k]) for k in keys)
-
 
 def update(entity, values):
     """Update entity from values
     @param entity: an Entity
     @param values: a map of values
     """
-    for k, v in values.iteritems(): entity[k] = v
+    for k, v in dict_iteritems(values): entity[k] = v
 
 SEPARATOR_RE = re.compile(r' |_|-|\.')
 

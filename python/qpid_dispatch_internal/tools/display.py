@@ -17,7 +17,14 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 from time import strftime, gmtime
+from qpid_dispatch_internal.compat import UNICODE
+
 
 def YN(val):
   if val:
@@ -156,7 +163,7 @@ class Display:
       for idx in range(diff):
         row.append("")
 
-    print title
+    print("%s" % title)
     if len (rows) == 0:
       return
     colWidth = []
@@ -165,10 +172,8 @@ class Display:
     for head in heads:
       width = len (head)
       for row in rows:
-        text = row[col]
-        if text.__class__ == str:
-          text = text.decode('utf-8')
-        cellWidth = len(unicode(text))
+        text = UNICODE(row[col])
+        cellWidth = len(text)
         if cellWidth > width:
           width = cellWidth
       colWidth.append (width + self.tableSpacing)
@@ -177,26 +182,24 @@ class Display:
         for i in range (colWidth[col] - len (head)):
           line = line + " "
       col = col + 1
-    print line
+    print(line)
     line = self.tablePrefix
     for width in colWidth:
       for i in range (width):
         line = line + "="
-    print line
+    print(line)
 
     for row in rows:
       line = self.tablePrefix
       col  = 0
       for width in colWidth:
-        text = row[col]
-        if text.__class__ == str:
-          text = text.decode('utf-8')
-        line = line + unicode(text)
+        text = UNICODE(row[col])
+        line = line + text
         if col < len (heads) - 1:
-          for i in range (width - len(unicode(text))):
+          for i in range (width - len(text)):
             line = line + " "
         col = col + 1
-      print line
+      print(line)
 
   def do_setTimeFormat (self, fmt):
     """ Select timestamp format """
@@ -225,7 +228,7 @@ class Display:
     result += "%ds" % (sec % 60)
     return result
 
-class Sortable:
+class Sortable(object):
   """ """
   def __init__(self, row, sortIndex):
     self.row = row
@@ -233,8 +236,8 @@ class Sortable:
     if sortIndex >= len(row):
       raise Exception("sort index exceeds row boundary")
 
-  def __cmp__(self, other):
-    return cmp(self.row[self.sortIndex], other.row[self.sortIndex])
+  def __lt__(self, other):
+    return self.row[self.sortIndex] < other.row[self.sortIndex]
 
   def getRow(self):
     return self.row

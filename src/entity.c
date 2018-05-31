@@ -17,8 +17,8 @@
  * under the License.
  */
 
+#include "python_private.h"  // must be first!
 
-#include <Python.h>
 #include <qpid/dispatch/error.h>
 #include "dispatch_private.h"
 #include "entity.h"
@@ -28,7 +28,7 @@ struct qd_entity_t {
 };
 
 static PyObject* qd_entity_get_py(qd_entity_t* entity, const char* attribute) {
-    PyObject *py_key = PyString_FromString(attribute);
+    PyObject *py_key = PyUnicode_FromString(attribute);
     if (!py_key) return NULL;   /* Don't set qd_error, caller will set if needed. */
     PyObject *value = PyObject_GetItem((PyObject*)entity, py_key);
     Py_DECREF(py_key);
@@ -45,11 +45,8 @@ bool qd_entity_has(qd_entity_t* entity, const char *attribute) {
 char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
-    PyObject *py_str = py_obj ? PyObject_Str(py_obj) : NULL;
-    const char *cstr = py_str ? PyString_AsString(py_str) : NULL;
-    char* str = cstr ? strdup(cstr) : NULL;
+    char *str = py_string_2_c(py_obj);
     Py_XDECREF(py_obj);
-    Py_XDECREF(py_str);
     if (!str) qd_error_py();
     return str;
 }
@@ -57,7 +54,14 @@ char *qd_entity_get_string(qd_entity_t *entity, const char* attribute) {
 long qd_entity_get_long(qd_entity_t *entity, const char* attribute) {
     qd_error_clear();
     PyObject *py_obj = qd_entity_get_py(entity, attribute);
-    long result = py_obj ? PyInt_AsLong(py_obj) : -1;
+    if (py_obj && !PyLong_Check(py_obj)) {
+        // 2.6 PyLong_AsLong fails to 'cast' non-long types
+        // so we have to manually cast it first:
+        PyObject *py_tmp = PyNumber_Long(py_obj);
+        Py_XDECREF(py_obj);
+        py_obj = py_tmp;
+    }
+    long result = py_obj ? PyLong_AsLong(py_obj) : -1;
     Py_XDECREF(py_obj);
     qd_error_py();
     return result;
@@ -110,7 +114,7 @@ qd_error_t qd_entity_set_py(qd_entity_t* entity, const char* attribute, PyObject
     qd_error_clear();
 
     int result = 0;
-    PyObject *py_key = PyString_FromString(attribute);
+    PyObject *py_key = PyUnicode_FromString(attribute);
     if (py_key) {
         if (py_value == NULL) {     /* Delete the attribute */
             result = PyObject_DelItem((PyObject*)entity, py_key);
@@ -132,11 +136,11 @@ qd_error_t qd_entity_set_py(qd_entity_t* entity, const char* attribute, PyObject
 }
 
 qd_error_t qd_entity_set_string(qd_entity_t *entity, const char* attribute, const char *value) {
-    return qd_entity_set_py(entity, attribute, value ? PyString_FromString(value) : 0);
+    return qd_entity_set_py(entity, attribute, value ? PyUnicode_FromString(value) : 0);
 }
 
 qd_error_t qd_entity_set_longp(qd_entity_t *entity, const char* attribute, const long *value) {
-    return qd_entity_set_py(entity, attribute, value ? PyInt_FromLong(*value) : 0);
+    return qd_entity_set_py(entity, attribute, value ? PyLong_FromLong(*value) : 0);
 }
 
 qd_error_t qd_entity_set_boolp(qd_entity_t *entity, const char *attribute, const bool *value) {
@@ -173,9 +177,9 @@ qd_error_t qd_entity_set_map_key_value_int(qd_entity_t *entity, const char *attr
     if (!key)
         return  QD_ERROR_VALUE;
 
-    PyObject *py_key = PyString_FromString(key);
-    PyObject *py_value = PyInt_FromLong(value);
-    PyObject *py_attribute = PyString_FromString(attribute);
+    PyObject *py_key = PyUnicode_FromString(key);
+    PyObject *py_value = PyLong_FromLong(value);
+    PyObject *py_attribute = PyUnicode_FromString(attribute);
 
     qd_error_t ret = QD_ERROR_NONE;
 
@@ -199,9 +203,9 @@ qd_error_t qd_entity_set_map_key_value_string(qd_entity_t *entity, const char *a
     if (!key)
         return  QD_ERROR_VALUE;
 
-    PyObject *py_key = PyString_FromString(key);
-    PyObject *py_value = PyString_FromString(value);
-    PyObject *py_attribute = PyString_FromString(attribute);
+    PyObject *py_key = PyUnicode_FromString(key);
+    PyObject *py_value = PyUnicode_FromString(value);
+    PyObject *py_attribute = PyUnicode_FromString(attribute);
 
     qd_error_t ret = QD_ERROR_NONE;
 

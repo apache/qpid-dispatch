@@ -23,6 +23,12 @@ that might cause problems, or caused issues in the past.
 For example, unresolvable host names.
 """
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 from threading import Timer
 import re
 from subprocess import PIPE, STDOUT
@@ -141,10 +147,11 @@ class RouterTestBadConfiguration(TestCase):
         """
         p = self.popen(
             ['qdmanage', '-b', self.address(), 'query', '--type=router', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_OK,
+            universal_newlines=True)
         out = p.communicate()[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out

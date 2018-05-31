@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest2 as unittest
 from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
@@ -28,7 +33,7 @@ from qpid_dispatch.management.client import Node
 CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 CONNECTION_PROPERTIES_SYMBOL = dict()
 CONNECTION_PROPERTIES_SYMBOL[symbol("connection")] = symbol("properties")
-CONNECTION_PROPERTIES_BINARY = {'client_identifier': 'policy_server'}
+CONNECTION_PROPERTIES_BINARY = {b'client_identifier': b'policy_server'}
 
 
 #====================================================
@@ -1030,7 +1035,7 @@ class MulticastUnsettled ( MessagingHandler ) :
         self.recv_conn = event.container.connect ( self.addr )
 
         self.sender = event.container.create_sender   ( self.send_conn, self.addr )
-        for i in xrange ( self.n_receivers ) :
+        for i in range ( self.n_receivers ) :
             rcvr = event.container.create_receiver ( self.send_conn, self.addr, name = "receiver_" + str(i) )
             self.receivers.append ( rcvr )
             rcvr.flow ( self.n_messages )
@@ -1043,7 +1048,7 @@ class MulticastUnsettled ( MessagingHandler ) :
         while self.n_sent < self.n_messages :
             if event.sender.credit < 1 :
                 break
-            for i in xrange ( self.n_messages ) :
+            for i in range ( self.n_messages ) :
                 msg = Message ( body = i )
                 # The sender does not settle, but the 
                 # receivers will..
@@ -1055,7 +1060,7 @@ class MulticastUnsettled ( MessagingHandler ) :
         if self.bailing :
             return
         event.delivery.settle()
-        for i in xrange ( self.n_receivers ) :
+        for i in range ( self.n_receivers ) :
             if event.receiver == self.receivers [ i ] :
                 # Body conetnts of the messages count from 0 ... n,
                 # so the contents of this message should be same as
@@ -1070,7 +1075,7 @@ class MulticastUnsettled ( MessagingHandler ) :
 
 
     def check_n_received ( self ) :
-        for i in xrange ( self.n_receivers ) :
+        for i in range ( self.n_receivers ) :
             if self.n_received [ i ] < self.n_messages :
                 return
         # All messages have been received by all receivers.
@@ -1758,10 +1763,10 @@ class StripMessageAnnotationsNoAddTrace ( MessagingHandler ) :
             if event.sender.credit < 1 :
                 break
             msg = Message ( body = self.n_sent )
-            annotations = { 'x-opt-qd.ingress': 'ingress-router',
-                            'x-opt-qd.trace': ['0/QDR.1'],
-                            'Canis_meus' : 'id_comedit'
-                          }
+            annotations = {'Canis_meus' : 'id_comedit',
+                           'x-opt-qd.ingress': 'ingress-router',
+                           'x-opt-qd.trace': ['0/QDR.1']
+            }
             self.n_sent += 1
             # This test has no added annotations.
             # The receiver should get the expected standard annotations anyway,
@@ -1853,9 +1858,9 @@ class StripMessageAnnotationsBoth ( MessagingHandler ) :
             if event.sender.credit < 1 :
                 break
             msg = Message ( body = self.n_sent )
-            annotations = { 'x-opt-qd.ingress': 'ingress-router',
+            annotations = { 'Canis_meus' : 'id_comedit',
+                            'x-opt-qd.ingress': 'ingress-router',
                             'x-opt-qd.trace': ['0/QDR.1'],
-                            'Canis_meus' : 'id_comedit'
                           }
             self.n_sent += 1
             # This test has no added annotations.
@@ -1888,8 +1893,6 @@ class StripMessageAnnotationsBoth ( MessagingHandler ) :
         if self.n_received >= self.n_messages :
             # success
             self.bail ( None )
-
-
 
 
 class StripMessageAnnotationsOut ( MessagingHandler ) :
@@ -2541,7 +2544,7 @@ class BatchedSettlementTest(MessagingHandler):
             outs = local_node.query(type='org.apache.qpid.dispatch.router')
             pos = outs.attribute_names.index("acceptedDeliveries")
             results = outs.results[0]
-            if results >= self.count:
+            if results[pos] >= self.count:
                 self.accepted_count_match = True
 
             self.timer.cancel()
@@ -2701,7 +2704,9 @@ class RejectDispositionTest(MessagingHandler):
         self.sent = False
         self.received_error = False
         self.dest = "rejectDispositionTest"
-        self.error_description = 'you were out of luck this time!'
+        # explicitly convert to str due to
+        # https://issues.apache.org/jira/browse/PROTON-1843
+        self.error_description = str('you were out of luck this time!')
         self.error_name = u'amqp:internal-error'
         self.reject_count_match = False
         self.rejects_at_start = 0

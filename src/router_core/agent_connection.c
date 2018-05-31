@@ -86,6 +86,9 @@ static void qd_get_next_pn_data(pn_data_t **data, const char **d, int *d1)
             case PN_INT:
                 *d1 = pn_data_get_int(*data);
                 break;
+            case PN_LONG:
+                *d1 = pn_data_get_long(*data);
+                break;
             default:
                 break;
         }

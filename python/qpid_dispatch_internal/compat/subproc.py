@@ -20,6 +20,10 @@
 """
 Implementations of some handy subprocess functions missing in python 2.6
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 from subprocess import *
 

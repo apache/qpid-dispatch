@@ -17,7 +17,12 @@
 # under the License.
 #
 
-import unittest2 as unitest
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+import unittest2 as unittest
 import os, json
 from subprocess import PIPE, Popen, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
@@ -30,7 +35,7 @@ class AuthServicePluginAuthzTest(TestCase):
     def addUser(cls, user, password):
         # Create a sasl database.
         p = Popen(['saslpasswd2', '-c', '-p', '-f', 'users.sasldb', user],
-                  stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                  stdin=PIPE, stdout=PIPE, stderr=PIPE, universal_newlines=True)
         result = p.communicate(password)
         assert p.returncode == 0, "saslpasswd2 exit status %s, output:\n%s" % (p.returncode, result)
 

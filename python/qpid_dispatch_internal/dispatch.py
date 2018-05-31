@@ -29,10 +29,16 @@ The C library also adds the following C extension types to this module:
 
 This module also prevents the proton python module from being accidentally loaded.
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 
 import sys, ctypes
 from ctypes import c_char_p, c_long, py_object
 import qpid_dispatch_site
+from .compat import UNICODE
 
 class CError(Exception):
     """Exception raised if there is an error in a C call"""
@@ -54,7 +60,9 @@ class QdDll(ctypes.PyDLL):
         # No check on qd_error_* functions, it would be recursive
         self._prototype(self.qd_error_code, c_long, [], check=False)
         self._prototype(self.qd_error_message, c_char_p, [], check=False)
-
+        # in python3 c_char_p returns a byte type for the error message.  We
+        # need to convert that to a unicode string:
+        self.qd_error_message.errcheck = lambda x,y,z : UNICODE(x)
         self._prototype(self.qd_log_entity, c_long, [py_object])
         self._prototype(self.qd_dispatch_configure_router, None, [self.qd_dispatch_p, py_object])
         self._prototype(self.qd_dispatch_prepare, None, [self.qd_dispatch_p])
@@ -133,6 +141,10 @@ def import_check(name, *args, **kw):
     return builtin_import(name, *args, **kw)
 
 check_forbidden()
-import __builtin__
-builtin_import = __builtin__.__import__
-__builtin__.__import__ = import_check
+try:
+    import builtins
+except:  # py2
+    import __builtin__ as builtins
+
+builtin_import = builtins.__import__
+builtins.__import__ = import_check

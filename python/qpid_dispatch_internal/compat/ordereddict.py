@@ -21,6 +21,12 @@
 # Passes Python2.7's test suite and incorporates all the latest updates.
 # From http://code.activestate.com/recipes/576693/
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
+
 try:
     from thread import get_ident as _get_ident
 except ImportError:
@@ -31,7 +37,11 @@ try:
 except ImportError:
     pass
 
-
+# Note well: this class is only used for versions of python < 2.7
+# Since 2.7 OrderDict is part of the collections module of the standard
+# library. It does not need to be python3 compatible and can
+# eventually removed when python versions <= 2.6 are no longer supported.
+#
 class OrderedDict(dict):
     'Dictionary that remembers insertion order'
     # An inherited dict maps keys to values.

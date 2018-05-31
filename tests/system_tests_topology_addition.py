@@ -17,6 +17,11 @@
 # under the License.
 #
 
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
+
 import unittest, os, json
 from subprocess      import PIPE, STDOUT
 from proton          import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
@@ -161,7 +166,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
                                      'verifyHostname': 'no',
-                                     'cost':  lower_cost / 2,
+                                     'cost':  int(lower_cost / 2),
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -171,7 +176,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
                                      'verifyHostname': 'no',
-                                     'cost':  lower_cost / 2,
+                                     'cost':  int(lower_cost / 2),
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -193,7 +198,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['A'],
                                      'verifyHostname': 'no',
-                                     'cost':  higher_cost / 2,
+                                     'cost':  int(higher_cost / 2),
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -203,7 +208,7 @@ class TopologyAdditionTests ( TestCase ):
                                      'role': 'inter-router',
                                      'port': cls.inter_router_ports['B'],
                                      'verifyHostname': 'no',
-                                     'cost':  higher_cost / 2,
+                                     'cost':  int(higher_cost / 2),
                                      'stripAnnotations': 'no',
                                      'linkCapacity' : 1000
                                   }
@@ -381,7 +386,7 @@ class AddRouter ( MessagingHandler ):
         # Make a little data structure that
         # will keep track of how many times each trace was seen.
         self.expected_trace_counts = list()
-        for i in xrange ( len(expected_traces )) :
+        for i in range ( len(expected_traces )) :
             self.expected_trace_counts.append ( [ expected_traces[i], 0 ] )
 
 
@@ -450,7 +455,7 @@ class AddRouter ( MessagingHandler ):
             return
 
         # Send little bursts of 3 messages every sender-timeout.
-        for _ in xrange(3) :
+        for _ in range(3) :
             msg = Message(body=self.n_sent)
             self.sender.send(msg)
             self.n_sent += 1

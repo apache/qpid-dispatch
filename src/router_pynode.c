@@ -26,6 +26,7 @@
 #include "dispatch_private.h"
 #include "router_private.h"
 #include "entity_cache.h"
+#include "python_private.h"
 
 static qd_log_source_t *log_source = 0;
 static PyObject        *pyRouter   = 0;
@@ -188,7 +189,9 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
         int           maskbit;
 
         for (idx = 0; idx < origin_count; idx++) {
-            maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
+            PyObject *pi = PyList_GetItem(origin_list, idx);
+            assert(QD_PY_INT_CHECK(pi));
+            maskbit = (int)QD_PY_INT_2_INT64(pi);
             if (maskbit >= qd_bitmask_width() || maskbit < 0) {
                 error = "Origin bit mask out of range";
                 break;
@@ -198,7 +201,9 @@ static PyObject* qd_set_valid_origins(PyObject *self, PyObject *args)
         if (error == 0) {
             qd_bitmask_set_bit(core_bitmask, 0);  // This router is a valid origin for all destinations
             for (idx = 0; idx < origin_count; idx++) {
-                maskbit = PyInt_AS_LONG(PyList_GetItem(origin_list, idx));
+                PyObject *pi = PyList_GetItem(origin_list, idx);
+                assert(QD_PY_INT_CHECK(pi));
+                maskbit = (int)QD_PY_INT_2_INT64(pi);
                 qd_bitmask_set_bit(core_bitmask, maskbit);
             }
         } else {
@@ -302,54 +307,12 @@ static PyMethodDef RouterAdapter_methods[] = {
 };
 
 static PyTypeObject RouterAdapterType = {
-    PyObject_HEAD_INIT(0)
-    0,                         /* ob_size*/
-    "dispatch.RouterAdapter",  /* tp_name*/
-    sizeof(RouterAdapter),     /* tp_basicsize*/
-    0,                         /* tp_itemsize*/
-    0,                         /* tp_dealloc*/
-    0,                         /* tp_print*/
-    0,                         /* tp_getattr*/
-    0,                         /* tp_setattr*/
-    0,                         /* tp_compare*/
-    0,                         /* tp_repr*/
-    0,                         /* tp_as_number*/
-    0,                         /* tp_as_sequence*/
-    0,                         /* tp_as_mapping*/
-    0,                         /* tp_hash */
-    0,                         /* tp_call*/
-    0,                         /* tp_str*/
-    0,                         /* tp_getattro*/
-    0,                         /* tp_setattro*/
-    0,                         /* tp_as_buffer*/
-    Py_TPFLAGS_DEFAULT,        /* tp_flags*/
-    "Dispatch Router Adapter", /* tp_doc */
-    0,                         /* tp_traverse */
-    0,                         /* tp_clear */
-    0,                         /* tp_richcompare */
-    0,                         /* tp_weaklistoffset */
-    0,                         /* tp_iter */
-    0,                         /* tp_iternext */
-    RouterAdapter_methods,     /* tp_methods */
-    0,                         /* tp_members */
-    0,                         /* tp_getset */
-    0,                         /* tp_base */
-    0,                         /* tp_dict */
-    0,                         /* tp_descr_get */
-    0,                         /* tp_descr_set */
-    0,                         /* tp_dictoffset */
-    0,                         /* tp_init */
-    0,                         /* tp_alloc */
-    0,                         /* tp_new */
-    0,                         /* tp_free */
-    0,                         /* tp_is_gc */
-    0,                         /* tp_bases */
-    0,                         /* tp_mro */
-    0,                         /* tp_cache */
-    0,                         /* tp_subclasses */
-    0,                         /* tp_weaklist */
-    0,                         /* tp_del */
-    0                          /* tp_version_tag */
+    PyVarObject_HEAD_INIT(NULL, 0)
+    .tp_name = "dispatch.RouterAdapter",  /* tp_name*/
+    .tp_basicsize = sizeof(RouterAdapter),     /* tp_basicsize*/
+    .tp_flags = Py_TPFLAGS_DEFAULT,        /* tp_flags*/
+    .tp_doc = "Dispatch Router Adapter", /* tp_doc */
+    .tp_methods = RouterAdapter_methods,     /* tp_methods */
 };
 
 
@@ -362,7 +325,7 @@ static void qd_router_mobile_added(void *context, const char *address_hash)
     if (pyAdded && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock_state_t lock_state = qd_python_lock();
         pArgs = PyTuple_New(1);
-        PyTuple_SetItem(pArgs, 0, PyString_FromString(address_hash));
+        PyTuple_SetItem(pArgs, 0, PyUnicode_FromString(address_hash));
         pValue = PyObject_CallObject(pyAdded, pArgs);
         qd_error_py();
         Py_DECREF(pArgs);
@@ -381,7 +344,7 @@ static void qd_router_mobile_removed(void *context, const char *address_hash)
     if (pyRemoved && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock_state_t lock_state = qd_python_lock();
         pArgs = PyTuple_New(1);
-        PyTuple_SetItem(pArgs, 0, PyString_FromString(address_hash));
+        PyTuple_SetItem(pArgs, 0, PyUnicode_FromString(address_hash));
         pValue = PyObject_CallObject(pyRemoved, pArgs);
         qd_error_py();
         Py_DECREF(pArgs);
@@ -400,7 +363,7 @@ static void qd_router_link_lost(void *context, int link_mask_bit)
     if (pyRemoved && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock_state_t lock_state = qd_python_lock();
         pArgs = PyTuple_New(1);
-        PyTuple_SetItem(pArgs, 0, PyInt_FromLong((long) link_mask_bit));
+        PyTuple_SetItem(pArgs, 0, PyLong_FromLong((long) link_mask_bit));
         pValue = PyObject_CallObject(pyLinkLost, pArgs);
         qd_error_py();
         Py_DECREF(pArgs);
@@ -466,21 +429,21 @@ qd_error_t qd_router_python_setup(qd_router_t *router)
     PyTuple_SetItem(pArgs, 0, adapterInstance);
 
     // arg 1: router_id
-    pId = PyString_FromString(router->router_id);
+    pId = PyUnicode_FromString(router->router_id);
     PyTuple_SetItem(pArgs, 1, pId);
 
     // arg 2: area_id
-    pArea = PyString_FromString(router->router_area);
+    pArea = PyUnicode_FromString(router->router_area);
     PyTuple_SetItem(pArgs, 2, pArea);
 
     // arg 3: max_routers
-    pMaxRouters = PyInt_FromLong((long) qd_bitmask_width());
+    pMaxRouters = PyLong_FromLong((long) qd_bitmask_width());
     PyTuple_SetItem(pArgs, 3, pMaxRouters);
 
     //
     // Instantiate the router
     //
-    pyRouter = PyInstance_New(pClass, pArgs, 0);
+    pyRouter = PyObject_CallObject(pClass, pArgs);
     Py_DECREF(pArgs);
     Py_DECREF(adapterType);
     QD_ERROR_PY_RET();

@@ -13,4 +13,5 @@ tests/policy-1/policy-*.json
 .settings
 console/test/topolgies/config-*
 .history
+.tox
 .vscode

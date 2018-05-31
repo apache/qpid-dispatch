@@ -20,6 +20,10 @@
 """
 Utilities for command-line programs.
 """
+from __future__ import unicode_literals
+from __future__ import division
+from __future__ import absolute_import
+from __future__ import print_function
 
 import sys, json, optparse, os
 from collections import Sequence, Mapping
@@ -44,13 +48,13 @@ def main(run, argv=sys.argv, op=None):
         run(argv)
         return 0
     except KeyboardInterrupt:
-        print
-    except UsageError, e:
+        print()
+    except UsageError as e:
         op.error(e)
-    except Exception, e:
+    except Exception as e:
         if "_QPID_DISPATCH_TOOLS_DEBUG_" in os.environ:
             raise
-        print "%s: %s" % (type(e).__name__, e)
+        print("%s: %s" % (type(e).__name__, e))
     return 1
 
 def check_args(args, maxargs=0, minargs=0):
@@ -194,7 +198,7 @@ class OptionParser(optparse.OptionParser):
     def __init__(self, *args, **kwargs):
         optparse.OptionParser.__init__(self, *args, **kwargs)
         def version_cb(*args):
-            print VERSION
+            print("%s" % VERSION)
             exit(0)
 
         self.add_option("--version", help="Print version and exit.",
