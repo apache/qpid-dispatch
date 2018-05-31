@@ -1678,6 +1678,13 @@
                     "required": false,
                     "create": true
                 },
+                "enableVhostNamePatterns": {
+                    "type": "boolean",
+                    "default": false,
+                    "description": "Enable vhost name patterns. When false vhost hostnames are treated as literal strings. When true vhost hostnames are treated as match patterns.",
+                    "required": false,
+                    "create": true
+                },
                 "policyDir": {
                     "type": "path",
                     "default": "",

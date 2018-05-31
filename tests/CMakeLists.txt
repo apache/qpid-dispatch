@@ -109,6 +109,7 @@ foreach(py_test_module
     system_tests_exchange_bindings
     system_tests_cmdline_parsing
     system_tests_bad_configuration
+    system_tests_ssl
     ${SYSTEM_TESTS_HTTP}
     )
 

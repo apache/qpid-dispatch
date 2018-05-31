@@ -114,6 +114,7 @@ typedef struct {
     bool                 receive_complete;               // true if the message has been completely received, false otherwise
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 aborted;                        // receive completed with abort flag set
+    bool                 disable_q2_holdoff;             // Disable the Q2 flow control
 } qd_message_content_t;
 
 typedef struct {

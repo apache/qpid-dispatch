@@ -270,6 +270,21 @@ void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
     qd_policy_c_counts_refresh(ccounts, entity);
 }
 
+bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, char *hostPattern)
+{
+    return qd_policy_host_pattern_add(qd->policy, hostPattern);
+}
+
+void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, char *hostPattern)
+{
+    qd_policy_host_pattern_remove(qd->policy, hostPattern);
+}
+
+char * qd_dispatch_policy_host_pattern_lookup(qd_dispatch_t *qd, char *hostPattern)
+{
+    return qd_policy_host_pattern_lookup(qd->policy, hostPattern);
+}
+
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
 {
     qd->server             = qd_server(qd, qd->thread_count, qd->router_id, qd->sasl_config_path, qd->sasl_config_name);

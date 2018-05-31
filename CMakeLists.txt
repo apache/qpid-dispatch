@@ -37,7 +37,7 @@ option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
-cmake_minimum_required(VERSION 2.6)
+cmake_minimum_required(VERSION 2.6.2)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
@@ -114,7 +114,8 @@ endif (NOT COMMAND add_compile_options)
 find_library(pthread_lib pthread)
 find_library(dl_lib dl)
 find_library(rt_lib rt)
-find_package(Proton REQUIRED Core Proactor)
+
+find_package(Proton 0.23 REQUIRED)
 
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
 

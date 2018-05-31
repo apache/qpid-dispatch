@@ -49,6 +49,7 @@ class PolicyManager(object):
         self._agent = agent
         self._policy_local = PolicyLocal(self)
         self.log_adapter = LogAdapter("POLICY")
+        self._use_hostname_patterns = False
 
     def log(self, level, text):
         info = traceback.extract_stack(limit=2)[0] # Caller frame info
@@ -75,6 +76,13 @@ class PolicyManager(object):
 
     def get_agent(self):
         return self._agent
+
+    def get_use_hostname_patterns(self):
+        return self._use_hostname_patterns
+
+    def set_use_hostname_patterns(self, v):
+        self._use_hostname_patterns = v
+        self._policy_local.use_hostname_patterns = v
 
     #
     # Management interface to create a ruleset

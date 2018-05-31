@@ -520,7 +520,7 @@ var QDR = (function (QDR) {
         .transition()
         .duration(duration/2)
         .attrTween('d', arcTweenExit)
-        .each('end', function (d) {d3.select(this).node().parentNode.remove();});
+        .each('end', function () {d3.select(this).node().parentNode.remove();});
 
       // decorate the chord layout's .chord() data with key, color, and orgIndex
       rechord.chordData = decorateChordData(rechord, matrix);

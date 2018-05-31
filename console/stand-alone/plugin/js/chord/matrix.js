@@ -71,7 +71,18 @@ valuesMatrix.prototype.hasValues = function () {
     });
   });
 };
-
+valuesMatrix.prototype.getMinMax = function () {
+  let min = Number.MAX_VALUE, max = Number.MIN_VALUE;
+  this.rows.forEach( function (row) {
+    row.cols.forEach( function (col) {
+      if (col.messages > MIN_CHORD_THRESHOLD) {
+        max = Math.max(max, col.messages);
+        min = Math.min(min, col.messages);
+      }
+    });
+  });
+  return [min, max];
+};
 // extract a square matrix with just the values from the object matrix
 valuesMatrix.prototype.matrixMessages = function () {
   let m = emptyMatrix(this.rows.length);
@@ -130,7 +141,11 @@ valuesMatrix.prototype.getAddresses = function (r) {
 let getAttribute = function (self, attr, i) {
   if (self.aggregate)
     return self.rows[i][attr];
-  return self.rows[self.getGroupBy().indexOf(i)][attr];
+  let groupByIndex = self.getGroupBy().indexOf(i);
+  if (groupByIndex < 0) {
+    groupByIndex = i;
+  }
+  return self.rows[groupByIndex][attr];
 };
 valuesMatrix.prototype.addRow = function (chordName, ingress, egress, address) {
   let rowIndex = this.rows.length;

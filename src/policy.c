@@ -61,10 +61,13 @@ struct qd_policy_t {
     qd_dispatch_t        *qd;
     qd_log_source_t      *log_source;
     void                 *py_policy_manager;
+    sys_mutex_t          *tree_lock;
+    qd_parse_tree_t      *hostname_tree;
                           // configured settings
     int                   max_connection_limit;
     char                 *policyDir;
     bool                  enableVhostPolicy;
+    bool                  enableVhostNamePatterns;
                           // live statistics
     int                   connections_processed;
     int                   connections_denied;
@@ -77,15 +80,12 @@ struct qd_policy_t {
 qd_policy_t *qd_policy(qd_dispatch_t *qd)
 {
     qd_policy_t *policy = NEW(qd_policy_t);
+    ZERO(policy);
     policy->qd                   = qd;
     policy->log_source           = qd_log_source("POLICY");
     policy->max_connection_limit = 65535;
-    policy->py_policy_manager    = 0;
-    policy->policyDir            = 0;
-    policy->enableVhostPolicy    = false;
-    policy->connections_processed= 0;
-    policy->connections_denied   = 0;
-    policy->connections_current  = 0;
+    policy->tree_lock            = sys_mutex();
+    policy->hostname_tree        = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
 
     qd_log(policy->log_source, QD_LOG_TRACE, "Policy Initialized");
     return policy;
@@ -99,6 +99,7 @@ void qd_policy_free(qd_policy_t *policy)
 {
     if (policy->policyDir)
         free(policy->policyDir);
+    qd_parse_tree_free(policy->hostname_tree);
     free(policy);
 }
 
@@ -114,8 +115,16 @@ qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
     policy->policyDir =
         qd_entity_opt_string(entity, "policyDir", 0); CHECK();
     policy->enableVhostPolicy = qd_entity_opt_bool(entity, "enableVhostPolicy", false); CHECK();
-    qd_log(policy->log_source, QD_LOG_INFO, "Policy configured maxConnections: %d, policyDir: '%s', access rules enabled: '%s'",
-           policy->max_connection_limit, policy->policyDir, (policy->enableVhostPolicy ? "true" : "false"));
+    policy->enableVhostNamePatterns = qd_entity_opt_bool(entity, "enableVhostNamePatterns", false); CHECK();
+    qd_log(policy->log_source, QD_LOG_INFO,
+           "Policy configured maxConnections: %d, "
+           "policyDir: '%s',"
+           "access rules enabled: '%s', "
+           "use hostname patterns: '%s'",
+           policy->max_connection_limit,
+           policy->policyDir,
+           (policy->enableVhostPolicy ? "true" : "false"),
+           (policy->enableVhostNamePatterns ? "true" : "false"));
     return QD_ERROR_NONE;
 
 error:
@@ -517,19 +526,35 @@ char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, 
     if (strlen(uname) == 0)
         return NULL;
 
+    const char duser[] = "${user}";
+    char *retptr = obuf;
+    const char *wiptr = proposed;
     const char *findptr = strstr(proposed, uname);
     if (findptr == NULL) {
         return NULL;
     }
 
-    // Copy leading before match and trailing after
-    int segsize = findptr - proposed;
-    const char *suffix = findptr + strlen(uname);
-    int rc = snprintf(obuf, osize,
-                      "%.*s${user}%s",
-                      segsize, proposed,
-                      suffix);
-    return (rc < osize) ? obuf : NULL;
+    // Copy leading before match
+    int segsize = findptr - wiptr;
+    int copysize = MIN(osize, segsize);
+    if (copysize)
+        strncpy(obuf, wiptr, copysize);
+    wiptr += copysize;
+    osize -= copysize;
+    obuf  += copysize;
+
+    // Copy the substitution string
+    segsize = sizeof(duser) - 1;
+    copysize = MIN(osize, segsize);
+    if (copysize)
+        strncpy(obuf, duser, copysize);
+    wiptr += strlen(uname);
+    osize -= copysize;
+    obuf  += copysize;
+
+    // Copy trailing after match
+    strncpy(obuf, wiptr, osize);
+    return retptr;
 }
 
 
@@ -566,8 +591,8 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
         if (!pa)
             return false;
     }
-    strcpy(pa, allowed);
-
+    strcpy(pa, allowed);        /* We know we have allocated enoough space */
+    pa[a_len] = 0;
     // Do reverse user substitution into proposed
     char substbuf[QPALN_USERBUFSIZE];
     char * prop2 = _qd_policy_link_user_name_subst(username, proposed, substbuf, QPALN_USERBUFSIZE);
@@ -815,4 +840,52 @@ bool qd_policy_approve_link_name(const char *username,
         }
     }
     return false;
+}
+
+
+// Add a hostname to the lookup parse_tree
+bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
+{
+    sys_mutex_lock(policy->tree_lock);
+    void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, hostPattern);
+    if (oldp) {
+        void *recovered = qd_parse_tree_add_pattern_str(policy->hostname_tree, (char *)oldp, oldp);
+        assert (recovered);
+        (void)recovered;        /* Silence compiler complaints of unused variable */
+    }
+    sys_mutex_unlock(policy->tree_lock);
+    if (oldp)
+        qd_log(policy->log_source,
+            QD_LOG_WARNING,
+            "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
+            hostPattern, oldp);
+    return oldp == 0;
+}
+
+
+// Remove a hostname from the lookup parse_tree
+void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern)
+{
+    sys_mutex_lock(policy->tree_lock);
+    void *oldp = qd_parse_tree_remove_pattern_str(policy->hostname_tree, hostPattern);
+    sys_mutex_unlock(policy->tree_lock);
+    if (!oldp) {
+        qd_log(policy->log_source, QD_LOG_WARNING, "vhost hostname pattern '%s' for removal not found", hostPattern);
+    }
+}
+
+
+// Look up a hostname in the lookup parse_tree
+char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern)
+{
+    void *payload = 0;
+    sys_mutex_lock(policy->tree_lock);
+    bool matched = qd_parse_tree_retrieve_match_str(policy->hostname_tree, hostPattern, &payload);
+    sys_mutex_unlock(policy->tree_lock);
+    if (!matched) {
+        payload = 0;
+    }
+    qd_log(policy->log_source, QD_LOG_TRACE, "vhost hostname pattern '%s' lookup returned '%s'", 
+           hostPattern, (payload ? (char *)payload : "null"));
+    return payload;
 }

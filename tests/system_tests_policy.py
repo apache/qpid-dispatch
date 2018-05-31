@@ -754,5 +754,80 @@ class PolicyLinkNamePatternTest(TestCase):
         self.assertTrue(exception)
 
 
+class PolicyHostamePatternTest(TestCase):
+    """
+    Verify hostname pattern matching
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyHostamePatternTest, cls).setUpClass()
+        listen_port = cls.tester.get_port()
+        policy_config_path = os.path.join(DIR, 'policy-8')
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy8'}),
+            ('listener', {'port': listen_port}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true', 'enableVhostNamePatterns': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('PolicyVhostNamePatternTest', config, wait=True)
+        try:
+            cls.router.wait_ready(timeout = 5)
+        except Exception,  e:
+            pass
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception, e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def disallowed_hostname(self):
+        return """
+{
+    "hostname": "#.#.0.0",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sources":       "public, private, $management",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def test_hostname_pattern_00_hello(self):
+        rulesets = json.loads(self.run_qdmanage('query --type=vhost'))
+        self.assertEqual(len(rulesets), 1)
+
+    def test_hostname_pattern_01_denied_add(self):
+        qdm_out = "<not written>"
+        try:
+            qdm_out = self.run_qdmanage('create --type=vhost --name=#.#.0.0 --stdin', input=self.disallowed_hostname())
+        except Exception, e:
+            self.assertTrue("pattern conflicts" in e.message, msg=('Error running qdmanage %s' % e.message))
+        self.assertFalse("222222" in qdm_out)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())

@@ -98,6 +98,72 @@ static char *test_add_and_match_str(void *context)
     return NULL;
 }
 
+static char *test_usurpation_recovery_str(void *context)
+{
+    const char *A = "#";
+    const char *B = "#.#.#.#";
+    qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    void *payload;
+    void *usurped;
+    void *deposed;
+
+    // rightful owner is ensconsced
+    if (qd_parse_tree_add_pattern_str(node, A, (void *)A))
+        return "Add returned existing value (1)";
+
+    // matches on A or B both return A
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(A, (char *)payload))
+        return "Got bad pattern";
+
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(A, (char *)payload))
+        return "Got bad pattern";
+
+    // usurper comes along
+    usurped = qd_parse_tree_add_pattern_str(node, B, (void *)B);
+    if (!usurped || strcmp(A, (char *)usurped))
+        return "Usurper should have grabbed '#' optimized match";
+
+    // matches on A or B both return B
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(B, (char *)payload))
+        return "Got bad pattern";
+
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(B, (char *)payload))
+        return "Got bad pattern";
+
+    // Restore rightful owner
+    deposed = qd_parse_tree_add_pattern_str(node, usurped, usurped);
+    if (!deposed || strcmp(B, (char *)deposed))
+        return "Failed to depose B";
+
+    // matches on A or B both return A
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(A, (char *)payload))
+        return "Got bad pattern";
+
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+        return "Could not get pattern";
+
+    if (!payload || strcmp(A, (char *)payload))
+        return "Got bad pattern";
+
+    qd_parse_tree_free(node);
+    return NULL;
+}
+
 // for pattern match callback
 typedef struct {
     int count;
@@ -633,6 +699,7 @@ int parse_tree_tests(void)
 
     TEST_CASE(test_add_remove, 0);
     TEST_CASE(test_add_and_match_str, 0);
+    TEST_CASE(test_usurpation_recovery_str, 0);
     TEST_CASE(test_normalization, 0);
     TEST_CASE(test_matches, 0);
     TEST_CASE(test_multiple_matches, 0);

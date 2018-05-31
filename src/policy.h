@@ -177,4 +177,29 @@ bool qd_policy_approve_link_name(const char *username,
                                   const char *proposed,
                                   bool isReceiver
                                 );
+
+/** Add a hostname to the lookup parse_tree
+ * Note that the parse_tree may store an 'optimised' pattern for a given
+ * pattern. Thus the patterns a user puts in may collide with existing
+ * patterns even though the text of the host patterns is different.
+ * This function does not allow new patterns with thier optimizations 
+ * to overwrite existing patterns that may have been optimised.
+ * @param[in] policy qd_policy_t
+ * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
+ * @return True if the possibly optimised pattern was added to the lookup parse tree
+ */
+bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern);
+
+/** Remove a hostname from the lookup parse_tree
+ * @param[in] policy qd_policy_t
+ * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
+ */
+void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern);
+
+/** Look up a hostname in the lookup parse_tree
+ * @param[in] policy qd_policy_t
+ * @param[in] hostname a concrete vhost name
+ * @return the name of the ruleset whose hostname pattern matched this actual hostname
+ */
+char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
 #endif

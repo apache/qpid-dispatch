@@ -1,3 +1,0 @@
-include setup.py
-
-recursive-include dispatch *

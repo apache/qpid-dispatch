@@ -795,32 +795,30 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         // We are trying to forward a delivery on an address that has no outbound paths
         // AND the incoming link is targeted (not anonymous).
-
-        // If the owning_addr is a multicast addr and there are no outbound paths, we will release this delivery
-        // and replenish the credit.
-
-        // For non multicast addresses, put the delivery on the incoming link's undelivered list.  Note that it is safe
-        // to do this because the undelivered list will be flushed once the number of
-        // paths transitions from zero to one.
         //
-        // Use the action-reference as the reference for undelivered rather
-        // than decrementing and incrementing the delivery ref_count.
+        // We shall release the delivery (it is currently undeliverable).  If the distribution is
+        // multicast, we will replenish the credit.  If it is anycast, we will allow the credit to
+        // drain.
         //
-        if (qdr_is_addr_treatment_multicast(link->owning_addr)) {
+        if (dlv->settled) {
+            // Increment the presettled_dropped_deliveries on the in_link
+            link->dropped_presettled_deliveries++;
+            core->dropped_presettled_deliveries++;
+        } else
             qdr_delivery_release_CT(core, dlv);
+
+        if (qdr_is_addr_treatment_multicast(link->owning_addr))
             qdr_link_issue_credit_CT(core, link, 1, false);
-            qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
-            if (dlv->settled) {
-                // Increment the presettled_dropped_deliveries on the in_link
-                link->dropped_presettled_deliveries++;
-                core->dropped_presettled_deliveries++;
-            }
-        }
-        else {
-            DEQ_INSERT_TAIL(link->undelivered, dlv);
-            dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
-            qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_forward_CT: action-list -> undelivered-list", (long) dlv);
-        }
+        else
+            link->credit_pending++;
+
+        //
+        // Set the discard flag on the message only if the message is not completely received yet.
+        //
+        if (!receive_complete)
+            qd_message_set_discard(dlv->msg, true);
+
+        qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
         return;
     }
 
@@ -834,7 +832,6 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             if (qdr_connection_route_container(link->conn)) {
                 addr->deliveries_ingress_route_container++;
                 core->deliveries_ingress_route_container++;
-
             }
 
         }
@@ -1144,14 +1141,15 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action");
 
     //
-    // If it is already in the undelivered list or it has no peers, don't try to deliver this again.
+    // If it is already in the undelivered list, don't try to deliver this again.
     //
-    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED || !qdr_delivery_has_peer_CT(in_dlv))
+    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED)
         return;
 
     qdr_deliver_continue_peers_CT(core, in_dlv);
 
-    if (qd_message_receive_complete(qdr_delivery_message(in_dlv))) {
+    qd_message_t *msg = qdr_delivery_message(in_dlv);
+    if (qd_message_receive_complete(msg) && !qd_message_is_discard(msg)) {
         //
         // The entire message has now been received. Check to see if there are in process subscriptions that need to
         // receive this message. in process subscriptions, at this time, can deal only with full messages.
@@ -1203,11 +1201,11 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
     bool drain_changed = link->drain_mode |= drain;
     link->drain_mode   = drain;
 
+    if (link->credit_pending > 0)
+        link->credit_pending = link->credit_pending > credit ? link->credit_pending - credit : 0;
+
     if (!drain_changed && credit == 0)
         return;
-
-    if (credit > 0)
-        link->flow_started = true;
 
     qdr_link_work_t *work = new_qdr_link_work_t();
     ZERO(work);
@@ -1271,8 +1269,8 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             //
             // Issue credit to stalled links
             //
-            if (!link->flow_started)
-                qdr_link_issue_credit_CT(core, link, link->capacity, false);
+            if (link->credit_pending > 0)
+                qdr_link_issue_credit_CT(core, link, link->credit_pending, false);
 
             //
             // Drain undelivered deliveries via the forwarder

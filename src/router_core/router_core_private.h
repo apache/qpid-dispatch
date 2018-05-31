@@ -398,10 +398,10 @@ struct qdr_link_t {
     qdr_link_oper_status_t   oper_status;
     int                      capacity;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
+    int                      credit_pending; ///< Number of credits to be issued once consumers are available
     bool                     admin_enabled;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
-    bool                     flow_started;   ///< for incoming, true iff initial credit has been granted
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
 

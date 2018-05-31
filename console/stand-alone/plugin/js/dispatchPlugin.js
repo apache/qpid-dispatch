@@ -51,7 +51,7 @@ var QDR = (function(QDR) {
    *
    * The top level path to this plugin's partials
    */
-  QDR.srcBase = 'node_modules/dispatch-console-pages/dist/';
+  QDR.srcBase = 'plugin/';
   QDR.templatePath = QDR.srcBase + 'html/';
   /**
    * @property SETTINGS_KEY
@@ -98,7 +98,7 @@ var QDR = (function(QDR) {
         templateUrl: QDR.templatePath + 'qdrCharts.html'
       })
       .when('/chord', {
-        templateUrl: 'plugin/html/qdrChord.html'
+        templateUrl: QDR.templatePath + 'qdrChord.html'
       })
       .when('/connect', {
         templateUrl: QDR.templatePath + 'qdrConnect.html'
@@ -246,7 +246,7 @@ var QDR = (function(QDR) {
     });
   }]);
 
-  QDR.module.controller ('QDR.Core', function ($scope) {
+  QDR.module.controller ('QDR.Core', function ($scope, $rootScope) {
     $scope.alerts = [];
     $scope.breadcrumb = {};
     $scope.closeAlert = function(index) {
@@ -263,7 +263,9 @@ var QDR = (function(QDR) {
       $scope.alerts = [];
       $scope.$apply();
     });
-
+    $scope.pageMenuClicked = function () {
+      $rootScope.$broadcast('pageMenuClicked');
+    };
   });
 
   return QDR;
