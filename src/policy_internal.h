@@ -110,6 +110,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
  * @param[in] username authenticated user name
  * @param[in] allowed policy settings source/target string in packed CSV form.
  * @param[in] proposed the link target name to be approved
+ * @param[in] tree the parse tree for this source/target names
  */
-bool _qd_policy_approve_link_name_tree(const char *username, qd_parse_tree_t *tree, const char *proposed);
+bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed, const char *proposed, qd_parse_tree_t *tree);
 #endif
