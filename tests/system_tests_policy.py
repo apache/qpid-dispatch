@@ -724,6 +724,60 @@ class PolicyLinkNamePatternTest(TestCase):
 }
 """
 
+    def disallowed_source_pattern1(self):
+        return """
+{
+    "id": "DISPATCH-1993-3",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sourcePattern": "public, private, $management, abc-${user}.xyz",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targetPattern": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
+    def disallowed_source_pattern2(self):
+        return """
+{
+    "id": "DISPATCH-1993-3",
+    "maxConnections": 3,
+    "maxConnectionsPerHost": 3,
+    "maxConnectionsPerUser": 3,
+    "allowUnknownUser": true,
+    "groups": {
+        "$default": {
+            "allowAnonymousSender": true,
+            "maxReceivers": 99,
+            "users": "*",
+            "maxSessionWindow": 1000000,
+            "maxFrameSize": 222222,
+            "sourcePattern": "public, private, $management, abc/${user}.xyz",
+            "maxMessageSize": 222222,
+            "allowDynamicSource": true,
+            "remoteHosts": "*",
+            "maxSessions": 2,
+            "targetPattern": "public, private, $management",
+            "maxSenders": 22
+        }
+    }
+}
+"""
+
     def test_link_name_parse_tree_patterns(self):
         # update to replace source/target match patterns
         qdm_out = "<not written>"
@@ -751,6 +805,26 @@ class PolicyLinkNamePatternTest(TestCase):
         except Exception as e:
             exception = True
             self.assertTrue("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-3' is invalid:" in str(e))
+        self.assertTrue(exception)
+
+        # attempt another create that should be rejected - name subst must whole token
+        qdm_out = "<not written>"
+        exception = False
+        try:
+            qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern1())
+        except Exception, e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+        self.assertTrue(exception)
+
+        # attempt another create that should be rejected - name subst must be prefix or suffix
+        qdm_out = "<not written>"
+        exception = False
+        try:
+            qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern2())
+        except Exception, e:
+            exception = True
+            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
         self.assertTrue(exception)
 
 

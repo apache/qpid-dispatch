@@ -98,19 +98,44 @@ static char *test_link_name_tree_lookup(void *context)
     qd_parse_tree_add_pattern_str(node, "${user}.xyz", payload);
 
     if (!_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz", node))
-        return "proposed link 'chuck.xyz' should tree-match allowed links with ${user} but does not";
+        return "proposed link 'chuck.xyz' should tree-match allow links with ${user} but does not";
 
     if (_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz.ynot", node))
-        return "proposed link 'chuck.xyz.ynot' should not tree-match allowed links with ${user} but does";
+        return "proposed link 'chuck.xyz.ynot' should not tree-match allow links with ${user} but does";
 
     qd_parse_tree_add_pattern_str(node, "${user}.#", payload);
 
     if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic", node))
-        return "proposed link 'motronic' should tree-match allowed links with ${user} but does not";
+        return "proposed link 'motronic' should tree-match allow links with ${user} but does not";
 
     if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic.stubs.wobbler", node))
-        return "proposed link 'motronic.stubs.wobbler' should tree-match allowed links with ${user} but does not";
+        return "proposed link 'motronic.stubs.wobbler' should tree-match allow links with ${user} but does not";
 
+    qd_parse_tree_t *node2 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    qd_parse_tree_add_pattern_str(node2, "abc.${user}", payload);
+
+    if (!_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.chuck", node2))
+        return "proposed link 'abc.chuck' should tree-match allow links with ${user} but does not";
+
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.ynot.chuck", node2))
+        return "proposed link 'abc.ynot.chuck' should not tree-match allow links with ${user} but does";
+
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.achuck", node2))
+        return "proposed link 'abc.achuck' should not tree-match allow links with ${user} but does";
+
+    if (_qd_policy_approve_link_name_tree("chuckginormous", "s,abc.,", "abc.chuck", node2))
+        return "proposed link 'abc.chuck' should not tree-match allow links with ${user} but does";
+
+    qd_parse_tree_t *node3 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    qd_parse_tree_add_pattern_str(node3, "${user}", payload);
+
+    if (!_qd_policy_approve_link_name_tree("chuck", "p,,", "chuck", node3))
+        return "proposed link 'chuck' should tree-match allow links with ${user} but does not";
+
+    qd_parse_tree_free(node);
+    qd_parse_tree_free(node2);
+    qd_parse_tree_free(node3);
+    
     return 0;
 }
 

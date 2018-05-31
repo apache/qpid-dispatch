@@ -355,8 +355,6 @@ class PolicyCompiler(object):
                                 eVal.append(v)
                                 eVal.append('')
                     policy_out[key] = ','.join(eVal)
-                    print "Val: ", val               # hack alert
-                    print "eVal:", eVal              # hack alert
 
                 if key == PolicyKeys.KW_SOURCES:
                     user_sources = True

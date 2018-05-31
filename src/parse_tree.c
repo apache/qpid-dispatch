@@ -91,6 +91,11 @@ static void token_iterator_next(token_iterator_t *t)
 }
 
 
+const char address_token_sep[] = "./";
+const char *qd_parse_address_token_sep() {
+    return address_token_sep;
+}
+
 static bool token_iterator_done(const token_iterator_t *t)
 {
     return t->token.begin == t->terminator;
