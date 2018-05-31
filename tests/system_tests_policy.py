@@ -773,7 +773,7 @@ class PolicyHostamePatternTest(TestCase):
         cls.router = cls.tester.qdrouterd('PolicyVhostNamePatternTest', config, wait=True)
         try:
             cls.router.wait_ready(timeout = 5)
-        except Exception,  e:
+        except Exception:
             pass
 
     def address(self):
@@ -786,7 +786,7 @@ class PolicyHostamePatternTest(TestCase):
         out = p.communicate(input)[0]
         try:
             p.teardown()
-        except Exception, e:
+        except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
 
@@ -824,7 +824,7 @@ class PolicyHostamePatternTest(TestCase):
         qdm_out = "<not written>"
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=#.#.0.0 --stdin', input=self.disallowed_hostname())
-        except Exception, e:
+        except Exception as e:
             self.assertTrue("pattern conflicts" in e.message, msg=('Error running qdmanage %s' % e.message))
         self.assertFalse("222222" in qdm_out)
 
