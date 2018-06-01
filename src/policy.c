@@ -581,11 +581,10 @@ bool is_token_sep(char testc)
 //
 // Size of 'easy' temporary copy of allowed input string
 #define QPALN_SIZE 1024
-// Wildcard character
+// Wildcard character at end of source/target name strings
 #define QPALN_WILDCARD '*'
-#define QPALN_USERBUFSIZE 300
 
-#define MIN(a,b) (((a)<(b))?(a):(b))\
+#define MIN(a,b) (((a)<(b))?(a):(b))
 
 /**
  * Given a username and a list of allowed link names 

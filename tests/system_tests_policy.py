@@ -812,9 +812,10 @@ class PolicyLinkNamePatternTest(TestCase):
         exception = False
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern1())
-        except Exception, e:
+        except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError:" in e.message)
+            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in e.message)
         self.assertTrue(exception)
 
         # attempt another create that should be rejected - name subst must be prefix or suffix
@@ -822,9 +823,10 @@ class PolicyLinkNamePatternTest(TestCase):
         exception = False
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern2())
-        except Exception, e:
+        except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: \"Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError:" in e.message)
+            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in e.message)
         self.assertTrue(exception)
 
 
