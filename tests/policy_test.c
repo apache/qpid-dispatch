@@ -26,6 +26,11 @@
 
 static char *test_link_name_lookup(void *context)
 {
+    // DISPATCH-1011: approval specifications are now CSV concatenated 3-tuples:
+    // (user-subst-code, prefix, suffix)
+    // codes are 'a'bsent, 'p'refix, 's'uffix, 'e'mbedded, '*'wildcard
+    // OLD: 'joe', NEW: 'a,joe,'
+
     // Degenerate blank names
     if (_qd_policy_approve_link_name("a", "a", ""))
 	return "blank proposed name not rejected";
@@ -33,31 +38,34 @@ static char *test_link_name_lookup(void *context)
 	return "blank allowed list not rejected";
 
     // Easy matches
-    if (!_qd_policy_approve_link_name("", "joe", "joe"))
+    if (!_qd_policy_approve_link_name("", "a,joe,", "joe"))
         return "proposed link 'joe' should match allowed links 'joe' but does not";
-    if (_qd_policy_approve_link_name("", "joe", "joey"))
+    if (_qd_policy_approve_link_name("", "a,joe,", "joey"))
         return "proposed link 'joey' should not match allowed links 'joe' but does";
 
     // Wildcard matches
-    if (!_qd_policy_approve_link_name("", "joe*", "joey"))
+    if (!_qd_policy_approve_link_name("", "a,joe*,", "joey"))
         return "proposed link 'joey' should match allowed links 'joe*' but does not";
-    if (!_qd_policy_approve_link_name("", "joe*", "joezzzZZZ"))
+    if (!_qd_policy_approve_link_name("", "a,joe*,", "joezzzZZZ"))
         return "proposed link 'joezzzZZZ' should match allowed links 'joe*' but does not";
-    if (!_qd_policy_approve_link_name("", "joe,*", "joey"))
+    if (!_qd_policy_approve_link_name("", "a,joe,,*,,", "joey"))
         return "proposed link 'joey' should match allowed links 'joe,*' but does not";
 
     // Deeper match
-    if (!_qd_policy_approve_link_name("", "no1,no2,no3,yes,no4", "yes"))
+    if (!_qd_policy_approve_link_name("", "a,no1,,a,no2,,a,no3,,a,yes,,a,no4,", "yes"))
         return "proposed link 'yes' should match allowed links 'no1,no2,no3,yes,no4' but does not";
 
     // Deeeper match - triggers malloc/free internal handler
-    char * bufp = (char *)malloc(512 * 5 + 6);
+#define BIG_N 512
+    char * bufp = (char *)malloc(BIG_N * 8 + 6);
+    if (!bufp)
+        return "failed to allocate buffer for large link name test";
     char * wp = bufp;
     int i;
-    for (i=0; i<512; i++) {
-        wp += sprintf(wp, "n%03d,", i);
+    for (i=0; i<BIG_N; i++) {
+        wp += sprintf(wp, "a,n%03d,,", i);
     }
-    sprintf(wp, "yes");
+    sprintf(wp, "a,yes,");
     if (!_qd_policy_approve_link_name("", bufp, "yes")) {
         free(bufp);
         return "proposed link 'yes' should match allowed large list but does not";
@@ -65,15 +73,17 @@ static char *test_link_name_lookup(void *context)
     free(bufp);
 
     // Substitute a user name
-    if (!_qd_policy_approve_link_name("chuck", "ab${user}xyz", "abchuckxyz"))
+    if (!_qd_policy_approve_link_name("chuck", "e,ab,xyz", "abchuckxyz"))
         return "proposed link 'abchuckxyz' should match allowed links with ${user} but does not";
-    if (!_qd_policy_approve_link_name("chuck", "${user}xyz", "chuckxyz"))
+    if (!_qd_policy_approve_link_name("chuck", "p,,xyz", "chuckxyz"))
         return "proposed link 'chuckxyz' should match allowed links with ${user} but does not";
-    if (!_qd_policy_approve_link_name("chuck", "ab${user}", "abchuck"))
+    if (!_qd_policy_approve_link_name("chuck", "s,ab,", "abchuck"))
         return "proposed link 'abchuck' should match allowed links with ${user} but does not";
+//    if (!_qd_policy_approve_link_name("em", "temp-${user}", "temp-em"))
+//        return "proposed link 'temp-em' should match allowed links with ${user} but does not";
 
     // Combine user name and wildcard
-    if (!_qd_policy_approve_link_name("chuck", "ab${user}*", "abchuckzyxw"))
+    if (!_qd_policy_approve_link_name("chuck", "e,ab,*", "abchuckzyxw"))
         return "proposed link 'abchuckzyxw' should match allowed links with ${user}* but does not";
 
     return 0;
@@ -85,18 +95,84 @@ static char *test_link_name_tree_lookup(void *context)
     qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     void *payload = (void*)1;
 
-    qd_parse_tree_add_pattern_str(node, "ab${user}xyz", payload);
+    qd_parse_tree_add_pattern_str(node, "${user}.xyz", payload);
 
-    if (!_qd_policy_approve_link_name_tree("chuck", node, "abchuckxyz"))
-        return "proposed link 'abchuckxyz' should tree-match allowed links with ${user} but does not";
+    if (!_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz", node))
+        return "proposed link 'chuck.xyz' should tree-match allow links with ${user} but does not";
+
+    if (_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz.ynot", node))
+        return "proposed link 'chuck.xyz.ynot' should not tree-match allow links with ${user} but does";
 
     qd_parse_tree_add_pattern_str(node, "${user}.#", payload);
 
-    if (!_qd_policy_approve_link_name_tree("motronic", node, "motronic"))
-        return "proposed link 'motronic' should tree-match allowed links with ${user} but does not";
+    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic", node))
+        return "proposed link 'motronic' should tree-match allow links with ${user} but does not";
 
-    if (!_qd_policy_approve_link_name_tree("motronic", node, "motronic.stubs.wobbler"))
-        return "proposed link 'motronic.stubs.wobbler' should tree-match allowed links with ${user} but does not";
+    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic.stubs.wobbler", node))
+        return "proposed link 'motronic.stubs.wobbler' should tree-match allow links with ${user} but does not";
+
+    qd_parse_tree_t *node2 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    qd_parse_tree_add_pattern_str(node2, "abc.${user}", payload);
+
+    if (!_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.chuck", node2))
+        return "proposed link 'abc.chuck' should tree-match allow links with ${user} but does not";
+
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.ynot.chuck", node2))
+        return "proposed link 'abc.ynot.chuck' should not tree-match allow links with ${user} but does";
+
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.achuck", node2))
+        return "proposed link 'abc.achuck' should not tree-match allow links with ${user} but does";
+
+    if (_qd_policy_approve_link_name_tree("chuckginormous", "s,abc.,", "abc.chuck", node2))
+        return "proposed link 'abc.chuck' should not tree-match allow links with ${user} but does";
+
+    qd_parse_tree_t *node3 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    qd_parse_tree_add_pattern_str(node3, "${user}", payload);
+
+    if (!_qd_policy_approve_link_name_tree("chuck", "p,,", "chuck", node3))
+        return "proposed link 'chuck' should tree-match allow links with ${user} but does not";
+
+    qd_parse_tree_free(node);
+    qd_parse_tree_free(node2);
+    qd_parse_tree_free(node3);
+    
+    return 0;
+}
+
+
+static char *test_link_name_csv_parser(void *context)
+{
+    char * result;
+
+    result = qd_policy_compile_allowed_csv("ttt");
+    if (!!strcmp(result, "a,ttt,"))
+        return "simple csv with no subst failed";
+    free(result);
+
+    result = qd_policy_compile_allowed_csv("ttt,uuu,vvvv");
+    if (!!strcmp(result, "a,ttt,,a,uuu,,a,vvvv,"))
+        return "moderate csv with no subst failed";
+    free(result);
+
+    result = qd_policy_compile_allowed_csv("*");
+    if (!!strcmp(result, "*,,"))
+        return "wildcard csv failed";
+    free(result);
+
+    result = qd_policy_compile_allowed_csv("${user}-temp");
+    if (!!strcmp(result, "p,,-temp"))
+        return "csv with prefix subst failed";
+    free(result);
+
+    result = qd_policy_compile_allowed_csv("temp-${user}");
+    if (!!strcmp(result, "s,temp-,"))
+        return "csv with suffix subst failed";
+    free(result);
+
+    result = qd_policy_compile_allowed_csv("temp-${user}-home");
+    if (!!strcmp(result, "e,temp-,-home"))
+        return "csv with embedded subst failed";
+    free(result);
 
     return 0;
 }
@@ -109,6 +185,7 @@ int policy_tests(void)
 
     TEST_CASE(test_link_name_lookup, 0);
     TEST_CASE(test_link_name_tree_lookup, 0);
+    TEST_CASE(test_link_name_csv_parser, 0);
 
     return result;
 }

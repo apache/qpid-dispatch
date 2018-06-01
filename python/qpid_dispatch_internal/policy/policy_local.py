@@ -89,6 +89,16 @@ class PolicyKeys(object):
     # policy stats controlled by C code but referenced by settings
     KW_CSTATS                   = "denialCounts"
 
+    # Username subsitituion token in link source and target names and patterns
+    KC_TOKEN_USER               = "${user}"
+
+    # Link target/source name wildcard tuple keys
+    KC_TUPLE_ABSENT             = 'a'
+    KC_TUPLE_PREFIX             = 'p'
+    KC_TUPLE_SUFFIX             = 's'
+    KC_TUPLE_EMBED              = 'e'
+    KC_TUPLE_WILDCARD           = '*'
+
 #
 #
 class PolicyCompiler(object):
@@ -291,8 +301,58 @@ class PolicyCompiler(object):
                                   (vhostname, usergroup, key, val, type(val)))
                 # deduplicate address lists
                 val = list(set(val))
-                # output result is CSV string with no white space between values: 'abc,def,mytarget'
-                policy_out[key] = ','.join(val)
+                # val is CSV string with no white space between values: 'abc,def,mytarget,tmp-${user}'
+                if key == PolicyKeys.KW_USERS:
+                    # user name list items are literal strings and need no special handling
+                    policy_out[key] = ','.join(val)
+                else:
+                    # source and target names get special handling for the '${user}' substitution token
+                    # The literal string is translated to a (key, prefix, suffix) set of three strings.
+                    # C code does not have to search for the username token and knows with authority
+                    # how to construct match strings.
+                    # A wildcard is also signaled.
+                    utoken = PolicyKeys.KC_TOKEN_USER
+                    eVal = []
+                    for v in val:
+                        vcount = v.count(utoken)
+                        if vcount > 1:
+                            errors.append("Policy vhost '%s' user group '%s' policy key '%s' item '%s' contains multiple user subtitution tokens" %
+                                          (vhostname, usergroup, key, v))
+                            return False
+                        elif vcount == 1:
+                            # a single token is present as a prefix, suffix, or embedded
+                            # construct cChar, S1, S2 encodings to be added to eVal description
+                            if v.startswith(utoken):
+                                # prefix
+                                eVal.append(PolicyKeys.KC_TUPLE_PREFIX)
+                                eVal.append('')
+                                eVal.append(v)
+                            elif v.endswith(utoken):
+                                # suffix
+                                eVal.append(PolicyKeys.KC_TUPLE_SUFFIX)
+                                eVal.append(v)
+                                eVal.append('')
+                            else:
+                                # embedded
+                                if key in [PolicyKeys.KW_SOURCE_PATTERN,
+                                           PolicyKeys.KW_TARGET_PATTERN]:
+                                    errors.append("Policy vhost '%s' user group '%s' policy key '%s' item '%s' may contain match pattern '%s' as a prefix or a suffix only." %
+                                          (vhostname, usergroup, key, v, utoken))
+                                    return False
+                                eVal.append(PolicyKeys.KC_TUPLE_EMBED)
+                                eVal.append(v[0:v.find(utoken)])
+                                eVal.append(v[v.find(utoken) + len(utoken):])
+                        else:
+                            # ${user} token is absent
+                            if v == PolicyKeys.KC_TUPLE_WILDCARD:
+                                eVal.append(PolicyKeys.KC_TUPLE_WILDCARD)
+                                eVal.append('')
+                                eVal.append('')
+                            else:
+                                eVal.append(PolicyKeys.KC_TUPLE_ABSENT)
+                                eVal.append(v)
+                                eVal.append('')
+                    policy_out[key] = ','.join(eVal)
 
                 if key == PolicyKeys.KW_SOURCES:
                     user_sources = True

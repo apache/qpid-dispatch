@@ -202,4 +202,15 @@ void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern);
  * @return the name of the ruleset whose hostname pattern matched this actual hostname
  */
 char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
+
+/**
+ * Compile raw CSV spec of allowed sources/targets and return
+ * the string of tuples used by policy runtime.
+ * The returned string is allocated here and freed by the caller.
+ * This function does no error checking or logging.
+ *
+ * @param[in] csv the CSV allowed list
+ * @return the ruleset string to be used in policy settings.
+ */
+char * qd_policy_compile_allowed_csv(char * csv);
 #endif
