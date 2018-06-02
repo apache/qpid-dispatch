@@ -71,7 +71,7 @@ if(CONSOLE_INSTALL)
         OUTPUT ${GULPED_ARTIFACTS}
         COMMENT "Running console build"
         COMMAND npm install --loglevel=error
-        COMMAND gulp
+        COMMAND npx gulp
         DEPENDS ${CONSOLE_SOURCES}
         WORKING_DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}
         )
