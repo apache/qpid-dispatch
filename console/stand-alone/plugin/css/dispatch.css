@@ -22,7 +22,7 @@ main-display > .span8 {
 }
 
 ul.qdrListNodes > li > span {
-  padding: 6px 20px; 6px; 6px;
+  padding: 6px 20px 6px 6px;
   display: block;
 }
 

@@ -1509,7 +1509,7 @@ var QDR = (function(QDR) {
           // add rows to the table for each link
           for (let l=0; l<links.length; l++) {
             if (l>=max_links) {
-              HTMLHeading = '<h4>Top ' + max_links + ' Links</h4>';
+              HTMLHeading = `<h4>Top ${max_links} Links</h4>`;
               break;
             }
             let link = links[l];
@@ -1523,7 +1523,7 @@ var QDR = (function(QDR) {
             let joinedVals = fnJoin(vals, function (v1) {
               return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', QDRService.utilities.pretty(v1 || '0')];
             });
-            HTML += ('<tr><td>' + joinedVals + '</td></tr>');
+            HTML += `<tr><td> ${joinedVals} </td></tr>`;
           }
           HTML += '</table>';
           return HTMLHeading + HTML;
