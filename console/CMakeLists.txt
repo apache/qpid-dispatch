@@ -17,20 +17,105 @@
 ## under the License.
 ##
 
-set(CONSOLE_BASE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone/")
+##
+## Add cmake option to choose whether to install stand-alone console
+##
+option(CONSOLE_INSTALL "Build and install console (requires npm)" ON)
 
-##
-## Add option to not install the stand-alone console
-##
-option(CONSOLE_INSTALL "Install stand-alone console" ON)
 if(CONSOLE_INSTALL)
+  find_program(NPM_EXE npm DOC "Location of the npm package manager")
+    if (NPM_EXE)
 
-       # Static console files
-       install(
-         DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}
-          DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
-    )
+      set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
+      set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
 
+      ## Files needed to create the ${CONSOLE_ARTIFACTS}
+      file (GLOB_RECURSE CONSOLE_JS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.js)
+      file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.ts)
+      set(CONSOLE_CSS_SOURCE ${CONSOLE_SOURCE_DIR}/plugin/css/dispatch.css)
+      set(ALL_CONSOLE_SOURCES ${CONSOLE_JS_SOURCES} ${CONSOLE_TS_SOURCES} ${CONSOLE_CSS_SOURCE})
+
+      ## Files created during the console build
+      set(CONSOLE_ARTIFACTS
+        ${CONSOLE_BUILD_DIR}/dist/js/dispatch.min.js
+        ${CONSOLE_BUILD_DIR}/dist/js/vendor.min.js
+        ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
+        ${CONSOLE_BUILD_DIR}/dist/css/vendor.min.css
+      )
+
+      ## copy the build config files
+      configure_file( ${CONSOLE_SOURCE_DIR}/package.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/package-lock.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/tslint.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/gulpfile.js ${CONSOLE_BUILD_DIR}/ COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/vendor-js.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/vendor-css.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
+
+      ## Tell cmake how and when to build ${CONSOLE_ARTIFACTS}
+      add_custom_command (
+        OUTPUT ${CONSOLE_ARTIFACTS}
+        COMMENT "Running console build"
+        COMMAND npm install --loglevel=error
+        COMMAND npx gulp --src ${CONSOLE_SOURCE_DIR}
+        DEPENDS ${ALL_CONSOLE_SOURCES}
+        WORKING_DIRECTORY ${CONSOLE_BUILD_DIR}/
+        )
+
+      ## Ensure ${CONSOLE_ARTIFACTS} is built on a make when needed
+      add_custom_target(console ALL
+        DEPENDS ${CONSOLE_ARTIFACTS}
+      )
+
+      ##
+      ## Install the static and built console files
+      ##
+
+      ## Files copied to the root of the console's install dir
+      set(BASE_FILES
+        ${CONSOLE_SOURCE_DIR}/index.html
+        ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
+      )
+      ## Files copied to the css/ dir
+      set(CSS_FONTS
+        ${CONSOLE_SOURCE_DIR}/plugin/css/brokers.ttf
+        ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/ui-grid.woff
+        ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/ui-grid.ttf
+      )
+      ## Files copied to the fonts/ dir
+      set(VENDOR_FONTS
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Regular-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Bold-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Light-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Semibold-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-BoldItalic-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Italic-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.eot
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/PatternFlyIcons-webfont.ttf
+        ${CONSOLE_BUILD_DIR}/node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2
+      )
+
+      install(DIRECTORY ${CONSOLE_BUILD_DIR}/dist/
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
+        PATTERN "*.map" EXCLUDE
+      )
+      install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/html/
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html
+        FILES_MATCHING PATTERN "*.html"
+      )
+      install(FILES ${BASE_FILES}
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
+      )
+      install(FILES ${CSS_FONTS}
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/css/
+      )
+      install(FILES ${VENDOR_FONTS}
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/fonts/
+      )
+
+    else(NPM_EXE)
+      message(WARNING "Cannot build console, npm not found")
+    endif(NPM_EXE)
 endif(CONSOLE_INSTALL)
 
 ##
@@ -50,7 +135,7 @@ if (MAVEN_EXE)
        # install the built war file into the console dir
        install(
            # We don't know in advance what the name of the final .war will be because
-               # the war file name depends on the version in the pom.xml. The version will change each release
+           # the war file name depends on the version in the pom.xml. The version will change each release
            CODE "file( GLOB builtwar \"${HAWTIO_BUILD_DIR}/dispatch-hawtio-console*.war\" )"
            CODE "file( INSTALL \${builtwar} DESTINATION \"${CONSOLE_INSTALL_DIR}/hawtio\" )"
        )

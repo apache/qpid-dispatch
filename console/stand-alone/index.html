@@ -28,24 +28,14 @@ under the License.
 
     <link rel="shortcut icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 
-    <link rel="stylesheet" href="node_modules/jquery-ui-dist/jquery-ui.css">
+    <link rel="stylesheet" href="css/vendor.min.css" type="text/css"/>
+    <link rel="stylesheet" href="css/dispatch.min.css" type="text/css"/>
 
-    <!-- PatternFly Styles -->
-    <link rel="stylesheet" href="node_modules/patternfly/dist/css/patternfly.min.css" >
-    <link rel="stylesheet" href="node_modules/patternfly/dist/css/patternfly-additions.min.css" >
-
-    <!-- jquery Styles -->
-    <link rel="stylesheet" href="node_modules/jquery.fancytree/dist/skin-bootstrap-n/ui.fancytree.css" type="text/css"/>
-
-    <!-- charting styles -->
-    <link rel="stylesheet" href="node_modules/c3/c3.css" type="text/css"/>
-
-    <!-- angular Styles -->
-    <link rel="stylesheet" href="node_modules/angular-ui-grid/ui-grid.css" type="text/css"/>
-
-    <!-- local Styles -->
-    <link rel="stylesheet" href="plugin/css/dispatch.css" type="text/css"/>
-
+    <style>
+        #installError {
+            display: none;
+        }
+    </style>
 </head>
 <body ng-app="QDR" ng-controller="QDR.Core">
 
@@ -81,84 +71,22 @@ under the License.
 <div class="container-fluid">
     <div class="row">
         <div id="main_container" class="col-md-12">
-            <div ng-view><div id="no-npm">Please run 'npm install' in the console/stand-alone/ directory.</div>
+            <div ng-view><div id="installError">There was an error when installing the console. Please run make install for the router and check for errors.</div></div>
         </div>
     </div>
 </div>
 
-<style>
-    #no-npm {
-        display: none;
-    }
-</style>
+<script type="text/javascript" src="js/vendor.min.js"></script>
+<script type="text/javascript" src="js/dispatch.min.js"></script>
 
-<!-- Only needed for IE -->
-<script src="node_modules/bluebird/js/browser/bluebird.js"></script>
 
-<!-- jQuery -->
-<script src="node_modules/jquery/dist/jquery.js"></script>
-<script src="node_modules/jquery-ui-dist/jquery-ui.js"></script>
-<script src="node_modules/jquery.fancytree/dist/jquery.fancytree-all.js"></script>
-
-<!-- Angular -->
-<script src="node_modules/angular/angular.js"></script>
-<script src="node_modules/angular-animate/angular-animate.min.js"></script>
-<script src="node_modules/angular-sanitize/angular-sanitize.min.js"></script>
-<script src="node_modules/angular-route/angular-route.min.js"></script>
-<script src="node_modules/angular-resource/angular-resource.min.js"></script>
-
-<!-- Bootstrap -->
-<script src="node_modules/bootstrap/dist/js/bootstrap.min.js"></script>
-<script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap.js"></script>
-<script src="node_modules/angular-ui-bootstrap/dist/ui-bootstrap-tpls.js"></script>
-
-<!-- d3 -->
-<script src='node_modules/d3/d3.min.js'></script>
-<script src='node_modules/d3-queue/build/d3-queue.min.js'></script>
-<script src='node_modules/d3-time/build/d3-time.min.js'></script>
-<script src='node_modules/d3-time-format/build/d3-time-format.min.js'></script>
-<script src='node_modules/d3-path/build/d3-path.min.js'></script>
-
-<!-- c3 for charts -->
-<script src="node_modules/c3/c3.js"></script>
-
-<script src="node_modules/angular-ui-slider/src/slider.js"></script>
-<script src="node_modules/angular-ui-grid/ui-grid.js"></script>
-<script src="node_modules/angular-bootstrap-checkbox/angular-bootstrap-checkbox.js"></script>
-<script src="node_modules/notifyjs-browser/dist/notify.js"></script>
-<script src="node_modules/patternfly/dist/js/patternfly.min.js"></script>
-
-<script type="text/javascript" src="node_modules/dispatch-management/dist/dispatch-management.js"></script>
-<script type="text/javascript" src="plugin/js/dispatchPlugin.js"></script>
-<script type="text/javascript" src="plugin/js/navbar.js"></script>
-<script type="text/javascript" src="plugin/js/qdrGlobals.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverview.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverviewLogsController.js"></script>
-<script type="text/javascript" src="plugin/js/qdrOverviewChartsController.js"></script>
-<script type="text/javascript" src="plugin/js/qdrTopAddressesController.js"></script>
-<script type="text/javascript" src="plugin/js/dlgChartController.js"></script>
-<script type="text/javascript" src="plugin/js/qdrList.js"></script>
-<script type="text/javascript" src="plugin/js/qdrListChart.js"></script>
-<script type="text/javascript" src="plugin/js/qdrCharts.js"></script>
-<script type="text/javascript" src="plugin/js/qdrSchema.js"></script>
-<script type="text/javascript" src="plugin/js/qdrService.js"></script>
-<script type="text/javascript" src="plugin/js/qdrChartService.js"></script>
-<script type="text/javascript" src="plugin/js/topology/qdrTopology.js"></script>
-<script type="text/javascript" src="plugin/js/topology/traffic.js"></script>
-<script type="text/javascript" src="plugin/js/qdrSettings.js"></script>
-<script type="text/javascript" src="plugin/js/chord/ribbon/ribbon.js"></script>
-<script type="text/javascript" src="plugin/js/chord/matrix.js"></script>
-<script type="text/javascript" src="plugin/js/chord/filters.js"></script>
-<script type="text/javascript" src="plugin/js/chord/data.js"></script>
-<script type="text/javascript" src="plugin/js/chord/layout/layout.js"></script>
-<script type="text/javascript" src="plugin/js/chord/qdrChord.js"></script>
 <script>
+    // If angular hasn't loaded a page after 1 second, display the error message
     setTimeout(function () {
-        var no_npm = document.getElementById('no-npm');
-        if (no_npm)
-            no_npm.style.display = "block";
+        var installError = document.getElementById('installError');
+        if (installError)
+            installError.style.display = "block";
     }, 1000);
-
     $(function(){
         $('.nav a').on('click', function(){
             $('.navbar-collapse').collapse('hide');

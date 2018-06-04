@@ -44,16 +44,12 @@
     <url>https://git-wip-us.apache.org/repos/asf?p=qpid-dispatch.git</url>
   </scm>
 
-  <prerequisites>
-    <maven>3.0.4</maven>
-  </prerequisites>
-
   <properties>
     <!-- filtered plugin properties, we don't define plugin-scripts here
       as we build that dynamically using maven-antrun-plugin below. -->
     <!-- plugin-context is what context this plugin will handle requests on
       in the application server -->
-    <plugin-context>/${artifactId}</plugin-context>
+    <plugin-context>/${project.artifactId}</plugin-context>
 
     <!-- plugin-name is the name of our plugin, affects the name used for
       the plugin's mbean -->
@@ -207,7 +203,14 @@
 
       <!-- maven-bundle-plugin config, needed to make this war
         deployable in karaf, defines the context that this bundle
-        should handle requests on -->
+        should handle requests on 
+
+        commented out because of:
+        [WARNING] Manifest org.apache.qpid:dispatch-hawtio-console:war:1.2.0-SNAPSHOT : None of Export-Package, Provide-Package, Private-Package, -testpackages, or -exportcontents is set, therefore no packages will be included
+        [WARNING] Manifest org.apache.qpid:dispatch-hawtio-console:war:1.2.0-SNAPSHOT : No sub JAR or directory WEB-INF/classes
+      -->
+
+      <!--
       <plugin>
         <groupId>org.apache.felix</groupId>
         <artifactId>maven-bundle-plugin</artifactId>
@@ -249,6 +252,28 @@
             <Implementation-Version>${project.version}</Implementation-Version>
           </instructions>
         </configuration>
+      </plugin>-->
+
+      <!-- maven-enforcer-plugin is now used instead of prerequisites for non maven-plugin projects -->
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-enforcer-plugin</artifactId>
+        <version>3.0.0-M1</version>
+        <executions>
+          <execution>
+            <id>enforce-maven</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <requireMavenVersion>
+                  <version>3.0.4</version>
+                </requireMavenVersion>
+              </rules>    
+            </configuration>
+          </execution>
+        </executions>
       </plugin>
 
       <!-- We define the maven-war-plugin here and make sure it uses
