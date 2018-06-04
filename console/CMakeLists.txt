@@ -98,7 +98,7 @@ if(CONSOLE_INSTALL)
         PATTERN "*.map" EXCLUDE
       )
       install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/html/
-        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html/
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html
         FILES_MATCHING PATTERN "*.html"
       )
       install(FILES ${BASE_FILES}
