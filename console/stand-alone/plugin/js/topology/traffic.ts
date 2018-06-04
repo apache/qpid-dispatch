@@ -232,12 +232,10 @@ class Dots extends TrafficAnimation {
     let self = this;
     // event notification that an address checkbox has changed
     traffic.$scope.addressFilterChanged = function () {
-      self.updateAddresses()
-        .then(function () {
-          // don't wait for the next polling cycle. update now
-          self.traffic.stop();
-          self.traffic.start();
-        });
+      self.updateAddresses();
+      // don't wait for the next polling cycle. update now
+      self.traffic.stop();
+      self.traffic.start();
     };
     // called by angular when mouse enters one of the address legends
     traffic.$scope.enterLegend = function (address) {
@@ -250,10 +248,8 @@ class Dots extends TrafficAnimation {
     };
     // clicked on the address name. toggle the address checkbox
     traffic.$scope.addressClick = function (address) {
-      self.toggleAddress(address)
-        .then(function () {
-          self.updateAddresses();
-        });
+      self.toggleAddress(address);
+      self.updateAddresses();
     };
   }
   remove() {
@@ -273,15 +269,9 @@ class Dots extends TrafficAnimation {
     if (this.chordData) {
       this.chordData.setFilter(this.excludedAddresses);
     }
-    return new Promise(function (resolve) {
-      return resolve();
-    });
   }
   toggleAddress(address) {
     this.traffic.$scope.addresses[address] = !this.traffic.$scope.addresses[address];
-    return new Promise(function (resolve) {
-      return resolve();
-    });
   }
   fadeOtherAddresses(address) {
     d3.selectAll('circle.flow').classed('fade', function (d) {

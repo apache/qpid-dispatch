@@ -18,7 +18,7 @@ under the License.
 */
 `;
 
-var gulp = require('gulp'),
+const gulp = require('gulp'),
   babel = require('gulp-babel'),
   concat = require('gulp-concat'),
   uglify = require('gulp-uglify'),
@@ -27,16 +27,46 @@ var gulp = require('gulp'),
   cleanCSS = require('gulp-clean-css'),
   del = require('del'),
   eslint = require('gulp-eslint'),
-  sourcemaps = require('gulp-sourcemaps'),
+  maps = require('gulp-sourcemaps'),
   insert = require('gulp-insert'),
 
   tsc = require('gulp-typescript'),
-  tslint = require('gulp-tslint'),
-  tsProject = tsc.createProject('tsconfig.json');
+  tslint = require('gulp-tslint');
+  //tsProject = tsc.createProject('tsconfig.json');
 
-var paths = {
+  // temp directory for converted typescript files
+const built_ts = 'built_ts';
+
+// fetch command line arguments
+const arg = (argList => {
+  let arg = {}, a, opt, thisOpt, curOpt;
+  for (a = 0; a < argList.length; a++) {
+    thisOpt = argList[a].trim();
+    opt = thisOpt.replace(/^-+/, '');
+
+    if (opt === thisOpt) {
+      // argument value
+      if (curOpt) arg[curOpt] = opt;
+      curOpt = null;
+    }
+    else {
+      // argument name
+      curOpt = opt;
+      arg[curOpt] = true;
+    }
+  }
+  return arg;
+})(process.argv);
+
+var src = arg.src ? arg.src + '/' : '';
+
+const paths = {
+  typescript: {
+    src: src + 'plugin/**/*.ts',
+    dest: built_ts
+  },
   styles: {
-    src: 'plugin/css/**/*.css',
+    src: src + 'plugin/css/**/*.css',
     dest: 'dist/css/',
     vendor_files: ['node_modules/jquery-ui-dist/jquery-ui.css',
       'node_modules/patternfly/dist/css/patternfly.min.css',
@@ -47,7 +77,7 @@ var paths = {
     ]
   },
   scripts: {
-    src: ['plugin/js/**/*.js', 'build/**/*.js'],
+    src: [src + 'plugin/js/**/*.js', built_ts + '/**/*.js'],
     dest: 'dist/js/',
     vendor_files: ['node_modules/bluebird/js/browser/bluebird.min.js', 
       'node_modules/jquery/dist/jquery.min.js',
@@ -76,70 +106,81 @@ var paths = {
     ]
   }
 };
+
 function clean() {
-  return del(['dist','build' ]);
+  return del(['dist',built_ts ]);
 }
 function cleanup() {
-  return del(['build']);
+  return del([built_ts]);
 }
 function styles() {
   return gulp.src(paths.styles.src)
+    .pipe(maps.init())
     .pipe(cleanCSS())
-    // pass in options to the stream
     .pipe(rename({
       basename: 'dispatch',
       suffix: '.min'
     }))
     .pipe(insert.prepend(license))
+    .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
 }
 function vendor_styles() {
   return gulp.src(paths.styles.vendor_files)
+    .pipe(maps.init())
     .pipe(concat('vendor.css'))
     .pipe(cleanCSS())
     .pipe(rename({
       basename: 'vendor',
       suffix: '.min'
     }))
+    .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
 }
+
 function scripts() {
   return gulp.src(paths.scripts.src, { sourcemaps: true })
     .pipe(babel({
-      presets: ['env']
+      presets: [require.resolve('babel-preset-env')]
     }))
     .pipe(ngAnnotate())
-    .pipe(uglify().on('error', function(e){
-      console.log(e);
-    }))
+    .pipe(maps.init())
+    .pipe(uglify())
     .pipe(concat('dispatch.min.js'))
     .pipe(insert.prepend(license))
+    .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.scripts.dest));
 }
 
 function vendor_scripts() {
   return gulp.src(paths.scripts.vendor_files)
-    .pipe(uglify().on('error', function(e){
-      console.log(e);
-    }))
+    .pipe(maps.init())
+    .pipe(uglify())
     .pipe(concat('vendor.min.js'))
+    .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.scripts.dest));
 }
 function watch() {
   gulp.watch(paths.scripts.src, scripts);
   gulp.watch(paths.styles.src, styles);
 }
-
 function lint() {
   return gulp.src('plugin/**/*.js')
     .pipe(eslint())
     .pipe(eslint.format())
     .pipe(eslint.failAfterError());
 }
-function typescript() {
-  return tsProject.src()
+
+function _typescript() {
+  return tsProject.src({files: src + 'plugin/**/*.ts'})
     .pipe(tsProject())
     .js.pipe(gulp.dest('build/dist'));
+}
+
+function typescript() {
+  var tsResult = gulp.src(paths.typescript.src)
+    .pipe(tsc());
+  return tsResult.js.pipe(gulp.dest(paths.typescript.dest));
 }
 
 function ts_lint() {
@@ -154,8 +195,8 @@ var build = gulp.series(
   clean,                          // removes the dist/ dir
   gulp.parallel(lint, ts_lint),   // lints the .js, .ts files
   typescript,                     // converts .ts to .js
-  gulp.parallel(vendor_styles, vendor_scripts, styles, scripts), // uglify and concat
-  cleanup                         // remove .js that were converted from .ts
+  gulp.parallel(vendor_styles, vendor_scripts, styles, scripts) // uglify and concat
+  //cleanup                         // remove .js that were converted from .ts
 );
 
 exports.clean = clean;

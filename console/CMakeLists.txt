@@ -17,78 +17,87 @@
 ## under the License.
 ##
 
-set(CONSOLE_BASE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone/")
-
 ##
 ## Add cmake option to choose whether to install stand-alone console
 ##
 option(CONSOLE_INSTALL "Build and install console (requires npm)" ON)
 
-## Files copied to the root of the console's install dir
-set(BASE_FILES
-  ${CONSOLE_BASE_SOURCE_DIR}index.html
-  ${CONSOLE_BASE_SOURCE_DIR}favicon-32x32.png
-)
-## Files copied to the css/ dir
-set(CSS_FONTS
-  ${CONSOLE_BASE_SOURCE_DIR}plugin/css/brokers.ttf
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/angular-ui-grid/ui-grid.woff
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/angular-ui-grid/ui-grid.ttf
-)
-## Files copied to the fonts/ dir
-set(VENDOR_FONTS
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-Regular-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-Bold-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-Light-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-Semibold-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-BoldItalic-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/OpenSans-Italic-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/fontawesome-webfont.woff2
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/fontawesome-webfont.eot
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/patternfly/dist/fonts/PatternFlyIcons-webfont.ttf
-  ${CONSOLE_BASE_SOURCE_DIR}node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2
-)
-## Files needed to create the ${GULPED_ARTIFACTS}
-file (GLOB_RECURSE CONSOLE_JS_SOURCES ${CONSOLE_BASE_SOURCE_DIR}plugin/js/*.js)
-file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_BASE_SOURCE_DIR}plugin/js/*.ts)
-file (GLOB CONSOLE_CSS_SOURCES ${CONSOLE_BASE_SOURCE_DIR}plugin/css/dispatch.css)
-set(CONSOLE_SOURCES ${CONSOLE_JS_SOURCES} ${CONSOLE_TS_SOURCES} ${CONSOLE_CSS_SOURCES})
-
-## Files created during the console build
-set(GULPED_ARTIFACTS
-  ${CONSOLE_BASE_SOURCE_DIR}dist/js/dispatch.min.js
-  ${CONSOLE_BASE_SOURCE_DIR}dist/js/vendor.min.js
-  ${CONSOLE_BASE_SOURCE_DIR}dist/css/dispatch.min.css
-  ${CONSOLE_BASE_SOURCE_DIR}dist/css/vendor.min.css
-)
-
 if(CONSOLE_INSTALL)
   find_program(NPM_EXE npm DOC "Location of the npm package manager")
     if (NPM_EXE)
 
-      ## Tell cmake how and when to build ${GULPED_ARTIFACTS}
+      set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
+      set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
+
+      ## Files needed to create the ${CONSOLE_ARTIFACTS}
+      file (GLOB_RECURSE CONSOLE_JS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.js)
+      file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.ts)
+      set(CONSOLE_CSS_SOURCE ${CONSOLE_SOURCE_DIR}/plugin/css/dispatch.css)
+      set(ALL_CONSOLE_SOURCES ${CONSOLE_JS_SOURCES} ${CONSOLE_TS_SOURCES} ${CONSOLE_CSS_SOURCE})
+
+      ## Files created during the console build
+      set(CONSOLE_ARTIFACTS
+        ${CONSOLE_BUILD_DIR}/dist/js/dispatch.min.js
+        ${CONSOLE_BUILD_DIR}/dist/js/vendor.min.js
+        ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
+        ${CONSOLE_BUILD_DIR}/dist/css/vendor.min.css
+      )
+
+      ## copy the build config files
+      configure_file( ${CONSOLE_SOURCE_DIR}/package.json ${CONSOLE_BUILD_DIR}/package.json COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/package-lock.json ${CONSOLE_BUILD_DIR}/package-lock.json COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/tslint.json ${CONSOLE_BUILD_DIR}/tslint.json COPYONLY)
+      configure_file( ${CONSOLE_SOURCE_DIR}/gulpfile.js ${CONSOLE_BUILD_DIR}/gulpfile.js COPYONLY)
+
+      ## Tell cmake how and when to build ${CONSOLE_ARTIFACTS}
       add_custom_command (
-        OUTPUT ${GULPED_ARTIFACTS}
+        OUTPUT ${CONSOLE_ARTIFACTS}
         COMMENT "Running console build"
         COMMAND npm install --loglevel=error
-        COMMAND npx gulp
-        DEPENDS ${CONSOLE_SOURCES}
-        WORKING_DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}
+        COMMAND npx gulp --src ${CONSOLE_SOURCE_DIR}
+        DEPENDS ${ALL_CONSOLE_SOURCES}
+        WORKING_DIRECTORY ${CONSOLE_BUILD_DIR}/
         )
 
-      ## Ensure ${GULPED_ARTIFACTS} is built on a make when needed
+      ## Ensure ${CONSOLE_ARTIFACTS} is built on a make when needed
       add_custom_target(console ALL
-        DEPENDS ${GULPED_ARTIFACTS}
-        WORKING_DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}
+        DEPENDS ${CONSOLE_ARTIFACTS}
       )
 
       ##
       ## Install the static and built console files
       ##
-      install(DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}dist/
-        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
+
+      ## Files copied to the root of the console's install dir
+      set(BASE_FILES
+        ${CONSOLE_SOURCE_DIR}/index.html
+        ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
       )
-      install(DIRECTORY ${CONSOLE_BASE_SOURCE_DIR}plugin/html/
+      ## Files copied to the css/ dir
+      set(CSS_FONTS
+        ${CONSOLE_SOURCE_DIR}/plugin/css/brokers.ttf
+        ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/ui-grid.woff
+        ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/ui-grid.ttf
+      )
+      ## Files copied to the fonts/ dir
+      set(VENDOR_FONTS
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Regular-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Bold-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Light-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Semibold-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-BoldItalic-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Italic-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.woff2
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.eot
+        ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/PatternFlyIcons-webfont.ttf
+        ${CONSOLE_BUILD_DIR}/node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2
+      )
+
+      install(DIRECTORY ${CONSOLE_BUILD_DIR}/dist/
+        DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
+        PATTERN "*.map" EXCLUDE
+      )
+      install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/html/
         DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html/
         FILES_MATCHING PATTERN "*.html"
       )
