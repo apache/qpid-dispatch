@@ -15,3 +15,5 @@ console/test/topolgies/config-*
 .history
 .tox
 .vscode
+console/stand-alone/node_modules/
+console/stand-alone/dist/

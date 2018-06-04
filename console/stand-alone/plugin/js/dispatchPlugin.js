@@ -39,20 +39,12 @@ var QDR = (function(QDR) {
   QDR.isStandalone = true;
 
   /**
-   * @property log
-   * @type {Logging.Logger}
-   *
-   * This plugin's logger instance
-   */
-  //HIO QDR.log = Logger.get(QDR.pluginName);
-  /**
    * @property templatePath
    * @type {string}
    *
    * The top level path to this plugin's partials
    */
-  QDR.srcBase = 'plugin/';
-  QDR.templatePath = QDR.srcBase + 'html/';
+  QDR.templatePath = 'html/';
   /**
    * @property SETTINGS_KEY
    * @type {string}
