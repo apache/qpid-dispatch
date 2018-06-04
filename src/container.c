@@ -444,6 +444,17 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
                 if (qd_conn->policy_settings) {
                     qd_conn->n_sessions--;
                 }
+
+                pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+                while (pn_link) {
+                    if (pn_link_session(pn_link) == ssn) {
+                        qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+                        if (qd_link)
+                            qd_link->pn_link = 0;
+                    }
+                    pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+                }
+
                 pn_session_close(ssn);
             }
             else if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
