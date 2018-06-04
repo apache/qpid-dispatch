@@ -352,6 +352,7 @@ struct qdr_delivery_t {
     qdr_link_work_t        *link_work;         ///< Delivery work item for this delivery
     qdr_subscription_list_t subscriptions;
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
+    bool                    multicast;         /// True if this delivery is targeted for a multicast address.
 
 };
 
