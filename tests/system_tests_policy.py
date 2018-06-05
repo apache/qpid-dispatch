@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest as unittest
-import os, json
+import os, json, re
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException, Timeout
@@ -115,7 +115,7 @@ class LoadPolicyFromFolder(TestCase):
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
             universal_newlines=True)
         out = p.communicate(input)[0]
@@ -398,7 +398,7 @@ class VhostPolicyNameField(TestCase):
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
             universal_newlines=True)
         out = p.communicate(input)[0]
@@ -631,7 +631,7 @@ class PolicyLinkNamePatternTest(TestCase):
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
             universal_newlines=True)
         out = p.communicate(input)[0]
@@ -857,7 +857,7 @@ class PolicyHostamePatternTest(TestCase):
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus', 'u1:password@' + self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
         out = p.communicate(input)[0]
         try:
