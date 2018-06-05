@@ -877,7 +877,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (1)");
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
-        if (dlv->settled || qdr_is_addr_treatment_multicast(addr)) {
+        dlv->multicast = qdr_is_addr_treatment_multicast(addr);
+        if (dlv->settled || dlv->multicast) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue
             // replacement credit for it now.
@@ -1162,7 +1163,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
         }
 
         // This is a multicast delivery
-        if (qdr_is_addr_treatment_multicast(in_dlv->link->owning_addr)) {
+        if (qdr_is_addr_treatment_multicast(in_dlv->link->owning_addr) || in_dlv->multicast) {
             assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
             //
             // The router will settle on behalf of the receiver in the case of multicast and send out settled
