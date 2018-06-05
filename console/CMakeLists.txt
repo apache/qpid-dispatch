@@ -23,8 +23,8 @@
 option(CONSOLE_INSTALL "Build and install console (requires npm)" ON)
 
 if(CONSOLE_INSTALL)
-  find_program(NPM_EXE npm DOC "Location of the npm package manager")
-    if (NPM_EXE)
+  find_program(NPX_EXE npx DOC "Location of the npx task runner")
+    if (NPEX_EXE)
 
       set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
       set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
@@ -56,7 +56,7 @@ if(CONSOLE_INSTALL)
         OUTPUT ${CONSOLE_ARTIFACTS}
         COMMENT "Running console build"
         COMMAND npm install --loglevel=error
-        COMMAND npx gulp --src ${CONSOLE_SOURCE_DIR}
+        COMMAND ${NPX_EXE} gulp --src ${CONSOLE_SOURCE_DIR}
         DEPENDS ${ALL_CONSOLE_SOURCES}
         WORKING_DIRECTORY ${CONSOLE_BUILD_DIR}/
         )
@@ -112,10 +112,9 @@ if(CONSOLE_INSTALL)
       install(FILES ${VENDOR_FONTS}
         DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/fonts/
       )
-
-    else(NPM_EXE)
-      message(WARNING "Cannot build console, npm not found")
-    endif(NPM_EXE)
+    else(NPX_EXE)
+      message(STATUS "Cannot build console, npm not found")
+    endif(NPX_EXE)
 endif(CONSOLE_INSTALL)
 
 ##
