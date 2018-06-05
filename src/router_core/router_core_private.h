@@ -108,6 +108,7 @@ struct qdr_action_t {
             qdr_error_t      *error;
             qd_detach_type_t  dt;
             int               credit;
+            bool              more;  // true if there are more frames arriving, false otherwise
             bool              drain;
             uint8_t           tag[32];
             int               tag_length;
