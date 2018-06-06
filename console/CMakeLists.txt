@@ -24,7 +24,7 @@ option(CONSOLE_INSTALL "Build and install console (requires npm)" ON)
 
 if(CONSOLE_INSTALL)
   find_program(NPX_EXE npx DOC "Location of the npx task runner")
-    if (NPEX_EXE)
+    if (NPX_EXE)
 
       set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
       set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
