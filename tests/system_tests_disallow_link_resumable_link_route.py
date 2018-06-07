@@ -32,6 +32,8 @@ from proton import Message, Terminus
 from proton.reactor import DurableSubscription, SenderOption
 from proton.utils import BlockingConnection, LinkDetached
 
+from qpid_dispatch.management.client import Node
+
 class SenderExpiry(SenderOption):
     def __init__(self, expiry):
         self.expiry = expiry
@@ -82,6 +84,32 @@ class LinkRouteTest(TestCase):
                )
         cls.routers[0].wait_ports()
         cls.routers[1].wait_ports()
+
+    def test_000_wait_for_link_route_up(self):
+        # wait up to 60 seconds for link route to get set up
+        # The name of this test must dictate that it runs first
+        wLoops = 600
+        wTimeS = 0.1
+        waitTimeS = float(wLoops) * wTimeS
+        local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
+        counted = False
+        for i in range(wLoops):
+            try:
+                results = local_node.query(type='org.apache.qpid.dispatch.router.address',
+                                           attribute_names=[u'name', u'containerCount']
+                                           ).results
+                for res in results:
+                    if res[0] == 'Corg.apache':
+                        if res[1] == 1:
+                            counted = True
+                        break
+                if counted:
+                    break
+                sleep(wTimeS)
+            except Exception as e:
+                self.fail("Exception: " + str(e))
+        if not counted:
+            self.fail("Interrouter link route failed to connect after %f seconds" % waitTimeS)
 
 
     def test_normal_receiver_allowed(self):
