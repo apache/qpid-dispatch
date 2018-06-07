@@ -330,11 +330,11 @@ class PolicyCompiler(object):
                                 # prefix
                                 eVal.append(PolicyKeys.KC_TUPLE_PREFIX)
                                 eVal.append('')
-                                eVal.append(v)
+                                eVal.append(v[v.find(utoken) + len(utoken):])
                             elif v.endswith(utoken):
                                 # suffix
                                 eVal.append(PolicyKeys.KC_TUPLE_SUFFIX)
-                                eVal.append(v)
+                                eVal.append(v[0:v.find(utoken)])
                                 eVal.append('')
                             else:
                                 # embedded
