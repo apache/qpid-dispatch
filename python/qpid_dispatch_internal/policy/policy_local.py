@@ -280,7 +280,7 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
                          PolicyKeys.KW_ALLOW_USERID_PROXY
                          ]:
-                if type(val) in [unicode, str] and val.lower() in ['true', 'false']:
+                if isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)) and val.lower() in ['true', 'false']:
                     val = True if val == 'true' else False
                 if not type(val) is bool:
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has illegal boolean value '%s'." %
