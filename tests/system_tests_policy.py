@@ -23,10 +23,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest as unittest
-import os, json, re
+import os, json, re, signal
+
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout
+from proton import ConnectionException, Timeout, Url
+from proton.handlers import MessagingHandler
+from proton.reactor import Container
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
@@ -933,7 +936,8 @@ class VhostPolicyFromRouterConfig(TestCase):
                 ), (
                     'anonymous', {
                         'users': 'anonymous', 'remoteHosts': '*',
-                        'sources': '*', 'targets': '*',
+                        'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
+                        'targets': 'addr/*, simpleaddress, queue.${user}',
                         'allowDynamicSource': 'true',
                         'allowAnonymousSender': 'true'
                     }
@@ -975,6 +979,123 @@ class VhostPolicyFromRouterConfig(TestCase):
 
         bc1.connection.close()
         bc2.connection.close()
+
+    def test_vhost_allowed_addresses(self):
+        target_addr_list = ['addr/something', 'simpleaddress', 'queue.anonymous']
+        source_addr_list = ['addr/something/queue/one', 'simpleaddress', 'queue.anonymous']
+
+        # Attempt to connect to all allowed target addresses
+        for target_addr in target_addr_list:
+            sender = SenderAddressValidator("%s/%s" % (self.address(), target_addr))
+            self.assertFalse(sender.link_error,
+                             msg="target address must be allowed, but it was not [%s]" % target_addr)
+
+        # Attempt to connect to all allowed source addresses
+        for source_addr in source_addr_list:
+            receiver = ReceiverAddressValidator("%s/%s" % (self.address(), source_addr))
+            self.assertFalse(receiver.link_error,
+                             msg="source address must be allowed, but it was not [%s]" % source_addr)
+
+    def test_vhost_denied_addresses(self):
+        target_addr_list = ['addr', 'simpleaddress1', 'queue.user']
+        source_addr_list = ['addr/queue/one', 'simpleaddress1', 'queue.user']
+
+        # Attempt to connect to all not allowed target addresses
+        for target_addr in target_addr_list:
+            sender = SenderAddressValidator("%s/%s" % (self.address(), target_addr))
+            self.assertTrue(sender.link_error,
+                            msg="target address must not be allowed, but it was [%s]" % target_addr)
+
+        # Attempt to connect to all not allowed source addresses
+        for source_addr in source_addr_list:
+            receiver = ReceiverAddressValidator("%s/%s" % (self.address(), source_addr))
+            self.assertTrue(receiver.link_error,
+                            msg="source address must not be allowed, but it was [%s]" % source_addr)
+
+
+class ClientAddressValidator(MessagingHandler):
+    """
+    Base client class used to validate vhost policies through
+    receiver or clients based on allowed target and source
+    addresses.
+    Implementing classes must provide on_start() implementation
+    and create the respective sender or receiver.
+    """
+    TIMEOUT = 3
+
+    def __init__(self, url):
+        super(ClientAddressValidator, self).__init__()
+        self.url = Url(url)
+        self.container = Container(self)
+        self.link_error = False
+        self.container.run()
+        signal.signal(signal.SIGALRM, self.timeout)
+        signal.alarm(ClientAddressValidator.TIMEOUT)
+
+    def timeout(self, signum, frame):
+        """
+        In case router crashes or something goes wrong and client
+        is unable to connect, this method will be invoked and
+        set the link_error to True
+        :param signum:
+        :param frame:
+        :return:
+        """
+        self.link_error = True
+        self.container.stop()
+
+    def on_link_error(self, event):
+        """
+        When link was closed by the router due to policy violation.
+        :param event:
+        :return:
+        """
+        self.link_error = True
+        event.connection.close()
+        signal.alarm(0)
+
+    def on_link_opened(self, event):
+        """
+        When link was opened without error.
+        :param event:
+        :return:
+        """
+        event.connection.close()
+        signal.alarm(0)
+
+
+class ReceiverAddressValidator(ClientAddressValidator):
+    """
+    Receiver implementation used to validate vhost policies
+    applied to source addresses.
+    """
+    def __init__(self, url):
+        super(ReceiverAddressValidator, self).__init__(url)
+
+    def on_start(self, event):
+        """
+        Creates the receiver.
+        :param event:
+        :return:
+        """
+        event.container.create_receiver(self.url)
+
+
+class SenderAddressValidator(ClientAddressValidator):
+    """
+    Sender implementation used to validate vhost policies
+    applied to target addresses.
+    """
+    def __init__(self, url):
+        super(SenderAddressValidator, self).__init__(url)
+
+    def on_start(self, event):
+        """
+        Creates the sender
+        :param event:
+        :return:
+        """
+        event.container.create_sender(self.url)
 
 
 if __name__ == '__main__':
