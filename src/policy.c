@@ -845,7 +845,10 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
             strcat(pName, user_subst_key);
         }
         else {
-            assert(false);
+            // On a list with multiple addresses, if no entry matches the proposed address
+            // it falls here after last one is processed and the assert below causes the
+            // router to crash.
+            //assert(false);
             break;
         }
 
