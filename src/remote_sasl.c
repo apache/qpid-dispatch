@@ -91,6 +91,7 @@ typedef struct
     char* authentication_service_address;
     char* sasl_init_hostname;
     pn_ssl_domain_t* ssl_domain;
+    pn_proactor_t* proactor;
 
     pn_connection_t* downstream;
     char* selected_mechanism;
@@ -120,7 +121,7 @@ static void copy_bytes(const pn_bytes_t* from, qdr_owned_bytes_t* to)
     memcpy(to->start, from->start, from->size);
 }
 
-static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* sasl_init_hostname)
+static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* sasl_init_hostname, pn_proactor_t* proactor)
 {
     qdr_sasl_relay_t* instance = NEW(qdr_sasl_relay_t);
     ZERO(instance);
@@ -128,6 +129,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
     if (sasl_init_hostname) {
         instance->sasl_init_hostname = strdup(sasl_init_hostname);
     }
+    instance->proactor = proactor;
     init_permissions(&instance->permissions);
     return instance;
 }
@@ -186,7 +188,7 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
         if (impl->upstream) return true;
         impl->upstream = upstream;
-        pn_proactor_t* proactor = pn_connection_proactor(upstream);
+        pn_proactor_t* proactor = impl->proactor;
         if (!proactor) return false;
         impl->downstream = pn_connection();
         pn_connection_set_hostname(impl->downstream, pn_connection_get_hostname(upstream));
@@ -445,10 +447,10 @@ static void set_remote_impl(pn_transport_t *transport, qdr_sasl_relay_t* context
     pnx_sasl_set_implementation(transport, &remote_sasl_impl, context);
 }
 
-void qdr_use_remote_authentication_service(pn_transport_t *transport, const char* address, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain)
+void qdr_use_remote_authentication_service(pn_transport_t *transport, const char* address, const char* sasl_init_hostname, pn_ssl_domain_t* ssl_domain, pn_proactor_t* proactor)
 {
     auth_service_log = qd_log_source("AUTHSERVICE");
-    qdr_sasl_relay_t* context = new_qdr_sasl_relay_t(address, sasl_init_hostname);
+    qdr_sasl_relay_t* context = new_qdr_sasl_relay_t(address, sasl_init_hostname, proactor);
     context->ssl_domain = ssl_domain;
     set_remote_impl(transport, context);
 }

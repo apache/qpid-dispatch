@@ -644,7 +644,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
         if (config->auth_service) {
             qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->auth_service);
-            qdr_use_remote_authentication_service(tport, config->auth_service, config->sasl_init_hostname, config->auth_ssl_conf);
+            qdr_use_remote_authentication_service(tport, config->auth_service, config->sasl_init_hostname, config->auth_ssl_conf, server->proactor);
         }
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);
@@ -877,7 +877,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
         }
         break;
     }
-        
+
     case PN_CONNECTION_BOUND:
         on_connection_bound(qd_server, e);
         break;
