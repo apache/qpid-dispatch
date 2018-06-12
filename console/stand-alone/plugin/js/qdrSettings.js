@@ -97,7 +97,11 @@ var QDR = (function(QDR) {
           $scope.connectionError = true;
         });
       };
-      let options = {address: $scope.formEntity.address, port: $scope.formEntity.port, reconnect: true};
+      let options = {address: $scope.formEntity.address, 
+        port: $scope.formEntity.port, 
+        password: $scope.formEntity.password,
+        username: $scope.formEntity.username,
+        reconnect: true};
       QDRService.connect(options)
         .then( function () {
           // register a callback for when the node list is available (needed for loading saved charts)

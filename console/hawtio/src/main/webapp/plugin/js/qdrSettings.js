@@ -16,6 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+/* global angular */
 /**
  * @module QDR
  */
@@ -29,7 +30,7 @@ var QDR = (function(QDR) {
    * Controller that handles the QDR settings page
    */
 
-  QDR.module.controller("QDR.SettingsController", ['$scope', 'QDRService', '$timeout', '$location', function($scope, QDRService, $timeout, $location) {
+  QDR.module.controller('QDR.SettingsController', ['$scope', 'QDRService', '$timeout', '$location', function($scope, QDRService, $timeout, $location) {
 
     $scope.connecting = false;
     $scope.connectionError = false;
@@ -43,18 +44,22 @@ var QDR = (function(QDR) {
       password: '',
       autostart: false
     };
+    $scope.formEntity.password = '';
 
     $scope.$watch('formEntity', function(newValue, oldValue) {
       if (newValue !== oldValue) {
+        let pass = newValue.password;
+        newValue.password = '';
         localStorage[QDR.SETTINGS_KEY] = angular.toJson(newValue);
+        newValue.password = pass;
       }
     }, true);
 
     $scope.buttonText = function() {
       if (QDRService.isConnected()) {
-        return "Disconnect";
+        return 'Disconnect';
       } else {
-        return "Connect";
+        return 'Connect';
       }
     };
 
@@ -62,7 +67,7 @@ var QDR = (function(QDR) {
       if (QDRService.connected) {
         $timeout( function () {
           QDRService.disconnect();
-        })
+        });
         return;
       }
 
@@ -71,50 +76,50 @@ var QDR = (function(QDR) {
         $scope.connecting = true;
         // timeout so connecting animation can display
         $timeout(function () {
-          doConnect()
-        })
+          doConnect();
+        });
       }
-    }
+    };
 
     var doConnect = function(opts) {
       if (!$scope.formEntity.address)
-        $scope.formEntity.address = "localhost"
+        $scope.formEntity.address = 'localhost';
       if (!$scope.formEntity.port)
-        $scope.formEntity.port = 5673
+        $scope.formEntity.port = 5673;
 
       var failed = function() {
         $timeout(function() {
-          QDR.log.debug("disconnect action called");
+          QDR.log.debug('disconnect action called');
           $scope.connecting = false;
           $scope.connectionErrorText = QDRService.errorText;
           $scope.connectionError = true;
-        })
-      }
+        });
+      };
       QDRService.addDisconnectAction(failed);
       QDRService.addConnectAction(function() {
-        QDRService.delDisconnectAction(failed)
+        QDRService.delDisconnectAction(failed);
         QDRService.getSchema(function () {
-          QDR.log.info("got schema after connection")
-          QDRService.addUpdatedAction("initialized", function () {
-            QDRService.delUpdatedAction("initialized")
-            QDR.log.info("got initial topology")
+          QDR.log.info('got schema after connection');
+          QDRService.addUpdatedAction('initialized', function () {
+            QDRService.delUpdatedAction('initialized');
+            QDR.log.info('got initial topology');
             $timeout(function() {
               $scope.connecting = false;
               if ($location.path().startsWith(QDR.pluginRoot)) {
-                  var searchObject = $location.search();
-                  var goto = "overview";
-                  if (searchObject.org && searchObject.org !== "connect") {
-                    goto = searchObject.org;
-                  }
-                  $location.search('org', null)
-                  $location.path(QDR.pluginRoot + "/" + goto);
+                var searchObject = $location.search();
+                var goto = 'overview';
+                if (searchObject.org && searchObject.org !== 'connect') {
+                  goto = searchObject.org;
+                }
+                $location.search('org', null);
+                $location.path(QDR.pluginRoot + '/' + goto);
               }
-            })
-          })
-          QDR.log.info("requesting a topology")
-          QDRService.setUpdateEntities([])
-          QDRService.topology.get()
-        })
+            });
+          });
+          QDR.log.info('requesting a topology');
+          QDRService.setUpdateEntities([]);
+          QDRService.topology.get();
+        });
       });
       var options = {address: $scope.formEntity.address, 
         port: $scope.formEntity.port, 
@@ -122,11 +127,11 @@ var QDR = (function(QDR) {
         password: $scope.formEntity.password};
       // if we have already successfully connected (the test connections succeeded)
       if (opts && opts.connection) {
-        options.connection = opts.connection
-        options.context = opts.context
+        options.connection = opts.connection;
+        options.context = opts.context;
       }
       QDRService.connect(options);
-    }
+    };
   }]);
 
 
@@ -139,13 +144,13 @@ var QDR = (function(QDR) {
         elem.bind('keypress', function(event) {
           var nkey = !event.charCode ? event.which : event.charCode;
           var skey = String.fromCharCode(nkey);
-          var nono = "-+.,"
+          var nono = '-+.,';
           if (nono.indexOf(skey) >= 0) {
             event.preventDefault();
             return false;
           }
           // firefox doesn't filter out non-numeric input. it just sets the ctrl to invalid
-          if (/[\!\@\#\$\%^&*\(\)]/.test(skey) && event.shiftKey || // prevent shift numbers
+          if (/[!@#$%^&*()]/.test(skey) && event.shiftKey || // prevent shift numbers
             !( // prevent all but the following
               nkey <= 0 || // arrows
               nkey == 8 || // delete|backspace
@@ -157,10 +162,10 @@ var QDR = (function(QDR) {
             event.preventDefault();
             return false;
           }
-        })
-          // check the current value of input
+        });
+        // check the current value of input
         var _isPortInvalid = function(value) {
-          var port = value + ''
+          var port = value + '';
           var isErrRange = false;
           // empty string is valid
           if (port.length !== 0) {
@@ -169,9 +174,9 @@ var QDR = (function(QDR) {
               isErrRange = true;
             }
           }
-          ctrl.$setValidity('range', !isErrRange)
+          ctrl.$setValidity('range', !isErrRange);
           return isErrRange;
-        }
+        };
 
         //For DOM -> model validation
         ctrl.$parsers.unshift(function(value) {
