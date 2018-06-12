@@ -967,14 +967,20 @@ console.dump(e)
         QDR.log.info("testConnect called with reconnect " + reconnect + " using " + protocol + " protocol")
         try {
           var ws = self.rhea.websocket_connect(WebSocket);
-          connection = self.rhea.connect({
+          var c = {
             connection_details: ws(protocol + "://" + baseAddress, ["binary"]),
             reconnect: reconnect,
-              properties: {
-                console_identifier: 'Dispatch console'
-              }
+            properties: {
+              console_identifier: 'Dispatch console'
             }
-          );
+          };
+          if (options.username && options.username !== '') {
+            c.username = options.username;
+          }
+          if (options.password && options.password !== '') {
+            c.password = options.password;
+          }
+          connection = self.rhea.connect(c);
         } catch (e) {
           QDR.log.debug("exception caught on test connect " + e)
           self.errorText = "Connection failed "
