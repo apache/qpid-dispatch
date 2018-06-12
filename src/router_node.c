@@ -829,32 +829,52 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     bool found_failover = false;
 
+
     if (conn->connector && DEQ_SIZE(conn->connector->conn_info_list) > 1) {
-        // Here we are simply removing all other failover information except the one we used to make a successful connection.
+        // Here we are simply removing all other failover information except the original connection information and the one we used to make a successful connection.
         int i = 1;
         qd_failover_item_t *item = DEQ_HEAD(conn->connector->conn_info_list);
         qd_failover_item_t *next_item = 0;
-        while(item) {
-            if (i != conn->connector->conn_index) {
-                next_item = DEQ_NEXT(item);
-                free(item->scheme);
-                free(item->host);
-                free(item->port);
-                free(item->hostname);
-                free(item->host_port);
-                DEQ_REMOVE(conn->connector->conn_info_list, item);
 
-                free(item);
-                item = next_item;
+        bool match_found = false;
+        int dec_conn_index=0;
+
+        while(item) {
+
+            //The first item on this list is always the original connector, so we want to keep that item in place
+            // We have to delete items in the list that were left over from the previous failover list from the previous connection
+            // because the new connection might have its own failover list.
+            if (i != conn->connector->conn_index) {
+                if (item != DEQ_HEAD(conn->connector->conn_info_list)) {
+                    next_item = DEQ_NEXT(item);
+                    free(item->scheme);
+                    free(item->host);
+                    free(item->port);
+                    free(item->hostname);
+                    free(item->host_port);
+
+                    DEQ_REMOVE(conn->connector->conn_info_list, item);
+
+                    free(item);
+                    item = next_item;
+
+                    // We are removing an item from the list before the conn_index match was found. We need to
+                    // decrement the conn_index
+                    if (!match_found)
+                        dec_conn_index += 1;
+                }
+                else {
+                    item = DEQ_NEXT(item);
+                }
             }
             else {
+                match_found = true;
                 item = DEQ_NEXT(item);
             }
             i += 1;
         }
-        conn->connector->conn_index = 0;
 
-        // By the end of this loop we should be left with only one element in the conn_info_list.
+        conn->connector->conn_index -= dec_conn_index;
     }
 
     if (props) {
