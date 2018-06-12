@@ -116,7 +116,10 @@ var QDR = (function(QDR) {
           QDRService.topology.get()
         })
       });
-      var options = {address: $scope.formEntity.address, port: $scope.formEntity.port}
+      var options = {address: $scope.formEntity.address, 
+        port: $scope.formEntity.port, 
+        username: $scope.formEntity.username, 
+        password: $scope.formEntity.password};
       // if we have already successfully connected (the test connections succeeded)
       if (opts && opts.connection) {
         options.connection = opts.connection
