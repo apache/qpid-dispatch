@@ -114,37 +114,39 @@ var QDR = (function(QDR) {
           response.results.forEach( function (result) {
             let address = QDRService.utilities.flatten(response.attributeNames, result);
             let uid = address.identity;
-            let identity = QDRService.utilities.identity_clean(uid);
-
-            let objname = QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity);
-            if (!addressObjs[objname]) {
-              addressObjs[objname] = {
-                address: QDRService.utilities.addr_text(identity),
-                'class': QDRService.utilities.addr_class(identity),
-                phase:   addr_phase(identity),
-                inproc:  address.inProcess,
-                local:   address.subscriberCount,
-                remote:  address.remoteCount,
-                'in':    address.deliveriesIngress,
-                out:     address.deliveriesEgress,
-                thru:    address.deliveriesTransit,
-                toproc:  address.deliveriesToContainer,
-                fromproc:address.deliveriesFromContainer,
-                uid:     uid
-              };
-            }
-            else {
-              let sumObj = addressObjs[objname];
-              sumObj.inproc = addNull(sumObj.inproc, address.inProcess);
-              sumObj.local = addNull(sumObj.local, address.subscriberCount);
-              sumObj.remote = addNull(sumObj.remote, address.remoteCount);
-              sumObj['in'] = addNull(sumObj['in'], address.deliveriesIngress);
-              sumObj.out = addNull(sumObj.out, address.deliveriesEgress);
-              sumObj.thru = addNull(sumObj.thru, address.deliveriesTransit);
-              sumObj.toproc = addNull(sumObj.toproc, address.deliveriesToContainer);
-              sumObj.fromproc = addNull(sumObj.fromproc, address.deliveriesFromContainer);
+            if (!uid.startsWith('Ltemp.')) {
+              let identity = QDRService.utilities.identity_clean(uid);
+              let objname = QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity);
+              if (!addressObjs[objname]) {
+                addressObjs[objname] = {
+                  address: QDRService.utilities.addr_text(identity),
+                  'class': QDRService.utilities.addr_class(identity),
+                  phase:   addr_phase(identity),
+                  inproc:  address.inProcess,
+                  local:   address.subscriberCount,
+                  remote:  address.remoteCount,
+                  'in':    address.deliveriesIngress,
+                  out:     address.deliveriesEgress,
+                  thru:    address.deliveriesTransit,
+                  toproc:  address.deliveriesToContainer,
+                  fromproc:address.deliveriesFromContainer,
+                  uid:     uid
+                };
+              }
+              else {
+                let sumObj = addressObjs[objname];
+                sumObj.inproc = addNull(sumObj.inproc, address.inProcess);
+                sumObj.local = addNull(sumObj.local, address.subscriberCount);
+                sumObj.remote = addNull(sumObj.remote, address.remoteCount);
+                sumObj['in'] = addNull(sumObj['in'], address.deliveriesIngress);
+                sumObj.out = addNull(sumObj.out, address.deliveriesEgress);
+                sumObj.thru = addNull(sumObj.thru, address.deliveriesTransit);
+                sumObj.toproc = addNull(sumObj.toproc, address.deliveriesToContainer);
+                sumObj.fromproc = addNull(sumObj.fromproc, address.deliveriesFromContainer);
+              }
             }
           });
+  
         }
         for (let obj in addressObjs) {
           addressObjs[obj].inproc = prettyVal(addressObjs[obj].inproc);
