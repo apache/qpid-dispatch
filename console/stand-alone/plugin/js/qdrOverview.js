@@ -1436,6 +1436,9 @@ var QDR = (function (QDR) {
       saveExpanded();
       updateExpanded();
     };
+    var onTreeNodeCollapsed = function () {
+      saveExpanded();
+    };
 
     if (!QDRService.management.connection.is_connected()) {
       QDR.redirectWhenConnected($location, 'overview');
@@ -1702,6 +1705,7 @@ var QDR = (function (QDR) {
       $('#overtree').fancytree({
         activate:       onTreeNodeActivated,
         expand:         onTreeNodeExpanded,
+        collapse:       onTreeNodeCollapsed,
         init:           onTreeInitialized,
         autoCollapse:   $scope.largeNetwork,
         activeVisible:! $scope.largeNetwork,

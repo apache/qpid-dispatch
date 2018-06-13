@@ -189,6 +189,8 @@ var QDR = (function(QDR) {
             list.push(tnode.key);
           }
         });
+        console.log('saving expanded list');
+        console.log(list);
         localStorage[ListExpandedKey] = JSON.stringify(list);
       };
 
@@ -217,6 +219,9 @@ var QDR = (function(QDR) {
       var onTreeNodeExpanded = function () {
         saveExpanded();
         updateExpandedEntities();
+      };
+      var onTreeNodeCollapsed = function () {
+        saveExpanded();
       };
       // a tree node was selected
       var onTreeNodeActivated = function (event, data) {
@@ -893,6 +898,7 @@ var QDR = (function(QDR) {
         $('#entityTree').fancytree({
           activate: onTreeNodeActivated,
           expand: onTreeNodeExpanded,
+          collapse: onTreeNodeCollapsed,
           beforeActivate: onTreeNodeBeforeActivate,
           beforeSelect: function(event, data){
             // A node is about to be selected: prevent this for folders:
