@@ -80,7 +80,7 @@ span.fancytree-icon {
             <div ng-show="currentMode.id === 'attributes'" class="selectedItems">
                 <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no {{selectedEntity | safePlural}}</div>
                 <div id='details-grid' ng-hide="selectedRecordName === selectedEntity" ui-grid="details" ui-grid-resize-columns ui-grid-save-state
-                     ng-style="getTableHeight()"></div>
+                ui-grid-auto-resize ng-style="getTableHeight()"></div>
             </div>
             <div ng-show="currentMode.id === 'delete'">
                 <div class="delete" ng-show="selectedRecordName !== selectedEntity">

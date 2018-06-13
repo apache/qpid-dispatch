@@ -382,6 +382,8 @@ var QDR = (function(QDR) {
         let h = $scope.detailFields.length * 30 + 46;
         $('.ui-grid-viewport').height(h);
         $scope.details.excessRows = $scope.detailFields.length;
+        $scope.gridApi.grid.handleWindowResize();
+        $scope.gridApi.core.refresh();
       };
       $(window).resize(resizer);
 
