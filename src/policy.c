@@ -729,12 +729,6 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
         return false;
     }
 
-    // Regardless of how many rule clauses are specified only three match
-    // patterns must be checked: no user subst, prefix subst, and suffix subst.
-    bool need_check_nosubst = true;
-    bool need_check_prefix  = true;
-    bool need_check_suffix  = true;
-
     size_t username_len = strlen(username);
     size_t usersubst_len = strlen(user_subst_key);
 
@@ -797,14 +791,12 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
 
         // From the rule clause construct what the rule is allowing
         // given the user name associated with this request.
-        if (*pChar == *user_subst_i_absent && need_check_nosubst) {
-            need_check_nosubst = false;
+        if (*pChar == *user_subst_i_absent) {
             // Substitution spec is absent. The search string is the literal
             // S1 in the rule.
             snprintf(pName, sName, "%s", proposed);
         }
-        else if (*pChar == *user_subst_i_prefix && need_check_prefix) {
-            need_check_prefix = false;
+        else if (*pChar == *user_subst_i_prefix) {
             // Substitution spec is prefix.
             if (strncmp(proposed, username, username_len) != 0)
                 continue; // Denied. Proposed does not have username prefix.
@@ -823,8 +815,7 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
         else if (*pChar == *user_subst_i_embed) {
             assert(false); // not supported
         }
-        else if (*pChar == *user_subst_i_suffix && need_check_suffix) {
-            need_check_suffix = false;
+        else if (*pChar == *user_subst_i_suffix) {
             // Check that link name has username suffix
             if (username_len > proposed_len) {
                 continue; // denied. proposed name is too short to hold username
