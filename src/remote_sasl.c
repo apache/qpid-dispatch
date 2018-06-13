@@ -300,11 +300,21 @@ static void remote_sasl_prepare(pn_transport_t *transport)
     }
 }
 
+static void connection_wake(pn_connection_t* conn)
+{
+    qd_connection_t *ctx = pn_connection_get_context(conn);
+    if (ctx) {
+        ctx->wake(ctx);
+    } else {
+        pn_connection_wake(conn);
+    }
+}
+
 static bool notify_upstream(qdr_sasl_relay_t* impl, uint8_t state)
 {
     if (!impl->upstream_released) {
         impl->upstream_state = state;
-        pn_connection_wake(impl->upstream);
+        connection_wake(impl->upstream);
         return true;
     } else {
         return false;
@@ -315,7 +325,7 @@ static bool notify_downstream(qdr_sasl_relay_t* impl, uint8_t state)
 {
     if (!impl->downstream_released && impl->downstream) {
         impl->downstream_state = state;
-        pn_connection_wake(impl->downstream);
+        connection_wake(impl->downstream);
         return true;
     } else {
         return false;
