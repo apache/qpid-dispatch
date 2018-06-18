@@ -295,13 +295,13 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
         info.ssl_cert_filepath = config->ssl_certificate_file;
         info.ssl_private_key_filepath = config->ssl_private_key_file;
         info.ssl_private_key_password = config->ssl_password;
-        info.ssl_ca_filepath = config->ssl_trusted_certificates;
+        info.ssl_ca_filepath = config->ssl_trusted_certificates ? config->ssl_trusted_certificates : config->ssl_trusted_certificate_db;
         info.ssl_cipher_list = config->ssl_ciphers;
 
         info.options |=
             LWS_SERVER_OPTION_DO_SSL_GLOBAL_INIT |
             (config->ssl_required ? 0 : LWS_SERVER_OPTION_ALLOW_NON_SSL_ON_SSL_PORT) |
-            (config->requireAuthentication ? LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT : 0);
+            ((config->requireAuthentication && info.ssl_ca_filepath) ? LWS_SERVER_OPTION_REQUIRE_VALID_OPENSSL_CLIENT_CERT : 0);
     }
     info.vhost_name = hl->listener->config.host_port;
     hl->vhost = lws_create_vhost(hs->context, &info);
