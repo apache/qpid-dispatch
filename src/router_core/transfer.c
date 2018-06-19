@@ -795,7 +795,9 @@ static long qdr_addr_path_count_CT(qdr_address_t *addr)
 
 static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv, qdr_address_t *addr, bool more)
 {
-    core->deliveries_ingress++;
+    if (dlv->link->link_type == QD_LINK_ENDPOINT)
+        core->deliveries_ingress++;
+
     if (addr && addr == link->owning_addr && qdr_addr_path_count_CT(addr) == 0) {
         //
         // We are trying to forward a delivery on an address that has no outbound paths
