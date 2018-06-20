@@ -907,14 +907,14 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
         if (ctx && ctx->connector) { /* Outgoing connection */
             const qd_server_config_t *config = &ctx->connector->config;
             if (condition  && pn_condition_is_set(condition)) {
-                qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed: %s %s", config->host_port,
+                qd_log(qd_server->log_source, QD_LOG_WARNING, "Connection to %s failed: %s %s", config->host_port,
                        pn_condition_get_name(condition), pn_condition_get_description(condition));
             } else {
-                qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed", config->host_port);
+                qd_log(qd_server->log_source, QD_LOG_WARNING, "Connection to %s failed", config->host_port);
             }
         } else if (ctx && ctx->listener) { /* Incoming connection */
             if (condition && pn_condition_is_set(condition)) {
-                qd_log(ctx->server->log_source, QD_LOG_INFO, "Connection from %s (to %s) failed: %s %s",
+                qd_log(ctx->server->log_source, QD_LOG_WARNING, "Connection from %s (to %s) failed: %s %s",
                        ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
                        pn_condition_get_description(condition));
             }

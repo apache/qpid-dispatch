@@ -346,7 +346,7 @@ void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
     assert(rc > 0 || !delivery->ref_counted);
     delivery->ref_counted = true;
     if (delivery->link)
-        qd_log(delivery->link->core->log, QD_LOG_DEBUG,
+        qd_log(delivery->link->core->log, QD_LOG_TRACE,
                "Delivery incref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, rc + 1, label);
 }
 
@@ -370,7 +370,7 @@ void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char 
 {
     uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, ref_count - 1, label);
+    qd_log(core->log, QD_LOG_TRACE, "Delivery decref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, ref_count - 1, label);
 
     if (ref_count == 1) {
         //
@@ -695,7 +695,7 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *label)
 {
     uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref_CT: dlv:%lx rc:%"PRIu32" %s", (long) dlv, ref_count - 1, label);
+    qd_log(core->log, QD_LOG_TRACE, "Delivery decref_CT: dlv:%lx rc:%"PRIu32" %s", (long) dlv, ref_count - 1, label);
     assert(ref_count > 0);
 
     if (ref_count == 1)
