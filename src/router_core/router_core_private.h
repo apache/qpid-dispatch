@@ -408,6 +408,7 @@ struct qdr_link_t {
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
     char                    *strip_prefix;
     char                    *insert_prefix;
+    bool                     terminus_survives_disconnect;
 
     uint64_t  total_deliveries;
     uint64_t  presettled_deliveries;

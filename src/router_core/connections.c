@@ -445,6 +445,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->credit_pending = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
+    link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -1723,7 +1724,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         if (dt != QD_LOST)
             qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
         else {
-            qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, false);
+            qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, !link->terminus_survives_disconnect);
             qdr_error_free(error);
         }
 
