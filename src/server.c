@@ -652,7 +652,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         sys_mutex_unlock(ctx->server->lock);
 
         qd_log(ctx->server->log_source, QD_LOG_INFO,
-               "[%"PRIu64"]: Accepted connection to %s from %s",
+               "[%"PRIu64"]: Accepted incoming connection to %s",
                ctx->connection_id, name, ctx->rhost_port);
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
@@ -790,6 +790,12 @@ static void qd_connection_free(qd_connection_t *ctx)
         //
         sys_atomic_inc(&ctx->connector->ref_count);
         qd_timer_schedule(ctx->connector->timer, delay);
+        qd_log(ctx->server->log_source, QD_LOG_INFO,
+               "[%"PRIu64"]: outgoing connection closed, retry in %lms",
+               ctx->connection_id, delay);
+    } else {
+        qd_log(ctx->server->log_source, QD_LOG_INFO,
+               "[%"PRIu64"]: incoming connection closed", ctx->connection_id);
     }
 
     sys_mutex_lock(qd_server->lock);
@@ -893,6 +899,11 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
             if (ctx->connector) {
                 ctx->connector->delay = 2000;  // Delay re-connect in case there is a recurring error
             }
+        }
+        if (ctx->connector) { /* Established an outgoing connection */
+            qd_log(ctx->server->log_source, QD_LOG_INFO,
+                   "[%"PRIu64"]: Established outgoing connection to %s",
+                   ctx->connection_id, ctx->connector->config.host_port);
         }
         break;
 
