@@ -288,11 +288,6 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     bool receive_complete = qd_message_receive_complete(msg);
 
     if (receive_complete) {
-        //
-        // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
-        //
-        pn_link_advance(pn_link);
-
         if (!qd_message_aborted(msg)) {
             // Since the entire message has been received, we can print out its contents to the log if necessary.
             if (cf->log_message) {
@@ -312,11 +307,30 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                        pn_link_name(pn_link));
         }
 
+        //
+        // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
+        //
+        pn_link_advance(pn_link);
+
+        //
+        // The entire message has been received but this message needs to be discarded
+        //
+        if (qd_message_is_discard(msg)) {
+            if (qdr_delivery_disposition(delivery) != 0)
+                pn_delivery_update(pnd, qdr_delivery_disposition(delivery));
+            pn_delivery_settle(pnd);
+            qdr_delivery_decref(router->router_core, delivery, "release protection of return from delivery discard");
+        }
+
         // Link stalling may have ignored some delivery events.
         // If there's another delivery pending then reschedule this.
         pn_delivery_t *npnd = pn_link_current(pn_link);
         if (npnd) {
             qd_connection_invoke_deferred(conn, deferred_AMQP_rx_handler, link);
+        }
+
+        if (qd_message_is_discard(msg)) {
+            return;
         }
     }
 
@@ -339,14 +353,21 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         // A delivery object was already available via pn_delivery_get_context. This means a qdr_delivery was already created. Use it to continue delivery.
         //
         if (delivery) {
-            qdr_deliver_continue(delivery);
 
             //
-            // Settle the proton delivery only if all the data has been received.
+            // Call continue only if the discard flag on the message is not set
+            // We should not continue processing the message after it has been discarded
             //
-            if (pn_delivery_settled(pnd) && receive_complete) {
-                qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
-                pn_delivery_settle(pnd);
+            if (!qd_message_is_discard(msg)) {
+                qdr_deliver_continue(delivery);
+
+                //
+                // Settle the proton delivery only if all the data has been received.
+                //
+                if (pn_delivery_settled(pnd) && receive_complete) {
+                    qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+                    pn_delivery_settle(pnd);
+                }
             }
         }
         else {
@@ -418,11 +439,17 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     if (delivery) {
-        qdr_deliver_continue(delivery);
-        if (receive_complete) {
-            if (pn_delivery_settled(pnd)) {
-                qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
-                pn_delivery_settle(pnd);
+        //
+        // Call continue only if the discard flag on the message is not set
+        // We should not continue processing the message after it has been discarded
+        //
+        if (!qd_message_is_discard(msg)) {
+            qdr_deliver_continue(delivery);
+            if (receive_complete) {
+                if (pn_delivery_settled(pnd)) {
+                    qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+                    pn_delivery_settle(pnd);
+                }
             }
         }
 

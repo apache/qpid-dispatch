@@ -58,6 +58,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->link_exclusion = link_exclusion;
     dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
+    dlv->disposition    = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver - protect returned value");
@@ -86,6 +87,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->link_exclusion = link_exclusion;
     dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
+    dlv->disposition    = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - protect returned value");
@@ -108,11 +110,12 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->link       = link;
-    dlv->msg        = msg;
-    dlv->settled    = settled;
-    dlv->presettled = settled;
-    dlv->error      = 0;
+    dlv->link         = link;
+    dlv->msg          = msg;
+    dlv->settled      = settled;
+    dlv->presettled   = settled;
+    dlv->error        = 0;
+    dlv->disposition  = 0;
 
     qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
@@ -337,6 +340,13 @@ bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery)
     if (!delivery)
         return false;
     return qd_message_receive_complete(delivery->msg);
+}
+
+uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery)
+{
+    if (!delivery)
+        return 0;
+    return delivery->disposition;
 }
 
 
@@ -569,6 +579,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
 
     qd_bitmask_free(delivery->link_exclusion);
     qdr_error_free(delivery->error);
+
     free_qdr_delivery_t(delivery);
 
 }
@@ -812,8 +823,12 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             link->dropped_presettled_deliveries++;
             if (dlv->link->link_type == QD_LINK_ENDPOINT)
                 core->dropped_presettled_deliveries++;
-        } else
-            qdr_delivery_release_CT(core, dlv);
+        } else {
+            if (more)
+                dlv->disposition = PN_RELEASED;
+            else
+                qdr_delivery_release_CT(core, dlv);
+        }
 
         if (qdr_is_addr_treatment_multicast(link->owning_addr))
             qdr_link_issue_credit_CT(core, link, 1, false);
@@ -870,13 +885,21 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         // If the delivery is not settled, release it.
         //
         if (!dlv->settled) {
-            qdr_delivery_release_CT(core, dlv);
 
             //
             // Set the discard flag on the message only if the message is not completely received yet.
             //
-            if (more)
+            if (more) {
+                //
+                // Since more of the messgae is still arriving, we want to wait until after the enter message arrives to release it.
+                // Dont release it now.
+                //
                 qd_message_set_discard(dlv->msg, true);
+                dlv->disposition = PN_RELEASED;
+            }
+            else {
+                qdr_delivery_release_CT(core, dlv);
+            }
         }
 
         //
