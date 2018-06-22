@@ -52,8 +52,6 @@ class MultiTimeout ( object ):
         self.parent.timeout ( self.name )
 
 
-
-
 class OneRouterTest(TestCase):
     """System tests involving a single router"""
     @classmethod
@@ -413,6 +411,11 @@ class OneRouterTest(TestCase):
         self.assertFalse(results_found)
 
         client.connection.close()
+
+    def test_40_anonymous_sender_no_receiver(self):
+        test = AnonymousSenderNoRecvLargeMessagedTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
 
 
 class Entity(object):
@@ -2228,6 +2231,7 @@ class MulticastUnsettledTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class LargeMessageStreamTest(MessagingHandler):
     def __init__(self, address):
         super(LargeMessageStreamTest, self).__init__()
@@ -2322,6 +2326,7 @@ class MultiframePresettledTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
 class MulticastUnsettledNoReceiverTest(MessagingHandler):
     """
     Creates a sender to a multicast address. Router provides a credit of 'linkCapacity' to this sender even
@@ -2394,6 +2399,48 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
     def on_released(self, event):
         if event.sender == self.sender:
             self.n_released += 1
+        self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
+    def __init__(self, address):
+        super(AnonymousSenderNoRecvLargeMessagedTest, self).__init__(auto_accept=False)
+        self.timer = None
+        self.conn = None
+        self.sender = None
+        self.address = address
+        self.released = False
+        self.error = None
+        self.body = ""
+        for i in range(20000):
+            self.body += "0123456789101112131415"
+
+    def timeout(self):
+        self.error = "Timeout Expired:, delivery not released. "
+        self.conn.close()
+
+    def check_if_done(self):
+        if self.released:
+            self.sender.close()
+            self.conn.close()
+            self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.conn = event.container.connect(self.address)
+        # This sender is an anonymous sender
+        self.sender = event.container.create_sender(self.conn)
+
+    def on_sendable(self, event):
+        msg = Message(body=self.body, address="someaddress")
+        # send(msg) calls the stream function which streams data from sender to the router
+        event.sender.send(msg)
+
+    def on_released(self, event):
+        self.released = True
         self.check_if_done()
 
     def run(self):
