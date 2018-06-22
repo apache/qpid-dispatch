@@ -192,6 +192,20 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
     sys_mutex_unlock(out_link->conn->work_lock);
 
     //
+    // We are dealing here only with link routed deliveries
+    // If the out_link has a connected link and if the out_link is an inter-router link, increment the global deliveries_transit
+    // If the out_link is a route container link, add to the global deliveries_egress
+    //
+    if (out_link && out_link->connected_link) {
+        if (out_link->conn->role == QDR_ROLE_INTER_ROUTER) {
+            core->deliveries_transit++;
+        }
+        else {
+            core->deliveries_egress++;
+        }
+    }
+
+    //
     // Activate the outgoing connection for later processing.
     //
     qdr_connection_activate_CT(core, out_link->conn);
@@ -326,7 +340,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                 qdr_forward_deliver_CT(core, dest_link, out_delivery);
                 fanout++;
                 addr->deliveries_transit++;
-                core->deliveries_transit++;
+                if (dest_link->link_type == QD_LINK_ROUTER)
+                    core->deliveries_transit++;
             }
         }
 
@@ -499,7 +514,8 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                 out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
                 qdr_forward_deliver_CT(core, out_link, out_delivery);
                 addr->deliveries_transit++;
-                core->deliveries_transit++;
+                if (out_link->link_type == QD_LINK_ROUTER)
+                    core->deliveries_transit++;
                 return 1;
             }
         }
@@ -661,7 +677,8 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         //
         if (chosen_link_bit >= 0) {
             addr->deliveries_transit++;
-            core->deliveries_transit++;
+            if (chosen_link->link_type == QD_LINK_ROUTER)
+                core->deliveries_transit++;
         }
         else {
             addr->deliveries_egress++;

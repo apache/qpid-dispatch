@@ -531,7 +531,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     if (link) {
         if (delivery->presettled) {
             link->presettled_deliveries++;
-            if (link->link_direction ==  QD_INCOMING)
+            if (link->link_direction ==  QD_INCOMING && link->link_type == QD_LINK_ENDPOINT)
                 core->presettled_deliveries++;
         }
         else if (delivery->disposition == PN_ACCEPTED) {
@@ -810,7 +810,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         if (dlv->settled) {
             // Increment the presettled_dropped_deliveries on the in_link
             link->dropped_presettled_deliveries++;
-            core->dropped_presettled_deliveries++;
+            if (dlv->link->link_type == QD_LINK_ENDPOINT)
+                core->dropped_presettled_deliveries++;
         } else
             qdr_delivery_release_CT(core, dlv);
 
@@ -946,6 +947,9 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
 
     if (link->connected_link) {
+        if (link->link_direction == QD_INCOMING)
+            core->deliveries_ingress++;
+
         //
         // If this is an attach-routed link, put the delivery directly onto the peer link
         //
