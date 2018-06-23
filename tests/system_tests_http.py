@@ -22,8 +22,19 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest2 as unittest
-import os, threading, sys, urllib2
+import os
+import threading
+import sys
 import ssl
+
+try:
+    from urllib2 import urlopen, build_opener, HTTPSHandler
+    from urllib2 import HTTPError, URLError
+except ImportError:
+    # python3
+    from urllib.request import urlopen, build_opener, HTTPSHandler
+    from urllib.error import HTTPError, URLError
+
 from system_test import TIMEOUT, Process
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR
@@ -37,7 +48,7 @@ class RouterTestHttp(TestCase):
 
     @classmethod
     def get(cls, url):
-        return urllib2.urlopen(url, cafile=cls.ssl_file('ca-certificate.pem')).read()
+        return urlopen(url, cafile=cls.ssl_file('ca-certificate.pem')).read().decode('utf-8')
 
     @classmethod
     def get_cert(cls, url):
@@ -46,8 +57,8 @@ class RouterTestHttp(TestCase):
                                 cls.ssl_file('client-private-key.pem'),
                                 'client-password')
         context.load_verify_locations(cls.ssl_file('ca-certificate.pem'))
-        opener = urllib2.build_opener(urllib2.HTTPSHandler(context=context))
-        return opener.open(url).read()
+        opener = build_opener(HTTPSHandler(context=context))
+        return opener.open(url).read().decode('utf-8')
 
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
         p = self.popen(
@@ -62,10 +73,10 @@ class RouterTestHttp(TestCase):
         return out
 
     def assert_get(self, url):
-        self.assertEqual("HTTP test\n", self.get("%s/system_tests_http.txt" % url))
+        self.assertEqual(u'HTTP test\n', self.get("%s/system_tests_http.txt" % url))
 
     def assert_get_cert(self, url):
-        self.assertEqual("HTTP test\n", self.get_cert("%s/system_tests_http.txt" % url))
+        self.assertEqual(u'HTTP test\n', self.get_cert("%s/system_tests_http.txt" % url))
 
     def test_listen_error(self):
         """Make sure a router exits if an initial HTTP listener fails, doesn't hang"""
@@ -117,7 +128,7 @@ class RouterTestHttp(TestCase):
 
         def test(port):
             self.assert_get("http://localhost:%d" % port)
-            self.assertRaises(urllib2.HTTPError, urllib2.urlopen, "http://localhost:%d/nosuch" % port)
+            self.assertRaises(HTTPError, urlopen, "http://localhost:%d/nosuch" % port)
 
         # Sequential calls on multiple ports
         for port in r.ports: test(port)
@@ -137,7 +148,7 @@ class RouterTestHttp(TestCase):
             if t.ex: raise t.ex
 
         # https not configured
-        self.assertRaises(urllib2.URLError, urllib2.urlopen, "https://localhost:%d/nosuch" % r.ports[0])
+        self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
     def test_https_get(self):
         if not sys.version_info >= (2, 9):
@@ -174,7 +185,7 @@ class RouterTestHttp(TestCase):
         self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[1])
 
         # authenticatePeer=True requires a client cert
-        self.assertRaises(urllib2.URLError, self.assert_get, "https://localhost:%s" % r.ports[2])
+        self.assertRaises(URLError, self.assert_get, "https://localhost:%s" % r.ports[2])
         # Provide client cert
         self.assert_get_cert("https://localhost:%d" % r.ports[2])
 
