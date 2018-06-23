@@ -53,7 +53,8 @@ class RouterTestSslBase(TestCase):
         # Create a sasl database.
         pipe = Popen(['saslpasswd2', '-c', '-p', '-f', 'qdrouterd.sasldb',
                       '-u', 'domain.com', 'test'],
-                     stdin=PIPE, stdout=PIPE, stderr=PIPE)
+                     stdin=PIPE, stdout=PIPE, stderr=PIPE,
+                     universal_newlines=True)
         result = pipe.communicate('password')
         assert pipe.returncode == 0, \
             "saslpasswd2 exit status %s, output:\n%s" % (pipe.returncode, result)
