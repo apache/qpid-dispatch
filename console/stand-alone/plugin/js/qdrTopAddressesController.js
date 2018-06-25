@@ -16,14 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular */
-/**
- * @module QDR
- */
-var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.TopAddressesController', function ($scope, QDRService, $timeout) {
+export class TopAddressesController {
+  constructor(QDRService, $scope, $timeout) {
+    this.controllerName = 'QDR.TopAddressesController';
 
     $scope.addressesData = [];
     $scope.topAddressesGrid = {
@@ -214,7 +211,6 @@ var QDR = (function(QDR) {
         clearInterval(timer);
     });
 
-  });
-  return QDR;
-
-} (QDR || {}));
+  }
+}
+TopAddressesController.$inject = ['QDRService', '$scope', '$timeout'];

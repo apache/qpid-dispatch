@@ -16,11 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global d3 */
 
-
-var qrdlayoutChord = function() { // eslint-disable-line no-unused-vars
+var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
   var chord = {}, chords, groups, matrix, n, padding = 0, τ = Math.PI*2, groupBy;
   function relayout() {
     groupBy = groupBy || d3.range(n);
@@ -145,3 +143,5 @@ let unique = function (arr) {
   }
   return Object.keys(counts).length;
 };
+
+export { qdrlayoutChord };

@@ -19,20 +19,26 @@ under the License.
 `;
 
 const gulp = require('gulp'),
-  babel = require('gulp-babel'),
+  mocha = require('gulp-mocha'),
+  gulpif = require('gulp-if'),
+  rollup = require('rollup-stream'),
+  source = require('vinyl-source-stream'),
+  buffer = require('vinyl-buffer'),
   concat = require('gulp-concat'),
   uglify = require('gulp-uglify'),
+  terser = require('gulp-terser'),
+  babel = require('gulp-babel'),
   ngAnnotate = require('gulp-ng-annotate'),
-  rename = require('gulp-rename'),
   cleanCSS = require('gulp-clean-css'),
   del = require('del'),
   eslint = require('gulp-eslint'),
   maps = require('gulp-sourcemaps'),
   insert = require('gulp-insert'),
+  rename = require('gulp-rename'),
   fs = require('fs'),
   tsc = require('gulp-typescript'),
-  tslint = require('gulp-tslint');
-  //tsProject = tsc.createProject('tsconfig.json');
+  tslint = require('gulp-tslint'),
+  through = require('through2');
 
   // temp directory for converted typescript files
 const built_ts = 'built_ts';
@@ -59,6 +65,7 @@ const arg = (argList => {
 })(process.argv);
 
 var src = arg.src ? arg.src + '/' : '';
+var production = (arg.build === 'production');
 
 const paths = {
   typescript: {
@@ -70,10 +77,14 @@ const paths = {
     dest: 'dist/css/'
   },
   scripts: {
-    src: [src + 'plugin/js/**/*.js', built_ts + '/**/*.js'],
+    src: [src + 'plugin/js/**/*.js'],
     dest: 'dist/js/'
   }
 };
+var touch = through.obj(function(file, enc, done) {
+  var now = new Date;
+  fs.utimes(file.path, now, now, done);
+});
 
 function clean() {
   return del(['dist',built_ts ]);
@@ -110,20 +121,6 @@ function vendor_styles() {
     .pipe(gulp.dest(paths.styles.dest));
 }
 
-function scripts() {
-  return gulp.src(paths.scripts.src, { sourcemaps: true })
-    .pipe(babel({
-      presets: [require.resolve('babel-preset-env')]
-    }))
-    .pipe(ngAnnotate())
-    .pipe(maps.init())
-    .pipe(uglify())
-    .pipe(concat('dispatch.min.js'))
-    .pipe(insert.prepend(license))
-    .pipe(maps.write('./'))
-    .pipe(gulp.dest(paths.scripts.dest));
-}
-
 function vendor_scripts() {
   var vendor_lines = fs.readFileSync('vendor-js.txt').toString().split('\n');
   var vendor_files = vendor_lines.filter( function (line) {
@@ -134,7 +131,8 @@ function vendor_scripts() {
     .pipe(uglify())
     .pipe(concat('vendor.min.js'))
     .pipe(maps.write('./'))
-    .pipe(gulp.dest(paths.scripts.dest));
+    .pipe(gulp.dest(paths.scripts.dest))
+    .pipe(touch);
 }
 function watch() {
   gulp.watch(paths.scripts.src, scripts);
@@ -167,10 +165,68 @@ function ts_lint() {
     .pipe(tslint.report());
 }
 
+function scripts() {
+  return rollup({
+    input: src + './main.js',
+    sourcemap: true,
+    format: 'es'
+  }).on('error', e => {
+    console.error(`${e.stack}`);
+  })
+  
+  // point to the entry file and gives the name of the output file.
+    .pipe(source('main.min.js', src))
+  
+  // buffer the output. most gulp plugins, including gulp-sourcemaps, don't support streams.
+    .pipe(buffer())
+  
+  // tell gulp-sourcemaps to load the inline sourcemap produced by rollup-stream.
+    .pipe(maps.init({loadMaps: true}))
+  // transform the code further here.
+  /*
+    .pipe(babel(
+      {presets: [
+        ['env', {
+          targets: {
+            'browsers': [
+              'Chrome >= 52',
+              'FireFox >= 44',
+              'Safari >= 7',
+              'Explorer 11',
+              'last 4 Edge versions'
+            ]
+          },
+          useBuiltIns: true,
+          //debug: true
+        }],
+        'es2015'
+      ],
+      'ignore': [
+        'node_modules'
+      ]
+      }
+    ))
+    */
+    .pipe(ngAnnotate())
+    //.pipe(gulpif(production, uglify()))
+    .pipe(gulpif(production, terser()))
+    .pipe(gulpif(production, insert.prepend(license)))
+  // write the sourcemap alongside the output file.
+    .pipe(maps.write('.'))
+  
+  // and output to ./dist/main.js as normal.
+    .pipe(gulp.dest(paths.scripts.dest));
+}
+
+function test () {
+  return gulp.src(['test/**/*.js'], {read: false})
+    .pipe(mocha({require: ['babel-core/register'], exit: true}))
+    .on('error', console.error);
+}
+
 var build = gulp.series(
   clean,                          // removes the dist/ dir
-  gulp.parallel(lint, ts_lint),   // lints the .js, .ts files
-  typescript,                     // converts .ts to .js
+  lint,                           // lints the .js
   gulp.parallel(vendor_styles, vendor_scripts, styles, scripts), // uglify and concat
   cleanup                         // remove .js that were converted from .ts
 );
@@ -186,5 +242,6 @@ exports.tsc = typescript;
 exports.scripts = scripts;
 exports.styles = styles;
 exports.vendor = vendor;
+exports.test = test;
 
 gulp.task('default', build);

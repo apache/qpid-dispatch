@@ -12,7 +12,7 @@ tests/policy-1/policy-*.json
 .metadata
 .settings
 console/test/topolgies/config-*
-.history
+.history/
 .tox
 .vscode
 console/stand-alone/node_modules/

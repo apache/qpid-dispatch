@@ -16,9 +16,7 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global d3 */
-
 const halfPI = Math.PI / 2.0;
 const twoPI = Math.PI * 2.0;
 
@@ -163,3 +161,5 @@ let cpRatio = function (gap, x, y) {
   let distScale = d3.scale.linear().domain([0, top/8, top/2, top]).range([0, .3, .4, .5]);
   return distScale(dist);
 };
+
+export { qdrRibbon };

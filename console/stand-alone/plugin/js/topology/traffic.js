@@ -16,25 +16,23 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 
-/* global d3 ChordData MIN_CHORD_THRESHOLD Promise */
-declare var d3: any;
-declare var ChordData: any;
-declare var MIN_CHORD_THRESHOLD: number;
+/* global d3 Promise */
+
+import { ChordData } from '../chord/data.js';
+import { MIN_CHORD_THRESHOLD } from '../chord/matrix.js';
+import { nextHop } from './topoUtils.js';
 
 const transitionDuration = 1000;
 const CHORDFILTERKEY = 'chordFilter';
 
-class Traffic { // eslint-disable-line no-unused-vars
-  [x: string]: any;
-  constructor($scope, $timeout, QDRService, converter, radius, topology, nextHop, type, prefix) {
+export class Traffic { // eslint-disable-line no-unused-vars
+  constructor($scope, $timeout, QDRService, converter, radius, topology, type, prefix) {
     $scope.addressColors = {};
     this.QDRService = QDRService;
     this.type = type; // moving dots or colored path
     this.prefix = prefix; // url prefix used in svg url()s
     this.topology = topology; // contains the list of router nodes
-    this.nextHop = nextHop; // fn that returns the route through the network between two routers
     this.$scope = $scope;
     this.$timeout = $timeout;
     // internal variables
@@ -55,9 +53,8 @@ class Traffic { // eslint-disable-line no-unused-vars
   }
   // remove any animations that are in progress
   remove() {
-    if (this.vis) {
+    if (this.vis)
       this.vis.remove();
-    }
   }
   // called when one of the address checkboxes is toggled
   setAnimationType(type, converter, radius) {
@@ -76,23 +73,21 @@ class Traffic { // eslint-disable-line no-unused-vars
 
 /* Base class for congestion and dots visualizations */
 class TrafficAnimation {
-  [x: string]: any;
   constructor(traffic) {
     this.traffic = traffic;
   }
   nodeIndexFor(nodes, name) {
     for (let i = 0; i < nodes.length; i++) {
       let node = nodes[i];
-      if (node.container === name) {
+      if (node.container === name)
         return i;
-      }
     }
     return -1;
   }
 }
 
 /* Color the links between router to show how heavily used the links are. */
-class Congestion extends TrafficAnimation {
+class Congestion extends TrafficAnimation{
   constructor(traffic) {
     super(traffic);
     this.init_markerDef();
@@ -116,28 +111,26 @@ class Congestion extends TrafficAnimation {
   }
   doUpdate() {
     let self = this;
-    this.traffic.QDRService.management.topology.ensureAllEntities(
-      [{ entity: 'router.link', force: true }, { entity: 'connection' }], function () {
+    this.traffic.QDRService.management.topology.ensureAllEntities([{ entity: 'router.link', force: true }, { entity: 'connection' }], function () {
       let links = {};
       let nodeInfo = self.traffic.QDRService.management.topology.nodeInfo();
       // accumulate all the inter-router links in an object
       // keyed by the svgs path id
-      for (const nodeId of Object.keys(nodeInfo)) {
+      for (let nodeId in nodeInfo) {
         let node = nodeInfo[nodeId];
         let nodeLinks = node['router.link'];
         for (let n = 0; n < nodeLinks.results.length; n++) {
           let link = self.traffic.QDRService.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
           if (link.linkType !== 'router-control') {
-            let f = self.nodeIndexFor(self.traffic.topology.nodes, self.traffic.QDRService.management.topology.nameFromId(nodeId));
+            let f = self.nodeIndexFor(self.traffic.topology.nodes.nodes, self.traffic.QDRService.utilities.nameFromId(nodeId));
             let connection = self.findResult(node, 'connection', 'identity', link.connectionId);
             if (connection) {
-              let t = self.nodeIndexFor(self.traffic.topology.nodes, connection.container);
+              let t = self.nodeIndexFor(self.traffic.topology.nodes.nodes, connection.container);
               let little = Math.min(f, t);
               let big = Math.max(f, t);
               let key = ['#path', little, big].join('-');
-              if (!links[key]) {
+              if (!links[key])
                 links[key] = [];
-              }
               links[key].push(link);
             }
           }
@@ -145,7 +138,7 @@ class Congestion extends TrafficAnimation {
       }
       // accumulate the colors/directions to be used
       let colors = {};
-      for (const key of Object.keys(links)) {
+      for (let key in links) {
         let congestion = self.congestion(links[key]);
         let path = d3.select(key);
         if (path && !path.empty()) {
@@ -198,7 +191,7 @@ class Congestion extends TrafficAnimation {
     let color = d3.scale.linear().domain([0, 1, 2, 3])
       .interpolate(d3.interpolateHcl)
       .range([d3.rgb('#CCCCCC'), d3.rgb('#00FF00'), d3.rgb('#FFA500'), d3.rgb('#FF0000')]);
-    return color(v);
+    return color(Math.max(0, Math.min(3, v)));
   }
   remove() {
     d3.select('#SVG_ID').selectAll('path.traffic')
@@ -222,7 +215,7 @@ class Dots extends TrafficAnimation {
     this.chordData.getMatrix().then(function () {
       this.traffic.$timeout(function () {
         this.traffic.$scope.addresses = this.chordData.getAddresses();
-        for (const address of Object.keys(this.traffic.$scope.addresses)) {
+        for (let address in this.traffic.$scope.addresses) {
           this.fillColor(address);
         }
       }.bind(this));
@@ -232,10 +225,12 @@ class Dots extends TrafficAnimation {
     let self = this;
     // event notification that an address checkbox has changed
     traffic.$scope.addressFilterChanged = function () {
-      self.updateAddresses();
-      // don't wait for the next polling cycle. update now
-      self.traffic.stop();
-      self.traffic.start();
+      self.updateAddresses()
+        .then(function () {
+          // don't wait for the next polling cycle. update now
+          self.traffic.stop();
+          self.traffic.start();
+        });
     };
     // called by angular when mouse enters one of the address legends
     traffic.$scope.enterLegend = function (address) {
@@ -248,12 +243,14 @@ class Dots extends TrafficAnimation {
     };
     // clicked on the address name. toggle the address checkbox
     traffic.$scope.addressClick = function (address) {
-      self.toggleAddress(address);
-      self.updateAddresses();
+      self.toggleAddress(address)
+        .then(function () {
+          self.updateAddresses();
+        });
     };
   }
   remove() {
-    for (const id of Object.keys(this.lastFlows)) {
+    for (let id in this.lastFlows) {
       d3.select('#SVG_ID').selectAll('circle.flow' + id).remove();
     }
     this.lastFlows = {};
@@ -261,17 +258,21 @@ class Dots extends TrafficAnimation {
   updateAddresses() {
     this.excludedAddresses = [];
     for (let address in this.traffic.$scope.addresses) {
-      if (!this.traffic.$scope.addresses[address]) {
+      if (!this.traffic.$scope.addresses[address])
         this.excludedAddresses.push(address);
-      }
     }
     localStorage[CHORDFILTERKEY] = JSON.stringify(this.excludedAddresses);
-    if (this.chordData) {
+    if (this.chordData)
       this.chordData.setFilter(this.excludedAddresses);
-    }
+    return new Promise(function (resolve) {
+      return resolve();
+    });
   }
   toggleAddress(address) {
     this.traffic.$scope.addresses[address] = !this.traffic.$scope.addresses[address];
+    return new Promise(function (resolve) {
+      return resolve();
+    });
   }
   fadeOtherAddresses(address) {
     d3.selectAll('circle.flow').classed('fade', function (d) {
@@ -306,30 +307,35 @@ class Dots extends TrafficAnimation {
       row.forEach(function (val, c) {
         if (val > MIN_CHORD_THRESHOLD) {
           // translate between matrix row/col and node index
-          let f = this.nodeIndexFor(this.traffic.topology.nodes, matrix.rows[r].egress);
-          let t = this.nodeIndexFor(this.traffic.topology.nodes, matrix.rows[r].ingress);
+          let f = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].egress);
+          let t = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].ingress);
           let address = matrix.getAddress(r, c);
           if (r !== c) {
             // accumulate the hops between the ingress and egress routers
-            this.traffic.nextHop(this.traffic.topology.nodes[f], this.traffic.topology.nodes[t], function (link, fnode, tnode) {
-              let key = '-' + link.uid;
-              let back = fnode.index < tnode.index;
-              if (!hops[key]) {
-                hops[key] = [];
-              }
-              hops[key].push({ val: val, back: back, address: address });
-            });
+            nextHop(this.traffic.topology.nodes.nodes[f], 
+              this.traffic.topology.nodes.nodes[t], 
+              this.traffic.topology.nodes, 
+              this.traffic.topology.links, 
+              this.traffic.QDRService, 
+              this.traffic.topology.nodes.nodes[f],
+              function (link, fnode, tnode) {
+                let key = '-' + link.uid;
+                let back = fnode.index < tnode.index;
+                if (!hops[key])
+                  hops[key] = [];
+                hops[key].push({ val: val, back: back, address: address });
+              });
           }
           // Find the senders connected to nodes[f] and the receivers connected to nodes[t]
           // and add their links to the animation
-          this.addClients(hops, this.traffic.topology.nodes, f, val, true, address);
-          this.addClients(hops, this.traffic.topology.nodes, t, val, false, address);
+          this.addClients(hops, this.traffic.topology.nodes.nodes, f, val, true, address);
+          this.addClients(hops, this.traffic.topology.nodes.nodes, t, val, false, address);
         }
       }.bind(this));
     }.bind(this));
     // for each link between routers that has traffic, start an animation
     let keep = {};
-    for (const id of Object.keys(hops)) {
+    for (let id in hops) {
       let hop = hops[id];
       for (let h = 0; h < hop.length; h++) {
         let ahop = hop[h];
@@ -360,9 +366,8 @@ class Dots extends TrafficAnimation {
   }
   // create dots along the path between routers
   startAnimation(path, id, hop, rate) {
-    if (!path.node()) {
+    if (!path.node())
       return;
-    }
     this.animateDots(path, id, hop, rate);
   }
   animateDots(path, id, hop, rate) {
@@ -375,9 +380,9 @@ class Dots extends TrafficAnimation {
     }
     // keep track of the number of dots for each link. If the length of the link is changed,
     // re-create the animation
-    if (!this.lastFlows[id]) {
+    if (!this.lastFlows[id])
       this.lastFlows[id] = len;
-    } else {
+    else {
       if (this.lastFlows[id] !== len) {
         this.lastFlows[id] = len;
         d3.select('#SVG_ID').selectAll('circle.flow' + id).remove();
@@ -407,9 +412,8 @@ class Dots extends TrafficAnimation {
       let node = nodes[n];
       if (node.normals && node.key === nodes[f].key && node.cdir === cdir) {
         let key = ['', f, n].join('-');
-        if (!hops[key]) {
+        if (!hops[key])
           hops[key] = [];
-        }
         hops[key].push({ val: val, back: node.cdir === 'in', address: address });
         return;
       }
@@ -428,9 +432,8 @@ class Dots extends TrafficAnimation {
         // start the points at different positions depending on their value (d)
         let tt = t * 1000;
         let f = ((tt + (d.i * 1000 / count)) % 1000) / 1000;
-        if (back) {
+        if (back)
           f = 1 - f;
-        }
         // l needs to be calculated each tick because the path's length might be changed during the animation
         let l = pnode.getTotalLength();
         let p = pnode.getPointAtLength(f * l);
@@ -439,5 +442,4 @@ class Dots extends TrafficAnimation {
     };
   }
 }
-
 
