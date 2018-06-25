@@ -18,16 +18,8 @@ under the License.
 -->
 
 <style>
-@media (min-width: 768px) {
-  .list-grid {
+.list-grid {
     padding-left: 300px;
-  }
-}
-@media (max-width: 768px) {
-  .list-grid {
-      padding-left: 0;
-  }
-
 }
 
 span.fancytree-icon {
@@ -51,11 +43,21 @@ span.fancytree-icon {
   height: 25px;
   width: 300px;
   background-color: #333333;
+  border: 0;
 }
 
 #list-controller div.list-grid select {
     background-color: white;
 }
+
+.list-grid {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: calc(100% - 40px);
+    margin-left: 20px;
+}
+
 </style>
 
 <div id="list-controller" ng-controller="QDR.ListController">
@@ -71,23 +73,23 @@ span.fancytree-icon {
         </div>
     </div>
 
-    <div class="list-grid col-xs-12">
+    <div class="list-grid">
         <div class="row-fluid qdrListActions">
             <ul class="nav nav-tabs">
                 <li ng-repeat="mode in modes" ng-show="isValid(mode)" ng-click="selectMode(mode)" ng-class="{active : isModeSelected(mode)}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
             </ul>
-            <h4>{{selectedRecordName}}</h4>
+            <h4>{{selectedRecordName | to_trusted}}</h4>
             <div ng-show="currentMode.id === 'attributes'" class="selectedItems">
-                <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no {{selectedEntity | safePlural}}</div>
+                <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no {{selectedEntity | safePlural | to_trusted}}</div>
                 <div id='details-grid' ng-hide="selectedRecordName === selectedEntity" ui-grid="details" ui-grid-resize-columns ui-grid-save-state
                 ui-grid-auto-resize ng-style="getTableHeight()"></div>
             </div>
             <div ng-show="currentMode.id === 'delete'">
                 <div class="delete" ng-show="selectedRecordName !== selectedEntity">
-                    <button class="btn btn-primary" ng-click="remove()">Delete</button> {{selectedRecordName}}
+                    <button class="btn btn-primary" ng-click="remove()">Delete</button> {{selectedRecordName | to_trusted}}
                 </div>
                 <div ng-hide="selectedRecordName !== selectedEntity">
-                    There are no {{selectedEntity | safePlural}}
+                    There are no {{selectedEntity | safePlural | to_trusted}}
                 </div>
             </div>
             <div class="operations" ng-show="currentMode.id === 'operations'">
@@ -98,7 +100,7 @@ span.fancytree-icon {
                             <th>Value</th>
                         </tr>
                     <tr title="{{attribute.title}}" ng-repeat="attribute in detailFields">
-                        <td><label for="{{attribute.name}}">{{attribute.name | humanify}}</label></td>
+                        <td><label for="{{attribute.name}}">{{attribute.name | humanify | to_trusted}}</label></td>
                         <!-- we can't do <input type="{angular expression}"> because... jquery throws an exception because... -->
                         <td>
                         <div ng-if="attribute.input == 'input'">
@@ -106,7 +108,7 @@ span.fancytree-icon {
                             <div ng-if="attribute.type == 'number'"><input type="number" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.rawValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"/><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
                             <div ng-if="attribute.type == 'text'"><input type="text" name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"/><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
                             <div ng-if="attribute.type == 'textarea'"><textarea name="{{attribute.name}}" id="{{attribute.name}}" ng-model="attribute.attributeValue" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" class="ui-widget-content ui-corner-all"></textarea><span ng-if="attribute.required" title="required" class="required-indicator"></span><span ng-if="attribute.unique" title="unique" class="unique-indicator"></span></div>
-                            <span ng-if="attribute.type == 'disabled'" >{{getAttributeValue(attribute)}}</span>
+                            <span ng-if="attribute.type == 'disabled'" >{{getAttributeValue(attribute) | to_trusted}}</span>
                         </div>
                         <div ng-if="attribute.input == 'select'">
                             <select id="{{attribute.name}}" ng-model="attribute.selected" ng-required="attribute.required" ng-class="{required: attribute.required, unique: attribute.unique}" ng-options="item for item in attribute.rawtype track by item"></select>
@@ -118,7 +120,7 @@ span.fancytree-icon {
                         </div>
                         </td>
                     </tr>
-                    <tr><td></td><td><button class="btn btn-primary" type="button" ng-click="ok()">{{operation | Pascalcase}}</button></td></tr>
+                    <tr><td></td><td><button class="btn btn-primary" type="button" ng-click="ok()">{{operation | Pascalcase | to_trusted}}</button></td></tr>
                     </table>
                 </fieldset>
             </div>
@@ -139,10 +141,23 @@ span.fancytree-icon {
                         </tr>
                     </table>
                 </div>
-                <div ng-if="logResults.length == 0 && !fetchingLog">No log entries for {{selectedRecordName}}</div>
-                <div ng-if="fetchingLog">Fetching logs for {{selectedRecordName}}</div>
+                <div ng-if="logResults.length == 0 && !fetchingLog">No log entries for {{selectedRecordName | to_trusted}}</div>
+                <div ng-if="fetchingLog">Fetching logs for {{selectedRecordName | to_trusted}}</div>
             </div>
         </div>
     </div>
 </div>
 
+<style>
+    @media (min-width: 768px) {
+      .list-grid {
+        padding-left: 300px;
+      }
+    }
+    @media (max-width: 768px) {
+      .list-grid {
+          padding-left: 0;
+      }
+    
+    }
+</style>

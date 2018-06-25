@@ -16,19 +16,19 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
-/**
- * @module QDR
- */
-var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.OverviewLogsController', function ($scope, $uibModalInstance, QDRService, $timeout, nodeName, nodeId, module, level) {
+import { QDRCore, QDRLogger } from './qdrGlobals.js';
 
+export class OverviewLogsController {
+  constructor(QDRService, $scope, $log, $uibModalInstance, $timeout, nodeName, nodeId, module, level) {
+    this.controllerName = 'QDR.OverviewLogsController';
+
+    let QDRLog = new QDRLogger($log, 'OverviewLogsController');
     var gotLogInfo = function (nodeId, response, context) {
       let statusCode = context.message.application_properties.statusCode;
       if (statusCode < 200 || statusCode >= 300) {
-        QDR.Core.notification('error', context.message.statusDescription);
-        QDR.log.info('Error ' + context.message.statusDescription);
+        QDRCore.notification('error', context.message.statusDescription);
+        QDRLog.info('Error ' + context.message.statusDescription);
       } else {
         let levelLogs = response.filter( function (result) {
           if (result[1] == null)
@@ -37,7 +37,7 @@ var QDR = (function(QDR) {
         });
         let logFields = levelLogs.map( function (result) {
           return {
-            nodeId: QDRService.management.topology.nameFromId(nodeId),
+            nodeId: QDRService.utilities.nameFromId(nodeId),
             name: result[0],
             type: result[1],
             message: result[2],
@@ -64,7 +64,6 @@ var QDR = (function(QDR) {
       $uibModalInstance.close(true);
     };
 
-  });
-  return QDR;
-
-} (QDR || {}));
+  }
+}
+OverviewLogsController.$inject = ['QDRService', '$scope', '$log', '$uibModalInstance', '$timeout', 'nodeName', 'nodeId', 'module', 'level'];

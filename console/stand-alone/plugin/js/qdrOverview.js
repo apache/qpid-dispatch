@@ -16,21 +16,15 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular d3 */
+import { QDRFolder, QDRLeaf, QDRCore, QDRLogger, QDRTemplatePath, QDRRedirectWhenConnected } from './qdrGlobals.js';
 
-/**
- * @module QDR
- */
-var QDR = (function (QDR) {
+export class OverviewController {
+  constructor(QDRService, $scope, $log, $location, $timeout, $uibModal) {
+    this.controllerName = 'QDR.OverviewController';
 
-  /**
-   *
-   * Controller that handles the QDR overview page
-   */
-  QDR.module.controller('QDR.OverviewController', ['$scope', 'QDRService', '$location', '$timeout', '$uibModal', 'uiGridConstants', function($scope, QDRService, $location, $timeout, $uibModal) {
-
-    QDR.log.debug('QDR.OverviewControll started with location of ' + $location.path() + ' and connection of  ' + QDRService.management.connection.is_connected());
+    let QDRLog = new QDRLogger($log, 'OverviewController');
+    QDRLog.debug('QDR.OverviewControll started with location of ' + $location.path() + ' and connection of  ' + QDRService.management.connection.is_connected());
     let updateIntervalHandle = undefined;
     const updateInterval = 5000;
 
@@ -46,14 +40,14 @@ var QDR = (function (QDR) {
       content: '<i class="icon-list"></i> Attributes',
       title: 'View the attribute values on your selection',
       isValid: function () { return true; },
-      href: function () { return '#/' + QDR.pluginName + '/attributes'; },
+      href: function () { return '#/attributes'; },
       index: 0
     },
     {
       content: '<i class="icon-leaf"></i> Operations',
       title: 'Execute operations on your selection',
       isValid: function () { return true; },
-      href: function () { return '#/' + QDR.pluginName + '/operations'; },
+      href: function () { return '#/operations'; },
       index: 1
     }];
     $scope.activeTab = $scope.subLevelTabs[0];
@@ -72,7 +66,7 @@ var QDR = (function (QDR) {
       {title: 'Overview', name: 'Overview', right: false}
     ];
 
-    $scope.tmplOverviewTree = QDR.templatePath + 'tmplOverviewTree.html';
+    $scope.tmplOverviewTree = QDRTemplatePath + 'tmplOverviewTree.html';
     $scope.templates = [
       { name: 'Charts', url: 'overviewCharts.html'},
       { name: 'Routers', url: 'routers.html'},
@@ -188,7 +182,7 @@ var QDR = (function (QDR) {
             if (nodes[node]['connection'].results[i][0] === 'inter-router')
               ++connections;
           }
-          let routerRow = {connections: connections, nodeId: node, id: QDRService.management.topology.nameFromId(node)};
+          let routerRow = {connections: connections, nodeId: node, id: QDRService.utilities.nameFromId(node)};
           nodes[node]['router'].attributeNames.forEach( function (routerAttr, i) {
             if (routerAttr !== 'routerId' && routerAttr !== 'id')
               routerRow[routerAttr] = nodes[node]['router'].results[0][i];
@@ -441,7 +435,7 @@ var QDR = (function (QDR) {
         }
         return include;
       });
-      QDR.log.info('setting linkFields in updateLinkGrid');
+      QDRLog.info('setting linkFields in updateLinkGrid');
       $scope.linkFields = filteredLinks;
       expandGridToContent('Links', $scope.linkFields.length);
       getLinkPagedData($scope.linkPagingOptions.pageSize, $scope.linkPagingOptions.currentPage);
@@ -594,7 +588,7 @@ var QDR = (function (QDR) {
 
     var getAllLinkFields = function (completionCallbacks, selectionCallback) {
       if (!$scope.linkFields) {
-        QDR.log.debug('$scope.linkFields was not defined!');
+        QDRLog.debug('$scope.linkFields was not defined!');
         return;
       }
       let nodeIds = QDRService.management.topology.nodeIdList();
@@ -611,10 +605,10 @@ var QDR = (function (QDR) {
           if (elapsed < 0)
             return 0;
           let delivered = QDRService.utilities.valFor(response.attributeNames, result, 'deliveryCount') - oldname[0].rawDeliveryCount;
-          //QDR.log.debug("elapsed " + elapsed + " delivered " + delivered)
+          //QDRLog.debug("elapsed " + elapsed + " delivered " + delivered)
           return elapsed > 0 ? parseFloat(Math.round((delivered/elapsed) * 100) / 100).toFixed(2) : 0;
         } else {
-          //QDR.log.debug("unable to find old linkName")
+          //QDRLog.debug("unable to find old linkName")
           return 0;
         }
       };
@@ -637,7 +631,7 @@ var QDR = (function (QDR) {
               return QDRService.utilities.pretty(und + uns);
             };
             var getLinkName = function () {
-              let namestr = QDRService.management.topology.nameFromId(nodeName);
+              let namestr = QDRService.utilities.nameFromId(nodeName);
               return namestr + ':' + QDRService.utilities.valFor(response.attributeNames, result, 'identity');
             };
             var fixAddress = function () {
@@ -1050,8 +1044,8 @@ var QDR = (function (QDR) {
         .then( function (results, context) {
           let statusCode = context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
-            QDR.Core.notification('error', context.message.statusDescription);
-            QDR.log.error('Error ' + context.message.statusDescription);
+            QDRCore.notification('error', context.message.statusDescription);
+            QDRLog.error('Error ' + context.message.statusDescription);
           }
         });
     };
@@ -1220,9 +1214,9 @@ var QDR = (function (QDR) {
         }
       });
       d.result.then(function () {
-        QDR.log.debug('d.open().then');
+        QDRLog.debug('d.open().then');
       }, function () {
-        QDR.log.debug('Modal dismissed at: ' + new Date());
+        QDRLog.debug('Modal dismissed at: ' + new Date());
       });
     }
 
@@ -1365,7 +1359,7 @@ var QDR = (function (QDR) {
           let entry = allLogEntries[n];
           entry.forEach( function (module) {
             if (module.name === node.key) {
-              module.nodeName = QDRService.management.topology.nameFromId(n);
+              module.nodeName = QDRService.utilities.nameFromId(n);
               module.nodeId = n;
               module.enable = logInfo.enable;
               $scope.logModuleData.push(module);
@@ -1441,7 +1435,7 @@ var QDR = (function (QDR) {
     };
 
     if (!QDRService.management.connection.is_connected()) {
-      QDR.redirectWhenConnected($location, 'overview');
+      QDRRedirectWhenConnected($location, 'overview');
       return;
     }
     $scope.template = $scope.templates[0];
@@ -1530,7 +1524,7 @@ var QDR = (function (QDR) {
     var showCharts = function () {
 
     };
-    let charts = new QDR.Folder('Charts');
+    let charts = new QDRFolder('Charts');
     charts.info = {fn: showCharts};
     charts.type = 'Charts';  // for the charts template
     charts.key = 'Charts';
@@ -1538,7 +1532,7 @@ var QDR = (function (QDR) {
     topLevelChildren.push(charts);
 
     // create a routers tree branch
-    let routers = new QDR.Folder('Routers');
+    let routers = new QDRFolder('Routers');
     routers.type = 'Routers';
     routers.info = {fn: allRouterInfo};
     routers.expanded = (expandedNodeList.indexOf('Routers') > -1);
@@ -1549,8 +1543,8 @@ var QDR = (function (QDR) {
     // called when the list of routers changes
     var updateRouterTree = function (nodes) {
       var worker = function (node) {
-        let name = QDRService.management.topology.nameFromId(node);
-        let router = new QDR.Leaf(name);
+        let name = QDRService.utilities.nameFromId(node);
+        let router = new QDRLeaf(name);
         router.type = 'Router';
         router.info = {fn: routerInfo};
         router.nodeId = node;
@@ -1563,7 +1557,7 @@ var QDR = (function (QDR) {
     };
 
     // create an addresses tree branch
-    let addresses = new QDR.Folder('Addresses');
+    let addresses = new QDRFolder('Addresses');
     addresses.type = 'Addresses';
     addresses.info = {fn: allAddressInfo};
     addresses.expanded = (expandedNodeList.indexOf('Addresses') > -1);
@@ -1573,7 +1567,7 @@ var QDR = (function (QDR) {
     topLevelChildren.push(addresses);
     var updateAddressTree = function (addressFields) {
       var worker = function (address) {
-        let a = new QDR.Leaf(address.title);
+        let a = new QDRLeaf(address.title);
         a.info = {fn: addressInfo};
         a.key = address.uid;
         a.fields = address;
@@ -1601,7 +1595,7 @@ var QDR = (function (QDR) {
     };
 
     $scope.filter = angular.fromJson(localStorage[FILTERKEY]) || {endpointsOnly: 'true', hideConsoles: true};
-    let links = new QDR.Folder('Links');
+    let links = new QDRFolder('Links');
     links.type = 'Links';
     links.info = {fn: allLinkInfo};
     links.expanded = (expandedNodeList.indexOf('Links') > -1);
@@ -1613,7 +1607,7 @@ var QDR = (function (QDR) {
     // called both before the tree is created and whenever a background update is done
     var updateLinkTree = function (linkFields) {
       var worker = function (link) {
-        let l = new QDR.Leaf(link.title);
+        let l = new QDRLeaf(link.title);
         let isConsole = QDRService.utilities.isConsole(QDRService.management.topology.getConnForLink(link));
         l.info = {fn: linkInfo};
         l.key = link.uid;
@@ -1630,7 +1624,7 @@ var QDR = (function (QDR) {
       updateLeaves(linkFields, 'Links', worker);
     };
 
-    let connections = new QDR.Folder('Connections');
+    let connections = new QDRFolder('Connections');
     connections.type = 'Connections';
     connections.info = {fn: allConnectionInfo};
     connections.expanded = (expandedNodeList.indexOf('Connections') > -1);
@@ -1645,7 +1639,7 @@ var QDR = (function (QDR) {
         if (connection.name === 'connection/' && connection.role === 'inter-router' && connection.host === '')
           host = connection.container + ':' + connection.identity;
 
-        let c = new QDR.Leaf(host);
+        let c = new QDRLeaf(host);
         let isConsole = QDRService.utilities.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId);
         c.type = 'Connection';
         c.info = {fn: connectionInfo};
@@ -1664,7 +1658,7 @@ var QDR = (function (QDR) {
 
     var updateLogTree = function (logFields) {
       var worker = function (log) {
-        let l = new QDR.Leaf(log.name);
+        let l = new QDRLeaf(log.name);
         l.type = 'Log';
         l.info = {fn: logInfo};
         l.key = log.name;
@@ -1678,7 +1672,7 @@ var QDR = (function (QDR) {
     let htmlReady = false;
     let dataReady = false;
     $scope.largeNetwork = QDRService.management.topology.isLargeNetwork();
-    let logs = new QDR.Folder('Logs');
+    let logs = new QDRFolder('Logs');
     logs.type = 'Logs';
     logs.info = {fn: allLogInfo};
     logs.expanded = (expandedNodeList.indexOf('Logs') > -1);
@@ -1723,13 +1717,13 @@ var QDR = (function (QDR) {
     // add placeholders for the top level tree nodes
     let topLevelTreeNodes = [routers, addresses, links, connections, logs];
     topLevelTreeNodes.forEach( function (parent) {
-      let placeHolder = new QDR.Leaf('loading...');
+      let placeHolder = new QDRLeaf('loading...');
       placeHolder.extraClasses = 'loading';
       parent.children = [placeHolder];
     });
 
     var updateExpanded = function () {
-      QDR.log.debug('updateExpandedEntities');
+      QDRLog.debug('updateExpandedEntities');
       clearTimeout(updateIntervalHandle);
 
       let tree = $('#overtree').fancytree('getTree');
@@ -1742,7 +1736,7 @@ var QDR = (function (QDR) {
         });
         q.await( function (error) {
           if (error)
-            QDR.log.error(error.message);
+            QDRLog.error(error.message);
 
           // if there are no active nodes, activate the saved one
           let tree = $('#overtree').fancytree('getTree');
@@ -1771,8 +1765,7 @@ var QDR = (function (QDR) {
       clearTimeout(updateIntervalHandle);
       $(window).off('resize', resizer);
     });
-  }]);
 
-  return QDR;
-
-}(QDR || {}));
+  }
+}
+OverviewController.$inject = ['QDRService', '$scope', '$log', '$location', '$timeout', '$uibModal'];

@@ -16,31 +16,43 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 
-var QDR = (function(QDR) {
+export var QDRFolder = (function () {
+  function Folder(title) {
+    this.title = title;
+    this.children = [];
+    this.folder = true;
+  }
+  return Folder;
+})();
+export var QDRLeaf = (function () {
+  function Leaf(title) {
+    this.title = title;
+  }
+  return Leaf;
+})();
 
-  QDR.Folder = (function () {
-    function Folder(title) {
-      this.title = title;
-      this.children = [];
-      this.folder = true;
-    }
-    return Folder;
-  })();
-  QDR.Leaf = (function () {
-    function Leaf(title) {
-      this.title = title;
-    }
-    return Leaf;
-  })();
+export var QDRCore = {
+  notification: function (severity, msg) {
+    $.notify(msg, severity);
+  }
+};
 
-  QDR.Core = {
-    notification: function (severity, msg) {
-      $.notify(msg, severity);
-    }
-  };
+export class QDRLogger {
+  constructor($log, source) {
+    this.log = function (msg) { $log.log(`QDR-${source}: ${msg}`); };
+    this.debug = function (msg) { $log.debug(`QDR-${source}: ${msg}`); };
+    this.error = function (msg) { $log.error(`QDR-${source}: ${msg}`); };
+    this.info = function (msg) { $log.info(`QDR-${source}: ${msg}`); };
+    this.warn = function (msg) { $log.warn(`QDR-${source}: ${msg}`); };
+  }
+}
 
-  return QDR;
+export const QDRTemplatePath = 'html/';
+export const QDR_SETTINGS_KEY = 'QDRSettings';
+export const QDR_LAST_LOCATION = 'QDRLastLocation';
 
-} (QDR || {}));
+export var QDRRedirectWhenConnected = function ($location, org) {
+  $location.path('/connect');
+  $location.search('org', org);
+};

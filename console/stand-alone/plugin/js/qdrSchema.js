@@ -16,19 +16,18 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
-/**
- * @module QDR
- */
-var QDR = (function (QDR) {
+import { QDRRedirectWhenConnected} from './qdrGlobals.js';
 
-  QDR.module.controller('QDR.SchemaController', ['$scope', '$location', '$timeout', 'QDRService', function($scope, $location, $timeout, QDRService) {
+export class SchemaController {
+  constructor(QDRService, $scope, $location, $timeout) {
+    this.controllerName = 'QDR.SchemaController';
+
     if (!QDRService.management.connection.is_connected()) {
-      QDR.redirectWhenConnected($location, 'schema');
+      QDRRedirectWhenConnected($location, 'schema');
       return;
     }
     var onDisconnect = function () {
-      $timeout( function () {QDR.redirectWhenConnected('schema');});
+      $timeout( function () {QDRRedirectWhenConnected('schema');});
     };
     // we are currently connected. setup a handler to get notified if we are ever disconnected
     QDRService.management.connection.addDisconnectAction( onDisconnect );
@@ -77,7 +76,6 @@ var QDR = (function (QDR) {
       QDRService.management.connection.delDisconnectAction( onDisconnect );
     });
 
-  }]);
-
-  return QDR;
-}(QDR || {}));
+  }
+}
+SchemaController.$inject = ['QDRService', '$scope', '$location', '$timeout'];

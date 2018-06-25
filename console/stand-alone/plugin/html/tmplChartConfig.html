@@ -31,7 +31,7 @@
         <uib-tabset>
             <uib-tab heading="Type">
                 <legend>Chart type</legend>
-                <div>
+                <div class="clearfix">
                     <label><input type="radio" ng-model="dialogChart.type" value="value" /> Value Chart</label>
                     <label><input type="radio" ng-model="dialogChart.type" value="rate" /> Rate Chart</label>
 <!--
@@ -41,19 +41,15 @@
                     </div>
 -->
                 </div>
-                <div style="clear:both;"> </div>
             </uib-tab>
-<!--
-            <uib-tab ng-hide="$parent.chart.aggregate()" heading="Colors">
+            <uib-tab ng-hide="chart.aggregate()" heading="Colors">
                 <legend>Chart colors</legend>
-                <div>
+                <div class="clearfix">
                     <div class="colorPicker">
-                        <label>Area: <input id="areaColor" name="areaColor" type="color" /></label>
+                        <label>Area: <input id="areaColor" name="areaColor" type="color" ng-model="dialogChart.areaColor"/></label>
                     </div>
                 </div>
-                <div style="clear:both;"> </div>
             </uib-tab>
--->
             <uib-tab heading="Duration">
                 <legend>Chart duration</legend>
                 <div class="clearfix">
