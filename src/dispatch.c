@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include <Python.h>
+#include "python_private.h"
 #include <qpid/dispatch/python_embedded.h>
 #include <qpid/dispatch.h>
 #include <qpid/dispatch/server.h>
@@ -270,19 +270,27 @@ void qd_dispatch_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
     qd_policy_c_counts_refresh(ccounts, entity);
 }
 
-bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, char *hostPattern)
+bool qd_dispatch_policy_host_pattern_add(qd_dispatch_t *qd, void *py_obj)
 {
-    return qd_policy_host_pattern_add(qd->policy, hostPattern);
+    char *hostPattern = py_string_2_c(py_obj);
+    bool rc = qd_policy_host_pattern_add(qd->policy, hostPattern);
+    free(hostPattern);
+    return rc;
 }
 
-void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, char *hostPattern)
+void qd_dispatch_policy_host_pattern_remove(qd_dispatch_t *qd, void *py_obj)
 {
+    char *hostPattern = py_string_2_c(py_obj);
     qd_policy_host_pattern_remove(qd->policy, hostPattern);
+    free(hostPattern);
 }
 
-char * qd_dispatch_policy_host_pattern_lookup(qd_dispatch_t *qd, char *hostPattern)
+char * qd_dispatch_policy_host_pattern_lookup(qd_dispatch_t *qd, void *py_obj)
 {
-    return qd_policy_host_pattern_lookup(qd->policy, hostPattern);
+    char *hostPattern = py_string_2_c(py_obj);
+    char *rc = qd_policy_host_pattern_lookup(qd->policy, hostPattern);
+    free(hostPattern);
+    return rc;
 }
 
 qd_error_t qd_dispatch_prepare(qd_dispatch_t *qd)
