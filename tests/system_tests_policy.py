@@ -817,8 +817,8 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern1())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError:" in e.message)
-            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError:" in str(e))
+            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected - name subst must be prefix or suffix
@@ -828,8 +828,8 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern2())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError:" in e.message)
-            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in e.message)
+            self.assertTrue("InternalServerErrorStatus: PolicyError:" in str(e))
+            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in str(e))
         self.assertTrue(exception)
 
 
@@ -904,7 +904,7 @@ class PolicyHostamePatternTest(TestCase):
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=#.#.0.0 --stdin', input=self.disallowed_hostname())
         except Exception as e:
-            self.assertTrue("pattern conflicts" in e.message, msg=('Error running qdmanage %s' % e.message))
+            self.assertTrue("pattern conflicts" in str(e), msg=('Error running qdmanage %s' % str(e)))
         self.assertFalse("222222" in qdm_out)
 
 
