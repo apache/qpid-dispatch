@@ -314,9 +314,11 @@ class TwoRouterIngressEgressTest(TestCase):
         local_node = Node.connect(address2, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_egress_index = outs.attribute_names.index('deliveriesEgress')
+        deliveries_accepted_index = outs.attribute_names.index('acceptedDeliveries')
         results = outs.results[0]
 
         pre_deliveries_egress = results[deliveries_egress_index]
+        pre_deliveries_accepted = results[deliveries_accepted_index]
 
         # Now run the test.
         test = IngressEgressTwoRouterTest(address1, address2)
@@ -333,12 +335,22 @@ class TwoRouterIngressEgressTest(TestCase):
         local_node = Node.connect(address2, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_egress_index = outs.attribute_names.index('deliveriesEgress')
+        deliveries_accepted_index = outs.attribute_names.index('acceptedDeliveries')
         results = outs.results[0]
 
         post_deliveries_egress = results[deliveries_egress_index]
+        post_deliveries_accepted = results[deliveries_accepted_index]
+
+        accepted_deliveries_diff = post_deliveries_accepted - pre_deliveries_accepted
 
         self.assertEqual(post_deliveries_ingresss - pre_deliveries_ingresss, 11)
         self.assertEqual(post_deliveries_egress - pre_deliveries_egress, 11)
+
+        # The management requests are counted in the acceptedDeliveries, so it is difficult to measure the
+        # exact number of accepted deliveries at this point in time. But it must at least be 10 since
+        # we know for sure from the test that the 10 dispositions related to the 10 sent messages
+        # were definitely received
+        self.assertTrue(accepted_deliveries_diff >= 10)
 
 
 class OneRouterIngressEgressTest(TestCase):
@@ -469,13 +481,14 @@ class IngressEgressTwoRouterTest(MessagingHandler):
         self.n_received = 0
         self.num_messages = 10
         self.start = False
+        self.n_accept = 0
 
     def timeout(self):
         self.conn_sender.close()
         self.conn_recv.close()
 
     def check_if_done(self):
-        if self.n_sent == self.n_received:
+        if self.num_messages == self.n_received and self.n_accept == self.num_messages:
             self.conn_sender.close()
             self.conn_recv.close()
             self.timer.cancel()
@@ -505,6 +518,8 @@ class IngressEgressTwoRouterTest(MessagingHandler):
             self.n_received += 1
 
     def on_accepted(self, event):
+        if event.sender:
+            self.n_accept += 1
         self.check_if_done()
 
     def run(self):
