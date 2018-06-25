@@ -1,7 +1,14 @@
 {
   "compilerOptions": {
-    "allowJs": true,
-    "checkJs": true,
+    "module": "commonjs",
+    "preserveConstEnums": true,
+    "newLine": "LF",
+    "target": "es5",
+    "moduleResolution": "node",
+    "noImplicitReturns": true,
+    "strict": true,
+    "declaration": true,
+    "declarationDir": "./typings",
     "lib": [
       "dom",
       "dom.iterable",
@@ -10,22 +17,14 @@
       "es7",
       "esnext",
       "esnext.asynciterable",
-      "es2015.iterable",
-      "es2017"
+      "es2015.iterable"
     ]
   },
   "compileOnSave": true,
   "include": [
-    "plugin/*"
+    "typings/*"
   ],
   "exclude": [
     "node_modules/*"
-  ],
-  "typeAcquisition": {
-    "enable": true
-  },
-  "files": [
-    "plugin/**/*.ts"
   ]
-
 }

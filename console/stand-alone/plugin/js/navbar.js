@@ -16,105 +16,92 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular */
 
-/**
- * @module QDR
- */
-var QDR = (function (QDR) {
+export class NavBarController {
+  constructor(QDRService, QDRChartService, $scope, $routeParams, $location) {
+    this.controllerName = 'QDR.NavBarController';
 
-  QDR.breadcrumbs = [
-    {
-      content: '<i class="icon-power"></i> Connect',
-      title: 'Connect to a router',
-      isValid: function () { return true; },
-      href: '#/connect',
-      name: 'Connect'
-    },
-    {
-      content: '<i class="pficon-home"></i> Overview',
-      title: 'View router overview',
-      isValid: function (QDRService) {return QDRService.management.connection.is_connected(); },
-      href: '#/overview',
-      name: 'Overview'
-    },
-    {
-      content: '<i class="icon-list "></i> Entities',
-      title: 'View the attributes of the router entities',
-      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
-      href: '#/list',
-      name: 'Entities'
-    },
-    {
-      content: '<i class="code-branch"></i> Topology',
-      title: 'View router network topology',
-      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
-      href: '#/topology',
-      name: 'Topology'
-    },
-    {
-      content: '<i class="icon-bar-chart"></i> Charts',
-      title: 'View charts',
-      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
-      href: '#/charts',
-      name: 'Charts'
-    },
-    {
-      content: '<i class="chord-diagram"></i> Message Flow',
-      title: 'Chord chart',
-      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
-      href: '#/chord',
-      name: 'Message Flow'
-    },
-    {
-      content: '<i class="icon-schema"></i> Schema',
-      title: 'View dispatch schema',
-      isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
-      href: '#/schema',
-      name: 'Schema'
-    }
-  ];
-  /**
-   * @function NavBarController
-   *
-   * @param $scope
-   * @param workspace
-   *
-   * The controller for this plugin's navigation bar
-   *
-   */
-  QDR.module.controller('QDR.NavBarController', ['$rootScope', '$scope', 'QDRService', 'QDRChartService', '$routeParams', '$location', function($rootScope, $scope, QDRService, QDRChartService, $routeParams, $location) {
-    $scope.breadcrumbs = QDR.breadcrumbs;
+    $scope.breadcrumbs = [
+      {
+        content: '<i class="icon-power"></i> Connect',
+        title: 'Connect to a router',
+        isValid: function () { return true; },
+        href: '#/connect',
+        name: 'Connect'
+      },
+      {
+        content: '<i class="pficon-home"></i> Overview',
+        title: 'View router overview',
+        isValid: function (QDRService) {return QDRService.management.connection.is_connected(); },
+        href: '#/overview',
+        name: 'Overview'
+      },
+      {
+        content: '<i class="icon-list "></i> Entities',
+        title: 'View the attributes of the router entities',
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+        href: '#/list',
+        name: 'Entities'
+      },
+      {
+        content: '<i class="code-branch"></i> Topology',
+        title: 'View router network topology',
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+        href: '#/topology',
+        name: 'Topology'
+      },
+      {
+        content: '<i class="icon-bar-chart"></i> Charts',
+        title: 'View charts',
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+        href: '#/charts',
+        name: 'Charts'
+      },
+      {
+        content: '<i class="chord-diagram"></i> Message Flow',
+        title: 'Chord chart',
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+        href: '#/chord',
+        name: 'Message Flow'
+      },
+      {
+        content: '<i class="icon-schema"></i> Schema',
+        title: 'View dispatch schema',
+        isValid: function (QDRService) { return QDRService.management.connection.is_connected(); },
+        href: '#/schema',
+        name: 'Schema'
+      }
+    ];
     $scope.isValid = function(link) {
       return link.isValid(QDRService, $location);
     };
-
+  
     $scope.isActive = function(href) {
       return href.split('#')[1] === $location.path();
     };
-
+  
     $scope.isRight = function (link) {
       return angular.isDefined(link.right);
     };
-
+  
     $scope.hasChart = function (link) {
       if (link.href == '#/charts') {
         return QDRChartService.charts.some(function (c) { return c.dashboard; });
       }
     };
-
+  
     $scope.isDashboardable = function () {
       return  ($location.path().indexOf('schema') < 0 && $location.path().indexOf('connect') < 0);
     };
-
+  
     $scope.addToDashboardLink = function () {
       var href = '#' + $location.path();
       var size = angular.toJson({
         size_x: 2,
         size_y: 2
       });
-
+  
       var routeParams = angular.toJson($routeParams);
       var title = 'Dispatch Router';
       return '/hawtio/#/dashboard/add?tab=dashboard' +
@@ -123,9 +110,8 @@ var QDR = (function (QDR) {
             '&title=' + encodeURIComponent(title) +
             '&size=' + encodeURIComponent(size);
     };
+  }
 
-  }]);
+}
+NavBarController.$inject = ['QDRService', 'QDRChartService', '$scope', '$routeParams', '$location'];
 
-  return QDR;
-
-} (QDR || {}));

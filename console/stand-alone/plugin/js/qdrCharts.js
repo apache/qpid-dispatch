@@ -16,34 +16,27 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 
 /* global angular */
 
-/**
- * @module QDR
- */
-var QDR = (function (QDR) {
+import { QDRTemplatePath, QDRRedirectWhenConnected } from './qdrGlobals.js';
 
-  /**
-   * @method ChartsController
-   *
-   * Controller that handles the QDR charts page
-   */
-  QDR.module.controller('QDR.ChartsController', function($scope, QDRService, QDRChartService, $uibModal, $location, $routeParams, $timeout) {
+export class ChartsController {
+  constructor(QDRService, QDRChartService, $scope, $location, $timeout, $routeParams, $uibModal) {
+    this.controllerName = 'QDR.ChartsController';
 
     let updateTimer = null;
 
     if (!QDRService.management.connection.is_connected()) {
       // we are not connected. we probably got here from a bookmark or manual page reload
-      QDR.redirectWhenConnected($location, 'charts');
+      QDRRedirectWhenConnected($location, 'charts');
       return;
     }
 
     $scope.svgCharts = [];
     // create an svg object for each chart
     QDRChartService.charts.filter(function (chart) {return chart.dashboard;}).forEach(function (chart) {
-      let svgChart = new QDRChartService.pfAreaChart(chart, chart.id(), true);
+      let svgChart = QDRChartService.pfAreaChart(chart, chart.id(), true);
       svgChart.zoomed = false;
       $scope.svgCharts.push(svgChart);
     });
@@ -108,7 +101,7 @@ var QDR = (function (QDR) {
     // called from dialog when we want to clone the dialog chart
     // the chart argument here is a QDRChartService chart
     $scope.addChart = function (chart) {
-      let nchart = new QDRChartService.pfAreaChart(chart, chart.id(), true);
+      let nchart = QDRChartService.pfAreaChart(chart, chart.id(), true);
       $scope.svgCharts.push(nchart);
       $timeout( function () {
         nchart.generate();
@@ -132,7 +125,7 @@ var QDR = (function (QDR) {
         backdrop: true,
         keyboard: true,
         backdropClick: true,
-        templateUrl: QDR.templatePath + template,
+        templateUrl: QDRTemplatePath + template,
         controller: 'QDR.ChartDialogController',
         resolve: {
           chart: function() {
@@ -150,11 +143,7 @@ var QDR = (function (QDR) {
         }
       });
     }
-
-  });
-
-
-  return QDR;
-
-}(QDR || {}));
+  }
+}
+ChartsController.$inject = ['QDRService', 'QDRChartService', '$scope', '$location', '$timeout', '$routeParams', '$uibModal'];
 

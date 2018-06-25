@@ -20,7 +20,6 @@ under the License.
 <html xmlns:ng="https://angularjs.org">
 
 <head>
-
     <meta charset="utf-8"/>
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -76,9 +75,15 @@ under the License.
     </div>
 </div>
 
+<!-- <script type="module" src="js/main.min.js"></script> -->
 <script type="text/javascript" src="js/vendor.min.js"></script>
-<script type="text/javascript" src="js/dispatch.min.js"></script>
-
+<script type="text/javascript" src="js/main.min.js"></script>
+<script defer nomodule>
+    var installError = document.getElementById('installError');
+    if (installError) {
+        installError.innerHTML = 'This browser is not supported because it does not support es-2015 modules. <a href="https://www.ecma-international.org/ecma-262/6.0/">https://www.ecma-international.org/ecma-262/6.0/</a><br/>Please use a different browser.';
+    }
+</script>
 
 <script>
     // If angular hasn't loaded a page after 1 second, display the error message

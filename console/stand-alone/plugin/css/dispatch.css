@@ -975,10 +975,10 @@ i.red {
 }
 
 .qdrListActions div.delete {
-    width: 20em;
+    width: 30em;
     margin: auto;
     border: 1px solid #eaeaea;
-    height: 5em;
+    /* height: 5em; */
     padding: 4em;
     background-color: #fcfcfc;
 }

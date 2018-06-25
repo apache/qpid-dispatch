@@ -16,15 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular */
-/**
- * @module QDR
- */
-var QDR = (function(QDR) {
 
-  // controller for the edit/configure chart dialog
-  QDR.module.controller('QDR.ChartDialogController', function($scope, QDRChartService, $location, $uibModalInstance, chart, updateTick, dashboard, adding) {
+export class ChartDialogController {
+  constructor(QDRChartService, $scope, $location, $uibModalInstance, chart, updateTick, dashboard, adding) {
+    this.controllerName = 'QDR.ChartDialogController';
     let dialogSvgChart = null;
     $scope.svgDivId = 'dialogEditChart';    // the div id for the svg chart
 
@@ -41,8 +37,10 @@ var QDR = (function(QDR) {
     });
     $scope.$watch('dialogChart.areaColor', function (newValue, oldValue) {
       if (newValue !== oldValue) {
-        if (dialogSvgChart)
+        if (dialogSvgChart) {
+          dialogSvgChart.chart.areaColor = newValue;
           dialogSvgChart.tick($scope.svgDivId);
+        }
       }
     });
     $scope.$watch('dialogChart.lineColor', function (newValue, oldValue) {
@@ -73,7 +71,7 @@ var QDR = (function(QDR) {
     $scope.showChartsPage = function () {
       cleanup();
       $uibModalInstance.close(true);
-      $location.path(QDR.pluginRoot + '/charts');
+      $location.path('/charts');
     };
 
     var cleanup = function () {
@@ -185,20 +183,13 @@ var QDR = (function(QDR) {
         setTimeout(showChart, 100);
         return;
       }
-      dialogSvgChart = new QDRChartService.pfAreaChart($scope.dialogChart, $scope.svgDivId);
-      /*
-      $('input[name=areaColor]').val($scope.dialogChart.areaColor);
-      $('input[name=areaColor]').on('input', function (e) {
-        $scope.dialogChart.areaColor = $(this).val();
-        updateDialogChart()
-      })
-*/
+      dialogSvgChart = QDRChartService.pfAreaChart($scope.dialogChart, $scope.svgDivId, false, 550);
       if (updateTimer)
         clearTimeout(updateTimer);
       updateDialogChart();
     };
     showChart();
-  });
-  return QDR;
 
-} (QDR || {}));
+  }
+}
+ChartDialogController.$inject = ['QDRChartService', '$scope', '$location', '$uibModalInstance', 'chart', 'updateTick', 'dashboard', 'adding'];

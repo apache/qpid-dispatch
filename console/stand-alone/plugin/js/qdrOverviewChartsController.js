@@ -16,14 +16,11 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular */
-/**
- * @module QDR
- */
-var QDR = (function(QDR) {
 
-  QDR.module.controller('QDR.OverviewChartsController', function ($scope, QDRService, QDRChartService, $timeout) {
+export class OverviewChartsController {
+  constructor(QDRService, QDRChartService, $scope, $timeout) {
+    this.controllerName = 'QDR.OverviewChartsController';
 
     $scope.overviewCharts = [];
     let updateTimer;
@@ -90,7 +87,7 @@ var QDR = (function(QDR) {
     ];
     $scope.overviewCharts = charts.map( function (chart) {
       let c = QDRChartService.registerChart(chart);
-      return new QDRChartService.pfAreaChart(c, c.id(), true);
+      return QDRChartService.pfAreaChart(c, c.id(), true);
     });
 
 
@@ -128,7 +125,6 @@ var QDR = (function(QDR) {
         QDRChartService.unRegisterChart(svg.chart);
       });
     });
-  });
-  return QDR;
-
-} (QDR || {}));
+  }
+}
+OverviewChartsController.$inject = ['QDRService', 'QDRChartService', '$scope', '$timeout'];

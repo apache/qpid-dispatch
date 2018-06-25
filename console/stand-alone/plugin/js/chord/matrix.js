@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global d3 */
 
 const MIN_CHORD_THRESHOLD = 0.01;
@@ -212,3 +211,5 @@ let emptyMatrix = function (size) {
   }
   return matrix;
 };
+
+export { MIN_CHORD_THRESHOLD, valuesMatrix };

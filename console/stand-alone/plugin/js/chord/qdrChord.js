@@ -16,16 +16,21 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
-/* global angular d3 separateAddresses aggregateAddresses ChordData qdrRibbon qrdlayoutChord */
+/* global angular d3 */
 
-var QDR = (function (QDR) {
-  QDR.module.controller('QDR.ChordController', ['$scope', 'QDRService', '$location', '$timeout', '$sce', function($scope, QDRService, $location, $timeout, $sce) {
+import { QDRRedirectWhenConnected } from '../qdrGlobals.js';
+import { separateAddresses, aggregateAddresses } from './filters.js';
+import { ChordData } from './data.js';
+import { qdrRibbon } from './ribbon/ribbon.js';
+import { qdrlayoutChord } from './layout/layout.js';
 
+export class ChordController {
+  constructor(QDRService, $scope, $location, $timeout, $sce) {
+    this.controllerName = 'QDR.ChordController';
     // if we get here and there is no connection, redirect to the connect page and then 
     // return here once we are connected
     if (!QDRService.management.connection.is_connected()) {
-      QDR.redirectWhenConnected($location, 'chord');
+      QDRRedirectWhenConnected($location, 'chord');
       return;
     }
 
@@ -441,7 +446,7 @@ var QDR = (function (QDR) {
 
       // create a new chord layout so we can animate between the last one and this one
       let groupBy = matrix.getGroupBy();
-      let rechord = qrdlayoutChord().padding(ARCPADDING).groupBy(groupBy).matrix(matrixMessages);
+      let rechord = qdrlayoutChord().padding(ARCPADDING).groupBy(groupBy).matrix(matrixMessages);
 
       // The chord layout has a function named .groups() that returns the
       // data for the arcs. We decorate this data with a unique key.
@@ -831,8 +836,7 @@ var QDR = (function (QDR) {
       });
     }
     let interval = setInterval(doUpdate, transitionDuration);
-  
-  }]);
-  return QDR;
 
-} (QDR || {}));
+  }
+}
+ChordController.$inject = ['QDRService', '$scope', '$location', '$timeout', '$sce'];

@@ -16,29 +16,20 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular */
-/**
- * @module QDR
- */
-var QDR = (function(QDR) {
+import { QDR_SETTINGS_KEY, QDRLogger} from './qdrGlobals.js';
 
-  /**
-   * @method SettingsController
-   * @param $scope
-   * @param QDRServer
-   *
-   * Controller that handles the QDR settings page
-   */
+export class SettingsController {
+  constructor(QDRService, QDRChartService, $scope, $log, $timeout) {
+    this.controllerName = 'QDR.SettingsController';
 
-  QDR.module.controller('QDR.SettingsController', ['$scope', 'QDRService', 'QDRChartService', '$timeout', function($scope, QDRService, QDRChartService, $timeout) {
-
+    let QDRLog = new QDRLogger($log, 'SettingsController');
     $scope.connecting = false;
     $scope.connectionError = false;
     $scope.connectionErrorText = undefined;
     $scope.forms = {};
 
-    $scope.formEntity = angular.fromJson(localStorage[QDR.SETTINGS_KEY]) || {
+    $scope.formEntity = angular.fromJson(localStorage[QDR_SETTINGS_KEY]) || {
       address: '',
       port: '',
       username: '',
@@ -51,7 +42,7 @@ var QDR = (function(QDR) {
       if (newValue !== oldValue) {
         let pass = newValue.password;
         newValue.password = '';
-        localStorage[QDR.SETTINGS_KEY] = angular.toJson(newValue);
+        localStorage[QDR_SETTINGS_KEY] = angular.toJson(newValue);
         newValue.password = pass;
       }
     }, true);
@@ -84,7 +75,7 @@ var QDR = (function(QDR) {
     };
 
     var doConnect = function() {
-      QDR.log.info('doConnect called on connect page');
+      QDRLog.info('doConnect called on connect page');
       if (!$scope.formEntity.address)
         $scope.formEntity.address = 'localhost';
       if (!$scope.formEntity.port)
@@ -116,65 +107,7 @@ var QDR = (function(QDR) {
           failed(e);
         });
     };
-  }]);
+  }
+}
+SettingsController.$inject = ['QDRService', 'QDRChartService', '$scope', '$log', '$timeout'];
 
-
-  QDR.module.directive('posint', function() {
-    return {
-      require: 'ngModel',
-
-      link: function(scope, elem, attr, ctrl) {
-        // input type number allows + and - but we don't want them so filter them out
-        elem.bind('keypress', function(event) {
-          let nkey = !event.charCode ? event.which : event.charCode;
-          let skey = String.fromCharCode(nkey);
-          let nono = '-+.,';
-          if (nono.indexOf(skey) >= 0) {
-            event.preventDefault();
-            return false;
-          }
-          // firefox doesn't filter out non-numeric input. it just sets the ctrl to invalid
-          if (/[!@#$%^&*()]/.test(skey) && event.shiftKey || // prevent shift numbers
-            !( // prevent all but the following
-              nkey <= 0 || // arrows
-              nkey == 8 || // delete|backspace
-              nkey == 13 || // enter
-              (nkey >= 37 && nkey <= 40) || // arrows
-              event.ctrlKey || event.altKey || // ctrl-v, etc.
-              /[0-9]/.test(skey)) // numbers
-          ) {
-            event.preventDefault();
-            return false;
-          }
-        });
-        // check the current value of input
-        var _isPortInvalid = function(value) {
-          let port = value + '';
-          let isErrRange = false;
-          // empty string is valid
-          if (port.length !== 0) {
-            let n = ~~Number(port);
-            if (n < 1 || n > 65535) {
-              isErrRange = true;
-            }
-          }
-          ctrl.$setValidity('range', !isErrRange);
-          return isErrRange;
-        };
-
-        //For DOM -> model validation
-        ctrl.$parsers.unshift(function(value) {
-          return _isPortInvalid(value) ? undefined : value;
-        });
-
-        //For model -> DOM validation
-        ctrl.$formatters.unshift(function(value) {
-          _isPortInvalid(value);
-          return value;
-        });
-      }
-    };
-  });
-
-  return QDR;
-}(QDR || {}));

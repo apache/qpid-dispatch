@@ -16,7 +16,6 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-'use strict';
 /* global angular d3 */
 
 /**
@@ -26,84 +25,66 @@ under the License.
  * The main entry point for the QDR module
  *
  */
-var QDR = (function(QDR) {
+
+//import angular from 'angular';
+import { QDRLogger, QDRTemplatePath, QDR_LAST_LOCATION } from './plugin/js/qdrGlobals.js';
+import { QDRService } from './plugin/js/qdrService.js';
+import { QDRChartService } from './plugin/js/qdrChartService.js';
+import { NavBarController } from './plugin/js/navbar.js';
+import { OverviewController } from './plugin/js/qdrOverview.js';
+import { OverviewChartsController } from './plugin/js/qdrOverviewChartsController.js';
+import { OverviewLogsController } from './plugin/js/qdrOverviewLogsController.js';
+import { TopologyController } from './plugin/js/topology/qdrTopology.js';
+import { ChordController } from './plugin/js/chord/qdrChord.js';
+import { ListController } from './plugin/js/qdrList.js';
+import { TopAddressesController } from './plugin/js/qdrTopAddressesController.js';
+import { ChartDialogController } from './plugin/js/dlgChartController.js';
+import { SettingsController } from './plugin/js/qdrSettings.js';
+import { SchemaController } from './plugin/js/qdrSchema.js';
+import { ChartsController } from './plugin/js/qdrCharts.js';
+import { posint } from './plugin/js/posintDirective.js';
+
+(function(QDR) {
 
   /**
-   * @property pluginName
-   * @type {string}
-   *
-   * The name of this plugin
-   */
-  QDR.pluginName = 'QDR';
-  QDR.pluginRoot = '';
-  QDR.isStandalone = true;
-
-  /**
-   * @property templatePath
-   * @type {string}
-   *
-   * The top level path to this plugin's partials
-   */
-  QDR.templatePath = 'html/';
-  /**
-   * @property SETTINGS_KEY
-   * @type {string}
-   *
-   * The key used to fetch our settings from local storage
-   */
-  QDR.SETTINGS_KEY = 'QDRSettings';
-  QDR.LAST_LOCATION = 'QDRLastLocation';
-
-  QDR.redirectWhenConnected = function ($location, org) {
-    $location.path(QDR.pluginRoot + '/connect');
-    $location.search('org', org);
-  };
-
-  /**
-   * @property module
-   * @type {object}
-   *
    * This plugin's angularjs module instance
    */
-  QDR.module = angular.module(QDR.pluginName, ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap',
-    'ui.grid', 'ui.grid.selection', 'ui.grid.autoResize', 'ui.grid.resizeColumns', 'ui.grid.saveState', 'ui.slider', 'ui.checkbox']);
+  QDR.module = angular.module('QDR', ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap',
+    'ui.grid', 'ui.grid.selection', 'ui.grid.autoResize', 'ui.grid.resizeColumns', 'ui.grid.saveState',
+    'ui.slider', 'ui.checkbox']);
 
   // set up the routing for this plugin
   QDR.module.config(function($routeProvider) {
     $routeProvider
       .when('/', {
-        templateUrl: QDR.templatePath + 'qdrOverview.html'
+        templateUrl: QDRTemplatePath + 'qdrOverview.html'
       })
       .when('/overview', {
-        templateUrl: QDR.templatePath + 'qdrOverview.html'
+        templateUrl: QDRTemplatePath + 'qdrOverview.html'
       })
       .when('/topology', {
-        templateUrl: QDR.templatePath + 'qdrTopology.html'
+        templateUrl: QDRTemplatePath + 'qdrTopology.html'
       })
       .when('/list', {
-        templateUrl: QDR.templatePath + 'qdrList.html'
+        templateUrl: QDRTemplatePath + 'qdrList.html'
       })
       .when('/schema', {
-        templateUrl: QDR.templatePath + 'qdrSchema.html'
+        templateUrl: QDRTemplatePath + 'qdrSchema.html'
       })
       .when('/charts', {
-        templateUrl: QDR.templatePath + 'qdrCharts.html'
+        templateUrl: QDRTemplatePath + 'qdrCharts.html'
       })
       .when('/chord', {
-        templateUrl: QDR.templatePath + 'qdrChord.html'
+        templateUrl: QDRTemplatePath + 'qdrChord.html'
       })
       .when('/connect', {
-        templateUrl: QDR.templatePath + 'qdrConnect.html'
+        templateUrl: QDRTemplatePath + 'qdrConnect.html'
       });
   });
 
   QDR.module.config(function ($compileProvider) {
     $compileProvider.aHrefSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension|file|blob):/);
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension):/);
-    /*    var cur = $compileProvider.urlSanitizationWhitelist();
-    $compileProvider.urlSanitizationWhitelist(/^\s*(https?|ftp|mailto|file|blob):/);
-    cur = $compileProvider.urlSanitizationWhitelist();
-*/
   });
 
   QDR.module.filter('to_trusted', ['$sce', function($sce){
@@ -112,11 +93,11 @@ var QDR = (function(QDR) {
     };
   }]);
 
-  QDR.module.filter('humanify', function (QDRService) {
+  QDR.module.filter('humanify', ['QDRService', function (QDRService) {
     return function (input) {
       return QDRService.utilities.humanify(input);
     };
-  });
+  }]);
 
   QDR.module.filter('Pascalcase', function () {
     return function (str) {
@@ -151,21 +132,12 @@ var QDR = (function(QDR) {
     };
   });
 
-  QDR.logger = function ($log) {
-    var log = $log;
-
-    this.debug = function (msg) { msg = 'QDR: ' + msg; log.debug(msg);};
-    this.error = function (msg) {msg = 'QDR: ' + msg; log.error(msg);};
-    this.info = function (msg) {msg = 'QDR: ' + msg; log.info(msg);};
-    this.warn = function (msg) {msg = 'QDR: ' + msg; log.warn(msg);};
-
-    return this;
-  };
   // one-time initialization happens in the run function
   // of our module
   QDR.module.run( ['$rootScope', '$route', '$timeout', '$location', '$log', 'QDRService', 'QDRChartService',  function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {
-    QDR.log = new QDR.logger($log);
-    QDR.log.info('************* creating Dispatch Console ************');
+    let QDRLog = new QDRLogger($log, 'main');
+    QDRLog.info('************* creating Dispatch Console ************');
+
     var curPath = $location.path();
     var org = curPath.substr(1);
     if (org && org.length > 0 && org !== 'connect') {
@@ -185,19 +157,19 @@ var QDR = (function(QDR) {
           $location.search('org', 'overview');
       }
       var connectOptions = {address: host, port: port};
-      QDR.log.info('Attempting AMQP over websockets connection using address:port of browser ('+host+':'+port+')');
+      QDRLog.info('Attempting AMQP over websockets connection using address:port of browser ('+host+':'+port+')');
       QDRService.management.connection.testConnect(connectOptions)
         .then( function () {
           // We didn't connect with reconnect: true flag.
           // The reason being that if we used reconnect:true and the connection failed, rhea would keep trying. There
           // doesn't appear to be a way to tell it to stop trying to reconnect.
           QDRService.disconnect();
-          QDR.log.info('Connect succeeded. Using address:port of browser');
+          QDRLog.info('Connect succeeded. Using address:port of browser');
           connectOptions.reconnect = true;
           // complete the connection (create the sender/receiver)
           QDRService.connect(connectOptions)
             .then( function () {
-              // register a callback for when the node list is available (needed for loading saved charts)
+            // register a callback for when the node list is available (needed for loading saved charts)
               QDRService.management.topology.addUpdatedAction('initChartService', function() {
                 QDRService.management.topology.delUpdatedAction('initChartService');
                 QDRChartService.init(); // initialize charting service after we are connected
@@ -206,8 +178,8 @@ var QDR = (function(QDR) {
               QDRService.management.topology.startUpdating(false);
             });
         }, function () {
-          QDR.log.info('failed to auto-connect to ' + host + ':' + port);
-          QDR.log.info('redirecting to connect page');
+          QDRLog.info('failed to auto-connect to ' + host + ':' + port);
+          QDRLog.info('redirecting to connect page');
           $timeout(function () {
             $location.path('/connect');
             $location.search('org', org);
@@ -219,14 +191,15 @@ var QDR = (function(QDR) {
     $rootScope.$on('$routeChangeSuccess', function() {
       var path = $location.path();
       if (path !== '/connect') {
-        localStorage[QDR.LAST_LOCATION] = path;
+        localStorage[QDR_LAST_LOCATION] = path;
       }
     });
   }]);
 
-  QDR.module.controller ('QDR.MainController', ['$scope', '$location', function ($scope, $location) {
-    QDR.log.debug('started QDR.MainController with location.url: ' + $location.url());
-    QDR.log.debug('started QDR.MainController with window.location.pathname : ' + window.location.pathname);
+  QDR.module.controller ('QDR.MainController', ['$scope', '$log', '$location', function ($scope, $log, $location) {
+    let QDRLog = new QDRLogger($log, 'MainController');
+    QDRLog.debug('started QDR.MainController with location.url: ' + $location.url());
+    QDRLog.debug('started QDR.MainController with window.location.pathname : ' + window.location.pathname);
     $scope.topLevelTabs = [];
     $scope.topLevelTabs.push({
       id: 'qdr',
@@ -260,5 +233,22 @@ var QDR = (function(QDR) {
     };
   });
 
-  return QDR;
-}(QDR || {}));
+  QDR.module.controller('QDR.NavBarController', NavBarController);
+  QDR.module.controller('QDR.OverviewController', OverviewController);
+  QDR.module.controller('QDR.OverviewChartsController', OverviewChartsController);
+  QDR.module.controller('QDR.OverviewLogsController', OverviewLogsController);
+  QDR.module.controller('QDR.TopAddressesController', TopAddressesController);
+  QDR.module.controller('QDR.ChartDialogController', ChartDialogController);
+  QDR.module.controller('QDR.SettingsController', SettingsController);
+  QDR.module.controller('QDR.TopologyController', TopologyController);
+  QDR.module.controller('QDR.ChordController', ChordController);
+  QDR.module.controller('QDR.ListController', ListController);
+  QDR.module.controller('QDR.SchemaController', SchemaController);
+  QDR.module.controller('QDR.ChartsController', ChartsController);
+  
+  QDR.module.service('QDRService', QDRService);
+  QDR.module.service('QDRChartService', QDRChartService);
+  QDR.module.directive('posint', posint);
+  //  .directive('exampleDirective', () => new ExampleDirective);
+}({}));
+
