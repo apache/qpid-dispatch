@@ -201,7 +201,7 @@ void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern);
  * @param[in] hostname a concrete vhost name
  * @return the name of the ruleset whose hostname pattern matched this actual hostname
  */
-char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
+const char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
 
 /**
  * Compile raw CSV spec of allowed sources/targets and return

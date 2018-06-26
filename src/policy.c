@@ -65,6 +65,8 @@ static const char * const user_subst_i_embed    = "e";
 static const char * const user_subst_i_suffix   = "s";
 static const char * const user_subst_i_wildcard = "*";
 
+static void hostname_tree_free(qd_parse_tree_t *hostname_tree);
+
 //
 // Policy configuration/statistics management interface
 //
@@ -110,7 +112,7 @@ void qd_policy_free(qd_policy_t *policy)
 {
     if (policy->policyDir)
         free(policy->policyDir);
-    qd_parse_tree_free(policy->hostname_tree);
+    hostname_tree_free(policy->hostname_tree);
     free(policy);
 }
 
@@ -1056,11 +1058,13 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern)
         (void)recovered;        /* Silence compiler complaints of unused variable */
     }
     sys_mutex_unlock(policy->tree_lock);
-    if (oldp)
+    if (oldp) {
         qd_log(policy->log_source,
             QD_LOG_WARNING,
             "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
             hostPattern, oldp);
+        free(hostPattern);
+    }
     return oldp == 0;
 }
 
@@ -1071,27 +1075,46 @@ void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern)
     sys_mutex_lock(policy->tree_lock);
     void *oldp = qd_parse_tree_remove_pattern_str(policy->hostname_tree, hostPattern);
     sys_mutex_unlock(policy->tree_lock);
-    if (!oldp) {
+    if (!oldp)
         qd_log(policy->log_source, QD_LOG_WARNING, "vhost hostname pattern '%s' for removal not found", hostPattern);
-    }
+    free(oldp);
+    free(hostPattern);
 }
 
 
 // Look up a hostname in the lookup parse_tree
-char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern)
+const char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern)
 {
-    void *payload = 0;
+    const char *payload = 0;
     sys_mutex_lock(policy->tree_lock);
-    bool matched = qd_parse_tree_retrieve_match_str(policy->hostname_tree, hostPattern, &payload);
+    bool matched = qd_parse_tree_retrieve_match_str(policy->hostname_tree, hostPattern,
+                                                    (void **) &payload);
     sys_mutex_unlock(policy->tree_lock);
     if (!matched) {
         payload = 0;
     }
     qd_log(policy->log_source, QD_LOG_TRACE, "vhost hostname pattern '%s' lookup returned '%s'", 
            hostPattern, (payload ? (char *)payload : "null"));
+    free(hostPattern);
     return payload;
 }
 
+
+// free the hostname parse tree and associated resources
+//
+static bool _hostname_tree_free_payload(void *handle,
+                                        const char *pattern,
+                                        void *payload)
+{
+    free(payload);
+    return true;
+}
+
+static void hostname_tree_free(qd_parse_tree_t *hostname_tree)
+{
+    qd_parse_tree_walk(hostname_tree, _hostname_tree_free_payload, NULL);
+    qd_parse_tree_free(hostname_tree);
+}
 
 // Convert naked CSV allow list into parsed settings 3-tuple
 // Note that this logic is also present in python compile_app_settings.

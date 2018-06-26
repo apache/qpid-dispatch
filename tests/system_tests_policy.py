@@ -861,7 +861,8 @@ class PolicyHostamePatternTest(TestCase):
     def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
         p = self.popen(
             ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect)
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
         out = p.communicate(input)[0]
         try:
             p.teardown()
