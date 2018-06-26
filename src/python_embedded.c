@@ -704,7 +704,6 @@ static PyTypeObject IoAdapterType = {
 static void qd_register_constant(PyObject *module, const char *name, uint32_t value)
 {
     PyObject *const_object = PyLong_FromLong((long) value);
-    Py_INCREF(const_object);
     PyModule_AddObject(module, name, const_object);
 }
 
