@@ -188,20 +188,20 @@ bool qd_policy_approve_link_name(const char *username,
  * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
  * @return True if the possibly optimised pattern was added to the lookup parse tree
  */
-bool qd_policy_host_pattern_add(qd_policy_t *policy, char *hostPattern);
+bool qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern);
 
 /** Remove a hostname from the lookup parse_tree
  * @param[in] policy qd_policy_t
  * @param[in] hostPattern the hostname pattern with possible parse_tree wildcards
  */
-void qd_policy_host_pattern_remove(qd_policy_t *policy, char *hostPattern);
+void qd_policy_host_pattern_remove(qd_policy_t *policy, const char *hostPattern);
 
 /** Look up a hostname in the lookup parse_tree
  * @param[in] policy qd_policy_t
  * @param[in] hostname a concrete vhost name
  * @return the name of the ruleset whose hostname pattern matched this actual hostname
  */
-char * qd_policy_host_pattern_lookup(qd_policy_t *policy, char *hostPattern);
+char * qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPattern);
 
 /**
  * Compile raw CSV spec of allowed sources/targets and return
