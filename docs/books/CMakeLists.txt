@@ -1,0 +1,54 @@
+##
+## Licensed to the Apache Software Foundation (ASF) under one
+## or more contributor license agreements.  See the NOTICE file
+## distributed with this work for additional information
+## regarding copyright ownership.  The ASF licenses this file
+## to you under the Apache License, Version 2.0 (the
+## "License"); you may not use this file except in compliance
+## with the License.  You may obtain a copy of the License at
+##
+##   http://www.apache.org/licenses/LICENSE-2.0
+##
+## Unless required by applicable law or agreed to in writing,
+## software distributed under the License is distributed on an
+## "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+## KIND, either express or implied.  See the License for the
+## specific language governing permissions and limitations
+## under the License.
+##
+
+find_program (ASCIIDOCTOR_EXE asciidoctor DOC "Generate books")
+
+set (
+  books
+  ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
+  ${CMAKE_CURRENT_BINARY_DIR}/old-user-guide/index.html
+  )
+
+if (ASCIIDOCTOR_EXE)
+  # Don't follow symlinks and don't warn about it
+  cmake_policy(SET CMP0009 NEW)
+  file (GLOB_RECURSE png_files RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} *.png)
+
+  foreach (file ${png_files})
+    execute_process (
+      COMMAND ${CMAKE_COMMAND} -E copy_if_different
+      ${CMAKE_CURRENT_SOURCE_DIR}/${file}
+      ${CMAKE_CURRENT_BINARY_DIR}/${file}
+      )
+  endforeach ()
+
+  foreach (dir user-guide old-user-guide)
+    add_custom_command (
+      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dir}/index.html
+      COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/book.adoc -o ${dir}/index.html
+      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/book.adoc
+      )
+  endforeach ()
+
+else ()
+  message (STATUS "AsciiDoctor not found: Not generating books")
+endif ()
+
+add_custom_target (books DEPENDS ${books})
+add_dependencies (docs books)

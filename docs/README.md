@@ -1,4 +1,4 @@
-////
+<!--
 Licensed to the Apache Software Foundation (ASF) under one
 or more contributor license agreements.  See the NOTICE file
 distributed with this work for additional information
@@ -15,21 +15,26 @@ software distributed under the License is distributed on an
 KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License
-////
+-->
 
-[[documentation-for-dispatch]]
-Documentation for dispatch
---------------------------
+# Qpid Dispatch documentation
 
-:index-only:
+## Building the documentation
 
-link:book.html[Dispatch Router User Guide] (link:book.pdf[PDF Format])
+Documentation is built when you run `make docs`.  You need the
+following tools to build the documentation.
 
-Manual pages
+* asciidoctor (1.5.6) for books
+* asciidoc (8.6.8) for man pages
 
-- link:qdrouterd.8.html[qdrouterd]
-- link:qdrouterd.conf.5.html[qdrouterd.conf]
-- link:qdstat.8.html[qdstat]
-- link:qdmanage.8.html[qdmanage]
+The versions above are known to work, earlier versions may or may not.
 
-Also check the link:http://qpid.apache.org/components/dispatch-router[Dispatch Router Website]
+## Writing documentation
+
+Documentation is written in AsciiDoc markup.
+
+* 'books/': AsciiDoc source for the user guide
+* 'man/': AsciiDoc source for Unix man pages
+* 'notes/': Developer notes: project information, design notes, or
+  anything else that's primarily of developer interest; these are not
+  installed.
