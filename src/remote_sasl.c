@@ -191,7 +191,7 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         pn_proactor_t* proactor = impl->proactor;
         if (!proactor) return false;
         impl->downstream = pn_connection();
-        pn_connection_set_hostname(impl->downstream, pn_connection_get_hostname(upstream));
+        pn_connection_set_hostname(impl->downstream, impl->authentication_service_address);
         set_sasl_relay_context(impl->downstream, impl);
         //request permissions in response if supported by peer:
         pn_data_t* data = pn_connection_desired_capabilities(impl->downstream);
