@@ -56,7 +56,7 @@ class ConsoleTest(system_test.TestCase):
         node_dir = '/'.join(base + ['console', 'stand-alone', 'node_modules'])
         node_modules = os.path.isdir(node_dir)
         if not node_modules:
-            p0 = subprocess.Popen(['npm', 'install'], stdout=PIPE, cwd=src_dir)
+            p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
             p0.wait();
 
         prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--src=%s/' % src_dir]
