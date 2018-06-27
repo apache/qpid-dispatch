@@ -333,7 +333,7 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits l
     if (log_message == 0)
         return 0;
 
-    if (qd_message_check(msg, QD_DEPTH_BODY)) {
+    if (qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES)) {
         char *begin = buffer;
         char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
 
