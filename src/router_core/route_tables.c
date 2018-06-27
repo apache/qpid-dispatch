@@ -232,6 +232,12 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
         core->router_addr_T   = qdr_add_local_address_CT(core, 'T', "qdrouter",    QD_TREATMENT_MULTICAST_FLOOD);
         core->routerma_addr_T = qdr_add_local_address_CT(core, 'T', "qdrouter.ma", QD_TREATMENT_MULTICAST_ONCE);
 
+        core->hello_addr->router_control_only      = true;
+        core->router_addr_L->router_control_only   = true;
+        core->routerma_addr_L->router_control_only = true;
+        core->router_addr_T->router_control_only   = true;
+        core->routerma_addr_T->router_control_only = true;
+
         core->neighbor_free_mask = qd_bitmask(1);
 
         core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());

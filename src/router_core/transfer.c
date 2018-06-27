@@ -997,9 +997,18 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         }
 
         //
-        // Give the action reference to the qdr_link_forward function. Don't decref/incref.
+        // Deal with any delivery restrictions for this address.
         //
-        qdr_link_forward_CT(core, link, dlv, addr, more);
+        if (addr && addr->router_control_only && link->link_type != QD_LINK_CONTROL) {
+            qdr_delivery_release_CT(core, dlv);
+            qdr_link_issue_credit_CT(core, link, 1, false);
+            qdr_delivery_decref_CT(core, dlv, "qdr_link_deliver_CT - removed from action on restricted access");
+        } else {
+            //
+            // Give the action reference to the qdr_link_forward function. Don't decref/incref.
+            //
+            qdr_link_forward_CT(core, link, dlv, addr, more);
+        }
     } else {
         //
         // Take the action reference and use it for undelivered.  Don't decref/incref.

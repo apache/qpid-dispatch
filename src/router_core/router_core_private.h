@@ -456,6 +456,7 @@ struct qdr_address_t {
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
     bool                       block_deletion;
     bool                       local;
+    bool                       router_control_only; ///< If set, address is only for deliveries arriving on a control link
     uint32_t                   tracked_deliveries;
     uint64_t                   cost_epoch;
 
