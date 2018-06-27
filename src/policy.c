@@ -111,6 +111,8 @@ void qd_policy_free(qd_policy_t *policy)
     if (policy->policyDir)
         free(policy->policyDir);
     qd_parse_tree_free(policy->hostname_tree);
+    if (policy->tree_lock)
+        sys_mutex_free(policy->tree_lock);
     free(policy);
 }
 
