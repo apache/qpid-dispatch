@@ -112,6 +112,7 @@ foreach(py_test_module
     system_tests_bad_configuration
     system_tests_ssl
     ${SYSTEM_TESTS_HTTP}
+    system_tests_console
     )
 
   add_test(${py_test_module} ${TEST_WRAP} -x unit2 -v ${py_test_module})

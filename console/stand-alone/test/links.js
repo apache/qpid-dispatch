@@ -44,8 +44,19 @@ var unknowns = [];
 const width = 1024;
 const height = 768;
 
+
 before(function(done){
-  fs.readFile('./test/nodes.json', 'utf8', function(err, fileContents) {
+  let src = '';
+  let LAST_PARAM = process.argv[process.argv.length-1];
+
+  let PARAM_NAME  = LAST_PARAM.split('=')[0].replace('--','');
+  let PARAM_VALUE = LAST_PARAM.split('=')[1];
+  if (PARAM_NAME == 'src') {
+    src = PARAM_VALUE;
+  }
+  
+  console.log('src: ', src);
+  fs.readFile(src + './test/nodes.json', 'utf8', function(err, fileContents) {
     if (err) throw err;
     nodeInfo = JSON.parse(fileContents);
     done();
