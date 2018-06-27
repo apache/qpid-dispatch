@@ -58,6 +58,7 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->link_exclusion = link_exclusion;
     dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
+    dlv->disposition    = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver - protect returned value");
@@ -86,6 +87,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->link_exclusion = link_exclusion;
     dlv->ingress_index  = ingress_index;
     dlv->error          = 0;
+    dlv->disposition    = 0;
 
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - protect returned value");
@@ -108,11 +110,12 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
     ZERO(dlv);
-    dlv->link       = link;
-    dlv->msg        = msg;
-    dlv->settled    = settled;
-    dlv->presettled = settled;
-    dlv->error      = 0;
+    dlv->link         = link;
+    dlv->msg          = msg;
+    dlv->settled      = settled;
+    dlv->presettled   = settled;
+    dlv->error        = 0;
+    dlv->disposition  = 0;
 
     qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
