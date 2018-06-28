@@ -94,6 +94,7 @@ char *COMPONENT_SEPARATOR = ";";
 static const int BACKLOG = 50;  /* Listening backlog */
 
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
+static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
@@ -656,6 +657,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
         setup_ssl_sasl_and_open(ctx);
+
     } else {                    /* No connector and no listener */
         connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "unknown Connection");
         return;
@@ -769,13 +771,8 @@ static void qd_connection_free(qd_connection_t *ctx)
         ctx->connector->ctx = 0;
         // Increment the connection index by so that we can try connecting to the failover url (if any).
         bool has_failover = qd_connector_has_failover_info(ctx->connector);
-        if (has_failover) {
-            if (DEQ_SIZE(ctx->connector->conn_info_list) == ctx->connector->conn_index)
-                // Start round robin again
-                ctx->connector->conn_index = 1;
-            else
-                ctx->connector->conn_index += 1;
 
+        if (has_failover) {
             // Go thru the failover list round robin.
             // IMPORTANT: Note here that we set the re-try timer to 1 second.
             // We want to quickly keep cycling thru the failover urls every second.
@@ -839,6 +836,22 @@ static void startup_timer_handler(void *context)
     qd_connection_invoke_deferred(ctx, timeout_on_handhsake, context);
 }
 
+static void qd_increment_conn_index(qd_connection_t *ctx)
+{
+    if (ctx->connector) {
+        qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+
+        if (item->retries == 1) {
+            ctx->connector->conn_index += 1;
+            if (ctx->connector->conn_index > DEQ_SIZE(ctx->connector->conn_info_list))
+                ctx->connector->conn_index = 1;
+            item->retries = 0;
+        }
+        else
+            item->retries += 1;
+    }
+
+}
 
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
@@ -892,6 +905,9 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
             ctx->opened = true;
             if (ctx->connector) {
                 ctx->connector->delay = 2000;  // Delay re-connect in case there is a recurring error
+                qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+                if (item)
+                    item->retries = 0;
             }
         }
         break;
@@ -902,23 +918,25 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
 
     case PN_TRANSPORT_ERROR:
         {
-        pn_transport_t *transport = pn_event_transport(e);
-        pn_condition_t* condition = transport ? pn_transport_condition(transport) : NULL;
-        if (ctx && ctx->connector) { /* Outgoing connection */
-            const qd_server_config_t *config = &ctx->connector->config;
-            if (condition  && pn_condition_is_set(condition)) {
-                qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed: %s %s", config->host_port,
-                       pn_condition_get_name(condition), pn_condition_get_description(condition));
-            } else {
-                qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed", config->host_port);
+            qd_increment_conn_index(ctx);
+
+            pn_transport_t *transport = pn_event_transport(e);
+            pn_condition_t* condition = transport ? pn_transport_condition(transport) : NULL;
+            if (ctx && ctx->connector) { /* Outgoing connection */
+                const qd_server_config_t *config = &ctx->connector->config;
+                if (condition  && pn_condition_is_set(condition)) {
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed: %s %s", config->host_port,
+                           pn_condition_get_name(condition), pn_condition_get_description(condition));
+                } else {
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed", config->host_port);
+                }
+            } else if (ctx && ctx->listener) { /* Incoming connection */
+                if (condition && pn_condition_is_set(condition)) {
+                    qd_log(ctx->server->log_source, QD_LOG_INFO, "Connection from %s (to %s) failed: %s %s",
+                           ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
+                           pn_condition_get_description(condition));
+                }
             }
-        } else if (ctx && ctx->listener) { /* Incoming connection */
-            if (condition && pn_condition_is_set(condition)) {
-                qd_log(ctx->server->log_source, QD_LOG_INFO, "Connection from %s (to %s) failed: %s %s",
-                       ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
-                       pn_condition_get_description(condition));
-            }
-        }
         }
         break;
 
@@ -953,7 +971,7 @@ static void *thread_run(void *arg)
 }
 
 
-qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
+static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 
     qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
 
@@ -1368,6 +1386,7 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     qd_failover_item_list_t conn_info_list;
     DEQ_INIT(conn_info_list);
     ct->conn_info_list = conn_info_list;
+    ct->conn_index = 1;
     ct->lock = sys_mutex();
     ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
     if (!ct->lock || !ct->timer) {
