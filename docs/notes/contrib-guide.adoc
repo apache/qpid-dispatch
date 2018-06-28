@@ -154,17 +154,19 @@ The branch name should include the ID of the JIRA for which you are creating the
 Use the following resources to make your changes:
 
 * link:style-guide.adoc[Style Guide]
+--
+
 ////
+Other resources to add:
 * Templates:
 ** link:template-procedure.adoc[Procedure] (_I want to do x..._)
 ** link:template-concept[Concept] (_I need to understand x..._)
 ** link:template-reference[Reference] (_I want to know x..._)
 ////
---
 
 . Build the documentation locally to test your changes.
 +
-For more information, see xref:building-documentation[].
+For more information, see link:../README.adoc[Building documentation].
 
 . When you are satisfied with your changes, commit them.
 
