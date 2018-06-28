@@ -38,6 +38,7 @@ addons:
     - maven
     # documentation
     - asciidoc
+    - asciidoctor
     - dblatex
     # unit test requirement
     - python-unittest2
