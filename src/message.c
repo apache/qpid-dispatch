@@ -27,6 +27,7 @@
 #include <proton/object.h>
 #include "message_private.h"
 #include "compose_private.h"
+#include "connection_manager_private.h"
 #include "aprintf.h"
 #include <string.h>
 #include <ctype.h>
@@ -237,7 +238,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
                }
                quote(str_val, len, begin, end);
            }
-           break;
+         break;
        }
        case QD_AMQP_MAP8:
        case QD_AMQP_MAP32: {
@@ -292,16 +293,16 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
 static void print_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
                        char **begin, char *end)
 {
-    qd_iterator_t* iter = 0;
+        qd_iterator_t* iter = 0;
 
 
     // TODO - Need to discuss this. I have a question.
-    if (field == QD_FIELD_APPLICATION_PROPERTIES) {
-        iter = qd_message_field_iterator(msg, field);
+        if (field == QD_FIELD_APPLICATION_PROPERTIES) {
+            iter = qd_message_field_iterator(msg, field);
     }
     else {
-        iter = qd_message_field_iterator_typed(msg, field);
-    }
+            iter = qd_message_field_iterator_typed(msg, field);
+        }
 
     aprintf(begin, end, "%s", pre);
 
@@ -310,7 +311,7 @@ static void print_field(qd_message_t *msg,  int field, int max, char *pre, char 
         return;
     }
 
-    qd_parsed_field_t *parsed_field = qd_parse(iter);
+            qd_parsed_field_t *parsed_field = qd_parse(iter);
 
     // If there is a problem with parsing a field, just return
     if (!qd_parse_ok(parsed_field)) {
@@ -318,13 +319,13 @@ static void print_field(qd_message_t *msg,  int field, int max, char *pre, char 
         qd_iterator_free(iter);
         qd_parse_free(parsed_field);
         return;
-    }
+            }
 
     print_parsed_field(parsed_field, begin, end, max);
 
     aprintf(begin, end, "%s", post);
     qd_iterator_free(iter);
-    qd_parse_free(parsed_field);
+            qd_parse_free(parsed_field);
 }
 
 static const char REPR_END[] = "}\0";

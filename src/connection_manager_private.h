@@ -29,5 +29,6 @@
 
 void qd_connection_manager_connection_opened(qd_connection_t *conn);
 void qd_connection_manager_connection_closed(qd_connection_t *conn);
+bool is_log_component_enabled(qd_log_bits log_message, const char *component_name);
 
 #endif

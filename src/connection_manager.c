@@ -451,7 +451,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 }
 
 
-bool is_log_component_enabled(qd_log_bits log_message, char *component_name) {
+bool is_log_component_enabled(qd_log_bits log_message, const char *component_name) {
 
     for(int i=0;;i++) {
         const char *component = qd_log_message_components[i];
