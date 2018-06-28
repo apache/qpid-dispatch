@@ -23,7 +23,7 @@ This directory contains the documentation for Qpid Dispatch Router. The document
 
 [source,bash,options="nowrap",subs="+quotes"]
 ----
-/doc
+/docs
   ├── books  # Files for the Dispatch Router user guide.
   ├── man  # Man page source files and scripts.
   └── notes  # Developer notes: project information, design notes, or anything else that's primarily of developer interest; these are not installed.

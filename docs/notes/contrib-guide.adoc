@@ -38,7 +38,7 @@ Follow this process if you want to make a quick fix or simple addition to the us
 
 . Make your edits.
 +
-For more information, see xref:style-guide.adoc[Style guidelines].
+For more information, see link:style-guide.adoc[Style guidelines].
 
 . In the `Propose file change` section at the bottom of the page, enter a title and description of your changes. Enter enough detail for reviewers to know what you have changed and why.
 
@@ -149,18 +149,18 @@ The branch name should include the ID of the JIRA for which you are creating the
 --
 
 . Make your changes to the documentation.
-////
 +
 --
 Use the following resources to make your changes:
 
+* link:style-guide.adoc[Style Guide]
+////
 * Templates:
 ** link:template-procedure.adoc[Procedure] (_I want to do x..._)
 ** link:template-concept[Concept] (_I need to understand x..._)
 ** link:template-reference[Reference] (_I want to know x..._)
-* link:style-guide.adoc[Style Guide]
---
 ////
+--
 
 . Build the documentation locally to test your changes.
 +
