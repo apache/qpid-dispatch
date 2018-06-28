@@ -65,7 +65,7 @@ help2txt (${CMAKE_BINARY_DIR}/router/qdrouterd)
 help2txt (${tools}/qdmanage)
 help2txt (${tools}/qdstat)
 
-add_custom_target (doc_gen ALL DEPENDS ${generated_txt})
+add_custom_target (doc_gen DEPENDS ${generated_txt})
 
 execute_process (COMMAND ${CMAKE_COMMAND} -E copy_directory ${src} ${bin})  
 
@@ -121,5 +121,5 @@ else ()
   message (STATUS "asciidoc not found: not generating HTML, man pages or PDF")
 endif ()
 
-add_custom_target (man DEPENDS ${docs_deps})
+add_custom_target (man DEPENDS ${docs_deps} doc_gen)
 add_dependencies (docs man)
