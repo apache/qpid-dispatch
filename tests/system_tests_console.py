@@ -32,8 +32,10 @@ import shutil
 from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module
 
+
 class ConsoleTest(system_test.TestCase):
     """Run console tests"""
+
     @classmethod
     def setUpClass(cls):
         super(ConsoleTest, cls).setUpClass()
@@ -45,17 +47,17 @@ class ConsoleTest(system_test.TestCase):
         cls.router = cls.tester.qdrouterd('test-router', config)
 
     def run_console_test(self):
-        cwd = os.getcwd()   # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
-                            #    /foo/qpid-dispatch/build/system_test.dir/system_tests_console/ConsoleTest/test_console/
-                            # 
-                            # 
-                            # run_console_test.out
+        # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
+        # /foo/qpid-dispatch/build/system_test.dir/system_tests_console/ConsoleTest/test_console/
+        # run_console_test.out
+        cwd = os.getcwd()
+
         def get_base(remove):
-            base = cwd.split('/')[:-remove]   # path that ends with qpid-dispatch's home dir
-            test_cmd = '/'.join(base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
-            test_dir = '/'.join(base + ['console', 'stand-alone', 'test'])
-            src_dir = '/'.join(base + ['console', 'stand-alone'])
-            return (base, test_cmd, test_dir, src_dir)
+            l_base = cwd.split('/')[:-remove]   # path that ends with qpid-dispatch's home dir
+            l_test_cmd = '/'.join(l_base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
+            l_test_dir = '/'.join(l_base + ['console', 'stand-alone', 'test'])
+            l_src_dir = '/'.join(l_base + ['console', 'stand-alone'])
+            return l_base, l_test_cmd, l_test_dir, l_src_dir
         
         (base, test_cmd, test_dir, src_dir) = get_base(6)
         found_src = os.path.isdir(src_dir)
@@ -97,6 +99,7 @@ class ConsoleTest(system_test.TestCase):
 
     def test_console(self):
         self.run_console_test()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
