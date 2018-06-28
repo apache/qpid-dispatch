@@ -74,6 +74,10 @@ if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
 endif()
 
+if(CONSOLE_INSTALL)
+  set(CONSOLE_TEST system_tests_console)
+endif(CONSOLE_INSTALL)
+
 # System test python modules
 foreach(py_test_module
 #   system_tests_broker
@@ -113,7 +117,7 @@ foreach(py_test_module
     system_tests_bad_configuration
     system_tests_ssl
     ${SYSTEM_TESTS_HTTP}
-    system_tests_console
+    ${CONSOLE_TEST}
     )
 
   add_test(${py_test_module} ${TEST_WRAP} -x unit2 -v ${py_test_module})
