@@ -37,51 +37,62 @@ class ConsoleTest(system_test.TestCase):
     @classmethod
     def setUpClass(cls):
         super(ConsoleTest, cls).setUpClass()
+        cls.http_port = cls.tester.get_port()
         config = system_test.Qdrouterd.Config([
             ('router', {'id': 'QDR.A', 'workerThreads': 1}),
-            ('listener', {'port': cls.tester.get_port()}),
+            ('listener', {'port': cls.http_port, 'http': True}),
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
 
     def run_console_test(self):
         cwd = os.getcwd()   # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
+                            #    /foo/qpid-dispatch/build/system_test.dir/system_tests_console/ConsoleTest/test_console/
+                            # 
+                            # 
+                            # run_console_test.out
         def get_base(remove):
-            base = cwd.split('/')[:-remove]   #path that ends with qpid-dispatch's home dir
+            base = cwd.split('/')[:-remove]   # path that ends with qpid-dispatch's home dir
             test_cmd = '/'.join(base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
             test_dir = '/'.join(base + ['console', 'stand-alone', 'test'])
             src_dir = '/'.join(base + ['console', 'stand-alone'])
             return (base, test_cmd, test_dir, src_dir)
         
         (base, test_cmd, test_dir, src_dir) = get_base(6)
-        from_ctest = os.path.isdir(src_dir)
-        if not from_ctest:
+        found_src = os.path.isdir(src_dir)
+        # running the test from the command line results in a different path
+        if not found_src:
             (base, test_cmd, test_dir, src_dir) = get_base(5)
+            found_src = os.path.isdir(src_dir)
 
-        # The console test needs a node_modules dir in the source directory
-        # If the node_modules dir is not present in the source dir, create it.
-        # An alternative is to copy all the source files to the build/console dir.
-        node_dir = '/'.join(base + ['console', 'stand-alone', 'node_modules'])
-        node_modules = os.path.isdir(node_dir)
-        if not node_modules:
-            p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
-            p0.wait();
+        pret = 0
+        out = 'Skipped'
+        if found_src:  # if we are unable to find the console's source directory. Skip the test
+            # The console test needs a node_modules dir in the source directory
+            # If the node_modules dir is not present in the source dir, create it.
+            # An alternative is to copy all the source files to the build/console dir.
+            node_dir = '/'.join(base + ['console', 'stand-alone', 'node_modules'])
+            node_modules = os.path.isdir(node_dir)
+            if not node_modules:
+                p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
+                p0.wait();
 
-        prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--src=%s/' % src_dir]
-        p = self.popen(prg, stdout=PIPE, expect=None)
-        out = p.communicate()[0]
+            prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
+            p = self.popen(prg, stdout=PIPE, expect=None)
+            out = p.communicate()[0]
+            pret = p.returncode
 
-        # write the output
-        with open('run_console_test.out', 'w') as popenfile:
-            popenfile.write('returncode was %s\n' % p.returncode)
-            popenfile.write('out was:\n')
-            popenfile.writelines(out)
+            # write the output
+            with open('run_console_test.out', 'w') as popenfile:
+                popenfile.write('returncode was %s\n' % p.returncode)
+                popenfile.write('out was:\n')
+                popenfile.writelines(out)
 
-        # if we created the node_modules dir, remove it
-        if not node_modules:
-            shutil.rmtree(node_dir)
+            # if we created the node_modules dir, remove it
+            if not node_modules:
+                shutil.rmtree(node_dir)
 
-        assert p.returncode == 0, \
-            "console test exit status %s, output:\n%s" % (p.returncode, out)
+        assert pret == 0, \
+            "console test exit status %s, output:\n%s" % (pret, out)
         return out
 
     def test_console(self):
