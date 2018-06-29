@@ -150,11 +150,7 @@ The branch name should include the ID of the JIRA for which you are creating the
 
 . Make your changes to the documentation.
 +
---
-Use the following resources to make your changes:
-
-* link:style-guide.adoc[Style Guide]
---
+For more information, see link:style-guide.adoc[Style guidelines].
 
 . Build the documentation locally to test your changes.
 +
