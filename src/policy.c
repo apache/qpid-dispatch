@@ -289,8 +289,10 @@ qd_parse_tree_t * qd_policy_parse_tree(const char *config_spec)
 
     // make a writable, disposable copy of the csv string
     char * dup = strdup(config_spec);
-    if (!dup)
+    if (!dup) {
+        qd_parse_tree_free(tree);
         return NULL;
+    }
     char * dupend = dup + strlen(dup);
 
     char * pch = dup;
@@ -385,7 +387,7 @@ bool qd_policy_open_lookup_user(
             if (result) {
                 char *res_string = py_obj_2_c_string(result);
                 const size_t res_len = res_string ? strlen(res_string) : 0;
-                if (res_len < name_buf_size) {
+                if (res_string && res_len < name_buf_size) {
                     strcpy(name_buf, res_string);
                 } else {
                     qd_log(policy->log_source, QD_LOG_ERROR,

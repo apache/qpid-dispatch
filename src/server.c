@@ -918,11 +918,10 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
 
     case PN_TRANSPORT_ERROR:
         {
-            qd_increment_conn_index(ctx);
-
             pn_transport_t *transport = pn_event_transport(e);
             pn_condition_t* condition = transport ? pn_transport_condition(transport) : NULL;
             if (ctx && ctx->connector) { /* Outgoing connection */
+                qd_increment_conn_index(ctx);
                 const qd_server_config_t *config = &ctx->connector->config;
                 if (condition  && pn_condition_is_set(condition)) {
                     qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed: %s %s", config->host_port,
