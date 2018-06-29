@@ -130,10 +130,28 @@ static void format_time(pn_timestamp_t epoch_time, char *format, char *buffer, s
 }
 
 /**
- * Tries to print the string representation of the parsed field content based on the tag of the parsed field.
- * Some tag types have not been dealt with. Add code as and when required.
+ * Print the bytes of a parsed_field as characters, with pre/post quotes.
  */
-static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, char *end, int max)
+static void print_parsed_field_string(qd_parsed_field_t *parsed_field,
+                                      const char *pre, const char *post,
+                                      char **begin, char *end) {
+    qd_iterator_t *i = qd_parse_raw(parsed_field);
+    if (i) {
+        aprintf(begin, end, "%s", pre);
+        while (end - *begin > 1 &&  !qd_iterator_end(i)) {
+            char c = qd_iterator_octet(i);
+            quote(&c, 1, begin, end);
+        }
+        aprintf(begin, end, "%s", post);
+    }
+}
+
+/**
+ * Tries to print the string representation of the parsed field content based on
+ * the tag of the parsed field.  Some tag types have not been dealt with. Add
+ * code as and when required.
+ */
+static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, char *end)
 {
    uint8_t   tag    = qd_parse_tag(parsed_field);
    switch (tag) {
@@ -188,18 +206,13 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
 
            //qd_iterator_t* iter = qd_message_field_iterator(msg, field);
            qd_iterator_t *iter = qd_parse_raw(parsed_field);
-           for (int j = 0; !qd_iterator_end(iter) && j < max; ++j) {
-                char byte = qd_iterator_octet(iter);
-                if (timestamp_length > 0) {
-                    // Gather the timestamp bytes into the timestamp_bytes array, so we process them later into time.
-                    timestamp_bytes[--timestamp_length] = byte;
-                }
+           while (!qd_iterator_end(iter) && timestamp_length > 0) {
+               timestamp_bytes[--timestamp_length] = qd_iterator_octet(iter);
            }
-
            memcpy(&creation_timestamp, timestamp_bytes, 8);
            if (creation_timestamp > 0) {
                format_time(creation_timestamp, "%Y-%m-%d %H:%M:%S.%%03lu %z", creation_time, 100);
-               aprintf(begin, end, "%s", creation_time);
+               aprintf(begin, end, "\"%s\"", creation_time);
            }
            break;
        }
@@ -222,24 +235,19 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
 
        case QD_AMQP_VBIN8:
        case QD_AMQP_VBIN32:
+         print_parsed_field_string(parsed_field, "b\"", "\"", begin, end);
+         break;
+
        case QD_AMQP_STR8_UTF8:
        case QD_AMQP_STR32_UTF8:
-       case QD_AMQP_SYM8:
-       case QD_AMQP_SYM32: {
-           qd_iterator_t *raw_iter = qd_parse_raw(parsed_field);
-           if (raw_iter) {
-               int len = qd_iterator_length(raw_iter);
-               char str_val[len];
-               int i=0;
-
-               while (!qd_iterator_end(raw_iter)) {
-                   str_val[i] = qd_iterator_octet(raw_iter);
-                   i++;
-               }
-               quote(str_val, len, begin, end);
-           }
+         print_parsed_field_string(parsed_field, "\"", "\"", begin, end);
          break;
-       }
+
+       case QD_AMQP_SYM8:
+       case QD_AMQP_SYM32:
+         print_parsed_field_string(parsed_field, ":\"", "\"", begin, end);
+         break;
+
        case QD_AMQP_MAP8:
        case QD_AMQP_MAP32: {
            uint32_t count = qd_parse_sub_count(parsed_field);
@@ -248,14 +256,15 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
            }
            for (uint32_t idx = 0; idx < count; idx++) {
                qd_parsed_field_t *sub_key  = qd_parse_sub_key(parsed_field, idx);
-               // The keys of this map are restricted to be of type string (which excludes the possibility of a null key)
-               print_parsed_field(sub_key, begin, end, max);
+               // The keys of this map are restricted to be of type string
+               // (which excludes the possibility of a null key)
+               print_parsed_field(sub_key, begin, end);
 
                aprintf(begin, end, "%s", "=");
 
                qd_parsed_field_t *sub_value = qd_parse_sub_value(parsed_field, idx);
 
-               print_parsed_field(sub_value, begin, end, max);
+               print_parsed_field(sub_value, begin, end);
 
                if ((idx + 1) < count)
                    aprintf(begin, end, "%s", ", ");
@@ -274,7 +283,7 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
            }
            for (uint32_t idx = 0; idx < count; idx++) {
                qd_parsed_field_t *sub_value = qd_parse_sub_value(parsed_field, idx);
-               print_parsed_field(sub_value, begin, end, max);
+               print_parsed_field(sub_value, begin, end);
                if ((idx + 1) < count)
                   aprintf(begin, end, "%s", ", ");
            }
@@ -290,100 +299,58 @@ static void print_parsed_field(qd_parsed_field_t *parsed_field, char **begin, ch
    }
 }
 
-static void print_field(qd_message_t *msg,  int field, int max, char *pre, char *post,
-                       char **begin, char *end)
+/* Print field if enabled by log bits, leading comma if !*first */
+static void print_field(
+    qd_message_t *msg, int field, const char *name,
+    qd_log_bits flags, bool *first, char **begin, char *end)
 {
-        qd_iterator_t* iter = 0;
-
-
-    // TODO - Need to discuss this. I have a question.
-        if (field == QD_FIELD_APPLICATION_PROPERTIES) {
-            iter = qd_message_field_iterator(msg, field);
-    }
-    else {
-            iter = qd_message_field_iterator_typed(msg, field);
-        }
-
-    aprintf(begin, end, "%s", pre);
-
-    if (!iter) {
-        aprintf(begin, end, "%s", post);
-        return;
-    }
-
+    if (is_log_component_enabled(flags, name)) {
+        qd_iterator_t* iter = (field == QD_FIELD_APPLICATION_PROPERTIES) ?
+            qd_message_field_iterator(msg, field) :
+            qd_message_field_iterator_typed(msg, field);
+        if (iter) {
             qd_parsed_field_t *parsed_field = qd_parse(iter);
-
-    // If there is a problem with parsing a field, just return
-    if (!qd_parse_ok(parsed_field)) {
-        aprintf(begin, end, "%s", post);
-        qd_iterator_free(iter);
-        qd_parse_free(parsed_field);
-        return;
+            if (qd_parse_ok(parsed_field)) {
+                if (*first) {
+                    *first = false;
+                    aprintf(begin, end, "%s=", name);
+                } else {
+                    aprintf(begin, end, ", %s=", name);
+                }
+                print_parsed_field(parsed_field, begin, end);
             }
-
-    print_parsed_field(parsed_field, begin, end, max);
-
-    aprintf(begin, end, "%s", post);
-    qd_iterator_free(iter);
             qd_parse_free(parsed_field);
+            qd_iterator_free(iter);
+        }
+    }
 }
 
 static const char REPR_END[] = "}\0";
 
-char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits log_message) {
-    if (log_message == 0)
-        return 0;
-
-    if (qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES)) {
-        char *begin = buffer;
-        char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
-
-        aprintf(&begin, end, "Message{", msg);
-
-        if (is_log_component_enabled(log_message, "message-id"))
-            print_field(msg, QD_FIELD_MESSAGE_ID, INT_MAX, "message-id='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "user-id"))
-            print_field(msg, QD_FIELD_USER_ID, INT_MAX, ", user-id='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "to"))
-            print_field(msg, QD_FIELD_TO, INT_MAX, ", to='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "subject"))
-            print_field(msg, QD_FIELD_SUBJECT, INT_MAX, ", subject='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "reply-to"))
-            print_field(msg, QD_FIELD_REPLY_TO, INT_MAX, ", reply-to='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "correlation-id"))
-            print_field(msg, QD_FIELD_CORRELATION_ID, INT_MAX, ", correlation-id='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "content-type"))
-            print_field(msg, QD_FIELD_CONTENT_TYPE, INT_MAX, ", content-type='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "content-encoding"))
-            print_field(msg, QD_FIELD_CONTENT_ENCODING, INT_MAX, ", content-encoding='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "absolute-expiry-time"))
-            print_field(msg, QD_FIELD_ABSOLUTE_EXPIRY_TIME, INT_MAX, ", absolute-expiry-time='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "creation-time"))
-            print_field(msg, QD_FIELD_CREATION_TIME, INT_MAX, ", creation-time='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "group-id"))
-            print_field(msg, QD_FIELD_GROUP_ID, INT_MAX, ", group-id='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "group-sequence"))
-            print_field(msg, QD_FIELD_GROUP_SEQUENCE, INT_MAX, ", group-sequence='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "reply-to-group-id"))
-            print_field(msg, QD_FIELD_REPLY_TO_GROUP_ID, INT_MAX, ", reply-to-group-id='", "'", &begin, end);
-
-        if (is_log_component_enabled(log_message, "app-properties"))
-            print_field(msg, QD_FIELD_APPLICATION_PROPERTIES, INT_MAX, ", application properties=", "", &begin, end);
-
-        aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
+char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits flags) {
+    if (flags == 0 || !qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES)) {
+        return NULL;
     }
+    char *begin = buffer;
+    char *end = buffer + len - sizeof(REPR_END); /* Save space for ending */
+    bool first = true;
+    aprintf(&begin, end, "Message{", msg);
+    print_field(msg, QD_FIELD_MESSAGE_ID, "message-id", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_USER_ID, "user-id", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_TO, "to", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_SUBJECT, "subject", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_REPLY_TO, "reply-to", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_CORRELATION_ID, "correlation-id", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_CONTENT_TYPE, "content-type", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_CONTENT_ENCODING, "content-encoding", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_ABSOLUTE_EXPIRY_TIME, "absolute-expiry-time", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_CREATION_TIME, "creation-time", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_GROUP_ID, "group-id", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_GROUP_SEQUENCE, "group-sequence", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_REPLY_TO_GROUP_ID, "reply-to-group-id", flags, &first, &begin, end);
+    print_field(msg, QD_FIELD_APPLICATION_PROPERTIES, "app-properties", flags, &first, &begin, end);
+
+    aprintf(&begin, end, "%s", REPR_END);   /* We saved space at the beginning. */
     return buffer;
 }
 

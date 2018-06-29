@@ -264,6 +264,27 @@ static qd_iterator_t *router_annotate_message(qd_router_t   *router,
     return ingress_iter;
 }
 
+static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_message_t *msg)
+{
+    if (!conn || !pn_link || !msg) return;
+    const qd_server_config_t *cf = qd_connection_config(conn);
+    if (!cf) return;
+    char buf[qd_message_repr_len()];
+    const char *msg_str = qd_message_aborted(msg) ?
+        "aborted message" : qd_message_repr(msg, buf, sizeof(buf), cf->log_bits);
+    if (msg_str) {
+        const char *src = pn_terminus_get_address(pn_link_source(pn_link));
+        const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
+        qd_log(qd_message_log_source(), QD_LOG_TRACE,
+               "[%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
+               qd_connection_connection_id(conn),
+               pn_link_is_sender(pn_link) ? "Sent" : "Received",
+               msg_str,
+               pn_link_name(pn_link),
+               src ? src : "",
+               tgt ? tgt : "");
+    }
+}
 
 /**
  * Inbound Delivery Handler
@@ -278,7 +299,6 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         return;
     qdr_link_t     *rlink        = (qdr_link_t*) qd_link_get_context(link);
     qd_connection_t  *conn       = qd_link_connection(link);
-    const qd_server_config_t *cf = qd_connection_config(conn);
     qdr_delivery_t *delivery     = qdr_node_delivery_qdr_from_pn(pnd);
 
     //
@@ -288,24 +308,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     bool receive_complete = qd_message_receive_complete(msg);
 
     if (receive_complete) {
-        if (!qd_message_aborted(msg)) {
-            // Since the entire message has been received, we can print out its contents to the log if necessary.
-            if (cf->log_message) {
-                char repr[qd_message_repr_len()];
-                char* message_repr = qd_message_repr((qd_message_t*)msg,
-                                                    repr,
-                                                    sizeof(repr),
-                                                    cf->log_bits);
-                if (message_repr) {
-                    qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link %s received %s",
-                        pn_link_name(pn_link),
-                        message_repr);
-                }
-            }
-        } else {
-            qd_log(qd_message_log_source(), QD_LOG_TRACE, "Link '%s' received aborted message",
-                       pn_link_name(pn_link));
-        }
+        log_link_message(conn, pn_link, msg);
 
         //
         // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
@@ -1362,6 +1365,8 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 {
     qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
+    qd_connection_t *qconn = qd_link_connection(qlink);
+
     uint64_t update = 0;
 
     if (!qlink)
@@ -1453,6 +1458,7 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
                     pn_delivery_settle(pdlv);
             }
         }
+        log_link_message(qconn, plink, msg_out);
     }
     return update;
 }

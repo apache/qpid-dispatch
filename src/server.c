@@ -1299,7 +1299,9 @@ const qd_server_config_t *qd_connection_config(const qd_connection_t *conn)
 {
     if (conn->listener)
         return &conn->listener->config;
-    return &conn->connector->config;
+    if (conn->connector)
+        return &conn->connector->config;
+    return NULL;
 }
 
 

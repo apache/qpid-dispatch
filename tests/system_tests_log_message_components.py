@@ -80,23 +80,23 @@ class RouterMessageLogTestAll(RouterMessageLogTestBase):
         everything_ok = False
 
         logs = json.loads(self.run_qdmanage("get-log"))
-        for log in logs:
-            if log[0] == u'MESSAGE':
-                if "message-id='123455'" in log[2]:
-                    self.assertTrue("user-id='testuser'" in log[2])
-                    self.assertTrue("subject='test-subject'" in log[2])
-                    self.assertTrue("reply-to='hello_world'" in log[2])
-                    self.assertTrue("correlation-id='89'" in log[2])
-                    self.assertTrue("content-type='text/html; charset=utf-8'" in log[2])
-                    self.assertTrue("content-encoding='gzip, deflate'" in log[2])
-                    self.assertTrue("group-id='group1', group-sequence='0', reply-to-group-id='group0'" in log[2])
-                    self.assertTrue("application properties={app-property=[10, 20, 30], some-other=O_one}" in log[2])
-                    self.assertTrue("creation-time='2017-02-22" in log[2])
-                    self.assertTrue("10:23.883" in log[2])
-
-                    everything_ok = True
-
-        self.assertTrue(everything_ok)
+        message_logs = [log for log in logs if log[0] == u'MESSAGE']
+        self.assertTrue(message_logs)
+        test_message = [log for log in message_logs if "message-id=\"123455\"" in log[2]]
+        self.assertTrue(2 == len(test_message), message_logs) # Sent and Received
+        self.assertIn('Received', test_message[0][2])
+        self.assertIn('Sent', test_message[1][2])
+        for log in test_message:
+            self.assertIn('user-id=b"testuser"', log[2])
+            self.assertIn('subject="test-subject"', log[2])
+            self.assertIn('reply-to="hello_world"', log[2])
+            self.assertIn('correlation-id=89', log[2])
+            self.assertIn('content-type=:"text/html; charset=utf-8"', log[2])
+            self.assertIn('content-encoding=:"gzip, deflate"', log[2])
+            self.assertIn('group-id="group1", group-sequence=0, reply-to-group-id="group0"', log[2])
+            self.assertIn('app-properties={"app-property"=[10, 20, 30], "some-other"=:"O_one"}', log[2])
+            self.assertIn('creation-time="2017-02-22', log[2])
+            self.assertIn('10:23.883', log[2])
 
 class RouterMessageLogTestNone(RouterMessageLogTestBase):
     """System tests to check log messages emitted by router"""
@@ -144,7 +144,7 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
             ('router', {'mode': 'standalone', 'id': 'QDR'}),
             # logMessage has been deprecated. We are using it here so we can make sure that it is still
             # backward compatible.
-            ('listener', {'port': cls.tester.get_port(), 'logMessage': 'message-id,user-id,subject,reply-to'}),
+            ('listener', {'port': cls.tester.get_port(), 'logMessage': 'user-id,subject,reply-to'}),
 
             ('address', {'prefix': 'closest', 'distribution': 'closest'}),
             ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
@@ -163,12 +163,14 @@ class RouterMessageLogTestSome(RouterMessageLogTestBase):
 
         everything_ok = False
         logs = json.loads(self.run_qdmanage("get-log"))
-        for log in logs:
-            if log[0] == u'MESSAGE':
-                if u"received Message{message-id='123455', user-id='testuser', subject='test-subject', reply-to='hello_world'}" in log[2]:
-                    everything_ok = True
-
-        self.assertTrue(everything_ok)
+        message_logs = [log for log in logs if log[0] == u'MESSAGE']
+        self.assertTrue(message_logs)
+        test_message = [log for log in message_logs if
+                        u'Received Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
+        self.assertTrue(test_message, message_logs)
+        test_message = [log for log in message_logs if
+                        u'Sent Message{user-id=b"testuser", subject="test-subject", reply-to="hello_world"}' in log[2]]
+        self.assertTrue(test_message, message_logs)
 
 class LogMessageTest(MessagingHandler):
     def __init__(self, address):
