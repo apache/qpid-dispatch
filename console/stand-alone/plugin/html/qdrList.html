@@ -58,6 +58,12 @@ span.fancytree-icon {
     margin-left: 20px;
 }
 
+@media (min-width: 768px) {
+    .navbar-collapse.page-menu {
+        padding-right: 0;
+        min-height: calc(100vh - 71px) !important;
+    }
+}
 </style>
 
 <div id="list-controller" ng-controller="QDR.ListController">
