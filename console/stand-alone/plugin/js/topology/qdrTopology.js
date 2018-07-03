@@ -225,7 +225,10 @@ export class TopologyController {
         .append('svg')
         .attr('id', 'SVG_ID')
         .attr('width', width)
-        .attr('height', height);
+        .attr('height', height)
+        .on('click', function () {
+          clearPopups();
+        });
 
       // the legend
       d3.select('#topo_svg_legend svg').remove();
@@ -440,7 +443,7 @@ export class TopologyController {
       d3.select('#multiple_details').style('display', 'none');
       d3.select('#link_details').style('display', 'none');
       d3.select('#node_context_menu').style('display', 'none');
-
+      d3.select('#popover-div').style('display', 'none');
     }
 
     function clearAllHighlights() {
