@@ -29,6 +29,7 @@
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
+#include <inttypes.h>
 
 const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
