@@ -470,6 +470,17 @@ qd_direction_t qdr_link_direction(const qdr_link_t *link);
 int qdr_link_phase(const qdr_link_t *link);
 
 /**
+ * qdr_link_internal_address
+ *
+ * If this link is associated with an auto_link and the auto_link has different
+ * internal and external addresses, return the internal (routing) address.
+ *
+ * @param link Link object
+ * @return 0 or the auto_link's internal address.
+ */
+const char *qdr_link_internal_address(const qdr_link_t *link);
+
+/**
  * qdr_link_is_anonymous
  *
  * Indicate whether the link is anonymous.  Note that this is determined inside

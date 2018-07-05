@@ -368,6 +368,12 @@ int qdr_link_phase(const qdr_link_t *link)
 }
 
 
+const char *qdr_link_internal_address(const qdr_link_t *link)
+{
+    return link && link->auto_link ? link->auto_link->internal_addr : 0;
+}
+
+
 bool qdr_link_is_anonymous(const qdr_link_t *link)
 {
     return link->owning_addr == 0;

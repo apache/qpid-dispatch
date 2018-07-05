@@ -623,6 +623,7 @@ struct qdr_auto_link_t {
     char                  *name;
     qdr_address_t         *addr;
     char                  *external_addr;
+    const char            *internal_addr;
     int                    phase;
     qd_direction_t         dir;
     qdr_conn_identifier_t *conn_id;

@@ -56,6 +56,8 @@ class RouterTest(TestCase):
                 ('linkRoute', {'prefix': '0.0.0.0/link', 'direction': 'out', 'containerId': 'LRC'}),
                 ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'in'}),
                 ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'out'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.ext', 'containerId': 'ALCE', 'direction': 'in', 'externalAddr': 'EXT'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.ext', 'containerId': 'ALCE', 'direction': 'out', 'externalAddr': 'EXT'}),
                 ('address', {'prefix': 'closest', 'distribution': 'closest'}),
                 ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
@@ -418,6 +420,46 @@ class RouterTest(TestCase):
                             self.routers[1].addresses[2],
                             "queue.waypoint",
                             "0.0.0.0/queue.waypoint")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_33_one_router_waypoint_no_tenant_external_addr(self):
+        test = WaypointTest(self.routers[0].addresses[0],
+                            self.routers[0].addresses[2],
+                            "0.0.0.0/queue.ext",
+                            "EXT",
+                            "ALCE")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_34_one_router_waypoint_external_addr(self):
+        test = WaypointTest(self.routers[0].addresses[1],
+                            self.routers[0].addresses[2],
+                            "queue.ext",
+                            "EXT",
+                            "ALCE")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_35_two_router_waypoint_no_tenant_external_addr(self):
+        test = WaypointTest(self.routers[0].addresses[0],
+                            self.routers[1].addresses[2],
+                            "0.0.0.0/queue.ext",
+                            "EXT",
+                            "ALCE")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+    def test_36_two_router_waypoint_external_addr(self):
+        test = WaypointTest(self.routers[0].addresses[1],
+                            self.routers[1].addresses[2],
+                            "queue.ext",
+                            "EXT",
+                            "ALCE")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -794,12 +836,13 @@ class LinkRouteTest(MessagingHandler):
 
 
 class WaypointTest(MessagingHandler):
-    def __init__(self, first_host, second_host, first_address, second_address):
+    def __init__(self, first_host, second_host, first_address, second_address, container_id="ALC"):
         super(WaypointTest, self).__init__()
         self.first_host     = first_host
         self.second_host    = second_host
         self.first_address  = first_address
         self.second_address = second_address
+        self.container_id   = container_id
 
         self.first_conn        = None
         self.second_conn       = None
@@ -886,7 +929,7 @@ class WaypointTest(MessagingHandler):
 
     def run(self):
         container = Container(self)
-        container.container_id = 'ALC'
+        container.container_id = self.container_id
         container.run()
 
 

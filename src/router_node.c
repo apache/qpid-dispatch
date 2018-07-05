@@ -547,9 +547,18 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         //
         // This is a targeted link, not anonymous.
         //
-        const char *term_addr = pn_terminus_get_address(qd_link_remote_target(link));
-        if (!term_addr)
-            term_addr = pn_terminus_get_address(qd_link_source(link));
+
+        //
+        // Look in a series of locations for the terminus address, starting
+        // with the qdr_link (in case this is an auto-link with separate
+        // internal and external addresses).
+        //
+        const char *term_addr = qdr_link_internal_address(rlink);
+        if (!term_addr) {
+            term_addr = pn_terminus_get_address(qd_link_remote_target(link));
+            if (!term_addr)
+                term_addr = pn_terminus_get_address(qd_link_source(link));
+        }
 
         if (term_addr) {
             qd_composed_field_t *to_override = qd_compose_subfield(0);
