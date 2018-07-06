@@ -84,7 +84,9 @@ ciphers: ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
 +
 To see the full list of available ciphers, use the `openssl ciphers` command. For more information about each cipher, see the link:https://www.openssl.org/docs/manmaster/man1/ciphers.html[ciphers man page^].
 
-`protocols`:: The SSL/TLS protocols that this SSL/TLS profile can use. You can specify a list of one or more of TLSv1, TLSv1.1, or TLSv1.2. To specify multiple protocols, separate the protocols with a space. 
+`protocols`:: The SSL/TLS protocols that this router can use. You can specify a list of one or more of the following values: TLSv1, TLSv1.1, or TLSv1.2.
++
+To specify multiple protocols, separate the protocols with a space.
 +
 .Specifying Multiple Protocols
 ====
@@ -96,7 +98,12 @@ protocols: TLSv1.1 TLSv1.2
 ----
 ====
 +
-If you do not specify a value, the SSL/TLS profile uses the TLS protocol specified by the system-wide configuration.
+If you do not specify a value, the router will use the TLS protocol specified by the system-wide configuration.
++
+[NOTE]
+====
+When setting the TLS protocol versions for the router, you should also consider the TLS protocol version (or versions) used by your client applications. If a subset of TLS protocol versions does not exist between a client and the router, the client will not be able to connect to the router.
+====
 
 `caCertFile`:: The absolute path to the file that contains the public certificates of trusted certificate authorities (CA).
 +
