@@ -306,18 +306,18 @@ include::managing-using-qdmanage.adoc[tags=qdmanage-connection-options-note]
 |===
 | To... | Use this command...
 
-|View the router’s SSL configuration
+|View the router’s SSL/TLS configuration
 a|
 [options="nowrap"]
 ----
 qdmanage query --type=sslProfile
 ----
 
-|Set up SSL for the router
+|Set up SSL/TLS for the router
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage create --type=sslProfile --name=_NAME_ --certDB=_PATH_ --certFile=_PATH_ --privateKeyFile=_PATH_ --_ATTRIBUTE_=_VALUE_ ...
+qdmanage create --type=sslProfile --name=_NAME_ --_ATTRIBUTE_=_VALUE_ ...
 ----
 
 |Add SSL/TLS encryption to an incoming connection
