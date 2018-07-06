@@ -75,7 +75,7 @@ export class ListController {
         id: 'delete',
         op: 'DELETE',
         title: 'Delete',
-        isValid: function () { return $scope.operations.indexOf(this.op) > -1; }
+        isValid: function () { return canDelete(); }
       },
       {
         content: '<a><i class="icon-eye-open"></i> Fetch</a>',
@@ -85,6 +85,16 @@ export class ListController {
         isValid: function () { return ($scope.selectedEntity === 'log'); }
       }
     ];
+    let canDelete = function () {
+      if ($scope.selectedEntity === 'listener' && $scope.detailFields) {
+        if ($scope.detailFields.some( function (field) {
+          return field.attributeName === 'Http' && field.attributeValue === true;
+        })) {
+          return false;
+        }
+      }
+      return $scope.operations.indexOf('DELETE') > -1;
+    };
     $scope.operations = [];
     $scope.currentMode = $scope.modes[0];
     $scope.isModeSelected = function (mode) {
@@ -185,8 +195,6 @@ export class ListController {
           list.push(tnode.key);
         }
       });
-      console.log('saving expanded list');
-      console.log(list);
       localStorage[ListExpandedKey] = JSON.stringify(list);
     };
 
