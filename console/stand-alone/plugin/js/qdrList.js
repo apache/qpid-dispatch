@@ -686,21 +686,23 @@ export class ListController {
           {
             field: 'attributeName',
             displayName: 'Attribute',
-            cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
+            cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents"><button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button>{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>',
+            width: aggregateEntities.indexOf($scope.selectedEntity) > -1 ? '40%' : '50%'
           },
           {
             field: 'attributeValue',
             displayName: 'Value',
-            cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>'
+            cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>',
+            width: aggregateEntities.indexOf($scope.selectedEntity) > -1 ? '25%' : '50%'
           }
         ];
         if (aggregateEntities.indexOf($scope.selectedEntity) > -1) {
           $scope.detailCols.push(
             {
-              width: '10%',
+              width: '35%',
               field: 'aggregateValue',
               displayName: 'Aggregate',
-              cellTemplate: '<div popover-enable="{{grid.appScope.aggregateTipEnabled(row)}}" uib-popover-html="grid.appScope.aggregateTip" popover-append-to-body="true" ng-mouseover="grid.appScope.genAggregateTip(row)" popover-trigger="\'mouseenter\'" class="listAggrValue ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS}} <button title="Click to view/add a graph" ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.aggchartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>',
+              cellTemplate: '<div popover-enable="{{grid.appScope.aggregateTipEnabled(row)}}" uib-popover-html="grid.appScope.aggregateTip" popover-append-to-body="true" ng-mouseover="grid.appScope.genAggregateTip(row)" popover-trigger="\'mouseenter\'" class="listAggrValue ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}"><button title="Click to view/add a graph" ng-if="row.entity.graph" ng-click="grid.appScope.addAllToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.aggchartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button>{{COL_FIELD CUSTOM_FILTERS}}</div>',
               cellClass: 'aggregate'
             }
           );
@@ -724,12 +726,14 @@ export class ListController {
         {
           field: 'attributeName',
           displayName: 'Attribute',
-          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>'
+          cellTemplate: '<div title="{{row.entity.title}}" class="listAttrName ui-grid-cell-contents">{{COL_FIELD CUSTOM_FILTERS | pretty}}<button ng-if="row.entity.graph" title="Click to view/add a graph" ng-click="grid.appScope.addToGraph(row.entity)" ng-class="{\'btn-success\': row.entity.chartExists}" class="btn"><i ng-class="{\'icon-bar-chart\': row.entity.graph == true }"></i></button></div>',
+          width: '50%'
         },
         {
           field: 'attributeValue',
           displayName: 'Value',
-          cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>'
+          cellTemplate: '<div class="ui-grid-cell-contents" ng-class="{\'changed\': row.entity.changed == 1}">{{COL_FIELD CUSTOM_FILTERS | pretty}}</div>',
+          width: '50%'
         }
       ],
       enableColumnResize: true,

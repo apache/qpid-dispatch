@@ -60,12 +60,18 @@ div.listAttrName button {
 }
 
 div.listAggrValue button {
-    margin: 3px 5px;
+  float: right;
+  margin: 3px 5px;
+}
+@-moz-document url-prefix() { 
+  div.listAggrValue button {
+    padding: 2px 6px !important;
+  }
 }
 
 @-moz-document url-prefix() {
   div.listAttrName button {
-    top: -24px;
+    /* top: -24px; */
     position: relative;
     margin: 3px 0px;
     padding: 0 5px !important;
@@ -1633,7 +1639,7 @@ svg {
       overflow: hidden !important;
   }
   
-  @-moz-document url-prefix() {
+  @-moz-document url-prefix() { 
       .btn {padding: 2px 12px 8px !important;}
       #overview-controller .btn {padding: 4px 12px !important;}
       #overview-controller .btn.filter-close {padding: 0 !important;}
