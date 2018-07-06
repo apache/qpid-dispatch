@@ -52,6 +52,7 @@ You must have the following files in PEM format:
 sslProfile {
     name: _NAME_
     ciphers: _CIPHERS_
+    protocols: _PROTOCOL_
     caCertFile: _PATH_.pem
     certFile: _PATH_.pem
     privateKeyFile: _PATH_.pem
@@ -71,14 +72,38 @@ name: router-ssl-profile
 
 `ciphers`:: The SSL cipher suites that can be used by this SSL/TLS profile. If certain ciphers are unsuitable for your environment, you can use this attribute to restrict them from being used.
 +
-To enable a cipher list, enter one or more cipher strings separated by colons (`:`). For example:
+To enable a cipher list, enter one or more cipher strings separated by colons (`:`). 
 +
+.Enabling a Cipher List
+====
 [options="nowrap"]
 ----
 ciphers: ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP
 ----
+====
 +
 To see the full list of available ciphers, use the `openssl ciphers` command. For more information about each cipher, see the link:https://www.openssl.org/docs/manmaster/man1/ciphers.html[ciphers man page^].
+
+`protocols`:: The SSL/TLS protocols that this router can use. You can specify a list of one or more of the following values: TLSv1, TLSv1.1, or TLSv1.2.
++
+To specify multiple protocols, separate the protocols with a space.
++
+.Specifying Multiple Protocols
+====
+This example permits the SSL/TLS profile to use TLS v1.1 and TLS v1.2 only:
+
+[options="nowrap"]
+----
+protocols: TLSv1.1 TLSv1.2
+----
+====
++
+If you do not specify a value, the router will use the TLS protocol specified by the system-wide configuration.
++
+[NOTE]
+====
+When setting the TLS protocol versions for the router, you should also consider the TLS protocol version (or versions) used by your client applications. If a subset of TLS protocol versions does not exist between a client and the router, the client will not be able to connect to the router.
+====
 
 `caCertFile`:: The absolute path to the file that contains the public certificates of trusted certificate authorities (CA).
 +
