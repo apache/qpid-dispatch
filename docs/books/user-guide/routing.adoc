@@ -325,6 +325,11 @@ After you add waypoint addresses to identify the broker queue, you must connect 
 
 With autolinks, client traffic is handled on the router, not the broker. Clients attach their links to the router, and then the router uses internal autolinks to connect to the queue on the broker. Therefore, the queue will always have a single producer and a single consumer regardless of how many clients are attached to the router.
 
+[NOTE]
+====
+If the connection to the broker fails, {RouterName} automatically attempts to reestablish the connection and reroute message deliveries to any available alternate destinations. However, some deliveries could be returned to the sender with a `RELEASED` or `MODIFIED` disposition. Therefore, you should ensure that your clients can handle these deliveries appropriately (generally by resending them).
+====
+
 . If this router is different than the router that is connected to the clients, then add the waypoint address.
 
 . Add an outgoing connection to the broker:
@@ -550,6 +555,13 @@ Unlike message routing, with link routing, the sender and receiver handle flow c
 Link routes establish a link between a sender and a receiver that travels through a router. You can configure inward and outward link routes to enable the router to receive link-attaches from clients and to send them to a particular destination.
 
 With link routing, client traffic is handled on the broker, not the router. Clients have a direct link through the router to a broker's queue. Therefore, each client is a separate producer or consumer.
+
+[NOTE]
+====
+If the connection to the broker fails, the routed links are detached, and the router will attempt to reconnect to the broker (or its backup). Once the connection is reestablished, the link route to the broker will become reachable again.
+
+From the client's perspective, the client will see the detached links (that is, the senders or receivers), but not the failed connection. Therefore, if you want the client to reattach dropped links in the event of a broker connection failure, you must configure this functionality on the client. Alternatively, you can use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker[Routing Messages through a Broker Queue].
+====
 
 .Procedure
 
