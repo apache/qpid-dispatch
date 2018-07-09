@@ -1251,7 +1251,7 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
 {
     assert(link->link_direction == QD_INCOMING);
 
-    bool drain_changed = link->drain_mode ^= drain;
+    bool drain_changed = link->drain_mode ^ drain;
     link->drain_mode   = drain;
 
     if (link->credit_pending > 0)
