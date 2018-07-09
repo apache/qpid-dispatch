@@ -233,10 +233,14 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     // incrementally to the router core.  i.e. convert absolute credit to
     // incremental credit.
     //
-    credit -= link->credit_to_core;
-    if (credit < 0)
-        credit = 0;
-    link->credit_to_core += credit;
+    if (link->drain_mode && !drain_mode) {
+        link->credit_to_core = 0;   // credit calc reset when coming out of drain mode
+    } else {
+        credit -= link->credit_to_core;
+        if (credit < 0)
+            credit = 0;
+        link->credit_to_core += credit;
+    }
 
     action->args.connection.link   = link;
     action->args.connection.credit = credit;
@@ -1247,7 +1251,7 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
 {
     assert(link->link_direction == QD_INCOMING);
 
-    bool drain_changed = link->drain_mode |= drain;
+    bool drain_changed = link->drain_mode ^= drain;
     link->drain_mode   = drain;
 
     if (link->credit_pending > 0)
