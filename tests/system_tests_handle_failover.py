@@ -150,7 +150,8 @@ class FailoverTest(TestCase):
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
 
-        expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port)
+        expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) \
+                   + ", " + "amqp://third-host:5671"
 
         if output[0].get('failoverUrls') == expected:
             self.success = True

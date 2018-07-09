@@ -869,54 +869,6 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     bool found_failover = false;
 
-
-    if (conn->connector && DEQ_SIZE(conn->connector->conn_info_list) > 1) {
-        // Here we are simply removing all other failover information except the original connection information and the one we used to make a successful connection.
-        int i = 1;
-        qd_failover_item_t *item = DEQ_HEAD(conn->connector->conn_info_list);
-        qd_failover_item_t *next_item = 0;
-
-        bool match_found = false;
-        int dec_conn_index=0;
-
-        while(item) {
-
-            //The first item on this list is always the original connector, so we want to keep that item in place
-            // We have to delete items in the list that were left over from the previous failover list from the previous connection
-            // because the new connection might have its own failover list.
-            if (i != conn->connector->conn_index) {
-                if (item != DEQ_HEAD(conn->connector->conn_info_list)) {
-                    next_item = DEQ_NEXT(item);
-                    free(item->scheme);
-                    free(item->host);
-                    free(item->port);
-                    free(item->hostname);
-                    free(item->host_port);
-
-                    DEQ_REMOVE(conn->connector->conn_info_list, item);
-
-                    free(item);
-                    item = next_item;
-
-                    // We are removing an item from the list before the conn_index match was found. We need to
-                    // decrement the conn_index
-                    if (!match_found)
-                        dec_conn_index += 1;
-                }
-                else {
-                    item = DEQ_NEXT(item);
-                }
-            }
-            else {
-                match_found = true;
-                item = DEQ_NEXT(item);
-            }
-            i += 1;
-        }
-
-        conn->connector->conn_index -= dec_conn_index;
-    }
-
     if (props) {
         pn_data_rewind(props);
         pn_data_next(props);
@@ -1007,9 +959,31 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                     item->host_port = malloc(hplen);
                                     snprintf(item->host_port, hplen, "%s:%s", item->host, item->port);
 
-                                    DEQ_INSERT_TAIL(conn->connector->conn_info_list, item);
+                                    //
+                                    // Iterate through failover list items and sets insert_tail to true
+                                    // when list has just original connector's host and port or when new
+                                    // reported host and port is not yet part of the current list.
+                                    //
+                                    bool insert_tail = false;
+                                    if ( DEQ_SIZE(conn->connector->conn_info_list) == 1 ) {
+                                        insert_tail = true;
+                                    } else {
+                                        qd_failover_item_t *conn_item = DEQ_HEAD(conn->connector->conn_info_list);
+                                        insert_tail = true;
+                                        while ( conn_item ) {
+                                            if ( !strcmp(conn_item->host_port, item->host_port) ) {
+                                                insert_tail = false;
+                                                break;
+                                            }
+                                            conn_item = DEQ_NEXT(conn_item);
+                                        }
+                                    }
 
-                                    qd_log(router->log_source, QD_LOG_DEBUG, "Added %s as backup host", item->host_port);
+                                    // Only inserts if not yet part of failover list
+                                    if ( insert_tail ) {
+                                        DEQ_INSERT_TAIL(conn->connector->conn_info_list, item);
+                                        qd_log(router->log_source, QD_LOG_DEBUG, "Added %s as backup host", item->host_port);
+                                    }
                                 }
                                 else {
                                         free(item->scheme);
