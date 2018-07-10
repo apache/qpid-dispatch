@@ -146,6 +146,7 @@ class FailoverTest(TestCase):
         # Router A should now try to connect to Router C. Router C does NOT have failoverUrls.
         # Query Router A which previously had failoverUrls in its connector (because Router B sent it failoverUrls)
         # does not have it anymore.
+        # Further wait for the connection from Router A to show up in Router C's management stack
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
@@ -153,10 +154,16 @@ class FailoverTest(TestCase):
         expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) \
                    + ", " + "amqp://third-host:5671"
 
-        if output[0].get('failoverUrls') == expected:
-            self.success = True
-        else:
+        if output[0].get('failoverUrls') != expected:
             self.schedule_B_to_C_failover_test()
+        else:
+            # Router A now sees the proper failover list when connected to Router C
+            # Stall until an inter-router connection shows up in Router C's status
+            outs = self.run_qdstat(['--connections'], address=self.routers[2].addresses[1])
+            if not "inter-router" in outs:
+                self.schedule_B_to_C_failover_test()
+            else:
+                self.success = True
 
     def can_terminate(self):
         if self.attempts == self.max_attempts:
@@ -178,6 +185,7 @@ class FailoverTest(TestCase):
         FailoverTest.routers[0].teardown()
 
         # Schedule a test to make sure that the failover url is available
+        # and Router C has an inter-router connection
         self.schedule_B_to_C_failover_test()
 
         while not self.can_terminate():
