@@ -530,7 +530,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
     case PN_LINK_LOCAL_DETACH:
     case PN_LINK_LOCAL_CLOSE:
         pn_link = pn_event_link(event);
-        if (pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED) && pn_link_get_context(pn_link)) {
+        if (pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
             pn_link_set_context(pn_link, NULL);
             pn_link_free(pn_link);
         }
@@ -791,7 +791,7 @@ void qd_link_free(qd_link_t *link)
 {
     if (!link) return;
     if (link->pn_link) {
-        pn_link_set_context(link->pn_link, 0);
+        pn_link_set_context(link->pn_link, NULL);
         link->pn_link = 0;
     }
     link->pn_sess = 0;
