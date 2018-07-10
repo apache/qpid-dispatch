@@ -85,7 +85,7 @@ class RouterTestHttp(TestCase):
             ('router', {'mode': 'standalone', 'id': 'bad'}),
             ('listener', {'port': listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
             ('listener', {'port': listen_port, 'http':True})])
-        r = Qdrouterd(name="expect_fail", config=config, wait=False);
+        r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
     def test_http_listener_delete(self):
@@ -96,7 +96,7 @@ class RouterTestHttp(TestCase):
             ('router', {'mode': 'standalone', 'id': 'A'}),
             ('listener', {'port': normal_listen_port, 'maxFrameSize': '2048', 'stripAnnotations': 'no'}),
             ('listener', {'name': name, 'port': http_delete_listen_port, 'http': True})])
-        router = Qdrouterd(name="expect_fail", config=config, wait=True)
+        router = self.qdrouterd(name="expect_fail_1", config=config, wait=True)
         exception_occurred = False
 
         def address():
@@ -111,7 +111,6 @@ class RouterTestHttp(TestCase):
             self.assertTrue("BadRequestStatus: HTTP listeners cannot be deleted" in str(e))
 
         self.assertTrue(exception_occurred)
-
 
     def test_http_get(self):
 

@@ -37,7 +37,7 @@ class OneRouterModifiedTest(TestCase):
             ('router', {'mode': 'standalone', 'id': 'A'}),
             ('listener', {'port': listen_port, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'})])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_one_router_modified_counts(self):
         address = self.router.addresses[0]
@@ -66,7 +66,7 @@ class OneRouterRejectedTest(TestCase):
             ('router', {'mode': 'standalone', 'id': 'A'}),
             ('listener', {'port': listen_port, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'})])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_one_router_rejected_counts(self):
         address = self.router.addresses[0]
@@ -96,7 +96,7 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
             ('listener', {'port': listen_port, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'})])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_one_router_released_dropped_counts(self):
         address = self.router.addresses[0]
@@ -364,7 +364,7 @@ class OneRouterIngressEgressTest(TestCase):
             ('router', {'mode': 'standalone', 'id': 'A'}),
             ('listener', {'port': listen_port, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'})])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_one_router_ingress_egress_counts(self):
         address = self.router.addresses[0]
@@ -408,7 +408,7 @@ class RouteContainerEgressCount(TestCase):
             ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
         ])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_route_container_egress(self):
         regular_addr = self.router.addresses[0]
@@ -449,7 +449,7 @@ class RouteContainerIngressCount(TestCase):
             ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
         ])
 
-        cls.router = Qdrouterd(name="A", config=config, wait=True)
+        cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
 
     def test_route_container_ingress(self):
         regular_addr = self.router.addresses[0]
