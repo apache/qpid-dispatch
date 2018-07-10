@@ -96,7 +96,7 @@ Flow control is "real" in that credits flow across the link route from the recei
 
 * Transaction support.
 +
-Link routing supports local transactions to a broker.
+Link routing supports local transactions to a single broker. Distributed transactions are not supported.
 
 * Server-side selectors.
 +
@@ -575,6 +575,22 @@ connector {
 For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_connector[connector] in the `qdrouterd.conf` man page.
 --
 
+. If you want clients to send local transactions to the broker, create a link route for the transaction coordinator:
++
+--
+[options="nowrap",subs="+quotes"]
+----
+linkRoute {
+    prefix: $coordinator  <1>
+    connection: __CONNECTOR_NAME__
+    direction: in
+}
+----
+<1> The `$coordinator` prefix designates this link route as a transaction coordinator. When the client opens a transacted session, the requests to start and end the transaction are propagated along this link route to the broker.
+
+{RouterName} does not support routing transactions to multiple brokers. If you have multiple brokers in your environment, choose a single broker and route all transactions to it.
+--
+ 
 . If you want clients to send messages on this link route, create an incoming link route:
 +
 --
