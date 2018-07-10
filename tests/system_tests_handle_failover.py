@@ -94,7 +94,7 @@ class FailoverTest(TestCase):
         TestCase.__init__(self, test_method)
         self.success = False
         self.timer_delay = 2
-        self.max_attempts = 5
+        self.max_attempts = 10
         self.attempts = 0
 
     def address(self):
