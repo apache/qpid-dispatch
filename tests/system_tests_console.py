@@ -29,9 +29,7 @@ import unittest
 from subprocess import PIPE
 import subprocess
 import shutil
-from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module
-
 
 class ConsoleTest(system_test.TestCase):
     """Run console tests"""
@@ -48,35 +46,35 @@ class ConsoleTest(system_test.TestCase):
 
     def run_console_test(self):
         # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
-        # /foo/qpid-dispatch/build/system_test.dir/system_tests_console/ConsoleTest/test_console/
-        # run_console_test.out
         cwd = os.getcwd()
 
-        def get_base(remove):
-            l_base = cwd.split('/')[:-remove]   # path that ends with qpid-dispatch's home dir
+        def get_dirs(remove):
+            # l_base is the path that ends with qpid-dispatch's home dir
+            l_base = cwd.split('/')[:-remove]
             l_test_cmd = '/'.join(l_base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
             l_test_dir = '/'.join(l_base + ['console', 'stand-alone', 'test'])
             l_src_dir = '/'.join(l_base + ['console', 'stand-alone'])
-            return l_base, l_test_cmd, l_test_dir, l_src_dir
+            l_node_dir = '/'.join(l_base + ['console', 'stand-alone', 'node_modules'])
+            return l_test_cmd, l_test_dir, l_src_dir, l_node_dir
         
-        (base, test_cmd, test_dir, src_dir) = get_base(6)
+        (test_cmd, test_dir, src_dir, node_dir) = get_dirs(6)
         found_src = os.path.isdir(src_dir)
         # running the test from the command line results in a different path
         if not found_src:
-            (base, test_cmd, test_dir, src_dir) = get_base(5)
+            (test_cmd, test_dir, src_dir, node_dir) = get_dirs(5)
             found_src = os.path.isdir(src_dir)
 
         pret = 0
+        # If we are unable to find the console's source directory. Skip the test
         out = 'Skipped'
-        if found_src:  # if we are unable to find the console's source directory. Skip the test
-            # The console test needs a node_modules dir in the source directory
-            # If the node_modules dir is not present in the source dir, create it.
-            # An alternative is to copy all the source files to the build/console dir.
-            node_dir = '/'.join(base + ['console', 'stand-alone', 'node_modules'])
+        if found_src:
+            ''' The console test needs a node_modules dir in the source directory.
+             If the node_modules dir is not present in the source dir, create it.
+             An alternative is to copy all the source files to the build/console dir. '''
             node_modules = os.path.isdir(node_dir)
             if not node_modules:
                 p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
-                p0.wait();
+                p0.wait()
 
             prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
             p = self.popen(prg, stdout=PIPE, expect=None)

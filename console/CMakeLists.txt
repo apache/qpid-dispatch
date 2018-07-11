@@ -39,14 +39,12 @@ if(CONSOLE_INSTALL)
           ## Files needed to create the ${CONSOLE_ARTIFACTS}
           file (GLOB_RECURSE CONSOLE_JS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.js)
           file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.ts)
-          file (GLOB_RECURSE CONSOLE_MODULE_SOURCES ${CONSOLE_SOURCE_DIR}/modules/*.js)
           set(CONSOLE_CSS_SOURCE ${CONSOLE_SOURCE_DIR}/plugin/css/dispatch.css)
           set(CONSOLE_MAIN ${CONSOLE_SOURCE_DIR}/main.js)
           set(ALL_CONSOLE_SOURCES ${CONSOLE_MAIN} ${CONSOLE_MODULE_SOURCES} ${CONSOLE_JS_SOURCES} ${CONSOLE_TS_SOURCES} ${CONSOLE_CSS_SOURCE})
 
           ## Files created during the console build
           set(CONSOLE_ARTIFACTS
-            ${CONSOLE_BUILD_DIR}/dist/js/main.min.js
             ${CONSOLE_BUILD_DIR}/dist/js/vendor.min.js
             ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
             ${CONSOLE_BUILD_DIR}/dist/css/vendor.min.css
@@ -82,6 +80,7 @@ if(CONSOLE_INSTALL)
           ## Files copied to the root of the console's install dir
           set(BASE_FILES
             ${CONSOLE_SOURCE_DIR}/index.html
+            ${CONSOLE_SOURCE_DIR}/main.js
             ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
           )
           ## Files copied to the css/ dir
@@ -115,6 +114,10 @@ if(CONSOLE_INSTALL)
           install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/html/
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html
             FILES_MATCHING PATTERN "*.html"
+          )
+          install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/js/
+            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/js
+            FILES_MATCHING PATTERN "*.js"
           )
           install(FILES ${BASE_FILES}
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}

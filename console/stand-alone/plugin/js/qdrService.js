@@ -17,8 +17,8 @@ Licensed to the Apache Software Foundation (ASF) under one
   under the License.
 */
 /* global Promise */
-import { Management as dm } from '../../modules/management.js';
-import { utils } from '../../modules/utilities.js';
+import { Management as dm } from './amqp/management.js';
+import { utils } from './amqp/utilities.js';
 
 import { QDR_LAST_LOCATION, QDRLogger} from './qdrGlobals.js';
 

@@ -227,7 +227,7 @@ function test () {
 var build = gulp.series(
   clean,                          // removes the dist/ dir
   lint,                           // lints the .js
-  gulp.parallel(vendor_styles, vendor_scripts, styles, scripts), // uglify and concat
+  gulp.parallel(vendor_styles, vendor_scripts, styles), // uglify and concat
   cleanup                         // remove .js that were converted from .ts
 );
 
