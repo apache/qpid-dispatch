@@ -41,7 +41,7 @@ if(CONSOLE_INSTALL)
           file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.ts)
           set(CONSOLE_CSS_SOURCE ${CONSOLE_SOURCE_DIR}/plugin/css/dispatch.css)
           set(CONSOLE_MAIN ${CONSOLE_SOURCE_DIR}/main.js)
-          set(ALL_CONSOLE_SOURCES ${CONSOLE_MAIN} ${CONSOLE_MODULE_SOURCES} ${CONSOLE_JS_SOURCES} ${CONSOLE_TS_SOURCES} ${CONSOLE_CSS_SOURCE})
+          set(ALL_CONSOLE_SOURCES ${CONSOLE_CSS_SOURCE})
 
           ## Files created during the console build
           set(CONSOLE_ARTIFACTS
