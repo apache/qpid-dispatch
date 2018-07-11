@@ -852,7 +852,9 @@ export class ListController {
       QDRService.management.topology.stopUpdating();
       QDRService.management.topology.delUpdatedAction('initList');
 
-      $scope.nodes = QDRService.management.topology.nodeList().sort(function (a, b) { return a.name.toLowerCase() > b.name.toLowerCase();});
+      $scope.nodes = QDRService.management.topology.nodeList().sort(function (a, b) { 
+        return a.name.toLowerCase() > b.name.toLowerCase() ? 1 : a.name.toLowerCase() < b.name.toLowerCase() ? -1 : 0;
+      });
       // unable to get node list? Bail.
       if ($scope.nodes.length == 0) {
         $location.path('/connect');
