@@ -537,7 +537,13 @@ export class TopologyController {
       // circle (node) group
       // nodes are known by id
       circle = circle.data(nodes.nodes, function(d) {
-        return d.name;
+        if (!d.normals)
+          return d.name;
+        let connIds = [d.routerId];
+        d.normals.forEach( function (n) {
+          connIds.push(n.connectionId);
+        });
+        return connIds.join('.');
       });
 
       // update existing nodes visual states
