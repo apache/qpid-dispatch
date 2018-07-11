@@ -464,16 +464,6 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_37_two_router_waypoint_no_tenant_external_addr_phase(self):
-        """
-        Attaches two receiver each to one router with an autoLinked address and makes sure that the phase
-        on both receivers is set to 1
-        :return:
-        """
-        test = WaypointReceiverPhaseTest(self.routers[0].addresses[0], self.routers[1].addresses[2], "0.0.0.0/queue.ext")
-        test.run()
-        self.assertEqual(None, test.error)
-
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -844,66 +834,6 @@ class LinkRouteTest(MessagingHandler):
         container = Container(self)
         container.container_id = 'LRC'
         container.run()
-
-
-class WaypointReceiverPhaseTest(MessagingHandler):
-    def __init__(self, first_host, second_host, dest):
-        super(WaypointReceiverPhaseTest, self).__init__()
-        self.first_host = first_host
-        self.second_host = second_host
-        self.first_conn = None
-        self.second_conn = None
-        self.error = None
-        self.timer = None
-        self.receiver1 = None
-        self.receiver2 = None
-        self.dest = dest
-        self.receiver1_phase = False
-        self.receiver2_phase = False
-
-    def timeout(self):
-        self.error = "The phase on the receiver links were not set to 1"
-        self.first_conn.close()
-        self.second_conn.close()
-
-    def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.first_conn = event.container.connect(self.first_host)
-        self.second_conn = event.container.connect(self.second_host)
-        self.receiver1 = event.container.create_receiver(self.first_conn, self.dest, name="AAA")
-        self.receiver2 = event.container.create_receiver(self.second_conn, self.dest, name="BBB")
-
-    def on_link_opened(self, event):
-        if event.receiver == self.receiver1:
-            local_node = Node.connect(self.first_host, timeout=TIMEOUT)
-            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
-            link_type_index = out.attribute_names.index('linkType')
-            link_dir_index = out.attribute_names.index('linkDir')
-            owning_addr_index = out.attribute_names.index('owningAddr')
-            link_name_index = out.attribute_names.index('linkName')
-
-            for result in out.results:
-                if result[link_type_index] == "endpoint" and result[link_dir_index] == "out" and result[link_name_index] == 'AAA' and result[owning_addr_index] == 'M10.0.0.0/queue.ext':
-                    self.receiver1_phase = True
-        elif event.receiver == self.receiver2:
-            local_node = Node.connect(self.second_host, timeout=TIMEOUT)
-            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
-            link_type_index = out.attribute_names.index('linkType')
-            link_dir_index = out.attribute_names.index('linkDir')
-            owning_addr_index = out.attribute_names.index('owningAddr')
-            link_name_index = out.attribute_names.index('linkName')
-
-            for result in out.results:
-                if result[link_type_index] == "endpoint" and result[link_dir_index] == "out" and result[link_name_index] == 'BBB' and result[owning_addr_index] == 'M10.0.0.0/queue.ext':
-                    self.receiver2_phase = True
-
-        if self.receiver1_phase and self.receiver2_phase:
-            self.first_conn.close()
-            self.second_conn.close()
-            self.timer.cancel()
-
-    def run(self):
-        Container(self).run()
 
 
 class WaypointTest(MessagingHandler):

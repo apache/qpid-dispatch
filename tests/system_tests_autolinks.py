@@ -35,6 +35,118 @@ from qpid_dispatch.management.client import Node
 CONNECTION_PROPERTIES = {u'connection': u'properties', u'int_property': 6451}
 
 
+class WaypointReceiverPhaseTest(TestCase):
+    inter_router_port = None
+
+    @classmethod
+    def router(cls, name, config):
+        config = Qdrouterd.Config(config)
+
+        cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+    @classmethod
+    def setUpClass(cls):
+        super(WaypointReceiverPhaseTest, cls).setUpClass()
+
+        cls.routers = []
+
+        cls.inter_router_port = cls.tester.get_port()
+        cls.inter_router_port_1 = cls.tester.get_port()
+        cls.backup_port = cls.tester.get_port()
+        cls.backup_url = 'amqp://0.0.0.0:' + str(cls.backup_port)
+
+        WaypointReceiverPhaseTest.router('A', [
+                        ('router', {'mode': 'interior', 'id': 'A'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port}),
+                        ('autoLink', {'addr': '0.0.0.0/queue.ext', 'direction': 'in', 'externalAddr': 'EXT'}),
+                        ('autoLink', {'addr': '0.0.0.0/queue.ext', 'direction': 'out', 'externalAddr': 'EXT'}),
+                        ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
+
+            ])
+
+        WaypointReceiverPhaseTest.router('B',
+                    [
+                        ('router', {'mode': 'interior', 'id': 'B'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
+                        ('connector', {'name': 'connectorToB', 'role': 'inter-router',
+                                       'port': cls.inter_router_port, 'verifyHostname': 'no'}),
+                        ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
+                    ])
+
+        cls.routers[1].wait_router_connected('A')
+
+    def test_two_router_waypoint_no_tenant_external_addr_phase(self):
+        """
+        Attaches two receiver each to one router with an autoLinked address and makes sure that the phase
+        on both receivers is set to 1
+        :return:
+        """
+        test = WaypointTest(self.routers[0].addresses[0], self.routers[1].addresses[0], "0.0.0.0/queue.ext")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+class WaypointTest(MessagingHandler):
+    def __init__(self, first_host, second_host, dest):
+        super(WaypointTest, self).__init__()
+        self.first_host = first_host
+        self.second_host = second_host
+        self.first_conn = None
+        self.second_conn = None
+        self.error = None
+        self.timer = None
+        self.receiver1 = None
+        self.receiver2 = None
+        self.dest = dest
+        self.receiver1_phase = False
+        self.receiver2_phase = False
+
+    def timeout(self):
+        self.error = "The phase on the receiver links were not set to 1"
+        self.first_conn.close()
+        self.second_conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.first_conn = event.container.connect(self.first_host)
+        self.second_conn = event.container.connect(self.second_host)
+        self.receiver1 = event.container.create_receiver(self.first_conn, self.dest, name="AAA")
+        self.receiver2 = event.container.create_receiver(self.second_conn, self.dest, name="BBB")
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver1:
+            local_node = Node.connect(self.first_host, timeout=TIMEOUT)
+            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
+            link_type_index = out.attribute_names.index('linkType')
+            link_dir_index = out.attribute_names.index('linkDir')
+            owning_addr_index = out.attribute_names.index('owningAddr')
+            link_name_index = out.attribute_names.index('linkName')
+
+            for result in out.results:
+                if result[link_type_index] == "endpoint" and result[link_dir_index] == "out" and result[link_name_index] == 'AAA' and result[owning_addr_index] == 'M10.0.0.0/queue.ext':
+                    self.receiver1_phase = True
+        elif event.receiver == self.receiver2:
+            local_node = Node.connect(self.second_host, timeout=TIMEOUT)
+            out = local_node.query(type='org.apache.qpid.dispatch.router.link')
+            link_type_index = out.attribute_names.index('linkType')
+            link_dir_index = out.attribute_names.index('linkDir')
+            owning_addr_index = out.attribute_names.index('owningAddr')
+            link_name_index = out.attribute_names.index('linkName')
+
+            for result in out.results:
+                if result[link_type_index] == "endpoint" and result[link_dir_index] == "out" and result[link_name_index] == 'BBB' and result[owning_addr_index] == 'M10.0.0.0/queue.ext':
+                    self.receiver2_phase = True
+
+        if self.receiver1_phase and self.receiver2_phase:
+            self.first_conn.close()
+            self.second_conn.close()
+            self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
+
+
 class AutolinkTest(TestCase):
     """System tests involving a single router"""
     @classmethod
