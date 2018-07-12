@@ -474,14 +474,14 @@ You can create vhost policies using either of the following methods:
 * xref:configuring-vhost-policies-router[Configure vhost policies directly in the router configuration file]
 * xref:configuring-vhost-policies-json[Configure vhost policies as JSON files]
 
-[id='configuring-vhost-policies-router']
-==== Configuring Vhost Policies in the Router Configuration File
+[id='enabling-vhost-policies']
+==== Enabling Vhost Policies
 
-You can configure vhost policies in the router configuration file by configuring `vhost` entities. However, if multiple routers in your router network should be configured with the same vhost configuration, you will need to add the vhost configuration to each router’s configuration file.
+You must enable the router to use vhost policies before you can create the policies.
 
 .Procedure
 
-. In the router configuration file, add a `policy` section if one does not exist, and enable vhost policies for the router.
+* In the router configuration file, add a `policy` section if one does not exist, and enable vhost policies for the router.
 +
 --
 [options="nowrap",subs="+quotes"]
@@ -489,15 +489,30 @@ You can configure vhost policies in the router configuration file by configuring
 policy {
     ...
     enableVhostPolicy: true
+    enableVhostNamePatterns: true | false
     defaultVhost: $default
 }
 ----
 `enableVhostPolicy`::
 Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies. The default is `false`, which means that the router will not enforce any vhost policies.
 
+`enableVhostNamePatterns`::
+Enables pattern matching for vhost hostnames. If set to `true`, you can use wildcards to specify a range of hostnames for a vhost. If set to `false`, vhost hostnames are treated as literal strings. This means that you must specify the exact hostname for each vhost. The default is `false`.
+
 `defaultVhost`::
 The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. The default is `$default`. If `defaultVhost` is not defined, then default vhost processing is disabled.
 --
+
+[id='configuring-vhost-policies-router']
+==== Configuring Vhost Policies in the Router Configuration File
+
+You can configure vhost policies in the router configuration file by configuring `vhost` entities. However, if multiple routers in your router network should be configured with the same vhost configuration, you will need to add the vhost configuration to each router’s configuration file.
+
+.Prerequisites
+
+Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies[].
+
+.Procedure
 
 . Add a `vhost` section and define the connection limits for the messaging endpoint.
 +
@@ -516,7 +531,9 @@ vhost {
 }
 ----
 `hostname`::
-The hostname of the vhost (the messaging endpoint). This vhost policy will be applied to any client connection that is directed to the hostname that you specify. This name must be unique; you can only have one vhost policy per hostname.
+The literal hostname of the vhost (the messaging endpoint) or a pattern that matches the vhost hostname. This vhost policy will be applied to any client connection that is directed to the hostname that you specify. This name must be unique; you can only have one vhost policy per hostname.
++
+If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostnames. For more information, see xref:syntax-for-vhost-policy-hostname-patterns[].
 
 `maxConnections`::
 The global maximum number of concurrent client connections allowed for this vhost. The default is 65535.
@@ -536,7 +553,7 @@ Whether unknown users (users who are not members of a defined user group) are al
 --
 You define resource limits by user group. A user group specifies the messaging resources the members of the group are allowed to access.
 
-.User groups in a vhost policy
+.User Groups in a Vhost Policy
 ====
 This example shows three user groups: admin, developers, and $default:
 
@@ -589,37 +606,31 @@ The advanced user group settings enable you to define resource limits based on t
 
 As an alternative to using the router configuration file, you can configure vhost policies in JSON files. If you have multiple routers that need to share the same vhost configuration, you can put the vhost configuration JSON files in a location accessible to each router, and then configure the routers to apply the vhost policies defined in these JSON files.
 
+.Prerequisites
+
+* Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies[].
+
 .Procedure
 
-. Determine where to store the vhost policy JSON files.
-+
-The directory should be accessible by each router that needs to apply these vhost policies.
-
-. In the router configuration file, add a `policy` section if one does not exist, and enable vhost policies for the router.
+. In the router configuration file, specify the directory where the vhost policy definition JSON files should be located.
 +
 --
 [options="nowrap",subs="+quotes"]
 ----
 policy {
     ...
-    enableVhostPolicy: true
-    policyDir: __DIRECTORY_PATH__ 
-    defaultVhost: $default
+    policyDir: __DIRECTORY_PATH__
 }
 ----
-`enableVhostPolicy`::
-Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies. The default is `false`, which means that the router will not enforce any vhost policies.
-
 `policyDir`::
 The absolute path to the directory that holds vhost policy definition files in JSON format. The router processes all of the vhost policies in each JSON file that is in this directory.
-
-`defaultVhost`::
-The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. The default is `$default`. If `defaultVhost` is not defined, then default vhost processing is disabled.
 --
 
-. In the directory you determined, create a JSON file for each vhost policy.
+. In the vhost policy definition directory, create a JSON file for each vhost policy.
 +
 --
+.Vhost Policy Definition JSON File
+====
 [source,json,options="nowrap"]
 ----
 [
@@ -654,7 +665,66 @@ The name of the default vhost policy, which is applied to any connection for whi
 ----
 
 For more information about these attributes, see xref:configuring-vhost-policies-router[].
+====
 --
+
+[id='syntax-for-vhost-policy-hostname-patterns']
+==== Syntax for Vhost Policy Hostname Patterns
+
+In a vhost policy, vhost hostnames can be either literal hostnames or patterns that cover a range of hostnames.
+
+A hostname pattern is a sequence of words with one or more of the following wildcard characters:
+
+[cols="25,75",options="header"]
+|===
+| This wildcard... | Matches...
+| `*` | A single word
+| `#` | Zero or more words
+|===
+
+The following table shows some examples of hostname patterns:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `*.example.com` 
+a| `www.example.com` 
+a| `example.com`
+`srv2.www.example.com`
+
+a| `#.example.com` 
+a| `example.com`
+`www.example.com`
+`a.b.c.d.example.com`
+a| `myhost.com`
+
+a| `www.*.test.example.com`
+a| `www.a.test.example.com`
+a| `www.test.example.com`
+`www.a.b.c.test.example.com`
+
+a| `www.#.test.example.com` 
+a| `www.test.example.com`
+`www.a.test.example.com`
+`www.a.b.c.test.example.com`
+a| `test.example.com`
+|===
+
+Vhost hostname pattern matching applies the following precedence rules:
+
+[options="header"]
+|===
+| Policy pattern | Precedence
+| Exact match | High
+| *           | Medium
+| #           | Low
+|===
+
+[NOTE]
+====
+{RouterName} does not permit you to create vhost hostname patterns that conflict with existing patterns. This includes patterns that can be reduced to be the same as an existing pattern. For example, you would not be able to create the `\#.#.\#.#.com` pattern if `#.com` already exists.
+====
 
 ////
 ==== TBD
