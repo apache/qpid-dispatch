@@ -533,7 +533,7 @@ vhost {
 `hostname`::
 The literal hostname of the vhost (the messaging endpoint) or a pattern that matches the vhost hostname. This vhost policy will be applied to any client connection that is directed to the hostname that you specify. This name must be unique; you can only have one vhost policy per hostname.
 +
-If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostnames. For more information, see xref:syntax-for-vhost-policy-hostname-patterns[].
+If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostnames. For more information, see xref:pattern-matching-vhost-policy-hostnames[].
 
 `maxConnections`::
 The global maximum number of concurrent client connections allowed for this vhost. The default is 65535.
@@ -589,11 +589,17 @@ A list of authenticated users for this user group. Use commas to separate multip
 `remoteHosts`::
 A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard `*`. To deny access from all remote hosts, leave this attribute blank.
 
-`sources`::
-A list of AMQP source addresses from which users in this group may receive messages. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses.
+`sources` | `sourcePattern`::
+A list of AMQP source addresses from which users in this group may receive messages.
++
+Use `sources` to specify one or more literal addresses. To specify multiple addresses, use a comma-separated list. To prevent users in this group from receiving messages from any addresses, leave this attribute blank. To allow access to an address specific to a particular user, specify the `${user}` token. For more information, see xref:methods-for-specifying-vhost-policy-source-target-addresses[].
++
+Alternatively, you can use `sourcePattern` to match one or more addresses that correspond to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
++
+To specify multiple address ranges, use a comma-separated list of address patterns. For more information, see xref:router-address-pattern-matching[Router Address Pattern Matching]. To allow access to address ranges that are specific to a particular user, specify the `${user}` token. For more information, see xref:methods-for-specifying-vhost-policy-source-target-addresses[].
 
-`targets`::
-A list of AMQP target addresses from which users in this group may send messages. You can specify multiple AMQP addresses and use user name substitution and wildcards the same way as with source addresses.
+`targets` | `targetPattern`::
+A list of AMQP target addresses from which users in this group may send messages. You can specify multiple AMQP addresses and use user name substitution and address patterns the same way as with source addresses.
 ====
 --
 
@@ -668,109 +674,71 @@ For more information about these attributes, see xref:configuring-vhost-policies
 ====
 --
 
-[id='syntax-for-vhost-policy-hostname-patterns']
-==== Syntax for Vhost Policy Hostname Patterns
+[id='methods-for-specifying-vhost-policy-source-target-addresses']
+==== Methods for Specifying Vhost Policy Source and Target Addresses
 
-In a vhost policy, vhost hostnames can be either literal hostnames or patterns that cover a range of hostnames.
+If you want to allow or deny access to multiple addresses on a vhost, there are several methods you can use to match multiple addresses without having to specify each address individually.
 
-A hostname pattern is a sequence of words with one or more of the following wildcard characters:
+The following table describes the methods you can use to specify multiple source and target addresses for a vhost:
 
-[cols="25,75",options="header"]
+[cols="33,67",options="header"]
 |===
-| This wildcard... | Matches...
-| `*` | A single word
-| `#` | Zero or more words
-|===
+| To... | Do this...
 
-The following table shows some examples of hostname patterns:
+| Allow all users in the user group to access all source or target addresses on the vhost
+a| Use a `*` wildcard character.
 
-[options="header"]
-|===
-| This pattern... | Matches... | But not...
-
-a| `*.example.com` 
-a| `www.example.com` 
-a| `example.com`
-`srv2.www.example.com`
-
-a| `#.example.com` 
-a| `example.com`
-`www.example.com`
-`a.b.c.d.example.com`
-a| `myhost.com`
-
-a| `www.*.test.example.com`
-a| `www.a.test.example.com`
-a| `www.test.example.com`
-`www.a.b.c.test.example.com`
-
-a| `www.#.test.example.com` 
-a| `www.test.example.com`
-`www.a.test.example.com`
-`www.a.b.c.test.example.com`
-a| `test.example.com`
-|===
-
-Vhost hostname pattern matching applies the following precedence rules:
-
-[options="header"]
-|===
-| Policy pattern | Precedence
-| Exact match | High
-| *           | Medium
-| #           | Low
-|===
-
-[NOTE]
-====
-{RouterName} does not permit you to create vhost hostname patterns that conflict with existing patterns. This includes patterns that can be reduced to be the same as an existing pattern. For example, you would not be able to create the `\#.#.\#.#.com` pattern if `#.com` already exists.
-====
-
-////
-==== TBD
-
-You can use the substitution token `${user}` to specify an AMQP address that contains a user's authenticated user name. This enables you to allow access to resources specific to each user in the user group without having to name each user individually. You can only specify the `${user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
-+
-You can use an asterisk (`*`) wildcard to match one or more characters in an AMQP address. However, this wildcard is only recognized if it is the last character in the address name.
-+
-.Allowing Access to All Addresses
+.Receive from Any Address
 ====
 [source,options="nowrap"]
 ----
 sources: *
 ----
 ====
-+
-.Restricting Access to All Addresses
+
+| Prevent all users in the user group from accessing all source or target addresses on the vhost
+a| Do not specify a value.
+
+.Deny Message Transfers to All Addresses
 ====
 [source,options="nowrap"]
 ----
-sources:
+targets:
 ----
 ====
-+
-.Allowing Access to Specific Addresses
+
+| Allow users in the user group to access resources specific to each user
+a| Use the `${user}` username substitution token. You can use this token with `source`, `target`, `sourcePattern`, and `targetPattern`.
+ 
+.Receive from a User-Specific Address
 ====
-[source,options="nowrap"]
-----
-sources: myaddress01, myaddress02, myaddress03
-----
-====
-+
-.Allowing Access to User-Specific Addresses
-====
-This definition allows access to any address that meets any of the following rules:
+This definition allows the users in the user group to receive messages any address that meets any of the following rules:
 
 * Starts with the prefix `tmp_` and ends with the user name
 * Starts with the prefix `temp` followed by any additional characters
 * Starts with the user name, is followed by `-home-`, and ends with any additional characters
-
 [source,options="nowrap"]
 ----
 sources: tmp_${user}, temp*, ${user}-home-*
 ----
 ====
-////
+
+.User-Specific Address Patterns
+====
+This definition allows the users in the user group to receive messages any address that meets any of the following rules:
+
+* Starts with the prefix `tmp_` and ends with the user name
+* Starts with the prefix `temp` followed by zero or more additional characters
+* Starts with the user name, is followed by `-home`, and ends with one or more additional characters
+[source,options="nowrap"]
+----
+sourcePattern: tmp_${user}, temp/#, ${user}-home/*
+----
+====
+
+You can only specify the `${user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
+
+|===
 
 ==== Vhost Policy Examples
 
