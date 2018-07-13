@@ -699,7 +699,7 @@ sources: *
 | Prevent all users in the user group from accessing all source or target addresses on the vhost
 a| Do not specify a value.
 
-.Deny Message Transfers to All Addresses
+.Prohibit Message Transfers to All Addresses
 ====
 [source,options="nowrap"]
 ----
@@ -707,8 +707,13 @@ targets:
 ----
 ====
 
-| Allow users in the user group to access resources specific to each user
+| Allow access to some resources specific to each user
 a| Use the `${user}` username substitution token. You can use this token with `source`, `target`, `sourcePattern`, and `targetPattern`.
+
+[NOTE]
+====
+You can only specify the `${user}` token once in an AMQP address name or pattern. If there are multiple tokens in an address, only the leftmost token will be substituted.
+====
  
 .Receive from a User-Specific Address
 ====
@@ -727,16 +732,19 @@ sources: tmp_${user}, temp*, ${user}-home-*
 ====
 This definition allows the users in the user group to receive messages any address that meets any of the following rules:
 
-* Starts with the prefix `tmp_` and ends with the user name
+* Starts with the prefix `tmp` and ends with the user name
 * Starts with the prefix `temp` followed by zero or more additional characters
-* Starts with the user name, is followed by `-home`, and ends with one or more additional characters
+* Starts with the user name, is followed by `home`, and ends with one or more additional characters
 [source,options="nowrap"]
 ----
-sourcePattern: tmp_${user}, temp/#, ${user}-home/*
+sourcePattern: tmp.${user}, temp/#, ${user}.home/*
 ----
 ====
 
-You can only specify the `${user}` token once in an AMQP address name. If there are multiple tokens in an address, only the leftmost token will be substituted.
+[NOTE]
+====
+In an address pattern (`sourcePattern` or `targetPattern`), the username substitution token must be either the first or last token in the pattern. The token must also be alone within its delimited field, which means that it cannot be concatenated with literal text prefixes or suffixes.
+====
 
 |===
 
