@@ -67,12 +67,17 @@ class Chart {
     this.hreq = false; // has this hdash chart been requested
     this.type = opts.type ? opts.type : 'value'; // value or rate
     this.rateWindow = opts.rateWindow ? opts.rateWindow : 1000; // calculate the rate of change over this time interval. higher == smother graph
-    this.areaColor = '#32b9f3'; // the chart's area color when not an empty string
-    this.lineColor = '#058dc7'; // the chart's line color when not an empty string
+    this.areaColor = opts.areaColor || '#32b9f3'; // the chart's area color when not an empty string
+    this.lineColor = opts.lineColor || '#058dc7'; // the chart's line color when not an empty string
     this.visibleDuration = opts.visibleDuration ? opts.visibleDuration : opts.type === 'rate' ? 0.25 : 1; // number of minutes of data to show (<= base.duration)
-    this.userTitle = null; // user title overrides title()
+    this.userTitle = opts.userTitle; // user title overrides title()
     this.hideLabel = opts.hideLabel;
     this.hideLegend = opts.hideLegend;
+    this.hideGridLines = opts.hideGridLines;
+    this.hideAxes = opts.hideAxes;
+    this.hideTitle = opts.hideTitle;
+    this.zerobased = opts.zerobased ? true : false;
+    this.curveType = opts.curveType;
     // generate a unique id for this chart
     this.id = function () {
       let name = this.name();
@@ -281,13 +286,14 @@ class AreaChart {
     this.stacked = chart.request().aggregate;
     // the id of the html element that is bound to the chart. The svg will be a child of this
     this.htmlId = chartId;
+    this.zeroFill = false;
     this.colorMap = {};
     if (!defer)
       this.generate(width);
   }
 
   // create the svg and bind it to the given div.id
-  generate (width) {
+  generate (width, height) {
     let chart = this.chart;  // for access during chart callbacks
     let self = this;
 
@@ -304,14 +310,18 @@ class AreaChart {
     let c3ChartDefaults = $().c3ChartDefaults();
     let singleAreaChartConfig = c3ChartDefaults.getDefaultSingleAreaConfig();
     singleAreaChartConfig.bindto = '#' + this.htmlId;
-    singleAreaChartConfig.size = {
-      width: width || 400,
-      height: 200
-    };
+
+    if (width || height)
+      singleAreaChartConfig.size = {};
+    if (width)
+      singleAreaChartConfig.size.width = width;
+    if (height)
+      singleAreaChartConfig.size.height = height;
+
     singleAreaChartConfig.data = {
       x: 'x',           // x-axis is named x
       columns: [[]],
-      type: 'area-spline'
+      type: chart.curveType || 'area-spline'
     };
     singleAreaChartConfig.axis = {
       x: {
@@ -336,7 +346,10 @@ class AreaChart {
         }
       }
     };
-
+    if (chart.hideAxes) {
+      singleAreaChartConfig.axis.x.show = false;
+      singleAreaChartConfig.axis.y.show = false;
+    }
     if (!chart.hideLabel) {
       singleAreaChartConfig.axis.x.label = {
         text: chart.name(),
@@ -349,11 +362,14 @@ class AreaChart {
     };
 
     singleAreaChartConfig.area = {
-      zerobased: false
+      zerobased: chart.zerobased
     };
 
     singleAreaChartConfig.tooltip = {
       contents: function (d) {
+        if (d[0].index < 2 && self.zeroFill) {
+          return '';
+        }
         let d3f = ',';
         if (chart.type === 'rate')
           d3f = ',.2f';
@@ -377,23 +393,29 @@ class AreaChart {
       }
     };
 
-    singleAreaChartConfig.title = {
-      text: this.QDRService.utilities.humanify(this.chart.attr())
-    };
+    if (!chart.hideTitle) {
+      singleAreaChartConfig.title = {
+        text: this.QDRService.utilities.humanify(this.chart.attr())
+      };
+    }
 
     singleAreaChartConfig.data.color = (color, d) => {
       let c = this.colorMap[d.id];
       return c ? c : color;
     };
     singleAreaChartConfig.color.pattern[0] = this.chart.areaColor;
-
-    //singleAreaChartConfig.data.colors = {};
-    //nameList.forEach( (name, i) => singleAreaChartConfig.data.colors[name] = this.colorMap[name] );
     singleAreaChartConfig.data.colors = this.colormap;
 
     if (!chart.hideLegend) {
       singleAreaChartConfig.legend = {
         show: true,
+      };
+    }
+    if (chart.hideGridLines) {
+      singleAreaChartConfig.grid = 
+      {
+        x: { show: false },
+        y: { show: false }
       };
     }
 
@@ -433,6 +455,7 @@ class AreaChart {
       // for non-stacked, there is only one line
       dlines.push([this.aggregate ? 'Total' : this.chart.router()]);
     }
+
     for (let i=0; i<data.length; i++) {
       let d = data[i], elapsed = 1, d1;
       if (d[0] >= visibleDate) {
@@ -453,10 +476,35 @@ class AreaChart {
         }
       }
     }
+
+    // if zeroFill, add an initial point to beginning of data
+    if (this.zeroFill && data[0][0] > visibleDate && !this.stacked) {
+      // get the minimum value
+      let min = 0;
+      if (dlines[0].length) {
+        min = dlines[0][1];
+        for (let i=1; i<dlines[0].length; i++) {
+          min = Math.min(min, dlines[0][i]);
+        }
+      }
+      // insert a point at oldest visible date
+      dlines[0].splice(1, 0, min);
+      dx.splice(1, 0, visibleDate);
+      // insert a point at now
+      dlines[0].splice(1, 0, min);
+      if (data.length) {
+        dx.splice(1, 0, new Date(data[0][0].getTime() - 1));
+      } else {
+        dx.splice(1, 0, now);
+      }
+    }
+
+
     let columns = [dx];
     dlines.forEach( function (line) {
       columns.push(line);
     });
+    this.chart.lastValue = columns[1][columns[1].length-1];
     return columns;
   }
 
@@ -472,11 +520,12 @@ class AreaChart {
 
     // update the chart title
     // since there is no c3 api to get or set the chart title, we change the title directly using d3
-    let rate = '';
-    if (this.chart.type === 'rate')
-      rate = ' per second';
-    d3.select('#'+this.htmlId+' svg text.c3-title').text(this.QDRService.utilities.humanify(this.chart.attr()) + rate);
-
+    if (!this.chart.hideTitle) {
+      let rate = '';
+      if (this.chart.type === 'rate')
+        rate = ' per second';
+      d3.select('#'+this.htmlId+' svg text.c3-title').text(this.QDRService.utilities.humanify(this.chart.attr()) + rate);
+    }
     let d = this.chartData();
     // load the new data
     // using the c3.flow api causes the x-axis labels to jump around

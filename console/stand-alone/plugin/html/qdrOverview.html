@@ -71,6 +71,19 @@ span.fancytree-icon {
     }
 }
 
+div.chartContainer {
+    clear: both;
+    width: 100%;
+}
+
+.line-chart-pf .c3-zoom-rect {
+    opacity: 0 !important;
+}
+
+.trend-header-compact-pf {
+    width: 11em;
+}
+
 </style>
 
 <div id="overview-controller" ng-controller="QDR.OverviewController">
@@ -88,12 +101,24 @@ span.fancytree-icon {
 </div>
 
 <script type="text/ng-template" id="overviewCharts.html">
-    <div ng-controller="QDR.OverviewChartsController" class="clearfix">
-        <div ng-repeat="chart in overviewCharts" class="chartContainer" >
-            <p class="chartLabels">
-            </p><div style="clear:both"></div>
-            <div id="{{chart.chart.id()}}" class="line-chart-pf aChart d3Chart"></div>
-        </div>
+    <div ng-controller="QDR.OverviewChartsController" class="clearfix chartContainer">
+        <pf-card head-title="Router network statistics (for the past minute)" show-top-border="false" style="width: 50%">
+            <div class="trend-card-inline-pf">
+                <div ng-repeat="chart in overviewCharts" class="row trend-row">
+                    <div class="col-sm-1 trend-flat-col">
+                        <div class="trend-compact-details">
+                            <span>
+                                <span class="trend-title-compact-big-pf">{{chart.chart.lastValue | truncate | pretty}}</span> 
+                            </span>
+                            <span class="trend-header-compact-pf">{{chart.chart.userTitle}}</span>
+                        </div>
+                    </div>
+                    <div class="col-sm-11 trend-flat-col">
+                            <div id="{{chart.chart.id()}}" class="line-chart-pf d3Chart"></div>
+                        </div>
+                    </div>
+            </div>
+        </pf-card>
     </div>
     <div ng-controller="QDR.TopAddressesController">
         <h1>Most active addresses</h1>

@@ -18,8 +18,9 @@
 -- The following files get packaged into a single vendor.min.css
 
 node_modules/jquery-ui-dist/jquery-ui.css
+node_modules/c3/c3.css
+node_modules/angular-patternfly/dist/styles/angular-patternfly.min.css
 node_modules/patternfly/dist/css/patternfly.min.css
 node_modules/patternfly/dist/css/patternfly-additions.min.css
 node_modules/jquery.fancytree/dist/skin-bootstrap-n/ui.fancytree.css
-node_modules/c3/c3.css
 node_modules/angular-ui-grid/ui-grid.css

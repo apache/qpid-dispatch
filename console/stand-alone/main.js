@@ -51,7 +51,7 @@ import { posint } from './plugin/js/posintDirective.js';
    */
   QDR.module = angular.module('QDR', ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap',
     'ui.grid', 'ui.grid.selection', 'ui.grid.autoResize', 'ui.grid.resizeColumns', 'ui.grid.saveState',
-    'ui.slider', 'ui.checkbox']);
+    'ui.slider', 'ui.checkbox', 'patternfly.charts', 'patternfly.card']);
 
   // set up the routing for this plugin
   QDR.module.config(function($routeProvider) {
@@ -132,6 +132,13 @@ import { posint } from './plugin/js/posintDirective.js';
     };
   });
 
+  QDR.module.filter('truncate', function () {
+    return function (str) {
+      if (!isNaN(parseFloat(str)) && isFinite(str))
+        return Math.round(str);
+      return str;
+    };
+  });
   // one-time initialization happens in the run function
   // of our module
   QDR.module.run( ['$rootScope', '$route', '$timeout', '$location', '$log', 'QDRService', 'QDRChartService',  function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {

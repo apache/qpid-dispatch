@@ -40,4 +40,8 @@ node_modules/d3-path/build/d3-path.min.js
 node_modules/c3/c3.min.js
 node_modules/notifyjs-browser/dist/notify.js
 node_modules/patternfly/dist/js/patternfly.min.js
+node_modules/patternfly/dist/js/patternfly-settings.min.js
+node_modules/patternfly/dist/js/patternfly-settings-colors.js
+node_modules/patternfly/dist/js/patternfly-settings-charts.js
+node_modules/angular-patternfly/dist/angular-patternfly.js
 node_modules/rhea/dist/rhea.js
