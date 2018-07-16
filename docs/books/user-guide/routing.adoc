@@ -102,17 +102,6 @@ Link routing supports local transactions to a single broker. Distributed transac
 +
 With a link route, consumers can provide server-side selectors for broker subscriptions.
 
-[id='considerations-for-broker-connection-failure-handling']
-=== Considerations for Broker Connection Failure Handling
-
-The message routing and link routing mechanisms both enable you to transfer messages to brokers. However, they differ in how they behave if the connection to the broker is lost. If you require the ability for the connection to be reestablished automatically, you should use message routing (with autolinks).
-
-With link routing::
-The client appears to be directly connected to the broker even though it is actually connected to a router, which is link routed to the broker. If the broker goes offline, the router sees the connection failure and closes all of the routed links that were attached to the broker. The client's connection to the router, however, remains open. Therefore, the client does not see the connection failure between the broker and the router and does not attempt to reestablish it.
-
-With message routing using autolinks::
-The client is connected to a router, and the router is connected to the broker. Therefore, if the broker goes offline, the router will see the connection failure and attempt to reestablish the connection when the broker comes back online.
-
 == Configuring Message Routing 
 
 With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message's _address_ and _routing pattern_.
@@ -335,6 +324,11 @@ include::routing.adoc[tags=pattern-matching]
 After you add waypoint addresses to identify the broker queue, you must connect a router to the broker using autolinks.
 
 With autolinks, client traffic is handled on the router, not the broker. Clients attach their links to the router, and then the router uses internal autolinks to connect to the queue on the broker. Therefore, the queue will always have a single producer and a single consumer regardless of how many clients are attached to the router.
+
+[NOTE]
+====
+If the connection to the broker fails, {RouterName} automatically attempts to reestablish the connection and reroute message deliveries to any available alternate destinations. However, some deliveries could be returned to the sender with a `RELEASED` or `MODIFIED` disposition. Therefore, you should ensure that your clients can handle these deliveries appropriately (generally by resending them).
+====
 
 . If this router is different than the router that is connected to the clients, then add the waypoint address.
 
@@ -564,7 +558,9 @@ With link routing, client traffic is handled on the broker, not the router. Clie
 
 [NOTE]
 ====
-Even though the client has a direct link to the broker, it will not be able to see a connection failure if the broker goes offline and will not attempt to reestablish the connection when the broker comes back online. If you want the connection to be reestablished automatically in this type of scenario, then you should use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker[Routing Messages through a Broker Queue] and xref:considerations-for-broker-connection-failure-handling[Considerations for Broker Connection Failure Handling].
+If the connection to the broker fails, the routed links are detached, and the router will attempt to reconnect to the broker (or its backup). Once the connection is reestablished, the link route to the broker will become reachable again.
+
+From the client's perspective, the client will see the detached links (that is, the senders or receivers), but not the failed connection. Therefore, if you want the client to reattach dropped links in the event of a broker connection failure, you must configure this functionality on the client. Alternatively, you can use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker[Routing Messages through a Broker Queue]
 ====
 
 .Procedure
