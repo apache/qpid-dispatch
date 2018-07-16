@@ -487,7 +487,7 @@ This limit is always enforced, even if no other policy settings have been define
 
 === Setting Connection and Resource Limits for Messaging Endpoints
 
-You can define the connection limit and AMQP resource limits for a messaging endpoint by configuring a _vhost policy_. Vhost policies define what clients can access on a messaging endpoint over a particular connection. 
+You can define the connection limit and AMQP resource limits for a messaging endpoint by configuring a _vhost policy_. Vhost policies define what resources clients are permitted to access on a messaging endpoint over a particular connection. 
 
 [NOTE]
 ====
@@ -742,7 +742,7 @@ You can only specify the `${user}` token once in an AMQP address name or pattern
  
 .Receive from a User-Specific Address
 ====
-This definition allows the users in the user group to receive messages any address that meets any of the following rules:
+This definition allows the users in the user group to receive messages from any address that meets any of the following rules:
 
 * Starts with the prefix `tmp_` and ends with the user name
 * Starts with the prefix `temp` followed by any additional characters
@@ -755,7 +755,7 @@ sources: tmp_${user}, temp*, ${user}-home-*
 
 .User-Specific Address Patterns
 ====
-This definition allows the users in the user group to receive messages any address that meets any of the following rules:
+This definition allows the users in the user group to receive messages from any address that meets any of the following rules:
 
 * Starts with the prefix `tmp` and ends with the user name
 * Starts with the prefix `temp` followed by zero or more additional characters
