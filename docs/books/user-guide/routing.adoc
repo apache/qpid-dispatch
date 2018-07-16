@@ -560,7 +560,7 @@ With link routing, client traffic is handled on the broker, not the router. Clie
 ====
 If the connection to the broker fails, the routed links are detached, and the router will attempt to reconnect to the broker (or its backup). Once the connection is reestablished, the link route to the broker will become reachable again.
 
-From the client's perspective, the client will see the detached links (that is, the senders or receivers), but not the failed connection. Therefore, if you want the client to reattach dropped links in the event of a broker connection failure, you must configure this functionality on the client. Alternatively, you can use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker[Routing Messages through a Broker Queue]
+From the client's perspective, the client will see the detached links (that is, the senders or receivers), but not the failed connection. Therefore, if you want the client to reattach dropped links in the event of a broker connection failure, you must configure this functionality on the client. Alternatively, you can use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker[Routing Messages through a Broker Queue].
 ====
 
 .Procedure
