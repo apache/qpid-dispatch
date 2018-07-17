@@ -59,9 +59,9 @@ The router configuration file supports pattern matching and wildcards to enable 
 [id='router-address-pattern-matching']
 === Pattern Matching for Addresses
 
-In some router configuration scenarios, you may need to use pattern matching to match a range of addresses rather than a single, literal address. Address patterns match any address that corresponds to the pattern.
+In some router configuration scenarios, you might need to use pattern matching to match a range of addresses rather than a single, literal address. Address patterns match any address that corresponds to the pattern.
 
-An address pattern is a sequence of tokens (typically words) that are delimited by either `.` or `/` characters. They also may contain special wildcard characters that represent words:
+An address pattern is a sequence of tokens (typically words) that are delimited by either `.` or `/` characters. They also can contain special wildcard characters that represent words:
 
 * `*` represents exactly one word
 * `#` represents zero or more words

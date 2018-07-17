@@ -643,7 +643,7 @@ As an alternative to using the router configuration file, you can configure vhos
 
 .Procedure
 
-. In the router configuration file, specify the directory where the vhost policy definition JSON files should be located.
+. In the router configuration file, specify the directory where you want to store the vhost policy definition JSON files.
 +
 --
 [options="nowrap",subs="+quotes"]
