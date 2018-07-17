@@ -100,7 +100,14 @@ class RouterTestSslClient(RouterTestSslBase):
         cls.routers = []
 
         if not SASL.extended():
-            return
+            router = ('router', {'id': 'QDR.A',
+                                 'mode': 'interior',
+                                 'saslConfigName': 'tests-mech-PLAIN',
+                                 'saslConfigDir': os.getcwd()})
+        else:
+            router = ('router', {'id': 'QDR.A',
+                                 'mode': 'interior'})
+
 
         # Generate authentication DB
         super(RouterTestSslClient, cls).create_sasl_files()
@@ -116,11 +123,8 @@ class RouterTestSslClient(RouterTestSslBase):
         cls.PORT_TLS_SASL = cls.tester.get_port()
         cls.PORT_SSL3 = cls.tester.get_port()
 
-        config = Qdrouterd.Config([
-            ('router', {'id': 'QDR.A',
-                        'mode': 'interior',
-                        'saslConfigName': 'tests-mech-PLAIN',
-                        'saslConfigDir': os.getcwd()}),
+        conf = [
+            router,
             # TLSv1 only
             ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS1,
                           'authenticatePeer': 'no',
@@ -229,7 +233,9 @@ class RouterTestSslClient(RouterTestSslBase):
                                        'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'protocols': 'SSLv23',
                             'password': 'server-password'})
-        ])
+        ]
+
+        config = Qdrouterd.Config(conf)
 
         cls.routers.append(cls.tester.qdrouterd("A", config, wait=False))
         cls.routers[0].wait_ports()
@@ -371,6 +377,9 @@ class RouterTestSslClient(RouterTestSslBase):
         and forcing the TLS protocol version, which should be accepted by the listener.
         :return:
         """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
         self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1"))
         self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.2"))
 
@@ -380,6 +389,9 @@ class RouterTestSslClient(RouterTestSslBase):
         and forcing the TLS protocol version, which should be rejected by the listener.
         :return:
         """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
         self.assertFalse(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.1"))
 
 
@@ -568,6 +580,9 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         Retrieves connected router nodes.
         :return:
         """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
         url = Url("amqp://0.0.0.0:%d/$management" % self.PORT_NO_SSL)
         node = Node.connect(url)
         response = node.query(type="org.apache.qpid.dispatch.router.node", attribute_names=["id"])
@@ -581,6 +596,9 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         """
         Validates if all expected routers are connected in the network
         """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
         router_nodes = self.get_router_nodes()
         self.assertTrue(router_nodes)
         for node in router_nodes:
