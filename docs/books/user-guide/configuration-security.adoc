@@ -592,13 +592,13 @@ vhost {
             remoteHosts: 127.0.0.1, ::1
             sources: *
             targets: *
-        },
+        }
         developers: {
             users: dev1, dev2, dev3
             remoteHosts: *
             sources: myqueue1, myqueue2
             targets: myqueue1, myqueue2
-        }, 
+        } 
         $default: {
             remoteHosts: *
             allowDynamicSource: true,
@@ -815,15 +815,15 @@ In this example, a vhost policy defines resource limits for clients connecting t
 
 <5> Users in the `admin` user group must connect from localhost. If the admin user attempts to connect from any other host, the connection will be denied.
 
-<6> Users in the admin user group can send to any address offered by the vhost.
+<6> Users in the admin user group can receive from any address offered by the vhost.
 
-<7> Users in the admin user group can receive from any address offered by the vhost.
+<7> Users in the admin user group can send to any address offered by the vhost.
 
 <8> Any non-admin user is permitted to connect from any host.
 
 <9> Non-admin users are permitted to receive messages from any addresses that start with the `news`, `sports`, or `chat` prefixes.
 
-<10> Non-admin users are permitted to send messages to any address that start with the `chat` prefix.
+<10> Non-admin users are permitted to send messages to any addresses that start with the `chat` prefix.
 ====
 
 .Limiting Memory Consumption
