@@ -269,11 +269,11 @@ span.legend-text {
       </div>
       <div uib-accordion-group class="panel-default" is-open="legend.status.addressesOpen" ng-hide="arcColorsEmpty()" heading="Addresses">
           <ul class="addresses">
-              <li ng-repeat="(address, color) in addresses" class="legend-line">
+              <li ng-repeat="(address, color) in addresses" class="legend-line" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()">
                 <checkbox style="background-color: {{chordColors[address]}};"
                   title="{{address}}" ng-change="addressFilterChanged()"
                   ng-model="addresses[address]"></checkbox>
-                <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                <span class="legend-text" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
               </li>
           </ul>
       </div>
