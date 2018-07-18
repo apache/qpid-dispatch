@@ -460,8 +460,8 @@ bool qd_policy_open_lookup_user(
     if (name_buf[0]) {
         qd_log(policy->log_source,
            QD_LOG_TRACE,
-           "ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
-           username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
+           "[%"PRIu64"]: ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
+           conn_id, username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
     } else {
         // Denials are logged in python code
     }
@@ -515,13 +515,13 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     if (result) {
         qd_log(policy->log_source,
            QD_LOG_TRACE,
-           "ALLOW AMQP Begin Session. user: %s, rhost: %s, vhost: %s",
-           qd_conn->user_id, hostip, vhost);
+           "[%"PRIu64"]: ALLOW AMQP Begin Session. user: %s, rhost: %s, vhost: %s",
+           qd_conn->connection_id, qd_conn->user_id, hostip, vhost);
     } else {
         qd_log(policy->log_source,
            QD_LOG_INFO,
-           "DENY AMQP Begin Session due to session limit. user: %s, rhost: %s, vhost: %s",
-           qd_conn->user_id, hostip, vhost);
+           "[%"PRIu64"]: DENY AMQP Begin Session due to session limit. user: %s, rhost: %s, vhost: %s",
+           qd_conn->connection_id, qd_conn->user_id, hostip, vhost);
     }
     return result;
 }
@@ -867,8 +867,8 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
             // Max sender limit specified and violated.
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
-                "DENY AMQP Attach sender for user '%s', rhost '%s', vhost '%s' based on maxSenders limit",
-                qd_conn->user_id, hostip, vhost);
+                "[%"PRIu64"]: DENY AMQP Attach sender for user '%s', rhost '%s', vhost '%s' based on maxSenders limit",
+                qd_conn->connection_id, qd_conn->user_id, hostip, vhost);
             _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
             return false;
         } else {
@@ -885,8 +885,8 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, target, false);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
-            "%s AMQP Attach sender link '%s' for user '%s', rhost '%s', vhost '%s' based on link target name",
-            (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
+            "[%"PRIu64"]: %s AMQP Attach sender link '%s' for user '%s', rhost '%s', vhost '%s' based on link target name",
+            qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
 
         if (!lookup) {
             _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
@@ -897,8 +897,8 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
         // This happens all the time with anonymous relay
         lookup = qd_conn->policy_settings->allowAnonymousSender;
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
-            "%s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
-            (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
+            "[%"PRIu64"]: %s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
+            qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         if (!lookup) {
             _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
             return false;
@@ -918,8 +918,8 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
             // Max sender limit specified and violated.
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
-                "DENY AMQP Attach receiver for user '%s', rhost '%s', vhost '%s' based on maxReceivers limit",
-                qd_conn->user_id, hostip, vhost);
+                "[%"PRIu64"]: DENY AMQP Attach receiver for user '%s', rhost '%s', vhost '%s' based on maxReceivers limit",
+                qd_conn->connection_id, qd_conn->user_id, hostip, vhost);
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
             return false;
         } else {
@@ -933,8 +933,8 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     if (dynamic_src) {
         bool lookup = qd_conn->policy_settings->allowDynamicSource;
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
-            "%s AMQP Attach receiver dynamic source for user '%s', rhost '%s', vhost '%s',",
-            (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
+            "[%"PRIu64"]: %s AMQP Attach receiver dynamic source for user '%s', rhost '%s', vhost '%s',",
+            qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
         // Dynamic source policy rendered the decision
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
@@ -947,8 +947,8 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
         bool lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, source, true);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
-            "%s AMQP Attach receiver link '%s' for user '%s', rhost '%s', vhost '%s' based on link source name",
-            (lookup ? "ALLOW" : "DENY"), source, qd_conn->user_id, hostip, vhost);
+            "[%"PRIu64"]: %s AMQP Attach receiver link '%s' for user '%s', rhost '%s', vhost '%s' based on link source name",
+            qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), source, qd_conn->user_id, hostip, vhost);
 
         if (!lookup) {
             _qd_policy_deny_amqp_receiver_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);

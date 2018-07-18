@@ -544,8 +544,8 @@ static void on_accept(pn_event_t *e)
     }
     ctx->listener = listener;
     qd_log(listener->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"] Accepting incoming connection from %s to %s",
-           ctx->connection_id, qd_connection_name(ctx), ctx->listener->config.host_port);
+           "[%"PRIu64"]: Accepting incoming connection to '%s'",
+           ctx->connection_id, ctx->listener->config.host_port);
     /* Asynchronous accept, configure the transport on PN_CONNECTION_BOUND */
     pn_listener_accept(pn_listener, ctx->pn_conn);
  }
@@ -652,8 +652,8 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
         sys_mutex_unlock(ctx->server->lock);
 
-        qd_log(ctx->server->log_source, QD_LOG_INFO, "Accepted connection to %s from %s",
-               name, ctx->rhost_port);
+        qd_log(ctx->server->log_source, QD_LOG_INFO, "[%"PRIu64"]: Accepted connection to %s from %s",
+               ctx->connection_id, name, ctx->rhost_port);
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
         setup_ssl_sasl_and_open(ctx);
@@ -924,15 +924,15 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
                 qd_increment_conn_index(ctx);
                 const qd_server_config_t *config = &ctx->connector->config;
                 if (condition  && pn_condition_is_set(condition)) {
-                    qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed: %s %s", config->host_port,
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "[%"PRIu64"]: Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
                            pn_condition_get_name(condition), pn_condition_get_description(condition));
                 } else {
-                    qd_log(qd_server->log_source, QD_LOG_INFO, "Connection to %s failed", config->host_port);
+                    qd_log(qd_server->log_source, QD_LOG_INFO, "[%"PRIu64"]: Connection to %s failed", ctx->connection_id, config->host_port);
                 }
             } else if (ctx && ctx->listener) { /* Incoming connection */
                 if (condition && pn_condition_is_set(condition)) {
-                    qd_log(ctx->server->log_source, QD_LOG_INFO, "Connection from %s (to %s) failed: %s %s",
-                           ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
+                    qd_log(ctx->server->log_source, QD_LOG_INFO, "[%"PRIu64"]: Connection from %s (to %s) failed: %s %s",
+                           ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
                            pn_condition_get_description(condition));
                 }
             }
