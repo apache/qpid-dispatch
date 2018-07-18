@@ -295,6 +295,10 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     qd_router_t    *router       = (qd_router_t*) context;
     pn_link_t      *pn_link      = qd_link_pn(link);
     assert(pn_link);
+
+    if (!pn_link)
+        return;
+
     pn_delivery_t  *pnd          = pn_link_current(pn_link);
     if (!pnd)
         return;

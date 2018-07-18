@@ -88,6 +88,8 @@ struct qd_container_t {
     qd_link_list_t        links;
 };
 
+ALLOC_DEFINE(qd_pn_free_link_session_t);
+
 static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 {
     qd_node_t *node = container->default_node;
@@ -332,6 +334,90 @@ static void writable_handler(qd_container_t *container, pn_connection_t *conn, q
 }
 
 
+/**
+ * Returns true if the free_link already exists in free_link_list, false otherwise
+ */
+static bool link_exists(qd_pn_free_link_session_list_t  **free_list, pn_link_t *free_link)
+{
+    qd_pn_free_link_session_t *free_item = DEQ_HEAD(**free_list);
+    while(free_item) {
+        if (free_item->pn_link == free_link)
+            return true;
+        free_item = DEQ_NEXT(free_item);
+    }
+    return false;
+}
+
+/**
+ * Returns true if the free_session already exists in free_session_list, false otherwise
+*/
+static bool session_exists(qd_pn_free_link_session_list_t  **free_list, pn_session_t *free_session)
+{
+    qd_pn_free_link_session_t *free_item = DEQ_HEAD(**free_list);
+    while(free_item) {
+        if (free_item->pn_session == free_session)
+            return true;
+        free_item = DEQ_NEXT(free_item);
+    }
+    return false;
+}
+
+static void add_session_to_free_list(qd_pn_free_link_session_list_t  *free_link_session_list, pn_session_t *ssn)
+{
+    if (!session_exists(&free_link_session_list, ssn)) {
+        qd_pn_free_link_session_t *to_free = new_qd_pn_free_link_session_t();
+        DEQ_ITEM_INIT(to_free);
+        to_free->pn_session = ssn;
+        to_free->pn_link = 0;
+        DEQ_INSERT_TAIL(*free_link_session_list, to_free);
+    }
+}
+
+static void add_link_to_free_list(qd_pn_free_link_session_list_t  *free_link_session_list, pn_link_t *pn_link)
+{
+    if (!link_exists(&free_link_session_list, pn_link)) {
+        qd_pn_free_link_session_t *to_free = new_qd_pn_free_link_session_t();
+        DEQ_ITEM_INIT(to_free);
+        to_free->pn_link = pn_link;
+        to_free->pn_session = 0;
+        DEQ_INSERT_TAIL(*free_link_session_list, to_free);
+    }
+
+}
+
+
+/*
+ * The need for these lists may indicate a router bug, where the router is
+ * using links/sessions after they are freed. Investigate and simplify if
+ * possible.
+*/
+void qd_conn_event_batch_complete(qd_connection_t *qd_conn)
+{
+    qd_pn_free_link_session_t *to_free_link = DEQ_HEAD(qd_conn->free_link_session_list);
+    qd_pn_free_link_session_t *to_free_session = DEQ_HEAD(qd_conn->free_link_session_list);
+
+    while(to_free_link) {
+        if (to_free_link->pn_link) {
+            pn_link_free(to_free_link->pn_link);
+            to_free_link->pn_link = 0;
+        }
+        to_free_link = DEQ_NEXT(to_free_link);
+    }
+
+    while(to_free_session) {
+        if (to_free_session->pn_session) {
+            pn_session_free(to_free_session->pn_session);
+            to_free_session->pn_session = 0;
+        }
+        DEQ_REMOVE_HEAD(qd_conn->free_link_session_list);
+        free_qd_pn_free_link_session_t(to_free_session);
+        to_free_session = DEQ_HEAD(qd_conn->free_link_session_list);
+    }
+}
+
+
+
+
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
 {
     pn_connection_t *conn = pn_event_connection(event);
@@ -406,7 +492,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
         }
 
         if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-            pn_session_free(ssn);
+            add_session_to_free_list(&qd_conn->free_link_session_list,ssn);
         }
         break;
 
@@ -458,7 +544,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
                 pn_session_close(ssn);
             }
             else if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-                pn_session_free(ssn);
+                add_session_to_free_list(&qd_conn->free_link_session_list,ssn);
             }
         }
         break;
@@ -517,8 +603,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
                 }
 
                 if (pn_link_state(pn_link) & PN_LOCAL_CLOSED) {
-                    pn_link_set_context(pn_link, NULL);
-                    pn_link_free(pn_link);
+                    add_link_to_free_list(&qd_conn->free_link_session_list, pn_link);
                 }
                 if (node) {
                     node->ntype->link_detach_handler(node->context, qd_link, dt);
@@ -531,8 +616,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event)
     case PN_LINK_LOCAL_CLOSE:
         pn_link = pn_event_link(event);
         if (pn_link_state(pn_link) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-            pn_link_set_context(pn_link, NULL);
-            pn_link_free(pn_link);
+            add_link_to_free_list(&qd_conn->free_link_session_list, pn_link);
         }
         break;
 

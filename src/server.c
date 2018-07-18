@@ -522,6 +522,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     pn_connection_set_context(ctx->pn_conn, ctx);
     DEQ_ITEM_INIT(ctx);
     DEQ_INIT(ctx->deferred_calls);
+    DEQ_INIT(ctx->free_link_session_list);
     sys_mutex_lock(server->lock);
     ctx->connection_id = server->next_connection_id++;
     DEQ_INSERT_TAIL(server->conn_list, ctx);
@@ -693,6 +694,7 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 }
 
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event);
+void qd_conn_event_batch_complete(qd_connection_t *qd_conn);
 
 static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
@@ -961,9 +963,29 @@ static void *thread_run(void *arg)
     while (running) {
         pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
         pn_event_t * e;
+        qd_connection_t *qd_conn = 0;
+        pn_connection_t *pn_conn = 0;
         while (running && (e = pn_event_batch_next(events))) {
+
+            pn_connection_t *conn = pn_event_connection(e);
+
+            if (!pn_conn)
+                pn_conn = conn;
+            else
+                assert(pn_conn == conn);
+
+            if (!qd_conn)
+                qd_conn = pn_connection_get_context(conn);
+
             running = handle(qd_server, e);
         }
+
+        // Frees all sessions and links that are waiting to be freed. This needs to be done
+        // before the call to pn_proactor_done.
+        if (qd_conn)
+            qd_conn_event_batch_complete(qd_conn);
+
+
         pn_proactor_done(qd_server->proactor, events);
     }
     return NULL;
