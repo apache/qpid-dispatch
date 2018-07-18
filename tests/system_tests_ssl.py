@@ -99,7 +99,7 @@ class RouterTestSslClient(RouterTestSslBase):
 
         cls.routers = []
 
-        if not SASL.extended():
+        if SASL.extended():
             router = ('router', {'id': 'QDR.A',
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
