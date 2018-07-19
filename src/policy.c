@@ -32,6 +32,7 @@
 #include <proton/transport.h>
 #include <proton/error.h>
 #include <proton/event.h>
+#include <inttypes.h>
 #include "python_private.h"
 
 
