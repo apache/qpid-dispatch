@@ -538,11 +538,6 @@ class DeleteSpuriousConnector ( MessagingHandler ):
             self.D_management_helper = ManagementMessageHelper ( event.receiver.remote_source.address )
 
 
-    def on_released ( self, event ) :
-        # The test fails.
-        self.bail ( "a message was released" )
-
-
     def run(self):
         Container(self).run()
 
