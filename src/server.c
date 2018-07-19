@@ -522,6 +522,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     pn_connection_set_context(ctx->pn_conn, ctx);
     DEQ_ITEM_INIT(ctx);
     DEQ_INIT(ctx->deferred_calls);
+    DEQ_INIT(ctx->free_link_session_list);
     sys_mutex_lock(server->lock);
     ctx->connection_id = server->next_connection_id++;
     DEQ_INSERT_TAIL(server->conn_list, ctx);
@@ -692,7 +693,8 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
     sys_mutex_unlock(conn->deferred_call_lock);
 }
 
-void qd_container_handle_event(qd_container_t *container, pn_event_t *event);
+void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
+void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn);
 
 static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
@@ -856,13 +858,12 @@ static void qd_increment_conn_index(qd_connection_t *ctx)
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
-static bool handle(qd_server_t *qd_server, pn_event_t *e) {
-    pn_connection_t *pn_conn = pn_event_connection(e);
+static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx)
+{
     if (pn_conn && qdr_is_authentication_service_connection(pn_conn)) {
         qdr_handle_authentication_service_connection_event(e);
         return true;
     }
-    qd_connection_t *ctx = pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
 
     switch (pn_event_type(e)) {
 
@@ -943,8 +944,8 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e) {
         break;
     } // Switch event type
 
-    /* TODO aconway 2017-04-18: fold the container handler into the server */
-    qd_container_handle_event(qd_server->container, e);
+    if (ctx)
+        qd_container_handle_event(qd_server->container, e, pn_conn, ctx);
 
     /* Free the connection after all other processing is complete */
     if (ctx && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
@@ -961,9 +962,29 @@ static void *thread_run(void *arg)
     while (running) {
         pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
         pn_event_t * e;
+        qd_connection_t *qd_conn = 0;
+        pn_connection_t *pn_conn = 0;
+
         while (running && (e = pn_event_batch_next(events))) {
-            running = handle(qd_server, e);
+            pn_connection_t *conn = pn_event_connection(e);
+
+            if (!pn_conn)
+                pn_conn = conn;
+            assert(pn_conn == conn);
+
+            if (!qd_conn)
+                qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
+
+            running = handle(qd_server, e, conn, qd_conn);
         }
+
+        //
+        // Notify the container that the batch is complete so it can do after-batch
+        // processing.
+        //
+        if (qd_conn)
+            qd_conn_event_batch_complete(qd_server->container, qd_conn);
+
         pn_proactor_done(qd_server->proactor, events);
     }
     return NULL;
@@ -1200,7 +1221,7 @@ void qd_server_free(qd_server_t *qd_server)
 
 void qd_server_set_container(qd_dispatch_t *qd, qd_container_t *container)
 {
-    qd->server->container              = container;
+    qd->server->container = container;
 }
 
 
@@ -1473,7 +1494,9 @@ const char* qd_connection_remote_ip(const qd_connection_t *c) {
 
 /* Expose event handling for HTTP connections */
 void qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
-    handle(c->server, e);
+    pn_connection_t *pn_conn = pn_event_connection(e);
+    qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
+    handle(c->server, e, pn_conn, qd_conn);
 }
 
 bool qd_connection_strip_annotations_in(const qd_connection_t *c) {

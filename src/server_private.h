@@ -133,34 +133,35 @@ DEQ_DECLARE(qd_connector_t, qd_connector_list_t);
  */
 struct qd_connection_t {
     DEQ_LINKS(qd_connection_t);
-    char                     *name;
-    qd_server_t              *server;
-    bool                      opened; // An open callback was invoked for this connection
-    bool                      closed;
-    int                       enqueued;
-    qd_timer_t               *timer;   // Timer for initial-setup
-    pn_connection_t          *pn_conn;
-    pn_session_t             *pn_sess;
-    pn_ssl_t                 *ssl;
-    qd_listener_t            *listener;
-    qd_connector_t           *connector;
-    void                     *context; // context from listener or connector
-    void                     *user_context;
-    void                     *link_context; // Context shared by this connection's links
-    uint64_t                  connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
-    const char               *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
-    bool                      free_user_id;
-    qd_policy_settings_t     *policy_settings;
-    int                       n_sessions;
-    int                       n_senders;
-    int                       n_receivers;
-    void                     *open_container;
-    qd_deferred_call_list_t   deferred_calls;
-    sys_mutex_t              *deferred_call_lock;
-    bool                      policy_counted;
-    char                     *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
-    bool                      strip_annotations_in;
-    bool                      strip_annotations_out;
+    char                            *name;
+    qd_server_t                     *server;
+    bool                            opened; // An open callback was invoked for this connection
+    bool                            closed;
+    int                             enqueued;
+    qd_timer_t                      *timer;   // Timer for initial-setup
+    pn_connection_t                 *pn_conn;
+    pn_session_t                    *pn_sess;
+    pn_ssl_t                        *ssl;
+    qd_listener_t                   *listener;
+    qd_connector_t                  *connector;
+    void                            *context; // context from listener or connector
+    void                            *user_context;
+    void                            *link_context; // Context shared by this connection's links
+    uint64_t                        connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
+    const char                      *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
+    bool                            free_user_id;
+    qd_policy_settings_t            *policy_settings;
+    int                             n_sessions;
+    int                             n_senders;
+    int                             n_receivers;
+    void                            *open_container;
+    qd_deferred_call_list_t         deferred_calls;
+    sys_mutex_t                     *deferred_call_lock;
+    bool                            policy_counted;
+    char                            *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
+    qd_pn_free_link_session_list_t  free_link_session_list;
+    bool                            strip_annotations_in;
+    bool                            strip_annotations_out;
     void (*wake)(qd_connection_t*); /* Wake method, different for HTTP vs. proactor */
     char rhost[NI_MAXHOST];     /* Remote host numeric IP for incoming connections */
     char rhost_port[NI_MAXHOST+NI_MAXSERV]; /* Remote host:port for incoming connections */
@@ -172,5 +173,6 @@ ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
+ALLOC_DECLARE(qd_pn_free_link_session_t);
 
 #endif
