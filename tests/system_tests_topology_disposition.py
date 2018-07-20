@@ -180,25 +180,25 @@ class TopologyDispositionTests ( TestCase ):
         #  Tail of arrow indicates initiator of connection.
         #  (The diagonal connections do not look very much like arrows, I fear...)
         #
-        #                1
+        #                2
         #         D ----------> A
         #         | \         > ^
         #         | 20\   50/   |
         #         |     \ /     |
-        #      1  |     / \     | 100
+        #      3  |     / \     | 100
         #         |   /     \   |
         #         v /         > |
         #         C ----------> B
-        #                1
+        #                4
         #
 
         cls.cost = dict()
         cls.cost [ 'AB' ] = 100
         cls.cost [ 'AC' ] =  50
-        cls.cost [ 'AD' ] =   1
-        cls.cost [ 'BC' ] =   1
+        cls.cost [ 'AD' ] =   2
+        cls.cost [ 'BC' ] =   4
         cls.cost [ 'BD' ] =  20
-        cls.cost [ 'CD' ] =   1
+        cls.cost [ 'CD' ] =   3
 
         # Add an extra, high-cost connection between A and D.
         # This will be deleted in the first test. Note that
