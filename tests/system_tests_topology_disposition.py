@@ -530,7 +530,7 @@ class DeleteSpuriousConnector ( MessagingHandler ):
             Stopwatch ( name = stopwatch_name, \
                         timer = event.reactor.schedule(init_time, Timeout(self, stopwatch_name)), \
                         initial_time = init_time, \
-                        repeat_time = 0.5 \
+                        repeat_time = 0.1 \
                       )
 
         self.sender_connection   = event.container.connect ( self.client_addrs['A'] )
@@ -748,7 +748,7 @@ class TopologyDisposition ( MessagingHandler ):
         self.client_addrs         = client_addrs
         self.timeout_count        = 0
         self.confirmed_kills      = 0
-        self.send_interval        = 0.5
+        self.send_interval        = 0.1
         self.to_be_sent           = 700
         self.deadline             = 100
         self.message_status       = dict()
