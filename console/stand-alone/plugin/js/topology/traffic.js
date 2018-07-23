@@ -222,6 +222,9 @@ class Dots extends TrafficAnimation {
     }.bind(this));
     // colors
     this.colorGen = d3.scale.category10();
+    for (let i=0; i<10; i++) {
+      this.colorGen(i);
+    }
     let self = this;
     // event notification that an address checkbox has changed
     traffic.$scope.addressFilterChanged = function () {
