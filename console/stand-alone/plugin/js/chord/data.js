@@ -20,7 +20,7 @@ under the License.
 /* global angular Promise */
 import { MIN_CHORD_THRESHOLD } from './matrix.js';
 
-const SAMPLES = 3;  // number of snapshots to use for rate calculations
+const SAMPLES = 3; // number of snapshots to use for rate calculations
 
 class ChordData { // eslint-disable-line no-unused-vars
   constructor(QDRService, isRate, converter) {
@@ -91,7 +91,7 @@ class ChordData { // eslint-disable-line no-unused-vars
           reject(Error('unable to fetch entities'));
           return;
         }
-        // the raw data received from the rouers
+        // the raw data received from the routers
         let values = [];
         // for each router in the network
         for (let nodeId in results) {
@@ -169,23 +169,21 @@ let calcRate = function (values, last_values, snapshots) {
   snapshots.push(angular.copy(last_values));
 
   let oldest = snapshots[0];
+  let newest = snapshots[snapshots.length-1];
   let rateValues = [];
-  let elapsed = (now - oldest.timestamp) / 1000;
+  let elapsed = (newest.timestamp - oldest.timestamp) / 1000;
+  let getValueFor = function (snap, value) {
+    for (let i=0; i<snap.values.length; i++) {
+      if (snap.values[i].ingress === value.ingress &&
+        snap.values[i].egress === value.egress &&
+        snap.values[i].address === value.address)
+        return snap.values[i].messages;
+    }
+  };
   values.forEach( function (value) {
-
-    let rate = 0;
-    let total = 0;
-    snapshots.forEach ( function (snap) {
-      let last_index = snap.values.findIndex( function (lv) {
-        return lv.ingress === value.ingress &&
-              lv.egress === value.egress &&
-              lv.address === value.address; 
-      });
-      if (last_index >= 0) {
-        total += snap.values[last_index].messages;
-      }
-    });
-    rate = (value.messages - (total / snapshots.length)) / elapsed;
+    let first = getValueFor(oldest, value);
+    let last = getValueFor(newest, value);
+    let rate = (last - first) / elapsed;
 
     rateValues.push({ingress: value.ingress, 
       egress: value.egress, 
