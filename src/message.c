@@ -1128,13 +1128,15 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         return discard_receive(delivery, link, (qd_message_t *)msg);
     }
 
+    // if q2 holdoff has been disabled (disable_q2_holdoff=true), we keep receiving.
+    // if q2 holdoff has been enabled (disable_q2_holdoff=false), if input is in holdoff then just exit.
+    //      When enough buffers
+    //      have been processed and freed by outbound processing then
+    //      message holdoff is cleared and receiving may continue.
     //
-    // If input is in holdoff then just exit. When enough buffers
-    // have been processed and freed by outbound processing then
-    // message holdoff is cleared and receiving may continue.
-    //
-    if (msg->content->q2_input_holdoff) {
-        return (qd_message_t*)msg;
+    if (!msg->content->disable_q2_holdoff) {
+        if (msg->content->q2_input_holdoff)
+            return (qd_message_t*)msg;
     }
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
