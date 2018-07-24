@@ -209,6 +209,7 @@ class Dots extends TrafficAnimation {
     this.excludedAddresses = localStorage[CHORDFILTERKEY] ? JSON.parse(localStorage[CHORDFILTERKEY]) : [];
     this.radius = radius; // the radius of a router circle
     this.lastFlows = {}; // the number of dots animated between routers
+    this.stopped = true;
     this.chordData = new ChordData(this.traffic.QDRService, true, converter); // gets ingressHistogram data
     this.chordData.setFilter(this.excludedAddresses);
     traffic.$scope.addresses = {};
@@ -253,10 +254,9 @@ class Dots extends TrafficAnimation {
     };
   }
   remove() {
-    for (let id in this.lastFlows) {
-      d3.select('#SVG_ID').selectAll('circle.flow' + id).remove();
-    }
+    d3.select('#SVG_ID').selectAll('circle.flow').remove();
     this.lastFlows = {};
+    this.stopped = true;
   }
   updateAddresses() {
     this.excludedAddresses = [];
@@ -287,6 +287,7 @@ class Dots extends TrafficAnimation {
   }
   doUpdate() {
     let self = this;
+    this.stopped = false;
     // we need the nextHop data to show traffic between routers that are connected by intermediaries
     this.traffic.QDRService.management.topology.ensureAllEntities([{ entity: 'router.node', attrs: ['id', 'nextHop'] }], function () {
       // get the ingressHistogram data for all routers
@@ -296,64 +297,66 @@ class Dots extends TrafficAnimation {
     });
   }
   render(matrix) {
-    this.traffic.$timeout(function () {
-      this.traffic.$scope.addresses = this.chordData.getAddresses();
-    }.bind(this));
-    // get the rate of message flow between routers
-    let hops = {}; // every hop between routers that is involved in message flow
-    let matrixMessages = matrix.matrixMessages();
-    // the fastest traffic rate gets 3 times as many dots as the slowest
-    let minmax = matrix.getMinMax();
-    let flowScale = d3.scale.linear().domain(minmax).range([1, 1.75]);
-    // row is ingress router, col is egress router. Value at [row][col] is the rate
-    matrixMessages.forEach(function (row, r) {
-      row.forEach(function (val, c) {
-        if (val > MIN_CHORD_THRESHOLD) {
-          // translate between matrix row/col and node index
-          let f = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].egress);
-          let t = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].ingress);
-          let address = matrix.getAddress(r, c);
-          if (r !== c) {
-            // accumulate the hops between the ingress and egress routers
-            nextHop(this.traffic.topology.nodes.nodes[f], 
-              this.traffic.topology.nodes.nodes[t], 
-              this.traffic.topology.nodes, 
-              this.traffic.topology.links, 
-              this.traffic.QDRService, 
-              this.traffic.topology.nodes.nodes[f],
-              function (link, fnode, tnode) {
-                let key = '-' + link.uid;
-                let back = fnode.index < tnode.index;
-                if (!hops[key])
-                  hops[key] = [];
-                hops[key].push({ val: val, back: back, address: address });
-              });
-          }
-          // Find the senders connected to nodes[f] and the receivers connected to nodes[t]
-          // and add their links to the animation
-          this.addClients(hops, this.traffic.topology.nodes.nodes, f, val, true, address);
-          this.addClients(hops, this.traffic.topology.nodes.nodes, t, val, false, address);
-        }
+    if (this.stopped === false) {
+      this.traffic.$timeout(function () {
+        this.traffic.$scope.addresses = this.chordData.getAddresses();
       }.bind(this));
-    }.bind(this));
-    // for each link between routers that has traffic, start an animation
-    let keep = {};
-    for (let id in hops) {
-      let hop = hops[id];
-      for (let h = 0; h < hop.length; h++) {
-        let ahop = hop[h];
-        let flowId = id + '-' + this.addressIndex(this, ahop.address) + (ahop.back ? 'b' : '');
-        let path = d3.select('#path' + id);
-        // start the animation. If the animation is already running, this will have no effect
-        this.startAnimation(path, flowId, ahop, flowScale(ahop.val));
-        keep[flowId] = true;
+      // get the rate of message flow between routers
+      let hops = {}; // every hop between routers that is involved in message flow
+      let matrixMessages = matrix.matrixMessages();
+      // the fastest traffic rate gets 3 times as many dots as the slowest
+      let minmax = matrix.getMinMax();
+      let flowScale = d3.scale.linear().domain(minmax).range([1, 1.75]);
+      // row is ingress router, col is egress router. Value at [row][col] is the rate
+      matrixMessages.forEach(function (row, r) {
+        row.forEach(function (val, c) {
+          if (val > MIN_CHORD_THRESHOLD) {
+            // translate between matrix row/col and node index
+            let f = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].egress);
+            let t = this.nodeIndexFor(this.traffic.topology.nodes.nodes, matrix.rows[r].ingress);
+            let address = matrix.getAddress(r, c);
+            if (r !== c) {
+              // accumulate the hops between the ingress and egress routers
+              nextHop(this.traffic.topology.nodes.nodes[f], 
+                this.traffic.topology.nodes.nodes[t], 
+                this.traffic.topology.nodes, 
+                this.traffic.topology.links, 
+                this.traffic.QDRService, 
+                this.traffic.topology.nodes.nodes[f],
+                function (link, fnode, tnode) {
+                  let key = '-' + link.uid;
+                  let back = fnode.index < tnode.index;
+                  if (!hops[key])
+                    hops[key] = [];
+                  hops[key].push({ val: val, back: back, address: address });
+                });
+            }
+            // Find the senders connected to nodes[f] and the receivers connected to nodes[t]
+            // and add their links to the animation
+            this.addClients(hops, this.traffic.topology.nodes.nodes, f, val, true, address);
+            this.addClients(hops, this.traffic.topology.nodes.nodes, t, val, false, address);
+          }
+        }.bind(this));
+      }.bind(this));
+      // for each link between routers that has traffic, start an animation
+      let keep = {};
+      for (let id in hops) {
+        let hop = hops[id];
+        for (let h = 0; h < hop.length; h++) {
+          let ahop = hop[h];
+          let flowId = id + '-' + this.addressIndex(this, ahop.address) + (ahop.back ? 'b' : '');
+          let path = d3.select('#path' + id);
+          // start the animation. If the animation is already running, this will have no effect
+          this.startAnimation(path, flowId, ahop, flowScale(ahop.val));
+          keep[flowId] = true;
+        }
       }
-    }
-    // remove any existing animations that we don't have data for anymore
-    for (let id in this.lastFlows) {
-      if (this.lastFlows[id] && !keep[id]) {
-        this.lastFlows[id] = 0;
-        d3.select('#SVG_ID').selectAll('circle.flow' + id).remove();
+      // remove any existing animations that we don't have data for anymore
+      for (let id in this.lastFlows) {
+        if (this.lastFlows[id] && !keep[id]) {
+          this.lastFlows[id] = 0;
+          d3.select('#SVG_ID').selectAll('circle.flow' + id).remove();
+        }
       }
     }
   }
@@ -365,7 +368,9 @@ class Dots extends TrafficAnimation {
       .ease('easeLinear')
       .duration(l * 10 / rate)
       .attrTween('transform', self.translateDots(self.radius, path, count, back))
-      .each('end', function () { self.animateFlow(flow, path, count, back, rate); });
+      .each('end', function () { if (this.stopped === false) {
+        self.animateFlow(flow, path, count, back, rate); 
+      }});
   }
   // create dots along the path between routers
   startAnimation(path, id, hop, rate) {
