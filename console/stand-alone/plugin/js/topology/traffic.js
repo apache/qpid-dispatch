@@ -209,7 +209,7 @@ class Dots extends TrafficAnimation {
     this.excludedAddresses = localStorage[CHORDFILTERKEY] ? JSON.parse(localStorage[CHORDFILTERKEY]) : [];
     this.radius = radius; // the radius of a router circle
     this.lastFlows = {}; // the number of dots animated between routers
-    this.stopped = true;
+    this.stopped = false;
     this.chordData = new ChordData(this.traffic.QDRService, true, converter); // gets ingressHistogram data
     this.chordData.setFilter(this.excludedAddresses);
     traffic.$scope.addresses = {};
@@ -362,15 +362,16 @@ class Dots extends TrafficAnimation {
   }
   // animate the d3 selection (flow) along the given path
   animateFlow(flow, path, count, back, rate) {
-    let self = this;
     let l = path.node().getTotalLength();
     flow.transition()
       .ease('easeLinear')
       .duration(l * 10 / rate)
-      .attrTween('transform', self.translateDots(self.radius, path, count, back))
-      .each('end', function () { if (this.stopped === false) {
-        self.animateFlow(flow, path, count, back, rate); 
-      }});
+      .attrTween('transform', this.translateDots(this.radius, path, count, back))
+      .each('end', () => {
+        if (this.stopped === false) {
+          this.animateFlow(flow, path, count, back, rate);
+        }
+      });
   }
   // create dots along the path between routers
   startAnimation(path, id, hop, rate) {
