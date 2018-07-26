@@ -229,14 +229,14 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
     qdr_route_log_CT(core, "Auto Link Activated", al->name, al->identity, conn);
 
     if (al->addr) {
-        qdr_terminus_t *source = 0;
-        qdr_terminus_t *target = 0;
-        qdr_terminus_t *term   = qdr_terminus(0);
+        qdr_terminus_t *source = qdr_terminus(0);
+        qdr_terminus_t *target = qdr_terminus(0);
+        qdr_terminus_t *term;
 
         if (al->dir == QD_INCOMING)
-            source = term;
+            term = source;
         else
-            target = term;
+            term = target;
 
         key = (const char*) qd_hash_key_by_handle(al->addr->hash_handle);
         if (key || al->external_addr) {
