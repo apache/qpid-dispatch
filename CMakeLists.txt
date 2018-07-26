@@ -46,10 +46,10 @@ include(FindPythonInterp)
 include(FindPythonLibs)
 
 
-if (PYTHON_VERSION_MAJOR STREQUAL 2)
-    set(PY_STRING "python")
-elseif(PYTHON_VERSION_MAJOR STREQUAL 3)
+if (PYTHON_VERSION_MAJOR STREQUAL 3)
     set(PY_STRING "python3")
+elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
+    set(PY_STRING "python")
 endif()
 
 # Find python-unittest2
