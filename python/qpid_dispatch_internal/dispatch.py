@@ -143,10 +143,10 @@ def import_check(name, *args, **kw):
     return builtin_import(name, *args, **kw)
 
 check_forbidden()
-try:
-    import builtins
-except:  # py2
+if IS_PY2:
     import __builtin__ as builtins
+else:
+    import builtins
 
 builtin_import = builtins.__import__
 builtins.__import__ = import_check
