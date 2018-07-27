@@ -7,6 +7,7 @@ install
 .pydevproject
 tests/system_test.dir/
 tests/policy-1/policy-*.json
+tests/authservice.py
 *.iml
 .idea
 .metadata
@@ -17,3 +18,5 @@ console/test/topolgies/config-*
 .vscode
 console/stand-alone/node_modules/
 console/stand-alone/dist/
+tools/qdmanage
+tools/qdstat
