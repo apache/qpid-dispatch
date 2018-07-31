@@ -24,13 +24,14 @@ from __future__ import print_function
 
 import unittest2 as unittest
 from time import sleep, time
+from threading import Thread
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 
 from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption
+from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption, AtLeastOnce
 from proton.utils import BlockingConnection
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
@@ -1437,6 +1438,128 @@ class MultiLinkSendReceive(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class LinkRouteProtocolTest(TestCase):
+    """
+    Test link route implementation against "misbehaving" containers
+
+    Uses a custom fake broker (not a router) that can do weird things at the
+    protocol level.
+
+             +-------------+         +---------+         +-----------------+
+             |             | <------ |         | <-----  | blocking_sender |
+             | fake broker |         |  QDR.A  |         +-----------------+
+             |             | ------> |         | ------> +-------------------+
+             +-------------+         +---------+         | blocking_receiver |
+                                                         +-------------------+
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Configure and start QDR.A"""
+        super(LinkRouteProtocolTest, cls).setUpClass()
+        config = [
+            ('router', {'mode': 'standalone', 'id': 'QDR.A'}),
+            # for client connections:
+            ('listener', {'role': 'normal',
+                          'host': '0.0.0.0',
+                          'port': cls.tester.get_port(),
+                          'saslMechanisms': 'ANONYMOUS'}),
+            # to connect to the fake broker
+            ('connector', {'name': 'broker',
+                           'role': 'route-container',
+                           'host': '127.0.0.1',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+
+            # forward 'org.apache' messages to + from fake broker:
+            ('linkRoute', {'prefix': 'org.apache', 'containerId': 'FakeBroker', 'direction': 'in'}),
+            ('linkRoute', {'prefix': 'org.apache', 'containerId': 'FakeBroker', 'direction': 'out'})
+        ]
+        config = Qdrouterd.Config(config)
+        cls.router = cls.tester.qdrouterd('A', config, wait=False)
+
+    def _fake_broker(self, cls):
+        """Spawn a fake broker listening on the broker's connector
+        """
+        fake_broker = cls(self.router.connector_addresses[0])
+        # wait until the connection to the fake broker activates
+        self.router.wait_connectors()
+        return fake_broker
+
+    def test_DISPATCH_1092(self):
+        # This fake broker will force the session closed after the link
+        # detaches.  Verify that the session comes back up correctly when the
+        # next client attaches
+        killer = self._fake_broker(SessionKiller)
+        for i in range(2):
+            bconn = BlockingConnection(self.router.addresses[0])
+            bsender = bconn.create_sender(address="org.apache",
+                                          options=AtLeastOnce())
+            msg = Message(body="Hey!")
+            bsender.send(msg)
+            bsender.close()
+            bconn.close()
+        killer.join()
+
+
+class _FakeBroker(MessagingHandler):
+    """Base class for creating customized fake brokers
+    """
+    def __init__(self, address):
+        super(_FakeBroker, self).__init__()
+        self.address = address
+        self.listener = None
+        self._container = Container(self)
+        self._container.container_id = 'FakeBroker'
+        self._thread = Thread(target=self._main)
+        self._thread.daemon = True
+        self._thread.start()
+        self._stop_thread = False
+
+    def _main(self):
+        self._container.timeout = 1.0
+        self._container.start()
+        while self._container.process():
+            if self._stop_thread:
+                break
+        self._container.stop()
+        self._container.process()
+
+    def join(self):
+        self._stop_thread = True
+        self._container.wakeup()
+        self._thread.join(timeout=10)
+        if self._thread.is_alive():
+            raise Exception("Fake Broker did not exit")
+
+    def on_start(self, event):
+        self.listener = event.container.listen(self.address)
+
+    def on_connection_opening(self, event):
+        pn_conn = event.connection
+        pn_conn.container = self._container.container_id
+
+    def on_connection_closed(self, event):
+        if self.listener:
+            self.listener.close()
+            self.listener = None
+
+    def on_link_opening(self, event):
+        # just copy the addresses and open the link
+        event.link.target.address = event.link.remote_target.address
+        event.link.source.address = event.link.remote_source.address
+        event.link.open()
+
+
+class SessionKiller(_FakeBroker):
+    """DISPATCH-1092: force a session close when the link closes.  This should
+    cause the router to re-create the session when the next client attaches.
+    """
+    def on_link_closing(self, event):
+        event.link.close()
+        event.session.close()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

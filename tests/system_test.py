@@ -389,37 +389,32 @@ class Qdrouterd(Process):
         """Return list of configured ports for all listeners"""
         return [l['port'] for l in self.config.sections('listener')]
 
+    def _cfg_2_host_port(self, c):
+        host = c['host']
+        port = c['port']
+        protocol_family = c.get('protocolFamily', 'IPv4')
+        if protocol_family == 'IPv6':
+            return "[%s]:%s" % (host, port)
+        elif protocol_family == 'IPv4':
+            return "%s:%s" % (host, port)
+        raise Exception("Unknown protocol family: %s" % protocol_family)
+
     @property
     def addresses(self):
         """Return amqp://host:port addresses for all listeners"""
-        address_list = []
-        for l in self.config.sections('listener'):
-            protocol_family = l.get('protocolFamily')
-            if protocol_family == 'IPv6':
-                address_list.append("amqp://[%s]:%s"%(l['host'], l['port']))
-            elif protocol_family == 'IPv4':
-                address_list.append("amqp://%s:%s"%(l['host'], l['port']))
-            else:
-                # Default to IPv4
-                address_list.append("amqp://%s:%s"%(l['host'], l['port']))
+        cfg = self.config.sections('listener')
+        return ["amqp://%s" % self._cfg_2_host_port(l) for l in cfg]
 
-        return address_list
+    @property
+    def connector_addresses(self):
+        """Return list of amqp://host:port for all connectors"""
+        cfg = self.config.sections('connector')
+        return ["amqp://%s" % self._cfg_2_host_port(c) for c in cfg]
 
     @property
     def hostports(self):
         """Return host:port for all listeners"""
-        address_list = []
-        for l in self.config.sections('listener'):
-            protocol_family = l.get('protocolFamily')
-            if protocol_family == 'IPv6':
-                address_list.append("[%s]:%s"%(l['host'], l['port']))
-            elif protocol_family == 'IPv4':
-                address_list.append("%s:%s"%(l['host'], l['port']))
-            else:
-                # Default to IPv4
-                address_list.append("%s:%s"%(l['host'], l['port']))
-
-        return address_list
+        return [self._cfg_2_host_port(l) for l in self.config.sections('listener')]
 
     def is_connected(self, port, host='127.0.0.1'):
         """If router has a connection to host:port:identity return the management info.

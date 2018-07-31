@@ -465,6 +465,8 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
 
     case PN_SESSION_LOCAL_CLOSE :
         ssn = pn_event_session(event);
+        if (ssn == qd_conn->pn_sess)
+            qd_conn->pn_sess = 0;
         pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         while (pn_link) {
             if (pn_link_session(pn_link) == ssn) {
@@ -481,8 +483,10 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
         break;
 
     case PN_SESSION_REMOTE_CLOSE :
+        ssn = pn_event_session(event);
+        if (ssn == qd_conn->pn_sess)
+            qd_conn->pn_sess = 0;
         if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
-            ssn = pn_event_session(event);
             if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
                 // remote has nuked our session.  Check for any links that were
                 // left open and forcibly detach them, since no detaches will
