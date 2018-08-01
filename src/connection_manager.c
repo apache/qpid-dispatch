@@ -881,6 +881,12 @@ void qd_connection_manager_start(qd_dispatch_t *qd)
     }
 
     while (ct) {
+
+        if (ct->state == CXTR_STATE_OPEN || ct->state == CXTR_STATE_CONNECTING) {
+            ct = DEQ_NEXT(ct);
+            continue;
+        }
+
         qd_connector_connect(ct);
         ct = DEQ_NEXT(ct);
     }

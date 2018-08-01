@@ -56,7 +56,8 @@ void qd_listener_decref(qd_listener_t* ct);
 void qd_server_config_free(qd_server_config_t *cf);
 
 typedef enum {
-    CXTR_STATE_CONNECTING = 0,
+    CXTR_STATE_INIT = 0,
+    CXTR_STATE_CONNECTING,
     CXTR_STATE_OPEN,
     CXTR_STATE_FAILED
 } cxtr_state_t;

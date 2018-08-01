@@ -23,10 +23,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from time import sleep
+import json
 import unittest2 as unittest
 import logging
+from threading import Timer
+from subprocess import PIPE, STDOUT
 from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout, Delivery
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT
 from system_test import AsyncTestReceiver
 
 from proton.handlers import MessagingHandler
@@ -1271,6 +1274,120 @@ class ThreeAck(MessagingHandler):
     def run(self):
         Container(self).run()
         self.test.assertEqual(3, self.phase)
+
+
+class TwoRouterConnection(TestCase):
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+        self.success = False
+        self.timer_delay = 4
+        self.max_attempts = 2
+        self.attempts = 0
+        self.local_node = None
+
+    @classmethod
+    def router(cls, name, config):
+        config = Qdrouterd.Config(config)
+
+        cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+    @classmethod
+    def setUpClass(cls):
+        super(TwoRouterConnection, cls).setUpClass()
+
+        cls.routers = []
+
+        cls.B_normal_port_1 = cls.tester.get_port()
+        cls.B_normal_port_2 = cls.tester.get_port()
+
+        TwoRouterConnection.router('A', [
+                        ('router', {'mode': 'interior', 'id': 'A'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal',
+                                      'port': cls.tester.get_port()}),
+                        ]
+              )
+
+        TwoRouterConnection.router('B',
+                    [
+                        ('router', {'mode': 'interior', 'id': 'B'}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal',
+                                      'port': cls.B_normal_port_1}),
+                        ('listener', {'host': '0.0.0.0', 'role': 'normal',
+                                      'port': cls.B_normal_port_2}),
+
+                    ]
+               )
+
+    def address(self):
+        return self.routers[0].addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception(out if out else str(e))
+        return out
+
+    def can_terminate(self):
+        if self.attempts == self.max_attempts:
+            return True
+
+        if self.success:
+            return True
+
+        return False
+
+    def check_connections(self):
+        res = self.local_node.query(type='org.apache.qpid.dispatch.connection')
+        results = res.results
+
+        # If DISPATCH-1093 was not fixed, there would be an additional
+        # connection created and hence the len(results) would be 4
+
+        # Since DISPATCH-1093 is fixed, len(results would be 3 which is what
+        # we would expect.
+
+        if len(results) != 3:
+            self.schedule_num_connections_test()
+        else:
+            self.success = True
+
+    def schedule_num_connections_test(self):
+        if self.attempts < self.max_attempts:
+            if not self.success:
+                Timer(self.timer_delay, self.check_connections).start()
+                self.attempts += 1
+
+    def test_create_connectors(self):
+        self.local_node = Node.connect(self.routers[0].addresses[0],
+                                       timeout=TIMEOUT)
+
+        res = self.local_node.query(type='org.apache.qpid.dispatch.connection')
+        results = res.results
+
+        self.assertEqual(1, len(results))
+
+        long_type = 'org.apache.qpid.dispatch.connector' ''
+
+        create_command = 'CREATE --type=' + long_type + ' --name=foo' + ' host=0.0.0.0 port=' + str(TwoRouterConnection.B_normal_port_1)
+
+        self.run_qdmanage(create_command)
+
+        create_command = 'CREATE --type=' + long_type + ' --name=bar' + ' host=0.0.0.0 port=' + str(TwoRouterConnection.B_normal_port_2)
+
+        self.run_qdmanage(create_command)
+
+        self.schedule_num_connections_test()
+
+        while not self.can_terminate():
+            pass
+
+        self.assertTrue(self.success)
 
 
 if __name__ == '__main__':
