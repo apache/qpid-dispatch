@@ -23,7 +23,7 @@ Provides tests related with allowed TLS protocol version restrictions.
 import os
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
-from system_test import TestCase, main_module, Qdrouterd, DIR
+from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
 from proton import SASL, Url, SSLDomain
 from proton.utils import BlockingConnection
 import proton
@@ -364,6 +364,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, 'SSLv3'))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_valid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -373,6 +374,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1"))
         self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.2"))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_invalid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -576,6 +578,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         node.close()
         return router_nodes
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_connected_tls_sasl_routers(self):
         """
         Validates if all expected routers are connected in the network

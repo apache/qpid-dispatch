@@ -662,33 +662,36 @@ class SkipIfNeeded(object):
     Decorator class that can be used along with test methods
     to provide skip test behavior when using both python2.6 or
     a greater version.
-    This decorator can be used with sub-classes of TestCase and the
-    sub-class must contain a dictionary named "skip" (test_name as key
-    and 0[run] or 1[skip] as the value).
+    This decorator can be used in test methods and a boolean
+    condition must be provided (skip parameter) to define whether
+    or not the test will be skipped.
     """
-    def __init__(self, test_name, reason):
-        self.test_name = test_name
+    def __init__(self, skip, reason):
+        """
+        :param skip: if True the method wont be called
+        :param reason: reason why test was skipped
+        """
+        self.skip = skip
         self.reason = reason
 
     def __call__(self, f):
 
         def wrap(*args, **kwargs):
             """
-            Wraps original test method's invocation looking for an instance
-            attribute named "skip" (should be a dictionary composed by
-            "test_name" as a key and value of 0 [run] or 1 [skip]).
-            When running test with python < 2.7, if the "skip" dictionary
-            contains the given test_name with a value of 1, the original
-            method won't be called. If running python >= 2.7, then
+            Wraps original test method's invocation and dictates whether or
+            not the test will be executed based on value (boolean) of the
+            skip parameter.
+            When running test with python < 2.7, if the "skip" parameter is
+            true, the original method won't be called. If running python >= 2.7, then
             skipTest will be called with given "reason" and original method
             will be invoked.
             :param args:
             :return:
             """
             instance = args[0]
-            if isinstance(instance, TestCase) and hasattr(instance, "skip") and instance.skip[self.test_name]:
+            if self.skip:
                 if sys.version_info < (2, 7):
-                    print("%s -> skipping (python<2.7) ..." % self.test_name)
+                    print("%s -> skipping (python<2.7) [%s] ..." % (f.__name__, self.reason))
                     return
                 else:
                     instance.skipTest(self.reason)
