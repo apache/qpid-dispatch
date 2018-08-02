@@ -25,10 +25,11 @@ from __future__ import print_function
 import unittest2 as unittest
 import os, json
 from subprocess import PIPE, Popen, STDOUT
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process, SkipIfNeeded
 from proton import Array, Data, Message, SASL, symbol, UNDESCRIBED
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
+
 
 class AuthServicePluginAuthzTest(TestCase):
     @classmethod
@@ -84,10 +85,8 @@ mech_list: SCRAM-SHA-1 PLAIN
                                  'saslConfigPath': os.getcwd()})
         ])).wait_ready()
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_authorized(self):
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         container = Container()
         client = ConnectionHandler('foo', 1)
         container.connect("guest:guest@127.0.0.1:%d" % self.router_port, handler=client)
@@ -96,10 +95,8 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(1, client.received)
         self.assertEqual(0, len(client.errors))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_unauthorized(self):
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         container = Container()
         client = ConnectionHandler('bar', 1)
         container.connect("guest:guest@127.0.0.1:%d" % self.router_port, handler=client)
@@ -110,10 +107,8 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual('amqp:unauthorized-access', client.errors[0])
         self.assertEqual('amqp:unauthorized-access', client.errors[1])
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_wildcard(self):
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         container = Container()
         client = ConnectionHandler('whatever', 1)
         container.connect("admin:admin@127.0.0.1:%d" % self.router_port, handler=client)
@@ -122,10 +117,8 @@ mech_list: SCRAM-SHA-1 PLAIN
         self.assertEqual(1, client.received)
         self.assertEqual(0, len(client.errors))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_dynamic_source_anonymous_sender(self):
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         container = Container()
         client = DynamicSourceAnonymousSender()
         container.connect("admin:admin@127.0.0.1:%d" % self.router_port, handler=client)

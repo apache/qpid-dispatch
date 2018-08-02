@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import unittest2 as unittest, os
 from subprocess import PIPE, Popen
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded
 from qpid_dispatch.management.client import Node
 from proton import SASL
 
@@ -110,6 +110,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
         cls.routers[1].wait_router_connected('QDR.X')
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_exists(self):
         """
         Check authentication of inter-router link is PLAIN.
@@ -120,9 +121,6 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         somehow use SASL ANONYMOUS to connect to QDR.X
 
         """
-
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
 
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[1]), '-c'],
@@ -135,13 +133,11 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         self.assertIn("inter-router", out)
         self.assertIn("test@domain.com(PLAIN)", out)
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_qdstat_connect_sasl(self):
         """
         Make qdstat use sasl plain authentication.
         """
-
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
 
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c', '--sasl-mechanisms=PLAIN',
@@ -161,13 +157,11 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
         self.assertEqual(1, split_list.count("inter-router"))
         self.assertEqual(1, split_list.count("normal"))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_qdstat_connect_sasl_password_file(self):
         """
         Make qdstat use sasl plain authentication with client password specified in a file.
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         password_file = os.getcwd() + '/sasl-client-password-file.txt'
         # Create a SASL configuration file.
         with open(password_file, 'w') as sasl_client_password_file:
@@ -268,13 +262,11 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
         cls.routers[1].wait_router_connected('QDR.X')
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_aaa_qdstat_connect_sasl_over_ssl(self):
         """
         Make qdstat use sasl plain authentication over ssl.
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         p = self.popen(
             ['qdstat', '-b', str(self.routers[0].addresses[2]), '-c',
              # The following are SASL args
@@ -302,6 +294,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         self.assertEqual(1, split_list.count("inter-router"))
         self.assertEqual(1, split_list.count("normal"))
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_over_ssl_exists(self):
         """The setUpClass sets up two routers with SASL PLAIN enabled over TLS.
 
@@ -313,9 +306,6 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         Also makes sure that TLSv1.x was used as sslProto
 
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         local_node = Node.connect(self.routers[0].addresses[1], timeout=TIMEOUT)
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
@@ -404,15 +394,13 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         except:
             pass
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_no_inter_router_connection(self):
         """
         Tests to make sure that there are no 'inter-router' connections.
         The connection to the other router will not happen because the connection failed
         due to setting 'verifyHostname': 'yes'
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
         # There should be only two connections.
@@ -528,26 +516,22 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         # user must be test@domain.com
         self.assertEqual(u'test@domain.com', results[N][8])
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_over_ssl_exists(self):
         """
         Tests to make sure that an inter-router connection exists between the routers since verifyHostname is 'no'.
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
 
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
         self.common_asserts(results)
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_zzz_delete_create_ssl_profile(self):
         """
         Deletes a connector and its corresponding ssl profile and recreates both
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         local_node = self.routers[1].management
 
         connections = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
