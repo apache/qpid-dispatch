@@ -92,6 +92,37 @@ class AddressCheckerTimeout ( object ):
     def on_timer_task(self, event):
         self.parent.address_check_timeout()
 
+
+class DistributionSkipMapper(object):
+    # 1 means skip that test.
+    skip = {'test_01': 0,
+            'test_02': 0,
+            'test_03': 0,
+            'test_04': 0,
+            'test_05': 0,
+            'test_06': 0,
+            'test_07': 0,
+            'test_08': 0,
+            'test_09': 0,
+            'test_10': 0,
+            'test_11': 0,
+            'test_12': 0,
+            'test_13': 0,
+            'test_14': 0,
+            'test_15': 0,
+            'test_16': 1,
+            'test_17': 1,
+            'test_18': 1,
+            'test_19': 1,
+            'test_20': 1,
+            'test_21': 1,
+            'test_22': 1,
+            'test_23': 0,
+            'test_24': 0,
+            'test_25': 0
+            }
+
+
 #------------------------------------------------
 # END Helper classes for all tests.
 #------------------------------------------------
@@ -499,37 +530,8 @@ class DistributionTests ( TestCase ):
         cls.C_addr = router_C.addresses[0]
         cls.D_addr = router_D.addresses[0]
 
-        # 1 means skip that test.
-        cls.skip = { 'test_01' : 0,
-                     'test_02' : 0,
-                     'test_03' : 0,
-                     'test_04' : 0,
-                     'test_05' : 0,
-                     'test_06' : 0,
-                     'test_07' : 0,
-                     'test_08' : 0,
-                     'test_09' : 0,
-                     'test_10' : 0,
-                     'test_11' : 0,
-                     'test_12' : 0,
-                     'test_13' : 0,
-                     'test_14' : 0,
-                     'test_15' : 0,
-                     'test_16' : 1,
-                     'test_17' : 1,
-                     'test_18' : 1,
-                     'test_19' : 1,
-                     'test_20' : 1,
-                     'test_21' : 1,
-                     'test_22' : 1,
-                     'test_23' : 0,
-                     'test_24' : 0,
-                     'test_25' : 0
-                   }
 
-
-
-    @SkipIfNeeded('test_01', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_01'], 'Test skipped during development.')
     def test_01_targeted_sender_AC ( self ):
         name='test_01'
         test = TargetedSenderTest ( name, self.A_addr, self.C_addr, "closest/01" )
@@ -537,7 +539,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_02', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_02'], 'Test skipped during development.')
     def test_02_targeted_sender_DC ( self ):
         name='test_02'
         test = TargetedSenderTest ( name, self.D_addr, self.C_addr, "closest/02" )
@@ -545,7 +547,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_03', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_03'], 'Test skipped during development.')
     def test_03_anonymous_sender_AC ( self ):
         name='test_03'
         test = AnonymousSenderTest ( name, self.A_addr, self.C_addr )
@@ -553,7 +555,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_04', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_04'], 'Test skipped during development.')
     def test_04_anonymous_sender_DC ( self ):
         name='test_04'
         test = AnonymousSenderTest ( name, self.D_addr, self.C_addr )
@@ -561,7 +563,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_05', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_05'], 'Test skipped during development.')
     def test_05_dynamic_reply_to_AC ( self ):
         name='test_05'
         test = DynamicReplyTo ( name, self.A_addr, self.C_addr )
@@ -569,7 +571,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_06', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_06'], 'Test skipped during development.')
     def test_06_dynamic_reply_to_DC ( self ):
         name='test_06'
         test = DynamicReplyTo ( name, self.D_addr, self.C_addr )
@@ -577,7 +579,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_07', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_07'], 'Test skipped during development.')
     def test_07_linkroute ( self ):
         name='test_07'
         test = LinkAttachRouting ( name,
@@ -591,7 +593,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_08', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_08'], 'Test skipped during development.')
     def test_08_linkroute_check_only ( self ):
         name='test_08'
         test = LinkAttachRoutingCheckOnly ( name,
@@ -605,7 +607,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_09', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_09'], 'Test skipped during development.')
     def test_09_closest_linear ( self ):
         name='test_09'
         test = ClosestTest ( name,
@@ -618,7 +620,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_10', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_10'], 'Test skipped during development.')
     def test_10_closest_mesh ( self ):
         name='test_10'
         test = ClosestTest ( name,
@@ -698,7 +700,7 @@ class DistributionTests ( TestCase ):
         #     100     55           33           12
         #
 
-    @SkipIfNeeded('test_11', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_11'], 'Test skipped during development.')
     def test_11_balanced_linear ( self ):
         name='test_11'
         # slop is how much the second two values may diverge from
@@ -730,7 +732,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_12', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_12'], 'Test skipped during development.')
     def test_12_balanced_linear_omit_middle_receiver ( self ):
         name='test_12'
         # If we omit the middle receiver, then router A will count
@@ -826,7 +828,7 @@ class DistributionTests ( TestCase ):
         #       2. B and D sum to 100 - A
         #       3. B and D are both with 1 of their expected values.
         #
-    @SkipIfNeeded('test_13', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_13'], 'Test skipped during development.')
     def test_13_balanced_mesh ( self ):
         name='test_13'
         total      = 100
@@ -851,7 +853,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_14', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_14'], 'Test skipped during development.')
     def test_14_multicast_linear ( self ):
         name='test_14'
         test = MulticastTest ( name,
@@ -864,7 +866,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_15', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_15'], 'Test skipped during development.')
     def test_15_multicast_mesh ( self ):
         name='test_15'
         test = MulticastTest ( name,
@@ -877,7 +879,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_16', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_16'], 'Test skipped during development.')
     def test_16_linkroute_linear_all_local ( self ) :
         name='test_16'
         """
@@ -966,7 +968,7 @@ class DistributionTests ( TestCase ):
 
 
 
-    @SkipIfNeeded('test_17', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_17'], 'Test skipped during development.')
     def test_17_linkroute_linear_all_B ( self ) :
         name='test_17'
         """
@@ -1055,7 +1057,7 @@ class DistributionTests ( TestCase ):
 
 
 
-    @SkipIfNeeded('test_18', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_18'], 'Test skipped during development.')
     def test_18_linkroute_linear_all_C ( self ) :
         name='test_18'
         """
@@ -1143,7 +1145,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_19', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_19'], 'Test skipped during development.')
     def test_19_linkroute_linear_kill ( self ) :
         name='test_19'
         """
@@ -1292,7 +1294,7 @@ class DistributionTests ( TestCase ):
 
 
 
-    @SkipIfNeeded('test_20', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_20'], 'Test skipped during development.')
     def test_20_linkroute_mesh_all_local ( self ) :
         name='test_20'
         """
@@ -1394,7 +1396,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_21', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_21'], 'Test skipped during development.')
     def test_21_linkroute_mesh_nonlocal ( self ) :
         name='test_21'
         """
@@ -1498,7 +1500,7 @@ class DistributionTests ( TestCase ):
 
 
 
-    @SkipIfNeeded('test_22', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_22'], 'Test skipped during development.')
     def test_22_linkroute_mesh_kill ( self ) :
         name='test_22'
         """
@@ -1655,7 +1657,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual ( None, test.error )
 
 
-    @SkipIfNeeded('test_23', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_23'], 'Test skipped during development.')
     def test_23_waypoint ( self ) :
         name='test_23'
         test = WaypointTest ( name,
@@ -1669,7 +1671,7 @@ class DistributionTests ( TestCase ):
         self.assertEqual(None, test.error)
 
 
-    @SkipIfNeeded('test_24', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_24'], 'Test skipped during development.')
     def test_24_serial_waypoint_test ( self ):
         name='test_24'
         test = SerialWaypointTest ( name,
@@ -1682,7 +1684,7 @@ class DistributionTests ( TestCase ):
         test.run()
         self.assertEqual(None, test.error)
 
-    @SkipIfNeeded('test_25', 'Test skipped during development.')
+    @SkipIfNeeded(DistributionSkipMapper.skip['test_25'], 'Test skipped during development.')
     def test_25_parallel_waypoint_test ( self ):
         name='test_25'
         test = ParallelWaypointTest ( name,

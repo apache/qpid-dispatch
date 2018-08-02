@@ -26,7 +26,7 @@ from __future__ import print_function
 import unittest2 as unittest
 import os
 from subprocess import PIPE, Popen
-from system_test import TestCase, Qdrouterd, main_module
+from system_test import TestCase, Qdrouterd, main_module, SkipIfNeeded
 from proton import SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -88,27 +88,23 @@ sql_select: dummy select
                      ('router', {'mode': 'standalone', 'id': 'router'})
         ])).wait_ready()
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_valid_credentials(self):
         """
         Check authentication succeeds when valid credentials are presented.
 
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         test = SimpleConnect("127.0.0.1:%d" % self.router_port, 'test@domain.com', 'password')
         test.run()
         self.assertEqual(True, test.connected)
         self.assertEqual(None, test.error)
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_invalid_credentials(self):
         """
         Check authentication fails when invalid credentials are presented.
 
         """
-        if not SASL.extended():
-            self.skipTest("Cyrus library not available. skipping test")
-
         test = SimpleConnect("127.0.0.1:%d" % self.router_port, 'test@domain.com', 'foo')
         test.run()
         self.assertEqual(False, test.connected)
