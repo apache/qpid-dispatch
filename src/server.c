@@ -1007,7 +1007,7 @@ static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 /* Timer callback to try/retry connection open */
 static void try_open_lh(qd_connector_t *ct)
 {
-    if (ct->state != CXTR_STATE_CONNECTING) {
+    if (ct->state != CXTR_STATE_CONNECTING && ct->state != CXTR_STATE_INIT) {
         /* No longer referenced by pn_connection or timer */
         qd_connector_decref(ct);
         return;
@@ -1409,6 +1409,7 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     DEQ_INIT(conn_info_list);
     ct->conn_info_list = conn_info_list;
     ct->conn_index = 1;
+    ct->state   = CXTR_STATE_INIT;
     ct->lock = sys_mutex();
     ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
     if (!ct->lock || !ct->timer) {
@@ -1422,7 +1423,6 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
 bool qd_connector_connect(qd_connector_t *ct)
 {
     sys_mutex_lock(ct->lock);
-    ct->state   = CXTR_STATE_CONNECTING;
     ct->ctx     = 0;
     ct->delay   = 0;
     /* Referenced by timer */
