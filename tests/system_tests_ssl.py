@@ -104,13 +104,12 @@ class RouterTestSslClient(RouterTestSslBase):
                                  'mode': 'interior',
                                  'saslConfigName': 'tests-mech-PLAIN',
                                  'saslConfigDir': os.getcwd()})
+
+            # Generate authentication DB
+            super(RouterTestSslClient, cls).create_sasl_files()
         else:
             router = ('router', {'id': 'QDR.A',
                                  'mode': 'interior'})
-
-
-        # Generate authentication DB
-        super(RouterTestSslClient, cls).create_sasl_files()
 
         # Saving listener ports for each TLS definition
         cls.PORT_TLS1 = cls.tester.get_port()
@@ -156,12 +155,21 @@ class RouterTestSslClient(RouterTestSslBase):
             # Invalid protocol version
             ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_SSL3,
                           'authenticatePeer': 'no',
-                          'sslProfile': 'ssl-profile-ssl3'}),
-            # TLS 1 and 1.2 with SASL PLAIN authentication for proton client validation
-            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS_SASL,
-                          'authenticatePeer': 'yes', 'saslMechanisms': 'PLAIN',
-                          'requireSsl': 'yes', 'requireEncryption': 'yes',
-                          'sslProfile': 'ssl-profile-tls1-tls12'}),
+                          'sslProfile': 'ssl-profile-ssl3'})
+        ]
+
+        # Adding SASL listener only when SASL is available
+        if SASL.extended():
+            conf += [
+                # TLS 1 and 1.2 with SASL PLAIN authentication for proton client validation
+                ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS_SASL,
+                              'authenticatePeer': 'yes', 'saslMechanisms': 'PLAIN',
+                              'requireSsl': 'yes', 'requireEncryption': 'yes',
+                              'sslProfile': 'ssl-profile-tls1-tls12'})
+            ]
+
+        # Adding SSL profiles
+        conf += [
             # SSL Profile for TLSv1
             ('sslProfile', {'name': 'ssl-profile-tls1',
                             'caCertFile': cls.ssl_file('ca-certificate.pem'),
