@@ -189,19 +189,19 @@ static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, q
     // activation for this address, notify the router module of the added address.
     //
     if (lr->addr) {
+        lr->active_ct += 1;
         qdr_add_connection_ref(&lr->addr->conns, conn);
-        if (DEQ_SIZE(lr->addr->conns) == 1) {
+        if (lr->active_ct == 1) {
             address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
             qd_log(core->log, QD_LOG_TRACE, "Activating link route pattern [%s]", address);
             qdr_post_mobile_added_CT(core, address);
             free(address);
         }
     }
-
-    lr->active = true;
 }
 
 
+// note that this function may free the qdr_link_route_t
 static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr, qdr_connection_t *conn)
 {
     qdr_route_log_CT(core, "Link Route Deactivated", lr->name, lr->identity, conn);
@@ -209,9 +209,10 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
     //
     // Deactivate the address(es) for link-routed destinations.
     //
-    if (lr->addr) {
-        qdr_del_connection_ref(&lr->addr->conns, conn);
-        if (DEQ_IS_EMPTY(lr->addr->conns)) {
+    if (lr->addr && qdr_del_connection_ref(&lr->addr->conns, conn)) {
+        assert(lr->active_ct > 0);
+        lr->active_ct -= 1;
+        if (lr->active_ct == 0) {
             char *address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
             qd_log(core->log, QD_LOG_TRACE, "Deactivating link route pattern [%s]", address);
             qdr_post_mobile_removed_CT(core, address);
@@ -219,7 +220,9 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
         }
     }
 
-    lr->active = false;
+    if (lr->delete_on_close && lr->active_ct == 0) {
+        qdr_route_del_link_route_CT(core, lr);  // note: frees 'lr'
+    }
 }
 
 
@@ -282,7 +285,8 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_parsed_field_t      *container_field,
                                               qd_parsed_field_t      *connection_field,
                                               qd_address_treatment_t  treatment,
-                                              qd_direction_t          dir)
+                                              qd_direction_t          dir,
+                                              bool                    auto_delete)
 {
     const bool is_prefix = !!prefix_field;
     qd_iterator_t *iter = qd_parse_raw(is_prefix ? prefix_field : pattern_field);
@@ -316,6 +320,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     lr->treatment = treatment;
     lr->is_prefix = is_prefix;
     lr->pattern   = pattern;
+    lr->delete_on_close = auto_delete;
 
     if (!!add_prefix_field) {
         qd_iterator_t *ap_iter = qd_parse_raw(add_prefix_field);
@@ -388,6 +393,7 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     // Disassociate from the connection identifier.  Check to see if the identifier
     // should be removed.
     //
+    lr->delete_on_close = false;  // prevent recursion via deactivate
     qdr_conn_identifier_t *cid = lr->conn_id;
     if (cid) {
         qdr_connection_ref_t * cref = DEQ_HEAD(cid->connection_refs);
@@ -559,12 +565,15 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
     qdr_conn_identifier_t *cid = conn->conn_id;
     if (cid) {
         //
-        // Deactivate all link-routes associated with this remote container.
+        // Deactivate all link-routes associated with this remote
+        // container.  This may delete deleteOnClose=True link routes
+        // so be careful walking the linked list
         //
         qdr_link_route_t *lr = DEQ_HEAD(cid->link_route_refs);
         while (lr) {
+            qdr_link_route_t *next = DEQ_NEXT_N(REF, lr);
             qdr_link_route_deactivate_CT(core, lr, conn);
-            lr = DEQ_NEXT_N(REF, lr);
+            lr = next;
         }
 
         //

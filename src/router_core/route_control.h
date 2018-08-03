@@ -30,7 +30,8 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_parsed_field_t      *container_field,
                                               qd_parsed_field_t      *connection_field,
                                               qd_address_treatment_t  treatment,
-                                              qd_direction_t          dir);
+                                              qd_direction_t          dir,
+                                              bool                    auto_delete);
 
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr);
 

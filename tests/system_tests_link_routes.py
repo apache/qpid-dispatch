@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import unittest2 as unittest
 from time import sleep, time
-from threading import Thread
+from threading import Thread, Event
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
@@ -1440,12 +1440,12 @@ class MultiLinkSendReceive(MessagingHandler):
         Container(self).run()
 
 
-class LinkRouteProtocolTest(TestCase):
+class LinkRouteContainerTest(TestCase):
     """
-    Test link route implementation against "misbehaving" containers
+    Test link route implementation against custom containers
 
-    Uses a custom fake broker (not a router) that can do weird things at the
-    protocol level.
+    Custom fake brokers (not a router) tailored for particular test cases.
+
 
              +-------------+         +---------+         +-----------------+
              |             | <------ |         | <-----  | blocking_sender |
@@ -1457,7 +1457,7 @@ class LinkRouteProtocolTest(TestCase):
     @classmethod
     def setUpClass(cls):
         """Configure and start QDR.A"""
-        super(LinkRouteProtocolTest, cls).setUpClass()
+        super(LinkRouteContainerTest, cls).setUpClass()
         config = [
             ('router', {'mode': 'standalone', 'id': 'QDR.A'}),
             # for client connections:
@@ -1482,7 +1482,7 @@ class LinkRouteProtocolTest(TestCase):
     def _fake_broker(self, cls):
         """Spawn a fake broker listening on the broker's connector
         """
-        fake_broker = cls(self.router.connector_addresses[0])
+        fake_broker = cls(self.router)
         # wait until the connection to the fake broker activates
         self.router.wait_connectors()
         return fake_broker
@@ -1495,27 +1495,64 @@ class LinkRouteProtocolTest(TestCase):
         for i in range(2):
             bconn = BlockingConnection(self.router.addresses[0])
             bsender = bconn.create_sender(address="org.apache",
-                                          options=AtLeastOnce())
+                                          options=AtMostOnce())
             msg = Message(body="Hey!")
             bsender.send(msg)
             bsender.close()
             bconn.close()
         killer.join()
 
+    def test_delete_on_close(self):
+        # create some deleteOnClose link routes:
+        mgmt = self.router.management
+        mgmt.create(type="org.apache.qpid.dispatch.router.config.linkRoute",
+                    name="testy-in",
+                    attributes={'prefix': 'testy',
+                                'containerId': 'FakeBroker',
+                                'direction': 'in',
+                                'deleteOnClose': True})
+        mgmt.create(type="org.apache.qpid.dispatch.router.config.linkRoute",
+                    name="testy-out",
+                    attributes={'prefix': 'testy',
+                                'containerId': 'FakeBroker',
+                                'direction': 'out',
+                                'deleteOnClose': True})
+        def count_link_routes():
+            rsp = mgmt.query(type="org.apache.qpid.dispatch.router.config.linkRoute")
+            total = count = 0
+            for r in rsp.iter_dicts():
+                total += 1
+                if r.get("deleteOnClose", False):
+                    count += 1
+            return total, count
+
+        self.assertEqual(4, count_link_routes()[0])
+        self.assertEqual(2, count_link_routes()[1])
+        broker = self._fake_broker(OnDeleteBroker)
+        broker.done.wait(timeout=TIMEOUT)
+        broker.join()
+        self.assertEqual(2, count_link_routes()[0])
+        self.assertEqual(0, count_link_routes()[1])
+
 
 class _FakeBroker(MessagingHandler):
-    """Base class for creating customized fake brokers
+    """Base class for creating customized fake brokers.  This class spawns a
+    broker thread that accepts incoming links and forwards based on the link
+    address
     """
-    def __init__(self, address):
+    def __init__(self, router):
         super(_FakeBroker, self).__init__()
-        self.address = address
+        self.router = router
+        self.address = router.connector_addresses[0]
         self.listener = None
         self._container = Container(self)
         self._container.container_id = 'FakeBroker'
+        self._stop_thread = False
+        self._connections = []
+        self._senders = {}
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
-        self._stop_thread = False
 
     def _main(self):
         self._container.timeout = 1.0
@@ -1523,10 +1560,17 @@ class _FakeBroker(MessagingHandler):
         while self._container.process():
             if self._stop_thread:
                 break
+        if self.listener:
+            self.listener.close()
+        for c in self._connections:
+            c.close()
+        while self._container.process():
+            pass
         self._container.stop()
         self._container.process()
 
     def join(self):
+        # stop thread cleanly
         self._stop_thread = True
         self._container.wakeup()
         self._thread.join(timeout=10)
@@ -1537,19 +1581,26 @@ class _FakeBroker(MessagingHandler):
         self.listener = event.container.listen(self.address)
 
     def on_connection_opening(self, event):
+        # remotely initiated connection, need to set my id
         pn_conn = event.connection
         pn_conn.container = self._container.container_id
 
+    def on_connection_opened(self, event):
+        self._connections.append(event.connection)
+
     def on_connection_closed(self, event):
-        if self.listener:
-            self.listener.close()
-            self.listener = None
+        self._connections.remove(event.connection)
 
     def on_link_opening(self, event):
-        # just copy the addresses and open the link
         event.link.target.address = event.link.remote_target.address
         event.link.source.address = event.link.remote_source.address
+        if event.link.is_sender:
+            self._senders[event.link.remote_source.address] = event.link
         event.link.open()
+
+    def on_message(self, event):
+        out_link = self._senders.get(event.link.remote_target.address)
+        out_link and out_link.send(event.message)
 
 
 class SessionKiller(_FakeBroker):
@@ -1559,6 +1610,45 @@ class SessionKiller(_FakeBroker):
     def on_link_closing(self, event):
         event.link.close()
         event.session.close()
+
+
+class OnDeleteBroker(_FakeBroker):
+    """Test the automatic deletion of linkRoute configuration entities
+    """
+    def __init__(self, router):
+        super(OnDeleteBroker, self).__init__(router)
+        self._router_address = router.addresses[0]
+        self._app_conn = None
+        self._app_sender = None
+        self._app_receiver = None
+        self._app_sent = False
+        self.done = Event()
+
+    def on_connection_opened(self, event):
+        super(OnDeleteBroker, self).on_connection_opened(event)
+        if self._app_conn is None:
+            # connector from router has been opened. Create application
+            # sender/receiver
+            self._app_conn = event.container.connect(self._router_address)
+            self._app_receiver = event.container.create_receiver(self._app_conn,
+                                                                 source="testy/one",
+                                                                 name="app-receiver")
+            self._app_sender = event.container.create_sender(self._app_conn,
+                                                             target="testy/one",
+                                                             name="app-sender")
+
+    def on_sendable(self, event):
+        if event.sender == self._app_sender and not self._app_sent:
+            self._app_sent = True
+            event.sender.send(Message(body="deleteOnClose"))
+        else:
+            super(OnDeleteBroker, self).on_sendable(event)
+
+    def on_message(self, event):
+        if event.receiver == self._app_receiver:
+            self.done.set()
+        else:
+            super(OnDeleteBroker, self).on_message(event)
 
 
 if __name__ == '__main__':
