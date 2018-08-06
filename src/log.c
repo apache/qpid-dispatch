@@ -310,7 +310,9 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
 
         aprintf(&begin, end, "%s ", buf);
     }
+
     aprintf(&begin, end, "%s (%s) %s", entry->module, level->name, entry->text);
+
     if (default_bool(log_source->includeSource, default_log_source->includeSource) && entry->file)
         aprintf(&begin, end, " (%s:%d)", entry->file, entry->line);
     aprintf(&begin, end, "\n");
@@ -403,6 +405,8 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
 
     if (!qd_log_enabled(source, level)) return;
 
+    // Bounded buffer of log entries, keep most recent.
+    sys_mutex_lock(log_lock);
     qd_log_entry_t *entry = new_qd_log_entry_t();
     DEQ_ITEM_INIT(entry);
     entry->module = source->module;
@@ -412,9 +416,6 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
     gettimeofday(&entry->time, NULL);
     vsnprintf(entry->text, TEXT_MAX, fmt, ap);
     write_log(source, entry);
-
-    // Bounded buffer of log entries, keep most recent.
-    sys_mutex_lock(log_lock);
     DEQ_INSERT_TAIL(entries, entry);
     if (DEQ_SIZE(entries) > LIST_MAX)
         qd_log_entry_free_lh(DEQ_HEAD(entries));
