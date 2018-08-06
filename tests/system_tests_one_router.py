@@ -417,6 +417,11 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_41_large_streaming_close_conn_test(self):
+        test = LargeMessageStreamCloseConnTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -2227,6 +2232,63 @@ class MulticastUnsettledTest(MessagingHandler):
             self.error = "Received unsettled delivery"
         self.n_received += 1
         self.check_if_done()
+
+    def run(self):
+        Container(self).run()
+
+
+class LargeMessageStreamCloseConnTest(MessagingHandler):
+    def __init__(self, address):
+        super(LargeMessageStreamCloseConnTest, self).__init__()
+        self.address = address
+        self.dest = "LargeMessageStreamCloseConnTest"
+        self.error = None
+        self.timer = None
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.sender = None
+        self.receiver = None
+        self.body = ""
+        self.aborted = False
+        for i in range(20000):
+            self.body += "0123456789101112131415"
+
+    def timeout(self):
+        if self.aborted:
+            self.error = "Message has been aborted. Test failed"
+        else:
+            self.error = "Message not received. test failed"
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        self.dest, name="A")
+
+    def on_sendable(self, event):
+        msg = Message(body=self.body)
+        # send(msg) calls the stream function which streams data
+        # from sender to the router
+        event.sender.send(msg)
+
+        # Close the connection immediately after sending the message
+        # Without the fix for DISPATCH-1085, this test will fail
+        # one in five times with an abort
+        # With the fix in place, this test will never fail (the
+        # on_aborted will never be called).
+        self.sender_conn.close()
+
+    def on_message(self, event):
+        self.timer.cancel()
+        self.receiver_conn.close()
+
+    def on_aborted(self, event):
+        self.aborted = True
+        self.timer.cancel()
+        self.timeout()
 
     def run(self):
         Container(self).run()
