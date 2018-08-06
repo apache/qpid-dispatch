@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
 from threading import Timer
 import unittest2 as unittest
 import json, re
@@ -49,6 +50,7 @@ class FailoverTest(TestCase):
         cls.inter_router_port_1 = cls.tester.get_port()
         cls.backup_port = cls.tester.get_port()
         cls.backup_url = 'amqp://0.0.0.0:' + str(cls.backup_port)
+        cls.my_server_port = cls.tester.get_port()
 
         cls.failover_list = 'amqp://third-host:5671, ' + cls.backup_url
 
@@ -126,15 +128,19 @@ class FailoverTest(TestCase):
 
     def test_1_connector_has_failover_list(self):
         """
-        Makes a qdmanage connector query and checks if Router A is storing the failover information received from
-        Router B.
-        :return:
+        This is the most simple and straightforward case. Router A connects to Router B. Router B sends
+        failover information to Router A.
+        We make a qdmanage connector query to Router A which checks if Router A is storing the failover information
+        received from  Router B.The failover list must consist of the original connection info (from the connector)
+        followed by the two items sent by the Router B (stored in cls.failover_list)
+        The 'failoverUrls' is comma separated.
         """
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command))
-        self.assertEqual("amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) + ", " + FailoverTest.failover_list,
-                         output[0]['failoverUrls'])
+        expected = "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) + ", " + FailoverTest.failover_list
+
+        self.assertEqual(expected, output[0]['failoverUrls'])
 
     def schedule_B_to_C_failover_test(self):
         if self.attempts < self.max_attempts:
@@ -143,10 +149,6 @@ class FailoverTest(TestCase):
                 self.attempts += 1
 
     def check_C_connector(self):
-        # Router A should now try to connect to Router C. Router C does NOT have failoverUrls.
-        # Query Router A which previously had failoverUrls in its connector (because Router B sent it failoverUrls)
-        # does not have it anymore.
-        # Further wait for the connection from Router A to show up in Router C's management stack
         long_type = 'org.apache.qpid.dispatch.connector'
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
@@ -154,16 +156,10 @@ class FailoverTest(TestCase):
         expected = FailoverTest.backup_url  + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) \
                    + ", " + "amqp://third-host:5671"
 
-        if output[0].get('failoverUrls') != expected:
-            self.schedule_B_to_C_failover_test()
+        if output[0].get('failoverUrls') == expected:
+            self.success = True
         else:
-            # Router A now sees the proper failover list when connected to Router C
-            # Stall until an inter-router connection shows up in Router C's status
-            outs = self.run_qdstat(['--connections'], address=self.routers[2].addresses[1])
-            if not "inter-router" in outs:
-                self.schedule_B_to_C_failover_test()
-            else:
-                self.success = True
+            self.schedule_B_to_C_failover_test()
 
     def can_terminate(self):
         if self.attempts == self.max_attempts:
@@ -175,6 +171,13 @@ class FailoverTest(TestCase):
         return False
 
     def test_2_remove_router_B(self):
+        """
+        In this test, we are killing Router B. As a result, Router A should try to connect to Router C.
+        Router C does NOT have a failover list, so the open frame that Router C sends to Router A will not contain
+        the failover-server-list property..Hence the failoverUrls list will remain unchanged except that the order of
+        the URLs would be different.
+        """
+
         # First make sure there are no inter-router connections on router C
         outs = self.run_qdstat(['--connections'], address=self.routers[2].addresses[1])
 
@@ -193,9 +196,6 @@ class FailoverTest(TestCase):
 
         self.assertTrue(self.success)
 
-        # Since router B has been killed, router A should now try to connect to a listener on router C.
-        # Use qdstat to connect to router C and determine that there is an inter-router connection with router A.
-        self.run_qdstat(['--connections'], regexp=r'A.*inter-router.*', address=self.routers[2].addresses[1])
 
     def schedule_C_to_B_failover_test(self):
         if self.attempts < self.max_attempts:
@@ -209,7 +209,12 @@ class FailoverTest(TestCase):
         query_command = 'QUERY --type=' + long_type
         output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
 
-        expected = "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) + ", " + FailoverTest.failover_list
+        # The order that the URLs appear in the failoverUrls is important. This is the order in which the router
+        # will attempt to make connections in case the existing connection goes down.
+
+        expected = "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port) + ", " + \
+                   FailoverTest.failover_list + \
+                   ', amqp://127.0.0.1:%d' % FailoverTest.my_server_port
 
         if output[0].get('failoverUrls') == expected:
             self.success = True
@@ -217,13 +222,21 @@ class FailoverTest(TestCase):
             self.schedule_C_to_B_failover_test()
 
     def test_3_reinstate_router_B(self):
+        """
+        In this test, we are restarting Router B and killing Router C. Router A should now try to connect back to
+        Router B since it maintains the original connection info to Router B from the connector config information.
+        Before starting Router B back again, we
+        have a small config change to Router B  wherein we are adding a new failover url to the original list.
+        This new failover url
+        points to our own server which will accept connections. This server will actually be used in the next test
+        but this test maskes sure that the new server url also shows up in the failoverUrls list.
+        """
         FailoverTest.router('B', [
                         ('router', {'mode': 'interior', 'id': 'B'}),
                         ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': FailoverTest.inter_router_port,
-                                      'failoverUrls': FailoverTest.failover_list}),
+                                      'failoverUrls': FailoverTest.failover_list +  ', amqp://127.0.0.1:%d' % FailoverTest.my_server_port}),
                         ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': FailoverTest.tester.get_port()}),
-                        ]
-              )
+                        ])
 
         FailoverTest.routers[3].wait_ready()
 
@@ -237,6 +250,54 @@ class FailoverTest(TestCase):
 
         # Schedule a test to make sure that the failover url is available
         self.schedule_C_to_B_failover_test()
+
+        while not self.can_terminate():
+            pass
+
+        self.assertTrue(self.success)
+
+    def check_A_connector(self):
+        # Router A should now try to connect to Router B again since we killed Router C.
+        long_type = 'org.apache.qpid.dispatch.connector'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command, address=self.routers[1].addresses[0]))
+
+        # The order that the URLs appear in the failoverUrls is important. This is the order in which the router
+        # will attempt to make connections in case the existing connection goes down.
+        expected = 'amqp://127.0.0.1:%d' % FailoverTest.my_server_port + ", " + "amqp://127.0.0.1:" + str(FailoverTest.inter_router_port)
+
+        if output[0].get('failoverUrls') == expected:
+            self.success = True
+        else:
+            self.schedule_B_to_my_server_failover_test()
+
+    def schedule_B_to_my_server_failover_test(self):
+        if self.attempts < self.max_attempts:
+            if not self.success:
+                Timer(self.timer_delay, self.check_A_connector).start()
+                self.attempts += 1
+
+    def test_4_remove_router_B_connect_to_my_server(self):
+        """
+        This test kills Router B again and makes sure that Router A now connects to our custom server that
+        accepts connections. This custom server intentionally sends an empty list for failover-server-list
+        Router A must look at this empty list and wipe out all failover information except the original connector information
+        and the current connection info.
+        """
+
+
+        # Start MyServer
+        proc = FailoverTest.tester.popen(
+            ['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'failoverserver.py'), '-a',
+             'amqp://127.0.0.1:%d' % FailoverTest.my_server_port], expect=Process.RUNNING)
+
+        # Kill the router B again
+        FailoverTest.routers[3].teardown()
+
+        self.success = False
+        self.attempts = 0
+
+        self.schedule_B_to_my_server_failover_test()
 
         while not self.can_terminate():
             pass
