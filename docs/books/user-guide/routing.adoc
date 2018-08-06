@@ -224,15 +224,7 @@ A _pattern_ matches an address that corresponds to a pattern. A pattern is a seq
 +
 The `*` and `#` characters are reserved as wildcards. Therefore, you should not use them in the message address.
 +
-The following table shows some examples of address patterns:
-+
-[cols="25,75"]
-|===
-| This pattern... | Matches...
-| `news`          | `news`
-| `news/*/sports` | `news/europe/sports` and `news/usa/sports`, but not `news`  or `news/europe/fr/sports`
-| `news/#`        | `news`, `news/europe`, `news/usa`, `news/usa/sports`
-|===
+For more information about creating address patterns, see xref:router-address-pattern-matching[].
 +
 [NOTE]
 ====
