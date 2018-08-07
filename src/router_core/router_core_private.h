@@ -749,6 +749,22 @@ struct qdr_core_t {
 
 };
 
+struct qdr_terminus_t {
+    qdr_field_t            *address;
+    pn_durability_t         durability;
+    pn_expiry_policy_t      expiry_policy;
+    pn_seconds_t            timeout;
+    bool                    dynamic;
+    bool                    coordinator;
+    pn_distribution_mode_t  distribution_mode;
+    pn_data_t              *properties;
+    pn_data_t              *filter;
+    pn_data_t              *outcomes;
+    pn_data_t              *capabilities;
+};
+
+ALLOC_DECLARE(qdr_terminus_t);
+
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost);

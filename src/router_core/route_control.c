@@ -18,6 +18,7 @@
  */
 
 #include "route_control.h"
+#include "router_core_private.h"
 #include <inttypes.h>
 #include <stdio.h>
 #include <qpid/dispatch/iterator.h>
@@ -242,12 +243,17 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
         if (key || al->external_addr) {
             if (al->external_addr) {
                 qdr_terminus_set_address(term, al->external_addr);
-                al->internal_addr = &key[2];
+                if (key)
+                    al->internal_addr = &key[2];
             } else
                 qdr_terminus_set_address(term, &key[2]); // truncate the "Mp" annotation (where p = phase)
             al->link = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, al->dir, source, target);
             al->link->auto_link = al;
             al->state = QDR_AUTO_LINK_STATE_ATTACHING;
+        }
+        else {
+            free_qdr_terminus_t(source);
+            free_qdr_terminus_t(target);
         }
     }
 }

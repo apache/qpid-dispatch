@@ -1067,6 +1067,14 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                         DEQ_INSERT_TAIL(conn->connector->conn_info_list, item);
                                         qd_log(router->log_source, QD_LOG_DEBUG, "Added %s as backup host", item->host_port);
                                     }
+                                    else {
+                                        free(item->scheme);
+                                        free(item->host);
+                                        free(item->port);
+                                        free(item->hostname);
+                                        free(item->host_port);
+                                        free(item);
+                                    }
 
                                 }
                                 else {
