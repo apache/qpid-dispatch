@@ -947,11 +947,6 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     if (ctx)
         qd_container_handle_event(qd_server->container, e, pn_conn, ctx);
 
-    /* Free the connection after all other processing is complete */
-    if (ctx && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
-        pn_connection_set_context(pn_conn, NULL);
-        qd_connection_free(ctx);
-    }
     return true;
 }
 
@@ -976,6 +971,13 @@ static void *thread_run(void *arg)
                 qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
 
             running = handle(qd_server, e, conn, qd_conn);
+
+            /* Free the connection after all other processing is complete */
+            if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
+                pn_connection_set_context(pn_conn, NULL);
+                qd_connection_free(qd_conn);
+                qd_conn = 0;
+            }
         }
 
         //
