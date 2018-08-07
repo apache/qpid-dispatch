@@ -24,7 +24,7 @@
 
   <groupId>org.apache.qpid</groupId>
   <artifactId>dispatch-hawtio-console</artifactId>
-  <version>1.3.0-SNAPSHOT</version>
+  <version>1.4.0-SNAPSHOT</version>
   <packaging>war</packaging>
   <inceptionYear>2018</inceptionYear>
   <url>https://qpid.apache.org</url>
