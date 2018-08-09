@@ -623,6 +623,8 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
 
+void qdr_process_tick(qdr_core_t *core);
+
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
@@ -796,5 +798,9 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
                                            bool             ssl);
+
+
+typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+void qdr_timner_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay);
 
 #endif

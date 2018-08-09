@@ -794,6 +794,7 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         }
 
         qdr_error_t *error = qdr_error_from_pn(cond);
+
         qdr_link_detach(rlink, dt, error);
     }
 
@@ -1179,6 +1180,9 @@ static void qd_router_timer_handler(void *context)
     // Periodic processing.
     //
     qd_pyrouter_tick(router);
+
+    qdr_process_tick(router->router_core);
+
     qd_timer_schedule(router->timer, 1000);
 }
 

@@ -29,6 +29,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -221,6 +222,13 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     }
 
     return num_deliveries_completed;
+}
+
+
+void qdr_process_tick(qdr_core_t *core)
+{
+    qdr_action_t *action = qdr_action(qdr_process_tick_CT, "process_tick");
+    qdr_action_enqueue(core, action);
 }
 
 
@@ -715,6 +723,35 @@ void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *l
 
     if (ref_count == 1)
         qdr_delete_delivery_internal_CT(core, dlv);
+}
+
+static void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (discard)
+        return;
+
+    if (DEQ_SIZE(core->timer_list) == 0)
+        return;
+
+    qdr_timer_work_t *next_timer_work = 0;
+
+    qdr_timer_work_t *timer_work = DEQ_HEAD(core->timer_list);
+
+    while (timer_work) {
+        if (timer_work->timer_delay == 0) { // It is time to execute the handler
+
+            timer_work->handler(core, timer_work->on_timer_context);
+            next_timer_work = DEQ_NEXT(timer_work);
+            DEQ_REMOVE(core->timer_list, timer_work);
+            free_qdr_timer_work_t(timer_work);
+            timer_work = next_timer_work;
+        }
+        else {
+            timer_work->timer_delay -=1;
+            timer_work = DEQ_NEXT(timer_work);
+        }
+
+    }
 }
 
 
