@@ -48,8 +48,10 @@ include(FindPythonLibs)
 
 if (PYTHON_VERSION_MAJOR STREQUAL 3)
     set(PY_STRING "python3")
+    set(PY_UNIT2_STRING "unit2-3")
 elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
+    set(PY_UNIT2_STRING "unit2")
 endif()
 
 # Find python-unittest2
