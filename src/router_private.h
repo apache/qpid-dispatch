@@ -73,4 +73,7 @@ struct qd_router_t {
     int topology_radius;
 };
 
+
+const qd_node_type_t *router_node_type(qd_router_t *router);
+
 #endif

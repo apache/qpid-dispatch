@@ -310,6 +310,12 @@ static int close_handler(qd_container_t *container, pn_connection_t *conn, qd_co
 }
 
 
+const qd_node_type_t *router_node_type(qd_router_t *router)
+{
+    return router->node->ntype;
+}
+
+
 static void writable_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
     const qd_node_type_t *nt;
