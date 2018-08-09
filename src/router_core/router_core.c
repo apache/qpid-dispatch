@@ -32,6 +32,7 @@ ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
 ALLOC_DEFINE(qdr_general_work_t);
+ALLOC_DEFINE(qdr_timer_work_t);
 ALLOC_DEFINE(qdr_link_work_t);
 ALLOC_DEFINE(qdr_connection_ref_t);
 ALLOC_DEFINE(qdr_connection_info_t);
@@ -465,6 +466,17 @@ static void qdr_general_handler(void *context)
         free_qdr_general_work_t(work);
         work = DEQ_HEAD(work_list);
     }
+}
+
+
+qdr_timer_work_t *qdr_timer_work(qdr_timer_work_handler_t handler, void *timer_context, int timer_delay)
+{
+    qdr_timer_work_t *work = new_qdr_timer_work_t();
+    ZERO(work);
+    work->handler = handler;
+    work->timer_delay = timer_delay;
+    work->on_timer_context = timer_context;
+    return work;
 }
 
 

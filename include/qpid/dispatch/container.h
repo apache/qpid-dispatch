@@ -35,6 +35,7 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/alloc.h>
 
+
 typedef uint8_t qd_dist_mode_t;
 #define QD_DIST_COPY 0x01
 #define QD_DIST_MOVE 0x02
@@ -71,6 +72,7 @@ typedef enum {
 typedef struct qd_node_t     qd_node_t;
 typedef struct qd_link_t     qd_link_t;
 
+typedef void (*qd_router_tick_handler_t)           (void *node_context);
 typedef void (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link);
 typedef void (*qd_container_disposition_handler_t) (void *node_context, qd_link_t *link, pn_delivery_t *pnd);
 typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
@@ -133,6 +135,11 @@ typedef struct {
 
     /** Invoked when a connection is closed. */
     qd_container_conn_handler_t  conn_closed_handler;
+
+    /** Handles ticks */
+    qd_router_tick_handler_t     tick_handler;
+
+
 } qd_node_type_t;
 
 

@@ -287,6 +287,13 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
     }
 }
 
+
+static void AMQP_tick_handler(void* context)
+{
+    qd_router_t    *router       = (qd_router_t*) context;
+    qdr_process_tick(router->router_core);
+}
+
 /**
  * Inbound Delivery Handler
  */
@@ -794,6 +801,7 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         }
 
         qdr_error_t *error = qdr_error_from_pn(cond);
+
         qdr_link_detach(rlink, dt, error);
     }
 
@@ -1179,6 +1187,9 @@ static void qd_router_timer_handler(void *context)
     // Periodic processing.
     //
     qd_pyrouter_tick(router);
+
+    router_node_type(router)->tick_handler(router);
+
     qd_timer_schedule(router->timer, 1000);
 }
 
@@ -1196,7 +1207,8 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      0,   // node_destroyed_handler
                                      AMQP_inbound_opened_handler,
                                      AMQP_outbound_opened_handler,
-                                     AMQP_closed_handler};
+                                     AMQP_closed_handler,
+                                     AMQP_tick_handler};
 static int type_registered = 0;
 
 qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
