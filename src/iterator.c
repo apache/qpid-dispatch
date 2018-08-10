@@ -389,20 +389,19 @@ static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
 
 void qd_iterator_set_address(bool _edge_mode, const char *area, const char *router)
 {
-    static char buf[2048];     /* Static buffer, should usually be Big Enough */
-    static char *ptr = buf;
-#define FMT "%s/%c%s/", area, '\0', router /* "area/\0router/\0" */
-    size_t size = snprintf(buf, sizeof(buf), FMT);
-    if (size < sizeof(buf)) {
-        ptr = buf;
-    } else {
-        if (ptr && ptr != buf) free(ptr);
-        ptr = malloc(size + 1);
-        snprintf(buf, sizeof(buf), FMT);
-    }
+    static char  buf[64];
+    static char *ptr   = buf;
+    size_t area_size   = strlen(area);
+    size_t router_size = strlen(router);
+
+    if (area_size + router_size + 1 >= sizeof(buf))
+        ptr = (char*) malloc(area_size + router_size + 2);
+
+    sprintf(ptr, "%s/%c%s/", area, '\0', router);
+
     edge_mode = _edge_mode;
     my_area   = ptr;
-    my_router = ptr + strlen(my_area) + 1;
+    my_router = ptr + area_size + 2;
 }
 
 

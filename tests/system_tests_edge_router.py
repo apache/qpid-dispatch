@@ -115,24 +115,28 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_06_dynamic_address_interior_to_edge(self):
+        self.skipTest("Temporarily disabled")
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_07_dynamic_address_edge_to_interior(self):
+        self.skipTest("Temporarily disabled")
         test = DynamicAddressTest(self.routers[0].addresses[0],
                                   self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_08_dynamic_address_edge_to_edge_one_interior(self):
+        self.skipTest("Temporarily disabled")
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[3].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_09_dynamic_address_edge_to_edge_two_interior(self):
+        self.skipTest("Temporarily disabled")
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[4].addresses[0])
         test.run()

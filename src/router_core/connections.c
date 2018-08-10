@@ -1239,21 +1239,19 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             return;
         }
 
-        if (conn->role == QDR_ROLE_INTER_ROUTER || conn->role == QDR_ROLE_EDGE_UPLINK) {
-            if (conn->role == QDR_ROLE_INTER_ROUTER) {
-                //
-                // Assign a unique mask-bit to this connection as a reference to be used by
-                // the router module
-                //
-                if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
-                    qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
-                else {
-                    qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
-                    conn->role = QDR_ROLE_NORMAL;
-                    qdr_field_free(action->args.connection.connection_label);
-                    qdr_field_free(action->args.connection.container_id);
-                    return;
-                }
+        if (conn->role == QDR_ROLE_INTER_ROUTER) {
+            //
+            // Assign a unique mask-bit to this connection as a reference to be used by
+            // the router module
+            //
+            if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
+                qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
+            else {
+                qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+                conn->role = QDR_ROLE_NORMAL;
+                qdr_field_free(action->args.connection.connection_label);
+                qdr_field_free(action->args.connection.container_id);
+                return;
             }
 
             if (!conn->incoming) {
@@ -1385,22 +1383,18 @@ static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original
 //
 static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
-    if (conn->role == QDR_ROLE_INTER_ROUTER || conn->role == QDR_ROLE_EDGE_UPLINK) {
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
         link->owning_addr = core->hello_addr;
         qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-    }
-
-    if (conn->role == QDR_ROLE_INTER_ROUTER)
         core->control_links_by_mask_bit[conn->mask_bit] = link;
+    }
 }
 
 
 static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
-    if (conn->role == QDR_ROLE_INTER_ROUTER || conn->role == QDR_ROLE_EDGE_UPLINK)
-        qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         core->control_links_by_mask_bit[conn->mask_bit] = 0;
         qdr_post_link_lost_CT(core, conn->mask_bit);
     }
@@ -1415,6 +1409,9 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
     if (conn->role == QDR_ROLE_INTER_ROUTER)
         core->data_links_by_mask_bit[conn->mask_bit] = link;
 
+    //
+    // TODO - This needs to be refactored in terms of a non-inter-router link type
+    //
     else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
         if (core->router_mode == QD_ROUTER_MODE_EDGE) {
             //
@@ -1451,6 +1448,9 @@ static void qdr_detach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
     if (conn->role == QDR_ROLE_INTER_ROUTER)
         core->data_links_by_mask_bit[conn->mask_bit] = 0;
 
+    //
+    // TODO - This needs to be refactored in terms of a non-inter-router link type
+    //
     else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
         if (core->router_mode == QD_ROUTER_MODE_EDGE) {
             qdr_del_link_ref(&core->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
