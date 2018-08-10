@@ -27,6 +27,10 @@ ALLOC_DEFINE(qdr_link_route_t);
 ALLOC_DEFINE(qdr_auto_link_t);
 ALLOC_DEFINE(qdr_conn_identifier_t);
 
+//
+// Note that these hash prefixes are in a different space than those listed in iterator.h.
+// These are used in a different hash table than the address hash.
+//
 const char CONTAINER_PREFIX = 'C';
 const char CONNECTION_PREFIX = 'L';
 

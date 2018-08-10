@@ -137,7 +137,7 @@ typedef enum {
     QDR_ROLE_NORMAL,
     QDR_ROLE_INTER_ROUTER,
     QDR_ROLE_ROUTE_CONTAINER,
-    QDR_ROLE_ON_DEMAND
+    QDR_ROLE_EDGE_UPLINK
 } qdr_connection_role_t;
 
 typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* token);

@@ -249,6 +249,11 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
             core->data_links_by_mask_bit[idx] = 0;
         }
     }
+
+    if (core->router_mode == QD_ROUTER_MODE_EDGE) {
+        core->hello_addr  = qdr_add_local_address_CT(core, 'L', "qdhello", QD_TREATMENT_MULTICAST_FLOOD);
+        core->uplink_addr = qdr_add_local_address_CT(core, 'L', "_uplink", QD_TREATMENT_ANYCAST_CLOSEST);
+    }
 }
 
 

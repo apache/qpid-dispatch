@@ -116,6 +116,7 @@ foreach(py_test_module
     system_tests_cmdline_parsing
     system_tests_bad_configuration
     system_tests_ssl
+    system_tests_edge_router
     ${SYSTEM_TESTS_HTTP}
     ${CONSOLE_TEST}
     )

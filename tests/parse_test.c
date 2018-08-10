@@ -266,7 +266,7 @@ static char *test_tracemask(void *context)
     qd_buffer_list_t list;
     static char      error[1024];
 
-    qd_iterator_set_address("0", "ROUTER");
+    qd_iterator_set_address(false, "0", "ROUTER");
 
     qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.A", 0);
     qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.B", 1);

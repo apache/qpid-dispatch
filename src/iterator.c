@@ -80,11 +80,24 @@ typedef enum {
 } state_t;
 
 
+static bool  edge_mode = false;
 static char *my_area   = "";
 static char *my_router = "";
 
 static const char    *SEPARATORS = "./";
 static const uint32_t HASH_INIT  = 5381;
+
+
+static void set_to_uplink(qd_iterator_t *iter)
+{
+    static const char *UPLINK = "_uplink";
+    iter->prefix = QD_ITER_HASH_PREFIX_LOCAL;
+    iter->state  = STATE_AT_PREFIX;
+    iter->view_start_pointer.buffer    = 0;
+    iter->view_start_pointer.cursor    = (unsigned char*) UPLINK;
+    iter->view_start_pointer.remaining = (int) strlen(UPLINK);
+    iter->view_pointer = iter->view_start_pointer;
+}
 
 
 static void parse_address_view(qd_iterator_t *iter)
@@ -107,7 +120,7 @@ static void parse_address_view(qd_iterator_t *iter)
         }
 
         if (qd_iterator_prefix(iter, "local/")) {
-            iter->prefix = 'L';
+            iter->prefix = QD_ITER_HASH_PREFIX_LOCAL;
             iter->state  = STATE_AT_PREFIX;
             return;
         }
@@ -115,32 +128,58 @@ static void parse_address_view(qd_iterator_t *iter)
         if (qd_iterator_prefix(iter, "topo/")) {
             if (qd_iterator_prefix(iter, "all/") || qd_iterator_prefix(iter, my_area)) {
                 if (qd_iterator_prefix(iter, "all/")) {
-                    iter->prefix = 'T';
+                    iter->prefix = QD_ITER_HASH_PREFIX_TOPOLOGICAL;
                     iter->state  = STATE_AT_PREFIX;
                     return;
                 } else if (qd_iterator_prefix(iter, my_router)) {
-                    iter->prefix = 'L';
+                    iter->prefix = QD_ITER_HASH_PREFIX_LOCAL;
                     iter->state  = STATE_AT_PREFIX;
                     return;
                 }
 
-                iter->prefix = 'R';
+                if (edge_mode)
+                    set_to_uplink(iter);
+                else {
+                    iter->prefix = QD_ITER_HASH_PREFIX_ROUTER;
+                    iter->state  = STATE_AT_PREFIX;
+                    iter->mode   = MODE_TO_SLASH;
+                }
+                return;
+            }
+
+            if (edge_mode)
+                set_to_uplink(iter);
+            else {
+                iter->prefix = QD_ITER_HASH_PREFIX_AREA;
+                iter->state  = STATE_AT_PREFIX;
+                iter->mode   = MODE_TO_SLASH;
+            }
+            return;
+        }
+
+        if (qd_iterator_prefix(iter, "edge/")) {
+            if (qd_iterator_prefix(iter, my_router)) {
+                iter->prefix = QD_ITER_HASH_PREFIX_LOCAL;
+                iter->state  = STATE_AT_PREFIX;
+                return;
+            }
+
+            if (edge_mode) {
+                set_to_uplink(iter);
+                return;
+            } else {
+                iter->prefix = QD_ITER_HASH_PREFIX_EDGE_SUMMARY;
                 iter->state  = STATE_AT_PREFIX;
                 iter->mode   = MODE_TO_SLASH;
                 return;
             }
-
-            iter->prefix = 'A';
-            iter->state  = STATE_AT_PREFIX;
-            iter->mode   = MODE_TO_SLASH;
-            return;
         }
     }
 
-    iter->prefix            = iter->prefix_override ? iter->prefix_override : 'M';
+    iter->prefix            = iter->prefix_override ? iter->prefix_override : QD_ITER_HASH_PREFIX_MOBILE;
     iter->state             = STATE_AT_PREFIX;
     iter->view_space        = true;
-    iter->annotation_length = iter->space_length + (iter->prefix == 'M' ? 2 : 1);
+    iter->annotation_length = iter->space_length + (iter->prefix == QD_ITER_HASH_PREFIX_MOBILE ? 2 : 1);
 }
 
 
@@ -150,7 +189,7 @@ static void adjust_address_with_space(qd_iterator_t *iter)
     // Convert an ADDRESS_HASH view to an ADDRESS_WITH_SPACE view
     //
     if (iter->view_space) {
-        iter->annotation_length -= iter->prefix == 'M' ? 2 : 1;
+        iter->annotation_length -= iter->prefix == QD_ITER_HASH_PREFIX_MOBILE ? 2 : 1;
         iter->state = iter->space ? STATE_IN_SPACE : STATE_IN_BODY;
     } else {
         iter->annotation_length = 0;
@@ -170,13 +209,13 @@ static void parse_node_view(qd_iterator_t *iter)
     iter->annotation_length = 1;
 
     if (qd_iterator_prefix(iter, my_area)) {
-        iter->prefix = 'R';
+        iter->prefix = QD_ITER_HASH_PREFIX_ROUTER;
         iter->state  = STATE_AT_PREFIX;
         iter->mode   = MODE_TO_END;
         return;
     }
 
-    iter->prefix = 'A';
+    iter->prefix = QD_ITER_HASH_PREFIX_AREA;
     iter->state  = STATE_AT_PREFIX;
     iter->mode   = MODE_TO_SLASH;
 }
@@ -348,7 +387,7 @@ static void qd_iterator_free_hash_segments(qd_iterator_t *iter)
 }
 
 
-void qd_iterator_set_address(const char *area, const char *router)
+void qd_iterator_set_address(bool _edge_mode, const char *area, const char *router)
 {
     static char buf[2048];     /* Static buffer, should usually be Big Enough */
     static char *ptr = buf;
@@ -361,7 +400,8 @@ void qd_iterator_set_address(const char *area, const char *router)
         ptr = malloc(size + 1);
         snprintf(buf, sizeof(buf), FMT);
     }
-    my_area = ptr;
+    edge_mode = _edge_mode;
+    my_area   = ptr;
     my_router = ptr + strlen(my_area) + 1;
 }
 
@@ -504,7 +544,7 @@ void qd_iterator_annotate_space(qd_iterator_t *iter, const char* space, int spac
         iter->space        = space;
         iter->space_length = space_length;
         if      (iter->view == ITER_VIEW_ADDRESS_HASH)
-            iter->annotation_length = (iter->view_space ? space_length : 0) + (iter->prefix == 'M' ? 2 : 1);
+            iter->annotation_length = (iter->view_space ? space_length : 0) + (iter->prefix == QD_ITER_HASH_PREFIX_MOBILE ? 2 : 1);
         else if (iter->view == ITER_VIEW_ADDRESS_WITH_SPACE) {
             if (iter->view_space)
                 iter->annotation_length = space_length;
@@ -519,7 +559,7 @@ unsigned char qd_iterator_octet(qd_iterator_t *iter)
         return 0;
 
     if (iter->state == STATE_AT_PREFIX) {
-        iter->state = iter->prefix == 'M' ? STATE_AT_PHASE : (iter->view_space && iter->space) ? STATE_IN_SPACE : STATE_IN_BODY;
+        iter->state = iter->prefix == QD_ITER_HASH_PREFIX_MOBILE ? STATE_AT_PHASE : (iter->view_space && iter->space) ? STATE_IN_SPACE : STATE_IN_BODY;
         iter->space_cursor = 0;
         iter->annotation_remaining--;
         return iter->prefix;
@@ -614,7 +654,8 @@ bool qd_iterator_equal(qd_iterator_t *iter, const unsigned char *string)
     qd_iterator_reset(iter);
 
     while (!qd_iterator_end(iter) && *string) {
-        if (*string != qd_iterator_octet(iter))
+        unsigned char octet = qd_iterator_octet(iter);
+        if (*string != octet)
             break;
         string++;
     }

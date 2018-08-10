@@ -503,6 +503,7 @@ DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
+qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char* prefix, const char *addr, qd_address_treatment_t treatment, bool edge);
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
@@ -574,18 +575,13 @@ struct qdr_connection_t {
 ALLOC_DECLARE(qdr_connection_t);
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
 
-// Address hash prefixes for link routes:
-//  'C' old style prefix address, incoming
-//  'D' old style prefix address, outgoing
-//  'E' link route pattern address, incoming
-//  'F' link route pattern address, outgoing
-#define QDR_IS_LINK_ROUTE_PREFIX(p) ((p) == 'C' || (p) == 'D')
-#define QDR_IS_LINK_ROUTE(p) ((p) == 'E' || (p) == 'F' || QDR_IS_LINK_ROUTE_PREFIX(p))
-#define QDR_LINK_ROUTE_DIR(p) (((p) == 'C' || (p) == 'E') ? QD_INCOMING : QD_OUTGOING)
+#define QDR_IS_LINK_ROUTE_PREFIX(p) ((p) == QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_IN || (p) == QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_OUT)
+#define QDR_IS_LINK_ROUTE(p) ((p) == QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_IN || (p) == QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_OUT || QDR_IS_LINK_ROUTE_PREFIX(p))
+#define QDR_LINK_ROUTE_DIR(p) (((p) == QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_IN || (p) == QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_IN) ? QD_INCOMING : QD_OUTGOING)
 #define QDR_LINK_ROUTE_HASH(dir, is_prefix) \
     (((dir) == QD_INCOMING)                 \
-     ? ((is_prefix) ? 'C' : 'E')            \
-     : ((is_prefix) ? 'D' : 'F'))
+     ? ((is_prefix) ? QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_IN  : QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_IN)    \
+     : ((is_prefix) ? QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_OUT : QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_OUT))
 
 struct qdr_link_route_t {
     DEQ_LINKS(qdr_link_route_t);
@@ -716,6 +712,7 @@ struct qdr_core_t {
     qdr_address_t             *routerma_addr_L;
     qdr_address_t             *router_addr_T;
     qdr_address_t             *routerma_addr_T;
+    qdr_address_t             *uplink_addr;
 
     qdr_node_list_t       routers;            ///< List of routers, in order of cost, from lowest to highest
     qd_bitmask_t         *neighbor_free_mask;
