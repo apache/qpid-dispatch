@@ -366,6 +366,8 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     else if (addr->treatment == QD_TREATMENT_ANYCAST_BALANCED) {
         free(addr->outstanding_deliveries);
     }
+    free(addr->add_prefix);
+    free(addr->del_prefix);
     free_qdr_address_t(addr);
 }
 
