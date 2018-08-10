@@ -33,7 +33,7 @@ def parse_record(fields, line):
 
 def parse_fields(header, items):
     pos = [header.find(name) for name in header.split()] + [len(header)]
-    fields = zip(pos, pos[1:])
+    fields = list(zip(pos, pos[1:]))
     return [parse_record(fields, item) for item in items]
 
 class LinkRouteTest(TestCase):
