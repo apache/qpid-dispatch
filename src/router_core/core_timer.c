@@ -18,9 +18,9 @@
  */
 
 #include "router_core_private.h"
+#include <stdio.h>
 
-
-void qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay)
+qdr_timer_work_t *qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay)
 {
     qdr_timer_work_t *timer_work = new_qdr_timer_work_t();
     ZERO(timer_work);
@@ -29,5 +29,18 @@ void qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_c
     timer_work->on_timer_context = timer_context;
 
     DEQ_INSERT_TAIL(core->timer_list, timer_work);
+
+    return timer_work;
+}
+
+void qdr_timer_delete(qdr_core_t *core, qdr_timer_work_t *timer_work)
+{
+    if (DEQ_SIZE(core->timer_list) == 0)
+        return;
+
+    if (timer_work) {
+        DEQ_REMOVE(core->timer_list, timer_work);
+        free_qdr_timer_work_t(timer_work);
+    }
 
 }

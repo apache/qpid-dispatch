@@ -182,7 +182,6 @@ ALLOC_DECLARE(qdr_general_work_t);
 DEQ_DECLARE(qdr_general_work_t, qdr_general_work_list_t);
 
 
-typedef struct qdr_timer_work_t qdr_timer_work_t;
 struct qdr_timer_work_t {
         DEQ_LINKS(qdr_timer_work_t);
         qdr_timer_cb_t            handler;

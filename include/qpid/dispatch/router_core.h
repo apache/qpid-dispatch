@@ -799,8 +799,9 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            int              ssl_ssf,
                                            bool             ssl);
 
-
+typedef struct qdr_timer_work_t qdr_timer_work_t;
 typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
-void qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay);
+qdr_timer_work_t *qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay);
+void qdr_timer_delete(qdr_core_t *core, qdr_timer_work_t *timer_work);
 
 #endif
