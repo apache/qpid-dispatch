@@ -801,6 +801,6 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
 
 
 typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
-void qdr_timner_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay);
+void qdr_timer_schedule(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context, int timer_delay);
 
 #endif
