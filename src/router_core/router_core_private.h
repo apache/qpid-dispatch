@@ -647,6 +647,17 @@ struct qdr_conn_identifier_t {
 ALLOC_DECLARE(qdr_conn_identifier_t);
 DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
 
+struct qdr_core_timer_t {
+    DEQ_LINKS(qdr_core_timer_t);
+    qdr_timer_cb_t    handler;
+    void             *context;
+    qd_timestamp_t    delta_time;
+    bool              scheduled; /* true means on scheduled list, false on idle list */
+};
+
+ALLOC_DECLARE(qdr_core_timer_t);
+DEQ_DECLARE(qdr_core_timer_t, qdr_core_timer_list_t);
+
 
 struct qdr_core_t {
     qd_dispatch_t     *qd;
@@ -659,6 +670,7 @@ struct qdr_core_t {
     sys_mutex_t       *action_lock;
 
     sys_mutex_t             *work_lock;
+    qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
 
@@ -764,6 +776,7 @@ struct qdr_terminus_t {
 };
 
 ALLOC_DECLARE(qdr_terminus_t);
+
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);

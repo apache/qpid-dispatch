@@ -29,6 +29,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 //==================================================================================
 // Internal Functions
@@ -221,6 +222,12 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     }
 
     return num_deliveries_completed;
+}
+
+void qdr_process_tick(qdr_core_t *core)
+{
+    qdr_action_t *action = qdr_action(qdr_process_tick_CT, "process_tick");
+    qdr_action_enqueue(core, action);
 }
 
 
@@ -1178,6 +1185,14 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
 
         peer = qdr_delivery_next_peer_CT(in_dlv);
     }
+}
+
+
+static void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (discard)
+        return;
+    qdr_core_timer_visit(core);
 }
 
 
