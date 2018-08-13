@@ -181,8 +181,20 @@ struct qdr_general_work_t {
 ALLOC_DECLARE(qdr_general_work_t);
 DEQ_DECLARE(qdr_general_work_t, qdr_general_work_list_t);
 
-qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
 
+struct qdr_timer_work_t {
+        DEQ_LINKS(qdr_timer_work_t);
+        qdr_timer_cb_t            handler;
+        void                     *on_timer_context;
+        int                       timer_delay;
+
+};
+
+ALLOC_DECLARE(qdr_timer_work_t);
+DEQ_DECLARE(qdr_timer_work_t, qdr_timer_work_list_t);
+
+
+qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
 
 //
 // Connection Work
@@ -660,6 +672,7 @@ struct qdr_core_t {
 
     sys_mutex_t             *work_lock;
     qdr_general_work_list_t  work_list;
+    qdr_timer_work_list_t    timer_list;
     qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
