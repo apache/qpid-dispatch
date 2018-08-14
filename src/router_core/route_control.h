@@ -55,4 +55,21 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
 void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr);
 void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address);
 
+/**
+ * Actions to be performed when an auto link detaches.
+ * Retries to establishe an auto link that is associated with the passed in link.
+ * Uses the core thread timer API to schedule an auto link retry.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param link qdr_link_t reference. The attach on this link for an auto link was rejected.
+ */
+void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link);
+
+/**
+ * Performs actions that need to be taken when an auto link is closed.
+ * For example, if a timer was setup to reconnect the autolink, it needs to be canceled.
+ * @param link qdr_link_t reference.
+ */
+void qdr_route_auto_link_closed_CT(qdr_core_t *core, qdr_link_t *link);
+
 #endif
