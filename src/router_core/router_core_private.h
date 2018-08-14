@@ -625,10 +625,12 @@ struct qdr_auto_link_t {
     char                  *external_addr;
     const char            *internal_addr;
     int                    phase;
+    int                    retry_attempts;
     qd_direction_t         dir;
     qdr_conn_identifier_t *conn_id;
     qdr_link_t            *link;
     qdr_auto_link_state_t  state;
+    qdr_core_timer_t      *retry_timer; // If the auto link attach fails or gets disconnected, this timer retries the attach.
     char                  *last_error;
 };
 
