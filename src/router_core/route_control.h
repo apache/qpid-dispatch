@@ -43,6 +43,9 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             qd_parsed_field_t      *connection_field,
                                             qd_parsed_field_t   *external_addr);
 
+void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
+                                    void            *context);
+
 void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
 
 void qdr_route_connection_opened_CT(qdr_core_t       *core,
@@ -54,5 +57,14 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
 
 void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr);
 void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address);
+
+/**
+ * Retries to establishe an auto link that is associated with the passed in link.
+ * Uses the core thread timer API to schedule an auto link retry.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @param link qdr_link_t reference. The attach on this link for an auto link was rejected.
+ */
+void qdr_route_retry_auto_link_CT(qdr_core_t *core, qdr_link_t *link);
 
 #endif

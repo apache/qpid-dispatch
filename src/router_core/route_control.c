@@ -30,6 +30,9 @@ ALLOC_DEFINE(qdr_conn_identifier_t);
 const char CONTAINER_PREFIX = 'C';
 const char CONNECTION_PREFIX = 'L';
 
+const int AUTO_LINK_FIRST_RETRY_INTERVAL = 2;
+const int AUTO_LINK_RETRY_INTERVAL = 5;
+
 
 static qdr_conn_identifier_t *qdr_route_declare_id_CT(qdr_core_t    *core,
                                                       qd_iterator_t *container,
@@ -382,6 +385,42 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
 }
 
 
+void qdr_route_retry_auto_link_CT(qdr_core_t *core, qdr_link_t *link)
+{
+    if (!link->auto_link)
+        return;
+
+    if (!link->auto_link->retry_timer)
+        link->auto_link->retry_timer = qdr_core_timer_CT(core, qdr_route_attempt_auto_link_CT, (void *)link->auto_link);
+
+    char *activation_failed = "Auto Link Activation Failed. ";
+    int error_length = 0;
+    if (link->auto_link->last_error)
+        error_length = strlen(link->auto_link->last_error);
+    int total_length = strlen(activation_failed);
+    if (error_length)
+        total_length += error_length;
+
+    char error_msg[total_length];
+    memset(error_msg, 0, error_length);
+    strcat(error_msg, activation_failed);
+    if (error_length)
+        strcat(error_msg, link->auto_link->last_error);
+
+    if (link->auto_link->retry_attempts == 0) {
+        // First retry in 2 seconds
+        qdr_core_timer_schedule_CT(core, link->auto_link->retry_timer, AUTO_LINK_FIRST_RETRY_INTERVAL);
+        link->auto_link->retry_attempts += 1;
+    }
+    else {
+        // Successive retries every 5 seconds
+        qdr_core_timer_schedule_CT(core, link->auto_link->retry_timer, AUTO_LINK_RETRY_INTERVAL);
+    }
+
+    qdr_route_log_CT(core, error_msg, link->auto_link->name, link->auto_link->identity, link->conn);
+}
+
+
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
     //
@@ -413,6 +452,19 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     qd_log(core->log, QD_LOG_TRACE, "Link route %spattern removed: pattern=%s name=%s",
            lr->is_prefix ? "prefix " : "", lr->pattern, lr->name);
     qdr_core_delete_link_route(core, lr);
+}
+
+
+void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
+                                    void *context)
+{
+    qdr_auto_link_t *al = (qdr_auto_link_t *)context;
+    qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
+    while (cref) {
+        qdr_auto_link_activate_CT(core, al, cref->conn);
+        cref = DEQ_NEXT(cref);
+    }
+
 }
 
 
@@ -465,6 +517,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     if (container_field || connection_field) {
         al->conn_id = qdr_route_declare_id_CT(core, qd_parse_raw(container_field), qd_parse_raw(connection_field));
         DEQ_INSERT_TAIL_N(REF, al->conn_id->auto_link_refs, al);
+
         qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
         while (cref) {
             qdr_auto_link_activate_CT(core, al, cref->conn);
@@ -512,6 +565,7 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
     DEQ_REMOVE(core->auto_links, al);
     free(al->name);
     free(al->external_addr);
+    qdr_core_timer_free_CT(core, al->retry_timer);
     free_qdr_auto_link_t(al);
 }
 

@@ -607,6 +607,21 @@ ALLOC_DECLARE(qdr_link_route_t);
 DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
 
+// Core timer related field/data structures
+typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+
+typedef struct qdr_core_timer_t {
+    DEQ_LINKS(struct qdr_core_timer_t);
+    qdr_timer_cb_t  handler;
+    void           *context;
+    uint32_t        delta_time_seconds;
+    bool            scheduled;
+} qdr_core_timer_t;
+
+ALLOC_DECLARE(qdr_core_timer_t);
+DEQ_DECLARE(qdr_core_timer_t, qdr_core_timer_list_t);
+
+
 typedef enum {
     QDR_AUTO_LINK_STATE_INACTIVE,
     QDR_AUTO_LINK_STATE_ATTACHING,
@@ -625,10 +640,12 @@ struct qdr_auto_link_t {
     char                  *external_addr;
     const char            *internal_addr;
     int                    phase;
+    int                    retry_attempts;
     qd_direction_t         dir;
     qdr_conn_identifier_t *conn_id;
     qdr_link_t            *link;
     qdr_auto_link_state_t  state;
+    qdr_core_timer_t      *retry_timer; // If the auto link attach fails or gets disconnected, this timer retries the attach.
     char                  *last_error;
 };
 
@@ -646,20 +663,6 @@ struct qdr_conn_identifier_t {
 
 ALLOC_DECLARE(qdr_conn_identifier_t);
 DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
-
-// Core timer related field/data structures
-typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
-
-typedef struct qdr_core_timer_t {
-    DEQ_LINKS(struct qdr_core_timer_t);
-    qdr_timer_cb_t  handler;
-    void           *context;
-    uint32_t        delta_time_seconds;
-    bool            scheduled;
-} qdr_core_timer_t;
-
-ALLOC_DECLARE(qdr_core_timer_t);
-DEQ_DECLARE(qdr_core_timer_t, qdr_core_timer_list_t);
 
 
 struct qdr_core_t {
