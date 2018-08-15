@@ -23,13 +23,13 @@ containers, by providing an additional layer of abstraction and automation of op
 virtualization on Linux.
 <https://www.docker.com/what-docker>
 
-####Dockerfiles for Fedora and Ubuntu
-The two docker files, Dockerfile-fedora and Dockerfile-ubuntu provide quick start
-docker containers with an running instance of qpid dispatch router on RHEL and Debian based systems respectively.
+####Dockerfiles for Fedora, Ubuntu and Centos
+The docker files, Dockerfile-fedora, Dockerfile-ubuntu, and Dockerfile-centos provide quick start
+docker containers with a running instance of qpid dispatch router on the various platforms.
 
 The dockerfiles follow these steps before launching the dispatch router
 
-* Downloads all the fedora or ubuntu specific dependencies needed for building apache qpid-proton.
+* Downloads all the specific dependencies needed for building apache qpid-proton.
 * Downloads the source code of qpid-proton to /main/qpid-proton
 * Builds and installs qpid-proton using gcc. 
 * Downloads the source code of qpid-dispatch to /main/qpid-dispatch.
@@ -40,8 +40,11 @@ The dockerfiles follow these steps before launching the dispatch router
 * To build the fedora docker file
  * sudo docker build -t docker-image-name --file=Dockerfile-fedora  .  (substitute docker-image-name with your own image name)
 * To build the ubuntu docker file
- * sudo docker build -t  docker-image-name --file=Dockerfile-ubuntu  .  (substitute docker-image-name with your own image name)
-* To run the fedora/ubuntu docker image
+ * sudo docker build -t docker-image-name --file=Dockerfile-ubuntu  .  (substitute docker-image-name with your own image name)
+* To build the centos docker file
+ * sudo docker build -t docker-image-name --file=Dockerfile-centos  .  (substitute docker-image-name with your own image name)
+
+* To run the fedora/ubuntu/centos docker image
  * sudo docker run -i -t docker-image-name (substitute docker-image-name with your own image name)
 * After the docker run command is invoked, execute the *sudo docker ps* command to check if your container name shows up in the list of docker processes.
 
