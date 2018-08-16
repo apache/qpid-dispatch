@@ -225,7 +225,7 @@ class QdmanageTest(TestCase):
 
     def test_get_log(self):
         log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
-        self.assertEquals(['AGENT', 'trace'], log[0:2])
+        self.assertEquals(['AGENT', 'debug'], log[0:2])
         self.assertRegexpMatches(log[2], 'get-log')
 
     def test_get_logstats(self):

@@ -446,7 +446,7 @@ PyObject *qd_log_recent_py(long limit) {
         int i = 0;
         // NOTE: PyList_SetItem steals a reference so no leak here.
         PyList_SetItem(py_entry, i++, PyUnicode_FromString(entry->module));
-        const char* level = level_name(entry->level);
+        const char* level = level_name( level_index_for_bit(entry->level) + 2 );
         PyList_SetItem(py_entry, i++, level ? PyUnicode_FromString(level) : inc_none());
         PyList_SetItem(py_entry, i++, PyUnicode_FromString(entry->text));
         PyList_SetItem(py_entry, i++, entry->file ? PyUnicode_FromString(entry->file) : inc_none());

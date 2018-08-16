@@ -102,7 +102,7 @@ class QdstatTest(system_test.TestCase):
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_log(self):
-        self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(trace\).*GET-LOG')
+        self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
