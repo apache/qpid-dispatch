@@ -22,6 +22,7 @@ under the License
 
 Securing your router network involves configuring authentication and authorization. You can authenticate and encrypt the router's connections using SSL/TLS or SASL. Additionally, you can authorize access to messaging resources by setting user connection restrictions and defining AMQP resource access control.
 
+[id='authenticating-remote-peers']
 == Authenticating Remote Peers
 
 You can configure {RouterName} to communicate with clients, routers, and brokers in a secure way by authenticating and encrypting the router's connections. {RouterName} supports the following security protocols:
@@ -440,6 +441,7 @@ listener {
 For more information about these attributes, see xref:adding-sasl-authentication-to-incoming-connection[].
 --
 
+[id='authorizing-access-to-messaging-resources']
 == Authorizing Access to Messaging Resources
 
 You can configure _policies_ to secure messaging resources in your messaging environment. Policies ensure that only authorized users can access messaging endpoints through the router network, and that the resources on those endpoints are used in an authorized way.

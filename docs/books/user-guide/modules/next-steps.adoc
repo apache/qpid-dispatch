@@ -1,0 +1,42 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// getting-started.adoc
+
+[id='next-steps-{context}']
+= Next steps
+
+After you successfully install a standalone router and use it to distribute messages between two clients, you can configure the router to make it production-ready, and add additional routers to form a router network.
+
+Configure the router::
+You can configure the router to meet the requirements of your production environment. 
++
+--
+* Secure the router:
+** Add authentication to control which users can connect to the router
+** Add authorization to control what messaging resources those users can access
+* Configure addresses to specify routing patterns for direct-routed (brokerless) messaging
+* Connect the router to a message broker to enable clients to exchange messages with a broker queue.
+* Create link routes to define private messaging paths between endpoints.
+--
+
+Deploy a router network::
+After deploying a single router, you can deploy additional routers and connect them together to form a router network. Router networks can be any arbitrary topology.

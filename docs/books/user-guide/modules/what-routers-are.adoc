@@ -1,0 +1,47 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// overview.adoc
+
+[id='what-routers-are-{context}']
+= What routers are
+
+{RouterName} is an application layer program running as a normal user program or as a daemon. A running instance of {RouterName} is called a _router_.
+
+Routers do not take responsibility for messages::
+Routers transfer messages between producers and consumers, but unlike message brokers, they do not take responsibility for messages. Instead, routers propagate message settlement and disposition across a network such that delivery guarantees are met. That is, the router network will deliver the message &ndash; possibly through several intermediate routers &ndash; and then route the consumer's acknowledgement of that message back across the same path. The responsibility for the message is transfered from the producer to the consumer as if they were directly connected.
+
+Routers are combined to form router networks::
+Routers are often deployed in topologies of multiple routers called a router network. Routers use link-state routing protocols and algorithms similar to the Open Shortest Path First (OSPF) and Intermediate System to Intermediate System (IS-IS) protocols to calculate the best path from every message source to every message destination, and to recover quickly from failures. A router network relies on redundant network paths to provide continued connectivity in case of system or network failure.
+
+Routers enhance both direct and indirect messaging patterns::
+A messaging client can make a single AMQP connection into a router network and, over that connection, exchange messages with one or more message brokers connected to any router in the network. At the same time, the client can exchange messages directly with other endpoints without involving a broker at all.
++
+.Enhancing the use of message brokers
+====
+Routers can enhance a cluster of message brokers that provide a scalable, distributed work queue.
+
+The router network makes the broker cluster appear as a single queue, with producers publishing to a single address, and consumers subscribing to a single address. The router network can distribute work to any broker in the cluster, and collect work from any broker for any consumer.
+
+The routers improve the scalability of the broker cluster, because brokers can be added or removed from the cluster without affecting the clients. 
+
+The routers also solve the common difficulty of "stuck messages". Without the router network, if a consumer is connected to a broker that does not have any messages (but other brokers in the cluster do have messages), you must either transfer the messages or leave them "stuck". The routers solve this issue, however, because all of the consumers are connected to all of the brokers through the router network. A message on any broker can be delivered to any of the consumers.
+====

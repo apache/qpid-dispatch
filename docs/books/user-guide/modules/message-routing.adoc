@@ -1,0 +1,112 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// routing.adoc
+
+[id='message-routing-{context}']
+= Message routing
+
+Message routing enables you to distribute messages in anycast and multicast patterns. These patterns can be used for both direct routing, in which the router distributes messages between clients without a message broker, and indirect routing, in which the router enables clients to exchange messages through a message broker.
+
+With message routing, messages are routed based on their _addresses_, and the _routing pattern_ defined for the address.
+
+[discrete]
+== Addresses
+
+An _address_ is the name of a message source or destination endpoint in the messaging network. AMQP addresses control the flow of messages across the router network. 
+
+Addresses can designate various types of entities in a messaging network, such as:
+
+* Endpoint processes that consume data or offer a service
+* Topics that match multiple consumers to multiple producers
+* Entities within a message broker:
+** Queues
+** Durable Topics
+** Exchanges
+
+When a router receives a message, it uses the message’s address to determine where to send the message (either its destination or one step closer to its destination).
+
+[NOTE]
+====
+{RouterName} treats addresses as opaque strings. Therefore, when creating addresses, you can use whatever syntax makes the most sense for your environment.
+====
+
+[discrete]
+== What mobile addresses are
+
+Addresses used in message routing are sometimes called _mobile addresses_, because ...
+
+[discrete]
+== Routing patterns
+
+Routing patterns define the paths that a message with a mobile address can take across a network. These routing patterns can be used for both direct routing, in which the router distributes messages between clients without a broker, and indirect routing, in which the router enables clients to exchange messages through a broker.
+
+{RouterName} supports two categories of routing patterns: anycast and multicast.
+
+[NOTE]
+====
+{RouterName} does not provide a true "unicast" routing pattern in which there is only one consumer for an address.
+====
+
+[options="header"]
+|===
+| Routing pattern | Description | Reliability
+
+| Anycast
+a| Each message is delivered to one consumer. There are two types of anycast methods:
+
+* Balanced
++
+Each message is delivered to a single consumer only, and {RouterName} attempts to balance the traffic load across the router network. This method allows multiple consumers to use the same address.
+
+* Closest
++
+Each message is sent along the shortest path to reach the destination, even if there are other consumers for the same address.
+
+| Reliable for unsettled message deliveries.
+
+| Multicast
+| Each message is delivered to all consumers. Each consumer will receive one copy of the message.
+| Unreliable. If a producer sends an unsettled delivery, the router automatically settles the delivery with ACCEPTED disposition regardless of whether the message was delivered to any consumers.
+
+|===
+
+[discrete]
+== Quality of service for message deliveries
+
+{RouterName} can deliver messages with any of the following levels of reliability:
+
+* At most once
+* At least once
+* Exactly once
+
+The level of reliability is negotiated between the client and router when the client establishes a link to the router. The router achieves this negotiated level of reliability by treating messages as either _pre-settled_ or _unsettled_.
+
+Pre-settled::
+Sometimes called "fire and forget", the router settles the incoming and outgoing deliveries and propagates the settlement to the message’s destination. However, it does not guarantee delivery.
+
+Unsettled::
+The router propagates the settlement between the producer and consumer, and guarantees one of the following outcomes:
++
+* The delivery is settled with ACCEPTED or REJECTED disposition where the disposition is supplied by the consumer.
+* The delivery is settled with RELEASED disposition, meaning that the message was not delivered to any consumer.
+* The delivery is settled with MODIFIED disposition, meaning that the message may have been delivered to a consumer but should be considered in-doubt and re-sent.
+* The connection to the producer is dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and re-sent.
