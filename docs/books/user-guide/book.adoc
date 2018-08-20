@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License
 ////
 
-include::attributes.adoc[]
+include::common/attributes.adoc[]
 
 = {RouterBook}
 
