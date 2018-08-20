@@ -23,7 +23,7 @@ under the License
 :doctype: article
 :experimental:
 :idprefix:
-:imagesdir: images
+:imagesdir: _images
 :numbered:
 :sectanchors!:
 :sectnums:
@@ -39,7 +39,7 @@ under the License
 :RouterLongName: {ProductName} Dispatch Router
 :ClientAmqpPythonName: {ProductName} Proton Python
 :ConsoleName: {RouterLongName} Console
-:FragmentDir: common
+:FragmentDir: _common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
 :DispatchRouterVersion: 1.0.1
