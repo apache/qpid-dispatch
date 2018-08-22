@@ -40,6 +40,10 @@ typedef struct qdr_terminus_t        qdr_terminus_t;
 typedef struct qdr_error_t           qdr_error_t;
 typedef struct qdr_connection_info_t qdr_connection_info_t;
 
+// Core timer related field/data structures
+typedef struct qdr_core_timer_t      qdr_core_timer_t;
+typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
     QD_ROUTER_MODE_INTERIOR,    ///< Interior router.  Full participation in routing protocol.
@@ -796,5 +800,55 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
                                            bool             ssl);
+
+/**
+ * Create a mew timer which will only be used inside the code thread.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @callback Callback function to be invoked when timer fires.
+ * @timer_context Context to be used when firing callback
+ */
+qdr_core_timer_t *qdr_core_timer(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context);
+
+
+/**
+ * Processes the tick that comes in every second into the core.
+ * @param core Pointer to the core object returned by qd_core()
+ */
+void qdr_process_tick(qdr_core_t *core);
+
+/**
+ * Schedules a core timer with a delay. The timer will fire after "delay" seconds
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ * @param delay The number of seconds to wait before firing the timer
+ */
+void qdr_core_timer_schedule(qdr_core_t *core, qdr_core_timer_t *timer, int delay);
+
+/**
+ * Cancels an already scheduled timeer. This does not free the timer. It is the responsibility of the person who
+ * created the timer to free it.
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ *
+ */
+void qdr_core_timer_cancel(qdr_core_t *core, qdr_core_timer_t *timer);
+
+/**
+ * Cancels the timer if it is scheduled and and free it.
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ */
+void qdr_core_timer_free(qdr_core_t *core, qdr_core_timer_t *timer);
+
+/**
+ * Starts visiting the scheduled timers from the head and fires the timers with zero delay.
+ * Stops visiting when it hits the first non-zero delay timer.
+ * If the head scheduled timer is not ready to be fired, it decrements the time delay by 1.
+ * qdr_process_tick calls this function every one second.
+ * @param core Pointer to the core object returned by qd_core()
+ */
+void qdr_core_timer_visit(qdr_core_t *core);
+
 
 #endif

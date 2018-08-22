@@ -95,6 +95,7 @@ set(qpid_dispatch_SOURCES
   router_core/management_agent.c
   router_core/terminus.c
   router_core/transfer.c
+  router_core/core_timer.c
   router_node.c
   router_pynode.c
   schema_enum.c

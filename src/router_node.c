@@ -1179,6 +1179,9 @@ static void qd_router_timer_handler(void *context)
     // Periodic processing.
     //
     qd_pyrouter_tick(router);
+
+    // This sends a tick into the core and this happens every second.
+    qdr_process_tick(router->router_core);
     qd_timer_schedule(router->timer, 1000);
 }
 
