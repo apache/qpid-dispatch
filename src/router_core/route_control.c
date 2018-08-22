@@ -98,7 +98,7 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
 }
 
 
-static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *name, uint64_t id, qdr_connection_t *conn)
+void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *name, uint64_t id, qdr_connection_t *conn)
 {
     const char *key = (const char*) qd_hash_key_by_handle(conn->conn_id->connection_hash_handle);
     if (!key)
@@ -416,6 +416,19 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 }
 
 
+void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
+                                    void *context)
+{
+    qdr_auto_link_t *al = (qdr_auto_link_t *)context;
+    qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
+    while (cref) {
+        qdr_auto_link_activate_CT(core, al, cref->conn);
+        cref = DEQ_NEXT(cref);
+    }
+
+}
+
+
 qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             qd_iterator_t       *name,
                                             qd_parsed_field_t   *addr_field,
@@ -465,6 +478,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     if (container_field || connection_field) {
         al->conn_id = qdr_route_declare_id_CT(core, qd_parse_raw(container_field), qd_parse_raw(connection_field));
         DEQ_INSERT_TAIL_N(REF, al->conn_id->auto_link_refs, al);
+
         qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
         while (cref) {
             qdr_auto_link_activate_CT(core, al, cref->conn);
@@ -512,6 +526,7 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
     DEQ_REMOVE(core->auto_links, al);
     free(al->name);
     free(al->external_addr);
+    qdr_core_timer_free(core, al->retry_timer);
     free_qdr_auto_link_t(al);
 }
 

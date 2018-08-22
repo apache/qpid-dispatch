@@ -34,6 +34,9 @@ static void qdr_link_delete_CT(qdr_core_t *core, qdr_action_t *action, bool disc
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
 
+const int AUTO_LINK_FIRST_RETRY_INTERVAL = 2;
+const int AUTO_LINK_RETRY_INTERVAL = 5;
+
 //==================================================================================
 // Internal Functions
 //==================================================================================
@@ -1329,6 +1332,9 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     while (link_ref) {
         qdr_link_t *link = link_ref->link;
 
+        if (link->auto_link && link->auto_link->retry_timer)
+            qdr_core_timer_cancel(core, link->auto_link->retry_timer);
+
         //
         // Clean up the link and all its associated state.
         //
@@ -1753,6 +1759,35 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
         free(link->auto_link->last_error);
         link->auto_link->last_error = qdr_error_description(error);
+
+        if (!link->auto_link->retry_timer)
+            link->auto_link->retry_timer = qdr_core_timer(core, qdr_route_attempt_auto_link_CT, (void *)link->auto_link);
+
+        char *activation_failed = "Auto Link Activation Failed. ";
+        int error_length = 0;
+        if (link->auto_link->last_error)
+            error_length = strlen(link->auto_link->last_error);
+        int total_length = strlen(activation_failed);
+        if (error_length)
+            total_length += error_length;
+
+        char error_msg[total_length];
+        memset(error_msg, 0, error_length);
+        strcat(error_msg, activation_failed);
+        if (error_length)
+            strcat(error_msg, link->auto_link->last_error);
+
+        if (link->auto_link->retry_attempts == 0) {
+            // First retry in 2 seconds
+            qdr_core_timer_schedule(core, link->auto_link->retry_timer, AUTO_LINK_FIRST_RETRY_INTERVAL);
+            link->auto_link->retry_attempts += 1;
+        }
+        else {
+            // Successive retries every 5 seconds
+            qdr_core_timer_schedule(core, link->auto_link->retry_timer, AUTO_LINK_RETRY_INTERVAL);
+        }
+
+        qdr_route_log_CT(core, error_msg, link->auto_link->name, link->auto_link->identity, conn);
     }
 
     link->owning_addr = 0;
