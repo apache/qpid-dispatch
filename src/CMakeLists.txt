@@ -63,7 +63,6 @@ set(qpid_dispatch_SOURCES
   entity_cache.c
   failoverlist.c
   hash.c
-  iovec.c
   iterator.c
   log.c
   message.c

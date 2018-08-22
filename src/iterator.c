@@ -757,62 +757,6 @@ qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter)
 }
 
 
-qd_iovec_t *qd_iterator_iovec(const qd_iterator_t *iter)
-{
-    if (!iter)
-        return 0;
-
-    //
-    // Count the number of buffers this field straddles
-    //
-    qd_iterator_pointer_t pointer   = iter->view_start_pointer;
-    int                   bufcnt    = 1;
-    qd_buffer_t          *buf       = pointer.buffer;
-    size_t                bufsize   = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
-    ssize_t               remaining = pointer.remaining - bufsize;
-
-    while (remaining > 0) {
-        bufcnt++;
-        buf = buf->next;
-        if (!buf)
-            return 0;
-        remaining -= qd_buffer_size(buf);
-    }
-
-    //
-    // Allocate an iovec object big enough to hold the number of buffers
-    //
-    qd_iovec_t *iov = qd_iovec(bufcnt);
-    if (!iov)
-        return 0;
-
-    //
-    // Build out the io vectors with pointers to the segments of the field in buffers
-    //
-    bufcnt     = 0;
-    buf        = pointer.buffer;
-    bufsize    = qd_buffer_size(buf) - (pointer.cursor - qd_buffer_base(pointer.buffer));
-    void *base = pointer.cursor;
-    remaining  = pointer.remaining;
-
-    while (remaining > 0) {
-        if (bufsize > remaining)
-            bufsize = remaining;
-        qd_iovec_array(iov)[bufcnt].iov_base = base;
-        qd_iovec_array(iov)[bufcnt].iov_len  = bufsize;
-        bufcnt++;
-        remaining -= bufsize;
-        if (remaining > 0) {
-            buf     = buf->next;
-            base    = qd_buffer_base(buf);
-            bufsize = qd_buffer_size(buf);
-        }
-    }
-
-    return iov;
-}
-
-
 /**
  * Creates and returns a new qd_hash_segment_t and initializes it.
  */
