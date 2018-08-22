@@ -647,6 +647,20 @@ struct qdr_conn_identifier_t {
 ALLOC_DECLARE(qdr_conn_identifier_t);
 DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
 
+// Core timer related field/data structures
+typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+
+typedef struct qdr_core_timer_t {
+    DEQ_LINKS(struct qdr_core_timer_t);
+    qdr_timer_cb_t  handler;
+    void           *context;
+    uint32_t        delta_time_seconds;
+    bool            scheduled;
+} qdr_core_timer_t;
+
+ALLOC_DECLARE(qdr_core_timer_t);
+DEQ_DECLARE(qdr_core_timer_t, qdr_core_timer_list_t);
+
 
 struct qdr_core_t {
     qd_dispatch_t     *qd;
@@ -659,6 +673,7 @@ struct qdr_core_t {
     sys_mutex_t       *action_lock;
 
     sys_mutex_t             *work_lock;
+    qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
 
@@ -765,6 +780,7 @@ struct qdr_terminus_t {
 
 ALLOC_DECLARE(qdr_terminus_t);
 
+
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost);
@@ -846,5 +862,39 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body);
+
+/**
+ * Create a new timer which will only be used inside the code thread.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ * @callback Callback function to be invoked when timer fires.
+ * @timer_context Context to be used when firing callback
+ */
+qdr_core_timer_t *qdr_core_timer_CT(qdr_core_t *core, qdr_timer_cb_t callback, void *timer_context);
+
+
+/**
+ * Schedules a core timer with a delay. The timer will fire after "delay" seconds
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ * @param delay The number of seconds to wait before firing the timer
+ */
+void qdr_core_timer_schedule_CT(qdr_core_t *core, qdr_core_timer_t *timer, uint32_t delay);
+
+/**
+ * Cancels an already scheduled timeer. This does not free the timer. It is the responsibility of the person who
+ * created the timer to free it.
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ *
+ */
+void qdr_core_timer_cancel_CT(qdr_core_t *core, qdr_core_timer_t *timer);
+
+/**
+ * Cancels the timer if it is scheduled and and free it.
+ * @param core Pointer to the core object returned by qd_core()
+ * @param timer Timer object that needs to be scheduled.
+ */
+void qdr_core_timer_free_CT(qdr_core_t *core, qdr_core_timer_t *timer);
 
 #endif

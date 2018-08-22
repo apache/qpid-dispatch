@@ -60,6 +60,20 @@ void qdr_core_free(qdr_core_t *core);
 
 /**
  ******************************************************************************
+ * Miscellaneous functions
+ ******************************************************************************
+ */
+
+/**
+ * Drive the core-internal timer every one second.
+ *
+ * @param core Pointer to the core object returned by qd_core()
+ */
+void qdr_process_tick(qdr_core_t *core);
+
+
+/**
+ ******************************************************************************
  * Route table maintenance functions (Router Control)
  ******************************************************************************
  */

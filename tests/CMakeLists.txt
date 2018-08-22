@@ -32,6 +32,7 @@ set(unit_test_SOURCES
     tool_test.c
     failoverlist_test.c
     timer_test.c
+    core_timer_test.c
     parse_tree_tests
     proton_utils_tests.c
     )
