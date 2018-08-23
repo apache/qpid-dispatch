@@ -1241,8 +1241,9 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     //
     // Seed the random number generator
     //
-    unsigned int seed = (unsigned int) time(0);
-    srandom(seed);
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    srandom((unsigned int)time.tv_sec + ((unsigned int)time.tv_usec << 11));
 
     switch (router->router_mode) {
     case QD_ROUTER_MODE_STANDALONE: qd_log(router->log_source, QD_LOG_INFO, "Router started in Standalone mode");  break;
