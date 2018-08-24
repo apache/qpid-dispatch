@@ -262,6 +262,22 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
 }
 
 
+/**
+ * Attempts re-establishing auto links across the related connections/containers
+ */
+static void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
+                                    void *context)
+{
+    qdr_auto_link_t *al = (qdr_auto_link_t *)context;
+    qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
+    while (cref) {
+        qdr_auto_link_activate_CT(core, al, cref->conn);
+        cref = DEQ_NEXT(cref);
+    }
+
+}
+
+
 static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr_connection_t *conn)
 {
     qdr_route_log_CT(core, "Auto Link Deactivated", al->name, al->identity, conn);
@@ -385,7 +401,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
 }
 
 
-void qdr_route_retry_auto_link_CT(qdr_core_t *core, qdr_link_t *link)
+void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link)
 {
     if (!link->auto_link)
         return;
@@ -421,6 +437,13 @@ void qdr_route_retry_auto_link_CT(qdr_core_t *core, qdr_link_t *link)
 }
 
 
+void qdr_route_auto_link_closed_CT(qdr_core_t *core, qdr_link_t *link)
+{
+    if (link->auto_link && link->auto_link->retry_timer)
+        qdr_core_timer_cancel_CT(core, link->auto_link->retry_timer);
+}
+
+
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
     //
@@ -452,19 +475,6 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     qd_log(core->log, QD_LOG_TRACE, "Link route %spattern removed: pattern=%s name=%s",
            lr->is_prefix ? "prefix " : "", lr->pattern, lr->name);
     qdr_core_delete_link_route(core, lr);
-}
-
-
-void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
-                                    void *context)
-{
-    qdr_auto_link_t *al = (qdr_auto_link_t *)context;
-    qdr_connection_ref_t * cref = DEQ_HEAD(al->conn_id->connection_refs);
-    while (cref) {
-        qdr_auto_link_activate_CT(core, al, cref->conn);
-        cref = DEQ_NEXT(cref);
-    }
-
 }
 
 

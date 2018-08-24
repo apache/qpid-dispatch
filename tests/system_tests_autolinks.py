@@ -84,7 +84,7 @@ class AutoLinkDetachAfterAttachTest(MessagingHandler):
         # n_rx_attach will be 2
         if self.n_tx_attach == 2 and self.n_rx_attach == 2:
             # This if statement will fail if you comment out the call to
-            # qdr_route_retry_auto_link_CT(core, link) in
+            # qdr_route_auto_link_detached_CT(core, link) in
             # qdr_link_inbound_detach_CT() (connections.c)
             self.conn.close()
             self.timer.cancel()
