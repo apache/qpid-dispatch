@@ -21,6 +21,8 @@ include::_common/attributes.adoc[]
 
 = {RouterBook}
 
+include::assemblies/overview.adoc[leveloffset=+1]
+
 // Introduction
 include::introduction.adoc[leveloffset=+1]
 
