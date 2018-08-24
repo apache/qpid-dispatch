@@ -417,7 +417,7 @@ void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link)
     int error_length = 0;
     if (link->auto_link->last_error)
         error_length = strlen(link->auto_link->last_error);
-    int total_length = strlen(activation_failed);
+    int total_length = strlen(activation_failed) + 1;
     if (error_length)
         total_length += error_length;
 
