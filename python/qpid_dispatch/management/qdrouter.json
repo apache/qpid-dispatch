@@ -1146,13 +1146,13 @@
                 },
                 "containerId": {
                     "type": "string",
-                    "description": "ContainerID for the target container. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created.",
+                    "description": "ContainerID for the target container. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created. For linkRoutes created with a lifetimePolicy of 'connection-close' the linkRoute configuration will be deleted when the last connection through which this container can be accessed is closed.",
                     "create": true,
                     "required": false
                 },
                 "connection": {
                     "type": "string",
-                    "description": "The name from a connector or listener. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created.",
+                    "description": "The name from a connector or listener. Only one of containerId or connection should be specified for a linkRoute. Specifying both will result in the linkRoute not being created. For linkRoutes created with a lifetimePolicy of 'connection-close' the linkRoute configuration will be deleted when the connection is closed.",
                     "create": true,
                     "required": false
                 },
@@ -1174,6 +1174,13 @@
                     "type": ["inactive", "active"],
                     "description": "The operational status of this linkRoute: inactive - The remote container is not connected; active - the remote container is connected and ready to accept link routed attachments.",
                     "create": false
+                },
+                "deleteOnClose": {
+                    "type": "boolean",
+                    "description": "By default a configured linkRoute exists until it is removed via the DELETE management operation. When deleteOnClose is set to 'true' the router will automatically delete the linkRoute when its associated connection or container closes.  This allows transient servers to configure linkRoutes for their services such that the linkRoutes are removed when the server disconnects.",
+                    "default": false,
+                    "required": false,
+                    "create": true
                 }
             }
         },
