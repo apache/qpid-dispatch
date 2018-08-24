@@ -22,7 +22,6 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <qpid/dispatch/buffer.h>
-#include <qpid/dispatch/iovec.h>
 
 
 /**@file
@@ -324,17 +323,6 @@ qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter);
  * @return buffer.
  */
 char* qd_iterator_strncpy(qd_iterator_t *iter, char* buffer, int n);
-
-/**
- * Return the contents of this iter into an iovec structure.  This is used in a
- * scatter/gather IO mechanism.  If the iterator spans multiple physical buffers,
- * the iovec structure will contain one pointer per buffer.
- *
- * @param iter A field iterator
- * @return An iovec structure that references the data in the iterator's buffers.
- */
-qd_iovec_t *qd_iterator_iovec(const qd_iterator_t *iter);
-
 
 /** @} */
 /** \name annotation

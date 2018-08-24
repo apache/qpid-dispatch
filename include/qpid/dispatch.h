@@ -43,7 +43,6 @@
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/hash.h>
-#include <qpid/dispatch/iovec.h>
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/router.h>
