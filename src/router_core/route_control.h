@@ -43,8 +43,12 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             qd_parsed_field_t      *connection_field,
                                             qd_parsed_field_t   *external_addr);
 
-void qdr_route_attempt_auto_link_CT(qdr_core_t      *core,
-                                    void            *context);
+/**
+ * Attempts re-establishing auto links across the related connections/containers
+ * @param core Pointer to the core object returned by qd_core()
+ * @param context - the auto link that needs to be activated
+ */
+void qdr_route_attempt_auto_link_CT(qdr_core_t      *core, void   *context);
 
 void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *auto_link);
 
