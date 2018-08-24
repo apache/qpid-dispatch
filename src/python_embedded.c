@@ -537,7 +537,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int 
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES), py_iter_parse, py_msg, "properties");
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_BODY), py_iter_parse, py_msg, "body");
 
-    PyObject *value = PyObject_CallFunction(self->handler, "Oll", py_msg, link_id, inter_router_cost);
+    PyObject *value = PyObject_CallFunction(self->handler, "Oil", py_msg, link_id, inter_router_cost);
 
     Py_DECREF(py_msg);
     Py_XDECREF(value);

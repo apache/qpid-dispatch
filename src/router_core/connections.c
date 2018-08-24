@@ -603,7 +603,10 @@ static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length
 {
     char discriminator[QDR_DISCRIMINATOR_SIZE];
     qdr_generate_discriminator(discriminator);
-    snprintf(buffer, length, "amqp:/_topo/%s/%s/temp.%s", core->router_area, core->router_id, discriminator);
+    if (core->router_mode == QD_ROUTER_MODE_EDGE)
+        snprintf(buffer, length, "amqp:/_edge/%s/temp.%s", core->router_id, discriminator);
+    else
+        snprintf(buffer, length, "amqp:/_topo/%s/%s/temp.%s", core->router_area, core->router_id, discriminator);
 }
 
 
@@ -1011,7 +1014,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
         //
         trt = QD_TREATMENT_LINK_BALANCED;
 
-    else if (copy[0] == 'M') {
+    else if (copy[0] == QD_ITER_HASH_PREFIX_MOBILE) {
         //
         // Handle the mobile address case
         //
@@ -1047,7 +1050,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     //
     if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && *key == 'M')
+        if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
             qdr_post_mobile_removed_CT(core, key);
     }
 
@@ -1253,7 +1256,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
 
             if (!conn->incoming) {
                 //
-                // The connector-side of inter-router connections is responsible for setting up the
+                // The connector-side of inter-router/edge-uplink connections is responsible for setting up the
                 // inter-router links:  Two (in and out) for control, two for routed-message transfer.
                 //
                 (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
@@ -1361,6 +1364,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_free(conn);
 }
 
+
 static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original)
 {
     size_t olen = strlen(original);
@@ -1372,6 +1376,92 @@ static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original
     strcat(name + olen + 1, conn->container);
     return name;
 }
+
+
+//
+// Handle the attachment and detachment of an inter-router control link
+//
+static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        link->owning_addr = core->hello_addr;
+        qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        core->control_links_by_mask_bit[conn->mask_bit] = link;
+    }
+}
+
+
+static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        core->control_links_by_mask_bit[conn->mask_bit] = 0;
+        qdr_post_link_lost_CT(core, conn->mask_bit);
+    }
+}
+
+
+//
+// Handle the attachment and detachment of an inter-router data link
+//
+static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    if (conn->role == QDR_ROLE_INTER_ROUTER)
+        core->data_links_by_mask_bit[conn->mask_bit] = link;
+
+    //
+    // TODO - This needs to be refactored in terms of a non-inter-router link type
+    //
+    else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
+        if (core->router_mode == QD_ROUTER_MODE_EDGE) {
+            //
+            // Associate this link with the uplink address.
+            //
+            link->owning_addr = core->uplink_addr;
+            qdr_add_link_ref(&core->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            qd_log(core->log, QD_LOG_INFO, "Edge-uplink established to interior router: %s", conn->connection_info->container);
+        } else if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
+            //
+            // This is a down-link to an edge router.  Create a mobile address of the form
+            // H<edge-router-id>, associate the link to that address, and advertise
+            // the address on the network.
+            //
+            const char    *edge_id = conn->connection_info->container;
+            qdr_address_t *addr    = qdr_add_mobile_address_CT(core, "", edge_id, QD_TREATMENT_ANYCAST_BALANCED, true);
+            link->owning_addr = addr;
+            qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            if (DEQ_SIZE(addr->rlinks) == 1) {
+                const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+                if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
+                    qdr_post_mobile_added_CT(core, key);
+                qdr_addr_start_inlinks_CT(core, addr);
+            }
+
+            qd_log(core->log, QD_LOG_INFO, "Downlink established to edge router: %s", edge_id);
+        }
+    }
+}
+
+
+static void qdr_detach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+{
+    if (conn->role == QDR_ROLE_INTER_ROUTER)
+        core->data_links_by_mask_bit[conn->mask_bit] = 0;
+
+    //
+    // TODO - This needs to be refactored in terms of a non-inter-router link type
+    //
+    else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
+        if (core->router_mode == QD_ROUTER_MODE_EDGE) {
+            qdr_del_link_ref(&core->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            qd_log(core->log, QD_LOG_INFO, "Edge-uplink lost");
+        } else if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
+            qdr_del_link_ref(&link->owning_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            qd_log(core->log, QD_LOG_INFO, "Downlink lost to edge router: %s", conn->connection_info->container);
+        }
+    }
+}
+
 
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
@@ -1394,8 +1484,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
-    if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) && conn->role != QDR_ROLE_INTER_ROUTER)) {
-        link->link_type = QD_LINK_ENDPOINT; // Demote the link type to endpoint if this is not an inter-router connection
+    if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) &&
+         (conn->role != QDR_ROLE_INTER_ROUTER && conn->role != QDR_ROLE_EDGE_UPLINK))) {
+        link->link_type = QD_LINK_ENDPOINT; // Demote the link type to endpoint if this is not an inter-router/edge-uplink connection
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
@@ -1406,6 +1497,8 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     // Reject ENDPOINT attaches if this is an inter-router connection _and_ there is no
     // CONTROL link on the connection.  This will prevent endpoints from using inter-router
     // listeners for normal traffic but will not prevent routed-links from being established.
+    //
+    // EDGE_TODO: Prevent endpoint links on edge-uplink connections
     //
     if (conn->role == QDR_ROLE_INTER_ROUTER && link->link_type == QD_LINK_ENDPOINT &&
         core->control_links_by_mask_bit[conn->mask_bit] == 0) {
@@ -1572,7 +1665,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                 if (DEQ_SIZE(addr->rlinks) == 1) {
                     const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-                    if (key && *key == 'M')
+                    if (key && *key == QD_ITER_HASH_PREFIX_MOBILE)
                         qdr_post_mobile_added_CT(core, key);
                     qdr_addr_start_inlinks_CT(core, addr);
                 }
@@ -1582,14 +1675,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         }
 
         case QD_LINK_CONTROL:
-            link->owning_addr = core->hello_addr;
-            qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            core->control_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_attach_link_control_CT(core, conn, link);
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
 
         case QD_LINK_ROUTER:
-            core->data_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_attach_link_data_CT(core, conn, link);
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
         }
@@ -1673,7 +1764,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                     link->owning_addr = link->auto_link->addr;
                     if (DEQ_SIZE(link->auto_link->addr->rlinks) == 1) {
                         const char *key = (const char*) qd_hash_key_by_handle(link->auto_link->addr->hash_handle);
-                        if (key && *key == 'M')
+                        if (key && *key == QD_ITER_HASH_PREFIX_MOBILE)
                             qdr_post_mobile_added_CT(core, key);
                         qdr_addr_start_inlinks_CT(core, link->auto_link->addr);
                     }
@@ -1682,13 +1773,11 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
             break;
 
         case QD_LINK_CONTROL:
-            link->owning_addr = core->hello_addr;
-            qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            core->control_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_attach_link_control_CT(core, conn, link);
             break;
 
         case QD_LINK_ROUTER:
-            core->data_links_by_mask_bit[conn->mask_bit] = link;
+            qdr_attach_link_data_CT(core, conn, link);
             break;
         }
     }
@@ -1755,8 +1844,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         link->auto_link->last_error = qdr_error_description(error);
     }
 
-    link->owning_addr = 0;
-
     if (link->link_direction == QD_INCOMING) {
         //
         // Handle incoming link cases
@@ -1795,19 +1882,16 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             break;
 
         case QD_LINK_CONTROL:
-            if (conn->role == QDR_ROLE_INTER_ROUTER) {
-                qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                core->control_links_by_mask_bit[conn->mask_bit] = 0;
-                qdr_post_link_lost_CT(core, conn->mask_bit);
-            }
+            qdr_detach_link_control_CT(core, conn, link);
             break;
 
         case QD_LINK_ROUTER:
-            if (conn->role == QDR_ROLE_INTER_ROUTER)
-                core->data_links_by_mask_bit[conn->mask_bit] = 0;
+            qdr_detach_link_data_CT(core, conn, link);
             break;
         }
     }
+
+    link->owning_addr = 0;
 
     if (link->detach_count == 1) {
         //

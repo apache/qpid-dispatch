@@ -44,6 +44,21 @@
  */
 typedef struct qd_iterator_t qd_iterator_t;
 
+/**
+ * Address Hash Prefix Values
+ */
+#define QD_ITER_HASH_PREFIX_TOPOLOGICAL           'T'
+#define QD_ITER_HASH_PREFIX_LOCAL                 'L'
+#define QD_ITER_HASH_PREFIX_AREA                  'A'
+#define QD_ITER_HASH_PREFIX_ROUTER                'R'
+#define QD_ITER_HASH_PREFIX_MOBILE                'M'
+#define QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_IN     'C'
+#define QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_OUT    'D'
+#define QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_IN  'E'
+#define QD_ITER_HASH_PREFIX_LINKROUTE_PATTERN_OUT 'F'
+#define QD_ITER_HASH_PREFIX_GLOBAL_PLACEHOLDER    'G'
+#define QD_ITER_HASH_PREFIX_EDGE_SUMMARY          'H'
+
 
 /**
  * qd_iterator_view_t
@@ -80,6 +95,11 @@ typedef struct qd_iterator_t qd_iterator_t;
  *                        L^^^^^^^
  *     amqp:/<mobile>
  *         M0^^^^^^^^
+ *     amqp:/_edge/<my-router>/<local>
+ *                            L^^^^^^^
+ *     amqp:/_edge/<router>/<local>
+ *                H^^^^^^^^          [ interior mode ]
+ *         L_uplink                  [ edge mode ]
  *
  * ITER_VIEW_NODE_HASH - Isolate the hashable part of a router-id, used for headers
  *
@@ -125,7 +145,7 @@ typedef struct {
  * @param area The name of the router's area
  * @param router The identifier of the router in the area
  */
-void qd_iterator_set_address(const char *area, const char *router);
+void qd_iterator_set_address(bool edge_mode, const char *area, const char *router);
 
 /** @} */
 /** \name lifecycle

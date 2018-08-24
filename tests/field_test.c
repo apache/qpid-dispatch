@@ -291,6 +291,8 @@ static char* test_view_address_hash(void *context)
     {"amqp:/mobile",                            "M1mobile"},
     {"mobile",                                  "M1mobile"},
     {"/mobile",                                 "M1mobile"},
+    {"amqp:/_edge/router/sub",                  "Hrouter"},
+    {"_edge/router/sub",                        "Hrouter"},
 
     // Re-run the above tests to make sure trailing dots are ignored.
     {"amqp:/_local/my-addr/sub.",                "Lmy-addr/sub"},
@@ -307,6 +309,60 @@ static char* test_view_address_hash(void *context)
     {"_topo/my-area/my-router/my-addr.",         "Lmy-addr"},
     {"_topo/my-area/router.",                    "Rrouter"},
     {"_topo/my-area/router:",                    "Rrouter:"},
+
+    {0, 0}
+    };
+    int idx;
+
+    for (idx = 0; cases[idx].addr; idx++) {
+        qd_iterator_t *iter = qd_iterator_string(cases[idx].addr, ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
+        qd_iterator_free(iter);
+        if (ret) return ret;
+    }
+
+    for (idx = 0; cases[idx].addr; idx++) {
+        qd_buffer_list_t chain;
+        DEQ_INIT(chain);
+        build_buffer_chain(&chain, cases[idx].addr, 3);
+        qd_iterator_t *iter = qd_iterator_buffer(DEQ_HEAD(chain), 0,
+                                                 strlen(cases[idx].addr),
+                                                 ITER_VIEW_ADDRESS_HASH);
+        qd_iterator_annotate_phase(iter, '1');
+        char *ret = verify_iterator(context, iter, cases[idx].addr, cases[idx].view);
+        release_buffer_chain(&chain);
+        qd_iterator_free(iter);
+        if (ret) return ret;
+    }
+
+    return 0;
+}
+
+
+static char* test_view_address_hash_edge(void *context)
+{
+    struct {const char *addr; const char *view;} cases[] = {
+    {"amqp:/_local/my-addr/sub",                "Lmy-addr/sub"},
+    {"amqp:/_local/my-addr",                    "Lmy-addr"},
+    {"amqp:/_topo/area/router/local/sub",       "L_uplink"},
+    {"amqp:/_topo/my-area/router/local/sub",    "L_uplink"},
+    {"amqp:/_topo/my-area/my-router/local/sub", "Llocal/sub"},
+    {"amqp:/_topo/area/all/local/sub",          "L_uplink"},
+    {"amqp:/_topo/my-area/all/local/sub",       "Tlocal/sub"},
+    {"amqp:/_topo/all/all/local/sub",           "Tlocal/sub"},
+    {"amqp://host:port/_local/my-addr",         "Lmy-addr"},
+    {"_topo/area/router/my-addr",               "L_uplink"},
+    {"_topo/my-area/router/my-addr",            "L_uplink"},
+    {"_topo/my-area/my-router/my-addr",         "Lmy-addr"},
+    {"_topo/my-area/router",                    "L_uplink"},
+    {"amqp:/mobile",                            "M1mobile"},
+    {"mobile",                                  "M1mobile"},
+    {"/mobile",                                 "M1mobile"},
+    {"amqp:/_edge/router/sub",                  "L_uplink"},
+    {"_edge/router/sub",                        "L_uplink"},
+    {"amqp:/_edge/my-router/sub",               "Lsub"},
+    {"_edge/my-router/sub",                     "Lsub"},
 
     {0, 0}
     };
@@ -989,7 +1045,7 @@ int field_tests(void)
     int result = 0;
     char *test_group = "field_tests";
 
-    qd_iterator_set_address("my-area", "my-router");
+    qd_iterator_set_address(false, "my-area", "my-router");
 
     TEST_CASE(test_view_global_dns, 0);
     TEST_CASE(test_view_global_non_dns, 0);
@@ -1015,6 +1071,9 @@ int field_tests(void)
     TEST_CASE(test_qd_hash_retrieve_prefix_separator_exact_match_dot_at_end_1, 0);
     TEST_CASE(test_prefix_hash, 0);
     TEST_CASE(test_prefix_hash_with_space, 0);
+
+    qd_iterator_set_address(true, "my-area", "my-router");
+    TEST_CASE(test_view_address_hash_edge, 0);
 
     return result;
 }

@@ -324,6 +324,40 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
     return addr;
 }
 
+
+qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char *prefix, const char *address, qd_address_treatment_t treatment, bool edge)
+{
+    char           addr_string_stack[1000];
+    char          *addr_string = addr_string_stack;
+    bool           allocated   = false;
+    qdr_address_t *addr = 0;
+    qd_iterator_t *iter = 0;
+
+    size_t len = strlen(prefix) + strlen(address) + 3;
+    if (len > sizeof(addr_string_stack)) {
+        allocated = true;
+        addr_string = (char*) malloc(len);
+    }
+
+    snprintf(addr_string, len, "%s%s%s", edge ? "H" : "M0", prefix, address);
+    iter = qd_iterator_string(addr_string, ITER_VIEW_ALL);
+
+    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+    if (!addr) {
+        addr = qdr_address_CT(core, treatment);
+        if (addr) {
+            qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+            DEQ_INSERT_TAIL(core->addrs, addr);
+        }
+    }
+
+    qd_iterator_free(iter);
+    if (allocated)
+        free(addr_string);
+    return addr;
+}
+
+
 bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
 {
     if (addr) {
