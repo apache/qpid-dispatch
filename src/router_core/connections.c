@@ -1332,6 +1332,8 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     while (link_ref) {
         qdr_link_t *link = link_ref->link;
 
+        qdr_route_auto_link_closed_CT(core, link);
+
         //
         // Clean up the link and all its associated state.
         //
@@ -1842,6 +1844,12 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
         free(link->auto_link->last_error);
         link->auto_link->last_error = qdr_error_description(error);
+
+        //
+        // The auto link has failed. Periodically retry setting up the auto link until
+        // it succeeds.
+        //
+        qdr_route_auto_link_detached_CT(core, link);
     }
 
     if (link->link_direction == QD_INCOMING) {
