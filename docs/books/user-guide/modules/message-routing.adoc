@@ -54,9 +54,64 @@ When a router receives a message, it uses the message’s address to determine w
 
 Routing patterns define the paths that a message with a mobile address can take across a network. These routing patterns can be used for both direct routing, in which the router distributes messages between clients without a broker, and indirect routing, in which the router enables clients to exchange messages through a broker.
 
-Note that the routing patterns fall into two categories: Anycast (Balanced and Closest) and Multicast. There is no concept of "unicast" in which there is only one consumer for an address.
+{RouterName} supports the following routing patterns:
 
-Anycast distribution delivers each message to one consumer whereas multicast distribution delivers each message to all consumers.
+Balanced:: An anycast method that allows multiple consumers to use the same address. Each message is delivered to a single consumer only, and {RouterName} attempts to balance the traffic load across the router network.
++
+--
+If multiple consumers are attached to the same address, each router determines which outbound path should receive a message by considering each path's current number of unsettled deliveries. This means that more messages will be delivered along paths where deliveries are settled at higher rates.
+
+[NOTE]
+====
+{RouterName} neither measures nor uses message settlement time to determine which outbound path to use.
+====
+
+In this scenario, the messages are spread across both receivers regardless of path length:
+
+.Balanced Message Routing
+image::balanced-routing.png[Balanced Message Routing, align="center"]
+--
+
+Closest:: An anycast method in which every message is sent along the shortest path to reach the destination, even if there are other consumers for the same address.
++
+{RouterName} determines the shortest path based on the topology cost to reach each of the consumers. If there are multiple consumers with the same lowest cost, messages will be spread evenly among those consumers.
++
+In this scenario, all messages sent by `Sender` will be delivered to `Receiver 1`:
++
+.Closest Message Routing
+image::closest-routing.png[Closest Message Routing, align="center"]
+
+Multicast:: Messages are sent to all consumers attached to the address. Each consumer will receive one copy of the message.
++
+In this scenario, all messages are sent to all receivers:
++
+.Multicast Message Routing
+image::multicast-routing.png[Multicast Message Routing, align="center"]
+
+[NOTE]
+====
+{RouterName} does not provide a true "unicast" routing pattern in which there is only one consumer for an address.
+====
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 Anycast delivery is reliable when the message deliveries are unsettled. There is a reliability contract that the router network abides by when delivering unsettled messages to anycast addresses. For every such delivery sent by a producer, the router network guarantees that one of the following outcomes will occur:
 
