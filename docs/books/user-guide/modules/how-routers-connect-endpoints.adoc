@@ -21,8 +21,8 @@ under the License
 //
 // important-terms-concepts.adoc
 
-[id='router-network-connections-{context}']
-= Network connections
+[id='how-routers-connect-endpoints-{context}']
+= How routers connect endpoints
 
 {RouterName} connects clients, servers, AMQP services, and other routers through network connections. Routers use _listeners_ to accept incoming connections, and _connectors_ to establish outgoing connections.
 

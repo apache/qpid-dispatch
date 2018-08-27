@@ -33,11 +33,9 @@ include::modules/overview-of-amqp.adoc[leveloffset=+1]
 
 include::modules/what-routers-are.adoc[leveloffset=+1]
 
-include::modules/router-network-connections.adoc[leveloffset=+1]
+// include::modules/how-routers-connect-endpoints.adoc[leveloffset=+1]
 
-include::modules/router-addresses.adoc[leveloffset=+1]
-
-include::modules/router-routing.adoc[leveloffset=+1]
+include::modules/how-routers-route-messages.adoc[leveloffset=+1]
 
 include::modules/router-security.adoc[leveloffset=+1]
 

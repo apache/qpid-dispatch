@@ -24,7 +24,7 @@ under the License
 [id='what-routers-are-{context}']
 = What routers are
 
-{RouterName} is an application layer program running as a normal user program or as a daemon. A running instance of {RouterName} is called a _router_. Routers transfer messages between producers and consumers, can be combined with other routers to form an interconnected _router network_, and enhance both _direct_ (brokerless) and _indirect_ (brokered) messaging patterns.
+{RouterName} is an application layer program running as a normal user program or as a daemon. A running instance of {RouterName} is called a _router_.
 
 Routers do not take responsibility for messages::
 Routers transfer messages between producers and consumers, but unlike message brokers, they do not take responsibility for messages. Instead, routers propagate message settlement and disposition across a network such that delivery guarantees are met. That is, the router network will deliver the message &ndash; possibly through several intermediate routers &ndash; and then route the consumer's acknowledgement of that message back across the same path. The responsibility for the message is transfered from the producer to the consumer as if they were directly connected.

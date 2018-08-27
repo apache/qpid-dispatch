@@ -26,7 +26,11 @@ under the License
 
 {RouterName} implements version 1.0 of the Advanced Message Queueing Protocol (AMQP) specification. Therefore, you should understand several key AMQP terms and concepts before deploying or configuring {RouterName}.
 
-AMQP is a wire-level messaging protocol for transferring messages between applications called _containers_. Containers contain addressable entities (such as queues) called _nodes_. Messages are transferred between connected containers over _links_. A link is a unidirectional route between nodes. Essentially, a link is a channel for sending or receiving messages. Links are established over _sessions_, which are contexts for sending and receiving messages. Sessions are established within a _connection_, which is a channel for communication between containers.
+* AMQP is a wire-level messaging protocol for transferring messages between applications called _containers_. 
+* Containers contain addressable entities (such as queues) called _nodes_. 
+* Messages are transferred between connected containers over _links_. A link is a unidirectional route between nodes. Essentially, a link is a channel for sending or receiving messages.
+* Links are established over _sessions_, which are contexts for sending and receiving messages. 
+* Sessions are established within a _connection_, which is a channel for communication between containers.
 
 .Additional resources
 

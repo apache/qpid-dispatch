@@ -50,86 +50,63 @@ When a router receives a message, it uses the message’s address to determine w
 ====
 
 [discrete]
+== What mobile addresses are
+
+Addresses used in message routing are sometimes called _mobile addresses_, because ...
+
+[discrete]
 == Routing patterns
 
 Routing patterns define the paths that a message with a mobile address can take across a network. These routing patterns can be used for both direct routing, in which the router distributes messages between clients without a broker, and indirect routing, in which the router enables clients to exchange messages through a broker.
 
-{RouterName} supports the following routing patterns:
-
-Balanced:: An anycast method that allows multiple consumers to use the same address. Each message is delivered to a single consumer only, and {RouterName} attempts to balance the traffic load across the router network.
-+
---
-If multiple consumers are attached to the same address, each router determines which outbound path should receive a message by considering each path's current number of unsettled deliveries. This means that more messages will be delivered along paths where deliveries are settled at higher rates.
-
-[NOTE]
-====
-{RouterName} neither measures nor uses message settlement time to determine which outbound path to use.
-====
-
-In this scenario, the messages are spread across both receivers regardless of path length:
-
-.Balanced Message Routing
-image::balanced-routing.png[Balanced Message Routing, align="center"]
---
-
-Closest:: An anycast method in which every message is sent along the shortest path to reach the destination, even if there are other consumers for the same address.
-+
-{RouterName} determines the shortest path based on the topology cost to reach each of the consumers. If there are multiple consumers with the same lowest cost, messages will be spread evenly among those consumers.
-+
-In this scenario, all messages sent by `Sender` will be delivered to `Receiver 1`:
-+
-.Closest Message Routing
-image::closest-routing.png[Closest Message Routing, align="center"]
-
-Multicast:: Messages are sent to all consumers attached to the address. Each consumer will receive one copy of the message.
-+
-In this scenario, all messages are sent to all receivers:
-+
-.Multicast Message Routing
-image::multicast-routing.png[Multicast Message Routing, align="center"]
+{RouterName} supports two categories of routing patterns: anycast and multicast.
 
 [NOTE]
 ====
 {RouterName} does not provide a true "unicast" routing pattern in which there is only one consumer for an address.
 ====
 
+[options="header"]
+|===
+| Routing pattern | Description | Reliability
 
+| Anycast
+a| Each message is delivered to one consumer. There are two types of anycast methods:
 
+* Balanced
++
+Each message is delivered to a single consumer only, and {RouterName} attempts to balance the traffic load across the router network. This method allows multiple consumers to use the same address.
 
+* Closest
++
+Each message is sent along the shortest path to reach the destination, even if there are other consumers for the same address.
 
+| Reliable for unsettled message deliveries.
 
+| Multicast
+| Each message is delivered to all consumers. Each consumer will receive one copy of the message.
+| Unreliable. If a producer sends an unsettled delivery, the router automatically settles the delivery with ACCEPTED disposition regardless of whether the message was delivered to any consumers.
 
+|===
 
+[discrete]
+== Quality of service for message deliveries
 
+{RouterName} can deliver messages with any of the following levels of reliability:
 
+* At most once
+* At least once
+* Exactly once
 
+The level of reliability is negotiated between the client and router when the client establishes a link to the router. The router achieves this negotiated level of reliability by treating messages as either _pre-settled_ or _unsettled_.
 
+Pre-settled::
+Sometimes called "fire and forget", the router settles the incoming and outgoing deliveries and propagates the settlement to the message’s destination. However, it does not guarantee delivery.
 
-
-
-
-
-
-
-
-
-Anycast delivery is reliable when the message deliveries are unsettled. There is a reliability contract that the router network abides by when delivering unsettled messages to anycast addresses. For every such delivery sent by a producer, the router network guarantees that one of the following outcomes will occur:
-
-The delivery shall be settled with ACCEPTED or REJECTED disposition where the disposition is supplied by the consumer.
-
-The delivery shall be settled with RELEASED disposition, meaning that the message was not delivered to any consumer.
-
-The delivery shall be settled with MODIFIED disposition, meaning that the message may have been delivered to a consumer but should be considered in-doubt and re-sent.
-
-The connection to the producer shall be dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and later re-sent.
-
-Multicast delivery is not reliable. If a producer sends an unsettled delivery, the ingress router shall settle the delivery with ACCEPTED disposition regardless of whether the message was delivered to any consumers.
-
-Balanced
-An anycast method which allows multiple receivers to use the same address. In this case, messages (or links) are routed to exactly one of the receivers and the network attempts to balance the traffic load across the set of receivers using the same address. This routing delivers messages to receivers based on how quickly they settle the deliveries. Faster receivers get more messages.
-
-Closest
-An anycast method in which even if there are more receivers for the same address, every message is sent along the shortest path to reach the destination. This means that only one receiver will get the message. Each message is delivered to the closest receivers in terms of topology cost. If there are multiple receivers with the same lowest cost, deliveries will be spread evenly among those receivers.
-
-Multicast
-Having multiple consumers on the same address at the same time, messages are routed such that each consumer receives one copy of the message.
+Unsettled::
+The router propagates the settlement between the producer and consumer, and guarantees one of the following outcomes:
++
+* The delivery is settled with ACCEPTED or REJECTED disposition where the disposition is supplied by the consumer.
+* The delivery is settled with RELEASED disposition, meaning that the message was not delivered to any consumer.
+* The delivery is settled with MODIFIED disposition, meaning that the message may have been delivered to a consumer but should be considered in-doubt and re-sent.
+* The connection to the producer is dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and re-sent.
