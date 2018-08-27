@@ -52,6 +52,9 @@ qdr_core_timer_t *qdr_core_timer_CT(qdr_core_t *core, qdr_timer_cb_t callback, v
 
 void qdr_core_timer_schedule_CT(qdr_core_t *core, qdr_core_timer_t *timer, uint32_t delay)
 {
+    if (timer->scheduled)
+        qdr_core_timer_cancel_CT(core, timer);
+
     qdr_core_timer_t *ptr         = DEQ_HEAD(core->scheduled_timers);
     uint32_t          time_before = 0;
 
@@ -105,17 +108,20 @@ void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
         return;
 
     qdr_core_timer_t *timer = DEQ_HEAD(core->scheduled_timers);
+    qdr_core_timer_t *timer_next = 0;
 
     while (timer && timer->delta_time_seconds == 0) {
         assert(timer->scheduled);
+        timer->scheduled = false;
+        timer_next = DEQ_NEXT(timer);
+        DEQ_REMOVE(core->scheduled_timers, timer);
+
         if (timer->handler)
             timer->handler(core, timer->context);
-        timer->scheduled = false;
-        timer = DEQ_NEXT(timer);
-        DEQ_REMOVE_HEAD(core->scheduled_timers);
+
+        timer = timer_next;
     }
 
-    timer = DEQ_HEAD(core->scheduled_timers);
     if (timer)
         timer->delta_time_seconds--;
 }
