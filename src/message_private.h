@@ -77,6 +77,14 @@ typedef struct {
     qd_field_location_t  section_body;                    // The message body: Data
     qd_field_location_t  section_footer;                  // The footer
     qd_field_location_t  field_user_annotations;          // Opaque user message annotations, not a real field.
+
+    // header fields
+    qd_field_location_t  field_durable;
+    qd_field_location_t  field_priority;
+    qd_field_location_t  field_ttl;
+    qd_field_location_t  field_first_acquirer;
+    qd_field_location_t  field_delivery_count;
+
     qd_field_location_t  field_message_id;                // The string value of the message-id
     qd_field_location_t  field_user_id;                   // The string value of the user-id
     qd_field_location_t  field_to;                        // The string value of the to field
@@ -115,6 +123,7 @@ typedef struct {
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 aborted;                        // receive completed with abort flag set
     bool                 disable_q2_holdoff;             // Disable the Q2 flow control
+    uint8_t              priority;
 } qd_message_content_t;
 
 typedef struct {
@@ -141,6 +150,8 @@ ALLOC_DECLARE(qd_message_content_t);
 void qd_message_initialize();
 
 qd_iterator_pointer_t qd_message_cursor(qd_message_pvt_t *msg);
+
+#define QDR_N_PRIORITIES 10
 
 ///@}
 
