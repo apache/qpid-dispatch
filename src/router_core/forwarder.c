@@ -24,6 +24,28 @@
 #include "forwarder.h"
 
 
+static qdr_link_t * peer_data_link(qdr_core_t *core,
+                                   qdr_node_t *node,
+                                   int         priority)
+{
+  int nlmb = node->link_mask_bit;
+
+  if (nlmb < 0 || priority < 0)
+      return 0;
+
+  // Try to return the requested priority link, but if it does
+  // not exist, return the closest one that is lower.
+  qdr_link_t * link = 0;
+  while (1) {
+      if ((link = core->data_links_by_mask_bit[nlmb].links[priority]))
+          return link;
+      if (-- priority < 0)
+          return 0;
+  }
+  return link;
+}
+
+
 //==================================================================================
 // Built-in Forwarders
 //==================================================================================
@@ -243,6 +265,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
     bool          presettled           = !!in_delivery ? in_delivery->settled : true;
     bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
+    int           priority             = qd_message_get_priority(msg);
 
     //
     // If the delivery is not presettled, set the settled flag for forwarding so all
@@ -321,7 +344,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             else
                 next_node = rnode;
 
-            dest_link = control ? PEER_CONTROL_LINK(core, next_node) : PEER_DATA_LINK(core, next_node);
+            dest_link = control ? PEER_CONTROL_LINK(core, next_node) : peer_data_link(core, next_node, priority);
             if (dest_link && qd_bitmask_value(rnode->valid_origins, origin))
                 qd_bitmask_set_bit(link_set, dest_link->conn->mask_bit);
         }
@@ -334,7 +357,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             qd_bitmask_clear_bit(link_set, link_bit);
             dest_link = control ?
                 core->control_links_by_mask_bit[link_bit] :
-                core->data_links_by_mask_bit[link_bit];
+                core->data_links_by_mask_bit[link_bit].links[priority];
             if (dest_link && (!link_exclusion || qd_bitmask_value(link_exclusion, link_bit) == 0)) {
                 qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
                 qdr_forward_deliver_CT(core, dest_link, out_delivery);
@@ -509,7 +532,8 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             else
                 next_node = rnode;
 
-            out_link = control ? PEER_CONTROL_LINK(core, next_node) : PEER_DATA_LINK(core, next_node);
+            uint8_t priority = qd_message_get_priority(msg);
+            out_link = control ? PEER_CONTROL_LINK(core, next_node) : peer_data_link(core, next_node, priority);
             if (out_link) {
                 out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
                 qdr_forward_deliver_CT(core, out_link, out_delivery);
@@ -613,7 +637,8 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         for (QD_BITMASK_EACH(addr->rnodes, node_bit, c)) {
             qdr_node_t *rnode     = core->routers_by_mask_bit[node_bit];
             qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
-            qdr_link_t *link      = PEER_DATA_LINK(core, next_node);
+            uint8_t     priority  = qd_message_get_priority(msg);
+            qdr_link_t *link      = peer_data_link(core, next_node, priority);
             if (!link) continue;
             int         link_bit  = link->conn->mask_bit;
             int         value     = addr->outstanding_deliveries[link_bit];
@@ -761,8 +786,9 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
                 else
                     next_node = rnode;
 
-                if (next_node && PEER_DATA_LINK(core, next_node))
-                    conn = PEER_DATA_LINK(core, next_node)->conn;
+                qdr_link_t * pdl = peer_data_link(core, next_node, 0);
+                if (next_node && pdl)
+                    conn = pdl->conn;
             }
         }
     }

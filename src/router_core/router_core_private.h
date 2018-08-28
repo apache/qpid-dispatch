@@ -20,6 +20,7 @@
  */
 
 #include "dispatch_private.h"
+#include "message_private.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/atomic.h>
@@ -290,7 +291,8 @@ DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
 void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode);
 
 #define PEER_CONTROL_LINK(c,n) ((n->link_mask_bit >= 0) ? (c)->control_links_by_mask_bit[n->link_mask_bit] : 0)
-#define PEER_DATA_LINK(c,n)    ((n->link_mask_bit >= 0) ? (c)->data_links_by_mask_bit[n->link_mask_bit] : 0)
+// PEER_DATA_LINK has gotten more complex with prioritized links, and is now a function, peer_data_link().
+
 
 
 struct qdr_router_ref_t {
@@ -661,6 +663,10 @@ struct qdr_conn_identifier_t {
 ALLOC_DECLARE(qdr_conn_identifier_t);
 DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
 
+typedef struct qdr_priority_sheaf_t {
+    qdr_link_t *links[QDR_N_PRIORITIES];
+    int count;
+} qdr_priority_sheaf_t;
 
 struct qdr_core_t {
     qd_dispatch_t     *qd;
@@ -737,7 +743,7 @@ struct qdr_core_t {
     qd_bitmask_t         *neighbor_free_mask;
     qdr_node_t          **routers_by_mask_bit;
     qdr_link_t          **control_links_by_mask_bit;
-    qdr_link_t          **data_links_by_mask_bit;
+    qdr_priority_sheaf_t *data_links_by_mask_bit;
     uint64_t              cost_epoch;
 
     uint64_t              next_tag;

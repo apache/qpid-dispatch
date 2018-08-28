@@ -811,7 +811,9 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         if (link->link_type == QD_LINK_CONTROL)
             core->control_links_by_mask_bit[conn->mask_bit] = 0;
         if (link->link_type == QD_LINK_ROUTER)
-            core->data_links_by_mask_bit[conn->mask_bit] = 0;
+            for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority)
+                if (link == core->data_links_by_mask_bit[conn->mask_bit].links[priority])
+                    core->data_links_by_mask_bit[conn->mask_bit].links[priority] = 0;
     }
 
     //
@@ -1257,12 +1259,15 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
             if (!conn->incoming) {
                 //
                 // The connector-side of inter-router/edge-uplink connections is responsible for setting up the
-                // inter-router links:  Two (in and out) for control, two for routed-message transfer.
+                // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for routed-message transfer.
                 //
                 (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
                 (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
-                (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
-                (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+
+                for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                }
             }
         }
 
@@ -1408,8 +1413,14 @@ static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 //
 static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
-    if (conn->role == QDR_ROLE_INTER_ROUTER)
-        core->data_links_by_mask_bit[conn->mask_bit] = link;
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        int next_slot = core->data_links_by_mask_bit[conn->mask_bit].count ++;
+        if (next_slot >= QDR_N_PRIORITIES) {
+            qd_log(core->log, QD_LOG_ERROR, "Attempt to attach too many inter-router links for priority sheaf.");
+            return;
+        }
+        core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
+    }
 
     //
     // TODO - This needs to be refactored in terms of a non-inter-router link type
@@ -1448,8 +1459,12 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
 static void qdr_detach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER)
-        core->data_links_by_mask_bit[conn->mask_bit] = 0;
-
+        for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
+            if (link == core->data_links_by_mask_bit[conn->mask_bit].links[priority]) {
+                core->data_links_by_mask_bit[conn->mask_bit].links[priority] = 0;
+                break;
+            }
+        }
     //
     // TODO - This needs to be refactored in terms of a non-inter-router link type
     //

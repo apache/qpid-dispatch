@@ -1072,6 +1072,7 @@ uint8_t qd_message_get_priority(qd_message_t *in_msg)
             message_set_priority(in_msg, priority);
         }
     }
+    qd_iterator_free(priority_iterator);
     return msg->content->priority;
 }
 
