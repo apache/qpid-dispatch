@@ -27,7 +27,9 @@ from system_test import TestCase, Qdrouterd, main_module
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 from system_tests_drain_support import DrainMessagesMoreHandler
-
+from proton.handlers import MessagingHandler
+from proton import Message
+from proton.reactor import Container
 from time import sleep
 
 class DrainSupportTest(TestCase):
@@ -107,6 +109,96 @@ class DrainSupportTest(TestCase):
         drain_support = DrainMessagesMoreHandler(self.address, "abc")
         drain_support.run()
         self.assertEqual(drain_support.error, None)
+
+
+class ReceiverDropsOffDrainTest(TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        super(ReceiverDropsOffDrainTest, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'Broker'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.tester.get_port(),
+                          'saslMechanisms': 'ANONYMOUS'}),
+        ])
+
+        cls.router = cls.tester.qdrouterd("A", config, wait=True)
+        cls.address = cls.router.addresses[0]
+
+    def test_receiver_drops_off_sender_receives_drain(self):
+        test = ReceiverDropsOffSenderDrain(self.address, "examples")
+        test.run()
+        self.assertEqual(None, test.error)
+
+
+class ReceiverDropsOffSenderDrain(MessagingHandler):
+    def __init__(self, address, dest):
+        super(ReceiverDropsOffSenderDrain, self).__init__()
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.sender = None
+        self.receiver = None
+        self.error = None
+        self.sender_drained = False
+        self.address = address
+        self.dest = dest
+        self.num_msgs = 0
+        self.receiver_closed = False
+        self.drained = 0
+        self.expected_drained = 249
+
+    def timeout(self):
+        if not self.error:
+            self.error = "Timeout Expired: Sender was not drained. Expected " \
+                         "drained=%s, actual drain=%s " % \
+                         (self.expected_drained, self.drained)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        # Create sender and receiver in two separate connections
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        self.dest)
+
+    def on_sendable(self, event):
+        # Send just one message for now
+        if self.num_msgs < 1:
+            self.num_msgs += 1
+            msg = Message(body={'number': 1})
+            self.sender.send(msg)
+
+    def on_message(self, event):
+        # As soon as the receiver receives the message, close the receiver
+        if event.receiver == self.receiver:
+            self.receiver.close()
+            self.receiver_closed = True
+
+    def on_link_closed(self, event):
+        if event.receiver == self.receiver:
+            # The receiver link is closed. The sender still have a credit
+            # of 249. Now send a message. The receiver is already gone at
+            # this point. The router will receive this message and see that
+            # there are no receivers and it will send a drain to the sender
+            # This test will not work without the fix for DISPATCH-1090
+            msg = Message(body={'number': 2})
+            self.sender.send(msg)
+
+    def on_link_flow(self, event):
+        if self.receiver_closed:
+            if event.sender:
+                self.drained = event.sender.drained()
+                if self.drained == self.expected_drained:
+                    self.error = None
+                    self.sender_conn.close()
+                    self.receiver_conn.close()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':
