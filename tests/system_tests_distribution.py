@@ -28,14 +28,6 @@ from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNee
 from proton.handlers import MessagingHandler
 from proton.reactor  import Container, LinkOption, ApplicationEvent, EventInjector
 
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
-
 
 #------------------------------------------------
 # Helper classes for all tests.

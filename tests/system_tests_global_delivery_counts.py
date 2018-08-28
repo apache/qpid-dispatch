@@ -19,7 +19,7 @@
 
 from time import sleep
 
-from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol, Timeout
+from proton import Condition, Message, Delivery,  Timeout
 from system_test import TestCase, Qdrouterd, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container

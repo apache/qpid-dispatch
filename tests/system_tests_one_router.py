@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest2 as unittest
-from proton import Condition, Message, Delivery, PENDING, ACCEPTED, REJECTED, Url, symbol, Timeout
+from proton import Condition, Message, Delivery, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector

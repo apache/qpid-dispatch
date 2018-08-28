@@ -30,13 +30,6 @@ from proton.reactor  import Container
 
 import time
 
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
 #------------------------------------------------
 # Helper classes for all tests.
 #------------------------------------------------

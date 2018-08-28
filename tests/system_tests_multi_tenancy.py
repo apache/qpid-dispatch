@@ -30,12 +30,6 @@ from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch_internal.compat import UNICODE
 from qpid_dispatch.management.client import Node
 
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
 
 class RouterTest(TestCase):
 

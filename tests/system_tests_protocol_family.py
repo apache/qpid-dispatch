@@ -29,12 +29,6 @@ from proton.reactor import Container
 from system_test import TestCase, Qdrouterd, main_module
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
 class ProtocolFamilyTest(TestCase):
     @classmethod
     def setUpClass(cls):

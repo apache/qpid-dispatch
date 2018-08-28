@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import unittest, os, json
 from subprocess      import PIPE, STDOUT
-from proton          import Message, PENDING, ACCEPTED, REJECTED, RELEASED, SSLDomain, SSLUnavailable, Timeout
+from proton          import Message, SSLDomain, SSLUnavailable, Timeout
 from system_test     import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process
 from proton.handlers import MessagingHandler
 from proton.reactor  import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
@@ -36,16 +36,6 @@ import time
 import datetime
 import pdb
 import inspect
-
-
-
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
 
 
 #================================================

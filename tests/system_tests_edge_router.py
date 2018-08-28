@@ -23,13 +23,6 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
-
-
 class RouterTest(TestCase):
 
     inter_router_port = None

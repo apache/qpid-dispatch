@@ -28,7 +28,7 @@ import unittest2 as unittest
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
-from proton import Message, PENDING, ACCEPTED, REJECTED, Timeout, Delivery
+from proton import Message, Timeout, Delivery
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT
 from system_test import AsyncTestReceiver
 
@@ -36,13 +36,6 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce
 from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
-
-
-# PROTON-828:
-try:
-    from proton import MODIFIED
-except ImportError:
-    from proton import PN_STATUS_MODIFIED as MODIFIED
 
 
 class TwoRouterTest(TestCase):
