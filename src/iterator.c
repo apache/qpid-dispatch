@@ -768,6 +768,14 @@ char* qd_iterator_strncpy(qd_iterator_t *iter, char* buffer, int n)
 }
 
 
+uint8_t qd_iterator_uint8(qd_iterator_t *iter ) {
+    qd_iterator_reset(iter);
+    if (qd_iterator_end(iter))
+        return 0;
+    return (uint8_t) qd_iterator_octet(iter);
+}
+
+
 unsigned char *qd_iterator_copy(qd_iterator_t *iter)
 {
     if (!iter)
