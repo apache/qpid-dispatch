@@ -311,7 +311,7 @@ int qdr_connection_process(qdr_connection_t *conn)
                 }
 
                 sys_mutex_lock(conn->work_lock);
-                if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0) {
+                if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0 && !link->detach_received) {
                     DEQ_INSERT_HEAD(link->work_list, link_work);
                     link_work->processing = false;
                     link_work = 0; // Halt work processing
@@ -915,6 +915,9 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
     qdr_link_work_t *work = new_qdr_link_work_t();
     ZERO(work);
     work->work_type  = ++link->detach_count == 1 ? QDR_LINK_WORK_FIRST_DETACH : QDR_LINK_WORK_SECOND_DETACH;
+    if (work->work_type == QDR_LINK_WORK_SECOND_DETACH) {
+        link->detach_received = true;
+    }
     work->close_link = close;
 
     if (error)
