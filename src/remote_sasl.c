@@ -286,6 +286,7 @@ static void remote_sasl_prepare(pn_transport_t *transport)
             switch (impl->outcome) {
             case PN_SASL_OK:
                 set_policy_settings(impl->upstream, &impl->permissions);
+                qd_log(auth_service_log, QD_LOG_INFO, "authenticated as % ", impl->username);
                 pnx_sasl_succeed_authentication(transport, impl->username);
                 break;
             default:
@@ -567,18 +568,18 @@ static void* parse_properties(pn_data_t* data, permission_handler handler, void*
     return context;
 }
 
-static pn_bytes_t extract_authenticated_identity(pn_data_t* data)
+static pn_data_t* extract_map_entry(pn_data_t* data, const char* name)
 {
-    pn_bytes_t result = pn_bytes_null;
+    pn_data_t* result = 0;
     size_t count = pn_data_get_map(data);
     pn_data_enter(data);
-    for (size_t i = 0; !result.size && i < count/2; i++) {
+    for (size_t i = 0; !result && i < count/2; i++) {
         if (pn_data_next(data)) {
-            if (pn_data_type(data) == PN_SYMBOL) {
-                pn_bytes_t key = pn_data_get_symbol(data);
-                if (key.size && key.start && strncmp(key.start, "authenticated-identity", min(key.size, 22)) == 0) {
+            if (pn_data_type(data) == PN_SYMBOL || pn_data_type(data) == PN_STRING) {
+                pn_bytes_t key = pn_data_type(data) == PN_SYMBOL ? pn_data_get_symbol(data) : pn_data_get_string(data);
+                if (key.size && key.start && strncmp(key.start, name, min(key.size, strlen(name))) == 0) {
                     pn_data_next(data);
-                    result = pn_data_get_string(data);
+                    result = data;
                 } else {
                     //key didn't match, move to next pair
                     pn_data_next(data);
@@ -588,6 +589,20 @@ static pn_bytes_t extract_authenticated_identity(pn_data_t* data)
                 pn_data_next(data);
             }
         }
+    }
+    return result;
+}
+
+static pn_bytes_t extract_authenticated_identity(pn_data_t* data)
+{
+    pn_bytes_t result = pn_bytes_null;
+    pn_data_t* authid = extract_map_entry(data, "authenticated-identity");
+    if (authid) {
+        pn_data_t* id = extract_map_entry(authid, "sub");
+        if (id) {
+            result = pn_data_get_string(id);
+        }
+        pn_data_exit(data);
     }
     pn_data_exit(data);
     pn_data_rewind(data);
