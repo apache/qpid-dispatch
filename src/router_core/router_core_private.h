@@ -406,6 +406,7 @@ struct qdr_link_t {
     bool                     strip_annotations_out;
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
+    bool                     detach_received;
     char                    *strip_prefix;
     char                    *insert_prefix;
     bool                     terminus_survives_disconnect;
