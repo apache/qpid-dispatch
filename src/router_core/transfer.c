@@ -155,6 +155,11 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     int               num_deliveries_completed = 0;
 
     if (link->link_direction == QD_OUTGOING) {
+
+        // If a detach has been received on the link, there is no need to process deliveries on the link.
+        if (link->detach_received)
+            return 0;
+
         while (credit > 0) {
             sys_mutex_lock(conn->work_lock);
             dlv = DEQ_HEAD(link->undelivered);
