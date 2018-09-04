@@ -830,8 +830,13 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         } else {
             if (more)
                 dlv->disposition = PN_RELEASED;
-            else
+            else {
                 qdr_delivery_release_CT(core, dlv);
+                //
+                // Drain credit on the link
+                //
+                qdr_link_issue_credit_CT(core, link, 0, true);
+            }
         }
 
         if (qdr_is_addr_treatment_multicast(link->owning_addr))
@@ -944,7 +949,6 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             //
             // Again, don't bother decrementing then incrementing the ref_count
             //
-
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;
             qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_forward_CT: action-list -> unsettled-list", (long) dlv);
