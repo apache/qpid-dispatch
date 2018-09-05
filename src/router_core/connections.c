@@ -1053,6 +1053,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     //
     if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        qd_log(core->log, QD_LOG_INFO, "************qdr_check_addr_CT Mobile address %s is being removed*****************", key);
         if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
             qdr_post_mobile_removed_CT(core, key);
     }

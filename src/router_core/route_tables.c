@@ -731,6 +731,7 @@ static void qdr_do_mobile_removed(qdr_core_t *core, qdr_general_work_t *work)
 {
     char *address_hash = qdr_field_copy(work->field);
     if (address_hash) {
+        qd_log(core->log, QD_LOG_INFO, "Actually removing address in qdr_do_mobile_removed");
         core->rt_mobile_removed(core->rt_context, address_hash);
         free(address_hash);
     }
