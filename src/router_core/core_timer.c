@@ -84,10 +84,12 @@ void qdr_core_timer_schedule_CT(qdr_core_t *core, qdr_core_timer_t *timer, uint3
 
 void qdr_core_timer_cancel_CT(qdr_core_t *core, qdr_core_timer_t *timer)
 {
-    if (timer->scheduled && DEQ_NEXT(timer)) {
-        DEQ_NEXT(timer)->delta_time_seconds += timer->delta_time_seconds;
-        DEQ_REMOVE(core->scheduled_timers, timer);
+    if (timer->scheduled) {
         timer->scheduled = false;
+        if (DEQ_NEXT(timer)) {
+            DEQ_NEXT(timer)->delta_time_seconds += timer->delta_time_seconds;
+        }
+        DEQ_REMOVE(core->scheduled_timers, timer);
     }
 }
 
