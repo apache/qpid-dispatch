@@ -652,28 +652,28 @@ qdmanage query --type=log
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage read --type=log --module=_LOGGING_MODULE_NAME_
+qdmanage read --type=log --name=log/_LOGGING_MODULE_NAME_
 ----
 
 |Set the default logging configuration
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage create --type=log --module=DEFAULT --enable=_LOGGING_LEVEL_ --includeTimestamp=yes --_ATTRIBUTE_=_VALUE_
+qdmanage update --type=log --name=log/DEFAULT enable=_LOGGING_LEVEL_ includeTimestamp=yes _ATTRIBUTE_=_VALUE_
 ----
 
 |Enable logging for a logging module
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage create --type=log --module=_LOGGING_MODULE_NAME_ --enable=_LOGGING_LEVEL_ --_ATTRIBUTE_=_VALUE_ ...
+qdmanage update --type=log --name=log/_LOGGING_MODULE_NAME_ enable=_LOGGING_LEVEL_ _ATTRIBUTE_=_VALUE_ ...
 ----
 
 |Change the logging configuration for a logging module
 a|
 [options="nowrap",subs="+quotes"]
 ----
-qdmanage update --type=log --module=_LOGGING_MODULE_NAME_ --_ATTRIBUTE_=_VALUE_ ...
+qdmanage update --type=log --name=log/_LOGGING_MODULE_NAME_ _ATTRIBUTE_=_VALUE_ ...
 ----
 
 |===
