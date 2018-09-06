@@ -989,6 +989,7 @@
                         "MESSAGE",
                         "SERVER",
                         "AGENT",
+                        "AUTHSERVICE",
                         "CONTAINER",
                         "ERROR",
                         "POLICY",
