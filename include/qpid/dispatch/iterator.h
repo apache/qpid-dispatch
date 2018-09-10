@@ -327,6 +327,8 @@ int qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, int n);
  */
 unsigned char *qd_iterator_copy(qd_iterator_t *iter);
 
+uint8_t qd_iterator_uint8(qd_iterator_t *iter);
+
 /**
  * Return a new iterator that is a duplicate of the original iterator, referring
  * to the same base data.  If the input iterator pointer is NULL, the duplicate
