@@ -242,11 +242,14 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
 
         core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
         core->control_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
-        core->data_links_by_mask_bit    = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+        core->data_links_by_mask_bit    = NEW_ARRAY(qdr_priority_sheaf_t, qd_bitmask_width());
         for (int idx = 0; idx < qd_bitmask_width(); idx++) {
             core->routers_by_mask_bit[idx]   = 0;
             core->control_links_by_mask_bit[idx] = 0;
-            core->data_links_by_mask_bit[idx] = 0;
+            core->data_links_by_mask_bit[idx].count = 0;
+            for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority)
+              core->data_links_by_mask_bit[idx].links[priority] = 0;
+
         }
     }
 
