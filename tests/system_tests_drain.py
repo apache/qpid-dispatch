@@ -147,6 +147,10 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
         self.receiver_closed = False
         self.drained = 0
         self.expected_drained = 249
+        self.sender_drained = False
+
+        # Second receiver link opened.
+        self.sec_recv_link_opened = False
 
     def timeout(self):
         if not self.error:
@@ -175,8 +179,31 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
     def on_message(self, event):
         # As soon as the receiver receives the message, close the receiver
         if event.receiver == self.receiver:
-            self.receiver.close()
-            self.receiver_closed = True
+            if self.sec_recv_link_opened and self.sender_drained:
+
+                # Make sure this is the same message body that was
+                # sent by the newly created receiver
+                if event.message.body[u'number'] == 3:
+                    self.receiver.close()
+                    self.error = None
+                    self.sender_conn.close()
+                    self.receiver_conn.close()
+            else:
+                self.receiver.close()
+                self.receiver_closed = True
+
+    def on_link_opened(self, event):
+        if self.sender_drained:
+            if event.receiver == self.receiver:
+                self.sec_recv_link_opened = True
+
+                if self.num_msgs < 3:
+                    # Send a message after the sender has been drained
+                    # and a new receiver has been created
+                    # and make sure that the message has reached the receiver
+                    self.num_msgs += 1
+                    msg = Message(body={'number': 3})
+                    self.sender.send(msg)
 
     def on_link_closed(self, event):
         if event.receiver == self.receiver:
@@ -185,6 +212,7 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
             # this point. The router will receive this message and see that
             # there are no receivers and it will send a drain to the sender
             # This test will not work without the fix for DISPATCH-1090
+            self.num_msgs += 1
             msg = Message(body={'number': 2})
             self.sender.send(msg)
 
@@ -193,9 +221,18 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
             if event.sender:
                 self.drained = event.sender.drained()
                 if self.drained == self.expected_drained:
-                    self.error = None
-                    self.sender_conn.close()
-                    self.receiver_conn.close()
+                    # The sender has been drained. Now create another receiver
+                    # to the same address as the sender
+                    # and use the sender to send a message to see
+                    # if flow is re-issued by the router to the sender and if
+                    # the message reaches this newly created receiver
+                    self.sender_drained = True
+
+                    # Create a new receiver
+                    self.receiver = event.container.create_receiver(
+                        self.receiver_conn,
+                        self.dest,
+                        name="A")
 
     def run(self):
         Container(self).run()
