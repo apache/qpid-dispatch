@@ -447,6 +447,11 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     pn_data_put_string(pn_connection_properties(conn),
                        pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
 
+    pn_data_put_symbol(pn_connection_properties(conn),
+                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_CONN_ID), QD_CONNECTION_PROPERTY_CONN_ID));
+    qd_connection_t *qd_conn = pn_connection_get_context(conn);
+    pn_data_put_int(pn_connection_properties(conn), qd_conn->connection_id);
+
     if (config && config->inter_router_cost > 1) {
         pn_data_put_symbol(pn_connection_properties(conn),
                            pn_bytes(strlen(QD_CONNECTION_PROPERTY_COST_KEY), QD_CONNECTION_PROPERTY_COST_KEY));

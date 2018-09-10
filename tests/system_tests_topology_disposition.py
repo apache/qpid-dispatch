@@ -370,7 +370,8 @@ class TopologyDispositionTests ( TestCase ):
 
         # 1 means skip that test.
         cls.skip = { 'test_01' : 0,
-                     'test_02' : 0
+                     'test_02' : 0,
+                     'test_03' : 0
                    }
 
 
@@ -398,6 +399,40 @@ class TopologyDispositionTests ( TestCase ):
         test.run()
         self.assertEqual ( None, test.error )
 
+
+    def test_03_connection_id_propagation ( self ):
+        name = 'test_03'
+        error = None
+        if self.skip [ name ] :
+            self.skipTest ( "Test skipped during development." )
+        st_key = "SERVER (trace) ["
+        qc_key = "qd.conn-id\"="
+        for letter in ['A', 'B', 'C', 'D']:
+            log_name = ('../setUpClass/%s.log' % letter)
+            with  open(log_name, 'r') as router_log:
+                log_lines = router_log.read().split("\n")
+                outbound_opens = [s for s in log_lines if "-> @open" in s]
+                for oopen in outbound_opens:
+                    sti = oopen.find(st_key)
+                    if sti < 0:
+                        error = "Log %s, line '%s' has no SERVER key" % (log_name, oopen)
+                        break
+                    qci = oopen.find(qc_key)
+                    if qci < 0:
+                        error = "Log %s, line '%s' has no qd.conn-id key" % (log_name, oopen)
+                        break
+                    sti += len(st_key)
+                    qci += len(qc_key)
+                    while not oopen[sti] == "]":
+                        if not oopen[sti] == oopen[qci]:
+                            error = "log %s, line '%s' server conn_id != published conn-id" % (log_name, oopen)
+                            break
+                        sti += 1
+                        qci += 1
+                    if oopen[qci].isdigit():
+                        error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
+                self.assertEqual(None, error)
+            self.assertEqual ( None, error )
 
 
 #################################################################
