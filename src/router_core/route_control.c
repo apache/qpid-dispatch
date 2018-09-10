@@ -418,17 +418,12 @@ void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link)
     if (!link->auto_link->retry_timer)
         link->auto_link->retry_timer = qdr_core_timer_CT(core, qdr_route_attempt_auto_link_CT, (void *)link->auto_link);
 
-    char *activation_failed = "Auto Link Activation Failed. ";
-    int error_length = 0;
-    if (link->auto_link->last_error)
-        error_length = strlen(link->auto_link->last_error);
-    int total_length = strlen(activation_failed) + 1;
-    if (error_length)
-        total_length += error_length;
+    static char *activation_failed = "Auto Link Activation Failed. ";
+    int error_length = link->auto_link->last_error ? strlen(link->auto_link->last_error) : 0;
+    int total_length = strlen(activation_failed) + error_length + 1;
 
     char error_msg[total_length];
-    memset(error_msg, 0, error_length);
-    strcat(error_msg, activation_failed);
+    strcpy(error_msg, activation_failed);
     if (error_length)
         strcat(error_msg, link->auto_link->last_error);
 
