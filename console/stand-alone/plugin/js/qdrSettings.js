@@ -30,8 +30,8 @@ export class SettingsController {
     $scope.forms = {};
 
     $scope.formEntity = angular.fromJson(localStorage[QDR_SETTINGS_KEY]) || {
-      address: '',
-      port: '',
+      address: window.location.hostname,
+      port: Number(window.location.port),
       username: '',
       password: '',
       autostart: false
@@ -77,9 +77,9 @@ export class SettingsController {
     var doConnect = function() {
       QDRLog.info('doConnect called on connect page');
       if (!$scope.formEntity.address)
-        $scope.formEntity.address = 'localhost';
+        $scope.formEntity.address = window.location.hostname;
       if (!$scope.formEntity.port)
-        $scope.formEntity.port = 5673;
+        $scope.formEntity.port = Number(window.location.port);
 
       var failed = function() {
         $timeout(function() {

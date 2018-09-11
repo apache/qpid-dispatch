@@ -35,7 +35,7 @@ under the License.
         <div class="col-xs-10">
             <div class="alert alert-success">
                     <p>
-                        Enter the address and a HTML-enabled port of a <strong><a href="http://qpid.apache.org/components/dispatch-router/" target="_blank">Qpid Dispatch Router</a></strong>.
+                        Enter the address and an HTTP-enabled port of a <strong><a href="http://qpid.apache.org/components/dispatch-router/" target="_blank">Qpid Dispatch Router</a></strong>.
                     </p>
                     <!--
                     <p>
@@ -48,12 +48,12 @@ under the License.
                         <div class="form-group">
                             <label class="col-md-2 control-label" for="address">Address: </label>
                             <div class="col-md-6">
-                                <input tabindex="1" id="address" type="text" ng-model="formEntity.address" placeholder="localhost" name="address" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"></div>
+                                <input tabindex="1" id="address" type="text" ng-model="formEntity.address" placeholder="{{formEntity.address}}" name="address" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"></div>
                         </div>
                         <div class="form-group">
-                            <label tabindex="-1" class="col-md-2 control-label" title="Ports to connect to, by default 5673" for="port">Port: </label>
+                            <label tabindex="-1" class="col-md-2 control-label" title="Port to connect to, by default 5673" for="port">Port: </label>
                             <div class="col-md-6">
-                                <input tabindex="2" id="port" posint type="number" placeholder="5673" tooltip="Ports to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
+                                <input tabindex="2" id="port" posint type="number" placeholder="{{formEntity.port}}" tooltip="Port to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
                                 <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
                             </div>
                         </div>
