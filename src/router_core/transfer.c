@@ -1001,8 +1001,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         peer->tag_length = action->args.connection.tag_length;
         memcpy(peer->tag, action->args.connection.tag, peer->tag_length);
 
-        // Adding this work at priority 0.
-        qdr_forward_deliver_CT(core, link->connected_link, peer, 0);
+        qdr_forward_deliver_CT(core, link->connected_link, peer);
 
         link->total_deliveries++;
 
