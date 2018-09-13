@@ -57,6 +57,16 @@ struct fs_vector_t {
                          9, QD_AMQP_LONG,       0, 0, 0, 1, 0, 0x0102030405060708},  // 15
 {"\x55\x08",             2, QD_AMQP_SMALLLONG,  0, 0, 0, 1, 0, 0x08},                // 16
 {"\x45",                 1, QD_AMQP_LIST0,      0, 0, 0, 0, 0, 0},                   // 17
+{"\x70\xff\xff\xff\xff", 5, QD_AMQP_UINT,       1, 0, 0, 0, UINT32_MAX, 0},          // 18
+{"\x71\x7f\xff\xff\xff", 5, QD_AMQP_INT,        0, 0, 1, 0, 0, INT32_MAX},           // 19
+{"\x71\x80\x00\x00\x00", 5, QD_AMQP_INT,        0, 0, 1, 0, 0, INT32_MIN},           // 20
+
+{"\x80\xff\xff\xff\xff\xff\xff\xff\xff",
+                         9, QD_AMQP_ULONG,      0, 1, 0, 0, UINT64_MAX, 0},          // 21
+{"\x81\x7f\xff\xff\xff\xff\xff\xff\xff",
+                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MAX},           // 22
+{"\x81\x80\x00\x00\x00\x00\x00\x00\x00",
+                         9, QD_AMQP_LONG,       0, 0, 0, 1, 0, INT64_MIN},           // 23
 {0, 0, 0, 0, 0}
 };
 
@@ -115,6 +125,69 @@ static char *test_parser_fixed_scalars(void *context)
     }
 
     return 0;
+}
+
+static char *test_integer_conversion(void *context)
+{
+    const struct fs_vector_t {
+        const char *data;
+        int         length;
+        uint8_t     parse_as;
+        bool        expect_fail;
+        int64_t     expected_int;
+        uint64_t    expected_uint;
+    } fs_vectors[] = {
+        // can successfully convert 64 bit values that are valid in the 32bit range
+        {"\x80\x00\x00\x00\x00\xff\xff\xff\xff", 9, QD_AMQP_UINT, false, 0,         UINT32_MAX},
+        {"\x80\x00\x00\x00\x00\x00\x00\x00\x00", 9, QD_AMQP_UINT, false, 0,         0},
+        {"\x80\x00\x00\x00\x00\x00\x00\x00\x01", 9, QD_AMQP_UINT, false, 0,         1},
+        {"\x81\x00\x00\x00\x00\x7f\xff\xff\xff", 9, QD_AMQP_INT,  false, INT32_MAX, 0},
+        {"\x81\xFF\xFF\xFF\xFF\x80\x00\x00\x00", 9, QD_AMQP_INT,  false, INT32_MIN, 0},
+        {"\x81\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 9, QD_AMQP_INT,  false, -1,        0},
+
+        // and cannot convert 64 bit values that are outside the 32bit range as int32
+        {"\x80\x00\x00\x00\x01\x00\x00\x00\x00", 9, QD_AMQP_UINT, true,  0, 0},
+        {"\x81\x00\x00\x00\x00\x80\x00\x00\x00", 9, QD_AMQP_INT,  true,  0, 0},
+        {"\x81\xFF\xFF\xFF\xFF\x7F\xFF\xFF\xFF", 9, QD_AMQP_INT,  true,  0, 0},
+        {NULL},
+    };
+
+    char *error = NULL;
+    for (int i = 0; fs_vectors[i].data && !error; ++i) {
+        qd_iterator_t     *data_iter = qd_iterator_binary(fs_vectors[i].data, fs_vectors[i].length, ITER_VIEW_ALL);
+        qd_parsed_field_t *field = qd_parse(data_iter);
+
+        if (!qd_parse_ok(field)) {
+            error = "unexpected parse error";
+            qd_iterator_free(data_iter);
+            qd_parse_free(field);
+            break;
+        }
+
+        bool equal = false;
+        if (fs_vectors[i].parse_as == QD_AMQP_UINT) {
+            uint32_t tmp = qd_parse_as_uint(field);
+            equal = (tmp == fs_vectors[i].expected_uint);
+        } else {
+            int32_t tmp = qd_parse_as_int(field);
+            equal = (tmp == fs_vectors[i].expected_int);
+        }
+
+        if (!qd_parse_ok(field)) {
+            if (!fs_vectors[i].expect_fail) {
+                error = "unexpected conversion/parse error";
+            }
+        } else if (fs_vectors[i].expect_fail) {
+            error = "Conversion did not fail as expected";
+        } else if (!equal) {
+            error = "unexpected converted value";
+        }
+
+        qd_iterator_free(data_iter);
+        qd_parse_free(field);
+    }
+
+    return error;
 }
 
 
@@ -367,6 +440,7 @@ int parse_tests()
     TEST_CASE(test_map, 0);
     TEST_CASE(test_parser_errors, 0);
     TEST_CASE(test_tracemask, 0);
+    TEST_CASE(test_integer_conversion, 0);
 
     return result;
 }
