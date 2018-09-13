@@ -38,6 +38,7 @@ typedef struct qdr_auto_link_t       qdr_auto_link_t;
 typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
 typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 typedef struct qdr_exchange          qdr_exchange_t;
+typedef struct qdr_edge_t            qdr_edge_t;
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -679,6 +680,8 @@ struct qdr_core_t {
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
 
+    qdr_edge_t        *edge;   // if router_mode is edge router
+
     sys_mutex_t             *work_lock;
     qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
@@ -788,7 +791,6 @@ struct qdr_terminus_t {
 
 ALLOC_DECLARE(qdr_terminus_t);
 
-
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost);
@@ -849,6 +851,10 @@ void qdr_connection_free(qdr_connection_t *conn);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
 qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase);
 qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter);
+qdr_edge_t *qdr_edge(qdr_core_t *);
+void qdr_edge_free(qdr_edge_t *);
+void qdr_edge_connection_opened(qdr_edge_t *edge, qdr_connection_t *conn);
+void qdr_edge_connection_closed(qdr_edge_t *edge);
 
 void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                     qdr_connection_t      *conn,

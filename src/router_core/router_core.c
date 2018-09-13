@@ -47,6 +47,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->router_mode = mode;
     core->router_area = area;
     core->router_id   = id;
+
+    if (mode == QD_ROUTER_MODE_EDGE)
+        core->edge = qdr_edge(core);
+
     DEQ_INIT(core->exchanges);
 
     //
@@ -166,6 +170,8 @@ void qdr_core_free(qdr_core_t *core)
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
     if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
+
+    qdr_edge_free(core->edge);
 
     free(core);
 }
