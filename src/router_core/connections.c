@@ -817,9 +817,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
         if (link->link_type == QD_LINK_CONTROL)
             core->control_links_by_mask_bit[conn->mask_bit] = 0;
         if (link->link_type == QD_LINK_ROUTER)
-            for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority)
-                if (link == core->data_links_by_mask_bit[conn->mask_bit].links[priority])
-                    core->data_links_by_mask_bit[conn->mask_bit].links[priority] = 0;
+            core->data_links_by_mask_bit[conn->mask_bit].links[link->priority] = 0;
     }
 
     //
@@ -852,9 +850,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     sys_mutex_lock(conn->work_lock);
-    for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
-        qdr_del_link_ref(conn->links_with_work + priority, link, QDR_LINK_LIST_CLASS_WORK);
-    }
+    qdr_del_link_ref(conn->links_with_work + link->priority, link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
 
     //
@@ -1438,11 +1434,14 @@ static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        // As inter-router links are attached to this connection, they
+        // are assigned priorities in the order in which they are attached.
         int next_slot = core->data_links_by_mask_bit[conn->mask_bit].count ++;
         if (next_slot >= QDR_N_PRIORITIES) {
             qd_log(core->log, QD_LOG_ERROR, "Attempt to attach too many inter-router links for priority sheaf.");
             return;
         }
+        link->priority = next_slot;
         core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
     }
 
@@ -1483,12 +1482,7 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
 static void qdr_detach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER)
-        for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
-            if (link == core->data_links_by_mask_bit[conn->mask_bit].links[priority]) {
-                core->data_links_by_mask_bit[conn->mask_bit].links[priority] = 0;
-                break;
-            }
-        }
+        core->data_links_by_mask_bit[conn->mask_bit].links[link->priority] = 0;
     //
     // TODO - This needs to be refactored in terms of a non-inter-router link type
     //
