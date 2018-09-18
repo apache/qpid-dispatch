@@ -286,7 +286,7 @@ static void remote_sasl_prepare(pn_transport_t *transport)
             switch (impl->outcome) {
             case PN_SASL_OK:
                 set_policy_settings(impl->upstream, &impl->permissions);
-                qd_log(auth_service_log, QD_LOG_INFO, "authenticated as % ", impl->username);
+                qd_log(auth_service_log, QD_LOG_INFO, "authenticated as %s", impl->username);
                 pnx_sasl_succeed_authentication(transport, impl->username);
                 break;
             default:
