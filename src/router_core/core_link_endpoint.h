@@ -46,7 +46,7 @@ typedef void (*qdrc_update_t) (void           *link_context,
                                qdr_delivery_t *delivery);
 
 typedef void (*qdrc_transfer_t) (void           *link_context,
-                                 qdr_delivery_t *delivery;
+                                 qdr_delivery_t *delivery,
                                  qd_message_t   *message);
 
 typedef void (*qdrc_detach_t) (void        *link_context,
