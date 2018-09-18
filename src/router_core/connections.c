@@ -218,6 +218,16 @@ int qdr_connection_process(qdr_connection_t *conn)
     DEQ_MOVE(conn->work_list, work_list);
     for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
         DEQ_MOVE(conn->links_with_work[priority], links_with_work[priority]);
+
+        //
+        // Move the references from CLASS_WORK to CLASS_LOCAL so concurrent action in the core
+        // thread doesn't assume these links are referenced from the connection's list.
+        //
+        ref = DEQ_HEAD(links_with_work[priority]);
+        while (ref) {
+            move_link_ref(ref->link, QDR_LINK_LIST_CLASS_WORK, QDR_LINK_LIST_CLASS_LOCAL);
+            ref = DEQ_NEXT(ref);
+        }
     }
     sys_mutex_unlock(conn->work_lock);
 
@@ -249,23 +259,26 @@ int qdr_connection_process(qdr_connection_t *conn)
             qdr_link_work_t *link_work;
             free_link = false;
 
-            sys_mutex_lock(conn->work_lock);
             ref = DEQ_HEAD(links_with_work[priority]);
             if (ref) {
                 link = ref->link;
-                qdr_del_link_ref(links_with_work + priority, ref->link, QDR_LINK_LIST_CLASS_WORK);
+                qdr_del_link_ref(links_with_work + priority, ref->link, QDR_LINK_LIST_CLASS_LOCAL);
 
+                //
+                // The work lock must be used to protect accesses to the link's work_list and
+                // link_work->processing.
+                //
+                sys_mutex_lock(conn->work_lock);
                 link_work = DEQ_HEAD(link->work_list);
                 if (link_work) {
                     DEQ_REMOVE_HEAD(link->work_list);
                     link_work->processing = true;
                 }
+                sys_mutex_unlock(conn->work_lock);
             } else
                 link = 0;
-            sys_mutex_unlock(conn->work_lock);
 
             if (link) {
-
                 //
                 // Handle disposition/settlement updates
                 //
@@ -848,8 +861,8 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     // Remove the reference to this link in the connection's reference lists
     //
-    qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     sys_mutex_lock(conn->work_lock);
+    qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     qdr_del_link_ref(conn->links_with_work + link->priority, link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
 

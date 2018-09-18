@@ -370,7 +370,8 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 #define QDR_LINK_LIST_CLASS_ADDRESS    0
 #define QDR_LINK_LIST_CLASS_WORK       1
 #define QDR_LINK_LIST_CLASS_CONNECTION 2
-#define QDR_LINK_LIST_CLASSES          3
+#define QDR_LINK_LIST_CLASS_LOCAL      3
+#define QDR_LINK_LIST_CLASSES          4
 
 typedef enum {
     QDR_LINK_OPER_UP,
@@ -438,6 +439,7 @@ DEQ_DECLARE(qdr_link_ref_t, qdr_link_ref_list_t);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
+void move_link_ref(qdr_link_t *link, int from_cls, int to_cls);
 
 
 struct qdr_connection_ref_t {

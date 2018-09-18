@@ -451,6 +451,14 @@ void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
 }
 
 
+void move_link_ref(qdr_link_t *link, int from_cls, int to_cls)
+{
+    assert(link->ref[to_cls] == 0);
+    link->ref[to_cls] = link->ref[from_cls];
+    link->ref[from_cls] = 0;
+}
+
+
 void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn)
 {
     qdr_connection_ref_t *ref = new_qdr_connection_ref_t();
