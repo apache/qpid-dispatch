@@ -131,9 +131,6 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->sasl_username)   free(cf->sasl_username);
     if (cf->sasl_password)   free(cf->sasl_password);
     if (cf->sasl_mechanisms) free(cf->sasl_mechanisms);
-    if (cf->auth_service)    free(cf->auth_service);
-    if (cf->sasl_init_hostname)    free(cf->sasl_init_hostname);
-    if (cf->auth_ssl_conf)   pn_ssl_domain_free(cf->auth_ssl_conf);
     if (cf->ssl_profile)     free(cf->ssl_profile);
     if (cf->failover_list)   qd_failover_list_free(cf->failover_list);
     if (cf->log_message)     free(cf->log_message);
@@ -147,6 +144,19 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->ssl_trusted_certificates)   free(cf->ssl_trusted_certificates);
     if (cf->ssl_uid_format)             free(cf->ssl_uid_format);
     if (cf->ssl_uid_name_mapping_file)  free(cf->ssl_uid_name_mapping_file);
+
+    if (cf->sasl_plugin_config.auth_service)               free(cf->sasl_plugin_config.auth_service);
+    if (cf->sasl_plugin_config.sasl_init_hostname)         free(cf->sasl_plugin_config.sasl_init_hostname);
+    if (cf->sasl_plugin_config.ssl_certificate_file)       free(cf->sasl_plugin_config.ssl_certificate_file);
+    if (cf->sasl_plugin_config.ssl_private_key_file)       free(cf->sasl_plugin_config.ssl_private_key_file);
+    if (cf->sasl_plugin_config.ssl_ciphers)                free(cf->sasl_plugin_config.ssl_ciphers);
+    if (cf->sasl_plugin_config.ssl_protocols)              free(cf->sasl_plugin_config.ssl_protocols);
+    if (cf->sasl_plugin_config.ssl_password)               free(cf->sasl_plugin_config.ssl_password);
+    if (cf->sasl_plugin_config.ssl_trusted_certificate_db) free(cf->sasl_plugin_config.ssl_trusted_certificate_db);
+    if (cf->sasl_plugin_config.ssl_trusted_certificates)   free(cf->sasl_plugin_config.ssl_trusted_certificates);
+    if (cf->sasl_plugin_config.ssl_uid_format)             free(cf->sasl_plugin_config.ssl_uid_format);
+    if (cf->sasl_plugin_config.ssl_uid_name_mapping_file)  free(cf->sasl_plugin_config.ssl_uid_name_mapping_file);
+
     memset(cf, 0, sizeof(*cf));
 }
 
@@ -400,43 +410,26 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         qd_config_sasl_plugin_t *sasl_plugin =
             qd_find_sasl_plugin(qd->connection_manager, config->sasl_plugin);
         if (sasl_plugin) {
-            config->auth_service = SSTRDUP(sasl_plugin->auth_service);
-            config->sasl_init_hostname = SSTRDUP(sasl_plugin->sasl_init_hostname);
-            qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Using auth service %s from  SASL Plugin %s", config->auth_service, config->sasl_plugin);
+            config->sasl_plugin_config.auth_service = SSTRDUP(sasl_plugin->auth_service);
+            config->sasl_plugin_config.sasl_init_hostname = SSTRDUP(sasl_plugin->sasl_init_hostname);
+            qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Using auth service %s from  SASL Plugin %s", config->sasl_plugin_config.auth_service, config->sasl_plugin);
 
             if (sasl_plugin->auth_ssl_profile) {
+                config->sasl_plugin_config.use_ssl = true;
                 qd_config_ssl_profile_t *auth_ssl_profile =
                     qd_find_ssl_profile(qd->connection_manager, sasl_plugin->auth_ssl_profile);
-                config->auth_ssl_conf = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 
-                if (auth_ssl_profile->ssl_certificate_file) {
-                    if (pn_ssl_domain_set_credentials(config->auth_ssl_conf,
-                                                      auth_ssl_profile->ssl_certificate_file,
-                                                      auth_ssl_profile->ssl_private_key_file,
-                                                      auth_ssl_profile->ssl_password)) {
-                        qd_error(QD_ERROR_RUNTIME, "Cannot set SSL credentials for authentication service"); CHECK();
-                    }
-                }
-                if (auth_ssl_profile->ssl_trusted_certificate_db) {
-                    if (pn_ssl_domain_set_trusted_ca_db(config->auth_ssl_conf, auth_ssl_profile->ssl_trusted_certificate_db)) {
-                        qd_error(QD_ERROR_RUNTIME, "Cannot set trusted SSL certificate db for authentication service" ); CHECK();
-                    } else {
-                        if (pn_ssl_domain_set_peer_authentication(config->auth_ssl_conf, PN_SSL_VERIFY_PEER, auth_ssl_profile->ssl_trusted_certificate_db)) {
-                            qd_error(QD_ERROR_RUNTIME, "Cannot set SSL peer verification for authentication service"); CHECK();
-                        }
-                    }
-                }
-                if (auth_ssl_profile->ssl_ciphers) {
-                    if (pn_ssl_domain_set_ciphers(config->auth_ssl_conf, auth_ssl_profile->ssl_ciphers)) {
-                        return qd_error(QD_ERROR_RUNTIME, "Cannot set ciphers. The ciphers string might be invalid. Use openssl ciphers -v <ciphers> to validate");
-                    }
-                }
-                if (auth_ssl_profile->ssl_protocols) {
-                    if (pn_ssl_domain_set_protocols(config->auth_ssl_conf, auth_ssl_profile->ssl_protocols)) {
-                        return qd_error(QD_ERROR_RUNTIME, "Cannot set protocols. The protocols string might be invalid. This list is a space separated string of the allowed TLS protocols (TLSv1 TLSv1.1 TLSv1.2)");
-                    }
-                }
-
+                config->sasl_plugin_config.ssl_certificate_file = SSTRDUP(auth_ssl_profile->ssl_certificate_file);
+                config->sasl_plugin_config.ssl_private_key_file = SSTRDUP(auth_ssl_profile->ssl_private_key_file);
+                config->sasl_plugin_config.ssl_ciphers = SSTRDUP(auth_ssl_profile->ssl_ciphers);
+                config->sasl_plugin_config.ssl_protocols = SSTRDUP(auth_ssl_profile->ssl_protocols);
+                config->sasl_plugin_config.ssl_password = SSTRDUP(auth_ssl_profile->ssl_password);
+                config->sasl_plugin_config.ssl_trusted_certificate_db = SSTRDUP(auth_ssl_profile->ssl_trusted_certificate_db);
+                config->sasl_plugin_config.ssl_trusted_certificates = SSTRDUP(auth_ssl_profile->ssl_trusted_certificates);
+                config->sasl_plugin_config.ssl_uid_format = SSTRDUP(auth_ssl_profile->ssl_uid_format);
+                config->sasl_plugin_config.ssl_uid_name_mapping_file = SSTRDUP(auth_ssl_profile->uid_name_mapping_file);
+            } else {
+                config->sasl_plugin_config.use_ssl = false;
             }
         } else {
             qd_error(QD_ERROR_RUNTIME, "Cannot find sasl plugin %s", config->sasl_plugin); CHECK();

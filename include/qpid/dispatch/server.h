@@ -153,22 +153,35 @@ typedef struct qd_server_config_t {
     char *sasl_mechanisms;
 
     /**
-     * Address, i.e. host:port, of remote authentication service to connect to.
-     * (listener only)
-     */
-    char *auth_service;
-    /**
-     * Hostname to set on sasl-init sent to authentication service.
-     */
-    char *sasl_init_hostname;
-    /**
-     * Ssl config for connecting to the authentication service.
-     */
-    pn_ssl_domain_t *auth_ssl_conf;
-    /**
-     * The name of the related sasl plugin config.
+     * The name of the sasl plugin config if used.
      */
     char *sasl_plugin;
+    /**
+     * The config of the sasl plugin config if used.
+     */
+    struct {
+        /**
+         * Address, i.e. host:port, of remote authentication service to connect to.
+         * (listener only)
+         */
+        char *auth_service;
+        /**
+         * Hostname to set on sasl-init sent to authentication service.
+         */
+        char *sasl_init_hostname;
+        bool use_ssl;
+        //ssl config for sasl auth plugin:
+        char *ssl_certificate_file;
+        char *ssl_private_key_file;
+        char *ssl_uid_format;
+        char *ssl_profile;
+        char *ssl_uid_name_mapping_file;
+        char *ssl_password;
+        char *ssl_trusted_certificate_db;
+        char *ssl_trusted_certificates;
+        char *ssl_ciphers;
+        char *ssl_protocols;
+    } sasl_plugin_config;
 
     /**
      * If appropriate for the mechanism, the username for authentication

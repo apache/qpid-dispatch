@@ -649,9 +649,41 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         pn_sasl_config_name(sasl, ctx->server->sasl_config_name);
         if (config->sasl_mechanisms)
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
-        if (config->auth_service) {
-            qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->auth_service);
-            qdr_use_remote_authentication_service(tport, config->auth_service, config->sasl_init_hostname, config->auth_ssl_conf, server->proactor);
+        if (config->sasl_plugin_config.auth_service) {
+            qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->sasl_plugin_config.auth_service);
+            pn_ssl_domain_t* plugin_ssl_domain = NULL;
+            if (config->sasl_plugin_config.use_ssl) {
+                plugin_ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
+
+                if (config->sasl_plugin_config.ssl_certificate_file) {
+                    if (pn_ssl_domain_set_credentials(plugin_ssl_domain,
+                                                      config->sasl_plugin_config.ssl_certificate_file,
+                                                      config->sasl_plugin_config.ssl_private_key_file,
+                                                      config->sasl_plugin_config.ssl_password)) {
+                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL credentials for authentication service");
+                    }
+                }
+                if (config->sasl_plugin_config.ssl_trusted_certificate_db) {
+                    if (pn_ssl_domain_set_trusted_ca_db(plugin_ssl_domain, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
+                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set trusted SSL certificate db for authentication service" );
+                    } else {
+                        if (pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_VERIFY_PEER, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
+                            qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL peer verification for authentication service");
+                        }
+                    }
+                }
+                if (config->sasl_plugin_config.ssl_ciphers) {
+                    if (pn_ssl_domain_set_ciphers(plugin_ssl_domain, config->sasl_plugin_config.ssl_ciphers)) {
+                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set ciphers for authentication service");
+                    }
+                }
+                if (config->sasl_plugin_config.ssl_protocols) {
+                    if (pn_ssl_domain_set_protocols(plugin_ssl_domain, config->sasl_plugin_config.ssl_protocols)) {
+                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set protocols for authentication service");
+                    }
+                }
+            }
+            qdr_use_remote_authentication_service(tport, config->sasl_plugin_config.auth_service, config->sasl_plugin_config.sasl_init_hostname, plugin_ssl_domain, server->proactor);
         }
         pn_transport_require_auth(tport, config->requireAuthentication);
         pn_transport_require_encryption(tport, config->requireEncryption);

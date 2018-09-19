@@ -138,6 +138,7 @@ static void delete_qdr_sasl_relay_t(qdr_sasl_relay_t* instance)
 {
     if (instance->authentication_service_address) free(instance->authentication_service_address);
     if (instance->sasl_init_hostname) free(instance->sasl_init_hostname);
+    if (instance->ssl_domain) pn_ssl_domain_free(instance->ssl_domain);
     if (instance->mechlist) free(instance->mechlist);
     if (instance->selected_mechanism) free(instance->selected_mechanism);
     if (instance->response.start) free(instance->response.start);
