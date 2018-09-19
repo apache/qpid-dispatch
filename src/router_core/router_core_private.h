@@ -40,6 +40,8 @@ typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 typedef struct qdr_exchange          qdr_exchange_t;
 typedef struct qdr_edge_t            qdr_edge_t;
 
+#include "core_link_endpoint.h"
+
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
                            bool exclude_inprocess, bool control);
@@ -395,6 +397,7 @@ struct qdr_link_t {
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
+    qdrc_endpoint_t         *core_endpoint;      ///< [ref] Set if this link terminates on an in-core endpoint
     qdr_link_ref_t          *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects
     qdr_auto_link_t         *auto_link;          ///< [ref] Auto_link that owns this link
     qdr_delivery_list_t      undelivered;        ///< Deliveries to be forwarded or sent
@@ -461,6 +464,8 @@ struct qdr_address_t {
     qdr_link_ref_list_t        inlinks;       ///< Locally-Connected Producers
     qd_bitmask_t              *rnodes;        ///< Bitmask of remote routers with connected consumers
     qd_hash_handle_t          *hash_handle;   ///< Linkage back to the hash table entry
+    qdrc_endpoint_desc_t      *core_endpoint; ///< [ref] Set if this address is bound to an in-core endpoint
+    void                      *core_endpoint_context;
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
@@ -484,7 +489,7 @@ struct qdr_address_t {
     //
     // State for "exchange" treatment
     //
-    qdr_exchange_t      *exchange;  // weak ref
+    qdr_exchange_t *exchange;  // weak ref
 
     //
     // State for "link balanced" treatment

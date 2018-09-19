@@ -23,6 +23,7 @@
 #include <stdio.h>
 #include <strings.h>
 #include "router_core_private.h"
+#include "core_link_endpoint.h"
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -1082,7 +1083,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
     //
     if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
         qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion &&
-        addr->tracked_deliveries == 0) {
+        addr->tracked_deliveries == 0 && addr->core_endpoint == 0) {
         qdr_core_remove_address(core, addr);
     }
 }
@@ -1101,6 +1102,8 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
  * @param create_if_not_found Iff true, return a pointer to a newly created address record
  * @param accept_dynamic Iff true, honor the dynamic flag by creating a dynamic address
  * @param [out] link_route True iff the lookup indicates that an attach should be routed
+ * @param [out] unavailable True iff this address is blocked as unavailable
+ * @param [out] core_endpoint True iff this address is bound to a core-internal endpoint
  * @return Pointer to an address record or 0 if none is found
  */
 static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
@@ -1110,15 +1113,17 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
                                                      bool              create_if_not_found,
                                                      bool              accept_dynamic,
                                                      bool             *link_route,
-                                                     bool             *unavailable)
+                                                     bool             *unavailable,
+                                                     bool             *core_endpoint)
 {
     qdr_address_t *addr = 0;
 
     //
     // Unless expressly stated, link routing is not indicated for this terminus.
     //
-    *link_route = false;
-    *unavailable = false;
+    *link_route    = false;
+    *unavailable   = false;
+    *core_endpoint = false;
 
     if (qdr_terminus_is_dynamic(terminus)) {
         //
@@ -1240,6 +1245,9 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
 
     if (qdr_terminus_is_coordinator(terminus))
         *unavailable = false;
+
+    if (!!addr && addr->core_endpoint != 0)
+        *core_endpoint = true;
 
     return addr;
 }
@@ -1573,12 +1581,27 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 //
                 bool  link_route;
                 bool  unavailable;
-                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &unavailable);
-                if (unavailable) {
+                bool  core_endpoint;
+                qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &unavailable, &core_endpoint);
+
+                if (core_endpoint) {
+                    qdr_error_t *error = 0;
+                    if (qdrc_endpoint_do_bound_attach_CT(core, addr, link, &error)) {
+                        link->owning_addr = addr;
+                        qdr_link_outbound_second_attach_CT(core, link, source, target);
+                    } else {
+                        qdr_link_outbound_detach_CT(core, link, error, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                        qdr_terminus_free(source);
+                        qdr_terminus_free(target);
+                    }
+                }
+
+                else if (unavailable) {
                     qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
                 }
+
                 else if (!addr) {
                     //
                     // No route to this destination, reject the link
@@ -1669,12 +1692,27 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         case QD_LINK_ENDPOINT: {
             bool  link_route;
             bool  unavailable;
-            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &unavailable);
-            if (unavailable) {
+            bool  core_endpoint;
+            qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &unavailable, &core_endpoint);
+
+            if (core_endpoint) {
+                qdr_error_t *error = 0;
+                if (qdrc_endpoint_do_bound_attach_CT(core, addr, link, &error)) {
+                    link->owning_addr = addr;
+                    qdr_link_outbound_second_attach_CT(core, link, source, target);
+                } else {
+                    qdr_link_outbound_detach_CT(core, link, error, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+                    qdr_terminus_free(source);
+                    qdr_terminus_free(target);
+                }
+            }
+
+            else if (unavailable) {
                 qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
             }
+
             else if (!addr) {
                 //
                 // No route to this destination, reject the link

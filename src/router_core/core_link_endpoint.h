@@ -143,8 +143,8 @@ void qdrc_endpoint_bind_mobile_address_CT(qdr_core_t           *core,
  * @Param core Pointer to the core object
  * @Param conn Pointer to the connection object over which the link will be created
  * @Param dir The direction of the link: QD_INCOMING or QD_OUTGOING
- * @Param source The source terminus of the link - must be included for incoming links
- * @Param target The target terminus of the link - must be included for outgoing links
+ * @Param local_source The source terminus of the link - must be included for incoming links
+ * @Param local_target The target terminus of the link - must be included for outgoing links
  * @Param desc The descriptor for this core endpoint containing all callbacks
  * @Param link_context An opaque context that will be included in the calls to the callbacks
  * @Return Pointer to a new qdrc_endpoint_t for tracking the link
@@ -152,18 +152,22 @@ void qdrc_endpoint_bind_mobile_address_CT(qdr_core_t           *core,
 qdrc_endpoint_t *qdrc_endpoint_create_link_CT(qdr_core_t           *core,
                                               qdr_connection_t     *conn,
                                               qd_direction_t        dir,
-                                              qdr_terminus_t       *source,
-                                              qdr_terminus_t       *target,
+                                              qdr_terminus_t       *local_source,
+                                              qdr_terminus_t       *local_target,
                                               qdrc_endpoint_desc_t *desc,
                                               void                 *link_context);
 
 /**
- * Get the direction for the link
+ * Accessors for data held by the endpoint
+ *
+ *  - The link's direction of delivery flow
+ *  - The link's connection
  *
  * @Param endpoint Pointer to an endpoint object
- * @Return The direction of delivery flow (incoming or outgoing) for the link
+ * @Return The requested information (or 0 if not present)
  */
-qd_direction_t qdrc_endpoint_get_direction_CT(const qdrc_endpoint_t *endpoint);
+qd_direction_t    qdrc_endpoint_get_direction_CT(const qdrc_endpoint_t *endpoint);
+qdr_connection_t *qdrc_endpoint_get_connection_CT(qdrc_endpoint_t *endpoint);
 
 /**
  * Issue credit and control drain for an incoming link
