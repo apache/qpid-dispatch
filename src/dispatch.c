@@ -58,7 +58,7 @@ const char     *MULTICAST_DISTRIBUTION = "multicast";
 const char     *BALANCED_DISTRIBUTION  = "balanced";
 const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
 {
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
     ZERO(qd);
@@ -84,6 +84,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir)
     qd_dispatch_set_router_id(qd, strdup("0"));
     qd->router_mode = QD_ROUTER_MODE_ENDPOINT;
     qd->default_treatment   = QD_TREATMENT_LINK_BALANCED;
+    qd->test_hooks          = test_hooks;
 
     qd_python_initialize(qd, python_pkgdir);
     if (qd_error_code()) { qd_dispatch_free(qd); return 0; }

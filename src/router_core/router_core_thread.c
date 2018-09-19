@@ -18,6 +18,7 @@
  */
 
 #include "router_core_private.h"
+#include "core_test_hooks.h"
 
 /**
  * Creates a thread that is dedicated to managing and using the routing table.
@@ -51,6 +52,7 @@ void *router_core_thread(void *arg)
     qdr_forwarder_setup_CT(core);
     qdr_route_table_setup_CT(core);
     qdr_agent_setup_CT(core);
+    qdrc_test_hooks_init_CT(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {

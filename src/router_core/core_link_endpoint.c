@@ -19,6 +19,7 @@
 
 #include "core_link_endpoint.h"
 #include "qpid/dispatch/alloc.h"
+#include <stdio.h>
 
 struct qdrc_endpoint_t {
     qdrc_endpoint_desc_t *desc;
@@ -40,7 +41,7 @@ void qdrc_endpoint_bind_mobile_address_CT(qdr_core_t           *core,
     qd_iterator_annotate_phase(iter, phase);
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &addr);
-    if (addr) {
+    if (!addr) {
         qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0);
         if (treatment == QD_TREATMENT_UNAVAILABLE)
             treatment = QD_TREATMENT_ANYCAST_BALANCED;
@@ -143,6 +144,8 @@ bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr
     ep->desc = addr->core_endpoint;
     ep->link = link;
 
+    link->core_endpoint = ep;
+
     *error = 0;
     bool accept = !!ep->desc->on_first_attach ?
         ep->desc->on_first_attach(addr->core_endpoint_context, ep, &ep->link_context, error) : false;
@@ -151,5 +154,11 @@ bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr
         free_qdrc_endpoint_t(ep);
 
     return accept;
+}
+
+
+void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv)
+{
+    ep->desc->on_transfer(ep->link_context, dlv, dlv->msg);
 }
 
