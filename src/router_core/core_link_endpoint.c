@@ -157,8 +157,24 @@ bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr
 }
 
 
+
 void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv)
 {
     ep->desc->on_transfer(ep->link_context, dlv, dlv->msg);
+}
+
+
+qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qd_message_t *message)
+{
+    qdr_delivery_t *dlv = new_qdr_delivery_t();
+    uint64_t       *tag = (uint64_t*) dlv->tag;
+
+    ZERO(dlv);
+    dlv->link           = endpoint->link;
+    dlv->msg            = message;
+    *tag                = core->next_tag++;
+    dlv->tag_length = 8;
+    dlv->ingress_index = -1;
+    return dlv;
 }
 

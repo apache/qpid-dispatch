@@ -199,6 +199,16 @@ void qdrc_endpoint_flow_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, int cred
 void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_delivery_t *delivery, bool presettled);
 
 /**
+ * Allocate a delivery from a given endpoint
+ *
+ * @Param core Pointer to the core object
+ * @Param endpoint Pointer to an endpoint object
+ * @Param message An outgoing message to be associated with the delivery
+ * @Return A delivery that can be passed to qdrc_endpoint_send_CT
+ */
+qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qd_message_t *message);
+
+/**
  * Settle a received delivery with a specified disposition
  *
  * @param core Pointer to the core object
