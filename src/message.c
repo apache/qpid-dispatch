@@ -354,7 +354,18 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits f
     return buffer;
 }
 
-static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume, buffer_process_t handler, void *context)
+/**
+ * Advance cursor through buffer chain by 'consume' bytes.
+ * Cursor and buffer args are advanced to point to new position in buffer chain.
+ *  - if the number of bytes in the buffer chain is less than or equal to 
+ *    the consume number then return a null buffer and cursor.
+ *  - the original buffer chain is not changed or freed.
+ *
+ * @param cursor Pointer into current buffer content
+ * @param buffer pointer to current buffer
+ * @param consume number of bytes to advance
+ */
+static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume)
 {
     unsigned char *local_cursor = *cursor;
     qd_buffer_t   *local_buffer = *buffer;
@@ -362,13 +373,9 @@ static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume, b
     int remaining = qd_buffer_size(local_buffer) - (local_cursor - qd_buffer_base(local_buffer));
     while (consume > 0) {
         if (consume < remaining) {
-            if (handler)
-                handler(context, local_cursor, consume);
             local_cursor += consume;
             consume = 0;
         } else {
-            if (handler)
-                handler(context, local_cursor, remaining);
             consume -= remaining;
             local_buffer = local_buffer->next;
             if (local_buffer == 0){
@@ -385,10 +392,56 @@ static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume, b
 }
 
 
+/**
+ * Advance cursor through buffer chain by 'consume' bytes.
+ * Cursor and buffer args are advanced to point to new position in buffer chain.
+ * Buffer content that is consumed is optionally passed to handler.
+ *  - if the number of bytes in the buffer chain is less than or equal to 
+ *    the consume number then return the last buffer in the chain
+ *    and a cursor pointing t the first unused byte in the buffer.
+ *  - the original buffer chain is not changed or freed.
+ *
+ * @param cursor pointer into current buffer content
+ * @param buffer pointer to current buffer
+ * @param consume number of bytes to advance
+ * @param handler pointer to processor function
+ * @param context opaque argument for handler
+ */
+static void advance_guarded(unsigned char **cursor, qd_buffer_t **buffer, int consume, buffer_process_t handler, void *context)
+{
+    unsigned char *local_cursor = *cursor;
+    qd_buffer_t   *local_buffer = *buffer;
+
+    int remaining = qd_buffer_size(local_buffer) - (local_cursor - qd_buffer_base(local_buffer));
+    while (consume > 0) {
+        if (consume < remaining) {
+            if (handler)
+                handler(context, local_cursor, consume);
+            local_cursor += consume;
+            consume = 0;
+        } else {
+            if (handler)
+                handler(context, local_cursor, remaining);
+            consume -= remaining;
+            if (!local_buffer->next) {
+                local_cursor = qd_buffer_base(local_buffer) + qd_buffer_size(local_buffer);
+                break;
+            }
+            local_buffer = local_buffer->next;
+            local_cursor = qd_buffer_base(local_buffer);
+            remaining = qd_buffer_size(local_buffer) - (local_cursor - qd_buffer_base(local_buffer));
+        }
+    }
+
+    *cursor = local_cursor;
+    *buffer = local_buffer;
+}
+
+
 static unsigned char next_octet(unsigned char **cursor, qd_buffer_t **buffer)
 {
     unsigned char result = **cursor;
-    advance(cursor, buffer, 1, 0, 0);
+    advance(cursor, buffer, 1);
     return result;
 }
 
@@ -454,7 +507,7 @@ static int traverse_field(unsigned char **cursor, qd_buffer_t **buffer, qd_field
         field->tag        = tag;
     }
 
-    advance(cursor, buffer, consume, 0, 0);
+    advance(cursor, buffer, consume);
     return 1;
 }
 
@@ -609,7 +662,7 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
 
     location->length = pre_consume + consume;
     if (consume)
-        advance(&test_cursor, &test_buffer, consume, 0, 0);
+        advance(&test_cursor, &test_buffer, consume);
 
     *cursor = test_cursor;
     *buffer = test_buffer;
@@ -698,14 +751,14 @@ static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_me
     // requested field not parsed out.  Need to parse out up to the requested field:
     qd_buffer_t   *buffer = content->section_message_properties.buffer;
     unsigned char *cursor = qd_buffer_base(buffer) + content->section_message_properties.offset;
-    advance(&cursor, &buffer, content->section_message_properties.hdr_length, 0, 0);
+    advance(&cursor, &buffer, content->section_message_properties.hdr_length);
     if (index >= start_list(&cursor, &buffer)) return 0;  // properties list too short
 
     int position = 0;
     while (position < index) {
         qd_field_location_t *f = (qd_field_location_t *)((char *)content + offsets[position]);
         if (f->parsed)
-            advance(&cursor, &buffer, f->hdr_length + f->length, 0, 0);
+            advance(&cursor, &buffer, f->hdr_length + f->length);
         else // parse it out
             if (!traverse_field(&cursor, &buffer, f)) return 0;
         position++;
@@ -753,7 +806,7 @@ static qd_field_location_t *qd_message_header_field(qd_message_t *msg, qd_messag
     qd_field_location_t section = content->section_message_header;
     qd_buffer_t   *buffer = section.buffer;
     unsigned char *cursor = qd_buffer_base(buffer) + section.offset;
-    advance(&cursor, &buffer, section.hdr_length, 0, 0);
+    advance(&cursor, &buffer, section.hdr_length);
     int start = start_list(&cursor, &buffer);
     if (index > start)
         return 0;  // properties list too short
@@ -763,7 +816,7 @@ static qd_field_location_t *qd_message_header_field(qd_message_t *msg, qd_messag
         qd_field_location_t *f = (qd_field_location_t *)((char *)content + offsets[position]);
         // If it's parsed, advance over it. If not, parse it.
         if (f->parsed)
-            advance(&cursor, &buffer, f->hdr_length + f->length, 0, 0);
+            advance(&cursor, &buffer, f->hdr_length + f->length);
         else
         if (!traverse_field(&cursor, &buffer, f))
             return 0;
@@ -1471,7 +1524,7 @@ void qd_message_send(qd_message_t *in_msg,
         if (content->section_message_header.length > 0) {
             buf    = content->section_message_header.buffer;
             cursor = content->section_message_header.offset + qd_buffer_base(buf);
-            advance(&cursor, &buf, header_consume, send_handler, (void*) pnl);
+            advance_guarded(&cursor, &buf, header_consume, send_handler, (void*) pnl);
         }
 
         //
@@ -1481,7 +1534,7 @@ void qd_message_send(qd_message_t *in_msg,
         if (content->section_delivery_annotation.length > 0) {
             buf    = content->section_delivery_annotation.buffer;
             cursor = content->section_delivery_annotation.offset + qd_buffer_base(buf);
-            advance(&cursor, &buf, da_consume, send_handler, (void*) pnl);
+            advance_guarded(&cursor, &buf, da_consume, send_handler, (void*) pnl);
         }
 
         //
@@ -1501,9 +1554,9 @@ void qd_message_send(qd_message_t *in_msg,
         if (content->field_user_annotations.length > 0) {
             qd_buffer_t *buf2      = content->field_user_annotations.buffer;
             unsigned char *cursor2 = content->field_user_annotations.offset + qd_buffer_base(buf);
-            advance(&cursor2, &buf2,
-                    content->field_user_annotations.length,
-                    send_handler, (void*) pnl);
+            advance_guarded(&cursor2, &buf2,
+                            content->field_user_annotations.length,
+                            send_handler, (void*) pnl);
         }
 
         //
@@ -1523,8 +1576,7 @@ void qd_message_send(qd_message_t *in_msg,
         //
         int ma_consume = content->section_message_annotation.hdr_length + content->section_message_annotation.length;
         if (content->section_message_annotation.length > 0)
-            advance(&cursor, &buf, ma_consume, 0, 0);
-
+            advance_guarded(&cursor, &buf, ma_consume, 0, 0);
 
         msg->cursor.buffer = buf;
 
@@ -1545,7 +1597,11 @@ void qd_message_send(qd_message_t *in_msg,
 
     pn_session_t     *pns  = pn_link_session(pnl);
 
-    while (buf && pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER) {
+    while (msg->content->aborted ||
+           (buf &&
+            (msg->cursor.cursor < qd_buffer_cursor(buf) || buf->next != 0) &&
+            pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER)) {
+
         if (msg->content->aborted) {
             if (pn_link_current(pnl)) {
                 msg->send_complete = true;
@@ -1598,9 +1654,10 @@ void qd_message_send(qd_message_t *in_msg,
             msg->cursor.cursor = qd_buffer_base(next_buf);
         }
         else {
+            // There is no next_buf
             if (qd_message_receive_complete(in_msg)) {
                 //
-                // There is no next_buf and there is no more of the message coming, this means
+                // There is no more of the message coming, this means
                 // that we have completely sent out the message.
                 //
                 msg->send_complete = true;
@@ -1805,7 +1862,7 @@ qd_iterator_t *qd_message_field_iterator(qd_message_t *msg, qd_message_field_t f
 
     qd_buffer_t   *buffer = loc->buffer;
     unsigned char *cursor = qd_buffer_base(loc->buffer) + loc->offset;
-    advance(&cursor, &buffer, loc->hdr_length, 0, 0);
+    advance(&cursor, &buffer, loc->hdr_length);
 
     return qd_iterator_buffer(buffer, cursor - qd_buffer_base(buffer), loc->length, ITER_VIEW_ALL);
 }
