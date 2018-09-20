@@ -983,6 +983,13 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     bool more = action->args.connection.more;
 
+    //
+    // If this link has a core_endpoint, direct deliveries to that endpoint.
+    //
+    if (!!link->core_endpoint) {
+        qdrc_endpoint_do_deliver_CT(core, link->core_endpoint, dlv);
+        return;
+    }
 
     if (link->connected_link) {
         if (link->link_direction == QD_INCOMING)
