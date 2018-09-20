@@ -768,10 +768,11 @@ char* qd_iterator_strncpy(qd_iterator_t *iter, char* buffer, int n)
 }
 
 
-uint8_t qd_iterator_uint8(qd_iterator_t *iter ) {
+// Return invalid value if iterator is empty.
+int32_t qd_iterator_uint8(qd_iterator_t *iter ) {
     qd_iterator_reset(iter);
     if (qd_iterator_end(iter))
-        return 0;
+        return -1;
     return (uint8_t) qd_iterator_octet(iter);
 }
 

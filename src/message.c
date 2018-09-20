@@ -1054,26 +1054,31 @@ void qd_message_add_fanout(qd_message_t *in_msg)
     sys_atomic_inc(&msg->content->fanout);
 }
 
-static void message_set_priority(qd_message_t *in_msg, uint8_t priority)
+// Priority information may have arrived as part of the incoming
+// message header. Here we are storing it as past of the message
+// private data structure for convenience in later routing.
+// Router code does not decide a message's priority, unless it is
+// to assign the default value to a message whose priority was
+// left undefined by the sender.
+static uint8_t message_private_store_priority(qd_message_t *in_msg, uint8_t priority)
 {
     qd_message_pvt_t *msg  = (qd_message_pvt_t*) in_msg;
-    msg->content->priority = priority < QDR_N_PRIORITIES ? priority : QDR_N_PRIORITIES - 1;
+    return msg->content->priority = priority < QDR_N_PRIORITIES ? priority : QDR_N_PRIORITIES - 1;
 }
 
 uint8_t qd_message_get_priority(qd_message_t *in_msg)
 {
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-
-    uint8_t  priority = 0;
+    int32_t  priority = -1;
     qd_iterator_t *priority_iterator = qd_message_field_iterator(in_msg, QD_FIELD_PRIORITY);
     if (priority_iterator) {
         if (qd_iterator_remaining(priority_iterator) > 0) {
             priority = qd_iterator_uint8(priority_iterator);
-            message_set_priority(in_msg, priority);
         }
     }
+    // If there was no priority value, use the default per AMQP 1.0 spec.
+    priority = (priority < 0) ? QDR_DEFAULT_PRIORITY : priority;
     qd_iterator_free(priority_iterator);
-    return msg->content->priority;
+    return message_private_store_priority(in_msg, priority);
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)
