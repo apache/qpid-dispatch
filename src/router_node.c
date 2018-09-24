@@ -778,12 +778,14 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     pn_delivery_t  *pnd          = pn_link_current(pn_link);
 
     if (pnd) {
-        qd_message_t   *msg   = qd_message_receive(pnd);
-
-        if (!qd_message_receive_complete(msg)) {
-            qd_message_Q2_holdoff_disable(msg);
-            deferred_AMQP_rx_handler((void *)link, false);
+        qd_message_t *msg = qd_get_message_context(pnd);
+        if (msg) {
+            if (!qd_message_receive_complete(msg)) {
+                qd_message_Q2_holdoff_disable(msg);
+                deferred_AMQP_rx_handler((void *)link, false);
+            }
         }
+
     }
 
     qd_router_t    *router = (qd_router_t*) context;

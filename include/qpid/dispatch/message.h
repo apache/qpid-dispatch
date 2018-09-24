@@ -221,6 +221,14 @@ void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *i
 qd_message_t *qd_message_receive(pn_delivery_t *delivery);
 
 /**
+ * Returns the PN_DELIVERY_CTX record from the attachments
+ *
+ * @param delivery An incoming delivery from a link
+ * @return - pointer to qd_message_t object
+ */
+qd_message_t * qd_get_message_context(pn_delivery_t *delivery);
+
+/**
  * Send the message outbound on an outgoing link.
  *
  * @param msg A pointer to a message to be sent.

@@ -1137,6 +1137,7 @@ bool qd_message_receive_complete(qd_message_t *in_msg)
     return msg->content->receive_complete;
 }
 
+
 bool qd_message_send_complete(qd_message_t *in_msg)
 {
     if (!in_msg)
@@ -1207,6 +1208,15 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
     return msg_in;
 }
 
+qd_message_t * qd_get_message_context(pn_delivery_t *delivery)
+{
+    pn_record_t *record    = pn_delivery_attachments(delivery);
+    if (record)
+        return (qd_message_t *) pn_record_get(record, PN_DELIVERY_CTX);
+
+    return 0;
+}
+
 
 qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 {
@@ -1229,7 +1239,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
-    }
+}
 
     //
     // The discard flag indicates we should keep reading the input stream
@@ -1632,6 +1642,9 @@ void qd_message_send(qd_message_t *in_msg,
                 while (local_buf && local_buf != next_buf) {
                     DEQ_REMOVE_HEAD(content->buffers);
                     qd_buffer_free(local_buf);
+                    if (!msg->content->buffers_freed)
+                        msg->content->buffers_freed = true;
+
                     local_buf = DEQ_HEAD(content->buffers);
 
                     // by freeing a buffer there now may be room to restart a
@@ -1712,10 +1725,17 @@ static int qd_check_field_LH(qd_message_content_t *content,
 static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_t depth)
 {
     qd_error_clear();
+
+    //
+    // In the case of a streaming or multi buffer message, there is a change that some buffers might be freed before the entire
+    // message has arrived in which case we cannot reliably check the message using the depth.
+    //
+    if (content->buffers_freed)
+        return true;
+
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
 
     if (!buffer) {
-        qd_error(QD_ERROR_MESSAGE, "No data");
         return false;
     }
 
