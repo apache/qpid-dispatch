@@ -31,7 +31,7 @@ export class SettingsController {
 
     $scope.formEntity = angular.fromJson(localStorage[QDR_SETTINGS_KEY]) || {
       address: window.location.hostname,
-      port: Number(window.location.port) || 80,
+      port: Number(window.location.port) || (window.location.protocol === 'https' ? 443 : 80),
       username: '',
       password: '',
       autostart: false
