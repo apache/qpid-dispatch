@@ -1137,6 +1137,26 @@ bool qd_message_receive_complete(qd_message_t *in_msg)
     return msg->content->receive_complete;
 }
 
+
+bool qd_message_is_buffers_freed(qd_message_t *in_msg)
+{
+    if (!in_msg)
+        return false;
+    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
+    return msg->content->buffers_freed;
+}
+
+
+void qd_message_set_buffers_freed(qd_message_t *msg, bool buffers_freed)
+{
+    if (!msg)
+        return;
+
+    qd_message_pvt_t *pvt_msg = (qd_message_pvt_t*) msg;
+    pvt_msg->content->buffers_freed = buffers_freed;
+}
+
+
 bool qd_message_send_complete(qd_message_t *in_msg)
 {
     if (!in_msg)
@@ -1207,6 +1227,15 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
     return msg_in;
 }
 
+qd_message_t * qd_pn_delivery_get_delivery_context(pn_delivery_t *delivery)
+{
+    pn_record_t *record    = pn_delivery_attachments(delivery);
+    if (record)
+        return pn_record_get(record, PN_DELIVERY_CTX);
+
+    return 0;
+}
+
 
 qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 {
@@ -1214,7 +1243,8 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     ssize_t           rc;
 
     pn_record_t *record    = pn_delivery_attachments(delivery);
-    qd_message_pvt_t *msg  = (qd_message_pvt_t*) pn_record_get(record, PN_DELIVERY_CTX);
+    qd_message_t *m = pn_record_get(record, PN_DELIVERY_CTX);
+    qd_message_pvt_t *msg  = (qd_message_pvt_t*) m;
 
     //
     // If there is no message associated with the delivery then this is the
@@ -1222,13 +1252,14 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     // Allocate a message descriptor and link it and the delivery together.
     //
     if (!msg) {
-        msg = (qd_message_pvt_t*) qd_message();
+        m = qd_message();
+        msg = (qd_message_pvt_t*) m;
         qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
         msg->content->input_link = pn_link_get_context(link);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
-        pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
+        pn_record_set(record, PN_DELIVERY_CTX, (void*) m);
     }
 
     //
@@ -1632,6 +1663,9 @@ void qd_message_send(qd_message_t *in_msg,
                 while (local_buf && local_buf != next_buf) {
                     DEQ_REMOVE_HEAD(content->buffers);
                     qd_buffer_free(local_buf);
+                    if (!qd_message_is_buffers_freed(in_msg))
+                        qd_message_set_buffers_freed(in_msg, true);
+
                     local_buf = DEQ_HEAD(content->buffers);
 
                     // by freeing a buffer there now may be room to restart a
@@ -1712,6 +1746,10 @@ static int qd_check_field_LH(qd_message_content_t *content,
 static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_t depth)
 {
     qd_error_clear();
+
+    if (content->buffers_freed)
+        return true;
+
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
 
     if (!buffer) {

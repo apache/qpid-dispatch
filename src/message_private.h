@@ -123,6 +123,7 @@ typedef struct {
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 aborted;                        // receive completed with abort flag set
     bool                 disable_q2_holdoff;             // Disable the Q2 flow control
+    bool                 buffers_freed;                  // Have any message content buffers be freed ?
     uint8_t              priority;
 } qd_message_content_t;
 
