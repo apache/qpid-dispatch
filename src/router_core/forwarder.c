@@ -23,6 +23,8 @@
 #include <strings.h>
 #include "forwarder.h"
 
+ALLOC_DEFINE(qdr_forward_deliver_info_t);
+
 
 static qdr_link_t * peer_data_link(qdr_core_t *core,
                                    qdr_node_t *node,
@@ -266,6 +268,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     bool          presettled           = !!in_delivery ? in_delivery->settled : true;
     bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
     int           priority             = qd_message_get_priority(msg);
+    qdr_forward_deliver_info_list_t deliver_info_list;
+    DEQ_INIT(deliver_info_list);
 
     //
     // If the delivery is not presettled, set the settled flag for forwarding so all
@@ -285,7 +289,14 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         while (link_ref) {
             qdr_link_t     *out_link     = link_ref->link;
             qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
-            qdr_forward_deliver_CT(core, out_link, out_delivery);
+
+            // Store the out_link and out_delivery so we can forward the delivery later on
+            qdr_forward_deliver_info_t *deliver_info = new_qdr_forward_deliver_info_t();
+            ZERO(deliver_info);
+            deliver_info->out_dlv = out_delivery;
+            deliver_info->out_link = out_link;
+            DEQ_INSERT_TAIL(deliver_info_list, deliver_info);
+
             fanout++;
             if (out_link->link_type != QD_LINK_CONTROL && out_link->link_type != QD_LINK_ROUTER) {
                 addr->deliveries_egress++;
@@ -360,7 +371,14 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
                 core->data_links_by_mask_bit[link_bit].links[priority];
             if (dest_link && (!link_exclusion || qd_bitmask_value(link_exclusion, link_bit) == 0)) {
                 qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
-                qdr_forward_deliver_CT(core, dest_link, out_delivery);
+
+                // Store the out_link and out_delivery so we can forward the delivery later on
+                qdr_forward_deliver_info_t *deliver_info = new_qdr_forward_deliver_info_t();
+                ZERO(deliver_info);
+                deliver_info->out_dlv = out_delivery;
+                deliver_info->out_link = dest_link;
+                DEQ_INSERT_TAIL(deliver_info_list, deliver_info);
+
                 fanout++;
                 addr->deliveries_transit++;
                 if (dest_link->link_type == QD_LINK_ROUTER)
@@ -375,7 +393,6 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         //
         // Forward to in-process subscribers
         //
-
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         while (sub) {
             //
@@ -397,6 +414,14 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             addr->deliveries_to_container++;
             sub = DEQ_NEXT(sub);
         }
+    }
+
+    qdr_forward_deliver_info_t *deliver_info = DEQ_HEAD(deliver_info_list);
+    while (deliver_info) {
+        qdr_forward_deliver_CT(core, deliver_info->out_link, deliver_info->out_dlv);
+        DEQ_REMOVE_HEAD(deliver_info_list);
+        free_qdr_forward_deliver_info_t(deliver_info);
+        deliver_info = DEQ_HEAD(deliver_info_list);
     }
 
     if (in_delivery && !presettled) {

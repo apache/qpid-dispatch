@@ -440,6 +440,17 @@ struct qdr_link_ref_t {
 ALLOC_DECLARE(qdr_link_ref_t);
 DEQ_DECLARE(qdr_link_ref_t, qdr_link_ref_list_t);
 
+
+typedef struct qdr_forward_deliver_info_t {
+    DEQ_LINKS(struct qdr_forward_deliver_info_t);
+    qdr_link_t     *out_link;
+    qdr_delivery_t *out_dlv;
+} qdr_forward_deliver_info_t;
+
+ALLOC_DECLARE(qdr_forward_deliver_info_t);
+DEQ_DECLARE(qdr_forward_deliver_info_t, qdr_forward_deliver_info_list_t);
+
+
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 void move_link_ref(qdr_link_t *link, int from_cls, int to_cls);

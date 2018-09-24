@@ -221,6 +221,13 @@ void qd_message_set_ingress_annotation(qd_message_t *msg, qd_composed_field_t *i
 qd_message_t *qd_message_receive(pn_delivery_t *delivery);
 
 /**
+ * Returns the PN_DELIVERY_CTX record from the attachments
+ *
+ * @param delivery An incoming delivery from a link
+ */
+qd_message_t * qd_pn_delivery_get_delivery_context(pn_delivery_t *delivery);
+
+/**
  * Send the message outbound on an outgoing link.
  *
  * @param msg A pointer to a message to be sent.
@@ -333,6 +340,21 @@ void qd_message_set_discard(qd_message_t *msg, bool discard);
  * @param msg A pointer to the message.
  */
 bool qd_message_receive_complete(qd_message_t *msg);
+
+/**
+ * Returns true if at least one message buffer has been freed, false otherwise.
+ * @param msg A pointer to the message.
+ */
+bool qd_message_is_buffers_freed(qd_message_t *in_msg);
+
+/**
+ *Set the buffers_freed field on the message to to the passed in boolean value.
+ *
+ * @param msg A pointer to the message.
+ * @param discard - the boolean value of buffers_freed.
+ */
+
+void qd_message_set_buffers_freed(qd_message_t *msg, bool buffers_freed);
 
 /**
  * Returns true if the message has been completely received AND the message has been completely sent.
