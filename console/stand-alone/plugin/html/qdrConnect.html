@@ -51,9 +51,9 @@ under the License.
                                 <input tabindex="1" id="address" type="text" ng-model="formEntity.address" placeholder="{{formEntity.address}}" name="address" autofocus="autofocus" class="ng-pristine ng-valid ng-valid-required"></div>
                         </div>
                         <div class="form-group">
-                            <label tabindex="-1" class="col-md-2 control-label" title="Port to connect to, by default 5673" for="port">Port: </label>
+                            <label tabindex="-1" class="col-md-2 control-label" title="Port to connect to" for="port">Port: </label>
                             <div class="col-md-6">
-                                <input tabindex="2" id="port" posint type="number" placeholder="{{formEntity.port}}" tooltip="Port to connect to, by default 5673" ng-model="formEntity.port" name="port" title="Ports to connect to, by default 5673">
+                                <input tabindex="2" id="port" posint type="number" placeholder="{{formEntity.port}}" tooltip="Port to connect to" ng-model="formEntity.port" name="port" title="Ports to connect to">
                                 <span ng-show="settings.port.$error.range">Must be 1 through 65535</span>
                             </div>
                         </div>
