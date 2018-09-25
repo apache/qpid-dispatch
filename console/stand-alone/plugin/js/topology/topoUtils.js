@@ -60,7 +60,12 @@ export function nextHop(thisNode, d, nodes, links, QDRService, selected_node, cb
   }
 }
 
+let linkRateHistory = {};
 export function connectionPopupHTML (d, QDRService) {
+  if (!d) {
+    linkRateHistory = {};
+    return;
+  }
   let getConnsArray = function (d, conn) {
     let conns = [conn];
     if (d.cls === 'small') {
@@ -79,7 +84,7 @@ export function connectionPopupHTML (d, QDRService) {
   // The HTML is sanitized elsewhere before it is displayed
   let linksHTML = function (onode, conn, d) {
     const max_links = 10;
-    const fields = ['undelivered', 'unsettled', 'rejected', 'released', 'modified'];
+    const fields = ['deliveryCount', 'undeliveredCount', 'unsettledCount', 'rejectedCount', 'releasedCount', 'modifiedCount'];
     // local function to determine if a link's connectionId is in any of the connections
     let isLinkFor = function (connectionId, conns) {
       for (let c=0; c<conns.length; c++) {
@@ -111,22 +116,36 @@ export function connectionPopupHTML (d, QDRService) {
         if (isLinkFor(link.connectionId, conns)) {
           if (link.owningAddr)
             hasAddress = true;
+          if (link.name) {
+            let rate = QDRService.utilities.rates(link, fields, linkRateHistory, link.name, 1);
+            // replace the raw value with the rate
+            for (let i=0; i<fields.length; i++) {
+              link[fields[i]] = rate[fields[i]];
+            }
+          }
           links.push(link);
         }
       }
     }
     // we may need to limit the number of links displayed, so sort descending by the sum of the field values
+    let sum = function (a) {
+      let s = 0;
+      for (let i=0; i<fields.length; i++) {
+        s += a[fields[i]];
+      }
+      return s;
+    };
     links.sort( function (a, b) {
-      let asum = a.undeliveredCount + a.unsettledCount + a.rejectedCount + a.releasedCount + a.modifiedCount;
-      let bsum = b.undeliveredCount + b.unsettledCount + b.rejectedCount + b.releasedCount + b.modifiedCount;
+      let asum = sum(a);
+      let bsum = sum(b);
       return asum < bsum ? 1 : asum > bsum ? -1 : 0;
     });
-    let HTMLHeading = '<h5>Links</h5>';
+
+    let HTMLHeading = '<h5>Rates (per second) for links</h5>';
     let HTML = '<table class="popupTable">';
     // copy of fields since we may be prepending an address
     let th = fields.slice();
-    // convert to actual attribute names
-    let td = fields.map( function (f) {return f + 'Count';});
+    let td = fields;
     th.unshift('dir');
     td.unshift('linkDir');
     // add an address field if any of the links had an owningAddress
@@ -134,11 +153,20 @@ export function connectionPopupHTML (d, QDRService) {
       th.unshift('address');
       td.unshift('owningAddr');
     }
-    HTML += ('<tr class="header"><td>' + th.join('</td><td>') + '</td></tr>');
+
+    let rate_th = function (th) {
+      let rth = th.map( function (t) {
+        if (t.endsWith('Count'))
+          t = t.replace('Count', 'Rate');
+        return QDRService.utilities.humanify(t);
+      });
+      return rth;
+    };
+    HTML += ('<tr class="header"><td>' + rate_th(th).join('</td><td>') + '</td></tr>');
     // add rows to the table for each link
     for (let l=0; l<links.length; l++) {
       if (l>=max_links) {
-        HTMLHeading = `<h4>Top ${max_links} Links</h4>`;
+        HTMLHeading = `<h5>Rates (per second) for top ${max_links} links</h5>`;
         break;
       }
       let link = links[l];
@@ -150,13 +178,14 @@ export function connectionPopupHTML (d, QDRService) {
         return link[f];
       });
       let joinedVals = fnJoin(vals, function (v1) {
-        return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', QDRService.utilities.pretty(v1 || '0')];
+        return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', QDRService.utilities.pretty(v1 || '0', ',.2f')];
       });
       HTML += `<tr><td> ${joinedVals} </td></tr>`;
     }
     HTML += '</table>';
     return HTMLHeading + HTML;
   };
+
   let left = d.left ? d.source : d.target;
   // left is the connection with dir 'in'
   let right = d.left ? d.target : d.source;

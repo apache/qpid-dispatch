@@ -85,8 +85,8 @@ var utils = {
     var t = s.charAt(0).toUpperCase() + s.substr(1).replace(/[A-Z]/g, ' $&');
     return t.replace('.', ' ');
   },
-  pretty: function (v) {
-    var formatComma = ddd.format(',');
+  pretty: function (v, format = ',') {
+    var formatComma = ddd.format(format);
     if (!isNaN(parseFloat(v)) && isFinite(v))
       return formatComma(v);
     return v;
@@ -103,13 +103,40 @@ var utils = {
   },
   // extract the name of the router from the router id
   nameFromId: function (id) {
-    // the router id looks like 'amqp:/topo/0/routerName/$managemrnt'
+    // the router id looks like 'amqp:/topo/0/routerName/$management'
     var parts = id.split('/');
     // handle cases where the router name contains a /
     parts.splice(0, 3); // remove amqp, topo, 0
     parts.pop(); // remove $management
     return parts.join('/');
+  },
+  // calculate the average rate of change per second for a list of fields on the given obj
+  // store the historical raw values in storage[key] for future rate calcs
+  // keep 'history' number of historical values
+  rates: function (obj, fields, storage, key, history = 1) {
+    let list = storage[key];
+    if (!list) {
+      list = storage[key] = [];
+    }
+    // expire old entries
+    while (list.length > history) {
+      list.shift();
+    }
+    let rates = {};
+    list.push({date: new Date(), val: Object.assign({}, obj)});
+
+    for (let i=0; i<fields.length; i++) {
+      let cumulative = 0;
+      let field = fields[i];
+      for (let j=0; j<list.length-1; j++) {
+        let elapsed = list[j+1].date - list[j].date;
+        let diff = list[j+1].val[field] - list[j].val[field];
+        if (elapsed > 100)
+          cumulative += diff/(elapsed / 1000);
+      }
+      rates[field] = list.length > 1 ? cumulative / (list.length-1) : 0;
+    }
+    return rates;
   }
-  
 };
 export { utils };

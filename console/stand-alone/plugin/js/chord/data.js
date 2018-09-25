@@ -108,7 +108,7 @@ class ChordData { // eslint-disable-line no-unused-vars
           let egressRouter = self.QDRService.utilities.nameFromId(nodeId);
           // loop through the router links for this router looking for out/endpoint/non-console links
           let routerLinks = results[nodeId]['router.link'];
-          for (let i = 0; i < routerLinks.results.length; i++) {
+          for (let i = 0; routerLinks && (i < routerLinks.results.length); i++) {
             let link = self.QDRService.utilities.flatten(routerLinks.attributeNames, routerLinks.results[i]);
             // if the link is an outbound/enpoint/non console
             if (link.linkType === 'endpoint' && link.linkDir === 'out' && !link.owningAddr.startsWith('Ltemp.')) {

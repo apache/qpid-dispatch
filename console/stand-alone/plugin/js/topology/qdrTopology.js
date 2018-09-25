@@ -523,6 +523,7 @@ export class TopologyController {
           d3.select('#popover-div')
             .style('display', 'none');
           selected_link = null;
+          connectionPopupHTML();
           restart();
         })
         // left click a path
