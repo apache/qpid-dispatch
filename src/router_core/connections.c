@@ -816,6 +816,13 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     DEQ_REMOVE(core->open_links, link);
 
     //
+    // If the link has a core_endpoint, allow the core_endpoint module to
+    // clean up its state
+    //
+    if (link->core_endpoint)
+        qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
+
+    //
     // If the link has a connected peer, unlink the peer
     //
     if (link->connected_link) {
@@ -1890,96 +1897,101 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     //
     link->detach_count++;
 
-    //
-    // For routed links, propagate the detach
-    //
-    if (link->connected_link) {
-        //
-        // If the connected link is outgoing and there is a delivery on the connected link's undelivered
-        // list that is not receive-complete, we must flag that delivery as aborted or it will forever
-        // block the propagation of the detach.
-        //
-        if (link->connected_link->link_direction == QD_OUTGOING)
-            qdr_link_abort_undelivered_CT(core, link->connected_link);
+    if (link->core_endpoint) {
+        qdrc_endpoint_do_detach_CT(core, link->core_endpoint, error);
 
-        if (dt != QD_LOST)
-            qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
-        else {
-            qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, !link->terminus_survives_disconnect);
-            qdr_error_free(error);
-        }
-
-        //
-        // If the link is completely detached, release its resources
-        //
-        if (link->detach_count == 2) {
-            qdr_link_cleanup_CT(core, conn, link);
-            free_qdr_link_t(link);
-        }
-
-        return;
-    }
-
-    //
-    // For auto links, switch the auto link to failed state and record the error
-    //
-    if (link->auto_link) {
-        link->auto_link->link  = 0;
-        link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
-        free(link->auto_link->last_error);
-        link->auto_link->last_error = qdr_error_description(error);
-
-        //
-        // The auto link has failed. Periodically retry setting up the auto link until
-        // it succeeds.
-        //
-        qdr_route_auto_link_detached_CT(core, link);
-    }
-
-    if (link->link_direction == QD_INCOMING) {
-        //
-        // Handle incoming link cases
-        //
-        switch (link->link_type) {
-        case QD_LINK_ENDPOINT:
-            if (addr) {
-                //
-                // Drain the undelivered list to ensure deliveries don't get dropped by a detach.
-                //
-                qdr_drain_inbound_undelivered_CT(core, link, addr);
-
-                //
-                // Remove this link from the linked address.
-                //
-                qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            }
-            break;
-
-        case QD_LINK_CONTROL:
-            break;
-
-        case QD_LINK_ROUTER:
-            break;
-        }
     } else {
         //
-        // Handle outgoing link cases
+        // For routed links, propagate the detach
         //
-        switch (link->link_type) {
-        case QD_LINK_ENDPOINT:
-            if (addr) {
-                qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                was_local = true;
+        if (link->connected_link) {
+            //
+            // If the connected link is outgoing and there is a delivery on the connected link's undelivered
+            // list that is not receive-complete, we must flag that delivery as aborted or it will forever
+            // block the propagation of the detach.
+            //
+            if (link->connected_link->link_direction == QD_OUTGOING)
+                qdr_link_abort_undelivered_CT(core, link->connected_link);
+
+            if (dt != QD_LOST)
+                qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
+            else {
+                qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, !link->terminus_survives_disconnect);
+                qdr_error_free(error);
             }
-            break;
 
-        case QD_LINK_CONTROL:
-            qdr_detach_link_control_CT(core, conn, link);
-            break;
+            //
+            // If the link is completely detached, release its resources
+            //
+            if (link->detach_count == 2) {
+                qdr_link_cleanup_CT(core, conn, link);
+                free_qdr_link_t(link);
+            }
 
-        case QD_LINK_ROUTER:
-            qdr_detach_link_data_CT(core, conn, link);
-            break;
+            return;
+        }
+
+        //
+        // For auto links, switch the auto link to failed state and record the error
+        //
+        if (link->auto_link) {
+            link->auto_link->link  = 0;
+            link->auto_link->state = QDR_AUTO_LINK_STATE_FAILED;
+            free(link->auto_link->last_error);
+            link->auto_link->last_error = qdr_error_description(error);
+
+            //
+            // The auto link has failed. Periodically retry setting up the auto link until
+            // it succeeds.
+            //
+            qdr_route_auto_link_detached_CT(core, link);
+        }
+
+        if (link->link_direction == QD_INCOMING) {
+            //
+            // Handle incoming link cases
+            //
+            switch (link->link_type) {
+            case QD_LINK_ENDPOINT:
+                if (addr) {
+                    //
+                    // Drain the undelivered list to ensure deliveries don't get dropped by a detach.
+                    //
+                    qdr_drain_inbound_undelivered_CT(core, link, addr);
+
+                    //
+                    // Remove this link from the linked address.
+                    //
+                    qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                }
+                break;
+
+            case QD_LINK_CONTROL:
+                break;
+
+            case QD_LINK_ROUTER:
+                break;
+            }
+        } else {
+            //
+            // Handle outgoing link cases
+            //
+            switch (link->link_type) {
+            case QD_LINK_ENDPOINT:
+                if (addr) {
+                    qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                    was_local = true;
+                }
+                break;
+
+            case QD_LINK_CONTROL:
+                qdr_detach_link_control_CT(core, conn, link);
+                break;
+
+            case QD_LINK_ROUTER:
+                qdr_detach_link_data_CT(core, conn, link);
+                break;
+            }
         }
     }
 

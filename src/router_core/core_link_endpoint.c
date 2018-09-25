@@ -19,6 +19,7 @@
 
 #include "core_link_endpoint.h"
 #include "qpid/dispatch/alloc.h"
+#include <stdio.h>
 
 struct qdrc_endpoint_t {
     qdrc_endpoint_desc_t *desc;
@@ -40,7 +41,7 @@ void qdrc_endpoint_bind_mobile_address_CT(qdr_core_t           *core,
     qd_iterator_annotate_phase(iter, phase);
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &addr);
-    if (addr) {
+    if (!addr) {
         qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0);
         if (treatment == QD_TREATMENT_UNAVAILABLE)
             treatment = QD_TREATMENT_ANYCAST_BALANCED;
@@ -110,6 +111,21 @@ void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t
 }
 
 
+qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qd_message_t *message)
+{
+    qdr_delivery_t *dlv = new_qdr_delivery_t();
+    uint64_t       *tag = (uint64_t*) dlv->tag;
+
+    ZERO(dlv);
+    dlv->link           = endpoint->link;
+    dlv->msg            = message;
+    *tag                = core->next_tag++;
+    dlv->tag_length = 8;
+    dlv->ingress_index = -1;
+    return dlv;
+}
+
+
 void qdrc_endpoint_settle_CT(qdr_core_t *core, qdr_delivery_t *dlv, uint64_t disposition)
 {
     //
@@ -133,6 +149,10 @@ void qdrc_endpoint_settle_CT(qdr_core_t *core, qdr_delivery_t *dlv, uint64_t dis
 void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
 {
     qdr_link_outbound_detach_CT(core, ep->link, error, QDR_CONDITION_NONE, true);
+    if (ep->link->detach_count == 2) {
+        ep->link->core_endpoint = 0;
+        free_qdrc_endpoint_t(ep);
+    }
 }
 
 
@@ -143,13 +163,48 @@ bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr
     ep->desc = addr->core_endpoint;
     ep->link = link;
 
+    link->core_endpoint = ep;
+
     *error = 0;
     bool accept = !!ep->desc->on_first_attach ?
         ep->desc->on_first_attach(addr->core_endpoint_context, ep, &ep->link_context, error) : false;
 
-    if (!accept)
+    if (!accept) {
+        link->core_endpoint = 0;
         free_qdrc_endpoint_t(ep);
+    }
 
     return accept;
 }
+
+
+
+void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv)
+{
+    ep->desc->on_transfer(ep->link_context, dlv, dlv->msg);
+}
+
+
+void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit, bool drain)
+{
+    ep->desc->on_flow(ep->link_context, credit, drain);
+}
+
+
+void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
+{
+    ep->desc->on_detach(ep->link_context, error);
+    if (ep->link->detach_count == 2) {
+        ep->link->core_endpoint = 0;
+        free_qdrc_endpoint_t(ep);
+    }
+}
+
+
+void qdrc_endpoint_do_cleanup_CT(qdr_core_t *core, qdrc_endpoint_t *ep)
+{
+    ep->desc->on_cleanup(ep->link_context);
+    free_qdrc_endpoint_t(ep);
+}
+
 

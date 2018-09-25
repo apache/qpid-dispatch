@@ -154,6 +154,16 @@ struct qdr_action_t {
             qd_buffer_list_t         body_buffers;
         } agent;
 
+        //
+        // Arguments for general use
+        //
+        struct {
+            void *context_1;
+            void *context_2;
+            void *context_3;
+            void *context_4;
+        } general;
+
     } args;
 };
 

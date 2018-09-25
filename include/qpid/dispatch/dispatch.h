@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include <stdbool.h>
 #include <qpid/dispatch/error.h>
 
 /**@file
@@ -34,9 +35,10 @@ typedef struct qd_dispatch_t qd_dispatch_t;
  * Initialize the Dispatch library and prepare it for operation.
  *
  * @param python_pkgdir The path to the Python files.
+ * @param test_hooks Iff true, enable internal system testing features
  * @return A handle to be used in API calls for this instance.
  */
-qd_dispatch_t *qd_dispatch(const char *python_pkgdir);
+qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks);
 
 
 /**
