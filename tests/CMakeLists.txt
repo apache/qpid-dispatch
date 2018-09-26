@@ -121,6 +121,7 @@ foreach(py_test_module
     system_tests_core_endpoint
     ${SYSTEM_TESTS_HTTP}
     ${CONSOLE_TEST}
+    system_tests_priority
     )
 
   add_test(${py_test_module} ${TEST_WRAP} -x ${PY_UNIT2_STRING} -v ${py_test_module})

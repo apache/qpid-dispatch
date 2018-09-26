@@ -545,3 +545,10 @@ uint64_t qdr_identifier(qdr_core_t* core)
     return id;
 }
 
+void qdr_reset_sheaf(qdr_core_t *core, uint8_t n)
+{
+  qdr_priority_sheaf_t *sheaf = core->data_links_by_mask_bit + n;
+  sheaf->count = 0;
+  memset(sheaf->links, 0, QDR_N_PRIORITIES * sizeof(void *));
+}
+
