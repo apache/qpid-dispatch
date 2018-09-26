@@ -929,4 +929,13 @@ void qdr_core_timer_cancel_CT(qdr_core_t *core, qdr_core_timer_t *timer);
  */
 void qdr_core_timer_free_CT(qdr_core_t *core, qdr_core_timer_t *timer);
 
+/**
+ * Clears the sheaf of priority links in a connection.
+ * Call this when a connection is being closed, when the mask-bit
+ * for that sheaf is being returned to the core for re-use.
+ * @param core Pointer to the core object returned by qd_core()
+ * @param n uint8_t index for the sheaf to be reset prior to re-use.
+ */
+void qdr_reset_sheaf(qdr_core_t *core, uint8_t n);
+
 #endif
