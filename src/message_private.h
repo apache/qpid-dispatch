@@ -152,7 +152,8 @@ void qd_message_initialize();
 
 qd_iterator_pointer_t qd_message_cursor(qd_message_pvt_t *msg);
 
-#define QDR_N_PRIORITIES 10
+#define QDR_N_PRIORITIES     10
+#define QDR_DEFAULT_PRIORITY  4
 
 ///@}
 
