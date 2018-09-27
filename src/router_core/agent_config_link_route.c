@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/ctools.h>
 #include "agent_config_link_route.h"
+#include "agent_config_address.h"
 #include "route_control.h"
 #include <inttypes.h>
 #include <stdio.h>
@@ -379,6 +380,8 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
                                       qdr_query_t       *query,
                                       qd_parsed_field_t *in_body)
 {
+    char *pattern = NULL;
+
     while (true) {
         //
         // Ensure there isn't a duplicate name and that the body is a map
@@ -454,6 +457,17 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
             break;
         }
 
+        // validate the pattern/prefix, add "/#" if prefix
+        pattern = qdra_config_address_validate_pattern_CT((prefix_field) ? prefix_field : pattern_field,
+                                                          !!prefix_field,
+                                                          &msg);
+        if (!pattern) {
+            query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = msg;
+            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_LINKROUTE_TYPE, query->status.description);
+            break;
+        }
+
         qd_direction_t dir;
         const char *error = qdra_link_route_direction_CT(dir_field, &dir);
         if (error) {
@@ -476,8 +490,10 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         // The request is good.  Create the entity.
         //
 
-        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, add_prefix_field, del_prefix_field, container_field, connection_field, trt, dir);
-
+        lr = qdr_route_add_link_route_CT(core, name, pattern, !!prefix_field,
+                                         add_prefix_field, del_prefix_field,
+                                         container_field, connection_field,
+                                         trt, dir);
         //
         // Compose the result map for the response.
         //
@@ -508,6 +524,7 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
             qd_log(core->log, QD_LOG_ERROR, "Error configuring linkRoute: %s", query->status.description);
         qdr_query_free(query);
     }
+    free(pattern);
 }
 
 void qdra_config_link_route_get_CT(qdr_core_t    *core,
