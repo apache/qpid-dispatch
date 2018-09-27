@@ -1470,8 +1470,7 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         // are assigned priorities in the order in which they are attached.
         int next_slot = core->data_links_by_mask_bit[conn->mask_bit].count ++;
         if (next_slot >= QDR_N_PRIORITIES) {
-            qd_log(core->log, QD_LOG_CRITICAL, "Attempt to attach too many inter-router links for priority sheaf.");
-            exit(1);
+            qd_log(core->log, QD_LOG_ERROR, "Attempt to attach too many inter-router links for priority sheaf.");
         }
         link->priority = next_slot;
         core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
