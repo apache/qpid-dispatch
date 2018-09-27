@@ -23,8 +23,8 @@
 
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
-                                              qd_parsed_field_t      *prefix_field,
-                                              qd_parsed_field_t      *pattern_field,
+                                              const char             *addr_pattern,
+                                              bool                    is_prefix,
                                               qd_parsed_field_t      *add_prefix_field,
                                               qd_parsed_field_t      *del_prefix_field,
                                               qd_parsed_field_t      *container_field,
