@@ -422,8 +422,10 @@ void qd_message_set_aborted(const qd_message_t *msg, bool aborted);
 /**
  * Return message priority
  * @param msg A pointer to the message
+ * @param priority [out] The priority value, if present
+ * @return True iff the priority was present in the message header
  */
-uint8_t qd_message_get_priority(qd_message_t *msg);
+bool qd_message_get_priority(qd_message_t *msg, uint8_t *priority);
 
 
 ///@}

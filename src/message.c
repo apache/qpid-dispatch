@@ -773,61 +773,29 @@ static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_me
 }
 
 
-// get the field location of a field in the message header (if it exists,
-// else 0)
-static qd_field_location_t *qd_message_header_field(qd_message_t *msg, qd_message_field_t field)
+static void qd_message_parse_priority(qd_message_t *in_msg)
 {
-    int first_header_field = QD_FIELD_DURABLE,
-        last_header_field  = QD_FIELD_DELIVERY_COUNT;
-    static const intptr_t offsets[] = {
-        // position of the fields' qd_field_location_t in the message content object
-        (intptr_t) &((qd_message_content_t *)0)->field_durable,
-        (intptr_t) &((qd_message_content_t *)0)->field_priority,
-        (intptr_t) &((qd_message_content_t *)0)->field_ttl,
-        (intptr_t) &((qd_message_content_t *)0)->field_first_acquirer,
-        (intptr_t) &((qd_message_content_t *)0)->field_delivery_count
-    };
-    if (!(first_header_field <= field && field <= last_header_field)) {
-        assert ( 0 );
-        return 0;
-    }
+    qd_message_content_t *content  = MSG_CONTENT(in_msg);
+    qd_iterator_t        *iter     = qd_message_field_iterator(in_msg, QD_FIELD_HEADER);
 
-    qd_message_content_t *content = MSG_CONTENT(msg);
-     if (!content->section_message_header.parsed) {
-         if (!qd_message_check(msg, QD_DEPTH_HEADER) || !content->section_message_header.parsed)
-             return 0;
-     }
-    // If it's already been parsed, just return it.
-    const int index = field - first_header_field;
-    qd_field_location_t *const location = (qd_field_location_t *)((char *)content + offsets[index]);
-    if (location->parsed)
-        return location;
-    // requested field not parsed out.  Need to parse out up to the requested field:
-    qd_field_location_t section = content->section_message_header;
-    qd_buffer_t   *buffer = section.buffer;
-    unsigned char *cursor = qd_buffer_base(buffer) + section.offset;
-    advance(&cursor, &buffer, section.hdr_length);
-    int start = start_list(&cursor, &buffer);
-    if (index > start)
-        return 0;  // properties list too short
-    // Make sure that all fields up to the requested one are parsed.
-    int position = 0;
-    while (position < index) {
-        qd_field_location_t *f = (qd_field_location_t *)((char *)content + offsets[position]);
-        // If it's parsed, advance over it. If not, parse it.
-        if (f->parsed)
-            advance(&cursor, &buffer, f->hdr_length + f->length);
-        else
-        if (!traverse_field(&cursor, &buffer, f))
-            return 0;
-        position++;
-     }
-    // all fields previous to the target have now been parsed and cursor/buffer
-    // are in the correct position, parse out the field:
-    if (traverse_field(&cursor, &buffer, location))
-        return location;
-    else
-         return 0;
+    content->priority_parsed  = true;
+    content->priority_present = false;
+
+    if (!!iter) {
+        qd_parsed_field_t *field = qd_parse(iter);
+        if (qd_parse_ok(field)) {
+            if (qd_parse_is_list(field) && qd_parse_sub_count(field) >= 2) {
+                qd_parsed_field_t *priority_field = qd_parse_sub_value(field, 1);
+                if (qd_parse_tag(priority_field) != QD_AMQP_NULL) {
+                    uint32_t value = qd_parse_as_uint(priority_field);
+                    content->priority = value >= QDR_N_PRIORITIES ? QDR_N_PRIORITIES - 1 : (uint8_t) (value & 0x00ff);
+                    content->priority_present = true;
+                }
+            }
+        }
+        qd_parse_free(field);
+        qd_iterator_free(iter);
+    }
 }
 
 
@@ -842,7 +810,10 @@ static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_mess
 
     switch (section) {
     case QD_FIELD_HEADER:
-        return qd_message_header_field(msg, field);
+        if (content->section_message_header.parsed ||
+            (qd_message_check(msg, QD_DEPTH_HEADER) && content->section_message_header.parsed))
+            return &content->section_message_header;
+        break;
 
     case QD_FIELD_PROPERTIES:
         return qd_message_properties_field(msg, field);
@@ -980,8 +951,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     copy->ma_phase = msg->ma_phase;
     copy->strip_annotations_in  = msg->strip_annotations_in;
 
-    copy->content           = content;
-    copy->content->priority = content->priority;
+    copy->content = content;
 
     copy->sent_depth    = QD_DEPTH_NONE;
     copy->cursor.buffer = 0;
@@ -1107,26 +1077,17 @@ void qd_message_add_fanout(qd_message_t *in_msg)
     sys_atomic_inc(&msg->content->fanout);
 }
 
-static void message_set_priority(qd_message_t *in_msg, uint8_t priority)
+bool qd_message_get_priority(qd_message_t *msg, uint8_t *priority)
 {
-    qd_message_pvt_t *msg  = (qd_message_pvt_t*) in_msg;
-    msg->content->priority = priority < QDR_N_PRIORITIES ? priority : QDR_N_PRIORITIES - 1;
-}
+    qd_message_content_t *content = MSG_CONTENT(msg);
 
-uint8_t qd_message_get_priority(qd_message_t *in_msg)
-{
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    if (!content->priority_parsed)
+        qd_message_parse_priority(msg);
 
-    uint8_t  priority = 0;
-    qd_iterator_t *priority_iterator = qd_message_field_iterator(in_msg, QD_FIELD_PRIORITY);
-    if (priority_iterator) {
-        if (qd_iterator_remaining(priority_iterator) > 0) {
-            priority = qd_iterator_uint8(priority_iterator);
-            message_set_priority(in_msg, priority);
-        }
-    }
-    qd_iterator_free(priority_iterator);
-    return msg->content->priority;
+    if (content->priority_present)
+        *priority = content->priority;
+
+    return content->priority_present;
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)

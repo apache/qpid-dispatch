@@ -264,6 +264,24 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
 }
 
 
+/**
+ * Get the effective priority for a message.
+ *
+ * This function returns a priority value for a message (and address).  If the message
+ * has no priority header, the default priority is chosen.
+ *
+ * TODO: Add the ability to get the priority from the address if not present in the message
+ */
+static uint8_t qdr_forward_effective_priority(qd_message_t *msg, qdr_address_t *addr)
+{
+    uint8_t priority;
+    bool    has_priority = qd_message_get_priority(msg, &priority);
+    if (!has_priority)
+        priority = QDR_DEFAULT_PRIORITY;
+    return priority;
+}
+
+
 int qdr_forward_multicast_CT(qdr_core_t      *core,
                              qdr_address_t   *addr,
                              qd_message_t    *msg,
@@ -276,7 +294,8 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
     bool          presettled           = !!in_delivery ? in_delivery->settled : true;
     bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
-    int           priority             = qd_message_get_priority(msg);
+    uint8_t       priority             = qdr_forward_effective_priority(msg, addr);
+
     qdr_forward_deliver_info_list_t deliver_info_list;
     DEQ_INIT(deliver_info_list);
 
@@ -566,7 +585,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             else
                 next_node = rnode;
 
-            uint8_t priority = qd_message_get_priority(msg);
+            uint8_t priority = qdr_forward_effective_priority(msg, addr);
             out_link = control ? PEER_CONTROL_LINK(core, next_node) : peer_data_link(core, next_node, priority);
             if (out_link) {
                 out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
@@ -671,7 +690,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         for (QD_BITMASK_EACH(addr->rnodes, node_bit, c)) {
             qdr_node_t *rnode     = core->routers_by_mask_bit[node_bit];
             qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
-            uint8_t     priority  = qd_message_get_priority(msg);
+            uint8_t     priority  = qdr_forward_effective_priority(msg, addr);
             qdr_link_t *link      = peer_data_link(core, next_node, priority);
             if (!link) continue;
             int         link_bit  = link->conn->mask_bit;
