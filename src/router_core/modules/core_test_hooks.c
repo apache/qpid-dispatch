@@ -20,8 +20,8 @@
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/message.h"
 #include "qpid/dispatch/compose.h"
-#include "core_test_hooks.h"
 #include "core_link_endpoint.h"
+#include "module.h"
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -34,7 +34,8 @@ typedef enum {
     TEST_NODE_DISCARD
 } test_node_behavior_t;
 
-typedef struct test_node_t test_node_t;
+typedef struct test_module_t test_module_t;
+typedef struct test_node_t   test_node_t;
 
 typedef struct test_endpoint_t {
     DEQ_LINKS(struct test_endpoint_t);
@@ -50,18 +51,22 @@ DEQ_DECLARE(test_endpoint_t, test_endpoint_list_t);
 
 struct test_node_t {
     qdr_core_t           *core;
+    test_module_t        *module;
     test_node_behavior_t  behavior;
     qdrc_endpoint_desc_t *desc;
     test_endpoint_list_t  in_links;
     test_endpoint_list_t  out_links;
 };
 
-static test_node_t *echo_node;
-static test_node_t *deny_node;
-static test_node_t *sink_node;
-static test_node_t *source_node;
-static test_node_t *source_ps_node;
-static test_node_t *discard_node;
+struct test_module_t {
+    qdr_core_t  *core;
+    test_node_t *echo_node;
+    test_node_t *deny_node;
+    test_node_t *sink_node;
+    test_node_t *source_node;
+    test_node_t *source_ps_node;
+    test_node_t *discard_node;
+};
 
 
 static void endpoint_action(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -310,7 +315,7 @@ static void cleanup(void *link_context)
 static qdrc_endpoint_desc_t descriptor = {first_attach, second_attach, flow, update, transfer, detach, cleanup};
 
 
-static void qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)
+static test_module_t *qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)
 {
     char *echo_address       = "org.apache.qpid.dispatch.router/test/echo";
     char *deny_address       = "org.apache.qpid.dispatch.router/test/deny";
@@ -319,90 +324,98 @@ static void qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)
     char *source_ps_address  = "org.apache.qpid.dispatch.router/test/source_ps";
     char *discard_address    = "org.apache.qpid.dispatch.router/test/discard";
 
-    echo_node       = NEW(test_node_t);
-    deny_node       = NEW(test_node_t);
-    sink_node       = NEW(test_node_t);
-    source_node     = NEW(test_node_t);
-    source_ps_node  = NEW(test_node_t);
-    discard_node    = NEW(test_node_t);
+    test_module_t *module = NEW(test_module_t);
 
-    echo_node->core     = core;
-    echo_node->behavior = TEST_NODE_ECHO;
-    echo_node->desc     = &descriptor;
-    DEQ_INIT(echo_node->in_links);
-    DEQ_INIT(echo_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, echo_address, '0', &descriptor, echo_node);
+    module->core           = core;
+    module->echo_node      = NEW(test_node_t);
+    module->deny_node      = NEW(test_node_t);
+    module->sink_node      = NEW(test_node_t);
+    module->source_node    = NEW(test_node_t);
+    module->source_ps_node = NEW(test_node_t);
+    module->discard_node   = NEW(test_node_t);
 
-    deny_node->core     = core;
-    deny_node->behavior = TEST_NODE_DENY;
-    deny_node->desc     = &descriptor;
-    DEQ_INIT(deny_node->in_links);
-    DEQ_INIT(deny_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, deny_address, '0', &descriptor, deny_node);
+    module->echo_node->core     = core;
+    module->echo_node->module   = module;
+    module->echo_node->behavior = TEST_NODE_ECHO;
+    module->echo_node->desc     = &descriptor;
+    DEQ_INIT(module->echo_node->in_links);
+    DEQ_INIT(module->echo_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, echo_address, '0', &descriptor, module->echo_node);
 
-    sink_node->core     = core;
-    sink_node->behavior = TEST_NODE_SINK;
-    sink_node->desc     = &descriptor;
-    DEQ_INIT(sink_node->in_links);
-    DEQ_INIT(sink_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, sink_address, '0', &descriptor, sink_node);
+    module->deny_node->core     = core;
+    module->deny_node->module   = module;
+    module->deny_node->behavior = TEST_NODE_DENY;
+    module->deny_node->desc     = &descriptor;
+    DEQ_INIT(module->deny_node->in_links);
+    DEQ_INIT(module->deny_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, deny_address, '0', &descriptor, module->deny_node);
 
-    source_node->core     = core;
-    source_node->behavior = TEST_NODE_SOURCE;
-    source_node->desc     = &descriptor;
-    DEQ_INIT(source_node->in_links);
-    DEQ_INIT(source_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, source_address, '0', &descriptor, source_node);
+    module->sink_node->core     = core;
+    module->sink_node->module   = module;
+    module->sink_node->behavior = TEST_NODE_SINK;
+    module->sink_node->desc     = &descriptor;
+    DEQ_INIT(module->sink_node->in_links);
+    DEQ_INIT(module->sink_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, sink_address, '0', &descriptor, module->sink_node);
 
-    source_ps_node->core     = core;
-    source_ps_node->behavior = TEST_NODE_SOURCE_PS;
-    source_ps_node->desc     = &descriptor;
-    DEQ_INIT(source_ps_node->in_links);
-    DEQ_INIT(source_ps_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, source_ps_address, '0', &descriptor, source_ps_node);
+    module->source_node->core     = core;
+    module->source_node->module   = module;
+    module->source_node->behavior = TEST_NODE_SOURCE;
+    module->source_node->desc     = &descriptor;
+    DEQ_INIT(module->source_node->in_links);
+    DEQ_INIT(module->source_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, source_address, '0', &descriptor, module->source_node);
 
-    discard_node->core     = core;
-    discard_node->behavior = TEST_NODE_DISCARD;
-    discard_node->desc     = &descriptor;
-    DEQ_INIT(discard_node->in_links);
-    DEQ_INIT(discard_node->out_links);
-    qdrc_endpoint_bind_mobile_address_CT(core, discard_address, '0', &descriptor, discard_node);
+    module->source_ps_node->core     = core;
+    module->source_ps_node->module   = module;
+    module->source_ps_node->behavior = TEST_NODE_SOURCE_PS;
+    module->source_ps_node->desc     = &descriptor;
+    DEQ_INIT(module->source_ps_node->in_links);
+    DEQ_INIT(module->source_ps_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, source_ps_address, '0', &descriptor, module->source_ps_node);
+
+    module->discard_node->core     = core;
+    module->discard_node->module   = module;
+    module->discard_node->behavior = TEST_NODE_DISCARD;
+    module->discard_node->desc     = &descriptor;
+    DEQ_INIT(module->discard_node->in_links);
+    DEQ_INIT(module->discard_node->out_links);
+    qdrc_endpoint_bind_mobile_address_CT(core, discard_address, '0', &descriptor, module->discard_node);
+
+    return module;
 }
 
 
-static void qdrc_test_hooks_core_endpoint_finalize(qdr_core_t *core)
+static void qdrc_test_hooks_core_endpoint_finalize(test_module_t *module)
 {
-    free(echo_node);
-    free(deny_node);
-    free(sink_node);
-    free(source_node);
-    free(source_ps_node);
-    free(discard_node);
+    free(module->echo_node);
+    free(module->deny_node);
+    free(module->sink_node);
+    free(module->source_node);
+    free(module->source_ps_node);
+    free(module->discard_node);
 }
 
 
-void qdrc_test_hooks_init_CT(qdr_core_t *core)
-{
-    //
-    // Exit if the test hooks are not enabled (by the --test-hooks command line option)
-    //
-    if (!core->qd->test_hooks)
-        return;
-
-    qd_log(core->log, QD_LOG_INFO, "Core thread system test hooks enabled");
-
-    qdrc_test_hooks_core_endpoint_setup(core);
-}
-
-
-void qdrc_test_hooks_final_CT(qdr_core_t *core)
+static void qdrc_test_hooks_init_CT(qdr_core_t *core, void **module_context)
 {
     //
     // Exit if the test hooks are not enabled (by the --test-hooks command line option)
     //
-    if (!core->qd->test_hooks)
+    if (!core->qd->test_hooks) {
+        *module_context = 0;
         return;
+    }
 
-    qdrc_test_hooks_core_endpoint_finalize(core);
+    *module_context = qdrc_test_hooks_core_endpoint_setup(core);
 }
 
+
+static void qdrc_test_hooks_final_CT(void *module_context)
+{
+    if (!!module_context)
+        qdrc_test_hooks_core_endpoint_finalize(module_context);
+}
+
+
+QDR_CORE_MODULE_DECLARE("core_test_hooks", qdrc_test_hooks_init_CT, qdrc_test_hooks_final_CT)

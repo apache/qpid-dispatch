@@ -39,11 +39,13 @@ add_custom_command (
 if(NOT LIBWEBSOCKETS_FOUND)
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/router_core
   ${CMAKE_CURRENT_BINARY_DIR}
   )
 else()
 include_directories(
   ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/router_core
   ${CMAKE_CURRENT_BINARY_DIR}
   ${LIBWEBSOCKETS_INCLUDE_DIRS}
   )
@@ -85,7 +87,6 @@ set(qpid_dispatch_SOURCES
   router_core/agent_router.c
   router_core/connections.c
   router_core/core_link_endpoint.c
-  router_core/core_test_hooks.c
   router_core/edge_control.c
   router_core/error.c
   router_core/exchange_bindings.c
@@ -98,6 +99,7 @@ set(qpid_dispatch_SOURCES
   router_core/terminus.c
   router_core/transfer.c
   router_core/core_timer.c
+  router_core/modules/core_test_hooks.c
   router_node.c
   router_pynode.c
   schema_enum.c
