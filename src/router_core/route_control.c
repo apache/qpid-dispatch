@@ -301,8 +301,8 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
-                                              qd_parsed_field_t      *prefix_field,
-                                              qd_parsed_field_t      *pattern_field,
+                                              const char             *addr_pattern,
+                                              bool                    is_prefix,
                                               qd_parsed_field_t      *add_prefix_field,
                                               qd_parsed_field_t      *del_prefix_field,
                                               qd_parsed_field_t      *container_field,
@@ -311,27 +311,6 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_direction_t          dir,
                                               bool                    auto_delete)
 {
-    const bool is_prefix = !!prefix_field;
-    qd_iterator_t *iter = qd_parse_raw(is_prefix ? prefix_field : pattern_field);
-    int len = qd_iterator_length(iter);
-    char *pattern = malloc(len + 1 + (is_prefix ? 2 : 0));
-
-    qd_iterator_strncpy(iter, pattern, len + 1);
-
-    // forward compatibility hack: convert the old style prefix addresses into
-    // a proper pattern addresses by appending ".#"
-    // note: see parse_tree.c for acceptable separator and wildcard characters
-    if (is_prefix) {
-        char suffix = pattern[strlen(pattern) - 1];
-        if (suffix == '#') {
-            // already converted - do nothing
-        } else {
-            if (!strchr("./", suffix))
-                strcat(pattern, ".");  // use . for legacy
-            strcat(pattern, "#");
-        }
-    }
-
     //
     // Set up the link_route structure
     //
@@ -342,7 +321,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     lr->dir       = dir;
     lr->treatment = treatment;
     lr->is_prefix = is_prefix;
-    lr->pattern   = pattern;
+    lr->pattern   = strdup(addr_pattern);
     lr->delete_on_close = auto_delete;
 
     if (!!add_prefix_field) {
