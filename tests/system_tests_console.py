@@ -23,13 +23,59 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import errno
 import re
 import system_test
 import unittest
 from subprocess import PIPE
 import subprocess
 import shutil
-from system_test import main_module
+from system_test import main_module, SkipIfNeeded
+
+class ConsolePreReq(object):
+    @staticmethod
+    def get_dirs(remove):
+        # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
+        cwd = os.getcwd()
+        # l_base is the path that ends with qpid-dispatch's home dir
+        l_base = cwd.split('/')[:-remove]
+        l_test_cmd = '/'.join(l_base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
+        l_test_dir = '/'.join(l_base + ['console', 'stand-alone', 'test'])
+        l_src_dir = '/'.join(l_base + ['console', 'stand-alone'])
+        l_node_dir = '/'.join(l_base + ['console', 'stand-alone', 'node_modules'])
+        return l_test_cmd, l_test_dir, l_src_dir, l_node_dir
+
+    @staticmethod
+    def is_cmd(name):
+        ''' determine if a command is present and executes on the system '''
+        try:
+            devnull = open(os.devnull, "w")
+            subprocess.Popen([name], stdout=devnull, stderr=devnull).communicate()
+        except OSError as e:
+            if e.errno == os.errno.ENOENT:
+                return False
+        return True
+
+    @staticmethod
+    def find_dirs():
+        for i in range(6, 0, -1):
+            (test_cmd, test_dir, src_dir, node_dir) = ConsolePreReq.get_dirs(i)
+            if os.path.isdir(src_dir):
+                return test_cmd, test_dir, src_dir, node_dir
+
+        raise OSError(errno.ENOENT, os.strerror(errno.ENOENT), src_dir)
+
+    @staticmethod
+    def should_skip():
+        try:
+            (test_cmd, test_dir, src_dir, node_dir) = ConsolePreReq.find_dirs()
+            found_npm = ConsolePreReq.is_cmd('npm')
+            found_mocha = ConsolePreReq.is_cmd(test_cmd)
+
+            return not found_npm or not found_mocha or not os.path.isdir(src_dir)
+        except OSError:
+            return True
+
 
 class ConsoleTest(system_test.TestCase):
     """Run console tests"""
@@ -45,36 +91,17 @@ class ConsoleTest(system_test.TestCase):
         cls.router = cls.tester.qdrouterd('test-router', config)
 
     def run_console_test(self):
-        # expecting <base-path>/build/system_test.dir/system_tests_console/ConsoleTest/test_console
-        cwd = os.getcwd()
-
-        def get_dirs(remove):
-            # l_base is the path that ends with qpid-dispatch's home dir
-            l_base = cwd.split('/')[:-remove]
-            l_test_cmd = '/'.join(l_base + ['build', 'console', 'node_modules', '.bin', 'mocha'])
-            l_test_dir = '/'.join(l_base + ['console', 'stand-alone', 'test'])
-            l_src_dir = '/'.join(l_base + ['console', 'stand-alone'])
-            l_node_dir = '/'.join(l_base + ['console', 'stand-alone', 'node_modules'])
-            return l_test_cmd, l_test_dir, l_src_dir, l_node_dir
-        
-        (test_cmd, test_dir, src_dir, node_dir) = get_dirs(6)
-        found_src = os.path.isdir(src_dir)
-        # running the test from the command line results in a different path
-        if not found_src:
-            (test_cmd, test_dir, src_dir, node_dir) = get_dirs(5)
-            found_src = os.path.isdir(src_dir)
-
         pret = 0
-        # If we are unable to find the console's source directory. Skip the test
-        out = 'Skipped'
-        if found_src:
-            ''' The console test needs a node_modules dir in the source directory.
-             If the node_modules dir is not present in the source dir, create it.
-             An alternative is to copy all the source files to the build/console dir. '''
-            node_modules = os.path.isdir(node_dir)
-            if not node_modules:
-                p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
-                p0.wait()
+        (test_cmd, test_dir, src_dir, node_dir) = ConsolePreReq.find_dirs()
+
+        out = ''
+        ''' The console test needs a node_modules dir in the source directory.
+            If the node_modules dir is not present in the source dir, create it.
+            An alternative is to copy all the source files to the build/console dir. '''
+        node_modules = os.path.isdir(node_dir)
+        if not node_modules:
+            p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
+            p0.wait()
 
             prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
             p = self.popen(prg, stdout=PIPE, expect=None)
@@ -95,9 +122,11 @@ class ConsoleTest(system_test.TestCase):
             "console test exit status %s, output:\n%s" % (pret, out)
         return out
 
+    # If we are unable to find the console's source directory,
+    # or if we can't run the npm or mocha command. Skip the test
+    @SkipIfNeeded(ConsolePreReq.should_skip(), 'Test skipped')
     def test_console(self):
         self.run_console_test()
-
 
 if __name__ == '__main__':
     unittest.main(main_module())
