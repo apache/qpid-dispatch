@@ -2797,8 +2797,8 @@ class PresettledOverflowTest(MessagingHandler):
 
                 for result in out.results:
                     if result[5] == 'out' and 'balanced.PresettledOverflow' in result[6]:
-                        if result[16] != 250:
-                            self.error = "Expected 250 dropped presettled deliveries but got " + str(result[16])
+                        if result[16] != 249:
+                            self.error = "Expected 249 dropped presettled deliveries but got " + str(result[16])
             self.conn.close()
             self.timer.cancel()
 

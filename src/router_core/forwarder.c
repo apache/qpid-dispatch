@@ -150,6 +150,16 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
 static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link)
 {
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
+
+    if (!dlv)
+        return;
+    //
+    // Remove leading delivery from consideration.
+    // Parts of this message may have been transmitted already and dropping
+    // it may corrupt outbound data.
+    //
+    dlv = DEQ_NEXT(dlv);
+
     qdr_delivery_t *next;
 
     while (dlv) {
