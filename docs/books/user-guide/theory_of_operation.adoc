@@ -273,12 +273,11 @@ guarantees that one of the following outcomes will occur:
 
 * The connection to the producer shall be dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and later re-sent.
 
-Multicast delivery is not reliable. If a producer sends an unsettled
-delivery, one of the following outcomes will occur:
+Multicast delivery is not reliable. If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RELEASED.
 
-* If the address has no consumers, the router sends back a disposition of RELEASED.
+* If ACCEPTED, there is no guarantee that the message was delivered to any consumer.
 
-* If the address has one or more consumers, the router sends back a disposition of SETTLED.
+* If RELEASED, the message was definitely not delivered to any consumer.
 
 ==== Balanced
 
