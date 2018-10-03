@@ -552,7 +552,7 @@ bool qdr_is_addr_treatment_multicast(qdr_address_t *addr);
 //
 
 struct qdr_connection_info_t {
-    const  char                *container;
+    char                       *container;
     char                       *sasl_mechanisms;
     char                       *host;
     bool                        is_encrypted;
