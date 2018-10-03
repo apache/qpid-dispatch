@@ -153,8 +153,9 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
     connection_info->is_encrypted          = is_encrypted;
     connection_info->is_authenticated      = is_authenticated;
     connection_info->opened                = opened;
-    connection_info->container             = container;
 
+    if (container)
+        connection_info->container = strdup(container);
     if (sasl_mechanisms)
         connection_info->sasl_mechanisms = strdup(sasl_mechanisms);
     connection_info->dir = dir;
@@ -180,6 +181,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
 
 static void qdr_connection_info_free(qdr_connection_info_t *ci)
 {
+    free(ci->container);
     free(ci->sasl_mechanisms);
     free(ci->host);
     free(ci->ssl_proto);
