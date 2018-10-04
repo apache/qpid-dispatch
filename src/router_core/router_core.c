@@ -468,18 +468,17 @@ void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_
 }
 
 
-bool qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn)
+void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn)
 {
     qdr_connection_ref_t *ref = DEQ_HEAD(*ref_list);
     while (ref) {
         if (ref->conn == conn) {
             DEQ_REMOVE(*ref_list, ref);
             free_qdr_connection_ref_t(ref);
-            return true;
+            break;
         }
         ref = DEQ_NEXT(ref);
     }
-    return false;
 }
 
 

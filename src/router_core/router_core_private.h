@@ -464,7 +464,7 @@ ALLOC_DECLARE(qdr_connection_ref_t);
 DEQ_DECLARE(qdr_connection_ref_t, qdr_connection_ref_list_t);
 
 void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
-bool qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
+void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
 
 struct qdr_address_t {
     DEQ_LINKS(qdr_address_t);
@@ -614,9 +614,8 @@ struct qdr_link_route_t {
     qd_direction_t          dir;
     qdr_conn_identifier_t  *conn_id;
     qd_address_treatment_t  treatment;
-    int                     active_ct;
+    bool                    active;
     bool                    is_prefix;
-    bool                    delete_on_close;
     char                   *pattern;
     char                   *add_prefix;
     char                   *del_prefix;

@@ -36,7 +36,6 @@
 #define QDR_CONFIG_LINK_ROUTE_PATTERN       10
 #define QDR_CONFIG_LINK_ROUTE_ADD_EXTERNAL_PREFIX 11
 #define QDR_CONFIG_LINK_ROUTE_DEL_EXTERNAL_PREFIX 12
-#define QDR_CONFIG_LINK_ROUTE_DELETE_ON_CLOSE     13
 
 const char *qdr_config_link_route_columns[] =
     {"name",
@@ -52,7 +51,6 @@ const char *qdr_config_link_route_columns[] =
      "pattern",
      "addExternalPrefix",
      "delExternalPrefix",
-     "deleteOnClose",
      0};
 
 const char *CONFIG_LINKROUTE_TYPE = "org.apache.qpid.dispatch.router.config.linkRoute";
@@ -158,12 +156,8 @@ static void qdr_config_link_route_insert_column_CT(qdr_link_route_t *lr, int col
         break;
 
     case QDR_CONFIG_LINK_ROUTE_OPER_STATUS:
-        text = lr->active_ct > 0 ? "active" : "inactive";
+        text = lr->active ? "active" : "inactive";
         qd_compose_insert_string(body, text);
-        break;
-
-    case QDR_CONFIG_LINK_ROUTE_DELETE_ON_CLOSE:
-        qd_compose_insert_bool(body, lr->delete_on_close);
         break;
     }
 }
@@ -422,7 +416,6 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_CONTAINER_ID]);
         qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DIRECTION]);
-        qd_parsed_field_t *del_on_close_field  = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DELETE_ON_CLOSE]);
         if (! dir_field) {
             dir_field        = qd_parse_value_by_key(in_body, qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_DIR]);
             if (dir_field)
@@ -479,13 +472,11 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
             break;
         }
 
-        bool auto_delete = del_on_close_field ? qd_parse_as_bool(del_on_close_field) : false;
-
         //
         // The request is good.  Create the entity.
         //
 
-        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, add_prefix_field, del_prefix_field, container_field, connection_field, trt, dir, auto_delete);
+        lr = qdr_route_add_link_route_CT(core, name, prefix_field, pattern_field, add_prefix_field, del_prefix_field, container_field, connection_field, trt, dir);
 
         //
         // Compose the result map for the response.
