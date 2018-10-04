@@ -84,6 +84,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_05_echo_attach_detach(self):
+        test = EchoTest(self.routers[0].addresses[0], "org.apache.qpid.dispatch.router/test/echo")
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -222,6 +227,57 @@ class SourceTest(MessagingHandler):
         elif self.n_rcvd == self.n_credit_given:
             self.receiver.flow(5)
             self.n_credit_given += 5
+
+    def run(self):
+        Container(self).run()
+
+
+class EchoTest(MessagingHandler):
+    def __init__(self, host, address):
+        super(EchoTest, self).__init__(prefetch = 0)
+        self.host      = host
+        self.address   = address
+
+        self.conn     = None
+        self.error    = None
+        self.action   = "Connecting to router"
+        self.receiver = None
+        self.sender   = None
+
+    def timeout(self):
+        self.error = "Timeout Expired while attempting action: %s" % self.action
+        self.conn.close()
+
+    def fail(self, error):
+        self.error = error
+        self.conn.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(5.0, Timeout(self))
+        self.conn     = event.container.connect(self.host)
+        self.receiver = event.container.create_receiver(self.conn, self.address)
+
+    def on_link_opening(self, event):
+        if event.sender:
+            self.action = "Attaching incoming echoed link"
+            self.sender = event.sender
+            if event.sender.remote_source.address == self.address:
+                event.sender.source.address = self.address
+                event.sender.open()
+            else:
+                self.fail("Incorrect address on incoming sender: got %s, expected %s" %
+                          (event.sender.remote_source.address, self.address))
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.action = "Closing the echoed link"
+            self.receiver.close()
+
+    def on_link_closed(self, event):
+        if event.receiver == self.receiver:
+            self.conn.close()
+            self.timer.cancel()
 
     def run(self):
         Container(self).run()

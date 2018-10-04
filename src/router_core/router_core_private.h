@@ -889,6 +889,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                qdr_terminus_t   *target);
 
 void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition, bool close);
+void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
 
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,

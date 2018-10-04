@@ -988,7 +988,7 @@ void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t
 }
 
 
-static void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
+void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
     qdr_connection_work_t *work = new_qdr_connection_work_t();
     ZERO(work);
@@ -1594,15 +1594,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, target, true, true, &link_route, &unavailable, &core_endpoint);
 
                 if (core_endpoint) {
-                    qdr_error_t *error = 0;
-                    if (qdrc_endpoint_do_bound_attach_CT(core, addr, link, &error)) {
-                        link->owning_addr = addr;
-                        qdr_link_outbound_second_attach_CT(core, link, source, target);
-                    } else {
-                        qdr_link_outbound_detach_CT(core, link, error, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
-                        qdr_terminus_free(source);
-                        qdr_terminus_free(target);
-                    }
+                    qdrc_endpoint_do_bound_attach_CT(core, addr, link, source, target);
                 }
 
                 else if (unavailable) {
@@ -1705,15 +1697,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, source, true, true, &link_route, &unavailable, &core_endpoint);
 
             if (core_endpoint) {
-                qdr_error_t *error = 0;
-                if (qdrc_endpoint_do_bound_attach_CT(core, addr, link, &error)) {
-                    link->owning_addr = addr;
-                    qdr_link_outbound_second_attach_CT(core, link, source, target);
-                } else {
-                    qdr_link_outbound_detach_CT(core, link, error, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
-                    qdr_terminus_free(source);
-                    qdr_terminus_free(target);
-                }
+                qdrc_endpoint_do_bound_attach_CT(core, addr, link, source, target);
             }
 
             else if (unavailable) {
@@ -1794,6 +1778,11 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     qdr_terminus_t   *target = action->args.connection.target;
 
     link->oper_status = QDR_LINK_OPER_UP;
+
+    if (link->core_endpoint) {
+        qdrc_endpoint_do_second_attach_CT(core, link->core_endpoint, source, target);
+        return;
+    }
 
     //
     // Handle attach-routed links
@@ -1901,6 +1890,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
 
     if (link->core_endpoint) {
         qdrc_endpoint_do_detach_CT(core, link->core_endpoint, error);
+        return;
 
     } else {
         //

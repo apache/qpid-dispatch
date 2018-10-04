@@ -32,17 +32,22 @@ typedef struct qdrc_endpoint_t qdrc_endpoint_t;
 /**
  * Event - An attach for a new core-endpoint link has arrived
  *
+ * This handler must either invoke qdrc_endpoint_detach_CT or qdrc_endpoint_second_attach_CT
+ * to reject or accept the link.  If desired, this handler may schedule the detach/attach
+ * response to happen asynchronously at a later time.
+ *
  * @param bind_context The opaque context provided in the mobile address binding
  * @param endpoint A new endpoint object for the link.  If the link is accepted, this
  *                 object must be stored for later use.
  * @param link_context [out] Handler-provided opaque context to be associated with the endpoint
- * @param error [out] Error indication which may be supplied if the link is rejected
- * @return True if the link is to be accepted, False if the link should be rejected and detached
+ * @param repote_source Pointer to the remote source terminus of the link
+ * @param remote_target Pointer to the remote target terminus of the link
  */
-typedef bool (*qdrc_first_attach_t) (void             *bind_context,
+typedef void (*qdrc_first_attach_t) (void             *bind_context,
                                      qdrc_endpoint_t  *endpoint,
                                      void            **link_context,
-                                     qdr_error_t     **error);
+                                     qdr_terminus_t   *remote_source,
+                                     qdr_terminus_t   *remote_target);
 
 /**
  * Event - The attachment of a link initiated by the core-endpoint was completed
@@ -127,7 +132,8 @@ typedef struct qdrc_endpoint_desc_t {
     qdrc_flow_t           on_flow;
     qdrc_update_t         on_update;
     qdrc_transfer_t       on_transfer;
-    qdrc_detach_t         on_detach;
+    qdrc_detach_t         on_first_detach;
+    qdrc_detach_t         on_second_detach;
     qdrc_cleanup_t        on_cleanup;
 } qdrc_endpoint_desc_t;
 
@@ -188,6 +194,24 @@ qd_direction_t    qdrc_endpoint_get_direction_CT(const qdrc_endpoint_t *endpoint
 qdr_connection_t *qdrc_endpoint_get_connection_CT(qdrc_endpoint_t *endpoint);
 
 /**
+ * Detach a link attached to the core-endpoint
+ *
+ * @param core Pointer to the core object
+ * @param endpoint Pointer to an endpoint object
+ * @param error An error indication or 0 for no error
+ */
+void qdrc_endpoint_second_attach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_terminus_t *source, qdr_terminus_t *target);
+
+/**
+ * Detach a link attached to the core-endpoint
+ *
+ * @param core Pointer to the core object
+ * @param endpoint Pointer to an endpoint object
+ * @param error An error indication or 0 for no error
+ */
+void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_error_t *error);
+
+/**
  * Issue credit and control drain for an incoming link
  *
  * @param core Pointer to the core object
@@ -228,21 +252,13 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
  */
 void qdrc_endpoint_settle_CT(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition);
 
-/**
- * Detach a link attached to the core-endpoint
- *
- * @param core Pointer to the core object
- * @param endpoint Pointer to an endpoint object
- * @param error An error indication or 0 for no error
- */
-void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_error_t *error);
-
 
 //=====================================================================================
 // Private functions, not part of the API
 //=====================================================================================
 
-bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link, qdr_error_t **error);
+void qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
+void qdrc_endpoint_do_second_attach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_terminus_t *source, qdr_terminus_t *target);
 void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_delivery_t *delivery);
 void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, int credit, bool drain);
 void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_error_t *error);

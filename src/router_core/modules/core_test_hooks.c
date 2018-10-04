@@ -39,12 +39,14 @@ typedef struct test_node_t   test_node_t;
 
 typedef struct test_endpoint_t {
     DEQ_LINKS(struct test_endpoint_t);
-    test_node_t         *node;
-    qdrc_endpoint_t     *ep;
-    qdr_delivery_list_t  deliveries;
-    int                  credit;
-    bool                 in_action_list;
-    bool                 detached;
+    test_node_t            *node;
+    qdrc_endpoint_t        *ep;
+    qdr_delivery_list_t     deliveries;
+    int                     credit;
+    bool                    in_action_list;
+    bool                    detached;
+    qd_direction_t          dir;
+    struct test_endpoint_t *peer;
 } test_endpoint_t;
 
 DEQ_DECLARE(test_endpoint_t, test_endpoint_list_t);
@@ -118,7 +120,7 @@ static void free_endpoint(test_endpoint_t *ep)
 {
     test_node_t *node = ep->node;
 
-    if (qdrc_endpoint_get_direction_CT(ep->ep) == QD_INCOMING)
+    if (ep->dir == QD_INCOMING)
         DEQ_REMOVE(node->in_links, ep);
     else
         DEQ_REMOVE(node->out_links, ep);
@@ -158,19 +160,21 @@ static void endpoint_action(qdr_core_t *core, qdr_action_t *action, bool discard
 }
 
 
-static bool first_attach(void             *bind_context,
-                         qdrc_endpoint_t  *endpoint,
-                         void            **link_context,
-                         qdr_error_t     **error)
+static void on_first_attach(void             *bind_context,
+                            qdrc_endpoint_t  *endpoint,
+                            void            **link_context,
+                            qdr_terminus_t   *source,
+                            qdr_terminus_t   *target)
 {
     test_node_t     *node     = (test_node_t*) bind_context;
     test_endpoint_t *test_ep  = 0;
     bool             incoming = qdrc_endpoint_get_direction_CT(endpoint) == QD_INCOMING;
+    qdr_error_t     *error    = 0;
 
     switch (node->behavior) {
     case TEST_NODE_DENY :
-        *error = qdr_error("qd:forbidden", "Connectivity to the deny node is forbidden");
-        return false;
+        error = qdr_error("qd:forbidden", "Connectivity to the deny node is forbidden");
+        break;
 
     case TEST_NODE_ECHO :
         break;
@@ -179,16 +183,14 @@ static bool first_attach(void             *bind_context,
         if (incoming) {
             qdrc_endpoint_flow_CT(node->core, endpoint, 1, false);
         } else {
-            *error = qdr_error("qd:forbidden", "Sink function only accepts incoming links");
-            return false;
+            error = qdr_error("qd:forbidden", "Sink function only accepts incoming links");
         }
         break;
 
     case TEST_NODE_SOURCE :
     case TEST_NODE_SOURCE_PS :
         if (incoming) {
-            *error = qdr_error("qd:forbidden", "Source function only accepts outgoing links");
-            return false;
+            error = qdr_error("qd:forbidden", "Source function only accepts outgoing links");
         }
         break;
 
@@ -196,16 +198,23 @@ static bool first_attach(void             *bind_context,
         if (incoming) {
             qdrc_endpoint_flow_CT(node->core, endpoint, 1, false);
         } else {
-            *error = qdr_error("qd:forbidden", "Discard function only accepts incoming links");
-            return false;
+            error = qdr_error("qd:forbidden", "Discard function only accepts incoming links");
         }
         break;
+    }
+
+    if (!!error) {
+        qdrc_endpoint_detach_CT(node->core, endpoint, error);
+        qdr_terminus_free(source);
+        qdr_terminus_free(target);
+        return;
     }
 
     test_ep = NEW(test_endpoint_t);
     ZERO(test_ep);
     test_ep->node = node;
     test_ep->ep   = endpoint;
+    test_ep->dir  = incoming ? QD_INCOMING : QD_OUTGOING;
     *link_context = test_ep;
 
     if (incoming)
@@ -213,23 +222,48 @@ static bool first_attach(void             *bind_context,
     else
         DEQ_INSERT_TAIL(node->out_links, test_ep);
 
-    return true;
+    if (node->behavior == TEST_NODE_ECHO) {
+        test_endpoint_t *peer = NEW(test_endpoint_t);
+        ZERO(peer);
+        peer->node = node;
+        peer->ep   = qdrc_endpoint_create_link_CT(node->core,
+                                                  qdrc_endpoint_get_connection_CT(endpoint),
+                                                  incoming ? QD_OUTGOING : QD_INCOMING,
+                                                  source,
+                                                  target,
+                                                  node->desc,
+                                                  peer);
+        test_ep->dir  = incoming ? QD_INCOMING : QD_OUTGOING;
+        test_ep->peer = peer;
+        peer->peer    = test_ep;
+
+        if (incoming)
+            DEQ_INSERT_TAIL(node->out_links, peer);
+        else
+            DEQ_INSERT_TAIL(node->in_links, peer);
+    } else
+        qdrc_endpoint_second_attach_CT(node->core, endpoint, source, target);
 }
 
 
-static void second_attach(void           *link_context,
-                          qdr_terminus_t *remote_source,
-                          qdr_terminus_t *remote_target)
-{
-}
-
-
-static void flow(void *link_context,
-                 int   available_credit,
-                 bool  drain)
+static void on_second_attach(void           *link_context,
+                             qdr_terminus_t *remote_source,
+                             qdr_terminus_t *remote_target)
 {
     test_endpoint_t *ep = (test_endpoint_t*) link_context;
-    if (available_credit == 0)
+
+    if (!!ep->peer) {
+        qdrc_endpoint_second_attach_CT(ep->node->core, ep->peer->ep, remote_source, remote_target);
+    }
+}
+
+
+static void on_flow(void *link_context,
+                    int   available_credit,
+                    bool  drain)
+{
+    test_endpoint_t *ep = (test_endpoint_t*) link_context;
+    if (!ep || available_credit == 0)
         return;
 
     ep->credit = available_credit;
@@ -254,17 +288,17 @@ static void flow(void *link_context,
 }
 
 
-static void update(void           *link_context,
-                   qdr_delivery_t *delivery,
-                   bool            settled,
-                   uint64_t        disposition)
+static void on_update(void           *link_context,
+                      qdr_delivery_t *delivery,
+                      bool            settled,
+                      uint64_t        disposition)
 {
 }
 
 
-static void transfer(void           *link_context,
-                     qdr_delivery_t *delivery,
-                     qd_message_t   *message)
+static void on_transfer(void           *link_context,
+                        qdr_delivery_t *delivery,
+                        qd_message_t   *message)
 {
     test_endpoint_t *ep = (test_endpoint_t*) link_context;
 
@@ -294,10 +328,19 @@ static void transfer(void           *link_context,
 }
 
 
-static void detach(void        *link_context,
-                   qdr_error_t *error)
+static void on_first_detach(void        *link_context,
+                            qdr_error_t *error)
 {
     test_endpoint_t *ep = (test_endpoint_t*) link_context;
+
+    if (ep->node->behavior == TEST_NODE_ECHO) {
+        if (!!ep->peer) {
+            qdrc_endpoint_detach_CT(ep->node->core, ep->peer->ep, error);
+            return;
+        }
+    }
+
+    qdrc_endpoint_detach_CT(ep->node->core, ep->ep, 0);
 
     if (ep->in_action_list) {
         ep->detached = true;
@@ -307,12 +350,37 @@ static void detach(void        *link_context,
 }
 
 
-static void cleanup(void *link_context)
+static void on_second_detach(void        *link_context,
+                             qdr_error_t *error)
+{
+    test_endpoint_t *ep = (test_endpoint_t*) link_context;
+
+    if (!!ep) {
+        if (ep->node->behavior == TEST_NODE_ECHO) {
+            if (!!ep->peer) {
+                qdrc_endpoint_detach_CT(ep->node->core, ep->peer->ep, error);
+                if (ep->peer->in_action_list)
+                    ep->peer->detached = true;
+                else
+                    free_endpoint(ep->peer);
+            }
+        }
+
+        if (ep->in_action_list)
+            ep->detached = true;
+        else
+            free_endpoint(ep);
+    }
+}
+
+
+static void on_cleanup(void *link_context)
 {
 }
 
 
-static qdrc_endpoint_desc_t descriptor = {first_attach, second_attach, flow, update, transfer, detach, cleanup};
+static qdrc_endpoint_desc_t descriptor = {on_first_attach, on_second_attach, on_flow, on_update,
+                                          on_transfer, on_first_detach, on_second_detach, on_cleanup};
 
 
 static test_module_t *qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)

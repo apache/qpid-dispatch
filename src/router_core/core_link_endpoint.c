@@ -79,13 +79,29 @@ qdrc_endpoint_t *qdrc_endpoint_create_link_CT(qdr_core_t           *core,
 
 qd_direction_t qdrc_endpoint_get_direction_CT(const qdrc_endpoint_t *ep)
 {
-    return ep->link->link_direction;
+    return !!ep ? (!!ep->link ? ep->link->link_direction : QD_INCOMING) : QD_INCOMING;
 }
 
 
 qdr_connection_t *qdrc_endpoint_get_connection_CT(qdrc_endpoint_t *ep)
 {
     return !!ep ? (!!ep->link ? ep->link->conn : 0) : 0;
+}
+
+
+void qdrc_endpoint_second_attach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_terminus_t *source, qdr_terminus_t *target)
+{
+    qdr_link_outbound_second_attach_CT(core, ep->link, source, target);
+}
+
+
+void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
+{
+    qdr_link_outbound_detach_CT(core, ep->link, error, QDR_CONDITION_NONE, true);
+    if (ep->link->detach_count == 2) {
+        ep->link->core_endpoint = 0;
+        free_qdrc_endpoint_t(ep);
+    }
 }
 
 
@@ -146,17 +162,7 @@ void qdrc_endpoint_settle_CT(qdr_core_t *core, qdr_delivery_t *dlv, uint64_t dis
 }
 
 
-void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
-{
-    qdr_link_outbound_detach_CT(core, ep->link, error, QDR_CONDITION_NONE, true);
-    if (ep->link->detach_count == 2) {
-        ep->link->core_endpoint = 0;
-        free_qdrc_endpoint_t(ep);
-    }
-}
-
-
-bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link, qdr_error_t **error)
+void qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target)
 {
     qdrc_endpoint_t *ep = new_qdrc_endpoint_t();
     ZERO(ep);
@@ -164,37 +170,40 @@ bool qdrc_endpoint_do_bound_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr
     ep->link = link;
 
     link->core_endpoint = ep;
+    link->owning_addr   = addr;
 
-    *error = 0;
-    bool accept = !!ep->desc->on_first_attach ?
-        ep->desc->on_first_attach(addr->core_endpoint_context, ep, &ep->link_context, error) : false;
-
-    if (!accept) {
-        link->core_endpoint = 0;
-        free_qdrc_endpoint_t(ep);
-    }
-
-    return accept;
+    ep->desc->on_first_attach(addr->core_endpoint_context, ep, &ep->link_context, source, target);
 }
 
+
+void qdrc_endpoint_do_second_attach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_terminus_t *source, qdr_terminus_t *target)
+{
+    if (!!ep->desc->on_second_attach)
+        ep->desc->on_second_attach(ep->link_context, source, target);
+}
 
 
 void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv)
 {
-    ep->desc->on_transfer(ep->link_context, dlv, dlv->msg);
+    if (!!ep->desc->on_transfer)
+        ep->desc->on_transfer(ep->link_context, dlv, dlv->msg);
 }
 
 
 void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit, bool drain)
 {
-    ep->desc->on_flow(ep->link_context, credit, drain);
+    if (!!ep->desc->on_flow)
+        ep->desc->on_flow(ep->link_context, credit, drain);
 }
 
 
 void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
 {
-    ep->desc->on_detach(ep->link_context, error);
-    if (ep->link->detach_count == 2) {
+    if (ep->link->detach_count == 1) {
+        ep->desc->on_first_detach(ep->link_context, error);
+    } else {
+        if (!!ep->desc->on_second_detach)
+            ep->desc->on_second_detach(ep->link_context, error);
         ep->link->core_endpoint = 0;
         free_qdrc_endpoint_t(ep);
     }
@@ -203,7 +212,8 @@ void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error
 
 void qdrc_endpoint_do_cleanup_CT(qdr_core_t *core, qdrc_endpoint_t *ep)
 {
-    ep->desc->on_cleanup(ep->link_context);
+    if (!!ep->desc->on_cleanup)
+        ep->desc->on_cleanup(ep->link_context);
     free_qdrc_endpoint_t(ep);
 }
 
