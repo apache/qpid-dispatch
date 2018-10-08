@@ -72,4 +72,13 @@ void qdr_route_auto_link_detached_CT(qdr_core_t *core, qdr_link_t *link);
  */
 void qdr_route_auto_link_closed_CT(qdr_core_t *core, qdr_link_t *link);
 
+// Connection scoped link routes:
+qdr_link_route_t *qdr_route_add_conn_route_CT(qdr_core_t       *core,
+                                              qdr_connection_t *conn,
+                                              qd_iterator_t    *name,
+                                              const char       *addr_pattern,
+                                              qd_direction_t    dir);
+
+void qdr_route_del_conn_route_CT(qdr_core_t       *core,
+                                 qdr_link_route_t *lr);
 #endif

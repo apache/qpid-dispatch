@@ -291,7 +291,7 @@ static const char *qdra_link_route_treatment_CT(qd_parsed_field_t *field, qd_add
 }
 
 
-static const char *qdra_link_route_direction_CT(qd_parsed_field_t *field, qd_direction_t *dir)
+const char *qdra_link_route_direction_CT(qd_parsed_field_t *field, qd_direction_t *dir)
 {
     if (field) {
         qd_iterator_t *iter = qd_parse_raw(field);

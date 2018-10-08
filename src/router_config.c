@@ -42,7 +42,7 @@ static void qdi_router_configure_body(qdr_core_t              *core,
     if (name)
         name_iter = qd_iterator_string(name, ITER_VIEW_ALL);
 
-    qdr_manage_create(core, 0, type, name_iter, in_body, 0, buffers);
+    qdr_manage_create(core, 0, type, name_iter, in_body, 0, buffers, 0);
 
     qd_iterator_free(name_iter);
 }

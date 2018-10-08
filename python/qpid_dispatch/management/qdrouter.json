@@ -1925,6 +1925,31 @@
                 "num1": {"type": "integer", "create": true, "update": true},
                 "num2": {"type": "integer", "create": true, "update": true}
             }
+        },
+
+        "router.connection.linkRoute": {
+            "description": "[EXPERIMENTAL] A linkRoute that is scoped to the connection that created it. Connection linkRoutes only exist within the context of a connection and when the connection is closed, they vanish. This differs from configured linkRoutes (router.config.linkRoute) which remain configured should their associated connection restart. Connection linkRoutes may be used by a client to create link-routed message flows that are automatically removed when the client disconnects.  Note well that connection.linkRoute cannot be declared in a configuration file - they must be created at run time via management operations over the connection which they are to be used. Connection linkRoutes are only visible to management access that is via the containing connection.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes" : {
+                "pattern": {
+                    "description": "A wildcarded pattern for address matching. Incoming addresses are matched against this pattern. Matching addresses use the configured settings. The pattern consists of one or more tokens separated by a forward slash '/'. A token can be one of the following: a * character, a # character, or a sequence of characters that do not include /, *, or #.  The * token matches any single token.  The # token matches zero or more tokens. * has higher precedence than #, and exact match has the highest precedence.",
+                    "type": "string",
+                    "create": true,
+                    "required": true
+                },
+                "direction": {
+                    "description": "The permitted direction of links: 'in' means client senders; 'out' means client receivers",
+                    "type": ["in", "out"],
+                    "create": true,
+                    "required": true
+                },
+                "containerId": {
+                    "type": "string",
+                    "description": "Name of the container which has instantiated this linkRoute.",
+                    "create": false
+                }
+            }
         }
     }
 }

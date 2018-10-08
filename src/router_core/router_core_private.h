@@ -40,6 +40,7 @@ typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 typedef struct qdr_exchange          qdr_exchange_t;
 typedef struct qdr_edge_t            qdr_edge_t;
 
+
 #include "core_link_endpoint.h"
 #include "core_events.h"
 
@@ -191,6 +192,7 @@ struct qdr_general_work_t {
     qdr_receive_t               on_message;
     void                       *on_message_context;
     qd_message_t               *msg;
+    uint64_t                    in_conn_id;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -284,6 +286,7 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
+    uint64_t                 in_conn;  // or perhaps a pointer???
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
@@ -582,6 +585,8 @@ struct qdr_connection_info_t {
 
 ALLOC_DECLARE(qdr_connection_info_t);
 
+DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
+
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
@@ -604,6 +609,7 @@ struct qdr_connection_t {
     int                         tenant_space_len;
     qdr_connection_info_t      *connection_info;
     void                       *user_context; /* Updated from IO thread, use work_lock */
+    qdr_link_route_list_t       conn_link_routes;  // connection scoped link routes
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -631,10 +637,10 @@ struct qdr_link_route_t {
     char                   *pattern;
     char                   *add_prefix;
     char                   *del_prefix;
+    qdr_connection_t       *parent_conn;
 };
 
 ALLOC_DECLARE(qdr_link_route_t);
-DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
 
 // Core timer related field/data structures
@@ -826,7 +832,7 @@ ALLOC_DECLARE(qdr_terminus_t);
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost);
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost, uint64_t in_conn_id);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
@@ -909,7 +915,8 @@ void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_
 qdr_query_t *qdr_query(qdr_core_t              *core,
                        void                    *context,
                        qd_router_entity_type_t  type,
-                       qd_composed_field_t     *body);
+                       qd_composed_field_t     *body,
+                       uint64_t                 conn_id);
 
 /**
  * Create a new timer which will only be used inside the code thread.

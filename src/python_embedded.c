@@ -512,7 +512,8 @@ static qd_error_t iter_to_py_attr(qd_iterator_t *iter,
     return qd_error_code();
 }
 
-static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int inter_router_cost)
+static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int inter_router_cost,
+                             uint64_t ignore)
 {
     IoAdapter *self = (IoAdapter*) context;
 

@@ -131,6 +131,7 @@ void qdr_core_free(qdr_core_t *core)
 
     qdr_link_route_t *link_route = 0;
     while ( (link_route = DEQ_HEAD(core->link_routes))) {
+        DEQ_REMOVE_HEAD(core->link_routes);
         qdr_core_delete_link_route(core, link_route);
     }
 
@@ -372,7 +373,6 @@ bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
 
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
 {
-    DEQ_REMOVE(core->link_routes, lr);
     free(lr->add_prefix);
     free(lr->del_prefix);
     free(lr->name);

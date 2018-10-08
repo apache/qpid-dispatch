@@ -103,7 +103,8 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
  * In-process messaging functions
  ******************************************************************************
  */
-typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost);
+typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
+                               uint64_t conn_id);
 
 qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        const char             *address,
@@ -705,7 +706,8 @@ typedef enum {
     QD_ROUTER_ADDRESS,
     QD_ROUTER_EXCHANGE,
     QD_ROUTER_BINDING,
-    QD_ROUTER_FORBIDDEN
+    QD_ROUTER_FORBIDDEN,
+    QD_ROUTER_CONN_LINK_ROUTE
 } qd_router_entity_type_t;
 
 typedef struct qdr_query_t qdr_query_t;
@@ -721,10 +723,11 @@ typedef struct qdr_query_t qdr_query_t;
  * @param name The name supplied for the entity
  * @param in_body The body of the request message
  * @param out_body A composed field for the body of the response message
+ * @param in_conn The identity of the connection over which the mgmt message arrived (0 if config file)
  */
 void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                        qd_iterator_t *name, qd_parsed_field_t *in_body, qd_composed_field_t *out_body,
-                       qd_buffer_list_t body_buffers);
+                       qd_buffer_list_t body_buffers, uint64_t in_conn);
 
 /**
  * qdr_manage_delete
@@ -736,9 +739,10 @@ void qdr_manage_create(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param type The entity type for the create request
  * @param name The name supplied with the request (or 0 if the identity was supplied)
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
+ * @param in_conn The identity of the connection over which the mgmt message arrived (0 if config file)
  */
 void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                       qd_iterator_t *name, qd_iterator_t *identity);
+                       qd_iterator_t *name, qd_iterator_t *identity, uint64_t in_conn);
 
 /**
  * qdr_manage_read
@@ -751,9 +755,11 @@ void qdr_manage_delete(qdr_core_t *core, void *context, qd_router_entity_type_t 
  * @param name The name supplied with the request (or 0 if the identity was supplied)
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  * @param body A composed field for the body of the response message
+ * @param in_conn The identity of the connection over which the mgmt message arrived (0 if config file)
  */
 void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                     qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body);
+                     qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body,
+                     uint64_t in_conn);
 
 
 /**
@@ -768,10 +774,12 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
  * @param identity The identity supplied with the request (or 0 if the name was supplied)
  * @param in_body The body of the request message
  * @param out_body A composed field for the body of the response message
+ * @param in_conn The identity of the connection over which the mgmt message arrived (0 if config file)
  */
 void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t type,
                        qd_iterator_t *name, qd_iterator_t *identity,
-                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body);
+                       qd_parsed_field_t *in_body, qd_composed_field_t *out_body,
+                       uint64_t in_conn);
 
 /**
  * Sequence for running a query:
@@ -789,7 +797,8 @@ void qdr_manage_update(qdr_core_t *core, void *context, qd_router_entity_type_t 
  */
 
 qdr_query_t *qdr_manage_query(qdr_core_t *core, void *context, qd_router_entity_type_t type,
-                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body);
+                              qd_parsed_field_t *attribute_names, qd_composed_field_t *body,
+                              uint64_t in_conn);
 void qdr_query_add_attribute_names(qdr_query_t *query);
 void qdr_query_get_first(qdr_query_t *query, int offset);
 void qdr_query_get_next(qdr_query_t *query);
