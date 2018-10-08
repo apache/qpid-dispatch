@@ -34,16 +34,21 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
+from subprocess import PIPE, STDOUT
 from copy import copy
 try:
     import queue as Queue   # 3.x
 except ImportError:
     import Queue as Queue   # 2.7
 from threading import Thread
+from threading import Event
+import json
 
 import proton
 from proton import Message, Timeout
+from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
+from proton.reactor import AtLeastOnce, Container
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
 
@@ -706,65 +711,251 @@ def main_module():
     return os.path.splitext(os.path.basename(__main__.__file__))[0]
 
 
-class AsyncTestReceiver(object):
+class AsyncTestReceiver(MessagingHandler):
     """
     A simple receiver that runs in the background and queues any received
     messages.  Messages can be retrieved from this thread via the queue member
     """
     Empty = Queue.Empty
 
-    def __init__(self, address, source, credit=100, timeout=0.1,
-                 conn_args=None, link_args=None):
-        """
-        Runs a BlockingReceiver in a separate thread.
-
-        :param address: address of router (URL)
-        :param source: the node address to consume from
-        :param credit: max credit for receiver
-        :param timeout: receive poll frequency in seconds
-        :param conn_args: map of BlockingConnection arguments
-        :param link_args: map of BlockingReceiver arguments
-        """
+    def __init__(self, address, source, conn_args=None, container_id=None):
         super(AsyncTestReceiver, self).__init__()
+        self.address = address
+        self.source = source
+        self.conn_args = conn_args
         self.queue = Queue.Queue()
-        kwargs = {'url': address}
-        if conn_args:
-            kwargs.update(conn_args)
-        self._conn = BlockingConnection(**kwargs)
-        kwargs = {'address': source,
-                  'credit': credit}
-        if link_args:
-            kwargs.update(link_args)
-        self._rcvr = self._conn.create_receiver(**kwargs)
-        self._thread = Thread(target=self._poll)
-        self._run = True
-        self._timeout = timeout
+        self._conn = None
+        self._container = Container(self)
+        if container_id is not None:
+            self._container.container_id = container_id
+        self._ready = Event()
+        self._stop_thread = False
+        self._thread = Thread(target=self._main)
+        self._thread.daemon = True
+        self._thread.start()
+        if self._ready.wait(timeout=TIMEOUT) is False:
+            raise Exception("Timed out waiting for receiver start")
+
+    def _main(self):
+        self._container.start()
+        while self._container.process():
+            if self._stop_thread:
+                if self._conn:
+                    self._conn.close()
+                    self._conn = None
+
+    def stop(self, timeout=TIMEOUT):
+        self._stop_thread = True
+        self._container.wakeup()
+        self._thread.join(timeout=TIMEOUT)
+        if self._thread.is_alive():
+            raise Exception("AsyncTestReceiver did not exit")
+
+    def on_start(self, event):
+        kwargs = {'url': self.address}
+        if self.conn_args:
+            kwargs.update(self.conn_args)
+        self._conn = event.container.connect(**kwargs)
+
+    def on_connection_opened(self, event):
+        kwargs = {'source': self.source}
+        rcv = event.container.create_receiver(event.connection,
+                                              **kwargs)
+    def on_link_opened(self, event):
+        self._ready.set()
+
+    def on_message(self, event):
+        self.queue.put(event.message)
+
+
+class AsyncTestSender(MessagingHandler):
+    """
+    A simple sender that runs in the background and sends 'count' messages to a
+    given target.
+    """
+    def __init__(self, address, target, count=1, body=None, container_id=None):
+        super(AsyncTestSender, self).__init__()
+        self.address = address
+        self.target = target
+        self.count = count
+        self._unaccepted = count
+        self._body = body or "test"
+        self._container = Container(self)
+        if container_id is not None:
+            self._container.container_id = container_id
+        self._thread = Thread(target=self._main)
+        self._thread.daemon = True
         self._thread.start()
 
-    def _poll(self):
-        """
-        Thread main loop
-        """
+    def _main(self):
+        self._container.start()
+        while self._container.process():
+            pass
 
-        while self._run:
-            try:
-                msg = self._rcvr.receive(timeout=self._timeout)
-            except Timeout:
-                continue
-            try:
-                self._rcvr.accept()
-            except IndexError:
-                # PROTON-1743
-                pass
-            self.queue.put(msg)
-        self._rcvr.close()
-        self._conn.close()
+    def wait(self):
+        # don't stop it - wait until everything is sent
+        self._thread.join(timeout=TIMEOUT)
+        assert not self._thread.is_alive(), "sender did not complete"
 
-    def stop(self, timeout=10):
-        """
-        Called to terminate the AsyncTestReceiver
-        """
-        self._run = False
-        self._thread.join(timeout=timeout)
+    def on_start(self, event):
+        self._conn = self._container.connect(self.address)
 
+    def on_connection_opened(self, event):
+        self._sender = self._container.create_sender(self._conn,
+                                                     target=self.target,
+                                                     options=AtLeastOnce())
+
+    def on_sendable(self, event):
+        if self.count:
+            self._sender.send(Message(body=self._body))
+            self.count -= 1
+
+    def on_accepted(self, event):
+        self._unaccepted -= 1;
+        if self._unaccepted == 0:
+            self._conn.close()
+            self._conn = None
+
+
+class QdManager(object):
+    """
+    A means to invoke qdmanage during a testcase
+    """
+    def __init__(self, tester, address=None, timeout=TIMEOUT):
+        # 'tester' - can be 'self' when called in a test,
+        # or an instance any class derived from Process (like Qdrouterd)
+        self._tester = tester
+        self._timeout = timeout
+        self._address = address
+
+    def __call__(self, cmd, address=None, input=None, expect=Process.EXIT_OK,
+                 timeout=None):
+        assert address or self._address, "address missing"
+        p = self._tester.popen(
+            ['qdmanage'] + cmd.split(' ')
+            + ['--bus', address or self._address,
+               '--indent=-1',
+               '--timeout', str(timeout or self._timeout)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def create(self, long_type, kwargs):
+        cmd = "CREATE --type=%s" % long_type
+        for k, v in kwargs.items():
+            cmd += " %s=%s" % (k, v)
+        return json.loads(self(cmd))
+
+    def delete(self, long_type, name=None, identity=None):
+        cmd = 'DELETE --type=%s' %  long_type
+        if identity is not None:
+            cmd += " --identity=%s" % identity
+        elif name is not None:
+            cmd += " --name=%s" % name
+        else:
+            assert False, "name or identity not supplied!"
+        self(cmd)
+
+    def query(self, long_type):
+        return json.loads(self('QUERY --type=%s' % long_type))
+
+
+class MgmtMsgProxy(object):
+    """
+    Utility for creating and inspecting management messages
+    """
+    class _Response(object):
+        def __init__(self, status_code, status_description, body):
+            self.status_code        = status_code
+            self.status_description = status_description
+            if body.__class__ == dict and len(body.keys()) == 2 and 'attributeNames' in body.keys() and 'results' in body.keys():
+                results = []
+                names   = body['attributeNames']
+                for result in body['results']:
+                    result_map = {}
+                    for i in range(len(names)):
+                        result_map[names[i]] = result[i]
+                    results.append(MgmtMsgProxy._Response(status_code, status_description, result_map))
+                self.attrs = {'results': results}
+            else:
+                self.attrs = body
+
+        def __getattr__(self, key):
+            return self.attrs[key]
+
+
+    def __init__(self, reply_addr):
+        self.reply_addr = reply_addr
+
+    def response(self, msg):
+        ap = msg.properties
+        return self._Response(ap['statusCode'], ap['statusDescription'], msg.body)
+
+    def query_connections(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.connection'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def query_links(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.link'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def query_link_routes(self):
+        ap = {'operation': 'QUERY',
+              'type': 'org.apache.qpid.dispatch.router.config.linkRoute'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def create_link_route(self, name, kwargs):
+        ap = {'operation': 'CREATE',
+              'type': 'org.apache.qpid.dispatch.router.config.linkRoute',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr,
+                       body=kwargs)
+
+    def delete_link_route(self, name):
+        ap = {'operation': 'DELETE',
+              'type': 'org.apache.qpid.dispatch.router.config.linkRoute',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def create_connector(self, name, kwargs):
+        ap = {'operation': 'CREATE',
+              'type': 'org.apache.qpid.dispatch.connector',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr,
+                       body=kwargs)
+
+    def delete_connector(self, name):
+        ap = {'operation': 'DELETE',
+              'type': 'org.apache.qpid.dispatch.connector',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def query_conn_link_routes(self):
+        ap = {'operation': 'QUERY',
+              'type': 'org.apache.qpid.dispatch.router.connection.attachSubscription'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def create_conn_link_route(self, name, kwargs):
+        ap = {'operation': 'CREATE',
+              'type': 'org.apache.qpid.dispatch.router.connection.attachSubscription',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr,
+                       body=kwargs)
+
+    def delete_conn_link_route(self, name):
+        ap = {'operation': 'DELETE',
+              'type': 'org.apache.qpid.dispatch.router.connection.attachSubscription',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
+    def read_conn_link_route(self, name):
+        ap = {'operation': 'READ',
+              'type': 'org.apache.qpid.dispatch.router.connection.attachSubscription',
+              'name': name}
+        return Message(properties=ap, reply_to=self.reply_addr)
 

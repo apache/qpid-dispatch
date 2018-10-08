@@ -19,7 +19,7 @@
 
 import unittest2 as unittest
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 
@@ -170,43 +170,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Entity(object):
-    def __init__(self, status_code, status_description, body):
-        self.status_code        = status_code
-        self.status_description = status_description
-        if body.__class__ == dict and len(body.keys()) == 2 and 'attributeNames' in body.keys() and 'results' in body.keys():
-            results = []
-            names   = body['attributeNames']
-            for result in body['results']:
-                result_map = {}
-                for i in range(len(names)):
-                    result_map[names[i]] = result[i]
-                results.append(Entity(status_code, status_description, result_map))
-            self.attrs = {'results': results}
-        else:
-            self.attrs = body
-
-    def __getattr__(self, key):
-        return self.attrs[key]
-
-
-class RouterProxy(object):
-    def __init__(self, reply_addr):
-        self.reply_addr = reply_addr
-
-    def response(self, msg):
-        ap = msg.properties
-        return Entity(ap['statusCode'], ap['statusDescription'], msg.body)
-
-    def query_connections(self):
-        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.connection'}
-        return Message(properties=ap, reply_to=self.reply_addr)
-
-    def query_links(self):
-        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.link'}
-        return Message(properties=ap, reply_to=self.reply_addr)
-
-
 class Timeout(object):
     def __init__(self, parent):
         self.parent = parent
@@ -249,7 +212,7 @@ class ConnectivityTest(MessagingHandler):
 
     def on_link_opened(self, event):
         if event.receiver == self.reply_receiver:
-            self.proxy        = RouterProxy(self.reply_receiver.remote_source.address)
+            self.proxy        = MgmtMsgProxy(self.reply_receiver.remote_source.address)
             self.agent_sender = event.container.create_sender(self.interior_conn, "$management")
 
     def on_sendable(self, event):

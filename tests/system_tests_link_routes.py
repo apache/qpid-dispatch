@@ -24,14 +24,21 @@ from __future__ import print_function
 
 import unittest2 as unittest
 from time import sleep, time
-from threading import Thread
+from threading import Event
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import AsyncTestSender
+from system_test import AsyncTestReceiver
+from system_test import QdManager
+from system_test import MgmtMsgProxy
+from test_broker import FakeBroker
 
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption, AtLeastOnce
+from proton.reactor import ApplicationEvent
+from proton.reactor import EventInjector
 from proton.utils import BlockingConnection
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
@@ -1583,62 +1590,397 @@ class LinkRouteProtocolTest(TestCase):
         killer.join()
 
 
-class _FakeBroker(MessagingHandler):
-    """Base class for creating customized fake brokers
-    """
-    def __init__(self, address):
-        super(_FakeBroker, self).__init__()
-        self.address = address
-        self.listener = None
-        self._container = Container(self)
-        self._container.container_id = 'FakeBroker'
-        self._thread = Thread(target=self._main)
-        self._thread.daemon = True
-        self._thread.start()
-        self._stop_thread = False
-
-    def _main(self):
-        self._container.timeout = 1.0
-        self._container.start()
-        while self._container.process():
-            if self._stop_thread:
-                break
-        self._container.stop()
-        self._container.process()
-
-    def join(self):
-        self._stop_thread = True
-        self._container.wakeup()
-        self._thread.join(timeout=10)
-        if self._thread.is_alive():
-            raise Exception("Fake Broker did not exit")
-
-    def on_start(self, event):
-        self.listener = event.container.listen(self.address)
-
-    def on_connection_opening(self, event):
-        pn_conn = event.connection
-        pn_conn.container = self._container.container_id
-
-    def on_connection_closed(self, event):
-        if self.listener:
-            self.listener.close()
-            self.listener = None
-
-    def on_link_opening(self, event):
-        # just copy the addresses and open the link
-        event.link.target.address = event.link.remote_target.address
-        event.link.source.address = event.link.remote_source.address
-        event.link.open()
-
-
-class SessionKiller(_FakeBroker):
+class SessionKiller(FakeBroker):
     """DISPATCH-1092: force a session close when the link closes.  This should
     cause the router to re-create the session when the next client attaches.
     """
+    def __init__(self, url):
+        super(SessionKiller, self).__init__(url)
+
     def on_link_closing(self, event):
         event.link.close()
         event.session.close()
+
+
+class ConnectionLinkRouteTest(TestCase):
+    """
+    Test connection scoped link route implementation
+
+    Base configuration:
+
+                                                        +-----------------+
+                           +---------+    +---------+<--| blocking_sender |
+    +-----------------+    |         |    |         |   +-----------------+
+    | Fake LR Service |<==>|  QDR.A  |<==>|  QDR.B  |
+    +-----------------+    |         |    |         |   +-------------------+
+                           +---------+    +---------+-->| blocking_receiver |
+                                                        +-------------------+
+
+    The Fake Link Route Service will create connection-scoped link routes to
+    QDR.A, while blocking sender/receivers on QDR.B will send/receive messages
+    via the link route.
+    """
+
+    _AS_TYPE = "org.apache.qpid.dispatch.router.connection.attachSubscription"
+
+
+    @classmethod
+    def setUpClass(cls):
+        super(ConnectionLinkRouteTest, cls).setUpClass()
+
+        b_port = cls.tester.get_port()
+        configs = [
+            # QDR.A:
+            [('router', {'mode': 'interior', 'id': 'QDR.A'}),
+             # for fake connection-scoped LRs:
+             ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # for fake route-container LR connections:
+             ('listener', {'role': 'route-container',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # to connect to the QDR.B
+             ('connector', {'role': 'inter-router',
+                            'host': '127.0.0.1',
+                            'port': b_port,
+                            'saslMechanisms': 'ANONYMOUS'})],
+            # QDR.B:
+            [('router', {'mode': 'interior', 'id': 'QDR.B'}),
+             # for client connections
+             ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # for connection to QDR.A
+             ('listener', {'role': 'inter-router',
+                           'host': '0.0.0.0',
+                           'port': b_port,
+                           'saslMechanisms': 'ANONYMOUS'})]
+            ]
+
+        cls.routers=[]
+        for c in configs:
+            config = Qdrouterd.Config(c)
+            cls.routers.append(cls.tester.qdrouterd(config=config, wait=False))
+        cls.QDR_A = cls.routers[0]
+        cls.QDR_B = cls.routers[1]
+        cls.QDR_A.wait_router_connected('QDR.B')
+        cls.QDR_B.wait_router_connected('QDR.A')
+
+    def _get_address(self, mgmt, addr):
+        a_type = 'org.apache.qpid.dispatch.router.address'
+        return list(filter(lambda a: a['name'].endswith(addr),
+                           mgmt.query(a_type)))
+
+    def test_config_file_bad(self):
+        # verify that specifying a connection link route in the configuration
+        # file fails
+        config = [('router', {'mode': 'interior', 'id': 'QDR.X'}),
+                  ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': self.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+
+                  ('attachSubscription',
+                   {'pattern': "i/am/bad",
+                    'direction': "out"})
+        ]
+
+        cfg = Qdrouterd.Config(config)
+        router = self.tester.qdrouterd("X", cfg, wait=False)
+        # we expect the router to fail
+        while router.poll() is None:
+            sleep(0.1)
+        self.assertRaises(RuntimeError, router.teardown)
+        self.assertNotEqual(0, router.returncode)
+
+    def test_mgmt(self):
+        # test create, delete, and query
+        mgmt_conn = BlockingConnection(self.QDR_A.addresses[0])
+        mgmt_recv = mgmt_conn.create_receiver(address=None, dynamic=True, credit=250)
+        mgmt_sender = mgmt_conn.create_sender(address="$management")
+        mgmt_proxy = MgmtMsgProxy(mgmt_recv.link.remote_source.address)
+
+        for i in range(10):
+            msg = mgmt_proxy.create_conn_link_route("lr1-%d" % i,
+                                                    {'pattern': "*/hi/there/%d" % i,
+                                                     'direction':
+                                                     'out' if i % 2 else 'in'})
+            mgmt_sender.send(msg)
+            rsp = mgmt_proxy.response(mgmt_recv.receive())
+            self.assertEqual(201, rsp.status_code)
+
+        # test query
+        msg = mgmt_proxy.query_conn_link_routes()
+        mgmt_sender.send(msg)
+        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        self.assertEqual(200, rsp.status_code)
+        self.assertEqual(10, len(rsp.results))
+        entities = rsp.results
+
+        # test read
+        msg = mgmt_proxy.read_conn_link_route('lr1-5')
+        mgmt_sender.send(msg)
+        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        self.assertEqual(200, rsp.status_code)
+        self.assertEqual("lr1-5", rsp.attrs['name'])
+        self.assertEqual("*/hi/there/5", rsp.attrs['pattern'])
+        self.assertEqual(mgmt_conn.container.container_id,
+                         rsp.attrs['containerId'])
+
+        # bad creates
+        attrs = [{'pattern': "bad", 'direction': "bad"},
+                 {'direction': 'in'},
+                 {},
+                 {'pattern': ''},
+                 {'pattern': 7}]
+        for a in attrs:
+            msg = mgmt_proxy.create_conn_link_route("iamnoone", a)
+            mgmt_sender.send(msg)
+            rsp = mgmt_proxy.response(mgmt_recv.receive())
+            self.assertEqual(400, rsp.status_code)
+
+        # bad read
+        msg = mgmt_proxy.read_conn_link_route('iamnoone')
+        mgmt_sender.send(msg)
+        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        self.assertEqual(404, rsp.status_code)
+
+        # bad delete
+        msg = mgmt_proxy.delete_conn_link_route('iamnoone')
+        mgmt_sender.send(msg)
+        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        self.assertEqual(404, rsp.status_code)
+
+        # delete all
+        for r in entities:
+            self.assertEqual(200, r.status_code)
+            msg = mgmt_proxy.delete_conn_link_route(r.attrs['name'])
+            mgmt_sender.send(msg)
+            rsp = mgmt_proxy.response(mgmt_recv.receive())
+            self.assertEqual(204, rsp.status_code)
+
+        # query - should be none left
+        msg = mgmt_proxy.query_conn_link_routes()
+        mgmt_sender.send(msg)
+        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        self.assertEqual(200, rsp.status_code)
+        self.assertEqual(0, len(rsp.results))
+
+    def test_address_propagation(self):
+        # test service that creates and deletes connection link routes
+        fs = ConnLinkRouteService(self.QDR_A.addresses[1], container_id="FakeService",
+                                  config = [("clr1",
+                                             {"pattern": "flea.*",
+                                              "direction": "out"}),
+                                            ("clr2",
+                                             {"pattern": "flea.*",
+                                              "direction": "in"})])
+        self.assertEqual(2, len(fs.values))
+
+        # the address should propagate to A and B
+        self.QDR_A.wait_address(address="Eflea.*")
+        self.QDR_A.wait_address(address="Fflea.*")
+        self.QDR_B.wait_address(address="Eflea.*")
+        self.QDR_B.wait_address(address="Fflea.*")
+
+        # now have the service delete the config
+        fs.delete_config()
+
+        # eventually the addresses will be un-published
+        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+        deadline = time() + TIMEOUT
+        while (self._get_address(mgmt_A, "flea.*")
+               or self._get_address(mgmt_B, "flea.*")):
+            self.assertTrue(time() < deadline)
+            sleep(0.1)
+
+        fs.join();
+
+    # simple forwarding tests with auto delete
+    def test_send_receive(self):
+        COUNT = 5
+        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+
+        # connect broker to A route-container
+        fs = ConnLinkRouteService(self.QDR_A.addresses[1], container_id="FakeService",
+                                  config = [("clr1",
+                                             {"pattern": "flea.*",
+                                              "direction": "out"}),
+                                            ("clr2",
+                                             {"pattern": "flea.*",
+                                              "direction": "in"})])
+        self.assertEqual(2, len(fs.values))
+
+        # wait for the address to propagate to B
+        self.QDR_B.wait_address(address="Eflea.*")
+        self.QDR_B.wait_address(address="Fflea.*")
+
+        # ensure the attachSubscriptions are not visible via other connections
+        clrs = mgmt_A.query(self._AS_TYPE)
+        self.assertEqual(0, len(clrs))
+
+        # send from A to B
+        r = AsyncTestReceiver(self.QDR_B.addresses[0],
+                              "flea.B",
+                              container_id="flea.BReceiver")
+        s = AsyncTestSender(self.QDR_A.addresses[0],
+                            "flea.B",
+                            container_id="flea.BSender",
+                            body="SENDING TO flea.B",
+                            count=COUNT)
+        s.wait()   # for sender to complete
+        for i in range(COUNT):
+            self.assertEqual("SENDING TO flea.B",
+                             r.queue.get(timeout=TIMEOUT).body)
+        r.stop()
+        self.assertEqual(COUNT, fs.incoming)
+
+        # send from B to A
+        r = AsyncTestReceiver(self.QDR_A.addresses[0],
+                              "flea.A",
+                              container_id="flea.AReceiver")
+        s = AsyncTestSender(self.QDR_B.addresses[0],
+                            "flea.A",
+                            container_id="flea.ASender",
+                            body="SENDING TO flea.A",
+                            count=COUNT)
+        s.wait()
+        for i in range(COUNT):
+            self.assertEqual("SENDING TO flea.A",
+                             r.queue.get(timeout=TIMEOUT).body)
+        r.stop()
+        self.assertEqual(2 * COUNT, fs.incoming)
+
+        # once the fake service shuts down the attach subscriptions
+        # are removed so the link route addresses must be gone
+        fs.join()
+
+        mgmt_A = QdManager(self, address=self.QDR_A.addresses[0])
+        mgmt_B = QdManager(self, address=self.QDR_B.addresses[0])
+        deadline = time() + TIMEOUT
+        while (self._get_address(mgmt_A, "flea.*")
+               or self._get_address(mgmt_B, "flea.*")):
+            self.assertTrue(time() < deadline)
+            sleep(0.1)
+
+
+class ConnLinkRouteService(FakeBroker):
+    def __init__(self, url, container_id, config, timeout=TIMEOUT):
+        self.conn = None
+        self.mgmt_proxy = None
+        self.mgmt_sender = None
+        self.mgmt_receiver = None
+        self.incoming = 0
+        self._config = config
+        self._config_index = 0
+        self._config_done = Event()
+        self._config_error = None
+        self._config_values = []
+        self._cleaning_up = False
+        self._delete_done = Event()
+        self._event_injector = EventInjector()
+        self._delete_event = ApplicationEvent("delete_config")
+        super(ConnLinkRouteService, self).__init__(url, container_id)
+        if self._config_done.wait(timeout) is False:
+            raise Exception("Timed out waiting for configuration setup")
+        if self._config_error is not None:
+            raise Exception("Error: %s" % self._config_error)
+
+    @property
+    def values(self):
+        return self._config_values
+
+    def delete_config(self):
+        self._event_injector.trigger(self._delete_event)
+        if self._delete_done.wait(TIMEOUT) is False:
+            raise Exception("Timed out waiting for configuration delete")
+
+    def on_start(self, event):
+        """
+        Do not create an acceptor, actively connect instead
+        """
+        event.container.selectable(self._event_injector)
+        self.conn = event.container.connect(self.url)
+
+    def on_connection_opened(self, event):
+        if event.connection == self.conn:
+            if self.mgmt_receiver is None:
+                self.mgmt_receiver = event.container.create_receiver(self.conn,
+                                                                     dynamic=True)
+        super(ConnLinkRouteService, self).on_connection_opened(event)
+
+    def on_connection_closed(self, event):
+        if self._event_injector:
+            self._event_injector.close()
+            self._event_injector = None
+        super(ConnLinkRouteService, self).on_connection_closed(event)
+
+    def on_link_opened(self, event):
+        if event.link == self.mgmt_receiver:
+            self.mgmt_proxy = MgmtMsgProxy(self.mgmt_receiver.remote_source.address)
+            self.mgmt_sender = event.container.create_sender(self.conn,
+                                                             target="$management")
+
+    def on_link_error(self, event):
+        # when a remote client disconnects the service will get a link error
+        # that is expected - simply clean up the link
+        self.on_link_closing(event)
+
+    def on_sendable(self, event):
+        if event.sender == self.mgmt_sender:
+            if not self._cleaning_up:
+                if self._config_index < len(self._config):
+                    cfg = self._config[self._config_index]
+                    msg = self.mgmt_proxy.create_conn_link_route(cfg[0], cfg[1])
+                    self.mgmt_sender.send(msg)
+                    self._config_index += 1
+            elif self._config_values:
+                cv = self._config_values.pop()
+                msg = self.mgmt_proxy.delete_conn_link_route(cv['name'])
+        else:
+            super(ConnLinkRouteService, self).on_sendable(event)
+
+    def on_message(self, event):
+        if event.receiver == self.mgmt_receiver:
+            response = self.mgmt_proxy.response(event.message)
+            if response.status_code == 201:
+                # created:
+                self._config_values.append(response.attrs)
+                if len(self._config_values) == len(self._config):
+                    self._config_done.set()
+            elif response.status_code == 204:
+                # deleted
+                if not self._config_values:
+                    self._delete_done.set()
+            else:
+                # error
+                self._config_error = ("mgmt failed: %s" %
+                                      response.status_description)
+                self._config_done.set()
+                self._delete_done.set()
+        else:
+            self.incoming += 1
+            super(ConnLinkRouteService, self).on_message(event)
+
+    def on_delete_config(self, event):
+        if not self._cleaning_up:
+            self._cleaning_up = True
+            if not self._config_values:
+                self._delete_done.set()
+            else:
+                try:
+                    while self.mgmt_sender.credit > 0:
+                        cv = self._config_values.pop()
+                        msg = self.mgmt_proxy.delete_conn_link_route(cv["name"])
+                        self.mgmt_sender.send(msg)
+                except IndexError:
+                    pass
 
 
 if __name__ == '__main__':

@@ -100,6 +100,8 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
     if (DEQ_IS_EMPTY(cid->connection_refs) && DEQ_IS_EMPTY(cid->link_route_refs) && DEQ_IS_EMPTY(cid->auto_link_refs)) {
         qd_hash_remove_by_handle(core->conn_id_hash, cid->connection_hash_handle);
         qd_hash_remove_by_handle(core->conn_id_hash, cid->container_hash_handle);
+        qd_hash_handle_free(cid->connection_hash_handle);
+        qd_hash_handle_free(cid->container_hash_handle);
         free_qdr_conn_identifier_t(cid);
     }
 }
@@ -107,9 +109,21 @@ static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identi
 
 static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *name, uint64_t id, qdr_connection_t *conn)
 {
-    const char *key = (const char*) qd_hash_key_by_handle(conn->conn_id->connection_hash_handle);
-    if (!key)
-        key = (const char*) qd_hash_key_by_handle(conn->conn_id->container_hash_handle);
+    const char *key = NULL;
+    const char *type = "<unknown>";
+    if (conn->conn_id) {
+        key = (const char*) qd_hash_key_by_handle(conn->conn_id->connection_hash_handle);
+        if (!key) {
+            key = (const char*) qd_hash_key_by_handle(conn->conn_id->container_hash_handle);
+        }
+        type = (key && *key == 'L') ? "connection" : "container";
+        ++key;
+    }
+    if (!key && conn->connection_info) {
+        type = "container";
+        key = conn->connection_info->container;
+    }
+
     char  id_string[64];
     const char *log_name = name ? name : id_string;
 
@@ -117,7 +131,7 @@ static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *nam
         snprintf(id_string, 64, "%"PRId64, id);
 
     qd_log(core->log, QD_LOG_INFO, "%s '%s' on %s %s",
-           text, log_name, key[0] == 'L' ? "connection" : "container", &key[1]);
+           text, log_name, type, key ? key : "<unknown>");
 }
 
 
@@ -281,6 +295,7 @@ static void qdr_auto_link_deactivate_CT(qdr_core_t *core, qdr_auto_link_t *al, q
 }
 
 
+// router.config.linkRoute
 qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
                                               qd_iterator_t          *name,
                                               const char             *addr_pattern,
@@ -407,6 +422,7 @@ void qdr_route_auto_link_closed_CT(qdr_core_t *core, qdr_link_t *link)
 }
 
 
+// router.config.linkRoute
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
     //
@@ -435,6 +451,7 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     //
     // Remove the link route from the core list.
     //
+    DEQ_REMOVE(core->link_routes, lr);
     qd_log(core->log, QD_LOG_TRACE, "Link route %spattern removed: pattern=%s name=%s",
            lr->is_prefix ? "prefix " : "", lr->pattern, lr->name);
     qdr_core_delete_link_route(core, lr);
@@ -580,6 +597,15 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
 
 void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
 {
+    //
+    // release any connection-based link routes.  These can exist on
+    // QDR_ROLE_NORMAL connections.
+    //
+    while (DEQ_SIZE(conn->conn_link_routes) > 0) {
+        // removes the link route from conn->link_routes
+        qdr_route_del_conn_route_CT(core, DEQ_HEAD(conn->conn_link_routes));
+    }
+
     if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
         return;
 
@@ -661,4 +687,82 @@ void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
 
     qd_iterator_free(iter);
     free(pattern);
+}
+
+
+qdr_link_route_t *qdr_route_add_conn_route_CT(qdr_core_t             *core,
+                                              qdr_connection_t       *conn,
+                                              qd_iterator_t          *name,
+                                              const char             *addr_pattern,
+                                              qd_direction_t          dir)
+{
+    //
+    // Set up the link_route structure
+    //
+    qdr_link_route_t *lr = new_qdr_link_route_t();
+    ZERO(lr);
+    lr->identity  = qdr_identifier(core);
+    lr->name      = name ? (char*) qd_iterator_copy(name) : 0;
+    lr->dir       = dir;
+    lr->treatment = QD_TREATMENT_LINK_BALANCED;
+    lr->is_prefix = false;
+    lr->pattern   = strdup(addr_pattern);
+    lr->parent_conn = conn;
+
+        //
+    // Add the address to the routing hash table and map it as a pattern in the
+    // wildcard pattern parse tree
+    //
+    {
+        char *addr_hash = qdr_link_route_pattern_to_address(lr->pattern, dir);
+        qd_iterator_t *a_iter = qd_iterator_string(addr_hash, ITER_VIEW_ALL);
+        qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
+        if (!lr->addr) {
+            lr->addr = qdr_address_CT(core, lr->treatment);
+            DEQ_INSERT_TAIL(core->addrs, lr->addr);
+            qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
+            qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
+        }
+
+        qd_iterator_free(a_iter);
+        free(addr_hash);
+    }
+    lr->addr->ref_count++;
+
+    //
+    // Add the link route to the parent connection's link route list
+    // and fire it up
+    //
+    DEQ_INSERT_TAIL(conn->conn_link_routes, lr);
+    qdr_link_route_activate_CT(core, lr, lr->parent_conn);
+
+    qd_log(core->log, QD_LOG_TRACE,
+           "Connection based link route pattern added: conn=%s pattern=%s name=%s",
+           conn->connection_info->container, lr->pattern, lr->name);
+    return lr;
+}
+
+
+void qdr_route_del_conn_route_CT(qdr_core_t       *core,
+                                 qdr_link_route_t *lr)
+{
+    qdr_connection_t *conn = lr->parent_conn;
+    qdr_link_route_deactivate_CT(core, lr, conn);
+
+    //
+    // Disassociate the link route from its address.  Check to see if the address
+    // (and its associated pattern) should be removed.
+    //
+    qdr_address_t *addr = lr->addr;
+    if (addr && --addr->ref_count == 0)
+        qdr_check_addr_CT(core, addr);
+
+    //
+    // Remove the link route from the parent's link route list
+    //
+    DEQ_REMOVE(conn->conn_link_routes, lr);
+    qd_log(core->log, QD_LOG_TRACE,
+           "Connection based link route pattern removed: conn=%s pattern=%s name=%s",
+           conn->connection_info->container, lr->pattern, lr->name);
+    qdr_core_delete_link_route(core, lr);
 }

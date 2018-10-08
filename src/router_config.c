@@ -42,7 +42,7 @@ static void qdi_router_configure_body(qdr_core_t              *core,
     if (name)
         name_iter = qd_iterator_string(name, ITER_VIEW_ALL);
 
-    qdr_manage_create(core, 0, type, name_iter, in_body, 0, buffers);
+    qdr_manage_create(core, 0, type, name_iter, in_body, 0, buffers, 0);
 
     qd_iterator_free(name_iter);
 }
@@ -426,6 +426,18 @@ qd_error_t qd_router_configure_binding(qd_router_t *router, qd_entity_t *entity)
     free(next_hop);
 
     return qd_error_code();
+}
+
+
+// attachSubscriptions are special snowflakes that cannot be configured via a
+// configuration file - they are only permitted at run time
+//
+qd_error_t qd_router_configure_attach_subscription(qd_router_t *router, qd_entity_t *entity)
+{
+    qd_log(router->log_source, QD_LOG_ERROR,
+           "attachSubscription can only be created via management at runtime."
+           " It cannot be specified in a configuration file.");
+    return qd_error(QD_ERROR_CONFIG, "attachSubscription cannot be created via the configuration file");
 }
 
 

@@ -257,7 +257,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
 
 void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
 {
-    work->on_message(work->on_message_context, work->msg, work->maskbit, work->inter_router_cost);
+    work->on_message(work->on_message_context, work->msg, work->maskbit, work->inter_router_cost, work->in_conn_id);
     qd_message_free(work->msg);
 }
 
@@ -270,6 +270,7 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
     work->msg                = qd_message_copy(msg);
     work->maskbit            = link ? link->conn->mask_bit : 0;
     work->inter_router_cost  = link ? link->conn->inter_router_cost : 1;
+    work->in_conn_id         = link ? link->conn->identity : 0;
     qdr_post_general_work_CT(core, work);
 }
 

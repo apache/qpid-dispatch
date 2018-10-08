@@ -44,6 +44,7 @@ qd_error_t qd_router_configure_link_route(qd_router_t *router, qd_entity_t *enti
 qd_error_t qd_router_configure_auto_link(qd_router_t *router, qd_entity_t *entity);
 qd_error_t qd_router_configure_exchange(qd_router_t *router, qd_entity_t *entity);
 qd_error_t qd_router_configure_binding(qd_router_t *router, qd_entity_t *entity);
+qd_error_t qd_router_configure_attach_subscription(qd_router_t *router, qd_entity_t *entity);
 
 void qd_router_configure_free(qd_router_t *router);
 
