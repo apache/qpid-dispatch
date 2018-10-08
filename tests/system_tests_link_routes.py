@@ -36,7 +36,7 @@ from proton.utils import BlockingConnection
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler, DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 
 from qpid_dispatch.management.client import Node
-from qpid_dispatch.management.error import NotFoundStatus
+from qpid_dispatch.management.error import NotFoundStatus, BadRequestStatus
 
 
 class LinkRouteTest(TestCase):
@@ -752,6 +752,86 @@ class LinkRouteTest(TestCase):
         test = EchoDetachReceived(self.routers[2].addresses[0], self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_bad_link_route_config(self):
+        """
+        What happens when the link route create request is malformed?
+        """
+        mgmt = self.routers[1].management
+
+        # zero length prefix
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-1",
+                          attributes={'prefix': '',
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'in'})
+        # pattern wrong type
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-2",
+                          attributes={'pattern': 666,
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'in'})
+        # invalid pattern (no tokens)
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-3",
+                          attributes={'pattern': '///',
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'in'})
+        # empty attributes
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-4",
+                          attributes={})
+
+        # both pattern and prefix
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-5",
+                          attributes={'prefix': 'a1',
+                                      'pattern': 'b2',
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'in'})
+        # bad direction
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-6",
+                          attributes={'pattern': 'b2',
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'nowhere'})
+        # bad distribution
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-7",
+                          attributes={'pattern': 'b2',
+                                      'containerId': 'FakeBroker',
+                                      'direction': 'in',
+                                      "distribution": "dilly dilly"})
+
+        # no direction
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-8",
+                          attributes={'prefix': 'b2',
+                                      'containerId': 'FakeBroker'})
+
+        # neither pattern nor prefix
+        self.assertRaises(BadRequestStatus,
+                          mgmt.create,
+                          type="org.apache.qpid.dispatch.router.config.linkRoute",
+                          name="bad-9",
+                          attributes={'direction': 'out',
+                                      'containerId': 'FakeBroker'})
 
 
 class Timeout(object):
