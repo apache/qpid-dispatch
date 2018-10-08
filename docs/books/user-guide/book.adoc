@@ -24,10 +24,10 @@ include::_common/attributes.adoc[]
 include::assemblies/overview.adoc[leveloffset=+1]
 
 // Introduction
-include::introduction.adoc[leveloffset=+1]
+// include::introduction.adoc[leveloffset=+1]
 
 // Theory of Operation
-include::theory_of_operation.adoc[leveloffset=+1]
+// include::theory_of_operation.adoc[leveloffset=+1]
 
 // Getting Started
 include::getting-started.adoc[leveloffset=+1]

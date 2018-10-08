@@ -41,3 +41,9 @@ A command-line tool for monitoring the status of a router in the router network.
 
 qdmanage::
 A command-line tool for viewing and updating the configuration of a router at runtime.
+
+.Additional resources
+
+* xref:console-overview[]
+* xref:monitoring-using-qdstat[]
+* xref:managing-router[]

@@ -65,3 +65,9 @@ Flow control is "real" in that credits flow across the link route from the recei
 +
 With a link route, consumers can provide server-side selectors for broker subscriptions.
 --
+
+.Additional resources
+
+* xref:configuring-message-routing[]
+
+* xref:configuring-link-routing[]

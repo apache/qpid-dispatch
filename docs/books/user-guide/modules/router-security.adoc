@@ -35,3 +35,9 @@ Authentication::
 
 Authorization::
 {RouterName} provides a `policy` mechanism that you can use to enforce user connection restrictions and AMQP resource access control.
+
+.Additional resources
+
+* xref:authenticating-remote-peers[]
+
+* xref:authorizing-access-to-messaging-resources[]

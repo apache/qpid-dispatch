@@ -102,6 +102,7 @@ Link routing supports local transactions to a single broker. Distributed transac
 +
 With a link route, consumers can provide server-side selectors for broker subscriptions.
 
+[id='configuring-message-routing']
 == Configuring Message Routing 
 
 With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message's _address_ and _routing pattern_.
@@ -128,12 +129,108 @@ Addresses determine how messages flow through your router network. An address de
 
 When a router receives a message, it uses the message's address to determine where to send the message (either its destination or one step closer to its destination).
 
-// Do we need to specify that these are AMQP addresses? Should they be distinguished from generic message addresses?
+==== Mobile Addresses
 
-// Need to add something here about the difference between discovered vs. configured mobile addresses so that it's clear that with message routing, the router can either be proactive or reactive in the way it routes messages.
+Routers consider addresses to be mobile such that any users of an
+address may be directly connected to any router in a network and may
+move around the topology. In cases where messages are broadcast to or
+balanced across multiple consumers, the address users may be connected
+to multiple routers in the network.
+
+Mobile addresses are rendezvous points for senders and receivers.
+Messages arrive at the mobile address and are dispatched to their
+destinations according to the routing defined for the mobile address.
+The details of these routing patterns are discussed later.
+
+Mobile addresses may be discovered during normal router operation or
+configured through management settings.
+
+===== Discovered Mobile Addresses
+
+Mobile addresses are created when a client creates a link to a source
+or destination address that is unknown to the router network.
+
+Suppose a service provider wants to offer _my-service_ that clients
+may use. The service provider must open a receiver link with source
+address _my-service_.  The router creates a mobile address
+_my-service_ and propagates the address so that it is known to every
+router in the network.
+
+Later a client wants to use the service and creates a sending link
+with target address _my-service_. The router matches the service
+provider's receiver having source address _my-service_ to the client's
+sender having target address _my-service_ and routes messages between
+the two.
+
+Any number of other clients can create links to the service as
+well. The clients do not have to know where in the router network the
+service provider is physically located nor are the clients required to
+connect to a specific router to use the service. Regardless of how
+many clients are using the service the service provider needs only a
+single connection and link into the router network.
+
+Another view of this same scenario is when a client tries to use the
+service before service provider has connected to the network. In this
+case the router network creates the mobile address _my-service_ as
+before. However, since the mobile address has only client sender links
+and no receiver links the router stalls the clients and prevents them
+from sending any messages.  Later, after the service provider connects
+and creates the receiver link, the router will issue credits to the
+clients and the messages will begin to flow between the clients and
+the service.
+
+The service provider can connect, disconnect, and reconnect from a
+different location without having to change any of the clients or
+their connections.  Imagine having the service running on a
+laptop. One day the connection is from corporate headquarters and the
+next day the connection is from some remote location. In this case the
+service provider's computer will typically have different host IP
+addresses for each connection. Using the router network the service
+provider connects to the router network and offers the named service
+and the clients connect to the router network and consume from the
+named service. The router network routes messages between the mobile
+addresses effectively masking host IP addresses of the service
+provider and the client systems.
+
+===== Configured Mobile Addresses
+
+Mobile addresses may be configured using the router _autoLink_
+object. An address created via an _autoLink_ represents a queue,
+topic, or other service in an external broker. Logically the
+_autoLink_ addresses are treated by the router network as if the
+broker had connected to the router and offered the services itself.
+
+For each configured mobile address the router will create a single
+link to the external resource. Messages flow between sender links and
+receiver links the same regardless if the mobile address was
+discovered or configured.
+
+Multiple _autoLink_ objects may define the same address on multiple
+brokers.  In this case the router network creates a sharded resource
+split between the brokers. Any client can seamlessly send and receive
+messages from either broker.
+
+Note that the brokers do not need to be clustered or federated to
+receive this treatment. The brokers may even be from different vendors
+or be different versions of the same broker yet still work together to
+provide a larger service platform.
+
 
 [id='routing-patterns-overview']
 === Routing Patterns
+
+Routing patterns define the paths that a message with a mobile address
+can take across a network. These routing patterns can be used for both
+direct routing, in which the router distributes messages between
+clients without a broker, and indirect routing, in which the router
+enables clients to exchange messages through a broker.
+
+Routing patterns fall into two categories: Anycast
+(Balanced and Closest) and Multicast. There is no concept of
+"unicast" in which there is only one consumer for an address.
+
+Anycast distribution delivers each message to one consumer whereas
+multicast distribution delivers each message to all consumers.
 
 Each address has one of the following routing patterns, which define the path that a message with the address can take across the messaging network:
 
@@ -191,6 +288,38 @@ This means that the message did not reach its destination.
 +
 This means that the message might or might not have reached its destination. The delivery is considered to be "in-doubt" and should be re-sent if "at least once" delivery is required.
 * The link, session, or connection to {RouterName} was dropped, and all deliveries are "in-doubt".
+
+=== Routing Pattern Reliability
+
+The following table describes the levels of reliability provided by each routing pattern:
+
+[options="header",cols="30,70"]
+|===
+| Routing pattern | Reliable?
+
+| Anycast (Balanced or Closest)
+a| Yes, when the message deliveries are unsettled. 
+
+There is a reliability contract that the router network abides by when delivering unsettled messages to anycast addresses. For every such delivery sent by a producer, the router network guarantees that one of the following outcomes will occur:
+
+* The delivery shall be settled with ACCEPTED or REJECTED disposition where the disposition is supplied by the consumer.
+
+* The delivery shall be settled with RELEASED disposition, meaning that the message was not delivered to any consumer.
+
+* The delivery shall be settled with MODIFIED disposition, meaning that the message may have been delivered to a consumer but should be considered in-doubt and re-sent.
+
+* The connection to the producer shall be dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and later re-sent.
+
+| Multicast
+a| No. 
+
+If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RELEASED.
+
+* If ACCEPTED, there is no guarantee that the message was delivered to any consumer.
+
+* If RELEASED, the message was definitely not delivered to any consumer.
+
+|===
 
 [id='routing-messages-between-clients']
 === Routing Messages Between Clients
@@ -521,6 +650,7 @@ The command output shows that Phase 1 of the address was used to deliver all thr
 Even in a multi-router network, and with multiple producers and consumers for `queue.first`, all deliveries are routed through the queue on the connected broker.
 ====
 
+[id='configuring-link-routing']
 == Configuring Link Routing
 
 Link routing provides an alternative strategy for brokered messaging. A link route represents a private messaging path between a sender and a receiver in which the router passes the messages between end points. You can think of a link route as a "virtual connection" or "tunnel" that travels from a sender, through the router network, to a receiver.
@@ -529,7 +659,11 @@ With link routing, routing is performed on link-attach frames, which are chained
 
 === Link Route Addresses
 
-A link route address represents a broker queue, topic, or other service. When a client attaches a link route address to a router, the router propagates a link attachment to the broker resource identified by the address. 
+A link route address represents a broker queue, topic, or other service. When a client attaches a link route address to a router, the router propagates a link attachment to the broker resource identified by the address.
+
+Using link route addresses, the router network does not participate in
+aggregated message distribution. The router simply passes message
+delivery and settlement between the two end points.
 
 === Link Route Routing Patterns
 
