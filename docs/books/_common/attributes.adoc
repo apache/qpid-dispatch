@@ -52,6 +52,12 @@ under the License
 
 :DispatchRouterUrlBase: https://qpid.apache.org/releases/qpid-dispatch-{DispatchRouterVersion}
 
+:DispatchRouterDownloadUrl: https://qpid.apache.org/download.html
+:DispatchRouterDownloadLink: link:{DispatchRouterDownloadUrl}[Download page^]
+
+:DispatchRouterPackagesUrl: https://qpid.apache.org/packages.html
+:DispatchRouterPackagesLink: link:{DispatchRouterPackagesUrl}[Packages page^]
+
 :ManagementEntitiesUrl: {DispatchRouterUrlBase}/man/managementschema.html
 :ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^] 
 
@@ -69,6 +75,9 @@ under the License
 
 :qdstatManPageUrl: {DispatchRouterUrlBase}/man/qdstat.html
 :qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page^]
+
+:QpidDispatchReadmeUrl: https://git-wip-us.apache.org/repos/asf?p=qpid-dispatch.git;a=blob_plain;f=README;hb={DispatchRouterVersion}
+:QpidDispatchReadmeLink: link:{QpidDispatchReadmeUrl}[Qpid Dispatch README^]
 
 :ClientAmqpPythonUrl: https://qpid.apache.org/proton/
 

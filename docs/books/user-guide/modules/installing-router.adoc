@@ -17,13 +17,15 @@ specific language governing permissions and limitations
 under the License
 ////
 
-. To start the router, use the *`qdrouterd`* command.
-+
---
-This example uses the default configuration to start the router as a daemon:
+// Module included in the following assemblies:
+//
+// getting-started.adoc
 
-[source,bash,options="nowrap"]
-----
-$ qdrouterd -d
-----
---
+[id='installing-router-{context}']
+= Installing {RouterName}
+
+include::{FragmentDir}/fragment-router-install-intro.adoc[]
+
+.Procedure
+
+include::{FragmentDir}/fragment-router-install-steps.adoc[]

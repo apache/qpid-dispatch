@@ -21,11 +21,8 @@ under the License
 //
 // overview.adoc
 
-ifdef::context[:parent-context: {context}]
-
 [id='important-terms-concepts-{context}']
 = Important terms and concepts
-:context: overview-terms-concepts
 
 Before using {RouterName}, you should be familiar with AMQP and understand some key concepts about {RouterName}.
 
@@ -40,7 +37,3 @@ include::modules/how-routers-route-messages.adoc[leveloffset=+1]
 include::modules/router-security.adoc[leveloffset=+1]
 
 include::modules/router-management.adoc[leveloffset=+1]
-
-// Restore the context to what it was before this assembly.
-ifdef::parent-context[:context: {parent-context}]
-ifndef::parent-context[:!context:]

@@ -21,11 +21,8 @@ under the License
 //
 // book.adoc
 
-ifdef::context[:parent-context: {context}]
-
 [id='overview-{context}']
 = Overview
-:context: product-overview
 
 {RouterName} is a lightweight AMQP message router for building scalable, available, and performant messaging networks.
 
@@ -36,7 +33,3 @@ include::modules/supported-standards-protocols.adoc[leveloffset=+1]
 include::important-terms-concepts.adoc[leveloffset=+1]
 
 include::_common/document_conventions.adoc[leveloffset=+1]
-
-// Restore the context to what it was before this assembly.
-ifdef::parent-context[:context: {parent-context}]
-ifndef::parent-context[:!context:]

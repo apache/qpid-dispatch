@@ -1,0 +1,65 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// getting-started.adoc
+
+[id='starting-router-{context}']
+= Starting the router
+
+After installing {RouterName}, you start the router by using the `qdrouterd` command.
+
+.Procedure
+
+// Step 1 for starting the router.
+include::{FragmentDir}/fragment-starting-router-step.adoc[]
++
+The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`. 
+
+. View the log to verify the router status:
++
+[source,bash,options="nowrap"]
+----
+$ qdstat --log
+----
++
+This example shows that the router was correctly installed, is running, and is ready to route traffic between clients:
++
+[options="nowrap"]
+----
+$ qdstat --log
+Fri May 20 09:38:03 2017 SERVER (info) Container Name: Router.A
+Fri May 20 09:38:03 2017 ROUTER (info) Router started in Standalone mode
+Fri May 20 09:38:03 2017 ROUTER_CORE (info) Router Core thread running. 0/Router.A
+Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription M/$management
+Fri May 20 09:38:03 2017 AGENT (info) Activating management agent on $_management_internal
+Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$management
+Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$_management_internal
+Fri May 20 09:38:03 2017 DISPLAYNAME (info) Activating DisplayNameService on $displayname
+Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$displayname
+Fri May 20 09:38:03 2017 CONN_MGR (info) Configured Listener: 0.0.0.0:amqp proto=any role=normal
+Fri May 20 09:38:03 2017 POLICY (info) Policy configured maximumConnections: 0, policyFolder: '', access rules enabled: 'false'
+Fri May 20 09:38:03 2017 POLICY (info) Policy fallback defaultApplication is disabled
+Fri May 20 09:38:03 2017 SERVER (info) Operational, 4 Threads Running
+----
+
+.Additional resources
+
+* The {qdrouterdManPageLink}.

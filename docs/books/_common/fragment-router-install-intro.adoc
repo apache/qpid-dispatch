@@ -17,13 +17,9 @@ specific language governing permissions and limitations
 under the License
 ////
 
-. To start the router, use the *`qdrouterd`* command.
-+
---
-This example uses the default configuration to start the router as a daemon:
+{RouterName} is distributed as a set of RPM packages, which are available for `yum`/`dnf`-based Linux distributions. Alternatively, you can build the {RouterName} from source.
 
-[source,bash,options="nowrap"]
-----
-$ qdrouterd -d
-----
---
+[NOTE]
+====
+{RouterName} will not build on Windows.
+====

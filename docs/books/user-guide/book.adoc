@@ -19,8 +19,11 @@ under the License
 
 include::_common/attributes.adoc[]
 
+:context: router
+
 = {RouterBook}
 
+// Overview
 include::assemblies/overview.adoc[leveloffset=+1]
 
 // Introduction
@@ -29,8 +32,8 @@ include::assemblies/overview.adoc[leveloffset=+1]
 // Theory of Operation
 // include::theory_of_operation.adoc[leveloffset=+1]
 
-// Getting Started
-include::getting-started.adoc[leveloffset=+1]
+// Getting started
+include::assemblies/getting-started.adoc[leveloffset=+1]
 
 // Configuration
 include::understand-router-configuration.adoc[leveloffset=+1]
