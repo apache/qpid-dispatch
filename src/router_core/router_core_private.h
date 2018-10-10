@@ -41,6 +41,7 @@ typedef struct qdr_exchange          qdr_exchange_t;
 typedef struct qdr_edge_t            qdr_edge_t;
 
 #include "core_link_endpoint.h"
+#include "core_events.h"
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -740,6 +741,13 @@ struct qdr_core_t {
     qdr_link_push_t            push_handler;
     qdr_link_deliver_t         deliver_handler;
     qdr_delivery_update_t      delivery_update_handler;
+
+    //
+    // Events section
+    //
+    qdrc_event_subscription_list_t conn_event_subscriptions;
+    qdrc_event_subscription_list_t link_event_subscriptions;
+    qdrc_event_subscription_list_t addr_event_subscriptions;
 
     qd_router_mode_t  router_mode;
     const char       *router_area;
