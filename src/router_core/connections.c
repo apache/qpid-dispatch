@@ -1264,70 +1264,72 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
+
     if (!discard) {
         qdr_connection_t *conn = action->args.connection.conn;
-        DEQ_ITEM_INIT(conn);
-        DEQ_INSERT_TAIL(core->open_connections, conn);
 
-        if (conn->role == QDR_ROLE_NORMAL) {
-            //
-            // No action needed for NORMAL connections
-            //
-            qdr_field_free(action->args.connection.connection_label);
-            qdr_field_free(action->args.connection.container_id);
-            return;
-        }
+        do {
+            DEQ_ITEM_INIT(conn);
+            DEQ_INSERT_TAIL(core->open_connections, conn);
 
-        if (conn->role == QDR_ROLE_INTER_ROUTER) {
-            //
-            // Assign a unique mask-bit to this connection as a reference to be used by
-            // the router module
-            //
-            if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
-                qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
-            else {
-                qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
-                conn->role = QDR_ROLE_NORMAL;
-                qdr_field_free(action->args.connection.connection_label);
-                qdr_field_free(action->args.connection.container_id);
-                return;
+            if (conn->role == QDR_ROLE_NORMAL) {
+                //
+                // No action needed for NORMAL connections
+                //
+                break;
             }
 
-            if (!conn->incoming) {
+            if (conn->role == QDR_ROLE_INTER_ROUTER) {
                 //
-                // The connector-side of inter-router/edge-uplink connections is responsible for setting up the
-                // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for routed-message transfer.
+                // Assign a unique mask-bit to this connection as a reference to be used by
+                // the router module
                 //
-                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
-                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
+                if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit))
+                    qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
+                else {
+                    qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+                    conn->role = QDR_ROLE_NORMAL;
+                    break;
+                }
 
-                for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                if (!conn->incoming) {
+                    //
+                    // The connector-side of inter-router/edge-uplink connections is responsible for setting up the
+                    // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for routed-message transfer.
+                    //
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
+
+                    for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
+                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                    }
                 }
             }
-        }
 
-        if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
-            //
-            // Notify the route-control module that a route-container connection has opened.
-            // There may be routes that need to be activated due to the opening of this connection.
-            //
+            if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
+                //
+                // Notify the route-control module that a route-container connection has opened.
+                // There may be routes that need to be activated due to the opening of this connection.
+                //
 
-            //
-            // If there's a connection label, use it as the identifier.  Otherwise, use the remote
-            // container id.
-            //
-            qdr_field_t *cid = action->args.connection.connection_label ?
-                action->args.connection.connection_label : action->args.connection.container_id;
-            if (cid)
-                qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
-        }
+                //
+                // If there's a connection label, use it as the identifier.  Otherwise, use the remote
+                // container id.
+                //
+                qdr_field_t *cid = action->args.connection.connection_label ?
+                    action->args.connection.connection_label : action->args.connection.container_id;
+                if (cid)
+                    qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
+            }
 
-        if (conn->role == QDR_ROLE_EDGE_UPLINK && core->edge) {
-            // edge router established connection to interior
-            qdr_edge_connection_opened(core->edge, conn);
-        }
+            if (conn->role == QDR_ROLE_EDGE_UPLINK && core->edge) {
+                // edge router established connection to interior
+                qdr_edge_connection_opened(core->edge, conn);
+            }
+        } while (false);
+
+        qdrc_event_conn_raise(core, QDRC_EVENT_CONN_OPENED, conn);
     }
 
     qdr_field_free(action->args.connection.connection_label);
@@ -1416,6 +1418,8 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         // edge router's uplink has closed
         qdr_edge_connection_closed(core->edge);
     }
+
+    qdrc_event_conn_raise(core, QDRC_EVENT_CONN_CLOSED, conn);
 
     DEQ_REMOVE(core->open_connections, conn);
     qdr_connection_free(conn);
