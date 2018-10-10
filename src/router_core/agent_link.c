@@ -43,6 +43,7 @@
 #define QDR_LINK_RELEASED_COUNT           19
 #define QDR_LINK_MODIFIED_COUNT           20
 #define QDR_LINK_INGRESS_HISTOGRAM        21
+#define QDR_LINK_PRIORITY                 22
 
 const char *qdr_link_columns[] =
     {"name",
@@ -67,6 +68,7 @@ const char *qdr_link_columns[] =
      "releasedCount",
      "modifiedCount",
      "ingressHistogram",
+     "priority",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -218,6 +220,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
             qd_compose_end_list(body);
         } else
             qd_compose_insert_null(body);
+        break;
+
+    case QDR_LINK_PRIORITY:
+        qd_compose_insert_uint(body, link->priority);
         break;
 
     default:

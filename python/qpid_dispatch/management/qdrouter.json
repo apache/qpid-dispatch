@@ -1423,6 +1423,10 @@
                 "ingressHistogram": {
                     "type": "list",
                     "description": "For outgoing links on connections with 'normal' role.  This histogram shows the number of settled deliveries on the link that ingressed the network at each interior router node."
+                },
+                "priority": {
+                    "type": "integer",
+                    "description": "For inter-router links, this is the message priority being handled."
                 }
             }
         },
