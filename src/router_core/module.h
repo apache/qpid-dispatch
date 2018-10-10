@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include "router_core_private.h"
 
 /**
  * Callback to initialize a core module at core thread startup

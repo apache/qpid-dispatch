@@ -88,7 +88,6 @@ set(qpid_dispatch_SOURCES
   router_core/connections.c
   router_core/core_events.c
   router_core/core_link_endpoint.c
-  router_core/edge_control.c
   router_core/error.c
   router_core/exchange_bindings.c
   router_core/forwarder.c
@@ -100,7 +99,9 @@ set(qpid_dispatch_SOURCES
   router_core/terminus.c
   router_core/transfer.c
   router_core/core_timer.c
-  router_core/modules/core_test_hooks.c
+  router_core/modules/edge_router/module.c
+  router_core/modules/edge_router/connection_manager.c
+  router_core/modules/test_hooks/core_test_hooks.c
   router_node.c
   router_pynode.c
   schema_enum.c

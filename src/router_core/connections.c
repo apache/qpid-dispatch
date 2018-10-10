@@ -1322,11 +1322,6 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 if (cid)
                     qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
             }
-
-            if (conn->role == QDR_ROLE_EDGE_UPLINK && core->edge) {
-                // edge router established connection to interior
-                qdr_edge_connection_opened(core->edge, conn);
-            }
         } while (false);
 
         qdrc_event_conn_raise(core, QDRC_EVENT_CONN_OPENED, conn);
@@ -1412,11 +1407,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     if (conn->in_activate_list) {
         conn->in_activate_list = false;
         DEQ_REMOVE_N(ACTIVATE, core->connections_to_activate, conn);
-    }
-
-    if (conn->role == QDR_ROLE_EDGE_UPLINK && core->edge) {
-        // edge router's uplink has closed
-        qdr_edge_connection_closed(core->edge);
     }
 
     qdrc_event_conn_raise(core, QDRC_EVENT_CONN_CLOSED, conn);

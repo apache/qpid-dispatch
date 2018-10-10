@@ -698,8 +698,6 @@ struct qdr_core_t {
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
 
-    qdr_edge_t        *edge;   // if router_mode is edge router
-
     sys_mutex_t             *work_lock;
     qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
