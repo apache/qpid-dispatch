@@ -30,7 +30,6 @@ from subprocess import PIPE
 from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module, SkipIfNeeded
 
-
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
     @classmethod
@@ -103,6 +102,70 @@ class QdstatTest(system_test.TestCase):
 
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
+
+class QdstatLinkPriorityTest(system_test.TestCase):
+    """Need 2 routers to get inter-router links for the link priority test"""
+    @classmethod
+    def setUpClass(cls):
+        super(QdstatLinkPriorityTest, cls).setUpClass()
+        cls.inter_router_port = cls.tester.get_port()
+        config_1 = system_test.Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'R1'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('connector', {'role': 'inter-router', 'port': cls.inter_router_port})
+        ])
+
+        config_2 = system_test.Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'R2'}),
+            ('listener', {'role': 'inter-router', 'port': cls.inter_router_port}),
+        ])
+        cls.router_2 = cls.tester.qdrouterd('test_router_2', config_2, wait=True)
+        cls.router_1 = cls.tester.qdrouterd('test_router_1', config_1, wait=True)
+        cls.router_1.wait_router_connected('R2')
+
+    def address(self):
+        return self.router_1.addresses[0]
+
+    def run_qdstat(self, args):
+        p = self.popen(
+            ['qdstat', '--bus', str(self.address()), '--timeout', str(system_test.TIMEOUT) ] + args,
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        return out
+
+    def test_link_priority(self):
+        out = self.run_qdstat(['--links'])
+        lines = out.split("\n")
+
+        # make sure the output contains a header line
+        self.assertGreaterEqual(len(lines), 2)
+
+        # see if the header line has the word priority in it
+        priorityregexp = r'priority'
+        priority_column = re.search(priorityregexp, lines[1]).start()
+        self.assertGreater(priority_column, -1)
+
+        # extract the number in the priority column of every inter-router link
+        priorities = {}
+        for i in range(3, len(lines) - 1):
+            if re.search(r'inter-router', lines[i]):
+                pri = re.findall('\d+', lines[i][priority_column:])
+                # make sure the priority found is a number
+                self.assertGreater(len(pri), 0, "Can not find numeric priority in '%s'" % lines[i])
+                priority = int(pri[0])
+                # make sure the priority is from 0 to 9
+                self.assertGreaterEqual(priority, 0, "Priority was less than 0")
+                self.assertLessEqual(priority, 9, "Priority was greater than 9")
+
+                # mark this priority as present
+                priorities[priority] = True
+
+        # make sure that all priorities are present in the list (currently 0-9)
+        self.assertEqual(len(priorities.keys()), 10, "Not all priorities are present")
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
