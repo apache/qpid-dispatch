@@ -1182,6 +1182,7 @@ qd_message_t * qd_get_message_context(pn_delivery_t *delivery)
 qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 {
     pn_link_t        *link = pn_delivery_link(delivery);
+    qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
     ssize_t           rc;
 
     pn_record_t *record    = pn_delivery_attachments(delivery);
@@ -1216,9 +1217,10 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //      have been processed and freed by outbound processing then
     //      message holdoff is cleared and receiving may continue.
     //
-    if (!msg->content->disable_q2_holdoff) {
-        if (msg->content->q2_input_holdoff)
+    if (!qd_link_is_q2_limit_unbounded(qdl) && !msg->content->disable_q2_holdoff) {
+        if (msg->content->q2_input_holdoff) {
             return (qd_message_t*)msg;
+        }
     }
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
@@ -1275,9 +1277,11 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 DEQ_INSERT_TAIL(msg->content->buffers, msg->content->pending);
                 msg->content->pending = 0;
                 if (qd_message_Q2_holdoff_should_block((qd_message_t *)msg)) {
-                    msg->content->q2_input_holdoff = true;
-                    UNLOCK(msg->content->lock);
-                    break;
+                    if (!qd_link_is_q2_limit_unbounded(qdl)) {
+                        msg->content->q2_input_holdoff = true;
+                        UNLOCK(msg->content->lock);
+                        break;
+                    }
                 }
                 UNLOCK(msg->content->lock);
                 msg->content->pending = qd_buffer();

@@ -305,18 +305,19 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
 /**
  * Inbound Delivery Handler
  */
-static void AMQP_rx_handler(void* context, qd_link_t *link)
+static bool AMQP_rx_handler(void* context, qd_link_t *link)
 {
     qd_router_t    *router       = (qd_router_t*) context;
     pn_link_t      *pn_link      = qd_link_pn(link);
+    bool            next_delivery = false;
     assert(pn_link);
 
     if (!pn_link)
-        return;
+        return next_delivery;
 
     pn_delivery_t  *pnd          = pn_link_current(pn_link);
     if (!pnd)
-        return;
+        return next_delivery;
     qdr_link_t     *rlink        = (qdr_link_t*) qd_link_get_context(link);
     qd_connection_t  *conn       = qd_link_connection(link);
     qdr_delivery_t *delivery     = qdr_node_delivery_qdr_from_pn(pnd);
@@ -349,11 +350,11 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         // If there's another delivery pending then reschedule this.
         pn_delivery_t *npnd = pn_link_current(pn_link);
         if (npnd) {
-            qd_connection_invoke_deferred(conn, deferred_AMQP_rx_handler, link);
+            next_delivery = true;
         }
 
         if (qd_message_is_discard(msg)) {
-            return;
+            return next_delivery;
         }
     }
 
@@ -364,7 +365,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     if (!rlink) {
         if (receive_complete) // The entire message has been received but there is nowhere to send it to, free it and do nothing.
             qd_message_free(msg);
-        return;
+        return next_delivery;
     }
 
     //
@@ -405,7 +406,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver_to_routed_link");
         }
 
-        return;
+        return next_delivery;
     }
 
     //
@@ -458,7 +459,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     if (!valid_message) {
-        return;
+        return next_delivery;
     }
 
     if (delivery) {
@@ -476,7 +477,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             }
         }
 
-        return;
+        return next_delivery;
     }
 
     if (check_user) {
@@ -494,7 +495,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
                     pn_delivery_settle(pnd);
                     qd_message_free(msg);
                     qd_iterator_free(userid_iter);
-                    return;
+                    return next_delivery;
                 }
             }
             qd_iterator_free(userid_iter);
@@ -520,7 +521,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         pn_delivery_update(pnd, PN_RELEASED);
         pn_delivery_settle(pnd);
         qd_message_free(msg);
-        return;
+        return next_delivery;
     }
 
     if (anonymous_link) {
@@ -596,6 +597,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index);
     }
 
+
+
     if (delivery) {
         //
         // Settle the proton delivery only if all the data has arrived
@@ -604,7 +607,7 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
             if (receive_complete) {
                 pn_delivery_settle(pnd);
                 qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
-                return;
+                return next_delivery;
             }
         }
 
@@ -620,6 +623,8 @@ static void AMQP_rx_handler(void* context, qd_link_t *link)
         pn_delivery_settle(pnd);
         qd_message_free(msg);
     }
+
+    return next_delivery;
 }
 
 
@@ -631,7 +636,10 @@ static void deferred_AMQP_rx_handler(void *context, bool discard) {
         qd_link_t     *qdl = (qd_link_t*)context;
         qd_router_t   *qdr = (qd_router_t *)qd_link_get_node_context(qdl);
         assert(qdr != 0);
-        AMQP_rx_handler(qdr, qdl);
+        while (true) {
+            if (! AMQP_rx_handler(qdr, qdl))
+                break;
+        }
     }
 }
 
@@ -781,6 +789,7 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         qd_message_t *msg = qd_get_message_context(pnd);
         if (msg) {
             if (!qd_message_receive_complete(msg)) {
+                qd_link_set_q2_limit_unbounded(link, true);
                 qd_message_Q2_holdoff_disable(msg);
                 deferred_AMQP_rx_handler((void *)link, false);
             }
