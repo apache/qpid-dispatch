@@ -61,6 +61,7 @@ struct qd_link_t {
     bool                        drain_mode;
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
+    bool                        q2_limit_unbounded;
 };
 
 DEQ_DECLARE(qd_link_t, qd_link_list_t);
@@ -185,7 +186,10 @@ static void do_receive(pn_delivery_t *pnd)
     if (link) {
         qd_node_t *node = link->node;
         if (node) {
-            node->ntype->rx_handler(node->context, link);
+            while (true) {
+                if (!node->ntype->rx_handler(node->context, link))
+                    break;
+            }
             return;
         }
     }
@@ -900,6 +904,18 @@ pn_link_t *qd_link_pn(qd_link_t *link)
 pn_session_t *qd_link_pn_session(qd_link_t *link)
 {
     return link->pn_sess;
+}
+
+
+bool qd_link_is_q2_limit_unbounded(qd_link_t *link)
+{
+    return link->q2_limit_unbounded;
+}
+
+
+void qd_link_set_q2_limit_unbounded(qd_link_t *link, bool q2_limit_unbounded)
+{
+    link->q2_limit_unbounded = q2_limit_unbounded;
 }
 
 
