@@ -29,7 +29,7 @@ void qdra_link_update_CT(qdr_core_t          *core,
                          qdr_query_t         *query,
                          qd_parsed_field_t   *in_body);
 
-#define QDR_LINK_COLUMN_COUNT  22
+#define QDR_LINK_COLUMN_COUNT  23
 
 const char *qdr_link_columns[QDR_LINK_COLUMN_COUNT + 1];
 

@@ -293,7 +293,7 @@ class BusManager(Node):
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'adminStatus', 'operStatus', 'linkName')
+                'modifiedCount', 'adminStatus', 'operStatus', 'linkName', 'priority')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
@@ -314,6 +314,7 @@ class BusManager(Node):
         heads.append(Header("mod"))
         heads.append(Header("admin"))
         heads.append(Header("oper"))
+        heads.append(Header("priority"))
         if self.opts.verbose:
             heads.append(Header("name"))
 
@@ -340,6 +341,7 @@ class BusManager(Node):
             row.append(link.modifiedCount)
             row.append(link.adminStatus)
             row.append(link.operStatus)
+            row.append(link.priority)
             if self.opts.verbose:
                 row.append(link.linkName)
             rows.append(row)
