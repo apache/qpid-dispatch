@@ -25,6 +25,7 @@
 #include "router_core_private.h"
 #include "core_link_endpoint.h"
 
+
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -1347,6 +1348,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     qdr_connection_t *conn = action->args.connection.conn;
 
+
     //
     // Deactivate routes associated with this connection
     //
@@ -1355,8 +1357,10 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     //
     // Give back the router mask-bit.
     //
-    if (conn->role == QDR_ROLE_INTER_ROUTER)
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        qdr_reset_sheaf(core, conn->mask_bit);
         qd_bitmask_set_bit(core->neighbor_free_mask, conn->mask_bit);
+    }
 
     //
     // Remove the references in the links_with_work list
@@ -1463,7 +1467,6 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         int next_slot = core->data_links_by_mask_bit[conn->mask_bit].count ++;
         if (next_slot >= QDR_N_PRIORITIES) {
             qd_log(core->log, QD_LOG_ERROR, "Attempt to attach too many inter-router links for priority sheaf.");
-            return;
         }
         link->priority = next_slot;
         core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
