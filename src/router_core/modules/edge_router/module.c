@@ -21,16 +21,16 @@
 #include "connection_manager.h"
 
 typedef struct {
-    qdrcm_edge_conn_mgr_t *conn_mgr;
+    qcm_edge_conn_mgr_t *conn_mgr;
     // TODO - Add pointers to other edge-router state here
-} qdrcm_edge_t;
+} qcm_edge_t;
 
 
-static void qdrcm_edge_router_init_CT(qdr_core_t *core, void **module_context)
+static void qcm_edge_router_init_CT(qdr_core_t *core, void **module_context)
 {
     if (core->router_mode == QD_ROUTER_MODE_EDGE) {
-        qdrcm_edge_t *edge = NEW(qdrcm_edge_t);
-        edge->conn_mgr = qdrcm_edge_conn_mgr(core);
+        qcm_edge_t *edge = NEW(qcm_edge_t);
+        edge->conn_mgr = qcm_edge_conn_mgr(core);
         // TODO - Add initialization of other edge-router functions here
         *module_context = edge;
     } else
@@ -38,16 +38,16 @@ static void qdrcm_edge_router_init_CT(qdr_core_t *core, void **module_context)
 }
 
 
-static void qdrcm_edge_router_final_CT(void *module_context)
+static void qcm_edge_router_final_CT(void *module_context)
 {
-    qdrcm_edge_t *edge = (qdrcm_edge_t*) module_context;
+    qcm_edge_t *edge = (qcm_edge_t*) module_context;
 
     if (edge) {
-        qdrcm_edge_conn_mgr_final(edge->conn_mgr);
+        qcm_edge_conn_mgr_final(edge->conn_mgr);
         // TODO - Add finalization of other edge-router functions here
         free(edge);
     }
 }
 
 
-QDR_CORE_MODULE_DECLARE("edge_router", qdrcm_edge_router_init_CT, qdrcm_edge_router_final_CT)
+QDR_CORE_MODULE_DECLARE("edge_router", qcm_edge_router_init_CT, qcm_edge_router_final_CT)

@@ -38,7 +38,7 @@
 //     QDRC_EVENT_CONN_EDGE_LOST
 //
 
-struct qdrcm_edge_conn_mgr_t {
+struct qcm_edge_conn_mgr_t {
     qdr_core_t                *core;
     qdrc_event_subscription_t *event_sub;
     qdr_connection_t          *active_uplink;
@@ -47,7 +47,7 @@ struct qdrcm_edge_conn_mgr_t {
 
 static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *conn)
 {
-    qdrcm_edge_conn_mgr_t *cm = (qdrcm_edge_conn_mgr_t*) context;
+    qcm_edge_conn_mgr_t *cm = (qcm_edge_conn_mgr_t*) context;
 
     switch (event) {
     case QDRC_EVENT_CONN_OPENED :
@@ -86,9 +86,9 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
 }
 
 
-qdrcm_edge_conn_mgr_t *qdrcm_edge_conn_mgr(qdr_core_t *core)
+qcm_edge_conn_mgr_t *qcm_edge_conn_mgr(qdr_core_t *core)
 {
-    qdrcm_edge_conn_mgr_t *cm = NEW(qdrcm_edge_conn_mgr_t);
+    qcm_edge_conn_mgr_t *cm = NEW(qcm_edge_conn_mgr_t);
 
     cm->core = core;
     cm->event_sub = qdrc_event_subscribe_CT(core,
@@ -103,7 +103,7 @@ qdrcm_edge_conn_mgr_t *qdrcm_edge_conn_mgr(qdr_core_t *core)
 }
 
 
-void qdrcm_edge_conn_mgr_final(qdrcm_edge_conn_mgr_t *cm)
+void qcm_edge_conn_mgr_final(qcm_edge_conn_mgr_t *cm)
 {
     qdrc_event_unsubscribe_CT(cm->core, cm->event_sub);
     free(cm);

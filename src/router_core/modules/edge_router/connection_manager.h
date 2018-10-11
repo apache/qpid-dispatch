@@ -17,19 +17,19 @@
  * under the License.
  */
 
-#ifndef qdrcm_edge_router_conn_mgr_types
-#define qdrcm_edge_router_conn_mgr_types 1
+#ifndef qcm_edge_router_conn_mgr_types
+#define qcm_edge_router_conn_mgr_types 1
 
-typedef struct qdrcm_edge_conn_mgr_t qdrcm_edge_conn_mgr_t;
+typedef struct qcm_edge_conn_mgr_t qcm_edge_conn_mgr_t;
 #include "router_core_private.h"
 
 #endif
 
 
-#ifndef qdrcm_edge_router_conn_mgr
-#define qdrcm_edge_router_conn_mgr 1
+#ifndef qcm_edge_router_conn_mgr
+#define qcm_edge_router_conn_mgr 1
 
-qdrcm_edge_conn_mgr_t *qdrcm_edge_conn_mgr(qdr_core_t *core);
-void qdrcm_edge_conn_mgr_final(qdrcm_edge_conn_mgr_t *cm);
+qcm_edge_conn_mgr_t *qcm_edge_conn_mgr(qdr_core_t *core);
+void qcm_edge_conn_mgr_final(qcm_edge_conn_mgr_t *cm);
 
 #endif
