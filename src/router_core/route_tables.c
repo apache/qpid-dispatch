@@ -400,7 +400,7 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     // Check the address and free it if there are no other interested parties tracking it
     //
     oaddr->block_deletion = false;
-    qdr_check_addr_CT(core, oaddr, false);
+    qdr_check_addr_CT(core, oaddr);
 }
 
 
@@ -604,6 +604,14 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
         rnode->ref_count++;
         addr->cost_epoch--;
         qdr_addr_start_inlinks_CT(core, addr);
+
+        //
+        // Raise an address event if this is the first destination for the address
+        //
+        if (qd_bitmask_cardinality(addr->rnodes) + DEQ_SIZE(addr->rlinks) == 1)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_DEST, addr);
+        else if (qd_bitmask_cardinality(addr->rnodes) == 1 && DEQ_SIZE(addr->rlinks) == 1)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
     } while (false);
 
     qdr_field_free(address);
@@ -646,10 +654,14 @@ static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, boo
         addr->cost_epoch--;
 
         //
-        // TODO - If this affects a waypoint, create the proper side effects
+        // Raise an address event if this was the last destination for the address
         //
+        if (qd_bitmask_cardinality(addr->rnodes) + DEQ_SIZE(addr->rlinks) == 0)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_DEST, addr);
+        else if (qd_bitmask_cardinality(addr->rnodes) == 0 && DEQ_SIZE(addr->rlinks) == 1)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
 
-        qdr_check_addr_CT(core, addr, false);
+        qdr_check_addr_CT(core, addr);
     } while (false);
 
     qdr_field_free(address);
@@ -704,7 +716,7 @@ static void qdr_unsubscribe_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     if (!discard) {
         DEQ_REMOVE(sub->addr->subscriptions, sub);
         sub->addr = 0;
-        qdr_check_addr_CT(sub->core, sub->addr, false);
+        qdr_check_addr_CT(sub->core, sub->addr);
     }
 
     free(sub);

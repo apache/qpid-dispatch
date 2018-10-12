@@ -76,8 +76,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
         // Associate the anonymous sender with the uplink address.  This will cause
         // all deliveries destined off-edge to be sent to the interior via the uplink.
         //
-        qdr_add_link_ref(&ap->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        link->owning_addr = ap->uplink_addr;
+        qdr_core_bind_address_link_CT(ap->core, ap->uplink_addr, link);
 
         //
         // Attach a receiving link for edge summary.  This will cause all deliveries
@@ -87,6 +86,11 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                                   QD_LINK_ENDPOINT, QD_INCOMING,
                                   qdr_terminus_edge_downlink(ap->core->router_id),
                                   qdr_terminus_edge_downlink(0));
+
+        //
+        // TODO - Process eligible local destinations
+        //
+
         break;
     }
 
@@ -103,7 +107,20 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
 
 static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr)
 {
-    //qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) context;
+    qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) context;
+
+    //
+    // If we don't have an established uplink, there is no further work to be done.
+    //
+    if (!ap->uplink_established)
+        return;
+
+    //
+    // If the address is not in the Mobile class, no further processing is needed.
+    //
+    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+    if (*key != QD_ITER_HASH_PREFIX_MOBILE)
+        return;
 
     switch (event) {
     case QDRC_EVENT_ADDR_BECAME_LOCAL_DEST :

@@ -749,7 +749,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             dlv->tracking_addr->tracked_deliveries--;
 
             if (dlv->tracking_addr->tracked_deliveries == 0)
-                qdr_check_addr_CT(core, dlv->tracking_addr, false);
+                qdr_check_addr_CT(core, dlv->tracking_addr);
 
             dlv->tracking_addr = 0;
         }
@@ -1077,29 +1077,23 @@ qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_it
  * Depending on its policy, the address may be eligible for being closed out
  * (i.e. Logging its terminal statistics and freeing its resources).
  */
-void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr, bool was_local)
+void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
 {
     if (addr == 0)
         return;
 
     //
-    // If we have just removed a local linkage and it was the last local linkage,
-    // we need to notify the router module that there is no longer a local
-    // presence of this address.
-    //
-    if (was_local && DEQ_SIZE(addr->rlinks) == 0) {
-        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
-            qdr_post_mobile_removed_CT(core, key);
-    }
-
-    //
     // If the address has no in-process consumer or destinations, it should be
     // deleted.
     //
-    if (DEQ_SIZE(addr->subscriptions) == 0 && DEQ_SIZE(addr->rlinks) == 0 && DEQ_SIZE(addr->inlinks) == 0 &&
-        qd_bitmask_cardinality(addr->rnodes) == 0 && addr->ref_count == 0 && !addr->block_deletion &&
-        addr->tracked_deliveries == 0 && addr->core_endpoint == 0) {
+    if (DEQ_SIZE(addr->subscriptions) == 0
+        && DEQ_SIZE(addr->rlinks) == 0
+        && DEQ_SIZE(addr->inlinks) == 0
+        && qd_bitmask_cardinality(addr->rnodes) == 0
+        && addr->ref_count == 0
+        && !addr->block_deletion
+        && addr->tracked_deliveries == 0
+        && addr->core_endpoint == 0) {
         qdr_core_remove_address(core, addr);
     }
 }
@@ -1501,14 +1495,7 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
         DEQ_INSERT_TAIL(core->addrs, addr);
     }
 
-    qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-    link->owning_addr = addr;
-    if (DEQ_SIZE(addr->rlinks) == 1) {
-        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        if (key && *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY)
-            qdr_post_mobile_added_CT(core, key);
-        qdr_addr_start_inlinks_CT(core, addr);
-    }
+    qdr_core_bind_address_link_CT(core, addr, link);
 
     qd_iterator_free(iter);
 }
@@ -1632,14 +1619,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     // Now, send back a detach with the error amqp:precondition-failed
                     qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_COORDINATOR_PRECONDITION_FAILED, true);
                 }
-                else
-                    {
+                else {
                     //
                     // Associate the link with the address.  With this association, it will be unnecessary
                     // to do an address lookup for deliveries that arrive on this link.
                     //
-                    link->owning_addr = addr;
-                    qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                    qdr_core_bind_address_link_CT(core, addr, link);
                     qdr_link_outbound_second_attach_CT(core, link, source, target);
 
                     //
@@ -1722,17 +1707,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             }
 
             else {
-                //
-                // Associate the link with the address.
-                //
-                link->owning_addr = addr;
-                qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                if (DEQ_SIZE(addr->rlinks) == 1) {
-                    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-                    if (key && *key == QD_ITER_HASH_PREFIX_MOBILE)
-                        qdr_post_mobile_added_CT(core, key);
-                    qdr_addr_start_inlinks_CT(core, addr);
-                }
+                qdr_core_bind_address_link_CT(core, addr, link);
                 qdr_link_outbound_second_attach_CT(core, link, source, target);
             }
             break;
@@ -1803,8 +1778,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                 //
                 if (qdr_terminus_get_address(source)) {
                     link->auto_link->state = QDR_AUTO_LINK_STATE_ACTIVE;
-                    qdr_add_link_ref(&link->auto_link->addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                    link->owning_addr = link->auto_link->addr;
+                    qdr_core_bind_address_link_CT(core, link->auto_link->addr, link);
                 }
             }
 
@@ -1837,14 +1811,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
                 //
                 if (qdr_terminus_get_address(target)) {
                     link->auto_link->state = QDR_AUTO_LINK_STATE_ACTIVE;
-                    qdr_add_link_ref(&link->auto_link->addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                    link->owning_addr = link->auto_link->addr;
-                    if (DEQ_SIZE(link->auto_link->addr->rlinks) == 1) {
-                        const char *key = (const char*) qd_hash_key_by_handle(link->auto_link->addr->hash_handle);
-                        if (key && *key == QD_ITER_HASH_PREFIX_MOBILE)
-                            qdr_post_mobile_added_CT(core, key);
-                        qdr_addr_start_inlinks_CT(core, link->auto_link->addr);
-                    }
+                    qdr_core_bind_address_link_CT(core, link->auto_link->addr, link);
                 }
             }
             break;
@@ -1872,12 +1839,11 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     if (discard)
         return;
 
-    qdr_connection_t *conn      = action->args.connection.conn;
-    qdr_link_t       *link      = action->args.connection.link;
-    qdr_error_t      *error     = action->args.connection.error;
-    qd_detach_type_t  dt        = action->args.connection.dt;
-    qdr_address_t    *addr      = link->owning_addr;
-    bool              was_local = false;
+    qdr_connection_t *conn  = action->args.connection.conn;
+    qdr_link_t       *link  = action->args.connection.link;
+    qdr_error_t      *error = action->args.connection.error;
+    qd_detach_type_t  dt    = action->args.connection.dt;
+    qdr_address_t    *addr  = link->owning_addr;
 
     //
     // Bump the detach count to track half and full detaches
@@ -1970,10 +1936,8 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             switch (link->link_type) {
             case QD_LINK_ENDPOINT:
             case QD_LINK_EDGE_DOWNLINK:
-                if (addr) {
-                    qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-                    was_local = true;
-                }
+                if (addr)
+                    qdr_core_unbind_address_link_CT(core, addr, link);
                 break;
 
             case QD_LINK_CONTROL:
@@ -2010,7 +1974,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     // cleanup has to be done.
     //
     if (addr)
-        qdr_check_addr_CT(core, addr, was_local);
+        qdr_check_addr_CT(core, addr);
 
     if (error)
         qdr_error_free(error);

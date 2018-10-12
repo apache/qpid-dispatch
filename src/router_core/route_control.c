@@ -188,22 +188,14 @@ static char *qdr_address_to_link_route_pattern(qd_iterator_t *addr_hash,
 
 static void qdr_link_route_activate_CT(qdr_core_t *core, qdr_link_route_t *lr, qdr_connection_t *conn)
 {
-    char *address;
     qdr_route_log_CT(core, "Link Route Activated", lr->name, lr->identity, conn);
 
     //
     // Activate the address for link-routed destinations.  If this is the first
     // activation for this address, notify the router module of the added address.
     //
-    if (lr->addr) {
-        qdr_add_connection_ref(&lr->addr->conns, conn);
-        if (DEQ_SIZE(lr->addr->conns) == 1) {
-            address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
-            qd_log(core->log, QD_LOG_TRACE, "Activating link route pattern [%s]", address);
-            qdr_post_mobile_added_CT(core, address);
-            free(address);
-        }
-    }
+    if (lr->addr)
+        qdr_core_bind_address_conn_CT(core, lr->addr, conn);
 
     lr->active = true;
 }
@@ -216,15 +208,8 @@ static void qdr_link_route_deactivate_CT(qdr_core_t *core, qdr_link_route_t *lr,
     //
     // Deactivate the address(es) for link-routed destinations.
     //
-    if (lr->addr) {
-        qdr_del_connection_ref(&lr->addr->conns, conn);
-        if (DEQ_IS_EMPTY(lr->addr->conns)) {
-            char *address = qdr_link_route_pattern_to_address(lr->pattern, lr->dir);
-            qd_log(core->log, QD_LOG_TRACE, "Deactivating link route pattern [%s]", address);
-            qdr_post_mobile_removed_CT(core, address);
-            free(address);
-        }
-    }
+    if (lr->addr)
+        qdr_core_unbind_address_conn_CT(core, lr->addr, conn);
 
     lr->active = false;
 }
@@ -445,7 +430,7 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
     //
     qdr_address_t *addr = lr->addr;
     if (addr && --addr->ref_count == 0)
-        qdr_check_addr_CT(core, addr, false);
+        qdr_check_addr_CT(core, addr);
 
     //
     // Remove the link route from the core list.
@@ -545,7 +530,7 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
     //
     qdr_address_t *addr = al->addr;
     if (addr && --addr->ref_count == 0)
-        qdr_check_addr_CT(core, addr, false);
+        qdr_check_addr_CT(core, addr);
 
     //
     // Remove the auto link from the core list.

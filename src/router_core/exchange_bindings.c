@@ -955,8 +955,7 @@ static void qdr_exchange_free(qdr_exchange_t *ex)
     ex->qdr_addr->forwarder = ex->old_forwarder;
     assert(ex->qdr_addr->ref_count > 0);
     ex->qdr_addr->ref_count -= 1;
-    qdr_check_addr_CT(ex->core, ex->qdr_addr, false); // @TODO(kgiusti) ?is
-                                                      // false correct ?
+    qdr_check_addr_CT(ex->core, ex->qdr_addr);
     free(ex->name);
     free(ex->address);
 
@@ -1066,8 +1065,7 @@ static void next_hop_release(next_hop_t *nh)
     if (--nh->ref_count == 0) {
         assert(nh->qdr_addr->ref_count > 0);
         if (--nh->qdr_addr->ref_count == 0) {
-            // @TODO(kgiusti) is 'false' ok?
-            qdr_check_addr_CT(nh->exchange->core, nh->qdr_addr, false);
+            qdr_check_addr_CT(nh->exchange->core, nh->qdr_addr);
         }
         DEQ_REMOVE_N(exchange_list, nh->exchange->next_hops, nh);
         assert(!nh->on_xmit_list);

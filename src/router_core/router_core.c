@@ -20,6 +20,7 @@
 #include "router_core_private.h"
 #include "route_control.h"
 #include "exchange_bindings.h"
+#include "core_events.h"
 #include <stdio.h>
 #include <strings.h>
 
@@ -405,6 +406,61 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     free(addr->del_prefix);
     free_qdr_address_t(addr);
 }
+
+
+void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
+{
+    link->owning_addr = addr;
+
+    if (link->link_direction == QD_OUTGOING) {
+        qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        if (DEQ_SIZE(addr->rlinks) == 1) {
+            const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+            if (key && (*key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY || *key == QD_ITER_HASH_PREFIX_MOBILE))
+                qdr_post_mobile_added_CT(core, key);
+            qdr_addr_start_inlinks_CT(core, addr);
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
+        } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
+    } else  // link->link_direction == QD_INCOMING
+        qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+}
+
+
+void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
+{
+    qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+    link->owning_addr = 0;
+
+    if (DEQ_SIZE(addr->rlinks) == 0) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
+            qdr_post_mobile_removed_CT(core, key);
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
+    } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
+}
+
+
+void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn)
+{
+    qdr_add_connection_ref(&addr->conns, conn);
+    if (DEQ_SIZE(addr->conns) == 1) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        qdr_post_mobile_added_CT(core, key);
+    }
+}
+
+
+void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn)
+{
+    qdr_del_connection_ref(&addr->conns, conn);
+    if (DEQ_IS_EMPTY(addr->conns)) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        qdr_post_mobile_removed_CT(core, key);
+    }
+}
+
 
 void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr)
 {

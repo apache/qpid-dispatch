@@ -498,7 +498,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
         dlv->tracking_addr->tracked_deliveries--;
 
         if (dlv->tracking_addr->tracked_deliveries == 0)
-            qdr_check_addr_CT(core, dlv->tracking_addr, false);
+            qdr_check_addr_CT(core, dlv->tracking_addr);
 
         dlv->tracking_addr = 0;
     }
@@ -542,7 +542,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
         delivery->tracking_addr->tracked_deliveries--;
 
         if (delivery->tracking_addr->tracked_deliveries == 0)
-            qdr_check_addr_CT(core, delivery->tracking_addr, false);
+            qdr_check_addr_CT(core, delivery->tracking_addr);
 
         delivery->tracking_addr = 0;
     }

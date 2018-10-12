@@ -31,7 +31,7 @@ typedef void (*qdrc_module_init_t) (qdr_core_t *core, void **module_context);
 
 
 /**
- * Callback to finailize a core module at core thread shutdown
+ * Callback to finalize a core module at core thread shutdown
  *
  * @param module_context The context returned by the module during the on_init call
  */
