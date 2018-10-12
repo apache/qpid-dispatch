@@ -764,7 +764,6 @@ struct qdr_core_t {
     qdr_address_t             *routerma_addr_L;
     qdr_address_t             *router_addr_T;
     qdr_address_t             *routerma_addr_T;
-    qdr_address_t             *uplink_addr;
 
     qdr_node_list_t       routers;            ///< List of routers, in order of cost, from lowest to highest
     qd_bitmask_t         *neighbor_free_mask;

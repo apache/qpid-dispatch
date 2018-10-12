@@ -126,6 +126,7 @@ extern const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 /// @{
 extern const char * const QD_CAPABILITY_ROUTER_CONTROL;
 extern const char * const QD_CAPABILITY_ROUTER_DATA;
+extern const char * const QD_CAPABILITY_EDGE_DOWNLINK;
 /// @}
 
 /** @name Dynamic Node Properties */

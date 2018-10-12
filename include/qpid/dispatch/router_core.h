@@ -142,9 +142,10 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
  */
 
 typedef enum {
-    QD_LINK_ENDPOINT,   ///< A link to a connected endpoint
-    QD_LINK_CONTROL,    ///< A link to a peer router for control messages
-    QD_LINK_ROUTER      ///< A link to a peer router for routed messages
+    QD_LINK_ENDPOINT,      ///< A link to a connected endpoint
+    QD_LINK_CONTROL,       ///< A link to a peer router for control messages
+    QD_LINK_ROUTER,        ///< A link to a peer router for routed messages
+    QD_LINK_EDGE_DOWNLINK  ///< Default link from an interior router to an edge router
 } qd_link_type_t;
 
 typedef enum {

@@ -34,6 +34,7 @@ const int          QD_MA_FILTER_LEN  = 5;  // N tailing inbound entries to searc
 
 const char * const QD_CAPABILITY_ROUTER_CONTROL  = "qd.router";
 const char * const QD_CAPABILITY_ROUTER_DATA     = "qd.router-data";
+const char * const QD_CAPABILITY_EDGE_DOWNLINK   = "qd.router-edge-downlink";
 const char * const QD_CAPABILITY_ANONYMOUS_RELAY = "ANONYMOUS-RELAY";
 
 const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS = "x-opt-qd.address";

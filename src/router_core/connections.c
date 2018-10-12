@@ -482,6 +482,12 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
         link->link_type = QD_LINK_CONTROL;
     else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_ROUTER_DATA))
         link->link_type = QD_LINK_ROUTER;
+    else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_EDGE_DOWNLINK)) {
+        if (conn->core->router_mode == QD_ROUTER_MODE_INTERIOR &&
+            conn->role == QDR_ROLE_EDGE_UPLINK &&
+            dir == QD_OUTGOING)
+            link->link_type = QD_LINK_EDGE_DOWNLINK;
+    }
 
     qdr_link_setup_histogram(conn, dir, link);
 
@@ -1471,38 +1477,6 @@ static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
         link->priority = next_slot;
         core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
     }
-
-    //
-    // TODO - This needs to be refactored in terms of a non-inter-router link type
-    //
-    else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
-        if (core->router_mode == QD_ROUTER_MODE_EDGE) {
-            //
-            // Associate this link with the uplink address.
-            //
-            link->owning_addr = core->uplink_addr;
-            qdr_add_link_ref(&core->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            qd_log(core->log, QD_LOG_INFO, "Edge-uplink established to interior router: %s", conn->connection_info->container);
-        } else if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
-            //
-            // This is a down-link to an edge router.  Create a mobile address of the form
-            // H<edge-router-id>, associate the link to that address, and advertise
-            // the address on the network.
-            //
-            const char    *edge_id = conn->connection_info->container;
-            qdr_address_t *addr    = qdr_add_mobile_address_CT(core, "", edge_id, QD_TREATMENT_ANYCAST_BALANCED, true);
-            link->owning_addr = addr;
-            qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            if (DEQ_SIZE(addr->rlinks) == 1) {
-                const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-                if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
-                    qdr_post_mobile_added_CT(core, key);
-                qdr_addr_start_inlinks_CT(core, addr);
-            }
-
-            qd_log(core->log, QD_LOG_INFO, "Downlink established to edge router: %s", edge_id);
-        }
-    }
 }
 
 
@@ -1510,18 +1484,33 @@ static void qdr_detach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qd
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER)
         core->data_links_by_mask_bit[conn->mask_bit].links[link->priority] = 0;
-    //
-    // TODO - This needs to be refactored in terms of a non-inter-router link type
-    //
-    else if (conn->role == QDR_ROLE_EDGE_UPLINK) {
-        if (core->router_mode == QD_ROUTER_MODE_EDGE) {
-            qdr_del_link_ref(&core->uplink_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            qd_log(core->log, QD_LOG_INFO, "Edge-uplink lost");
-        } else if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
-            qdr_del_link_ref(&link->owning_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-            qd_log(core->log, QD_LOG_INFO, "Downlink lost to edge router: %s", conn->connection_info->container);
-        }
+}
+
+
+static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, qdr_terminus_t *source)
+{
+    qdr_address_t *addr;
+    qd_iterator_t *iter = qd_iterator_dup(qdr_terminus_get_address(source));
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
+    qd_iterator_annotate_prefix(iter, QD_ITER_HASH_PREFIX_EDGE_SUMMARY);
+
+    qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
+    if (!addr) {
+        addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED);
+        qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
+        DEQ_INSERT_TAIL(core->addrs, addr);
     }
+
+    qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+    link->owning_addr = addr;
+    if (DEQ_SIZE(addr->rlinks) == 1) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        if (key && *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY)
+            qdr_post_mobile_added_CT(core, key);
+        qdr_addr_start_inlinks_CT(core, addr);
+    }
+
+    qd_iterator_free(iter);
 }
 
 
@@ -1673,13 +1662,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         }
 
         case QD_LINK_CONTROL:
+        case QD_LINK_ROUTER:
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 
-        case QD_LINK_ROUTER:
-            qdr_link_outbound_second_attach_CT(core, link, source, target);
-            qdr_link_issue_credit_CT(core, link, link->capacity, false);
+        case QD_LINK_EDGE_DOWNLINK:
             break;
         }
     } else {
@@ -1759,6 +1747,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             qdr_attach_link_data_CT(core, conn, link);
             qdr_link_outbound_second_attach_CT(core, link, source, target);
             break;
+
+        case QD_LINK_EDGE_DOWNLINK:
+            qdr_attach_link_downlink_CT(core, conn, link, source);
+            qdr_link_outbound_second_attach_CT(core, link, source, target);
+            break;
         }
     }
 }
@@ -1827,6 +1820,9 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
         case QD_LINK_ROUTER:
             qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
+
+        case QD_LINK_EDGE_DOWNLINK:
+            break;
         }
     } else {
         //
@@ -1859,6 +1855,9 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 
         case QD_LINK_ROUTER:
             qdr_attach_link_data_CT(core, conn, link);
+            break;
+
+        case QD_LINK_EDGE_DOWNLINK:
             break;
         }
     }
@@ -1960,6 +1959,9 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
 
             case QD_LINK_ROUTER:
                 break;
+
+            case QD_LINK_EDGE_DOWNLINK:
+                break;
             }
         } else {
             //
@@ -1967,6 +1969,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             //
             switch (link->link_type) {
             case QD_LINK_ENDPOINT:
+            case QD_LINK_EDGE_DOWNLINK:
                 if (addr) {
                     qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
                     was_local = true;

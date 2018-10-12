@@ -74,9 +74,10 @@ const char *qdr_link_columns[] =
 static const char *qd_link_type_name(qd_link_type_t lt)
 {
     switch (lt) {
-    case QD_LINK_ENDPOINT : return "endpoint";
-    case QD_LINK_CONTROL  : return "router-control";
-    case QD_LINK_ROUTER   : return "inter-router";
+    case QD_LINK_ENDPOINT      : return "endpoint";
+    case QD_LINK_CONTROL       : return "router-control";
+    case QD_LINK_ROUTER        : return "inter-router";
+    case QD_LINK_EDGE_DOWNLINK : return "edge-downlink";
     }
 
     return "";

@@ -252,10 +252,6 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
 
         }
     }
-
-    if (core->router_mode == QD_ROUTER_MODE_EDGE) {
-        core->uplink_addr = qdr_add_local_address_CT(core, 'L', "_uplink", QD_TREATMENT_ANYCAST_CLOSEST);
-    }
 }
 
 

@@ -19,9 +19,11 @@
 
 #include "module.h"
 #include "connection_manager.h"
+#include "addr_proxy.h"
 
 typedef struct {
-    qcm_edge_conn_mgr_t *conn_mgr;
+    qcm_edge_conn_mgr_t   *conn_mgr;
+    qcm_edge_addr_proxy_t *addr_proxy;
     // TODO - Add pointers to other edge-router state here
 } qcm_edge_t;
 
@@ -30,7 +32,8 @@ static void qcm_edge_router_init_CT(qdr_core_t *core, void **module_context)
 {
     if (core->router_mode == QD_ROUTER_MODE_EDGE) {
         qcm_edge_t *edge = NEW(qcm_edge_t);
-        edge->conn_mgr = qcm_edge_conn_mgr(core);
+        edge->conn_mgr   = qcm_edge_conn_mgr(core);
+        edge->addr_proxy = qcm_edge_addr_proxy(core);
         // TODO - Add initialization of other edge-router functions here
         *module_context = edge;
     } else
@@ -44,6 +47,7 @@ static void qcm_edge_router_final_CT(void *module_context)
 
     if (edge) {
         qcm_edge_conn_mgr_final(edge->conn_mgr);
+        qcm_edge_addr_proxy_final(edge->addr_proxy);
         // TODO - Add finalization of other edge-router functions here
         free(edge);
     }
