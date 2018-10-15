@@ -131,6 +131,45 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_10_mobile_address_same_edge(self):
+        test = MobileAddressTest(self.routers[2].addresses[0],
+                                 self.routers[2].addresses[0],
+                                 "test_10")
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_11_mobile_address_interior_to_edge(self):
+        self.skipTest("Temporarily disabled")
+        test = MobileAddressTest(self.routers[2].addresses[0],
+                                 self.routers[0].addresses[0],
+                                 "test_11")
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_12_mobile_address_edge_to_interior(self):
+        self.skipTest("Temporarily disabled")
+        test = MobileAddressTest(self.routers[0].addresses[0],
+                                 self.routers[2].addresses[0],
+                                 "test_12")
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_13_mobile_address_edge_to_edge_one_interior(self):
+        self.skipTest("Temporarily disabled")
+        test = MobileAddressTest(self.routers[2].addresses[0],
+                                 self.routers[3].addresses[0],
+                                 "test_13")
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_14_mobile_address_edge_to_edge_two_interior(self):
+        self.skipTest("Temporarily disabled")
+        test = MobileAddressTest(self.routers[2].addresses[0],
+                                 self.routers[4].addresses[0],
+                                 "test_14")
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, body):
@@ -269,6 +308,49 @@ class DynamicAddressTest(MessagingHandler):
         if event.receiver == self.receiver:
             self.address = self.receiver.remote_source.address
             self.sender  = event.container.create_sender(self.sender_conn, self.address)
+
+    def on_sendable(self, event):
+        while self.n_sent < self.count:
+            self.sender.send(Message(body="Message %d" % self.n_sent))
+            self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_rcvd += 1
+        if self.n_rcvd == self.count:
+            self.receiver_conn.close()
+            self.sender_conn.close()
+            self.timer.cancel()
+
+    def run(self):
+        Container(self).run()
+
+
+class MobileAddressTest(MessagingHandler):
+    def __init__(self, receiver_host, sender_host, address):
+        super(MobileAddressTest, self).__init__()
+        self.receiver_host = receiver_host
+        self.sender_host   = sender_host
+        self.address       = address
+
+        self.receiver_conn = None
+        self.sender_conn   = None
+        self.receiver      = None
+        self.count         = 10
+        self.n_rcvd        = 0
+        self.n_sent        = 0
+        self.error         = None
+
+    def timeout(self):
+        self.error = "Timeout Expired - n_sent=%d n_rcvd=%d addr=%s" % (self.n_sent, self.n_rcvd, self.address)
+        self.receiver_conn.close()
+        self.sender_conn.close()
+
+    def on_start(self, event):
+        self.timer         = event.reactor.schedule(5.0, Timeout(self))
+        self.receiver_conn = event.container.connect(self.receiver_host)
+        self.sender_conn   = event.container.connect(self.sender_host)
+        self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
+        self.sender        = event.container.create_sender(self.sender_conn, self.address)
 
     def on_sendable(self, event):
         while self.n_sent < self.count:
