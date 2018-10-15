@@ -404,7 +404,7 @@ bool qdr_link_is_anonymous(const qdr_link_t *link)
 
 bool qdr_link_is_routed(const qdr_link_t *link)
 {
-    return link->connected_link != 0;
+    return link->connected_link != 0 || link->core_endpoint != 0;
 }
 
 
