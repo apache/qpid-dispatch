@@ -38,10 +38,10 @@ class RouterTest(TestCase):
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'multiTenant': 'yes'}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'role': 'route-container'}),
-                ('linkRoute', {'prefix': '0.0.0.0/link', 'dir': 'in', 'containerId': 'LRC'}),
-                ('linkRoute', {'prefix': '0.0.0.0/link', 'dir': 'out', 'containerId': 'LRC'}),
-                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'dir': 'in'}),
-                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'dir': 'out'}),
+                ('linkRoute', {'prefix': '0.0.0.0/link', 'direction': 'in', 'containerId': 'LRC'}),
+                ('linkRoute', {'prefix': '0.0.0.0/link', 'direction': 'out', 'containerId': 'LRC'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'in'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'out'}),
                 ('address', {'prefix': 'closest', 'distribution': 'closest'}),
                 ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
@@ -139,7 +139,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_11_mobile_address_interior_to_edge(self):
-        self.skipTest("Temporarily disabled")
         test = MobileAddressTest(self.routers[2].addresses[0],
                                  self.routers[0].addresses[0],
                                  "test_11")
@@ -335,13 +334,17 @@ class MobileAddressTest(MessagingHandler):
         self.receiver_conn = None
         self.sender_conn   = None
         self.receiver      = None
-        self.count         = 10
+        self.count         = 300
+        self.rel_count     = 50
         self.n_rcvd        = 0
         self.n_sent        = 0
+        self.n_settled     = 0
+        self.n_released    = 0
         self.error         = None
 
     def timeout(self):
-        self.error = "Timeout Expired - n_sent=%d n_rcvd=%d addr=%s" % (self.n_sent, self.n_rcvd, self.address)
+        self.error = "Timeout Expired - n_sent=%d n_rcvd=%d n_settled=%d n_released=%d addr=%s" % \
+                     (self.n_sent, self.n_rcvd, self.n_settled, self.n_released, self.address)
         self.receiver_conn.close()
         self.sender_conn.close()
 
@@ -359,7 +362,18 @@ class MobileAddressTest(MessagingHandler):
 
     def on_message(self, event):
         self.n_rcvd += 1
-        if self.n_rcvd == self.count:
+
+    def on_settled(self, event):
+        self.n_settled += 1
+        if self.n_settled == self.count:
+            self.receiver.close()
+            for i in range(self.rel_count):
+                self.sender.send(Message(body="Message %d" % self.n_sent))
+                self.n_sent += 1
+
+    def on_released(self, event):
+        self.n_released += 1
+        if self.n_released == self.rel_count:
             self.receiver_conn.close()
             self.sender_conn.close()
             self.timer.cancel()

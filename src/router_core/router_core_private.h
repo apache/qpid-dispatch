@@ -477,6 +477,7 @@ struct qdr_address_t {
     qd_hash_handle_t          *hash_handle;   ///< Linkage back to the hash table entry
     qdrc_endpoint_desc_t      *core_endpoint; ///< [ref] Set if this address is bound to an in-core endpoint
     void                      *core_endpoint_context;
+    qdr_link_t                *edge_inlink;   ///< [ref] In-link from connected Interior router (on edge router)
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address

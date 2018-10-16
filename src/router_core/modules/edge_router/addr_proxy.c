@@ -41,6 +41,7 @@ struct qcm_edge_addr_proxy_t {
     qdrc_event_subscription_t *event_sub;
     bool                       uplink_established;
     qdr_address_t             *uplink_addr;
+    qdr_connection_t          *uplink_conn;
 };
 
 
@@ -48,6 +49,15 @@ static qdr_terminus_t *qdr_terminus_edge_downlink(const char *addr)
 {
     qdr_terminus_t *term = qdr_terminus(0);
     qdr_terminus_add_capability(term, QD_CAPABILITY_EDGE_DOWNLINK);
+    if (addr)
+        qdr_terminus_set_address(term, addr);
+    return term;
+}
+
+
+static qdr_terminus_t *qdr_terminus_normal(const char *addr)
+{
+    qdr_terminus_t *term = qdr_terminus(0);
     if (addr)
         qdr_terminus_set_address(term, addr);
     return term;
@@ -64,6 +74,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
         // Flag the uplink as being established.
         //
         ap->uplink_established = true;
+        ap->uplink_conn        = conn;
 
         //
         // Attach an anonymous sending link to the interior router.
@@ -96,6 +107,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
 
     case QDRC_EVENT_CONN_EDGE_LOST :
         ap->uplink_established = false;
+        ap->uplink_conn        = 0;
         break;
 
     default:
@@ -108,6 +120,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
 static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr)
 {
     qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) context;
+    qdr_link_t            *link;
 
     //
     // If we don't have an established uplink, there is no further work to be done.
@@ -124,9 +137,18 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     switch (event) {
     case QDRC_EVENT_ADDR_BECAME_LOCAL_DEST :
+        link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_INCOMING,
+                                  qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
+        qdr_core_bind_address_link_CT(ap->core, addr, link);
+        addr->edge_inlink = link;
+
         break;
 
     case QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST :
+        link = addr->edge_inlink;
+        qdr_core_unbind_address_link_CT(ap->core, addr, link);
+        qdr_link_outbound_detach_CT(ap->core, link, 0, QDR_CONDITION_NONE, true);
+
         break;
 
     default:
