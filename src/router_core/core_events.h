@@ -45,6 +45,7 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_LINK_IN_DETACHED           An inbound link has been detached
  * QDRC_EVENT_LINK_OUT_ATTACHED          An outbound link has been attached
  * QDRC_EVENT_LINK_OUT_DETACHED          An outbound link has been detached
+ * QDRC_EVENT_LINK_EDGE_OUTLINK          On an edge router, the outgoing message link(s) are attached
  *
  * QDRC_EVENT_ADDR_ADDED                 An address has been added
  * QDRC_EVENT_ADDR_REMOVED               An address has been removed
@@ -68,7 +69,8 @@ typedef uint32_t qdrc_event_t;
 #define QDRC_EVENT_LINK_IN_DETACHED          0x00000200
 #define QDRC_EVENT_LINK_OUT_ATTACHED         0x00000400
 #define QDRC_EVENT_LINK_OUT_DETACHED         0x00000800
-#define _QDRC_EVENT_LINK_RANGE               0x00000F00
+#define QDRC_EVENT_LINK_EDGE_OUTLINK         0x00001000
+#define _QDRC_EVENT_LINK_RANGE               0x00001F00
 
 #define QDRC_EVENT_ADDR_ADDED                0x00010000
 #define QDRC_EVENT_ADDR_REMOVED              0x00020000
