@@ -148,6 +148,11 @@ extern const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY;
 extern const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY;
 /// @}
 
+/** @name Terminus Addresses */
+/// @{
+extern const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING;
+/// @}
+
 /** @name AMQP error codes. */
 /// @{
 /** AMQP management error status code and string description (HTTP-style)  */

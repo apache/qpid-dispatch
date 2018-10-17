@@ -113,12 +113,6 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
             }
             addr = DEQ_NEXT(addr);
         }
-
-        //
-        // Raise an event for the establishment of the edge out-link
-        //
-        qdrc_event_link_raise(ap->core, QDRC_EVENT_LINK_EDGE_OUTLINK, out_link);
-
         break;
     }
 
@@ -158,14 +152,13 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
                                   qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
         qdr_core_bind_address_link_CT(ap->core, addr, link);
         addr->edge_inlink = link;
-
         break;
 
     case QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST :
         link = addr->edge_inlink;
+        addr->edge_inlink = 0;
         qdr_core_unbind_address_link_CT(ap->core, addr, link);
         qdr_link_outbound_detach_CT(ap->core, link, 0, QDR_CONDITION_NONE, true);
-
         break;
 
     default:

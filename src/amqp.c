@@ -50,6 +50,8 @@ const char * const QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY     = "port";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY   = "scheme";
 const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY = "hostname";
 
+const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING = "_$qd.edge_addr_tracking";
+
 const qd_amqp_error_t QD_AMQP_OK = { 200, "OK" };
 const qd_amqp_error_t QD_AMQP_CREATED = { 201, "Created" };
 const qd_amqp_error_t QD_AMQP_NO_CONTENT = { 204, "No Content" }; // This is the response code if the delete of a manageable entity was successful.
