@@ -1914,9 +1914,9 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                     qdr_drain_inbound_undelivered_CT(core, link, addr);
 
                     //
-                    // Remove this link from the linked address.
+                    // Unbind the address and the link.
                     //
-                    qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+                    qdr_core_unbind_address_link_CT(core, addr, link);
                 }
                 break;
 

@@ -45,7 +45,8 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_LINK_IN_DETACHED           An inbound link has been detached
  * QDRC_EVENT_LINK_OUT_ATTACHED          An outbound link has been attached
  * QDRC_EVENT_LINK_OUT_DETACHED          An outbound link has been detached
- * QDRC_EVENT_LINK_EDGE_OUTLINK          On an edge router, the outgoing message link(s) are attached
+ * QDRC_EVENT_LINK_EDGE_DATA_ATTACHED    An edge-data link has been attached
+ * QDRC_EVENT_LINK_EDGE_DATA_DETACHED    An edge-data link has been detached
  *
  * QDRC_EVENT_ADDR_ADDED                 An address has been added
  * QDRC_EVENT_ADDR_REMOVED               An address has been removed
@@ -55,6 +56,8 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_ADDR_NO_LONGER_DEST        An address transitioned from one to zero destinations
  * QDRC_EVENT_ADDR_ONE_LOCAL_DEST        An address transitioned from N destinations to one local dest
  * QDRC_EVENT_ADDR_TWO_DEST              An address transisioned from one local dest to two destinations
+ * QDRC_EVENT_ADDR_BECAME_SOURCE         An address transitioner from zero to one local source (inlink)
+ * QDRC_EVENT_ADDR_NO_LONGER_SOURCE      An address transitioner from one to zero local sources (inlink)
 */
 
 #define QDRC_EVENT_CONN_OPENED               0x00000001
@@ -81,7 +84,9 @@ typedef uint32_t qdrc_event_t;
 #define QDRC_EVENT_ADDR_NO_LONGER_DEST       0x00200000
 #define QDRC_EVENT_ADDR_ONE_LOCAL_DEST       0x00400000
 #define QDRC_EVENT_ADDR_TWO_DEST             0x00800000
-#define _QDRC_EVENT_ADDR_RANGE               0x00FF0000
+#define QDRC_EVENT_ADDR_BECAME_SOURCE        0x01000000
+#define QDRC_EVENT_ADDR_NO_LONGER_SOURCE     0x02000000
+#define _QDRC_EVENT_ADDR_RANGE               0x03FF0000
 
 
 /**

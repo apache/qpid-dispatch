@@ -19,22 +19,45 @@
 
 #include "addr_proxy.h"
 #include "core_events.h"
+#include "core_link_endpoint.h"
 #include "router_core_private.h"
+#include "qpid/dispatch/amqp.h"
+#include "qpid/dispatch/message.h"
+#include "qpid/dispatch/iterator.h"
+#include "qpid/dispatch/parse.h"
 #include <stdio.h>
 #include <inttypes.h>
 
 //
 // This is the Address Proxy component of the Edge Router module.
 //
-// Address Proxy has three main responsibilities:
-//  1) When an uplink becomes active, the "_uplink" address is properly linked to an
-//     outgoing anonymous link on the active uplink connection.
-//  2) When an uplink becomes active, an incoming link is established over the uplink
-//     connection that is used to transfer deliveries to topological (dynamic) addresses
-//     on the edge router.
-//  3) Ensure that if there is an active uplink, that uplink should have one incoming
-//     link for every address for which there is at least one local consumer.
+// Address Proxy has the following responsibilities:
 //
+//   Related to dynamic (topological) addresses:
+//
+//    1) When an uplink becomes active, the "_uplink" address is properly linked to an
+//       outgoing anonymous link on the active uplink connection.
+//
+//    2) When an uplink becomes active, an incoming link is established over the uplink
+//       connection that is used to transfer deliveries to topological (dynamic) addresses
+//       on the edge router.
+//
+//  Related to mobile addresses:
+//
+//    3) Ensure that if there is an active uplink, that uplink should have one incoming
+//       link for every mobile address for which there is at least one local consumer.
+//
+//    4) Ensure that if there is an active uplink, that uplink should have one outgoing
+//       link for every mobile address for which there is at least one local producer.
+//
+//    5) Maintain an incoming link for edge-address-tracking attached to the edge-address-tracker
+//       in the connected interior router.
+//
+//    6) Handle address tracking updates indicating which producer-addresses have destinations
+//       reachable via the edge uplink.
+//
+
+#define INITIAL_CREDIT 32
 
 struct qcm_edge_addr_proxy_t {
     qdr_core_t                *core;
@@ -42,6 +65,8 @@ struct qcm_edge_addr_proxy_t {
     bool                       uplink_established;
     qdr_address_t             *uplink_addr;
     qdr_connection_t          *uplink_conn;
+    qdrc_endpoint_t           *tracking_endpoint;
+    qdrc_endpoint_desc_t       endpoint_descriptor;
 };
 
 
@@ -61,6 +86,50 @@ static qdr_terminus_t *qdr_terminus_normal(const char *addr)
     if (addr)
         qdr_terminus_set_address(term, addr);
     return term;
+}
+
+
+static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t *addr)
+{
+    qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_INCOMING,
+                                          qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
+    qdr_core_bind_address_link_CT(ap->core, addr, link);
+    addr->edge_inlink = link;
+}
+
+
+static void del_inlink(qcm_edge_addr_proxy_t *ap, qdr_address_t *addr)
+{
+    qdr_link_t *link = addr->edge_inlink;
+    if (link) {
+        addr->edge_inlink = 0;
+        qdr_core_unbind_address_link_CT(ap->core, addr, link);
+        qdr_link_outbound_detach_CT(ap->core, link, 0, QDR_CONDITION_NONE, true);
+    }
+}
+
+
+static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t *addr)
+{
+    //
+    // Note that this link must not be bound to the address at this time.  That will
+    // happen later when the interior tells us that there are upstream destinations
+    // for the address.
+    //
+    qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
+                                          qdr_terminus_normal(0), qdr_terminus_normal(key + 2));
+    addr->edge_outlink = link;
+}
+
+
+static void del_outlink(qcm_edge_addr_proxy_t *ap, qdr_address_t *addr)
+{
+    qdr_link_t *link = addr->edge_outlink;
+    if (link) {
+        addr->edge_outlink = 0;
+        qdr_core_unbind_address_link_CT(ap->core, addr, link);
+        qdr_link_outbound_detach_CT(ap->core, link, 0, QDR_CONDITION_NONE, true);
+    }
 }
 
 
@@ -99,17 +168,33 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                                   qdr_terminus_edge_downlink(0));
 
         //
+        // Attach a receiving link for edge address tracking updates.
+        //
+        ap->tracking_endpoint =
+            qdrc_endpoint_create_link_CT(ap->core, conn, QD_INCOMING,
+                                         qdr_terminus_normal(QD_TERMINUS_EDGE_ADDRESS_TRACKING),
+                                         qdr_terminus(0), &ap->endpoint_descriptor, ap);
+
+        //
         // Process eligible local destinations
         //
         qdr_address_t *addr = DEQ_HEAD(ap->core->addrs);
         while (addr) {
             const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-            if (*key == QD_ITER_HASH_PREFIX_MOBILE && DEQ_SIZE(addr->rlinks) > 0) {
-                qdr_link_t *addr_link =
-                    qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_INCOMING,
-                                       qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
-                qdr_core_bind_address_link_CT(ap->core, addr, addr_link);
-                addr->edge_inlink = addr_link;
+            if (*key == QD_ITER_HASH_PREFIX_MOBILE) {
+                //
+                // If the address has more than zero attached destinations, create an
+                // incoming link from the interior to signal the presence of local consumers.
+                //
+                if (DEQ_SIZE(addr->rlinks) > 0)
+                    add_inlink(ap, key, addr);
+
+                //
+                // If the address has more than zero attached sources, create an outgoing link
+                // to the interior to signal the presence of local producers.
+                //
+                if (DEQ_SIZE(addr->inlinks) > 0)
+                    add_outlink(ap, key, addr);
             }
             addr = DEQ_NEXT(addr);
         }
@@ -131,7 +216,6 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
 static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr)
 {
     qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) context;
-    qdr_link_t            *link;
 
     //
     // If we don't have an established uplink, there is no further work to be done.
@@ -148,17 +232,19 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     switch (event) {
     case QDRC_EVENT_ADDR_BECAME_LOCAL_DEST :
-        link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_INCOMING,
-                                  qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
-        qdr_core_bind_address_link_CT(ap->core, addr, link);
-        addr->edge_inlink = link;
+        add_inlink(ap, key, addr);
         break;
 
     case QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST :
-        link = addr->edge_inlink;
-        addr->edge_inlink = 0;
-        qdr_core_unbind_address_link_CT(ap->core, addr, link);
-        qdr_link_outbound_detach_CT(ap->core, link, 0, QDR_CONDITION_NONE, true);
+        del_inlink(ap, addr);
+        break;
+
+    case QDRC_EVENT_ADDR_BECAME_SOURCE :
+        add_outlink(ap, key, addr);
+        break;
+
+    case QDRC_EVENT_ADDR_NO_LONGER_SOURCE :
+        del_outlink(ap, addr);
         break;
 
     default:
@@ -168,12 +254,84 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 }
 
 
+static void on_second_attach(void           *link_context,
+                             qdr_terminus_t *remote_source,
+                             qdr_terminus_t *remote_target)
+{
+    qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
+
+    qdrc_endpoint_flow_CT(ap->core, ap->tracking_endpoint, INITIAL_CREDIT, false);
+}
+
+
+static void on_transfer(void           *link_context,
+                        qdr_delivery_t *dlv,
+                        qd_message_t   *msg)
+{
+    qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
+
+    //
+    // Validate the message
+    //
+    if (qd_message_check(msg, QD_DEPTH_BODY)) {
+        //
+        // Get the message body.  It must be a list with two elements.  The first is an address
+        // and the second is a boolean indicating whether that address has upstream destinations.
+        //
+        qd_iterator_t     *iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+        qd_parsed_field_t *body = qd_parse(iter);
+        if (!!body && qd_parse_is_list(body) && qd_parse_sub_count(body) == 2) {
+            qd_parsed_field_t *addr_field = qd_parse_sub_value(body, 0);
+            qd_parsed_field_t *dest_field = qd_parse_sub_value(body, 1);
+
+            if (qd_parse_is_scalar(addr_field) && qd_parse_is_scalar(dest_field)) {
+                qd_iterator_t *addr_iter = qd_parse_raw(addr_field);
+                bool           dest      = qd_parse_as_bool(dest_field);
+                qdr_address_t *addr;
+
+                qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
+                qd_hash_retrieve(ap->core->addr_hash, addr_iter, (void**) &addr);
+                if (addr) {
+                    qdr_link_t *link = addr->edge_outlink;
+                    if (link) {
+                        if (dest)
+                            qdr_core_bind_address_link_CT(ap->core, addr, link);
+                        else
+                            qdr_core_unbind_address_link_CT(ap->core, addr, link);
+                    }
+                }
+            }
+        }
+
+        qd_parse_free(body);
+        qd_iterator_free(iter);
+    }
+
+    //
+    // Replenish the credit for this delivery
+    //
+    qdrc_endpoint_flow_CT(ap->core, ap->tracking_endpoint, 1, false);
+}
+
+
+static void on_cleanup(void *link_context)
+{
+    qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
+
+    ap->tracking_endpoint = 0;
+}
+
+
 qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
 {
     qcm_edge_addr_proxy_t *ap = NEW(qcm_edge_addr_proxy_t);
 
+    ZERO(ap);
     ap->core = core;
-    ap->uplink_established = false;
+
+    ap->endpoint_descriptor.on_second_attach = on_second_attach;
+    ap->endpoint_descriptor.on_transfer      = on_transfer;
+    ap->endpoint_descriptor.on_cleanup       = on_cleanup;
 
     //
     // Establish the uplink address to represent destinations reachable via the edge uplink
@@ -187,7 +345,9 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
                                             QDRC_EVENT_CONN_EDGE_ESTABLISHED
                                             | QDRC_EVENT_CONN_EDGE_LOST
                                             | QDRC_EVENT_ADDR_BECAME_LOCAL_DEST
-                                            | QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST,
+                                            | QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST
+                                            | QDRC_EVENT_ADDR_BECAME_SOURCE
+                                            | QDRC_EVENT_ADDR_NO_LONGER_SOURCE,
                                             on_conn_event,
                                             0,
                                             on_addr_event,

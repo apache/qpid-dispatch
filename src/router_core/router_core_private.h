@@ -452,7 +452,7 @@ ALLOC_DECLARE(qdr_link_ref_t);
 DEQ_DECLARE(qdr_link_ref_t, qdr_link_ref_list_t);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
-void qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
+bool qdr_del_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
 void move_link_ref(qdr_link_t *link, int from_cls, int to_cls);
 
 
@@ -478,6 +478,7 @@ struct qdr_address_t {
     qdrc_endpoint_desc_t      *core_endpoint; ///< [ref] Set if this address is bound to an in-core endpoint
     void                      *core_endpoint_context;
     qdr_link_t                *edge_inlink;   ///< [ref] In-link from connected Interior router (on edge router)
+    qdr_link_t                *edge_outlink;  ///< [ref] Out-link to connected Interior router (on edge router)
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
     int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
