@@ -1,0 +1,215 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+= Contributor's Guide
+
+Use this guide to learn how to contribute to the Qpid Dispatch Router documentation. The documentation consists of a user guide, man pages, and a configuration reference. There are two contribution methods:
+
+* xref:simple-change[Make a simple change to the documentation through the GitHub interface]. This method works well for quick fixes and simple additions.
+
+* xref:large-contribution[Make a large or complex contribution]. This method involves forking the repository, editing the documentation files, and submitting a pull request.
+
+[id='simple-change']
+== Making a simple change to the documentation
+
+Follow this process if you want to make a quick fix or simple addition to the user guide:
+
+. Find the file you want to edit in the GitHub web interface.
+
+. Click the file name to open it in GitHub.
+
+. Click the pencil icon near the top right of the page contents. 
+
+. Make your edits.
++
+For more information, see link:style-guide.adoc[Style guidelines].
+
+. In the `Propose file change` section at the bottom of the page, enter a title and description of your changes. Enter enough detail for reviewers to know what you have changed and why.
+
+. Click *Propose file change* to create a new branch for this commit and start a pull request.
+
+. Click *Create pull request*.
+
+. Wait. The documentation team will typically review pull requests within a few days.
+
+[id='large-contribution']
+== Making a large contribution to the documentation
+
+To make a large or complex contribution to the user guide, follow this method.
+
+=== Setting up your environment
+
+Before making a documentation contribution, you must set up your environment. This involves forking the upstream GitHub repository and cloning the fork to your local machine.
+
+. If necessary, install `git`. For more information, see link:https://git-scm.com/book/en/v2/Getting-Started-Installing-Git[Installing Git].
+
+. link:https://help.github.com/articles/connecting-to-github-with-ssh/[Set up authentication] to the qpid-dispatch GitHub repository.
+
+. Fork the link:https://github.com/apache/qpid-dispatch[qpid-dispatch] GitHub repository.
+
+. Clone your fork onto your local machine.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git clone git@github.com:__<your-user-name>__/qpid-dispatch.git
+----
+
+. Navigate to the new directory.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ cd qpid-dispatch
+----
+
+. Add a git remote to your local repository to link to the upstream version of the documentation.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git remote add upstream git@github.com:apache/qpid-dispatch.git
+----
+
+. Verify that the remotes are set up properly.
++
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git remote -v
+origin	git@github.com:__<your-user-name>__/qpid-dispatch.git (fetch)
+origin	git@github.com:__<your-user-name>__/qpid-dispatch.git (push)
+upstream	git@github.com:apache/qpid-dispatch.git (fetch)
+upstream	git@github.com:apache/qpid-dispatch.git (push)
+----
+
+=== Updating the documentation
+
+Updating the documentation involves fetching the latest code from the upstream repository, making your documentation changes, and submitting a pull request. The following procedure describes how this workflow typically works:
+
+. Update your local repo with the latest changes from the upstream repository:
+
+.. Check out the master branch locally.
++
+[source,bash,options="nowrap"]
+----
+$ git checkout master
+----
+
+.. Fetch the current files from the upstream repository.
++
+[source,bash,options="nowrap"]
+----
+$ git fetch upstream
+----
+
+.. Update your cloned master branch on your local machine with the current files from the upstream repository:
++
+[source,bash,options="nowrap"]
+----
+$ git rebase upstream/master
+----
+
+.. Update your fork in GitHub (`origin`) with the current files from the upstream repository.
++
+[source,bash,options="nowrap"]
+----
+$ git push origin master
+----
+
+. If there is not a JIRA for your documentation update, create one in the link:https://issues.apache.org/jira/projects/DISPATCH[Apache Dispatch JIRA project].
++
+--
+When you create the JIRA:
+
+* Select the `Documentation` component.
+* Assign the JIRA to yourself.
+--
+
+. Create a branch on your local machine for the documentation update.
++
+--
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git checkout -b _<branch-name>_ upstream/master
+----
+The branch name should include the ID of the JIRA for which you are creating the documentation update.
+--
+
+. Make your changes to the documentation.
++
+For more information, see link:style-guide.adoc[Style guidelines].
+
+. Build the documentation locally to test your changes.
++
+For more information, see link:../README.adoc[Building the documentation].
+
+. When you are satisfied with your changes, commit them.
+
+.. Verify the files that you have changed.
++
+[source,bash,options="nowrap"]
+----
+$ git status
+----
+
+.. Stage the files that you changed.
++
+[source,bash,options="nowrap"]
+----
+$ git add -A
+----
+
+.. Create a commit with the staged files.
++
+--
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git commit -m "_<commit-message>_"
+----
+For the commit message, write a short sentence that clearly describes the changes you made.
+--
+
+.. Push your changes to your fork in GitHub.
++
+[source,bash,options="nowrap"]
+----
+$ git push origin HEAD
+----
+
+. In GitHub, create a pull request.
+
+.. In the link:https://github.com/apache/qpid-dispatch[qpid-dispatch] GitHub project, click *Pull requests*.
+
+.. Click [btn]*New pull request*.
+
+.. Click the *compare across forks* link.
+
+.. In the head fork drop-down, select your fork, and in the compare drop-down, select the branch you created for this documentation update.
+
+.. Review the diff to verify your changes one more time.
+
+.. Click [btn]*Create pull request*.
+
+.. Write a title and description for the pull request. The title must include the ID of the JIRA for this documentation update.
+
+.. Click [btn]*Create pull request*.
+
+. Wait. The documentation team will typically review pull requests within a few days.
+
+[NOTE]
+====
+After the pull request has been merged or rejected, you can remove your feature branch from both the remote fork and your local machine. GitHub provides a button for removing from the fork in the UI of the PR once it is merged. To remove the branch from your local machine, enter `git branch -d _<branch-name>_`.
+====
