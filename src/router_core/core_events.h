@@ -38,18 +38,18 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_CONN_CLOSED                A connection has closed
  * QDRC_EVENT_CONN_EDGE_ESTABLISHED      An edge connection has been established
  * QDRC_EVENT_CONN_EDGE_LOST             An edge connection has been lost
- * QDRC_EVENT_CONN_IR_ESTABLISHED        An inter-router connection has been established
- * QDRC_EVENT_CONN_IR_LOST               An inter-router connection has been lost
+ * QDRC_EVENT_CONN_IR_ESTABLISHED        (not implemented)
+ * QDRC_EVENT_CONN_IR_LOST               (not implemented)
  *
- * QDRC_EVENT_LINK_IN_ATTACHED           An inbound link has been attached
- * QDRC_EVENT_LINK_IN_DETACHED           An inbound link has been detached
- * QDRC_EVENT_LINK_OUT_ATTACHED          An outbound link has been attached
- * QDRC_EVENT_LINK_OUT_DETACHED          An outbound link has been detached
- * QDRC_EVENT_LINK_EDGE_DATA_ATTACHED    An edge-data link has been attached
- * QDRC_EVENT_LINK_EDGE_DATA_DETACHED    An edge-data link has been detached
+ * QDRC_EVENT_LINK_IN_ATTACHED           (not implemented)
+ * QDRC_EVENT_LINK_IN_DETACHED           (not implemented)
+ * QDRC_EVENT_LINK_OUT_ATTACHED          (not implemented)
+ * QDRC_EVENT_LINK_OUT_DETACHED          (not implemented)
+ * QDRC_EVENT_LINK_EDGE_DATA_ATTACHED    An edge-data link has been attached (incoming only)
+ * QDRC_EVENT_LINK_EDGE_DATA_DETACHED    An edge-data link has been detached (incoming only)
  *
- * QDRC_EVENT_ADDR_ADDED                 An address has been added
- * QDRC_EVENT_ADDR_REMOVED               An address has been removed
+ * QDRC_EVENT_ADDR_ADDED                 (not implemented)
+ * QDRC_EVENT_ADDR_REMOVED               (not implemented)
  * QDRC_EVENT_ADDR_BECAME_LOCAL_DEST     An address transitioned from zero to one local destination
  * QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST  An address transitioned from one to zero local destinations
  * QDRC_EVENT_ADDR_BECAME_DEST           An address transitioned from zero to one destination

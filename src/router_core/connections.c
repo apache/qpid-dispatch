@@ -1645,6 +1645,13 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                             || !!addr->exchange) {
                         qdr_link_issue_credit_CT(core, link, link->capacity, false);
                     }
+
+                    //
+                    // If this link came through an edge-uplink connection, raise a link event to
+                    // herald that fact.
+                    //
+                    if (link->conn->role == QDR_ROLE_EDGE_UPLINK)
+                        qdrc_event_link_raise(core, QDRC_EVENT_LINK_EDGE_DATA_ATTACHED, link);
                 }
             }
             break;
@@ -1921,6 +1928,12 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                     // Unbind the address and the link.
                     //
                     qdr_core_unbind_address_link_CT(core, addr, link);
+
+                    //
+                    // If this is an edge data link, raise a link event to indicate its detachment.
+                    //
+                    if (link->conn->role == QDR_ROLE_EDGE_UPLINK)
+                        qdrc_event_link_raise(core, QDRC_EVENT_LINK_EDGE_DATA_DETACHED, link);
                 }
                 break;
 

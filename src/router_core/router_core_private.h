@@ -399,6 +399,7 @@ struct qdr_link_t {
     qdr_core_t              *core;
     uint64_t                 identity;
     void                    *user_context;
+    void                    *edge_context;       ///< Opaque context to be used for edge-related purposes
     qdr_connection_t        *conn;               ///< [ref] Connection that owns this link
     qd_link_type_t           link_type;
     qd_direction_t           link_direction;
