@@ -284,7 +284,6 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
-    uint8_t                  priority;
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
