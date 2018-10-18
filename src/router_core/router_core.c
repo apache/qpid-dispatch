@@ -299,6 +299,7 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment
     addr->rnodes    = qd_bitmask(0);
     addr->add_prefix = 0;
     addr->del_prefix = 0;
+    addr->priority   = -1;
     return addr;
 }
 

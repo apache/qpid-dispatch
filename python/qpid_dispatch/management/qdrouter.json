@@ -1111,6 +1111,12 @@
                     "description": "Advanced - Override the egress phase for this address",
                     "create": true,
                     "required": false
+                },
+                "priority": {
+                    "type": "integer",
+                    "description": "All messages sent to this address which lack an intrinsic priority will be assigned this priority.",
+                    "create": true,
+                    "required": false
                 }
             }
         },

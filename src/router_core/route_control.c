@@ -472,7 +472,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
     if (!al->addr) {
-        qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0);
+        qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0, 0);
         if (treatment == QD_TREATMENT_UNAVAILABLE) {
             //if associated address is not defined, assume balanced
             treatment = QD_TREATMENT_ANYCAST_BALANCED;

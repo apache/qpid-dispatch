@@ -280,15 +280,13 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
  * This function returns a priority value for a message (and address).  If the message
  * has no priority header, the default priority is chosen.
  *
- * TODO: Add the ability to get the priority from the address if not present in the message
+ * If the address has a defined priority, that value takes precedence.
+ * Otherwise the message priority is used, which has a default value
+ * if none was explicitly set.
  */
 static uint8_t qdr_forward_effective_priority(qd_message_t *msg, qdr_address_t *addr)
 {
-    uint8_t priority;
-    bool    has_priority = qd_message_get_priority(msg, &priority);
-    if (!has_priority)
-        priority = QDR_DEFAULT_PRIORITY;
-    return priority;
+    return addr->priority >= 0 ? addr->priority : qd_message_get_priority(msg);
 }
 
 

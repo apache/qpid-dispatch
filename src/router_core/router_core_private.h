@@ -284,6 +284,7 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
+    uint8_t                  priority;
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
@@ -521,6 +522,8 @@ struct qdr_address_t {
     uint64_t deliveries_ingress_route_container;
 
     ///@}
+
+    int priority;
 };
 
 ALLOC_DECLARE(qdr_address_t);
@@ -544,6 +547,7 @@ struct qdr_address_config_t {
     qd_address_treatment_t  treatment;
     int                     in_phase;
     int                     out_phase;
+    int                     priority;
 };
 
 ALLOC_DECLARE(qdr_address_config_t);
@@ -877,7 +881,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *pe
 void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv);
 void qdr_connection_free(qdr_connection_t *conn);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase);
+qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase, int *priority);
 qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter);
 qdr_edge_t *qdr_edge(qdr_core_t *);
 void qdr_edge_free(qdr_edge_t *);

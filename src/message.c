@@ -789,6 +789,7 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
                 if (qd_parse_tag(priority_field) != QD_AMQP_NULL) {
                     uint32_t value = qd_parse_as_uint(priority_field);
                     content->priority = value >= QDR_N_PRIORITIES ? QDR_N_PRIORITIES - 1 : (uint8_t) (value & 0x00ff);
+                    content->priority = value > QDR_MAX_PRIORITY ? QDR_MAX_PRIORITY : (uint8_t) (value & 0x00ff);
                     content->priority_present = true;
                 }
             }
@@ -1077,17 +1078,21 @@ void qd_message_add_fanout(qd_message_t *in_msg)
     sys_atomic_inc(&msg->content->fanout);
 }
 
-bool qd_message_get_priority(qd_message_t *msg, uint8_t *priority)
+/**
+* There are two sources of priority information --
+* message and address. Address takes precedence, falling
+* through when no address priority has been specified.
+* This also means that messages must always have a priority,
+* using default value if sender leaves it unspecified.
+*/
+uint8_t qd_message_get_priority(qd_message_t *msg)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
 
     if (!content->priority_parsed)
         qd_message_parse_priority(msg);
 
-    if (content->priority_present)
-        *priority = content->priority;
-
-    return content->priority_present;
+    return content->priority_present ? content->priority : QDR_DEFAULT_PRIORITY;
 }
 
 bool qd_message_receive_complete(qd_message_t *in_msg)

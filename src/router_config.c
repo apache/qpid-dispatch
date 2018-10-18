@@ -78,6 +78,7 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
         bool  waypoint  = qd_entity_opt_bool(entity, "waypoint", false);
         long  in_phase  = qd_entity_opt_long(entity, "ingressPhase", -1);
         long  out_phase = qd_entity_opt_long(entity, "egressPhase", -1);
+        long  priority  = qd_entity_opt_long(entity, "priority",    -1);
 
         //
         // Formulate this configuration create it through the core management API.
@@ -107,6 +108,10 @@ qd_error_t qd_router_configure_address(qd_router_t *router, qd_entity_t *entity)
 
         qd_compose_insert_string(body, "waypoint");
         qd_compose_insert_bool(body, waypoint);
+
+        qd_compose_insert_string(body, "priority");
+        qd_compose_insert_long(body, priority);
+
 
         if (in_phase >= 0) {
             qd_compose_insert_string(body, "ingressPhase");
