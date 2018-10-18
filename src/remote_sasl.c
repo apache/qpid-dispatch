@@ -201,6 +201,15 @@ static bool remote_sasl_init_server(pn_transport_t* transport)
         pn_data_put_symbol(data, pn_bytes(13, "ADDRESS-AUTHZ"));
         pn_data_exit(data);
 
+        data = pn_connection_properties(impl->downstream);
+        pn_data_put_map(data);
+        pn_data_enter(data);
+        pn_data_put_symbol(data, pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_KEY), QD_CONNECTION_PROPERTY_PRODUCT_KEY));
+        pn_data_put_string(data, pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_VALUE), QD_CONNECTION_PROPERTY_PRODUCT_VALUE));
+        pn_data_put_symbol(data, pn_bytes(strlen(QD_CONNECTION_PROPERTY_VERSION_KEY), QD_CONNECTION_PROPERTY_VERSION_KEY));
+        pn_data_put_string(data, pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
+        pn_data_exit(data);
+
         pn_proactor_connect(proactor, impl->downstream, impl->authentication_service_address);
         return true;
     } else {
