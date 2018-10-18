@@ -1,0 +1,59 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+= Qpid Dispatch Router documentation
+
+This directory contains the documentation for Qpid Dispatch Router. The documentation consists of a user guide, man pages, and a configuration reference.
+
+[source,bash,options="nowrap",subs="+quotes"]
+----
+/docs
+  ├── books  # Files for the Dispatch Router user guide.
+  ├── man  # Man page source files and scripts.
+  └── notes  # Developer notes: project information, design notes, or anything else that's primarily of developer interest; these are not installed.
+----
+
+== Contributing to the Documentation
+
+Apache Qpid welcomes contributions from the community. To contribute to the documentation, see the link:notes/contrib-guide.adoc[Contributor's Guide].
+
+To file a documentation bug or tell us about any other issue with the documentation, visit the link:https://issues.apache.org/jira/projects/DISPATCH[Apache Dispatch JIRA project]. When creating the issue, be sure to select the `Documentation` component, and be as specific as possible about the changes you would like to see.
+
+[id='building-documentation']
+== Building the documentation
+
+You must have the following tools to build the documentation:
+
+* link:https://github.com/asciidoctor/asciidoctor[`asciidoctor` (1.5.6)] for building books
+* link:http://asciidoc.org/INSTALL.html[`asciidoc` (8.6.8)] for building man pages
+
+Clone the qpid-dispatch repository:
+
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ git clone https://github.com/apache/qpid-dispatch.git
+$ cd qpid-dispatch
+----
+
+Build the documentation:
+
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ make docs
+----
