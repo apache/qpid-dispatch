@@ -362,6 +362,19 @@ qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char *prefix, c
 }
 
 
+bool qdr_address_is_mobile_CT(qdr_address_t *addr)
+{
+    if (!addr)
+        return false;
+
+    const char *addr_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
+
+    if (addr_str && addr_str[0] == QD_ITER_HASH_PREFIX_MOBILE)
+        return true;
+
+    return false;
+}
+
 bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
 {
     if (addr) {

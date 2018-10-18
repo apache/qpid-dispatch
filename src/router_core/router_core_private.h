@@ -841,6 +841,13 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
 void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
+
+/**
+ * Returns true if the passed in address is a mobile address, false otherwise
+ * If the first character of the address_key (obtained using its hash_handle) is M, the address is mobile.
+ */
+bool qdr_address_is_mobile_CT(qdr_address_t *addr);
+
 void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv);
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
