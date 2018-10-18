@@ -430,11 +430,19 @@ bool qd_policy_open_lookup_user(
                     settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
                     settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
                     settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
-                    settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
-                    settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
+                    if (!settings->allowAnonymousSender) { //don't override if enabled by authz plugin
+                        settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
+                    }
+                    if (!settings->allowDynamicSource) { //don't override if enabled by authz plugin
+                        settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
+                    }
                     settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                    settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
-                    settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    if (settings->sources == 0) { //don't override if configured by authz plugin
+                        settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                    }
+                    if (settings->targets == 0) { //don't override if configured by authz plugin
+                        settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                    }
                     settings->sourcePattern        = qd_entity_get_string((qd_entity_t*)upolicy, "sourcePattern");
                     settings->targetPattern        = qd_entity_get_string((qd_entity_t*)upolicy, "targetPattern");
                     settings->sourceParseTree      = qd_policy_parse_tree(settings->sourcePattern);
