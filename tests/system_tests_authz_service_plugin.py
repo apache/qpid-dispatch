@@ -73,9 +73,12 @@ mech_list: SCRAM-SHA-1 PLAIN
         cls.auth_service_port = cls.tester.get_port()
         cls.tester.popen(['/usr/bin/env', 'python', os.path.join(os.path.dirname(os.path.abspath(__file__)), 'authservice.py'), '-a', 'amqps://127.0.0.1:%d' % cls.auth_service_port, '-c', os.getcwd()], expect=Process.RUNNING)
 
+        policy_config_path = os.path.join(DIR, 'policy-authz')
+
         cls.router_port = cls.tester.get_port()
         cls.tester.qdrouterd('router', Qdrouterd.Config([
                      ('sslProfile', {'name':'myssl'}),
+                     ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'}),
                      # authService attribute has been deprecated. We are using it here to make sure that we are
                      # still backward compatible.
                      ('authServicePlugin', {'name':'myauth', 'sslProfile':'myssl', 'port': cls.auth_service_port, 'host': '127.0.0.1'}),
