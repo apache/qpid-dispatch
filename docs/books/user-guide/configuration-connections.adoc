@@ -25,7 +25,21 @@ Connections define how the router communicates with clients, other routers, and 
 [id='adding-incoming-connections']
 == Listening for Incoming Connections
 
-Listening for incoming connections involves setting the host and port on which the router should listen for traffic.
+{RouterName} provides _listeners_ that accept client connections.
+A client connecting to a router listener uses the
+same methods that it would use to connect to a broker. From the
+client's perspective, the router connection and link establishment are
+identical to broker connection and link establishment.
+
+Several types of listeners are defined by their role.
+
+[options="header",cols="20,80"]
+|===
+| Role | Description
+| normal | The connection is used for AMQP clients using normal message delivery.
+| inter-router | The connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+| route-container | The connection is a broker or other resource that holds known addresses. The router will use this connection to create links as necessary. The addresses are available for routing only after the remote resource has created a connection.
+|===
 
 .Procedure
 
@@ -56,7 +70,23 @@ If you have set up SSL/TLS or SASL in your environment, you can configure the ro
 [id='adding-outgoing-connections']
 == Adding Outgoing Connections
 
-Configuring outgoing connections involves setting the host and port on which the router connects to other routers and brokers.
+You can configure {RouterName} to create outbound connections to
+messaging brokers or other AMQP entities using _connectors_. A
+connector is defined with the network address of the broker and the
+name or names of the resources that are available in that broker. When
+a router connects to a broker through a connector, it uses the same
+methods a normal messaging client would use when connecting to the
+broker.
+
+Several types of connectors are defined by their role.
+
+[options="header",cols="20,80"]
+|===
+| Role | Description
+| normal | The connection is used for AMQP clients using normal message delivery. On this connector the router will initiate the connection but it will never create any links. Links are to be created by the peer that accepts the connection.
+| inter-router | The connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+| route-container | The connection is to a broker or other resource that holds known addresses. The router will use this connection to create links as necessary. The addresses are available for routing only after the router has created a connection to the remote resource.
+|===
 
 // Adding this here for now; in the future it might be better to have separate procedures for creating inter-router and route-container connections.
 When a router connects to a broker, the broker might provide backup connection data that the router can use if the primary connection fails. If the primary connection fails, the router attempts to reconnect by using a combination of the primary and -- if provided -- backup connections in round-robin fashion until the connection is successful. For more information about viewing the backup connection data provided by the broker, see xref:managing-connectors[].

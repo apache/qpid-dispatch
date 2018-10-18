@@ -1,0 +1,49 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// important-terms-concepts.adoc
+
+[id='router-management-{context}']
+= Router management
+
+{RouterName} provides both graphical and CLI tools for monitoring and managing a router network.
+
+{RouterLongName} Console::
+A web console for monitoring the layout and health of the router network.
+
+qdstat::
+A command-line tool for monitoring the status of a router in the router network. Using this tool, you can view the following information about a router:
+
+* Incoming and outgoing connections
+* Incoming and outgoing links
+* Router network topology from the perspective of this router
+* Addresses known to this router
+* Link routes and autolinks
+* Memory consumption information
+
+qdmanage::
+A command-line tool for viewing and updating the configuration of a router at runtime.
+
+.Additional resources
+
+* xref:console-overview[]
+* xref:monitoring-using-qdstat[]
+* xref:managing-router[]

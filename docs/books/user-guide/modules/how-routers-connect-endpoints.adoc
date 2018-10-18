@@ -1,0 +1,52 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// important-terms-concepts.adoc
+
+[id='how-routers-connect-endpoints-{context}']
+= How routers connect endpoints
+
+{RouterName} connects clients, servers, AMQP services, and other routers through network connections. Routers use _listeners_ to accept incoming connections, and _connectors_ to establish outgoing connections.
+
+The following table describes how routers connect to clients, other routers, and message brokers:
+
+[cols="30,70",options="header"]
+|===
+| To connect to... | The router uses...
+
+| Clients
+| _Normal_ listeners and connectors.
+
+Clients can connect to a router using the same methods they would use to connect to a message broker. From the client's perspective, the connection to the router and link establishment are identical to a broker connection and link establishment.
+
+Routers can also connect to clients for normal message delivery. In this type of connection, the router initiates the connection, but does not create any links. Links are only created by the peer that accepts the connection.
+
+| Routers
+| _Inter-router_ listeners and connectors.
+
+Inter-router discovery and routing protocols are enabled over these types of connections.
+
+| Message brokers
+| _Route-container_ listeners and connectors.
+
+A router can accept connections from message brokers or any resource that hosts known AMQP addresses. Routers can also connect to these types of resources.
+
+|===

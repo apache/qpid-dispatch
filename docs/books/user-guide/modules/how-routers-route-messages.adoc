@@ -1,0 +1,73 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// important-terms-concepts.adoc
+
+[id='how-routers-route-messages-{context}']
+= How routers route messages
+
+In a router network, _routing_ is the process by which messages are delivered to their destinations. To accomplish this, {RouterName} offers two different routing mechanisms: 
+
+Message routing::
+Message routing enables you to distribute messages in anycast and multicast patterns. These patterns can be used for both direct routing, in which the router distributes messages between clients without a message broker, and indirect routing, in which the router enables clients to exchange messages through a message broker.
++
+Message routing is useful for the following types of requirements:
++
+--
+* Default, basic message routing
++
+{RouterName} automatically routes messages by default, so manual configuration is only required if you want routing behavior that is different than the default.
+
+* Message-based routing patterns
++
+Message routing supports both anycast and multicast routing patterns. You can load-balance individual messages across multiple consumers, and multicast (or fan-out) messages to multiple subscribers.
+
+* Sharding messages across multiple message brokers when message delivery order is not important
++
+Sharding messages from one producer might cause that producer’s messages to be received in a different order than the order in which they were sent.
+--
+
+Link routing:: 
+Link routing enables you to establish a dedicated, virtual "path" between a sender and receiver that travels through the router network. Link routes are typically used to connect clients to message brokers in scenarios in which a direct connection is unfeasible. Therefore, link routes enable messaging capabilities that are not possible with message routing, such as:
++
+--
+* Transactional messaging
++
+Link routing supports local transactions to a single broker. Distributed transactions are not supported.
+
+* Guaranteed message delivery order
++
+Link routing to a sharded queue preserves the delivery order of the producer’s messages by causing all messages on that link to go to the same broker instance.
+
+* End-to-end flow control
++
+Flow control is "real" in that credits flow across the link route from the receiver to the sender.
+
+* Server-side selectors
++
+With a link route, consumers can provide server-side selectors for broker subscriptions.
+--
+
+.Additional resources
+
+* xref:configuring-message-routing[]
+
+* xref:configuring-link-routing[]

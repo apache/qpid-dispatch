@@ -1,0 +1,97 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// getting-started.adoc
+
+[id='sending-test-messages-{context}']
+= Sending test messages
+
+After starting the router, send some test messages to see how the router can connect two endpoints by distributing messages between them.
+
+This procedure demonstrates a simple configuration consisting of a single router with two clients connected to it: a sender and a receiver. The receiver wants to receive messages on a specific address, and the sender sends
+messages to that address. 
+
+A broker is not used in this procedure, so there is no _"store and forward"_ mechanism in the middle. Instead, the messages flow from the sender, through the router, to the receiver only if the receiver is online, and the sender can confirm that the messages have arrived at their destination.
+
+.Prerequisites
+
+{ClientAmqpPythonName} must be installed. For more information, see {ClientAmqpPythonUrl}.
+
+.Procedure
+
+. Navigate to the {ClientAmqpPythonName} Python examples directory.
++
+--
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ cd __<install-dir>__/examples/python/
+----
+
+<install-dir>:: The directory where you installed {ClientAmqpPythonName}.
+--
+
+. Start the `simple_recv.py` receiver client.
++
+--
+[source,bash,options="nowrap"]
+----
+$ python simple_recv.py -a 127.0.0.1:5672/examples -m 5
+----
+
+This command starts the receiver and listens on the `examples` address (`127.0.0.1:5672/examples`). The receiver is also set to receive a maximum of five messages.
+
+[NOTE]
+====
+In practice, the order in which you start senders and receivers does not matter. In both cases, messages will be sent as soon as the receiver comes online.
+====
+--
+
+. In a new terminal window, navigate to the Python examples directory and run the `simple_send.py` example:
++
+--
+[source,bash,options="nowrap",subs="+quotes"]
+----
+$ cd __<install-dir>__/examples/python/
+$ python simple_send.py -a 127.0.0.1:5672/examples -m 5
+----
+
+This command sends five auto-generated messages to the `examples` address (`127.0.0.1:5672/examples`) and then confirms that they were delivered and acknowledged by the receiver:
+
+[source,bash,options="nowrap"]
+----
+all messages confirmed
+----
+--
+
+. Verify that the receiver client received the messages.
++
+--
+The receiver client should display the contents of the five messages:
+
+[source,bash,options="nowrap"]
+----
+{u'sequence': 1L}
+{u'sequence': 2L}
+{u'sequence': 3L}
+{u'sequence': 4L}
+{u'sequence': 5L}
+----
+--
