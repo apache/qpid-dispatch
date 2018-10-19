@@ -417,13 +417,6 @@ class LinkRouteEntity(EntityAdapter):
     def __str__(self):
         return super(LinkRouteEntity, self).__str__().replace("Entity(", "LinkRouteEntity(")
 
-class RouterConnectionAttachsubscriptionEntity(EntityAdapter):
-    def create(self):
-        self._qd.qd_dispatch_configure_attach_subscription(self._dispatch, self)
-
-    def __str__(self):
-        return super(RouterConnectionAttachsubscriptionEntity, self).__str__().replace("Entity(", "RouterConnectionAttachsubscriptionEntity(")
-
 class AutoLinkEntity(EntityAdapter):
     def create(self):
         self._qd.qd_dispatch_configure_auto_link(self._dispatch, self)
@@ -526,12 +519,6 @@ class BindingEntity(EntityAdapter):
     def __str__(self):
         return super(BindingEntity, self).__str__().replace("Entity(", "BindingEntity(")
 
-class AttachSubscriptionEntity(EntityAdapter):
-    def create(self):
-        self._qd.qd_dispatch_configure_attach_subscription(self._dispatch, self)
-
-    def __str__(self):
-        return super(AttachSubscriptionEntity, self).__str__().replace("Entity(", "AttachSubscriptionEntity(")
 
 class EntityCache(object):
     """

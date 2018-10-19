@@ -67,7 +67,6 @@ class Config(object):
             if s[0] == "autoLink":  s[0] = "router.config.autoLink"
             if s[0] == "exchange":  s[0] = "router.config.exchange"
             if s[0] == "binding":   s[0] = "router.config.binding"
-            if s[0] == "attachSubscription":   s[0] = "router.connection.attachSubscription"
 
     @staticmethod
     def _parse(lines):
@@ -211,7 +210,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for t in "sslProfile", "authServicePlugin", "listener", "connector", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "router.config.exchange", "router.config.binding", \
-             "vhost", "router.connection.attachSubscription":
+             "vhost":
         for a in config.by_type(t):
             configure(a)
             if t == "sslProfile":

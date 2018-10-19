@@ -28,7 +28,7 @@
 #include "exchange_bindings.h"
 #include <stdio.h>
 #include "agent_router.h"
-#include "agent_attach_subscription.h"
+#include "agent_conn_link_route.h"
 
 
 static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -205,8 +205,8 @@ qdr_query_t *qdr_manage_query(qdr_core_t              *core,
     case QD_ROUTER_FORBIDDEN:         break;
     case QD_ROUTER_EXCHANGE:          qdr_agent_set_columns(query, attribute_names, qdr_config_exchange_columns, QDR_CONFIG_EXCHANGE_COLUMN_COUNT); break;
     case QD_ROUTER_BINDING:           qdr_agent_set_columns(query, attribute_names, qdr_config_binding_columns, QDR_CONFIG_BINDING_COLUMN_COUNT); break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: qdr_agent_set_columns(query, attribute_names, qdr_attach_subscription_columns,
-                                                              QDR_ATTACH_SUBSCRIPTION_COLUMN_COUNT); break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   qdr_agent_set_columns(query, attribute_names, qdr_conn_link_route_columns,
+                                                            QDR_CONN_LINK_ROUTE_COLUMN_COUNT); break;
     }
 
     return query;
@@ -226,7 +226,7 @@ void qdr_query_add_attribute_names(qdr_query_t *query)
     case QD_ROUTER_FORBIDDEN:         qd_compose_empty_list(query->body); break;
     case QD_ROUTER_EXCHANGE:          qdr_agent_emit_columns(query, qdr_config_exchange_columns, QDR_CONFIG_EXCHANGE_COLUMN_COUNT); break;
     case QD_ROUTER_BINDING:           qdr_agent_emit_columns(query, qdr_config_binding_columns, QDR_CONFIG_BINDING_COLUMN_COUNT); break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: qdr_agent_emit_columns(query, qdr_attach_subscription_columns, QDR_ATTACH_SUBSCRIPTION_COLUMN_COUNT); break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   qdr_agent_emit_columns(query, qdr_conn_link_route_columns, QDR_CONN_LINK_ROUTE_COLUMN_COUNT); break;
     }
 }
 
@@ -368,7 +368,7 @@ static void qdr_manage_read_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     case QD_ROUTER_FORBIDDEN:         qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_EXCHANGE:          qdra_config_exchange_get_CT(core, name, identity, query, qdr_config_exchange_columns); break;
     case QD_ROUTER_BINDING:           qdra_config_binding_get_CT(core, name, identity, query, qdr_config_binding_columns); break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: qdra_attach_subscription_get_CT(core, name, identity, query, qdr_attach_subscription_columns); break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   qdra_conn_link_route_get_CT(core, name, identity, query, qdr_conn_link_route_columns); break;
    }
 
     qdr_field_free(action->args.agent.name);
@@ -394,7 +394,7 @@ static void qdr_manage_create_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_FORBIDDEN:         qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_EXCHANGE:          qdra_config_exchange_create_CT(core, name, query, in_body); break;
     case QD_ROUTER_BINDING:           qdra_config_binding_create_CT(core, name, query, in_body); break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: qdra_attach_subscription_create_CT(core, name, query, in_body); break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   qdra_conn_link_route_create_CT(core, name, query, in_body); break;
 
    }
 
@@ -421,7 +421,7 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_FORBIDDEN:         qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_EXCHANGE:          qdra_config_exchange_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_BINDING:           qdra_config_binding_delete_CT(core, query, name, identity); break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: qdra_attach_subscription_delete_CT(core, query, name, identity); break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   qdra_conn_link_route_delete_CT(core, query, name, identity); break;
    }
 
    qdr_field_free(action->args.agent.name);
@@ -446,7 +446,7 @@ static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_FORBIDDEN:         qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_EXCHANGE:          break;
     case QD_ROUTER_BINDING:           break;
-    case QD_ROUTER_ATTACH_SUBSCRIPTION: break;
+    case QD_ROUTER_CONN_LINK_ROUTE:   break;
    }
 
    qdr_field_free(action->args.agent.name);
@@ -474,7 +474,7 @@ static void qdrh_query_get_first_CT(qdr_core_t *core, qdr_action_t *action, bool
         case QD_ROUTER_FORBIDDEN:         qdr_agent_forbidden(core, query, true); break;
         case QD_ROUTER_EXCHANGE:          qdra_config_exchange_get_first_CT(core, query, offset); break;
         case QD_ROUTER_BINDING:           qdra_config_binding_get_first_CT(core, query, offset); break;
-        case QD_ROUTER_ATTACH_SUBSCRIPTION: qdra_attach_subscription_get_first_CT(core, query, offset); break;
+        case QD_ROUTER_CONN_LINK_ROUTE:   qdra_conn_link_route_get_first_CT(core, query, offset); break;
         }
     }
 }
@@ -496,7 +496,7 @@ static void qdrh_query_get_next_CT(qdr_core_t *core, qdr_action_t *action, bool 
         case QD_ROUTER_FORBIDDEN:         break;
         case QD_ROUTER_EXCHANGE:          qdra_config_exchange_get_next_CT(core, query); break;
         case QD_ROUTER_BINDING:           qdra_config_binding_get_next_CT(core, query); break;
-        case QD_ROUTER_ATTACH_SUBSCRIPTION: qdra_attach_subscription_get_next_CT(core, query); break;
+        case QD_ROUTER_CONN_LINK_ROUTE:   qdra_conn_link_route_get_next_CT(core, query); break;
         }
     }
 }

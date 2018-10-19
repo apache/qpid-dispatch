@@ -233,12 +233,6 @@ qd_error_t qd_dispatch_configure_binding(qd_dispatch_t *qd, qd_entity_t *entity)
     return qd_error_code();
 }
 
-qd_error_t qd_dispatch_configure_attach_subscription(qd_dispatch_t *qd, qd_entity_t *entity) {
-    if (!qd->router) return qd_error(QD_ERROR_NOT_FOUND, "No router available");
-    qd_router_configure_attach_subscription(qd->router, entity);
-    return qd_error_code();
-}
-
 qd_error_t qd_dispatch_configure_policy(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_error_t err;

@@ -116,8 +116,8 @@ static void qdr_route_log_CT(qdr_core_t *core, const char *text, const char *nam
         if (!key) {
             key = (const char*) qd_hash_key_by_handle(conn->conn_id->container_hash_handle);
         }
-        type = (key && *key == 'L') ? "connection" : "container";
-        ++key;
+        if (key)
+            type = (*key++ == 'L') ? "connection" : "container";
     }
     if (!key && conn->connection_info) {
         type = "container";
@@ -601,9 +601,10 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
     // release any connection-based link routes.  These can exist on
     // QDR_ROLE_NORMAL connections.
     //
-    while (DEQ_SIZE(conn->conn_link_routes) > 0) {
+    while (DEQ_HEAD(conn->conn_link_routes)) {
+        qdr_link_route_t *lr = DEQ_HEAD(conn->conn_link_routes);
         // removes the link route from conn->link_routes
-        qdr_route_del_conn_route_CT(core, DEQ_HEAD(conn->conn_link_routes));
+        qdr_route_del_conn_route_CT(core, lr);
     }
 
     if (conn->role != QDR_ROLE_ROUTE_CONTAINER)

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "agent_attach_subscription.h"
+#include "agent_conn_link_route.h"
 #include "agent_config_address.h"
 #include "agent_config_link_route.h"
 #include "route_control.h"
@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-const char *qdr_attach_subscription_columns[QDR_ATTACH_SUBSCRIPTION_COLUMN_COUNT + 1] =
+const char *qdr_conn_link_route_columns[QDR_CONN_LINK_ROUTE_COLUMN_COUNT + 1] =
     {"name",
      "identity",
      "type",
@@ -34,43 +34,43 @@ const char *qdr_attach_subscription_columns[QDR_ATTACH_SUBSCRIPTION_COLUMN_COUNT
      "containerId",
      0};
 
-const char *ATTACH_SUBSCRIPTION_TYPE = "org.apache.qpid.dispatch.router.connection.attachSubscription";
+const char *CONN_LINK_ROUTE_TYPE = "org.apache.qpid.dispatch.router.connection.linkRoute";
 
 
 static void _insert_column_CT(qdr_link_route_t *lr, int col, qd_composed_field_t *body, bool as_map)
 {
     if (as_map)
-        qd_compose_insert_string(body, qdr_attach_subscription_columns[col]);
+        qd_compose_insert_string(body, qdr_conn_link_route_columns[col]);
 
     switch(col) {
-    case QDR_ATTACH_SUBSCRIPTION_NAME:
+    case QDR_CONN_LINK_ROUTE_NAME:
         if (lr->name)
             qd_compose_insert_string(body, lr->name);
         else
             qd_compose_insert_null(body);
         break;
 
-    case QDR_ATTACH_SUBSCRIPTION_IDENTITY: {
+    case QDR_CONN_LINK_ROUTE_IDENTITY: {
         char id_str[100];
         snprintf(id_str, 100, "%"PRId64, lr->identity);
         qd_compose_insert_string(body, id_str);
         break;
     }
 
-    case QDR_ATTACH_SUBSCRIPTION_TYPE:
-        qd_compose_insert_string(body, ATTACH_SUBSCRIPTION_TYPE);
+    case QDR_CONN_LINK_ROUTE_TYPE:
+        qd_compose_insert_string(body, CONN_LINK_ROUTE_TYPE);
         break;
 
-    case QDR_ATTACH_SUBSCRIPTION_PATTERN:
+    case QDR_CONN_LINK_ROUTE_PATTERN:
         qd_compose_insert_string(body, lr->pattern);
         break;
-    case QDR_ATTACH_SUBSCRIPTION_DIRECTION:
+    case QDR_CONN_LINK_ROUTE_DIRECTION:
         qd_compose_insert_string(body,
                                  lr->dir == QD_INCOMING
                                  ? "in"
                                  : "out");
         break;
-    case QDR_ATTACH_SUBSCRIPTION_CONTAINER_ID:
+    case QDR_CONN_LINK_ROUTE_CONTAINER_ID:
         if (lr->parent_conn && lr->parent_conn->connection_info) {
             if (lr->parent_conn->connection_info->container) {
                 qd_compose_insert_string(body,
@@ -102,7 +102,7 @@ static void _write_as_map_CT(qdr_query_t *query, qdr_link_route_t *lr)
 {
     qd_composed_field_t *body = query->body;
     qd_compose_start_map(body);
-    for (int col = 0; col < QDR_ATTACH_SUBSCRIPTION_COLUMN_COUNT; col++)
+    for (int col = 0; col < QDR_CONN_LINK_ROUTE_COLUMN_COUNT; col++)
         _insert_column_CT(lr, col, body, true);
     qd_compose_end_map(body);
 }
@@ -155,7 +155,7 @@ static qdr_link_route_t *_find_link_route_CT(qdr_connection_t *conn,
 }
 
 
-void qdra_attach_subscription_create_CT(qdr_core_t         *core,
+void qdra_conn_link_route_create_CT(qdr_core_t         *core,
                                         qd_iterator_t      *name,
                                         qdr_query_t        *query,
                                         qd_parsed_field_t  *in_body)
@@ -185,8 +185,8 @@ void qdra_attach_subscription_create_CT(qdr_core_t         *core,
     //
     // Extract the fields from the request
     //
-    qd_parsed_field_t *pattern_field    = qd_parse_value_by_key(in_body, qdr_attach_subscription_columns[QDR_ATTACH_SUBSCRIPTION_PATTERN]);
-    qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_attach_subscription_columns[QDR_ATTACH_SUBSCRIPTION_DIRECTION]);
+    qd_parsed_field_t *pattern_field    = qd_parse_value_by_key(in_body, qdr_conn_link_route_columns[QDR_CONN_LINK_ROUTE_PATTERN]);
+    qd_parsed_field_t *dir_field        = qd_parse_value_by_key(in_body, qdr_conn_link_route_columns[QDR_CONN_LINK_ROUTE_DIRECTION]);
 
     if (!pattern_field) {
         query->status.description = "Pattern field is required";
@@ -220,14 +220,14 @@ exit:
     free(pattern);
     if (query->status.status != QD_AMQP_CREATED.status) {
         qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s",
-               ATTACH_SUBSCRIPTION_TYPE, query->status.description);
+               CONN_LINK_ROUTE_TYPE, query->status.description);
         qd_compose_insert_null(query->body);  // no body map
     }
     qdr_agent_enqueue_response_CT(core, query);
 }
 
 
-void qdra_attach_subscription_delete_CT(qdr_core_t    *core,
+void qdra_conn_link_route_delete_CT(qdr_core_t    *core,
                                         qdr_query_t   *query,
                                         qd_iterator_t *name,
                                         qd_iterator_t *identity)
@@ -261,13 +261,13 @@ void qdra_attach_subscription_delete_CT(qdr_core_t    *core,
 exit:
     if (query->status.status != QD_AMQP_NO_CONTENT.status) {
         qd_log(core->agent_log, QD_LOG_ERROR, "Error performing DELETE of %s: %s",
-               ATTACH_SUBSCRIPTION_TYPE, query->status.description);
+               CONN_LINK_ROUTE_TYPE, query->status.description);
     }
     qdr_agent_enqueue_response_CT(core, query);
 }
 
 
-void qdra_attach_subscription_get_CT(qdr_core_t    *core,
+void qdra_conn_link_route_get_CT(qdr_core_t    *core,
                                      qd_iterator_t *name,
                                      qd_iterator_t *identity,
                                      qdr_query_t   *query,
@@ -303,7 +303,7 @@ exit:
 }
 
 
-void qdra_attach_subscription_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
+void qdra_conn_link_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
 {
     query->status = QD_AMQP_OK;
 
@@ -326,7 +326,7 @@ void qdra_attach_subscription_get_first_CT(qdr_core_t *core, qdr_query_t *query,
 }
 
 
-void qdra_attach_subscription_get_next_CT(qdr_core_t *core, qdr_query_t *query)
+void qdra_conn_link_route_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 {
     qdr_connection_t *conn = _find_conn_CT(core, query->in_conn);
     if (!conn || query->next_offset >= DEQ_SIZE(conn->conn_link_routes)) {

@@ -429,18 +429,6 @@ qd_error_t qd_router_configure_binding(qd_router_t *router, qd_entity_t *entity)
 }
 
 
-// attachSubscriptions are special snowflakes that cannot be configured via a
-// configuration file - they are only permitted at run time
-//
-qd_error_t qd_router_configure_attach_subscription(qd_router_t *router, qd_entity_t *entity)
-{
-    qd_log(router->log_source, QD_LOG_ERROR,
-           "attachSubscription can only be created via management at runtime."
-           " It cannot be specified in a configuration file.");
-    return qd_error(QD_ERROR_CONFIG, "attachSubscription cannot be created via the configuration file");
-}
-
-
 void qd_router_configure_free(qd_router_t *router)
 {
     if (!router) return;

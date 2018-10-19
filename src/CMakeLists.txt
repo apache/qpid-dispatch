@@ -85,7 +85,7 @@ set(qpid_dispatch_SOURCES
   router_core/agent_config_link_route.c
   router_core/agent_link.c
   router_core/agent_router.c
-  router_core/agent_attach_subscription.c
+  router_core/agent_conn_link_route.c
   router_core/connections.c
   router_core/core_events.c
   router_core/core_link_endpoint.c

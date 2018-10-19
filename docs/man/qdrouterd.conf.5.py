@@ -34,6 +34,12 @@ from qpid_dispatch_internal.compat import dict_itervalues
 CONNECTOR = 'org.apache.qpid.dispatch.connector'
 LISTENER = 'org.apache.qpid.dispatch.listener'
 
+# avoid writing these config entity types to the man file, they are not allowed
+# in the configuration file and are only supported at run time via management
+#
+TYPE_FILTER = ['router.connection.linkRoute']
+
+
 class ManPageWriter(SchemaWriter):
 
     def __init__(self):
@@ -136,6 +142,8 @@ listener {
 
             config = self.schema.entity_type("configurationEntity")
             for entity_type in dict_itervalues(self.schema.entity_types):
+                if entity_type.short_name in TYPE_FILTER:
+                    continue
                 if config in entity_type.all_bases:
                     with self.section(entity_type.short_name):
                         if entity_type.description:

@@ -446,7 +446,7 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
     else if (qd_iterator_equal(qd_parse_raw(parsed_field), config_binding_entity_type))
         *entity_type = QD_ROUTER_BINDING;
     else if (qd_iterator_equal(qd_parse_raw(parsed_field), attach_subscription_entity_type))
-        *entity_type = QD_ROUTER_ATTACH_SUBSCRIPTION;
+        *entity_type = QD_ROUTER_CONN_LINK_ROUTE;
     else
         return false;
 

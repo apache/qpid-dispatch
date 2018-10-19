@@ -1923,8 +1923,8 @@
             }
         },
 
-        "router.connection.attachSubscription": {
-            "description": "[EXPERIMENTAL] A linkRoute that is scoped to the connection that created it.  An attachSubscription is used to create a link-routed message flow between a client and a service.  Unlike configured linkRoutes, attachSubscriptions are scoped to a connection. They only exist within the context of a connection and when the connection is closed, they vanish. Note well that attachSubscriptions cannot be pre-configured - they must be created at run time via management operations.",
+        "router.connection.linkRoute": {
+            "description": "[EXPERIMENTAL] A linkRoute that is scoped to the connection that created it. Connection linkRoutes only exist within the context of a connection and when the connection is closed, they vanish. This differs from configured linkRoutes (router.config.linkRoute) which remain configured should their associated connection restart. Connection linkRoutes may be used by a client to create link-routed message flows that are automatically removed when the client disconnects.  Note well that connection.linkRoute cannot be declared in a configuration file - they must be created at run time via management operations over the connection which they are to be used. Connection linkRoutes are only visible to management access that is via the containing connection.",
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes" : {
