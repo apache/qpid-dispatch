@@ -373,7 +373,7 @@ class Priority ( MessagingHandler ):
 
         # First send the payload messages.
         if self.n_sent < self.n_messages :
-            for i in xrange(50) :
+            for i in range(50) :
                 msg = Message ( body=self.n_sent )
                 msg.priority = 3
                 self.sender.send ( msg )
