@@ -17,10 +17,13 @@
  * under the License.
  */
 
+#undef NDEBUG  // test code - uses asserts
+
 #include "qpid/dispatch/ctools.h"
 #include "qpid/dispatch/message.h"
 #include "qpid/dispatch/compose.h"
 #include "core_link_endpoint.h"
+#include "core_client_api.h"
 #include "module.h"
 #include <stdio.h>
 #include <inttypes.h>
@@ -36,6 +39,7 @@ typedef enum {
 
 typedef struct test_module_t test_module_t;
 typedef struct test_node_t   test_node_t;
+typedef struct test_client_t test_client_t;
 
 typedef struct test_endpoint_t {
     DEQ_LINKS(struct test_endpoint_t);
@@ -61,13 +65,14 @@ struct test_node_t {
 };
 
 struct test_module_t {
-    qdr_core_t  *core;
-    test_node_t *echo_node;
-    test_node_t *deny_node;
-    test_node_t *sink_node;
-    test_node_t *source_node;
-    test_node_t *source_ps_node;
-    test_node_t *discard_node;
+    qdr_core_t    *core;
+    test_node_t   *echo_node;
+    test_node_t   *deny_node;
+    test_node_t   *sink_node;
+    test_node_t   *source_node;
+    test_node_t   *source_ps_node;
+    test_node_t   *discard_node;
+    test_client_t *test_client;
 };
 
 
@@ -383,7 +388,7 @@ static qdrc_endpoint_desc_t descriptor = {"Core Test Hooks", on_first_attach, on
                                           on_transfer, on_first_detach, on_second_detach, on_cleanup};
 
 
-static test_module_t *qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)
+static test_module_t *qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core, test_module_t *module)
 {
     char *echo_address       = "org.apache.qpid.dispatch.router/test/echo";
     char *deny_address       = "org.apache.qpid.dispatch.router/test/deny";
@@ -392,9 +397,6 @@ static test_module_t *qdrc_test_hooks_core_endpoint_setup(qdr_core_t *core)
     char *source_ps_address  = "org.apache.qpid.dispatch.router/test/source_ps";
     char *discard_address    = "org.apache.qpid.dispatch.router/test/discard";
 
-    test_module_t *module = NEW(test_module_t);
-
-    module->core           = core;
     module->echo_node      = NEW(test_node_t);
     module->deny_node      = NEW(test_node_t);
     module->sink_node      = NEW(test_node_t);
@@ -465,6 +467,195 @@ static void qdrc_test_hooks_core_endpoint_finalize(test_module_t *module)
 }
 
 
+//
+// Tests for in-core messaging client API
+//
+// Note well: this test client is used by the system_tests_core_client.py unit
+// tests.  Any changes here may require updates to those tests.
+//
+
+struct test_client_t {
+    test_module_t             *module;
+    qdrc_event_subscription_t *conn_events;
+    qdr_connection_t          *conn;
+    qdrc_client_t             *core_client;
+    int                        credit;
+    int                        counter;
+};
+
+static uint64_t _client_on_reply_cb(qdr_core_t *core,
+                                    qdrc_client_t *client,
+                                    uintptr_t user_context,
+                                    uintptr_t request_context,
+                                    qd_iterator_t *app_properties,
+                                    qd_iterator_t *body)
+{
+    qd_log(core->log, QD_LOG_TRACE,
+           "client test reply received rc=%"PRIxPTR, request_context);
+
+    qd_iterator_free(app_properties);
+    qd_iterator_free(body);
+
+    return PN_ACCEPTED;
+}
+
+static void _client_on_ack_cb(qdr_core_t *core,
+                              qdrc_client_t *client,
+                              uintptr_t user_context,
+                              uintptr_t request_context,
+                              uint64_t disposition)
+{
+    test_client_t *tc = (test_client_t *)user_context;
+    qd_log(core->log, QD_LOG_TRACE,
+           "client test request ack rc=%"PRIxPTR" d=%"PRIu64,
+           request_context, disposition);
+    assert(request_context < tc->counter);
+}
+static void _client_on_done_cb(qdr_core_t *core,
+                               qdrc_client_t *client,
+                               uintptr_t user_context,
+                               uintptr_t request_context,
+                               const char *error)
+{
+    qd_log(core->log, QD_LOG_TRACE,
+           "client test request done rc=%"PRIxPTR" error=%s",
+           request_context,
+           (error) ? error : "None");
+}
+
+static void _do_send(test_client_t *tc)
+{
+    int rc = 0;
+    while (tc->credit > 0) {
+
+        qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
+        qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
+
+        qd_compose_start_map(props);
+        qd_compose_insert_string(props, "action");
+        qd_compose_insert_string(props, "echo");
+        qd_compose_insert_string(props, "counter");
+        qd_compose_insert_int(props, tc->counter);
+        qd_compose_end_map(props);
+        qd_compose_insert_string(body, "HI THERE");
+
+        qdrc_client_request_CT(tc->core_client,
+                               tc->counter,  // request context
+                               props,
+                               body,
+                               _client_on_reply_cb,
+                               _client_on_ack_cb,
+                               _client_on_done_cb);
+        assert(rc == 0);
+        ++tc->counter;
+        --tc->credit;
+        qd_log(tc->module->core->log, QD_LOG_TRACE,
+               "client test message sent id=%d c=%d", tc->counter + 1, tc->credit);
+    }
+}
+
+static void _client_on_state_cb(qdr_core_t *core, qdrc_client_t *core_client,
+                                uintptr_t user_context, bool active)
+{
+    test_client_t *tc = (test_client_t *)user_context;
+    qd_log(tc->module->core->log, QD_LOG_TRACE,
+           "client test on state active=%c", active ? 'T' : 'F');
+}
+
+static void _client_on_flow_cb(qdr_core_t *core, qdrc_client_t *core_client,
+                               uintptr_t user_context, int available_credit,
+                               bool drain)
+{
+    test_client_t *tc = (test_client_t *)user_context;
+
+    if (!tc->core_client)
+        return;
+
+    qd_log(tc->module->core->log, QD_LOG_TRACE,
+           "client test on flow c=%d d=%c", available_credit, drain ? 'T' : 'F');
+    tc->credit = available_credit;
+    _do_send(tc);
+    if (drain)
+        tc->credit = 0;
+}
+
+static void _on_conn_event(void *context, qdrc_event_t type, qdr_connection_t *conn)
+{
+    test_client_t *tc = (test_client_t *)context;
+
+    qd_log(tc->module->core->log, QD_LOG_TRACE, "client test on conn event");
+
+    switch (type) {
+    case QDRC_EVENT_CONN_OPENED:
+        qd_log(tc->module->core->log, QD_LOG_TRACE, "client test conn open");
+        if (tc->conn)  // already have a conn, ignore
+            return;
+        // look for the special test container id
+        const char *cid = ((conn->connection_info)
+                           ? conn->connection_info->container
+                           : NULL);
+        qd_log(tc->module->core->log, QD_LOG_TRACE, "client test container-id=%s", cid);
+
+        if (cid && strcmp(cid, "org.apache.qpid.dispatch.test_core_client") == 0) {
+            qd_log(tc->module->core->log, QD_LOG_TRACE, "client test connection opened");
+            qdr_terminus_t *target = qdr_terminus(NULL);
+            qdr_terminus_set_address(target, "test_client_address");
+            tc->conn = conn;
+            tc->core_client = qdrc_client_CT(tc->module->core,
+                                             tc->conn,
+                                             target,
+                                             10,   // credit window
+                                             (uintptr_t)tc,   // user context
+                                             _client_on_state_cb,
+                                             _client_on_flow_cb);
+            assert(tc->core_client);
+        }
+        break;
+    case QDRC_EVENT_CONN_CLOSED:
+        qd_log(tc->module->core->log, QD_LOG_TRACE, "client test conn closed");
+        if (tc->conn == conn) {
+            tc->conn = NULL;
+            tc->credit = 0;
+            tc->counter = 0;
+            qdrc_client_free_CT(tc->core_client);
+            tc->core_client = NULL;
+            qd_log(tc->module->core->log, QD_LOG_TRACE, "client test connection closed");
+        }
+        break;
+    }
+}
+
+
+static void qdrc_test_client_api_setup(test_module_t *test_module)
+{
+    test_client_t *tc = NEW(test_client_t);
+    ZERO(tc);
+
+    tc->module = test_module;
+    test_module->test_client = tc;
+    tc->conn_events = qdrc_event_subscribe_CT(test_module->core,
+                                              (QDRC_EVENT_CONN_OPENED | QDRC_EVENT_CONN_CLOSED),
+                                              _on_conn_event,
+                                              NULL, NULL, tc);
+
+    qd_log(test_module->core->log, QD_LOG_TRACE, "client test registered %p", tc->conn_events);
+}
+
+
+static void qdrc_test_client_api_finalize(test_module_t *test_module)
+{
+    test_client_t *tc = test_module->test_client;
+    if (tc) {
+        if (tc->core_client)
+            qdrc_client_free_CT(tc->core_client);
+        if (tc->conn_events)
+            qdrc_event_unsubscribe_CT(test_module->core, tc->conn_events);
+        free(tc);
+        test_module->test_client = NULL;
+    }
+}
+
+
 static void qdrc_test_hooks_init_CT(qdr_core_t *core, void **module_context)
 {
     //
@@ -475,14 +666,22 @@ static void qdrc_test_hooks_init_CT(qdr_core_t *core, void **module_context)
         return;
     }
 
-    *module_context = qdrc_test_hooks_core_endpoint_setup(core);
+    test_module_t *test_module = NEW(test_module_t);
+    ZERO(test_module);
+    test_module->core = core;
+    qdrc_test_hooks_core_endpoint_setup(core, test_module);
+    qdrc_test_client_api_setup(test_module);
+    *module_context = test_module;
 }
 
 
 static void qdrc_test_hooks_final_CT(void *module_context)
 {
-    if (!!module_context)
+    if (!!module_context) {
         qdrc_test_hooks_core_endpoint_finalize(module_context);
+        qdrc_test_client_api_finalize(module_context);
+        free(module_context);
+    }
 }
 
 

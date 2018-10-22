@@ -267,6 +267,7 @@ ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char 
 void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
 void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2);
+void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3);
 
 /** Put string representation of a message suitable for logging in buffer.
  * @return buffer
