@@ -1968,13 +1968,22 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 
     content->buffers = *field1_buffers;
     DEQ_INIT(*field1_buffers);
+    DEQ_APPEND(content->buffers, (*field2_buffers));
+}
 
-    qd_buffer_t *buf = DEQ_HEAD(*field2_buffers);
-    while (buf) {
-        DEQ_REMOVE_HEAD(*field2_buffers);
-        DEQ_INSERT_TAIL(content->buffers, buf);
-        buf = DEQ_HEAD(*field2_buffers);
-    }
+
+void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3)
+{
+    qd_message_content_t *content = MSG_CONTENT(msg);
+    content->receive_complete     = true;
+    qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
+    qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
+    qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);
+
+    content->buffers = *field1_buffers;
+    DEQ_INIT(*field1_buffers);
+    DEQ_APPEND(content->buffers, (*field2_buffers));
+    DEQ_APPEND(content->buffers, (*field3_buffers));
 }
 
 
