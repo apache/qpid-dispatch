@@ -127,6 +127,7 @@ typedef void (*qdrc_cleanup_t) (void *link_context);
 
 
 typedef struct qdrc_endpoint_desc_t {
+    const char           *label;
     qdrc_first_attach_t   on_first_attach;
     qdrc_second_attach_t  on_second_attach;
     qdrc_flow_t           on_flow;

@@ -379,7 +379,7 @@ static void on_cleanup(void *link_context)
 }
 
 
-static qdrc_endpoint_desc_t descriptor = {on_first_attach, on_second_attach, on_flow, on_update,
+static qdrc_endpoint_desc_t descriptor = {"Core Test Hooks", on_first_attach, on_second_attach, on_flow, on_update,
                                           on_transfer, on_first_detach, on_second_detach, on_cleanup};
 
 

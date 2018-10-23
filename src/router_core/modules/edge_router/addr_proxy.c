@@ -365,6 +365,7 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
     ZERO(ap);
     ap->core = core;
 
+    ap->endpoint_descriptor.label            = "Edge Address Proxy";
     ap->endpoint_descriptor.on_second_attach = on_second_attach;
     ap->endpoint_descriptor.on_transfer      = on_transfer;
     ap->endpoint_descriptor.on_cleanup       = on_cleanup;

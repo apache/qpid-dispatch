@@ -200,7 +200,10 @@ void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit,
 void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
 {
     if (ep->link->detach_count == 1) {
-        ep->desc->on_first_detach(ep->link_context, error);
+        if (!!ep->desc->on_first_detach)
+            ep->desc->on_first_detach(ep->link_context, error);
+        else
+            qdr_link_outbound_detach_CT(core, ep->link, 0, QDR_CONDITION_NONE, true);
     } else {
         if (!!ep->desc->on_second_detach)
             ep->desc->on_second_detach(ep->link_context, error);
