@@ -38,7 +38,8 @@ const gulp = require('gulp'),
   fs = require('fs'),
   tsc = require('gulp-typescript'),
   tslint = require('gulp-tslint'),
-  through = require('through2');
+  through = require('through2'),
+  runSequence = require('run-sequence');
 
   // temp directory for converted typescript files
 const built_ts = 'built_ts';
@@ -86,13 +87,15 @@ var touch = through.obj(function(file, enc, done) {
   fs.utimes(file.path, now, now, done);
 });
 
-function clean() {
+gulp.task('clean', function () {
   return del(['dist',built_ts ]);
-}
-function cleanup() {
+});
+
+gulp.task('cleanup', function () {
   return del([built_ts]);
-}
-function styles() {
+});
+
+gulp.task('styles', function () {
   return gulp.src(paths.styles.src)
     .pipe(maps.init())
     .pipe(cleanCSS())
@@ -103,8 +106,9 @@ function styles() {
     .pipe(insert.prepend(license))
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
-}
-function vendor_styles() {
+});
+
+gulp.task('vendor_styles', function () {
   var vendor_lines = fs.readFileSync('vendor-css.txt').toString().split('\n');
   var vendor_files = vendor_lines.filter( function (line) {
     return (!line.startsWith('-') && line.length > 0);
@@ -119,9 +123,10 @@ function vendor_styles() {
     }))
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
-}
+});
 
-function vendor_scripts() {
+
+gulp.task('vendor_scripts', function () {
   var vendor_lines = fs.readFileSync('vendor-js.txt').toString().split('\n');
   var vendor_files = vendor_lines.filter( function (line) {
     return (!line.startsWith('-') && line.length > 0);
@@ -133,17 +138,21 @@ function vendor_scripts() {
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.scripts.dest))
     .pipe(touch);
-}
+});
+
+/*
 function watch() {
   gulp.watch(paths.scripts.src, scripts);
   gulp.watch(paths.styles.src, styles);
 }
-function lint() {
+*/
+
+gulp.task('lint', function () {
   return gulp.src('plugin/**/*.js')
     .pipe(eslint())
     .pipe(eslint.format())
     .pipe(eslint.failAfterError());
-}
+});
 
 //function _typescript() {
 //  return tsProject.src({files: src + 'plugin/**/*.ts'})
@@ -151,21 +160,21 @@ function lint() {
 //    .js.pipe(gulp.dest('build/dist'));
 //}
 
-function typescript() {
+gulp.task('typescript', function() {
   var tsResult = gulp.src(paths.typescript.src)
     .pipe(tsc());
   return tsResult.js.pipe(gulp.dest(paths.typescript.dest));
-}
+});
 
-function ts_lint() {
+gulp.task('ts_lint', function() {
   return gulp.src('plugin/js/**/*.ts')
     .pipe(tslint({
       formatter: 'verbose'
     }))
     .pipe(tslint.report());
-}
+});
 
-function scripts() {
+gulp.task('scripts', function() {
   return rollup({
     input: src + './main.js',
     sourcemap: true,
@@ -216,23 +225,33 @@ function scripts() {
   
   // and output to ./dist/main.js as normal.
     .pipe(gulp.dest(paths.scripts.dest));
-}
+});
 
-function test () {
+gulp.task('test', function() {
   return gulp.src(['test/**/*.js'], {read: false})
     .pipe(mocha({require: ['babel-core/register'], exit: true}))
     .on('error', console.error);
-}
+});
 
+gulp.task('build', function(callback) {
+  runSequence('clean',
+    'lint',
+    ['vendor_styles', 'vendor_scripts', 'styles'],
+    'cleanup',
+    callback);
+});
+/*
+For use with gulp 4.0 when that is supported
 var build = gulp.series(
   clean,                          // removes the dist/ dir
   lint,                           // lints the .js
   gulp.parallel(vendor_styles, vendor_scripts, styles), // uglify and concat
   cleanup                         // remove .js that were converted from .ts
 );
+*/
+/* var vendor = gulp.parallel(vendor_styles, vendor_scripts); */
 
-var vendor = gulp.parallel(vendor_styles, vendor_scripts);
-
+/*
 exports.clean = clean;
 exports.watch = watch;
 exports.build = build;
@@ -243,5 +262,5 @@ exports.scripts = scripts;
 exports.styles = styles;
 exports.vendor = vendor;
 exports.test = test;
-
-gulp.task('default', build);
+*/
+gulp.task('default', ['build']);

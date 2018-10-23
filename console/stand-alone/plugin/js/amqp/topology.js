@@ -212,7 +212,6 @@ class Topology {
   }
   // ensure these nodes have all these entities. don't fetch unless forced to
   ensureEntities(nodes, entityAttribs, callback, extra) {
-    let self = this;
     if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
       entityAttribs = [entityAttribs];
     }
