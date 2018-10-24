@@ -1147,6 +1147,12 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
             dlv_moved = qdr_delivery_settled_CT(core, dlv);
     }
 
+    //
+    // If the delivery's link has a core endpoint, notify the endpoint of the update
+    //
+    if (dlv->link && dlv->link->core_endpoint)
+        qdrc_endpoint_do_update_CT(core, dlv->link->core_endpoint, dlv, settled);
+
     if (push)
         qdr_delivery_push_CT(core, peer);
 
