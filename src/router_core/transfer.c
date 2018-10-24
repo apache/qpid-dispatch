@@ -986,9 +986,13 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         return;
 
     qdr_delivery_t *dlv  = action->args.connection.delivery;
+    bool            more = action->args.connection.more;
     qdr_link_t     *link = dlv->link;
 
-    bool more = action->args.connection.more;
+    //
+    // If the link is an edge link, mark this delivery as via-edge
+    //
+    dlv->via_edge = link->edge;
 
     //
     // If this link has a core_endpoint, direct deliveries to that endpoint.

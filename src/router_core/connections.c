@@ -1524,6 +1524,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     qdr_add_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
 
     //
+    // Mark the link as an edge link if it's inside an edge-uplink connection.
+    //
+    link->edge = (conn->role == QDR_ROLE_EDGE_UPLINK);
+
+    //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) &&
@@ -1754,6 +1759,11 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     qdr_terminus_t   *target = action->args.connection.target;
 
     link->oper_status = QDR_LINK_OPER_UP;
+
+    //
+    // Mark the link as an edge link if it's inside an edge-uplink connection.
+    //
+    link->edge = (conn->role == QDR_ROLE_EDGE_UPLINK);
 
     if (link->core_endpoint) {
         qdrc_endpoint_do_second_attach_CT(core, link->core_endpoint, source, target);
