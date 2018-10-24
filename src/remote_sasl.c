@@ -243,7 +243,7 @@ static void remote_sasl_free(pn_transport_t *transport)
             }
         } else {
             impl->upstream_released = true;
-            if (impl->downstream_released) {
+            if (impl->downstream_released || impl->downstream == 0) {
                 delete_qdr_sasl_relay_t(impl);
             }
         }
@@ -256,9 +256,6 @@ static void set_policy_settings(pn_connection_t* conn, permissions_t* permission
         qd_connection_t *qd_conn = (qd_connection_t*) pn_connection_get_context(conn);
         qd_conn->policy_settings = NEW(qd_policy_settings_t);
         ZERO(qd_conn->policy_settings);
-
-        qd_conn->policy_settings->denialCounts = NEW(qd_policy_denial_counts_t);
-        ZERO(qd_conn->policy_settings->denialCounts);
 
         if (permissions->targets.start && permissions->targets.capacity) {
             qd_conn->policy_settings->targets = qd_policy_compile_allowed_csv(permissions->targets.start);
