@@ -499,7 +499,9 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     (void) pn_condition_set_name(       cond, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
     (void) pn_condition_set_description(cond, SESSION_DISALLOWED);
     pn_session_close(ssn);
-    qd_conn->policy_settings->denialCounts->sessionDenied++;
+    if (qd_conn->policy_settings->denialCounts) {
+        qd_conn->policy_settings->denialCounts->sessionDenied++;
+    }
 }
 
 
@@ -566,7 +568,9 @@ void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, const 
 void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition)
 {
     _qd_policy_deny_amqp_link(pn_link, qd_conn, condition);
-    qd_conn->policy_settings->denialCounts->senderDenied++;
+    if (qd_conn->policy_settings->denialCounts) {
+        qd_conn->policy_settings->denialCounts->senderDenied++;
+    }
 }
 
 
@@ -575,7 +579,9 @@ void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_co
 void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition)
 {
     _qd_policy_deny_amqp_link(pn_link, qd_conn, condition);
-    qd_conn->policy_settings->denialCounts->receiverDenied++;
+    if (qd_conn->policy_settings->denialCounts) {
+        qd_conn->policy_settings->denialCounts->receiverDenied++;
+    }
 }
 
 
