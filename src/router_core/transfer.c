@@ -174,8 +174,19 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     // The entire message has been sent. It is now the appropriate time to have the delivery removed
                     // from the head of the undelivered list and move it to the unsettled list if it is not settled.
                     //
-                    DEQ_REMOVE_HEAD(link->undelivered);
                     num_deliveries_completed++;
+
+                    credit--;
+                    link->credit_to_core--;
+                    link->total_deliveries++;
+                    offer = DEQ_SIZE(link->undelivered);
+
+                    if (offer == 0) {
+                        sys_mutex_unlock(conn->work_lock);
+                        return num_deliveries_completed;
+                    }
+
+                    DEQ_REMOVE_HEAD(link->undelivered);
                     dlv->link_work = 0;
 
                     if (settled) {
@@ -186,11 +197,6 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                         dlv->where = QDR_DELIVERY_IN_UNSETTLED;
                         qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_process_deliveries: undelivered-list -> unsettled-list", (long) dlv);
                     }
-
-                    credit--;
-                    link->credit_to_core--;
-                    link->total_deliveries++;
-                    offer = DEQ_SIZE(link->undelivered);
                 }
                 else {
                     //
@@ -227,7 +233,6 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 
     return num_deliveries_completed;
 }
-
 
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode)
 {
