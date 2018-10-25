@@ -1514,6 +1514,10 @@
                 "trackedDeliveries": {
                     "type": "integer",
                     "description": "Number of transit deliveries being tracked for this address (for balanced distribution)."
+                },
+                "priority": {
+                    "type": "integer",
+                    "description": "The message priority being handled by this address."
                 }
             }
         },

@@ -39,6 +39,7 @@
 #define QDR_ADDRESS_DELIVERIES_INGRESS_ROUTE_CONTAINER 16
 #define QDR_ADDRESS_TRANSIT_OUTSTANDING                17
 #define QDR_ADDRESS_TRACKED_DELIVERIES                 18
+#define QDR_ADDRESS_PRIORITY                           19
 
 const char *qdr_address_columns[] =
     {"name",
@@ -60,6 +61,7 @@ const char *qdr_address_columns[] =
      "deliveriesIngressRouteContainer",
      "transitOutstanding",
      "trackedDeliveries",
+     "priority",
      0};
 
 
@@ -165,6 +167,10 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
 
     case QDR_ADDRESS_TRACKED_DELIVERIES:
         qd_compose_insert_long(body, addr->tracked_deliveries);
+        break;
+
+    case QDR_ADDRESS_PRIORITY:
+        qd_compose_insert_int(body, addr->priority);
         break;
 
     default:

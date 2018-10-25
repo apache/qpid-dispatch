@@ -413,10 +413,11 @@ class BusManager(Node):
         heads.append(Header("thru", Header.COMMAS))
         heads.append(Header("to-proc", Header.COMMAS))
         heads.append(Header("from-proc", Header.COMMAS))
+        heads.append(Header("priority"))
         rows = []
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
                 'containerCount', 'deliveriesIngress', 'deliveriesEgress',
-                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name')
+                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name', 'priority')
 
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
@@ -435,6 +436,7 @@ class BusManager(Node):
             row.append(addr.deliveriesTransit)
             row.append(addr.deliveriesToContainer)
             row.append(addr.deliveriesFromContainer)
+            row.append(addr.priority)
             rows.append(row)
         title = "Router Addresses"
         sorter = Sorter(heads, rows, 'addr', 0, True)
