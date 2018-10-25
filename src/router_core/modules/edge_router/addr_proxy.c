@@ -113,14 +113,16 @@ static void del_inlink(qcm_edge_addr_proxy_t *ap, qdr_address_t *addr)
 
 static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t *addr)
 {
-    //
-    // Note that this link must not be bound to the address at this time.  That will
-    // happen later when the interior tells us that there are upstream destinations
-    // for the address (see on_transfer below).
-    //
-    qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
-                                          qdr_terminus_normal(0), qdr_terminus_normal(key + 2));
-    addr->edge_outlink = link;
+    if (addr->edge_outlink == 0) {
+        //
+        // Note that this link must not be bound to the address at this time.  That will
+        // happen later when the interior tells us that there are upstream destinations
+        // for the address (see on_transfer below).
+        //
+        qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
+                                              qdr_terminus_normal(0), qdr_terminus_normal(key + 2));
+        addr->edge_outlink = link;
+    }
 }
 
 
@@ -208,8 +210,14 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 // If the address has more than zero attached sources, create an outgoing link
                 // to the interior to signal the presence of local producers.
                 //
-                if (DEQ_SIZE(addr->inlinks) > 0)
-                    add_outlink(ap, key, addr);
+                if (DEQ_SIZE(addr->inlinks) > 0) {
+                    if (DEQ_SIZE(addr->inlinks) == 1) {
+                        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
+                        if (ref->link->conn != ap->uplink_conn)
+                            add_outlink(ap, key, addr);
+                    } else
+                        add_outlink(ap, key, addr);
+                }
             }
             addr = DEQ_NEXT(addr);
         }
@@ -276,11 +284,23 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
         break;
 
     case QDRC_EVENT_ADDR_BECAME_SOURCE :
-        add_outlink(ap, key, addr);
+        link_ref = DEQ_HEAD(addr->inlinks);
+        if (link_ref->link->conn != ap->uplink_conn)
+            add_outlink(ap, key, addr);
         break;
 
     case QDRC_EVENT_ADDR_NO_LONGER_SOURCE :
         del_outlink(ap, addr);
+        break;
+
+    case QDRC_EVENT_ADDR_TWO_SOURCE :
+        add_outlink(ap, key, addr);
+        break;
+
+    case QDRC_EVENT_ADDR_ONE_SOURCE :
+        link_ref = DEQ_HEAD(addr->inlinks);
+        if (link_ref->link->conn == ap->uplink_conn)
+            del_outlink(ap, addr);
         break;
 
     default:
@@ -386,7 +406,9 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
                                             | QDRC_EVENT_ADDR_ONE_LOCAL_DEST
                                             | QDRC_EVENT_ADDR_TWO_DEST
                                             | QDRC_EVENT_ADDR_BECAME_SOURCE
-                                            | QDRC_EVENT_ADDR_NO_LONGER_SOURCE,
+                                            | QDRC_EVENT_ADDR_NO_LONGER_SOURCE
+                                            | QDRC_EVENT_ADDR_TWO_SOURCE
+                                            | QDRC_EVENT_ADDR_ONE_SOURCE,
                                             on_conn_event,
                                             0,
                                             on_addr_event,

@@ -56,8 +56,10 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_ADDR_NO_LONGER_DEST        An address transitioned from one to zero destinations
  * QDRC_EVENT_ADDR_ONE_LOCAL_DEST        An address transitioned from N destinations to one local dest
  * QDRC_EVENT_ADDR_TWO_DEST              An address transisioned from one local dest to two destinations
- * QDRC_EVENT_ADDR_BECAME_SOURCE         An address transitioner from zero to one local source (inlink)
- * QDRC_EVENT_ADDR_NO_LONGER_SOURCE      An address transitioner from one to zero local sources (inlink)
+ * QDRC_EVENT_ADDR_BECAME_SOURCE         An address transitioned from zero to one local source (inlink)
+ * QDRC_EVENT_ADDR_NO_LONGER_SOURCE      An address transitioned from one to zero local sources (inlink)
+ * QDRC_EVENT_ADDR_TWO_SOURCE            An address transitioned from one to two local sources (inlink)
+ * QDRC_EVENT_ADDR_ONE_SOURCE            An address transitioned from two to one local sources (inlink)
 */
 
 #define QDRC_EVENT_CONN_OPENED               0x00000001
@@ -86,7 +88,9 @@ typedef uint32_t qdrc_event_t;
 #define QDRC_EVENT_ADDR_TWO_DEST             0x00800000
 #define QDRC_EVENT_ADDR_BECAME_SOURCE        0x01000000
 #define QDRC_EVENT_ADDR_NO_LONGER_SOURCE     0x02000000
-#define _QDRC_EVENT_ADDR_RANGE               0x03FF0000
+#define QDRC_EVENT_ADDR_TWO_SOURCE           0x04000000
+#define QDRC_EVENT_ADDR_ONE_SOURCE           0x08000000
+#define _QDRC_EVENT_ADDR_RANGE               0x0FFF0000
 
 
 /**

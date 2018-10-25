@@ -427,6 +427,8 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
         qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->inlinks) == 1)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr);
+        else if (DEQ_SIZE(addr->inlinks) == 2)
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr);
     }
 }
 
@@ -446,8 +448,12 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
     } else {
         bool removed = qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        if (removed && DEQ_SIZE(addr->inlinks) == 0)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr);
+        if (removed) {
+            if (DEQ_SIZE(addr->inlinks) == 0)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr);
+            else if (DEQ_SIZE(addr->inlinks) == 1)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr);
+        }
     }
 }
 
