@@ -1700,31 +1700,23 @@ class ConnectionLinkRouteTest(TestCase):
     def test_mgmt(self):
         # test create, delete, and query
         mgmt_conn = BlockingConnection(self.QDR_A.addresses[0])
-        mgmt_recv = mgmt_conn.create_receiver(address=None, dynamic=True, credit=250)
-        mgmt_sender = mgmt_conn.create_sender(address="$management")
-        mgmt_proxy = MgmtMsgProxy(mgmt_recv.link.remote_source.address)
+        mgmt_proxy = ConnLinkRouteMgmtProxy(mgmt_conn)
 
         for i in range(10):
-            msg = mgmt_proxy.create_conn_link_route("lr1-%d" % i,
+            rsp = mgmt_proxy.create_conn_link_route("lr1-%d" % i,
                                                     {'pattern': "*/hi/there/%d" % i,
                                                      'direction':
                                                      'out' if i % 2 else 'in'})
-            mgmt_sender.send(msg)
-            rsp = mgmt_proxy.response(mgmt_recv.receive())
             self.assertEqual(201, rsp.status_code)
 
         # test query
-        msg = mgmt_proxy.query_conn_link_routes()
-        mgmt_sender.send(msg)
-        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        rsp = mgmt_proxy.query_conn_link_routes()
         self.assertEqual(200, rsp.status_code)
         self.assertEqual(10, len(rsp.results))
         entities = rsp.results
 
         # test read
-        msg = mgmt_proxy.read_conn_link_route('lr1-5')
-        mgmt_sender.send(msg)
-        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        rsp = mgmt_proxy.read_conn_link_route('lr1-5')
         self.assertEqual(200, rsp.status_code)
         self.assertEqual("lr1-5", rsp.attrs['name'])
         self.assertEqual("*/hi/there/5", rsp.attrs['pattern'])
@@ -1738,35 +1730,25 @@ class ConnectionLinkRouteTest(TestCase):
                  {'pattern': ''},
                  {'pattern': 7}]
         for a in attrs:
-            msg = mgmt_proxy.create_conn_link_route("iamnoone", a)
-            mgmt_sender.send(msg)
-            rsp = mgmt_proxy.response(mgmt_recv.receive())
+            rsp = mgmt_proxy.create_conn_link_route("iamnoone", a)
             self.assertEqual(400, rsp.status_code)
 
         # bad read
-        msg = mgmt_proxy.read_conn_link_route('iamnoone')
-        mgmt_sender.send(msg)
-        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        rsp = mgmt_proxy.read_conn_link_route('iamnoone')
         self.assertEqual(404, rsp.status_code)
 
         # bad delete
-        msg = mgmt_proxy.delete_conn_link_route('iamnoone')
-        mgmt_sender.send(msg)
-        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        rsp = mgmt_proxy.delete_conn_link_route('iamnoone')
         self.assertEqual(404, rsp.status_code)
 
         # delete all
         for r in entities:
             self.assertEqual(200, r.status_code)
-            msg = mgmt_proxy.delete_conn_link_route(r.attrs['name'])
-            mgmt_sender.send(msg)
-            rsp = mgmt_proxy.response(mgmt_recv.receive())
+            rsp = mgmt_proxy.delete_conn_link_route(r.attrs['name'])
             self.assertEqual(204, rsp.status_code)
 
         # query - should be none left
-        msg = mgmt_proxy.query_conn_link_routes()
-        mgmt_sender.send(msg)
-        rsp = mgmt_proxy.response(mgmt_recv.receive())
+        rsp = mgmt_proxy.query_conn_link_routes()
         self.assertEqual(200, rsp.status_code)
         self.assertEqual(0, len(rsp.results))
 
@@ -1839,7 +1821,7 @@ class ConnectionLinkRouteTest(TestCase):
             self.assertEqual("SENDING TO flea.B",
                              r.queue.get(timeout=TIMEOUT).body)
         r.stop()
-        self.assertEqual(COUNT, fs.incoming)
+        self.assertEqual(COUNT, fs.in_count)
 
         # send from B to A
         r = AsyncTestReceiver(self.QDR_A.addresses[0],
@@ -1855,7 +1837,7 @@ class ConnectionLinkRouteTest(TestCase):
             self.assertEqual("SENDING TO flea.A",
                              r.queue.get(timeout=TIMEOUT).body)
         r.stop()
-        self.assertEqual(2 * COUNT, fs.incoming)
+        self.assertEqual(2 * COUNT, fs.in_count)
 
         # once the fake service closes its conn the link routes
         # are removed so the link route addresses must be gone
@@ -1876,7 +1858,6 @@ class ConnLinkRouteService(FakeBroker):
         self.mgmt_proxy = None
         self.mgmt_sender = None
         self.mgmt_receiver = None
-        self.incoming = 0
         self._config = config
         self._config_index = 0
         self._config_done = Event()
@@ -1884,6 +1865,7 @@ class ConnLinkRouteService(FakeBroker):
         self._config_values = []
         self._cleaning_up = False
         self._delete_done = Event()
+        self._delete_count = 0
         self._event_injector = EventInjector()
         self._delete_event = ApplicationEvent("delete_config")
         super(ConnLinkRouteService, self).__init__(url, container_id)
@@ -1943,6 +1925,7 @@ class ConnLinkRouteService(FakeBroker):
             elif self._config_values:
                 cv = self._config_values.pop()
                 msg = self.mgmt_proxy.delete_conn_link_route(cv['name'])
+                self._delete_count += 1
         else:
             super(ConnLinkRouteService, self).on_sendable(event)
 
@@ -1956,7 +1939,8 @@ class ConnLinkRouteService(FakeBroker):
                     self._config_done.set()
             elif response.status_code == 204:
                 # deleted
-                if not self._config_values:
+                self._delete_count -= 1
+                if (not self._config_values) and self._delete_count == 0:
                     self._delete_done.set()
             else:
                 # error
@@ -1965,7 +1949,6 @@ class ConnLinkRouteService(FakeBroker):
                 self._config_done.set()
                 self._delete_done.set()
         else:
-            self.incoming += 1
             super(ConnLinkRouteService, self).on_message(event)
 
     def on_delete_config(self, event):
@@ -1979,8 +1962,32 @@ class ConnLinkRouteService(FakeBroker):
                         cv = self._config_values.pop()
                         msg = self.mgmt_proxy.delete_conn_link_route(cv["name"])
                         self.mgmt_sender.send(msg)
+                        self._delete_count += 1
                 except IndexError:
                     pass
+
+
+class ConnLinkRouteMgmtProxy(object):
+    """
+    Manage connection scoped link routes over a given connection.
+    While the connection remains open the connection scoped links will remain
+    configured and active
+    """
+    def __init__(self, bconn, credit=250):
+        self._receiver = bconn.create_receiver(address=None, dynamic=True, credit=credit)
+        self._sender = bconn.create_sender(address="$management")
+        self._proxy = MgmtMsgProxy(self._receiver.link.remote_source.address)
+
+    def __getattr__(self, key):
+        # wrap accesses to the management message functions so we can send and
+        # receive the messages using the blocking links
+        f = getattr(self._proxy, key)
+        if not callable(f):
+            return f
+        def _func(*args, **kwargs):
+            self._sender.send(f(*args, **kwargs))
+            return self._proxy.response(self._receiver.receive())
+        return _func
 
 
 if __name__ == '__main__':

@@ -104,6 +104,8 @@ set(qpid_dispatch_SOURCES
   router_core/modules/edge_router/module.c
   router_core/modules/edge_router/addr_proxy.c
   router_core/modules/edge_router/connection_manager.c
+  router_core/modules/edge_router/link_route_proxy.c
+  router_core/modules/edge_router/edge_mgmt.c
   router_core/modules/test_hooks/core_test_hooks.c
   router_node.c
   router_pynode.c

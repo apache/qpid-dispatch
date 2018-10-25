@@ -131,17 +131,19 @@ static qdr_link_route_t *_find_link_route_CT(qdr_connection_t *conn,
     // if both id and name provided, prefer id
     //
     if (identity) {
-        qd_parsed_field_t *identity_field = qd_parse(identity);
-        uint64_t id = qd_parse_as_ulong(identity_field);
-        if (qd_parse_ok(identity_field)) {
-            lr = DEQ_HEAD(conn->conn_link_routes);
-            while (lr) {
-                if (id == lr->identity)
-                    break;
-                lr = DEQ_NEXT(lr);
-            }
+        char buf[64];
+        uint64_t id = 0;
+        assert(qd_iterator_length(identity) < sizeof(buf));
+        qd_iterator_strncpy(identity, buf, sizeof(buf));
+        if (sscanf(buf, "%"SCNu64, &id) != 1) {
+            return NULL;
         }
-        qd_parse_free(identity_field);
+        lr = DEQ_HEAD(conn->conn_link_routes);
+        while (lr) {
+            if (id == lr->identity)
+                break;
+            lr = DEQ_NEXT(lr);
+        }
     } else if (name) {
         lr = DEQ_HEAD(conn->conn_link_routes);
         while (lr) {
