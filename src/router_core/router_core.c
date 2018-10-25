@@ -477,6 +477,7 @@ void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_co
     if (DEQ_SIZE(addr->conns) == 1) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
         qdr_post_mobile_added_CT(core, key);
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
     }
 }
 
@@ -487,6 +488,7 @@ void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
     if (DEQ_IS_EMPTY(addr->conns)) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
         qdr_post_mobile_removed_CT(core, key);
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
     }
 }
 

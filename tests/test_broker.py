@@ -40,6 +40,9 @@ from system_test import TIMEOUT
 
 
 class FakeBroker(MessagingHandler):
+    """
+    A fake broker-like service that listens for client connections
+    """
     class _Queue(object):
         def __init__(self, dynamic=False):
             self.dynamic = dynamic
@@ -56,31 +59,39 @@ class FakeBroker(MessagingHandler):
 
         def publish(self, message):
             self.queue.append(message)
-            self.dispatch()
+            return self.dispatch()
 
         def dispatch(self, consumer=None):
             if consumer:
                 c = [consumer]
             else:
                 c = self.consumers
-            while self._deliver_to(c): pass
+            count = 0
+            while True:
+                rc = self._deliver_to(c)
+                count += rc
+                if rc == 0:
+                    break;
+            return count
 
         def _deliver_to(self, consumers):
             try:
-                result = False
+                result = 0
                 for c in consumers:
                     if c.credit:
                         c.send(self.queue.popleft())
-                        result = True
+                        result += 1
                 return result
             except IndexError: # no more messages
-                return False
+                return 0
 
     def __init__(self, url, container_id=None):
         super(FakeBroker, self).__init__()
         self.url = url
         self.queues = {}
         self.acceptor = None
+        self.in_count = 0
+        self.out_count = 0
         self._connections = []
         self._error = None
         self._container = Container(self)
@@ -168,7 +179,20 @@ class FakeBroker(MessagingHandler):
             l = l.next(Endpoint.REMOTE_ACTIVE)
 
     def on_sendable(self, event):
-        self._queue(event.link.source.address).dispatch(event.link)
+        self.out_count += self._queue(event.link.source.address).dispatch(event.link)
 
     def on_message(self, event):
-        self._queue(event.link.target.address).publish(event.message)
+        self.in_count += 1
+        self.out_count += self._queue(event.link.target.address).publish(event.message)
+
+
+class FakeService(FakeBroker):
+    """
+    Like a broker, but proactively connects to the message bus
+    Useful for testing link routes
+    """
+    def __init__(self, url, container_id=None):
+        super(FakeService, self).__init__(url, container_id)
+
+    def on_start(self, event):
+        event.container.connect(url=self.url)
