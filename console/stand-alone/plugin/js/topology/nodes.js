@@ -54,6 +54,8 @@ export class Nodes {
     this.nodes.some(function (n) {
       if (n.name === name) {
         n.fixed = b;
+        if (!b)
+          n.lat = n.lon = null;
         return true;
       }
     });
@@ -86,7 +88,12 @@ export class Nodes {
     }
     return normalInfo;
   }
-  savePositions () {
+  savePositions (nodes) {
+    if (!nodes)
+      nodes = this.nodes;
+    if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+      nodes = [nodes];
+    }
     this.nodes.forEach( function (d) {
       localStorage[d.name] = JSON.stringify({
         x: Math.round(d.x),
@@ -95,6 +102,46 @@ export class Nodes {
       });
     });
   }
+  // Convert node's x,y coordinates to longitude, lattitude
+  saveLonLat (backgroundMap, nodes) {
+    if (!backgroundMap)
+      return;
+    // didn't pass nodes, use all nodes
+    if (!nodes)
+      nodes = this.nodes;
+    // passed a single node, wrap it in an array
+    if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+      nodes = [nodes];
+    }
+    for (let i=0; i<nodes.length; i++) {
+      let n = nodes[i];
+      if (n.fixed) {
+        let lonlat = backgroundMap.getLonLat(n.x, n.y);
+        if (lonlat) {
+          n.lon = lonlat[0];
+          n.lat = lonlat[1];
+        }
+      } else {
+        n.lon = n.lat = null;
+      }
+    }
+  }
+  // convert all nodes' longitude,lattitude to x,y coordinates
+  setXY (backgroundMap) {
+    if (!backgroundMap)
+      return;
+    for (let i=0; i<this.nodes.length; i++) {
+      let n = this.nodes[i];
+      if (n.lon && n.lat) {
+        let xy = backgroundMap.getXY(n.lon, n.lat);
+        if (xy) {
+          n.x = n.px = xy[0];
+          n.y = n.py = xy[1];
+        }
+      }
+    }
+  }
+
   find (connectionContainer, properties, name) {
     properties = properties || {};
     for (let i=0; i<this.nodes.length; ++i) {

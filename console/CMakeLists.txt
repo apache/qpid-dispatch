@@ -131,6 +131,9 @@ if(CONSOLE_INSTALL)
           install(FILES ${VENDOR_FONTS}
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/fonts/
           )
+          install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/data/
+            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/data
+          )
         else(NPX_EXE)
           message(STATUS "Cannot build console, npx not found.")
         endif(NPX_EXE)

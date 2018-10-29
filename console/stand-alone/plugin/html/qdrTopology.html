@@ -196,6 +196,39 @@ table.popupTable tr.header {
 table.popupTable td {
     padding: 0 4px;
 }
+
+.graticule {
+  fill: none;
+  stroke: #777;
+  stroke-width: .5px;
+  stroke-opacity: .5;
+}
+
+g.geo path.land {
+  fill: #dcedf7;
+  stroke: #000;
+  stroke-opacity: 1;
+  stroke-width: 1px;
+}
+
+.boundary {
+  fill: none;
+  stroke: #333;
+  stroke-width: 5px;
+}
+
+.panel-group {
+    margin-bottom: 0;
+}
+
+span.map-label {
+    display: inline-block;
+    width: 4em;
+}
+#main_container {
+     padding-left: 0;
+     padding-right: 0;
+}
 </style>
 <div class="qdrTopology" ng-controller="QDR.TopologyController">
     <div class="legend-container page-menu navbar-collapse collapse">
@@ -250,6 +283,20 @@ table.popupTable td {
             </div>
             <div uib-accordion-group class="panel-default" is-open="legend.status.legendOpen" heading="Legend">
                 <div id="topo_svg_legend"></div>
+            </div>
+            <div uib-accordion-group class="panel-default" is-open="legend.status.mapOpen" heading="Background map">
+                <div id="topo_mapOptions">
+                    <div class="colorPicker">
+                        <ul>
+                            <li>
+                                <label><span class='map-label'>Land</span> <input id="areaColor" name="areaColor" type="color" ng-model="mapOptions.areaColor"/></label>
+                            </li>
+                            <li>
+                                <label><span class='map-label'>Ocean</span> <input id="oceanColor" name="oceanColor" type="color" ng-model="mapOptions.oceanColor"/></label>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
             </div>
           </uib-accordion>
     </div>

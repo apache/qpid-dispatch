@@ -27,6 +27,7 @@ import { separateAddresses } from '../chord/filters.js';
 import { Nodes } from './nodes.js';
 import { Links } from './links.js';
 import { nextHop, connectionPopupHTML } from './topoUtils.js';
+import { BackgroundMap } from './map.js';
 /**
  * @module QDR
  */
@@ -44,15 +45,33 @@ export class TopologyController {
     let nodes = new Nodes(QDRService, QDRLog);
     let links = new Links(QDRService, QDRLog);
     let forceData = {nodes: nodes, links: links};
+
+    $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots', mapOpen: false, legendOpen: true};
+    if (typeof $scope.legendOptions.mapOpen == 'undefined')
+      $scope.legendOptions.mapOpen = false;
+    if (typeof $scope.legendOptions.legendOpen == 'undefined')
+      $scope.legendOptions.legendOpen = false;
+    let backgroundMap = new BackgroundMap($scope, 
+      // notify: called each time a pan/zoom is performed
+      function () {
+        if ($scope.legend.status.mapOpen) {
+          // set all the nodes' x,y position based on their saved lon,lat
+          nodes.setXY(backgroundMap);
+          nodes.savePositions();
+          // redraw the nodes in their x,y position and let non-fixed nodes bungie
+          force.start();
+          clearPopups();
+        }
+      });
     // urlPrefix is used when referring to svg:defs
     let urlPrefix = $location.absUrl();
     urlPrefix = urlPrefix.split('#')[0];
 
-    $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots'};
     if (!$scope.legendOptions.trafficType)
       $scope.legendOptions.trafficType = 'dots';
-    $scope.legend = {status: {legendOpen: true, optionsOpen: true}};
+    $scope.legend = {status: {legendOpen: true, optionsOpen: true, mapOpen: false}};
     $scope.legend.status.optionsOpen = $scope.legendOptions.showTraffic;
+    $scope.legend.status.mapOpen = $scope.legendOptions.mapOpen;
     let traffic = new Traffic($scope, $timeout, QDRService, separateAddresses, 
       radius, forceData, $scope.legendOptions.trafficType, urlPrefix);
 
@@ -76,17 +95,39 @@ export class TopologyController {
         traffic.start();
       }
     });
+    $scope.$watch('legend.status.mapOpen', function (newvalue, oldvalue) {
+      $scope.legendOptions.mapOpen = $scope.legend.status.mapOpen;
+      localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
+      // map was shown
+      if ($scope.legend.status.mapOpen && backgroundMap.initialized) {
+        // respond to pan/zoom events
+        backgroundMap.restartZoom();
+        // set the main_container div's background color to the ocean color
+        backgroundMap.updateOceanColor();
+        d3.select('g.geo')
+          .style('opacity', 1);
+      } else {
+        if (newvalue !== oldvalue)
+          backgroundMap.cancelZoom();
+        // hide the map and reset the background color
+        d3.select('g.geo')
+          .style('opacity', 0);
+        d3.select('#main_container')
+          .style('background-color', '#FFF');
+      }
+    });
 
     // mouse event vars
     let selected_node = null,
       selected_link = null,
       mousedown_link = null,
-      mousedown_node = null,
       mouseover_node = null,
       mouseup_node = null,
       initial_mouse_down_position = null;
 
     $scope.schema = 'Not connected';
+    $scope.current_node = null,
+    $scope.mousedown_node = null,
 
     $scope.contextNode = null; // node that is associated with the current context menu
     $scope.isRight = function(mode) {
@@ -98,6 +139,7 @@ export class TopologyController {
         $scope.contextNode.fixed = b;
         nodes.setNodesFixed($scope.contextNode.name, b);
         nodes.savePositions();
+        nodes.saveLonLat(backgroundMap, $scope.contextNode);
       }
       restart();
     };
@@ -219,7 +261,6 @@ export class TopologyController {
       selected_node = null;
       selected_link = null;
 
-      nodes.savePositions();
       d3.select('#SVG_ID').remove();
       svg = d3.select('#topology')
         .append('svg')
@@ -229,6 +270,14 @@ export class TopologyController {
         .on('click', function () {
           clearPopups();
         });
+
+      /*
+      var graticule = d3.geo.graticule();
+      geo.append('path')
+        .datum(graticule)
+        .attr('class', 'graticule')
+        .attr('d', geoPath);
+      */
 
       // the legend
       d3.select('#topo_svg_legend svg').remove();
@@ -241,13 +290,19 @@ export class TopologyController {
 
       // mouse event vars
       mousedown_link = null;
-      mousedown_node = null;
+      $scope.mousedown_node = null;
       mouseup_node = null;
 
       // initialize the list of nodes
       forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
       animate = nodes.initialize(nodeInfo, localStorage, width, height);
       nodes.savePositions();
+      // read the map data from the data file and build the map layer
+      backgroundMap.init($scope, svg, width, height)
+        .then( function () {
+          nodes.saveLonLat(backgroundMap);
+          backgroundMap.setMapOpacity($scope.legend.status.mapOpen);
+        });
 
       // initialize the list of links
       let unknowns = [];
@@ -266,7 +321,7 @@ export class TopologyController {
         .friction(.10)
         .gravity(function(d) { return gravity(d, nodeCount); })
         .on('tick', tick)
-        .on('end', function () {nodes.savePositions();})
+        .on('end', function () {nodes.savePositions(); nodes.saveLonLat(backgroundMap);})
         .start();
 
       // This section adds in the arrows
@@ -301,8 +356,8 @@ export class TopologyController {
       grad.append('stop').attr('offset', '50%').style('stop-color', '#F0F000');
 
       // handles to link and node element groups
-      path = svg.append('svg:g').selectAll('path'),
-      circle = svg.append('svg:g').selectAll('g');
+      path = svg.append('svg:g').attr('class', 'links').selectAll('path'),
+      circle = svg.append('svg:g').attr('class', 'nodes').selectAll('g');
 
       // app starts here
       restart(false);
@@ -367,7 +422,7 @@ export class TopologyController {
     };
 
     function resetMouseVars() {
-      mousedown_node = null;
+      $scope.mousedown_node = null;
       mouseover_node = null;
       mouseup_node = null;
       mousedown_link = null;
@@ -568,12 +623,13 @@ export class TopologyController {
 
       appendCircle(g)
         .on('mouseover', function(d) {  // mouseover a circle
+          $scope.current_node = d;
           QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
           if (d.nodeType === 'normal') {
             showClientTooltip(d, d3.event);
           } else
             showRouterTooltip(d, d3.event);
-          if (d === mousedown_node)
+          if (d === $scope.mousedown_node)
             return;
           // enlarge target node
           d3.select(this).attr('transform', 'scale(1.1)');
@@ -590,6 +646,7 @@ export class TopologyController {
           });
         })
         .on('mouseout', function() { // mouse out for a circle
+          $scope.current_node = null;
           // unenlarge target node
           d3.select('#popover-div')
             .style('display', 'none');
@@ -599,15 +656,18 @@ export class TopologyController {
           restart();
         })
         .on('mousedown', function(d) { // mouse down for circle
+          backgroundMap.cancelZoom();
+          $scope.current_node = d;
           if (d3.event.button !== 0) { // ignore all but left button
             return;
           }
-          mousedown_node = d;
+          $scope.mousedown_node = d;
           // mouse position relative to svg
           initial_mouse_down_position = d3.mouse(this.parentNode.parentNode.parentNode).slice();
         })
         .on('mouseup', function(d) {  // mouse up for circle
-          if (!mousedown_node)
+          backgroundMap.restartZoom();
+          if (!$scope.mousedown_node)
             return;
 
           selected_link = null;
@@ -624,25 +684,28 @@ export class TopologyController {
             cur_mouse[1] != initial_mouse_down_position[1]) {
             d.fixed = true;
             nodes.setNodesFixed(d.name, true);
+            nodes.savePositions(d);
+            nodes.saveLonLat(backgroundMap, d);
             resetMouseVars();
             restart();
             return;
           }
 
           // if this node was selected, unselect it
-          if (mousedown_node === selected_node) {
+          if ($scope.mousedown_node === selected_node) {
             selected_node = null;
           } else {
             if (d.nodeType !== 'normal' && d.nodeType !== 'on-demand')
-              selected_node = mousedown_node;
+              selected_node = $scope.mousedown_node;
           }
           clearAllHighlights();
-          mousedown_node = null;
+          $scope.mousedown_node = null;
           if (!$scope.$$phase) $scope.$apply();
           restart(false);
 
         })
         .on('dblclick', function(d) { // circle
+          d3.event.preventDefault();
           if (d.fixed) {
             d.fixed = false;
             nodes.setNodesFixed(d.name, false);
@@ -702,7 +765,7 @@ export class TopologyController {
       // gets initialized as the page loads.
       $timeout(createLegend);
 
-      if (!mousedown_node || !selected_node)
+      if (!$scope.mousedown_node || !selected_node)
         return;
 
       if (!start)
@@ -1027,16 +1090,7 @@ export class TopologyController {
           savedKeys[key] = nodeInfo[key]['connection'].results.length;
       }
     }
-    // we are about to leave the page, save the node positions
-    $rootScope.$on('$locationChangeStart', function() {
-      //QDRLog.debug("locationChangeStart");
-      nodes.savePositions();
-    });
-    // When the DOM element is removed from the page,
-    // AngularJS will trigger the $destroy event on
-    // the scope
-    $scope.$on('$destroy', function() {
-      //QDRLog.debug("scope on destroy");
+    function destroy () {
       nodes.savePositions();
       QDRService.management.topology.setUpdateEntities([]);
       QDRService.management.topology.stopUpdating();
@@ -1047,6 +1101,18 @@ export class TopologyController {
       d3.select('#SVG_ID').remove();
       window.removeEventListener('resize', resize);
       traffic.stop();
+      d3.select('#main_container')
+        .style('background-color', 'white');
+    }
+    // When the DOM element is removed from the page,
+    // AngularJS will trigger the $destroy event on
+    // the scope
+    $scope.$on('$destroy', function() {
+      destroy();
+    });
+    // we are about to leave the page, save the node positions
+    $rootScope.$on('$locationChangeStart', function() {
+      destroy();
     });
 
     function handleInitialUpdate() {
