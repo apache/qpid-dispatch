@@ -99,7 +99,7 @@ typedef struct qd_iterator_t qd_iterator_t;
  *                            L^^^^^^^
  *     amqp:/_edge/<router>/<local>
  *                H^^^^^^^^          [ interior mode ]
- *         L_uplink                  [ edge mode ]
+ *         L_edge                    [ edge mode ]
  *
  * ITER_VIEW_NODE_HASH - Isolate the hashable part of a router-id, used for headers
  *

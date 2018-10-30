@@ -373,7 +373,7 @@ struct qdr_delivery_t {
     qdr_subscription_list_t subscriptions;
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
     bool                    multicast;         /// True if this delivery is targeted for a multicast address.
-    bool                    via_edge;          /// True if this delivery arrived via an edge-uplink connection.
+    bool                    via_edge;          /// True if this delivery arrived via an edge-connection.
 };
 
 ALLOC_DECLARE(qdr_delivery_t);
@@ -429,7 +429,7 @@ struct qdr_link_t {
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
     bool                     detach_received;
-    bool                     edge;              ///< True if this link is in an edge-uplink connection
+    bool                     edge;              ///< True if this link is in an edge-connection
     char                    *strip_prefix;
     char                    *insert_prefix;
     bool                     terminus_survives_disconnect;

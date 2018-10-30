@@ -484,7 +484,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
         link->link_type = QD_LINK_ROUTER;
     else if (qdr_terminus_has_capability(local_terminus, QD_CAPABILITY_EDGE_DOWNLINK)) {
         if (conn->core->router_mode == QD_ROUTER_MODE_INTERIOR &&
-            conn->role == QDR_ROLE_EDGE_UPLINK &&
+            conn->role == QDR_ROLE_EDGE_CONNECTION &&
             dir == QD_OUTGOING)
             link->link_type = QD_LINK_EDGE_DOWNLINK;
     }
@@ -1299,8 +1299,9 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
 
                 if (!conn->incoming) {
                     //
-                    // The connector-side of inter-router/edge-uplink connections is responsible for setting up the
-                    // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for routed-message transfer.
+                    // The connector-side of inter-router connections is responsible for setting up the
+                    // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for
+                    // routed-message transfer.
                     //
                     (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
                     (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
@@ -1524,16 +1525,16 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     qdr_add_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
 
     //
-    // Mark the link as an edge link if it's inside an edge-uplink connection.
+    // Mark the link as an edge link if it's inside an edge connection.
     //
-    link->edge = (conn->role == QDR_ROLE_EDGE_UPLINK);
+    link->edge = (conn->role == QDR_ROLE_EDGE_CONNECTION);
 
     //
     // Reject any attaches of inter-router links that arrive on connections that are not inter-router.
     //
     if (((link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER) &&
-         (conn->role != QDR_ROLE_INTER_ROUTER && conn->role != QDR_ROLE_EDGE_UPLINK))) {
-        link->link_type = QD_LINK_ENDPOINT; // Demote the link type to endpoint if this is not an inter-router/edge-uplink connection
+         conn->role != QDR_ROLE_INTER_ROUTER)) {
+        link->link_type = QD_LINK_ENDPOINT; // Demote the link type to endpoint if this is not an inter-router connection
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
@@ -1544,8 +1545,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     // Reject ENDPOINT attaches if this is an inter-router connection _and_ there is no
     // CONTROL link on the connection.  This will prevent endpoints from using inter-router
     // listeners for normal traffic but will not prevent routed-links from being established.
-    //
-    // EDGE_TODO: Prevent endpoint links on edge-uplink connections
     //
     if (conn->role == QDR_ROLE_INTER_ROUTER && link->link_type == QD_LINK_ENDPOINT &&
         core->control_links_by_mask_bit[conn->mask_bit] == 0) {
@@ -1652,10 +1651,10 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     }
 
                     //
-                    // If this link came through an edge-uplink connection, raise a link event to
+                    // If this link came through an edge connection, raise a link event to
                     // herald that fact.
                     //
-                    if (link->conn->role == QDR_ROLE_EDGE_UPLINK)
+                    if (link->conn->role == QDR_ROLE_EDGE_CONNECTION)
                         qdrc_event_link_raise(core, QDRC_EVENT_LINK_EDGE_DATA_ATTACHED, link);
                 }
             }
@@ -1761,9 +1760,9 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     link->oper_status = QDR_LINK_OPER_UP;
 
     //
-    // Mark the link as an edge link if it's inside an edge-uplink connection.
+    // Mark the link as an edge link if it's inside an edge connection.
     //
-    link->edge = (conn->role == QDR_ROLE_EDGE_UPLINK);
+    link->edge = (conn->role == QDR_ROLE_EDGE_CONNECTION);
 
     if (link->core_endpoint) {
         qdrc_endpoint_do_second_attach_CT(core, link->core_endpoint, source, target);
@@ -1942,7 +1941,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                     //
                     // If this is an edge data link, raise a link event to indicate its detachment.
                     //
-                    if (link->conn->role == QDR_ROLE_EDGE_UPLINK)
+                    if (link->conn->role == QDR_ROLE_EDGE_CONNECTION)
                         qdrc_event_link_raise(core, QDRC_EVENT_LINK_EDGE_DATA_DETACHED, link);
                 }
                 break;

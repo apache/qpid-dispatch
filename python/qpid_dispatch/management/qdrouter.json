@@ -386,7 +386,7 @@
                         "edge"
                     ],
                     "default": "standalone",
-                    "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router can make an uplink to an interior router and join a network without causing that network to recompute paths.",
+                    "description": "In standalone mode, the router operates as a single component.  It does not participate in the routing protocol and therefore will not cooperate with other routers. In interior mode, the router operates in cooperation with other interior routers in an interconnected network.  In edge mode, the router can make a connection to an interior router and join a network without causing that network to recompute paths.",
                     "create": true
                 },
                 "area": {
@@ -705,10 +705,10 @@
                         "normal",
                         "inter-router",
                         "route-container",
-                        "edge-uplink"
+                        "edge"
                     ],
                     "default": "normal",
-                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.  In the edge-uplink role, the connection is assumed to be between an edge router and an interior router.",
+                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.  In the edge role, the connection is assumed to be between an edge router and an interior router.",
                     "create": true
                 },
                 "cost": {
@@ -870,10 +870,10 @@
                         "normal",
                         "inter-router",
                         "route-container",
-                        "edge-uplink"
+                        "edge"
                     ],
                     "default": "normal",
-                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.  In the edge-uplink role, the connection is assumed to be between and edge router and an interior router.",
+                    "description": "The role of an established connection. In the normal role, the connection is assumed to be used for AMQP clients that are doing normal message delivery over the connection.  In the inter-router role, the connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections. route-container role can be used for router-container connections, for example, a router-broker connection.  In the edge role, the connection is assumed to be between and edge router and an interior router.",
                     "create": true
                 },
                 "cost": {

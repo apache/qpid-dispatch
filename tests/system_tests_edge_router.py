@@ -61,13 +61,13 @@ class RouterTest(TestCase):
         edge_port_B       = cls.tester.get_port()
 
         router('INT.A', 'interior', ('listener', {'role': 'inter-router', 'port': inter_router_port}),
-               ('listener', {'role': 'edge-uplink', 'port': edge_port_A}))
+               ('listener', {'role': 'edge', 'port': edge_port_A}))
         router('INT.B', 'interior', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}),
-               ('listener', {'role': 'edge-uplink', 'port': edge_port_B}))
-        router('EA1',   'edge',     ('connector', {'name': 'uplink', 'role': 'edge-uplink', 'port': edge_port_A}))
-        router('EA2',   'edge',     ('connector', {'name': 'uplink', 'role': 'edge-uplink', 'port': edge_port_A}))
-        router('EB1',   'edge',     ('connector', {'name': 'uplink', 'role': 'edge-uplink', 'port': edge_port_B}))
-        router('EB2',   'edge',     ('connector', {'name': 'uplink', 'role': 'edge-uplink', 'port': edge_port_B}))
+               ('listener', {'role': 'edge', 'port': edge_port_B}))
+        router('EA1',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_A}))
+        router('EA2',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_A}))
+        router('EB1',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
+        router('EB2',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
 
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
@@ -228,10 +228,10 @@ class ConnectivityTest(MessagingHandler):
             connections = response.results
             count = 0
             for conn in connections:
-                if conn.role == 'edge-uplink' and conn.container == self.edge_id:
+                if conn.role == 'edge' and conn.container == self.edge_id:
                     count += 1
             if count != 1:
-                self.error = "Incorrect uplink count for container-id.  Expected 1, got %d" % count
+                self.error = "Incorrect edge count for container-id.  Expected 1, got %d" % count
             self.interior_conn.close()
             self.edge_conn.close()
             self.timer.cancel()

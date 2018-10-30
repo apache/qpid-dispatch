@@ -35,26 +35,26 @@
 //
 //   Related to dynamic (topological) addresses:
 //
-//    1) When an uplink becomes active, the "_uplink" address is properly linked to an
-//       outgoing anonymous link on the active uplink connection.
+//    1) When an edge connection becomes active, the "_edge" address is properly linked to an
+//       outgoing anonymous link on the active edge connection.
 //
-//    2) When an uplink becomes active, an incoming link is established over the uplink
+//    2) When an edge connection becomes active, an incoming link is established over the edge
 //       connection that is used to transfer deliveries to topological (dynamic) addresses
 //       on the edge router.
 //
 //  Related to mobile addresses:
 //
-//    3) Ensure that if there is an active uplink, that uplink should have one incoming
+//    3) Ensure that if there is an active edge connection, that connection should have one incoming
 //       link for every mobile address for which there is at least one local consumer.
 //
-//    4) Ensure that if there is an active uplink, that uplink should have one outgoing
+//    4) Ensure that if there is an active edge connection, that connection should have one outgoing
 //       link for every mobile address for which there is at least one local producer.
 //
 //    5) Maintain an incoming link for edge-address-tracking attached to the edge-address-tracker
 //       in the connected interior router.
 //
 //    6) Handle address tracking updates indicating which producer-addresses have destinations
-//       reachable via the edge uplink.
+//       reachable via the edge connection.
 //
 
 #define INITIAL_CREDIT 32
@@ -62,9 +62,9 @@
 struct qcm_edge_addr_proxy_t {
     qdr_core_t                *core;
     qdrc_event_subscription_t *event_sub;
-    bool                       uplink_established;
-    qdr_address_t             *uplink_addr;
-    qdr_connection_t          *uplink_conn;
+    bool                       edge_conn_established;
+    qdr_address_t             *edge_conn_addr;
+    qdr_connection_t          *edge_conn;
     qdrc_endpoint_t           *tracking_endpoint;
     qdrc_endpoint_desc_t       endpoint_descriptor;
 };
@@ -92,7 +92,7 @@ static qdr_terminus_t *qdr_terminus_normal(const char *addr)
 static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t *addr)
 {
     if (addr->edge_inlink == 0) {
-        qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_INCOMING,
+        qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_INCOMING,
                                               qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
         qdr_core_bind_address_link_CT(ap->core, addr, link);
         addr->edge_inlink = link;
@@ -119,7 +119,7 @@ static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_
         // happen later when the interior tells us that there are upstream destinations
         // for the address (see on_transfer below).
         //
-        qdr_link_t *link = qdr_create_link_CT(ap->core, ap->uplink_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
+        qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
                                               qdr_terminus_normal(0), qdr_terminus_normal(key + 2));
         addr->edge_outlink = link;
     }
@@ -144,10 +144,10 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
     switch (event) {
     case QDRC_EVENT_CONN_EDGE_ESTABLISHED : {
         //
-        // Flag the uplink as being established.
+        // Flag the edge connection as being established.
         //
-        ap->uplink_established = true;
-        ap->uplink_conn        = conn;
+        ap->edge_conn_established = true;
+        ap->edge_conn             = conn;
 
         //
         // Attach an anonymous sending link to the interior router.
@@ -157,14 +157,14 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                                                   qdr_terminus(0), qdr_terminus(0));
 
         //
-        // Associate the anonymous sender with the uplink address.  This will cause
-        // all deliveries destined off-edge to be sent to the interior via the uplink.
+        // Associate the anonymous sender with the edge connection address.  This will cause
+        // all deliveries destined off-edge to be sent to the interior via the edge connection.
         //
-        qdr_core_bind_address_link_CT(ap->core, ap->uplink_addr, out_link);
+        qdr_core_bind_address_link_CT(ap->core, ap->edge_conn_addr, out_link);
 
         //
         // Attach a receiving link for edge summary.  This will cause all deliveries
-        // destined for this router to be delivered via the uplink.
+        // destined for this router to be delivered via the edge connection.
         //
         (void) qdr_create_link_CT(ap->core, conn,
                                   QD_LINK_ENDPOINT, QD_INCOMING,
@@ -188,7 +188,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
             if (*key == QD_ITER_HASH_PREFIX_MOBILE) {
                 //
                 // Nullify the edge link references in case there are any left over from an earlier
-                // instance of an edge uplink.
+                // instance of an edge connection.
                 //
                 addr->edge_inlink  = 0;
                 addr->edge_outlink = 0;
@@ -200,7 +200,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 if (DEQ_SIZE(addr->rlinks) > 0) {
                     if (DEQ_SIZE(addr->rlinks) == 1) {
                         qdr_link_ref_t *ref = DEQ_HEAD(addr->rlinks);
-                        if (ref->link->conn != ap->uplink_conn)
+                        if (ref->link->conn != ap->edge_conn)
                             add_inlink(ap, key, addr);
                     } else
                         add_inlink(ap, key, addr);
@@ -213,7 +213,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 if (DEQ_SIZE(addr->inlinks) > 0) {
                     if (DEQ_SIZE(addr->inlinks) == 1) {
                         qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
-                        if (ref->link->conn != ap->uplink_conn)
+                        if (ref->link->conn != ap->edge_conn)
                             add_outlink(ap, key, addr);
                     } else
                         add_outlink(ap, key, addr);
@@ -225,8 +225,8 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
     }
 
     case QDRC_EVENT_CONN_EDGE_LOST :
-        ap->uplink_established = false;
-        ap->uplink_conn        = 0;
+        ap->edge_conn_established = false;
+        ap->edge_conn             = 0;
         break;
 
     default:
@@ -242,9 +242,9 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
     qdr_link_ref_t        *link_ref;
 
     //
-    // If we don't have an established uplink, there is no further work to be done.
+    // If we don't have an established edge connection, there is no further work to be done.
     //
-    if (!ap->uplink_established)
+    if (!ap->edge_conn_established)
         return;
 
     //
@@ -257,11 +257,11 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
     switch (event) {
     case QDRC_EVENT_ADDR_BECAME_LOCAL_DEST :
         //
-        // Add an uplink for this address only if the local destination is
+        // Add an edge connection for this address only if the local destination is
         // not the link to the interior.
         //
         link_ref = DEQ_HEAD(addr->rlinks);
-        if (link_ref->link->conn != ap->uplink_conn)
+        if (link_ref->link->conn != ap->edge_conn)
             add_inlink(ap, key, addr);
         break;
 
@@ -275,7 +275,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
         // remove the inlink for this address.
         //
         link_ref = DEQ_HEAD(addr->rlinks);
-        if (link_ref->link->conn == ap->uplink_conn)
+        if (link_ref->link->conn == ap->edge_conn)
             del_inlink(ap, addr);
         break;
 
@@ -285,7 +285,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     case QDRC_EVENT_ADDR_BECAME_SOURCE :
         link_ref = DEQ_HEAD(addr->inlinks);
-        if (link_ref->link->conn != ap->uplink_conn)
+        if (link_ref->link->conn != ap->edge_conn)
             add_outlink(ap, key, addr);
         break;
 
@@ -299,7 +299,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     case QDRC_EVENT_ADDR_ONE_SOURCE :
         link_ref = DEQ_HEAD(addr->inlinks);
-        if (link_ref->link->conn == ap->uplink_conn)
+        if (link_ref->link->conn == ap->edge_conn)
             del_outlink(ap, addr);
         break;
 
@@ -391,9 +391,9 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
     ap->endpoint_descriptor.on_cleanup       = on_cleanup;
 
     //
-    // Establish the uplink address to represent destinations reachable via the edge uplink
+    // Establish the edge connection address to represent destinations reachable via the edge connection
     //
-    ap->uplink_addr = qdr_add_local_address_CT(core, 'L', "_uplink", QD_TREATMENT_ANYCAST_CLOSEST);
+    ap->edge_conn_addr = qdr_add_local_address_CT(core, 'L', "_edge", QD_TREATMENT_ANYCAST_CLOSEST);
 
     //
     // Subscribe to the core events we'll need to drive this component

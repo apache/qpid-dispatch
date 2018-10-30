@@ -48,7 +48,7 @@ const char *qdr_connection_roles[] =
     {"normal",
      "inter-router",
      "route-container",
-     "edge-uplink",
+     "edge",
      0};
 
 const char *qdr_connection_columns[] =

@@ -37,7 +37,7 @@ const char *QD_ROUTER_LINK_TYPE = "router.link";
 
 static char *router_role    = "inter-router";
 static char *container_role = "route-container";
-static char *edge_role      = "edge-uplink";
+static char *edge_role      = "edge";
 static char *direct_prefix;
 static char *node_id;
 
@@ -147,7 +147,7 @@ static void qd_router_connection_get_config(const qd_connection_t  *conn,
         } else if (cf && (strcmp(cf->role, edge_role) == 0)) {
             *strip_annotations_in  = false;
             *strip_annotations_out = false;
-            *role = QDR_ROLE_EDGE_UPLINK;
+            *role = QDR_ROLE_EDGE_CONNECTION;
             *cost = cf->inter_router_cost;
         } else if (cf && (strcmp(cf->role, container_role) == 0))  // backward compat
             *role = QDR_ROLE_ROUTE_CONTAINER;
@@ -939,11 +939,10 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     pn_data_t *props = pn_conn ? pn_connection_remote_properties(pn_conn) : 0;
 
-    if (role == QDR_ROLE_INTER_ROUTER || role == QDR_ROLE_EDGE_UPLINK) {
+    if (role == QDR_ROLE_INTER_ROUTER || role == QDR_ROLE_EDGE_CONNECTION) {
         //
         // Check the remote properties for an inter-router cost value.
         //
-
         if (props) {
             pn_data_rewind(props);
             pn_data_next(props);

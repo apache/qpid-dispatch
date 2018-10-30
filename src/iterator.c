@@ -88,14 +88,14 @@ static const char    *SEPARATORS = "./";
 static const uint32_t HASH_INIT  = 5381;
 
 
-static void set_to_uplink(qd_iterator_t *iter)
+static void set_to_edge_connection(qd_iterator_t *iter)
 {
-    static const char *UPLINK = "_uplink";
+    static const char *EDGE_CONNECTION = "_edge";
     iter->prefix = QD_ITER_HASH_PREFIX_LOCAL;
     iter->state  = STATE_AT_PREFIX;
     iter->view_start_pointer.buffer    = 0;
-    iter->view_start_pointer.cursor    = (unsigned char*) UPLINK;
-    iter->view_start_pointer.remaining = (int) strlen(UPLINK);
+    iter->view_start_pointer.cursor    = (unsigned char*) EDGE_CONNECTION;
+    iter->view_start_pointer.remaining = (int) strlen(EDGE_CONNECTION);
     iter->view_pointer = iter->view_start_pointer;
 }
 
@@ -138,7 +138,7 @@ static void parse_address_view(qd_iterator_t *iter)
                 }
 
                 if (edge_mode)
-                    set_to_uplink(iter);
+                    set_to_edge_connection(iter);
                 else {
                     iter->prefix = QD_ITER_HASH_PREFIX_ROUTER;
                     iter->state  = STATE_AT_PREFIX;
@@ -148,7 +148,7 @@ static void parse_address_view(qd_iterator_t *iter)
             }
 
             if (edge_mode)
-                set_to_uplink(iter);
+                set_to_edge_connection(iter);
             else {
                 iter->prefix = QD_ITER_HASH_PREFIX_AREA;
                 iter->state  = STATE_AT_PREFIX;
@@ -165,7 +165,7 @@ static void parse_address_view(qd_iterator_t *iter)
             }
 
             if (edge_mode) {
-                set_to_uplink(iter);
+                set_to_edge_connection(iter);
                 return;
             } else {
                 iter->prefix = QD_ITER_HASH_PREFIX_EDGE_SUMMARY;
