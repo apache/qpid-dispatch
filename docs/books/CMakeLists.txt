@@ -38,13 +38,17 @@ if (ASCIIDOCTOR_EXE)
       )
   endforeach ()
 
-  foreach (dir user-guide old-user-guide)
-    add_custom_command (
-      OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${dir}/index.html
-      COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/book.adoc -o ${dir}/index.html
-      DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/${dir}/book.adoc
-      )
-  endforeach ()
+  add_custom_command (
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/old-user-guide/index.html
+    COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/old-user-guide/book.adoc -o old-user-guide/index.html
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/old-user-guide/*.adoc
+    )
+
+  add_custom_command (
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
+    COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/book.adoc -o user-guide/index.html
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/*.adoc ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/modules/*.adoc ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/assemblies/*.adoc
+    )
 
   add_custom_target (books DEPENDS ${books})
   add_dependencies (docs books)

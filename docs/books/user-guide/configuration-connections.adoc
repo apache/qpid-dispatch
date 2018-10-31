@@ -118,3 +118,7 @@ For information about additional attributes, see link:{qdrouterdConfManPageUrl}#
 If you have set up SSL/TLS or SASL in your environment, you can configure the router to only send encrypted or authenticated communication on this connection.
 
 . For each remaining router or broker to which this router should connect, configure an additional `connector` entity.
+
+
+[id='connection-failover']
+include::modules/connection-failover.adoc[leveloffset=+1]

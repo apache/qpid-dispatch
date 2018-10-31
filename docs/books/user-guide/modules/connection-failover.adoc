@@ -1,0 +1,65 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+
+[id='connection-failover-{context}']
+= Connection Failover
+
+In {RouterName}, a connector attempts to maintain an open network transport
+connection to the configured remote host and port.  If the connection cannot be
+established, the connector will continually retry until the connection is
+established.  If an established connection is lost, the connector shall
+immediately attempt to re-establish the connection.
+
+Connection Failover is a mechanism by which the remote host can provide
+alternate connection information for the connector to use in the event the
+established connection is lost.  In this case, rather than attempting to
+re-establish the connection to the same host, the connector shall try the
+alternate hosts as well.  This is useful in the case where the remote host is
+formed by a cluster or array of servers providing the same service.
+
+{RouterName} can participate in Connection Failover as both a client (initiator
+of transport connections) and a server (recipient of transport connections).  In
+the client role, connectors shall always honor the failover lists provided by
+connected servers.  As a server, a listener may be configured to provide a
+failover list to the clients that connect to it.
+
+Listener attribute failoverUrls is an optional component that contains a
+comma-separated list of URLs to be used as backups for this listener.  Each URL
+is of the form:
+
+    [(amqp|amqps|ws|wss)://]host_or_ip[:port]
+
+When a client establishes a connection to this listener, it will be provided
+with this list of backup URLs to be used in the event that this connection is
+lost.
+
+As an example, a listener may be configured like this:
+
+    listener {
+        host: primary.domain.com
+        port: amqp
+        failoverUrls: secondary.domain.com:20000, tertiary.domain.com
+        .
+        .
+        .
+    }
+
