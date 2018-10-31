@@ -294,16 +294,25 @@ If you are changing the router's default configuration file, the file is located
 [options="nowrap",subs="+quotes"]
 ----
 router {
-    mode: _STANDALONE/INTERIOR_
+    mode: _STANDALONE/INTERIOR/EDGE_
     id: _ROUTER_ID_
 }
 ----
 
 `mode`:: Specify one of the following modes:
 +
-* `standalone` - Use this mode if the router does not communicate with other routers and is not part of a router network. When operating in this mode, the router only routes messages between directly connected endpoints.
-* `interior` - Use this mode if the router is part of a router network and needs to collaborate with other routers.
-`id`:: The unique identifier for the router. This ID will also be the container name at the AMQP protocol level.
+* `standalone` - Use this mode if the router does not communicate with
+other routers and is not part of a router network. When operating in
+this mode, the router only routes messages between directly connected
+endpoints. 
+* `interior` - Use this mode if the router is part of a router network
+and needs to collaborate with other routers.
+* `edge` - Use this mode if the router is an edge router that will
+connect to a network of interior routers.
+
+`id`:: The unique
+identifier for the router. This ID will also be the container name at
+the AMQP protocol level.
 
 For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_router[router] in the `qdrouterd.conf` man page.
 --

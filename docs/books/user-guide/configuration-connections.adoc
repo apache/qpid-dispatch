@@ -120,5 +120,4 @@ If you have set up SSL/TLS or SASL in your environment, you can configure the ro
 . For each remaining router or broker to which this router should connect, configure an additional `connector` entity.
 
 
-[id='connection-failover']
 include::modules/connection-failover.adoc[leveloffset=+1]
