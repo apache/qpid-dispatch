@@ -317,11 +317,12 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 
     // Because of a potential conflict when console is installed or not installed,
     // we now want to require that the config file explicitly specify HTTP root
-    // if HTTP service is requested.
+    // if it wants full HTTP service. If it does not specify HTTP root, it will
+    // be useful for AMQP-over-websockets, but will not serve any static content.
+    config->http = config->http || config->http_root_dir;
     if (config->http && ! config->http_root_dir) {
-        qd_log(qd->connection_manager->log_source, QD_LOG_WARNING, "Both http and http_root_dir must be set in router config to enable http support." );
+        qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "HTTP service is requested but no httpRootDir specified. The router will serve AMQP-over-websockets but no static content.");
     }
-    config->http = config->http && config->http_root_dir;
 
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();
     config->max_sessions         = qd_entity_get_long(entity, "maxSessions");         CHECK();
