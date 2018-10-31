@@ -37,8 +37,9 @@ Several types of listeners are defined by their role.
 |===
 | Role | Description
 | normal | The connection is used for AMQP clients using normal message delivery.
-| inter-router | The connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+| inter-router | The connection is assumed to be to another interior router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
 | route-container | The connection is a broker or other resource that holds known addresses. The router will use this connection to create links as necessary. The addresses are available for routing only after the remote resource has created a connection.
+| edge | The connection is between an edge router and an interior router.
 |===
 
 .Procedure
@@ -84,8 +85,9 @@ Several types of connectors are defined by their role.
 |===
 | Role | Description
 | normal | The connection is used for AMQP clients using normal message delivery. On this connector the router will initiate the connection but it will never create any links. Links are to be created by the peer that accepts the connection.
-| inter-router | The connection is assumed to be to another router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
+| inter-router | The connection is assumed to be to another interior router in the network.  Inter-router discovery and routing protocols can only be used over inter-router connections.
 | route-container | The connection is to a broker or other resource that holds known addresses. The router will use this connection to create links as necessary. The addresses are available for routing only after the router has created a connection to the remote resource.
+| edge | The connection is between an edge router and an interior router.
 |===
 
 // Adding this here for now; in the future it might be better to have separate procedures for creating inter-router and route-container connections.
