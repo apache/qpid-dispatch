@@ -174,9 +174,6 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
     if(!qdr_address_is_mobile_CT(addr))
         return;
 
-    const char *addr_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
-    printf ("addr_str is %s\n", addr_str);
-
     qdr_addr_tracking_module_context_t *addr_tracking = (qdr_addr_tracking_module_context_t*) context;
     switch (event) {
         case QDRC_EVENT_ADDR_BECAME_LOCAL_DEST : {
