@@ -26,15 +26,11 @@ from qpid_dispatch.management.client import Node
 
 
 class AddrTimer(object):
-    def __init__(self, parent, check_addr=False):
+    def __init__(self, parent):
         self.parent = parent
-        self.check_addr = check_addr
 
     def on_timer_task(self, event):
-        if self.check_addr:
             self.parent.check_address()
-        else:
-            self.parent.create_sndr()
 
 
 class RouterTest(TestCase):
@@ -282,7 +278,8 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[3].addresses[0],
-                                          "multicast.25")
+                                          "multicast.25",
+                                          self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -293,7 +290,8 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
                                           self.routers[2].addresses[0],
-                                          "multicast.26")
+                                          "multicast.26",
+                                          self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -303,7 +301,8 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
-                                          "multicast.27", check_addr=True)
+                                          "multicast.27",
+                                          self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -314,7 +313,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[1].addresses[0],
-                                          "multicast.28", check_addr=True)
+                                          "multicast.28")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -324,7 +323,7 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
                                           self.routers[0].addresses[0],
-                                          "multicast.29", check_addr=True)
+                                          "multicast.29")
         test.run()
         self.assertEqual(None, test.error)
 
@@ -333,21 +332,22 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
                                           self.routers[5].addresses[0],
-                                          "multicast.30")
+                                          "multicast.30",
+                                          self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
 
 
-    ######### Multicast Large message tests
+    ######### Multicast Large message tests ######################
+
     # 1 Sender and 3 receivers all on the same edge
     def test_31_multicast_mobile_address_same_edge(self):
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
-                                          "multicast.31", True,
-                                          check_addr=False)
+                                          "multicast.31", large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -358,7 +358,9 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[3].addresses[0],
-                                          "multicast.32", True)
+                                          "multicast.32",
+                                          self.routers[0].addresses[0],
+                                          large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -369,7 +371,7 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
                                           self.routers[2].addresses[0],
-                                          "multicast.33", True)
+                                          "multicast.33", large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -379,8 +381,7 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
-                                          "multicast.34", True,
-                                          check_addr=True)
+                                          "multicast.34", large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -391,8 +392,9 @@ class RouterTest(TestCase):
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[1].addresses[0],
-                                          "multicast.35", large_msg=True,
-                                          check_addr=True)
+                                          "multicast.35",
+                                          self.routers[0].addresses[0],
+                                          large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -402,8 +404,7 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
                                           self.routers[0].addresses[0],
-                                          "multicast.36", large_msg=True,
-                                          check_addr=True)
+                                          "multicast.36", large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -412,7 +413,9 @@ class RouterTest(TestCase):
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
                                           self.routers[5].addresses[0],
-                                          "multicast.37", True)
+                                          "multicast.37",
+                                          self.routers[0].addresses[0],
+                                          large_msg=True)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -422,7 +425,7 @@ class RouterTest(TestCase):
                                       self.routers[3].addresses[0],
                                       self.routers[2].addresses[0],
                                       self.routers[0].addresses[0],
-                                      "test_38", True)
+                                      "test_38")
 
         test.run()
         self.assertEqual(None, test.error)
@@ -434,7 +437,7 @@ class RouterTest(TestCase):
                                       self.routers[5].addresses[0],
                                       self.routers[2].addresses[0],
                                       self.routers[0].addresses[0],
-                                      "test_39", True)
+                                      "test_39")
 
         test.run()
         self.assertEqual(None, test.error)
@@ -720,7 +723,7 @@ class MobileAddressOneSenderTwoReceiversTest(MessagingHandler):
 
 class MobileAddressMulticastTest(MessagingHandler):
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
-                 sender_host, address, large_msg=False, check_addr=False):
+                 sender_host, address, check_addr_host=None, large_msg=False):
         super(MobileAddressMulticastTest, self).__init__()
         self.receiver1_host = receiver1_host
         self.receiver2_host = receiver2_host
@@ -758,10 +761,18 @@ class MobileAddressMulticastTest(MessagingHandler):
         self.large_msg = large_msg
         self.body = ""
         self.r_attaches = 0
+        self.reactor = None
         self.addr_timer = None
+
+        # The maximum number of times we are going to try to check if the
+        # address  has propagated.
+        self.max_attempts = 5
+        self.num_attempts = 0
         self.num_attempts = 0
         self.container = None
-        self.check_addr = check_addr
+        self.check_addr_host = check_addr_host
+        if not self.check_addr_host:
+            self.check_addr_host = self.sender_host
 
         if self.large_msg:
             for i in range(10000):
@@ -783,30 +794,33 @@ class MobileAddressMulticastTest(MessagingHandler):
         if self.sender_conn:
             self.sender_conn.close()
 
-    def check_address(self):
-        local_node = Node.connect(self.sender_host, timeout=TIMEOUT)
-        outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
-        found = False
-        for result in outs.results:
-            if self.address in result[0]:
-                found = True
-                self.sender_conn = self.container.connect(self.sender_host)
-                self.sender = self.container.create_sender(self.sender_conn,
-                                                           self.address)
-                local_node.close()
-                break
-
-        if not found:
-            self.error = "Unable to create sender because of " \
-                         "absence of address in the address table"
-            self.addr_timer.cancel()
-            self.timeout()
-            local_node.close()
-
     def create_sndr(self):
         self.sender_conn = self.container.connect(self.sender_host)
         self.sender = self.container.create_sender(self.sender_conn,
                                                    self.address)
+
+    def check_address(self):
+        local_node = Node.connect(self.check_addr_host, timeout=TIMEOUT)
+        outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
+        found = False
+        self.num_attempts += 1
+        for result in outs.results:
+            if self.address in result[0]:
+                found = True
+                self.create_sndr()
+                local_node.close()
+                self.addr_timer.cancel()
+                break
+
+        if not found:
+
+            if self.num_attempts < self.max_attempts:
+                self.addr_timer = self.reactor.schedule(1.0, AddrTimer(self))
+            else:
+                self.error = "Unable to create sender because of " \
+                             "absence of address in the address table"
+                self.timeout()
+                local_node.close()
 
     def on_start(self, event):
         if self.large_msg:
@@ -832,8 +846,8 @@ class MobileAddressMulticastTest(MessagingHandler):
                 event.receiver == self.receiver3:
             self.r_attaches += 1
             if self.r_attaches == 3:
-                self.addr_timer = event.reactor.schedule(4.0,
-                                                             AddrTimer(self, self.check_addr))
+                self.reactor = event.reactor
+                self.addr_timer = self.reactor.schedule(1.0, AddrTimer(self))
 
     def on_sendable(self, event):
         while self.n_sent < self.count:
@@ -883,7 +897,7 @@ class MobileAddressMulticastTest(MessagingHandler):
 
 class MobileAddressEventTest(MessagingHandler):
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
-                 sender_host, interior_host, address, check_addr=False):
+                 sender_host, interior_host, address):
         super(MobileAddressEventTest, self).__init__(auto_accept=False)
         self.receiver1_host = receiver1_host
         self.receiver2_host = receiver2_host
@@ -907,7 +921,6 @@ class MobileAddressEventTest(MessagingHandler):
         self.sender = None
         self.interior_host = interior_host
         self.container = None
-        self.check_addr = check_addr
         self.count = 600
         self.dup_msg = None
         self.receiver_name = None
@@ -918,8 +931,6 @@ class MobileAddressEventTest(MessagingHandler):
         self.n_settled = 0
         self.addr_timer = None
         self.container = None
-
-
 
     def timeout(self):
         if self.dup_msg:
@@ -974,9 +985,7 @@ class MobileAddressEventTest(MessagingHandler):
                                                          self.address)
         self.container = event.container
 
-        self.addr_timer = event.reactor.schedule(4.0,
-                                                 AddrTimer(self,
-                                                           self.check_addr))
+        self.addr_timer = event.reactor.schedule(1.0, AddrTimer(self))
 
     def on_sendable(self, event):
         if self.n_sent < self.count:
