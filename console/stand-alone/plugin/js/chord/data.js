@@ -114,7 +114,7 @@ class ChordData { // eslint-disable-line no-unused-vars
             if (link.linkType === 'endpoint' && link.linkDir === 'out' && !link.owningAddr.startsWith('Ltemp.')) {
               // keep track of the raw egress values as well as their ingress and egress routers and the address
               for (let j = 0; j < ingressRouters.length; j++) {
-                let messages = link.ingressHistogram[j];
+                let messages = link.ingressHistogram ? link.ingressHistogram[j] : 0;
                 if (messages) {
                   values.push({
                     ingress: ingressRouters[j],

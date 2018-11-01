@@ -103,13 +103,22 @@ var utils = {
   },
   // extract the name of the router from the router id
   nameFromId: function (id) {
-    // the router id looks like 'amqp:/topo/0/routerName/$management'
+    // the router id looks like 'amqp:/_topo/0/routerName/$management'
     var parts = id.split('/');
     // handle cases where the router name contains a /
-    parts.splice(0, 3); // remove amqp, topo, 0
+    parts.splice(0, parts.length - 2); // remove amqp, _topo, 0
     parts.pop(); // remove $management
     return parts.join('/');
   },
+
+  // construct a router id given a router name and type (_topo or _edge)
+  idFromName: function (name, type) {
+    let parts = ['amqp:', type, name, '$management'];
+    if (type === '_topo')
+      parts.splice(2, 0, '0');
+    return parts.join('/');
+  },
+
   // calculate the average rate of change per second for a list of fields on the given obj
   // store the historical raw values in storage[key] for future rate calcs
   // keep 'history' number of historical values

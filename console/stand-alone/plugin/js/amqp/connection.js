@@ -271,8 +271,9 @@ class ConnectionManager {
       this.connection = rhea.connect(c);
     }).bind(this));
   }
-  sendMgmtQuery(operation) {
-    return this.send([], '/$management', operation);
+  sendMgmtQuery(operation, to) {
+    to = to || '/$management';
+    return this.send([], to, operation);
   }
   sendQuery(toAddr, entity, attrs, operation) {
     operation = operation || 'QUERY';

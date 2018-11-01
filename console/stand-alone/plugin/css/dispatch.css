@@ -953,7 +953,7 @@ circle.node.route-container {
     fill: orange;
 }
 
-text.console, text.on-demand, text.normal {
+text.console, text.on-demand, text.normal, test.edge {
 	font-family: FontAwesome;
 	font-weight: normal;
 	font-size: 16px;
@@ -1114,6 +1114,9 @@ svg {
   }
   circle.node.normal.out {
       fill: #C0F0C0;
+  }
+  circle.node.edge {
+      fill: #C0C0FF;
   }
   circle.node.on-demand {
       fill: #C0FFC0;

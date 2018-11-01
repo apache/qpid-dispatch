@@ -74,48 +74,104 @@ class Topology {
   get() {
     return new Promise((function (resolve, reject) {
       this.connection.sendMgmtQuery('GET-MGMT-NODES')
-        .then((function (response) {
-          response = response.response;
+        .then((function (results) {
+          let response = results.response;
           if (Object.prototype.toString.call(response) === '[object Array]') {
-            var workInfo = {};
             // if there is only one node, it will not be returned
             if (response.length === 0) {
               var parts = this.connection.getReceiverAddress().split('/');
               parts[parts.length - 1] = '$management';
               response.push(parts.join('/'));
             }
-            for (var i = 0; i < response.length; ++i) {
-              workInfo[response[i]] = {};
-            }
-            var gotResponse = function (nodeName, entity, response) {
-              workInfo[nodeName][entity] = response;
-            };
-            var q = d3.queue(this.connection.availableQeueuDepth());
-            for (var id in workInfo) {
-              for (var entity in this.entityAttribs) {
-                q.defer((this.q_fetchNodeInfo).bind(this), id, entity, this.entityAttribs[entity], q, gotResponse);
-              }
-            }
-            q.await((function () {
-              // filter out nodes that have no connection info
-              if (this.filtering) {
-                for (var id in workInfo) {
-                  if (!(workInfo[id].connection)) {
-                    this.flux = true;
-                    delete workInfo[id];
-                  }
-                }
-              }
+            let finish = function (workInfo) {
               this._nodeInfo = utils.copy(workInfo);
               this.onDone(this._nodeInfo);
               resolve(this._nodeInfo);
-            }).bind(this));
+            };
+            let connectedToEdge = function (response, workInfo) {
+              let routerId = null;
+              if (response.length === 1) {
+                let parts = response[0].split('/');
+                // we are connected to an edge router
+                if (parts[1] === '_edge') {
+                  // find the role:edge connection
+                  let conn = workInfo[response[0]].connection;
+                  if (conn) {
+                    let roleIndex = conn.attributeNames.indexOf('role');
+                    for (let i=0; i<conn.results.length; i++) {
+                      if (conn.results[i][roleIndex] === 'edge') {
+                        let container = utils.valFor(conn.attributeNames, conn.results[i], 'container');
+                        return utils.idFromName(container, '_topo');
+                      }
+                    }
+                  }
+                }
+              }
+              return routerId;
+            };
+            this.doget(response)
+              .then( function (workInfo) {
+                // test for edge case
+                let routerId = connectedToEdge(response, workInfo);
+                if (routerId) {
+                  let edgeId = response[0];
+                  this.connection.sendMgmtQuery('GET-MGMT-NODES', routerId)
+                    .then((function (results) {
+                      let response = results.response;
+                      if (Object.prototype.toString.call(response) === '[object Array]') {
+                        // special case of edge case:
+                        // we are connected to an edge router that is connected to
+                        // a router that is not connected to any other interior routers
+                        if (response.length === 0) {
+                          response = [routerId];
+                        }
+                        this.doget(response)
+                          .then( function (workInfo) {
+                            finish.call(this, workInfo);
+                          }.bind(this));
+
+                      }
+                    }).bind(this));
+                } else {
+                  finish.call(this, workInfo);
+                }
+              }.bind(this));
           }
         }).bind(this), function (error) {
           reject(error);
         });
     }).bind(this));
   }
+  doget(ids) {
+    return new Promise((function (resolve) {
+      let workInfo = {};
+      for (var i = 0; i < ids.length; ++i) {
+        workInfo[ids[i]] = {};
+      }
+      var gotResponse = function (nodeName, entity, response) {
+        workInfo[nodeName][entity] = response;
+      };
+      var q = d3.queue(this.connection.availableQeueuDepth());
+      for (var id in workInfo) {
+        for (var entity in this.entityAttribs) {
+          q.defer((this.q_fetchNodeInfo).bind(this), id, entity, this.entityAttribs[entity], q, gotResponse);
+        }
+      }
+      q.await((function () {
+        // filter out nodes that have no connection info
+        if (this.filtering) {
+          for (var id in workInfo) {
+            if (!(workInfo[id].connection)) {
+              this.flux = true;
+              delete workInfo[id];
+            }
+          }
+        }
+        resolve(workInfo);
+      }).bind(this));
+    }).bind(this));
+  }
+
   onDone(result) {
     clearTimeout(this._getTimer);
     if (this.updating)

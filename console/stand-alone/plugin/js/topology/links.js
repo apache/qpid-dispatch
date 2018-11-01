@@ -79,6 +79,8 @@ export class Links {
     let source = 0;
     let client = 1.0;
     for (let id in nodeInfo) {
+      let parts = id.split('/');
+      let routerType = parts[1]; // _topo || _edge
       let onode = nodeInfo[id];
       if (!onode['connection'])
         continue;
@@ -93,81 +95,85 @@ export class Links {
         let properties = connection.properties || {};
         let dir = connection.dir;
         if (role == 'inter-router') {
+          // there are already 2 router nodes, just link them
           let connId = connection.container;
           let target = getContainerIndex(connId, nodeInfo, this.QDRService);
           if (target >= 0) {
             this.getLink(source, target, dir, '', source + '-' + target);
           }
-        } /* else if (role == "normal" || role == "on-demand" || role === "route-container")*/ {
-          // not an connection between routers, but an external connection
-          let name = this.QDRService.utilities.nameFromId(id) + '.' + connection.identity;
+        }
+        // handle external connections
+        let name = this.QDRService.utilities.nameFromId(id) + '.' + connection.identity;
+        // is this connection for a router connected to an edge router
+        if (role == 'edge' && routerType === '_edge') {
+          name = connection.container;
+          role = 'inter-router';
+        }
 
-          // if we have any new clients, animate the force graph to position them
-          let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
-          if ((typeof position == 'undefined')) {
-            animate = true;
-            position = {
-              x: Math.round(nodes.get(source).x + 40 * Math.sin(client / (Math.PI * 2.0))),
-              y: Math.round(nodes.get(source).y + 40 * Math.cos(client / (Math.PI * 2.0))),
-              fixed: false
-            };
-            //QDRLog.debug("new client pos (" + position.x + ", " + position.y + ")")
-          }// else QDRLog.debug("using previous location")
-          if (position.y > height) {
-            position.y = Math.round(nodes.get(source).y + 40 + Math.cos(client / (Math.PI * 2.0)));
+        // if we have any new clients, animate the force graph to position them
+        let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
+        if ((typeof position == 'undefined')) {
+          animate = true;
+          position = {
+            x: Math.round(nodes.get(source).x + 40 * Math.sin(client / (Math.PI * 2.0))),
+            y: Math.round(nodes.get(source).y + 40 * Math.cos(client / (Math.PI * 2.0))),
+            fixed: false
+          };
+        }
+        if (position.y > height) {
+          position.y = Math.round(nodes.get(source).y + 40 + Math.cos(client / (Math.PI * 2.0)));
+        }
+        let existingNodeIndex = nodes.nodeExists(connection.container);
+        let normalInfo = nodes.normalExists(connection.container);
+        let node = nodes.getOrCreateNode(id, name, role, nodeInfo, nodes.getLength(), position.x, position.y, connection.container, j, position.fixed, properties);
+        let nodeType = this.QDRService.utilities.isAConsole(properties, connection.identity, role, node.key) ? 'console' : 'client';
+        let cdir = getLinkDir(id, connection, onode, this.QDRService);
+        if (existingNodeIndex >= 0) {
+          // make a link between the current router (source) and the existing node
+          this.getLink(source, existingNodeIndex, dir, 'small', connection.name);
+        } else if (normalInfo.nodesIndex) {
+          // get node index of node that contained this connection in its normals array
+          let normalSource = this.getLinkSource(normalInfo.nodesIndex);
+          if (normalSource >= 0) {
+            if (cdir === 'unknown')
+              cdir = dir;
+            node.cdir = cdir;
+            nodes.add(node);
+            // create link from original node to the new node
+            this.getLink(this.links[normalSource].source, nodes.getLength()-1, cdir, 'small', connection.name);
+            // create link from this router to the new node
+            this.getLink(source, nodes.getLength()-1, cdir, 'small', connection.name);
+            // remove the old node from the normals list
+            nodes.get(normalInfo.nodesIndex).normals.splice(normalInfo.normalsIndex, 1);
           }
-          let existingNodeIndex = nodes.nodeExists(connection.container);
-          let normalInfo = nodes.normalExists(connection.container);
-          let node = nodes.getOrCreateNode(id, name, role, nodeInfo, nodes.getLength(), position.x, position.y, connection.container, j, position.fixed, properties);
-          let nodeType = this.QDRService.utilities.isAConsole(properties, connection.identity, role, node.key) ? 'console' : 'client';
-          let cdir = getLinkDir(id, connection, onode, this.QDRService);
-          if (existingNodeIndex >= 0) {
-            // make a link between the current router (source) and the existing node
-            this.getLink(source, existingNodeIndex, dir, 'small', connection.name);
-          } else if (normalInfo.nodesIndex) {
-            // get node index of node that contained this connection in its normals array
-            let normalSource = this.getLinkSource(normalInfo.nodesIndex);
-            if (normalSource >= 0) {
-              if (cdir === 'unknown')
-                cdir = dir;
-              node.cdir = cdir;
+        } else if (role === 'normal' || role === 'edge') {
+        // normal nodes can be collapsed into a single node if they are all the same dir
+          if (cdir !== 'unknown') {
+            node.user = connection.user;
+            node.isEncrypted = connection.isEncrypted;
+            node.host = connection.host;
+            node.connectionId = connection.identity;
+            node.cdir = cdir;
+            // determine arrow direction by using the link directions
+            if (!normalsParent[nodeType+cdir]) {
+              normalsParent[nodeType+cdir] = node;
               nodes.add(node);
-              // create link from original node to the new node
-              this.getLink(this.links[normalSource].source, nodes.getLength()-1, cdir, 'small', connection.name);
-              // create link from this router to the new node
-              this.getLink(source, nodes.getLength()-1, cdir, 'small', connection.name);
-              // remove the old node from the normals list
-              nodes.get(normalInfo.nodesIndex).normals.splice(normalInfo.normalsIndex, 1);
-            }
-          } else if (role === 'normal') {
-          // normal nodes can be collapsed into a single node if they are all the same dir
-            if (cdir !== 'unknown') {
-              node.user = connection.user;
-              node.isEncrypted = connection.isEncrypted;
-              node.host = connection.host;
-              node.connectionId = connection.identity;
-              node.cdir = cdir;
-              // determine arrow direction by using the link directions
-              if (!normalsParent[nodeType+cdir]) {
-                normalsParent[nodeType+cdir] = node;
-                nodes.add(node);
-                node.normals = [node];
-                // now add a link
-                this.getLink(source, nodes.getLength() - 1, cdir, 'small', connection.name);
-                client++;
-              } else {
-                normalsParent[nodeType+cdir].normals.push(node);
-              }
+              node.normals = [node];
+              // now add a link
+              this.getLink(source, nodes.getLength() - 1, cdir, 'small', connection.name);
+              client++;
             } else {
-              node.id = nodes.getLength() - 1 + unknowns.length;
-              unknowns.push(node);
+              normalsParent[nodeType+cdir].normals.push(node);
             }
           } else {
-            nodes.add(node);
-            // now add a link
-            this.getLink(source, nodes.getLength() - 1, dir, 'small', connection.name);
-            client++;
+            node.id = nodes.getLength() - 1 + unknowns.length;
+            unknowns.push(node);
           }
+        } else {
+          nodes.add(node);
+          // now add a link
+          this.getLink(source, nodes.getLength() - 1, dir, 'small', connection.name);
+          client++;
         }
       }
       source++;

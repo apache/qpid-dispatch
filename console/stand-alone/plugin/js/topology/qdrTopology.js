@@ -27,6 +27,7 @@ import { separateAddresses } from '../chord/filters.js';
 import { Nodes } from './nodes.js';
 import { Links } from './links.js';
 import { nextHop, connectionPopupHTML } from './topoUtils.js';
+import { BackgroundMap } from './map.js';
 /**
  * @module QDR
  */
@@ -36,25 +37,41 @@ export class TopologyController {
 
     let QDRLog = new QDRLogger($log, 'TopologyController');
     const TOPOOPTIONSKEY = 'topoOptions';
-    const radius = 25;
-    const radiusNormal = 15;
 
     //  - nodes is an array of router/client info. these are the circles
     //  - links is an array of connections between the routers. these are the lines with arrows
     let nodes = new Nodes(QDRService, QDRLog);
     let links = new Links(QDRService, QDRLog);
     let forceData = {nodes: nodes, links: links};
+
+    $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots', mapOpen: false, legendOpen: true};
+    if (typeof $scope.legendOptions.mapOpen == 'undefined')
+      $scope.legendOptions.mapOpen = false;
+    if (typeof $scope.legendOptions.legendOpen == 'undefined')
+      $scope.legendOptions.legendOpen = false;
+    let backgroundMap = new BackgroundMap($scope, 
+      // notify: called each time a pan/zoom is performed
+      function () {
+        if ($scope.legend.status.mapOpen) {
+          // set all the nodes' x,y position based on their saved lon,lat
+          nodes.setXY(backgroundMap);
+          nodes.savePositions();
+          // redraw the nodes in their x,y position and let non-fixed nodes bungie
+          force.start();
+          clearPopups();
+        }
+      });
     // urlPrefix is used when referring to svg:defs
     let urlPrefix = $location.absUrl();
     urlPrefix = urlPrefix.split('#')[0];
 
-    $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {showTraffic: false, trafficType: 'dots'};
     if (!$scope.legendOptions.trafficType)
       $scope.legendOptions.trafficType = 'dots';
-    $scope.legend = {status: {legendOpen: true, optionsOpen: true}};
+    $scope.legend = {status: {legendOpen: true, optionsOpen: true, mapOpen: false}};
     $scope.legend.status.optionsOpen = $scope.legendOptions.showTraffic;
+    $scope.legend.status.mapOpen = $scope.legendOptions.mapOpen;
     let traffic = new Traffic($scope, $timeout, QDRService, separateAddresses, 
-      radius, forceData, $scope.legendOptions.trafficType, urlPrefix);
+      Nodes.radius('inter-router'), forceData, $scope.legendOptions.trafficType, urlPrefix);
 
     // the showTraaffic checkbox was just toggled (or initialized)
     $scope.$watch('legend.status.optionsOpen', function () {
@@ -72,8 +89,29 @@ export class TopologyController {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
       if ($scope.legendOptions.showTraffic) {
         restart();
-        traffic.setAnimationType($scope.legendOptions.trafficType, separateAddresses, radius);
+        traffic.setAnimationType($scope.legendOptions.trafficType, separateAddresses, Nodes.radius('inter-router'));
         traffic.start();
+      }
+    });
+    $scope.$watch('legend.status.mapOpen', function (newvalue, oldvalue) {
+      $scope.legendOptions.mapOpen = $scope.legend.status.mapOpen;
+      localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
+      // map was shown
+      if ($scope.legend.status.mapOpen && backgroundMap.initialized) {
+        // respond to pan/zoom events
+        backgroundMap.restartZoom();
+        // set the main_container div's background color to the ocean color
+        backgroundMap.updateOceanColor();
+        d3.select('g.geo')
+          .style('opacity', 1);
+      } else {
+        if (newvalue !== oldvalue)
+          backgroundMap.cancelZoom();
+        // hide the map and reset the background color
+        d3.select('g.geo')
+          .style('opacity', 0);
+        d3.select('#main_container')
+          .style('background-color', '#FFF');
       }
     });
 
@@ -81,12 +119,13 @@ export class TopologyController {
     let selected_node = null,
       selected_link = null,
       mousedown_link = null,
-      mousedown_node = null,
       mouseover_node = null,
       mouseup_node = null,
       initial_mouse_down_position = null;
 
     $scope.schema = 'Not connected';
+    $scope.current_node = null,
+    $scope.mousedown_node = null,
 
     $scope.contextNode = null; // node that is associated with the current context menu
     $scope.isRight = function(mode) {
@@ -98,6 +137,7 @@ export class TopologyController {
         $scope.contextNode.fixed = b;
         nodes.setNodesFixed($scope.contextNode.name, b);
         nodes.savePositions();
+        nodes.saveLonLat(backgroundMap, $scope.contextNode);
       }
       restart();
     };
@@ -126,12 +166,6 @@ export class TopologyController {
       $('.contextMenu').fadeOut(200);
     });
 
-    const radii = {
-      'inter-router': 25,
-      'normal': 15,
-      'on-demand': 15,
-      'route-container': 15,
-    };
     let svg, lsvg;  // main svg and legend svg
     let force;
     let animate = false; // should the force graph organize itself when it is displayed
@@ -183,29 +217,6 @@ export class TopologyController {
     if (width <= 0 || height <= 0)
       return;
 
-    // vary the following force graph attributes based on nodeCount
-    // <= 6 routers returns min, >= 80 routers returns max, interpolate linearly
-    var forceScale = function(nodeCount, min, max) {
-      let count = Math.max(Math.min(nodeCount, 80), 6);
-      let x = d3.scale.linear()
-        .domain([6,80])
-        .range([min, max]);
-      //QDRLog.debug("forceScale(" + nodeCount + ", " + min + ", " + max + "  returns " + x(count) + " " + x(nodeCount))
-      return x(count);
-    };
-    var linkDistance = function (d, nodeCount) {
-      if (d.target.nodeType === 'inter-router')
-        return forceScale(nodeCount, 150, 70);
-      return forceScale(nodeCount, 75, 40);
-    };
-    var charge = function (d, nodeCount) {
-      if (d.nodeType === 'inter-router')
-        return forceScale(nodeCount, -1800, -900);
-      return -900;
-    };
-    var gravity = function (d, nodeCount) {
-      return forceScale(nodeCount, 0.0001, 0.1);
-    };
     // initialize the nodes and links array from the QDRService.topology._nodeInfo object
     var initForceGraph = function() {
       forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
@@ -219,7 +230,6 @@ export class TopologyController {
       selected_node = null;
       selected_link = null;
 
-      nodes.savePositions();
       d3.select('#SVG_ID').remove();
       svg = d3.select('#topology')
         .append('svg')
@@ -230,24 +240,38 @@ export class TopologyController {
           clearPopups();
         });
 
+      /*
+      var graticule = d3.geo.graticule();
+      geo.append('path')
+        .datum(graticule)
+        .attr('class', 'graticule')
+        .attr('d', geoPath);
+      */
+
       // the legend
       d3.select('#topo_svg_legend svg').remove();
       lsvg = d3.select('#topo_svg_legend')
         .append('svg')
         .attr('id', 'svglegend');
       lsvg = lsvg.append('svg:g')
-        .attr('transform', `translate( ${(radii['inter-router'] + 2)},${(radii['inter-router'] + 2)})`)
+        .attr('transform', `translate(${Nodes.maxRadius()}, ${Nodes.maxRadius()})`)
         .selectAll('g');
 
       // mouse event vars
       mousedown_link = null;
-      mousedown_node = null;
+      $scope.mousedown_node = null;
       mouseup_node = null;
 
       // initialize the list of nodes
       forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
       animate = nodes.initialize(nodeInfo, localStorage, width, height);
       nodes.savePositions();
+      // read the map data from the data file and build the map layer
+      backgroundMap.init($scope, svg, width, height)
+        .then( function () {
+          nodes.saveLonLat(backgroundMap);
+          backgroundMap.setMapOpacity($scope.legend.status.mapOpen);
+        });
 
       // initialize the list of links
       let unknowns = [];
@@ -261,12 +285,12 @@ export class TopologyController {
         .nodes(nodes.nodes)
         .links(links.links)
         .size([width, height])
-        .linkDistance(function(d) { return linkDistance(d, nodeCount); })
-        .charge(function(d) { return charge(d, nodeCount); })
+        .linkDistance(function(d) { return nodes.linkDistance(d, nodeCount); })
+        .charge(function(d) { return nodes.charge(d, nodeCount); })
         .friction(.10)
-        .gravity(function(d) { return gravity(d, nodeCount); })
+        .gravity(function(d) { return nodes.gravity(d, nodeCount); })
         .on('tick', tick)
-        .on('end', function () {nodes.savePositions();})
+        .on('end', function () {nodes.savePositions(); nodes.saveLonLat(backgroundMap);})
         .start();
 
       // This section adds in the arrows
@@ -301,8 +325,8 @@ export class TopologyController {
       grad.append('stop').attr('offset', '50%').style('stop-color', '#F0F000');
 
       // handles to link and node element groups
-      path = svg.append('svg:g').selectAll('path'),
-      circle = svg.append('svg:g').selectAll('g');
+      path = svg.append('svg:g').attr('class', 'links').selectAll('path'),
+      circle = svg.append('svg:g').attr('class', 'nodes').selectAll('g');
 
       // app starts here
       restart(false);
@@ -339,7 +363,7 @@ export class TopologyController {
           setTimeout(continueForce, 100, extra);
         }
       };
-      continueForce(forceScale(nodeCount, 0, 200));  // give large graphs time to settle down
+      continueForce(Nodes.forceScale(nodeCount, [0, 200]));  // give large graphs time to settle down
     };
 
     // To start up quickly, we only get the connection info for each router.
@@ -367,7 +391,7 @@ export class TopologyController {
     };
 
     function resetMouseVars() {
-      mousedown_node = null;
+      $scope.mousedown_node = null;
       mouseover_node = null;
       mouseup_node = null;
       mousedown_link = null;
@@ -376,24 +400,17 @@ export class TopologyController {
     // update force layout (called automatically each iteration)
     function tick() {
       circle.attr('transform', function(d) {
-        let cradius;
-        if (d.nodeType == 'inter-router') {
-          cradius = d.left ? radius + 8 : radius;
-        } else {
-          cradius = d.left ? radiusNormal + 18 : radiusNormal;
-        }
-        d.x = Math.max(d.x, radiusNormal * 2);
-        d.y = Math.max(d.y, radiusNormal * 2);
-        d.x = Math.max(0, Math.min(width - cradius, d.x));
-        d.y = Math.max(0, Math.min(height - cradius, d.y));
+        let r = Nodes.radius(d.nodeType);
+        d.x = Math.max(Math.min(d.x, width - r), r);
+        d.y = Math.max(Math.min(d.y, height - r), r);
+
         return `translate(${d.x},${d.y})`;
       });
 
-      // draw directed edges with proper padding from node centers
+      // draw lines with arrows with proper padding from node centers
       path.attr('d', function(d) {
-        let sourcePadding, targetPadding, r;
-
-        r = d.target.nodeType === 'inter-router' ? radius : radiusNormal - 18;
+        let sourcePadding, targetPadding;
+        let r = Nodes.radius(d.target.nodeType);
         sourcePadding = targetPadding = 0;
         let dtx = Math.max(targetPadding, Math.min(width - r, d.target.x)),
           dty = Math.max(targetPadding, Math.min(height - r, d.target.y)),
@@ -568,12 +585,14 @@ export class TopologyController {
 
       appendCircle(g)
         .on('mouseover', function(d) {  // mouseover a circle
+          $scope.current_node = d;
           QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
-          if (d.nodeType === 'normal') {
-            showClientTooltip(d, d3.event);
-          } else
-            showRouterTooltip(d, d3.event);
-          if (d === mousedown_node)
+          let e = d3.event;
+          d.toolTip(QDRService)
+            .then( function (toolTip) {
+              showToolTip(toolTip, e);
+            });
+          if (d === $scope.mousedown_node)
             return;
           // enlarge target node
           d3.select(this).attr('transform', 'scale(1.1)');
@@ -590,6 +609,7 @@ export class TopologyController {
           });
         })
         .on('mouseout', function() { // mouse out for a circle
+          $scope.current_node = null;
           // unenlarge target node
           d3.select('#popover-div')
             .style('display', 'none');
@@ -599,15 +619,18 @@ export class TopologyController {
           restart();
         })
         .on('mousedown', function(d) { // mouse down for circle
+          backgroundMap.cancelZoom();
+          $scope.current_node = d;
           if (d3.event.button !== 0) { // ignore all but left button
             return;
           }
-          mousedown_node = d;
+          $scope.mousedown_node = d;
           // mouse position relative to svg
           initial_mouse_down_position = d3.mouse(this.parentNode.parentNode.parentNode).slice();
         })
         .on('mouseup', function(d) {  // mouse up for circle
-          if (!mousedown_node)
+          backgroundMap.restartZoom();
+          if (!$scope.mousedown_node)
             return;
 
           selected_link = null;
@@ -624,25 +647,31 @@ export class TopologyController {
             cur_mouse[1] != initial_mouse_down_position[1]) {
             d.fixed = true;
             nodes.setNodesFixed(d.name, true);
+            nodes.savePositions(d);
+            nodes.saveLonLat(backgroundMap, d);
             resetMouseVars();
             restart();
             return;
           }
 
           // if this node was selected, unselect it
-          if (mousedown_node === selected_node) {
+          if ($scope.mousedown_node === selected_node) {
             selected_node = null;
           } else {
-            if (d.nodeType !== 'normal' && d.nodeType !== 'on-demand')
-              selected_node = mousedown_node;
+            if (d.nodeType !== 'normal' && 
+                d.nodeType !== 'on-demand' && 
+                d.nodeType !== 'edge' &&
+                d.nodeTYpe !== '_edge')
+              selected_node = $scope.mousedown_node;
           }
           clearAllHighlights();
-          mousedown_node = null;
+          $scope.mousedown_node = null;
           if (!$scope.$$phase) $scope.$apply();
           restart(false);
 
         })
         .on('dblclick', function(d) { // circle
+          d3.event.preventDefault();
           if (d.fixed) {
             d.fixed = false;
             nodes.setNodesFixed(d.name, false);
@@ -691,18 +720,19 @@ export class TopologyController {
       let multiples = svg.selectAll('.multiple');
       multiples.each(function(d) {
         let g = d3.select(this);
+        let r = Nodes.radius(d.nodeType);
         g.append('svg:text')
-          .attr('x', radiusNormal + 3)
-          .attr('y', Math.floor(radiusNormal / 2))
+          .attr('x', r + 4)
+          .attr('y', Math.floor((r / 2) - 4))
           .attr('class', 'subtext')
-          .text('x ' + d.normals.length);
+          .text('* ' + d.normals.length);
       });
       // call createLegend in timeout because:
       // If we create the legend right away, then it will be destroyed when the accordian
       // gets initialized as the page loads.
       $timeout(createLegend);
 
-      if (!mousedown_node || !selected_node)
+      if (!$scope.mousedown_node || !selected_node)
         return;
 
       if (!start)
@@ -714,51 +744,54 @@ export class TopologyController {
     }
     let createLegend = function () {
       // dynamically create the legend based on which node types are present
-      // the legend
       d3.select('#topo_svg_legend svg').remove();
       lsvg = d3.select('#topo_svg_legend')
         .append('svg')
         .attr('id', 'svglegend');
       lsvg = lsvg.append('svg:g')
-        .attr('transform', `translate(${(radii['inter-router'] + 2)},${(radii['inter-router'] + 2)})`)
+        .attr('transform', `translate(${Nodes.maxRadius()}, ${Nodes.maxRadius()})`)
         .selectAll('g');
       let legendNodes = new Nodes(QDRService, QDRLog);
       legendNodes.addUsing('Router', '', 'inter-router', '', undefined, 0, 0, 0, 0, false, {});
-
+      if (!svg.selectAll('circle.edge').empty() || !svg.selectAll('circle._edge').empty()) {
+        legendNodes.addUsing('Router', 'Edge', 'edge', '', undefined, 0, 0, 1, 0, false, {});
+      }
       if (!svg.selectAll('circle.console').empty()) {
-        legendNodes.addUsing('Console', 'Console', 'normal', '', undefined, 0, 0, 1, 0, false, {
+        legendNodes.addUsing('Console', 'Console', 'normal', '', undefined, 0, 0, 2, 0, false, {
           console_identifier: 'Dispatch console'
         });
       }
       if (!svg.selectAll('circle.client.in').empty()) {
-        legendNodes.addUsing('Sender', 'Sender', 'normal', '', undefined, 0, 0, 2, 0, false, {}).cdir = 'in';
+        legendNodes.addUsing('Sender', 'Sender', 'normal', '', undefined, 0, 0, 3, 0, false, {}).cdir = 'in';
       }
       if (!svg.selectAll('circle.client.out').empty()) {
-        legendNodes.addUsing('Receiver', 'Receiver', 'normal', '', undefined, 0, 0, 3, 0, false, {}).cdir = 'out';
+        legendNodes.addUsing('Receiver', 'Receiver', 'normal', '', undefined, 0, 0, 4, 0, false, {}).cdir = 'out';
       }
       if (!svg.selectAll('circle.client.inout').empty()) {
-        legendNodes.addUsing('Sender/Receiver', 'Sender/Receiver', 'normal', '', undefined, 0, 0, 4, 0, false, {}).cdir = 'both';
+        legendNodes.addUsing('Sender/Receiver', 'Sender/Receiver', 'normal', '', undefined, 0, 0, 5, 0, false, {}).cdir = 'both';
       }
       if (!svg.selectAll('circle.qpid-cpp').empty()) {
-        legendNodes.addUsing('Qpid broker', 'Qpid broker', 'route-container', '', undefined, 0, 0, 5, 0, false, {
+        legendNodes.addUsing('Qpid broker', 'Qpid broker', 'route-container', '', undefined, 0, 0, 6, 0, false, {
           product: 'qpid-cpp'
         });
       }
       if (!svg.selectAll('circle.artemis').empty()) {
-        legendNodes.addUsing('Artemis broker', 'Artemis broker', 'route-container', '', undefined, 0, 0, 6, 0, false,
+        legendNodes.addUsing('Artemis broker', 'Artemis broker', 'route-container', '', undefined, 0, 0, 7, 0, false,
           {product: 'apache-activemq-artemis'});
       }
       if (!svg.selectAll('circle.route-container').empty()) {
-        legendNodes.addUsing('Service', 'Service', 'route-container', 'external-service', undefined, 0, 0, 7, 0, false,
+        legendNodes.addUsing('Service', 'Service', 'route-container', 'external-service', undefined, 0, 0, 8, 0, false,
           {product: ' External Service'});
       }
       lsvg = lsvg.data(legendNodes.nodes, function(d) {
-        return d.key;
+        return d.key + d.name;
       });
+      let cury = 0;
       let lg = lsvg.enter().append('svg:g')
-        .attr('transform', function(d, i) {
-          // 45px between lines and add 10px space after 1st line
-          return 'translate(0, ' + (45 * i + (i > 0 ? 10 : 0)) + ')';
+        .attr('transform', function(d) {
+          let t = `translate(0, ${cury})`;
+          cury += (Nodes.radius(d.nodeType) * 2 + 10);
+          return t;
         });
 
       appendCircle(lg);
@@ -795,7 +828,7 @@ export class TopologyController {
       return g.append('svg:circle')
         .attr('class', 'node')
         .attr('r', function(d) {
-          return radii[d.nodeType];
+          return Nodes.radius(d.nodeType);
         })
         .attr('fill', function (d) {
           if (d.cdir === 'both' && !QDRService.utilities.isConsole(d)) {
@@ -819,10 +852,13 @@ export class TopologyController {
           return d.cdir == 'both';
         })
         .classed('inter-router', function(d) {
-          return d.nodeType == 'inter-router';
+          return d.nodeType == 'inter-router' || d.nodeType === '_topo';
         })
         .classed('on-demand', function(d) {
           return d.nodeType == 'on-demand';
+        })
+        .classed('edge', function(d) {
+          return d.nodeType === 'edge' || d.nodeType === '_edge';
         })
         .classed('console', function(d) {
           return QDRService.utilities.isConsole(d);
@@ -854,6 +890,8 @@ export class TopologyController {
             y = 4;
           else if (d.nodeType === 'route-container')
             y = 5;
+          else if (d.nodeType === 'edge' || d.nodeType === '_edge')
+            y = 4;
           return y;
         })
         .attr('class', 'id')
@@ -865,6 +903,12 @@ export class TopologyController {
         })
         .classed('on-demand', function(d) {
           return d.nodeType === 'on-demand';
+        })
+        .classed('edge', function(d) {
+          return d.nodeType === 'edge';
+        })
+        .classed('edge', function(d) {
+          return d.nodeType === '_edge';
         })
         .classed('artemis', function(d) {
           return QDRService.utilities.isArtemis(d);
@@ -881,84 +925,20 @@ export class TopologyController {
             return '\ue901';
           } else if (d.nodeType === 'route-container') {
             return d.properties.product ? d.properties.product[0].toUpperCase() : 'S';
-          } else if (d.nodeType === 'normal')
+          } else if (d.nodeType === 'normal') {
             return '\uf109'; // icon-laptop for clients
+          } else if (d.nodeType === 'edge' || d.nodeType === '_edge') {
+            return 'Edge';
+          }
           return d.name.length > 7 ? d.name.substr(0, 6) + '...' : d.name;
         });
     };
     let appendTitle = function(g) {
       g.append('svg:title').text(function(d) {
-        return generateTitle(d);
+        return d.title();
       });
     };
 
-    let generateTitle = function (d) {
-      let x = '';
-      if (d.normals && d.normals.length > 1)
-        x = ' x ' + d.normals.length;
-      if (QDRService.utilities.isConsole(d))
-        return 'Dispatch console' + x;
-      else if (QDRService.utilities.isArtemis(d))
-        return 'Broker - Artemis' + x;
-      else if (d.properties.product == 'qpid-cpp')
-        return 'Broker - qpid-cpp' + x;
-      else if (d.cdir === 'in')
-        return 'Sender' + x;
-      else if (d.cdir === 'out')
-        return 'Receiver' + x;
-      else if (d.cdir === 'both')
-        return 'Sender/Receiver' + x;
-      else if (d.nodeType === 'normal')
-        return 'client' + x;
-      else if (d.nodeType === 'on-demand')
-        return 'broker';
-      else if (d.properties.product) {
-        return d.properties.product;
-      }
-      else {
-        return '';
-      }
-    };
-
-    let showClientTooltip = function (d, event) {
-      let type = generateTitle(d);
-      let title = `<table class="popupTable"><tr><td>Type</td><td>${type}</td></tr>`;
-      if (!d.normals || d.normals.length < 2)
-        title += ('<tr><td>Host</td><td>' + d.host + '</td></tr>');
-      title += '</table>';
-      showToolTip(title, event);
-    };
-
-    let showRouterTooltip = function (d, event) {
-      QDRService.management.topology.ensureEntities(d.key, [
-        {entity: 'listener', attrs: ['role', 'port', 'http']},
-        {entity: 'router', attrs: ['name', 'version', 'hostName']}
-      ], function () {
-        // update all the router title text
-        let nodes = QDRService.management.topology.nodeInfo();
-        let node = nodes[d.key];
-        let listeners = node['listener'];
-        let router = node['router'];
-        let r = QDRService.utilities.flatten(router.attributeNames, router.results[0]);
-        let title = '<table class="popupTable">';
-        title += ('<tr><td>Router</td><td>' + r.name + '</td></tr>');
-        if (r.hostName)
-          title += ('<tr><td>Host Name</td><td>' + r.hostHame + '</td></tr>');
-        title += ('<tr><td>Version</td><td>' + r.version + '</td></tr>');
-        let ports = [];
-        for (let l=0; l<listeners.results.length; l++) {
-          let listener = QDRService.utilities.flatten(listeners.attributeNames, listeners.results[l]);
-          if (listener.role === 'normal') {
-            ports.push(listener.port+'');
-          }
-        }
-        if (ports.length > 0) {
-          title += ('<tr><td>Ports</td><td>' + ports.join(', ') + '</td></tr>');
-        }
-        title += '</table>';
-        showToolTip(title, event);
-      });
-    };
     let showToolTip = function (title, event) {
       // show the tooltip
       $timeout ( function () {
@@ -1027,16 +1007,7 @@ export class TopologyController {
           savedKeys[key] = nodeInfo[key]['connection'].results.length;
       }
     }
-    // we are about to leave the page, save the node positions
-    $rootScope.$on('$locationChangeStart', function() {
-      //QDRLog.debug("locationChangeStart");
-      nodes.savePositions();
-    });
-    // When the DOM element is removed from the page,
-    // AngularJS will trigger the $destroy event on
-    // the scope
-    $scope.$on('$destroy', function() {
-      //QDRLog.debug("scope on destroy");
+    function destroy () {
       nodes.savePositions();
       QDRService.management.topology.setUpdateEntities([]);
       QDRService.management.topology.stopUpdating();
@@ -1047,6 +1018,18 @@ export class TopologyController {
       d3.select('#SVG_ID').remove();
       window.removeEventListener('resize', resize);
       traffic.stop();
+      d3.select('#main_container')
+        .style('background-color', 'white');
+    }
+    // When the DOM element is removed from the page,
+    // AngularJS will trigger the $destroy event on
+    // the scope
+    $scope.$on('$destroy', function() {
+      destroy();
+    });
+    // we are about to leave the page, save the node positions
+    $rootScope.$on('$locationChangeStart', function() {
+      destroy();
     });
 
     function handleInitialUpdate() {
