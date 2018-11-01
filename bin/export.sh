@@ -20,6 +20,19 @@
 #
 
 # export.sh - Create a release archive.
+
+# run this script like this - 
+# Before executing this script, change directory to the folder in which this file is located, for example.
+#   1. cd /home/jdoe/qpid-dispatch/bin
+# Run the script like so - 
+#  2. ./export.sh <output_folder-full-path> <tag-name> 
+#  (Example : ./export.sh /home/jdoe/ 1.5.1 
+#  (/home/jdoe is the folder you want the tar.gz file to be put - specify the full path) 
+#  1.5.1 is the tag name
+# A file named qpid-dispatch-<tag-name>.tar.gz will be created at <output_folder-full-path>
+
+# Simply running ./export.sh will put the tar.gz file in the current folder and use the very latest createed tag 
+
 set -e
 trap "cleanup" 0 1 2 3 9 11 13 15
 
