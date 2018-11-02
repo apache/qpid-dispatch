@@ -45,6 +45,22 @@ describe('Management utilities', function() {
       let name = qdrService.utilities.nameFromId('amqp:/topo/0/router/Name/$management');
       assert.equal(name, 'router/Name');
     });
+    it('should extract from edge router id', function() {
+      let name = qdrService.utilities.nameFromId('amqp:/_edge/edgeName/$management');
+      assert.equal(name, 'edgeName');
+    });
+    it('should extract name with / from edge router id', function() {
+      let name = qdrService.utilities.nameFromId('amqp:/_edge/edge/Name/$management');
+      assert.equal(name, 'edge/Name');
+    });
+    it('should extract name with multiple /s from router id', function() {
+      let name = qdrService.utilities.nameFromId('amqp:/_topo/0/router/Name/here/$management');
+      assert.equal(name, 'router/Name/here');
+    });
+    it('should extract name with multiple /s from edge router id', function() {
+      let name = qdrService.utilities.nameFromId('amqp:/_edge/edge/Name/here/$management');
+      assert.equal(name, 'edge/Name/here');
+    });
   });
   describe('#valFor', function() {
     let aAr = ['name', 'value'];

@@ -111,7 +111,11 @@ class ChordData { // eslint-disable-line no-unused-vars
           for (let i = 0; routerLinks && (i < routerLinks.results.length); i++) {
             let link = self.QDRService.utilities.flatten(routerLinks.attributeNames, routerLinks.results[i]);
             // if the link is an outbound/enpoint/non console
-            if (link.linkType === 'endpoint' && link.linkDir === 'out' && !link.owningAddr.startsWith('Ltemp.')) {
+            if (link.linkType === 'endpoint' && 
+                link.linkDir === 'out' && 
+                (link.owningAddr && 
+                 !link.owningAddr.startsWith('Ltemp.') &&
+                 !link.owningAddr.startsWith('M0$'))) {
               // keep track of the raw egress values as well as their ingress and egress routers and the address
               for (let j = 0; j < ingressRouters.length; j++) {
                 let messages = link.ingressHistogram ? link.ingressHistogram[j] : 0;

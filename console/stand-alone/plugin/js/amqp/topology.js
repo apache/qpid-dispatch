@@ -114,7 +114,6 @@ class Topology {
                 // test for edge case
                 let routerId = connectedToEdge(response, workInfo);
                 if (routerId) {
-                  let edgeId = response[0];
                   this.connection.sendMgmtQuery('GET-MGMT-NODES', routerId)
                     .then((function (results) {
                       let response = results.response;

@@ -410,12 +410,13 @@ export class TopologyController {
       // draw lines with arrows with proper padding from node centers
       path.attr('d', function(d) {
         let sourcePadding, targetPadding;
-        let r = Nodes.radius(d.target.nodeType);
+        let rT = Nodes.radius(d.target.nodeType);
+        let rS = Nodes.radius(d.source.nodeType);
         sourcePadding = targetPadding = 0;
-        let dtx = Math.max(targetPadding, Math.min(width - r, d.target.x)),
-          dty = Math.max(targetPadding, Math.min(height - r, d.target.y)),
-          dsx = Math.max(sourcePadding, Math.min(width - r, d.source.x)),
-          dsy = Math.max(sourcePadding, Math.min(height - r, d.source.y));
+        let dtx = Math.max(targetPadding, Math.min(width - rT, d.target.x)),
+          dty = Math.max(targetPadding, Math.min(height - rT, d.target.y)),
+          dsx = Math.max(sourcePadding, Math.min(width - rS, d.source.x)),
+          dsy = Math.max(sourcePadding, Math.min(height - rS, d.source.y));
 
         let deltaX = dtx - dsx,
           deltaY = dty - dsy,
@@ -705,6 +706,8 @@ export class TopologyController {
               window.location = $location.protocol() + '://localhost:8161/hawtio' + artemisPath;
             }
             return;
+          } else {
+            // TODO: handle clicking on nodes that represent multiple sub-nodes
           }
           d3.event.stopPropagation();
         });

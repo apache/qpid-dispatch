@@ -103,11 +103,22 @@ var utils = {
   },
   // extract the name of the router from the router id
   nameFromId: function (id) {
-    // the router id looks like 'amqp:/_topo/0/routerName/$management'
+    // the router id looks like
+    //  amqp:/_topo/0/routerName/$management'
+    //  amqp:/_topo/0/router/Name/$management'
+    //  amqp:/_edge/routerName/$management'
+    //  amqp:/_edge/router/Name/$management'
+
     var parts = id.split('/');
-    // handle cases where the router name contains a /
-    parts.splice(0, parts.length - 2); // remove amqp, _topo, 0
-    parts.pop(); // remove $management
+    // remove $management
+    parts.pop(); 
+
+    // remove the area if present
+    if (parts[2] === '0')
+      parts.splice(2, 1);
+
+    // remove amqp/(_topo or _edge)
+    parts.splice(0, 2);
     return parts.join('/');
   },
 
