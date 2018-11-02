@@ -434,7 +434,7 @@ const char *qdr_link_name(const qdr_link_t *link)
 
 static void qdr_link_setup_histogram(qdr_connection_t *conn, qd_direction_t dir, qdr_link_t *link)
 {
-    if (dir == QD_OUTGOING && conn->role == QDR_ROLE_NORMAL) {
+    if (dir == QD_OUTGOING && conn->role != QDR_ROLE_INTER_ROUTER) {
         link->ingress_histogram = NEW_ARRAY(uint64_t, qd_bitmask_width());
         for (int i = 0; i < qd_bitmask_width(); i++)
             link->ingress_histogram[i] = 0;
