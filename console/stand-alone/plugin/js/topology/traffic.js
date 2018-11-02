@@ -419,11 +419,11 @@ class Dots extends TrafficAnimation {
     let cdir = sender ? 'out' : 'in';
     for (let n = 0; n < nodes.length; n++) {
       let node = nodes[n];
-      if (node.normals && node.key === nodes[f].key && node.cdir === cdir) {
+      if (node.normals && node.key === nodes[f].key && (node.cdir === cdir || node.cdir === 'both')) {
         let key = ['', f, n].join('-');
         if (!hops[key])
           hops[key] = [];
-        hops[key].push({ val: val, back: node.cdir === 'in', address: address });
+        hops[key].push({ val: val, back: !sender, address: address });
         return;
       }
     }
