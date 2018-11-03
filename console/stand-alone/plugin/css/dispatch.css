@@ -37,10 +37,6 @@ ul.qdrListNodes > li > span {
     width: auto;
 }
 
-.selectedItems {
-    /* margin-left: 21em; */
-}
-
 .qdrListPane {
     top: 110px;
 }
@@ -76,10 +72,6 @@ div.listAggrValue button {
     margin: 3px 0px;
     padding: 0 5px !important;
   }
-}
-
-div.listAttrName i.icon-bar-chart.active, div.hastip i.icon-bar-chart.active, li.haschart i {
-    /*background-color: #AAFFAA; */
 }
 
 div#main div ul.nav li a:not(.btn) {
@@ -159,13 +151,6 @@ div.chartContainer {
     stroke: black;
 }
 
-/* the line surrounding the area chart */
-div.d3Chart path {
-/*    stroke: black; */
-/*    stroke-width: 0; */
-/*	opacity: 0.5; */
-}
-
 /* the line above the area chart */
 /* the color gets overridden */
 div.d3Chart path.line {
@@ -223,9 +208,6 @@ div.d3Chart .title {
    fill: none;
    stroke: steelblue;
  }
-.focus .fo-table {
-	/* box-shadow: 2px 2px 3px #EEE; */
-}
 
 div.d3Chart {
     /* padding: 1em 0; */
@@ -238,10 +220,6 @@ div.d3Chart.hDash {
 
 div.d3Chart .axis path {
 	display: inherit;
-}
-
-.c3-circle {
-	/* display: none; */
 }
 
 .fo-table {
@@ -442,9 +420,6 @@ ul.qdrTopoModes {
     position: relative;
     top: -10px;
 }
-.overview.section {
-	/* width: 35em; */
-}
 .overview.section .ngGrid {
 	height: 12em !important;
 	min-height: 12em !important;
@@ -454,9 +429,6 @@ ul.qdrTopoModes {
  	height: 16em !important;
  	min-height: 16em !important;
 }
-.overview.routers.section {
- 	/*width: 15em; */
- }
 
 .grid-align-value {
 	text-align: right;
@@ -673,15 +645,8 @@ div.login.container {
 	text-decoration: none;
 }
 
-.fancytree-ico-c.router .fancytree-icon {
-
-}
-
 .tabs-left .nav-tabs {
 	float: left;
-}
-.tabs-left .nav-tabs > li {
-/*	float: initial; */
 }
 
 div.modal.dlg-large {
@@ -864,10 +829,6 @@ span:not(.fancytree-has-children).vhostStats .fancytree-icon:before {
 }
 
 
-.ngCellText {
-/*    color: #333333; */
-}
-
 .changed {
     color: #339933;
 }
@@ -918,10 +879,6 @@ div.operations .tab-pane.active {
 div.operations label {
     padding-top: 4px;
     margin-bottom: 4px;
-}
-.qdrListActions .ngGrid {
-	/*min-height: 40em;
-	height: 100%; */
 }
 div.qdrListActions .ngViewport {
     height: initial !important;
@@ -1037,7 +994,9 @@ svg {
   svg:not(.active):not(.ctrl) {
     cursor: crosshair;
   }
-  #end-arrow-selected, #start-arrow-selected {
+  #end-selected-28, #start-selected-28,
+  #end-selected-20, #start-selected-20,
+  #end-selected-15, #start-selected-15 {
       stroke: #33F;
       fill: #33F;
   }
@@ -1049,7 +1008,7 @@ svg {
   path.link {
     fill: #000;
     /* stroke: #000; */
-    stroke-width: 4px;
+    stroke-width: 2.5px;
     cursor: default;
   }
   
@@ -1059,26 +1018,29 @@ svg {
   svg:not(.active):not(.ctrl) path.link {
     cursor: pointer;
   }
-  
+
+  path.link.hittarget {
+    stroke-width: 15px;
+    stroke: transparent;
+  }
+
   path.link.small {
     stroke-width: 2.5;
   }
   path.link.small:not(.traffic) {
-      stroke: darkgray;
+      stroke: #000;
   }
   path.link.highlighted:not(.traffic) {
       stroke: #6F6 !important;
   }
-  marker#start-arrow-highlighted,
-  marker#end-arrow-highlighted {
+  marker#start-highlighted-28, marker#end-highlighted-28,
+  marker#start-highlighted-20, marker#end-highlighted-20,
+  marker#start-highlighted-15, marker#end-highlighted-15 {
       fill: #6F6;
   }
-  marker#start-arrow-small,
-  marker#end-arrow-small {
-      fill: darkgray;
-  }
   marker {
-      stroke-width: 0;
+    fill: #000;
+    stroke-width: 0;
   }
   path.link.dragline {
     pointer-events: none;
@@ -1146,9 +1108,6 @@ svg {
       border-radius: 5px;
   }
   
-  .tiptable {
-  
-  }
   .tiptable tr {
       border-bottom: 1px solid #ccc;
   }
@@ -1259,11 +1218,9 @@ svg {
     stroke-linejoin: round;
     fill:none;
   }
-  .arc { }
   .arc:hover {
     stroke: darkred;
   }
-  .flyer { }
   .flyer:hover {
     stroke: darkgreen;
   }
@@ -1347,10 +1304,6 @@ svg {
       display: inline-block;
   }
   */
-  .ui-tabs .ui-tabs-panel {
-      /* padding-top: 0 !important; */
-  }
-  
   .ui-widget-content fieldset {
     float: left;
     padding: 0 1em 0 0;
@@ -1421,7 +1374,6 @@ svg {
   
   .entity-fields label {
       font-weight: 600;
-      margin-top: 0.5em;
       display: inline;
   }
   
@@ -1511,9 +1463,6 @@ svg {
       left: 600px;
   }
   
-  .cross-rect {
-    /* fill: #cfe2f3; */
-  }
   .cross-line {
     stroke: black;
     stroke-width: 4px;

@@ -294,26 +294,35 @@ export class TopologyController {
         .start();
 
       // This section adds in the arrows
-      svg.append('svg:defs').attr('class', 'marker-defs').selectAll('marker')
-        .data(['end-arrow', 'end-arrow-selected', 'end-arrow-small', 'end-arrow-highlighted', 
-          'start-arrow', 'start-arrow-selected', 'start-arrow-small', 'start-arrow-highlighted'])
-        .enter().append('svg:marker') 
-        .attr('id', function (d) { return d; })
-        .attr('viewBox', '0 -5 10 10')
-        .attr('refX', function (d) { 
-          if (d.substr(0, 3) === 'end') {
-            return 24;
+      // Generate a marker for each combination of:
+      //  start|end, ''|selected highlighted, and each possible node radius
+      {
+        let sten = ['start', 'end'];
+        let states = ['', 'selected', 'highlighted'];
+        let radii = Nodes.discrete();
+        let defs = [];
+        for (let isten=0; isten<sten.length; isten++) {
+          for (let istate=0; istate<states.length; istate++) {
+            for (let iradii=0; iradii<radii.length; iradii++) {
+              defs.push({sten: sten[isten], state: states[istate], r: radii[iradii]});
+            }
           }
-          return d !== 'start-arrow-small' ? -14 : -24;})
-        .attr('markerWidth', 4)
-        .attr('markerHeight', 4)
-        .attr('orient', 'auto')
-        .classed('small', function (d) {return d.indexOf('small') > -1;})
-        .append('svg:path')
-        .attr('d', function (d) {
-          return d.substr(0, 3) === 'end' ? 'M 0 -5 L 10 0 L 0 5 z' : 'M 10 -5 L 0 0 L 10 5 z';
-        });
-
+        }
+        svg.append('svg:defs').attr('class', 'marker-defs').selectAll('marker')
+          .data(defs)
+          .enter().append('svg:marker') 
+          .attr('id', function (d) { return [d.sten, d.state, d.r].join('-'); })
+          .attr('viewBox', '0 -5 10 10')
+          .attr('refX', function (d) { return d.sten === 'end' ? d.r : -d.r; })
+          .attr('markerWidth', 4)
+          .attr('markerHeight', 4)
+          .attr('orient', 'auto')
+          .classed('small', function (d) {return d.sten === 'small';})
+          .append('svg:path')
+          .attr('d', function (d) {
+            return d.sten === 'end' ? 'M 0 -5 L 10 0 L 0 5 z' : 'M 10 -5 L 0 0 L 10 5 z';
+          });
+      }
       // gradient for sender/receiver client
       let grad = svg.append('svg:defs').append('linearGradient')
         .attr('id', 'half-circle')
@@ -399,45 +408,19 @@ export class TopologyController {
 
     // update force layout (called automatically each iteration)
     function tick() {
+      // move the circles
       circle.attr('transform', function(d) {
+        // don't let the edges of the circle go beyond the edges of the svg
         let r = Nodes.radius(d.nodeType);
         d.x = Math.max(Math.min(d.x, width - r), r);
         d.y = Math.max(Math.min(d.y, height - r), r);
-
         return `translate(${d.x},${d.y})`;
       });
 
-      // draw lines with arrows with proper padding from node centers
-      path.attr('d', function(d) {
-        let sourcePadding, targetPadding;
-        let rT = Nodes.radius(d.target.nodeType);
-        let rS = Nodes.radius(d.source.nodeType);
-        sourcePadding = targetPadding = 0;
-        let dtx = Math.max(targetPadding, Math.min(width - rT, d.target.x)),
-          dty = Math.max(targetPadding, Math.min(height - rT, d.target.y)),
-          dsx = Math.max(sourcePadding, Math.min(width - rS, d.source.x)),
-          dsy = Math.max(sourcePadding, Math.min(height - rS, d.source.y));
-
-        let deltaX = dtx - dsx,
-          deltaY = dty - dsy,
-          dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-        if (dist == 0)
-          dist = 0.001;
-        let normX = deltaX / dist,
-          normY = deltaY / dist;
-        let sourceX = dsx + (sourcePadding * normX),
-          sourceY = dsy + (sourcePadding * normY),
-          targetX = dtx - (targetPadding * normX),
-          targetY = dty - (targetPadding * normY);
-        sourceX = Math.max(0, sourceX);
-        sourceY = Math.max(0, sourceY);
-        targetX = Math.max(0, targetX);
-        targetY = Math.max(0, targetY);
-
-        return `M${sourceX},${sourceY}L${targetX},${targetY}`;
-      })
-        .attr('id', function (d) {
-          return ['path', d.source.index, d.target.index].join('-');
+      // draw lines from node centers
+      path
+        .attr('d', function(d) {
+          return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
         });
 
       if (!animate) {
@@ -476,7 +459,10 @@ export class TopologyController {
       circle.call(force.drag);
 
       // path (link) group
-      path = path.data(links.links, function(d) {return d.uid;});
+      path = path.data(links.links, function(d) {return d.uid;})
+        .attr('id', function (d) {
+          return ['path', d.source.index, d.target.index].join('-');
+        });
 
       // update existing links
       path.classed('selected', function(d) {
@@ -485,31 +471,24 @@ export class TopologyController {
         .classed('highlighted', function(d) {
           return d.highlighted;
         });
+      // reset the markers based on current highlighted/selected
       if (!$scope.legend.status.optionsOpen || $scope.legendOptions.trafficType === 'dots') {
         path
-          .attr('marker-start', function(d) {
-            let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-            if (d.highlighted)
-              sel = '-highlighted';
-            return d.left ? `url(${urlPrefix}#start-arrow${sel})` : '';
-          })
           .attr('marker-end', function(d) {
-            let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-            if (d.highlighted)
-              sel = '-highlighted';
-            return d.right ? `url(${urlPrefix}#end-arrow${sel})` : '';
+            return d.right ? `url(${urlPrefix}#end${d.markerId(selected_link, d.source)})` : '';
+          })
+          .attr('marker-start', function(d) {
+            return d.left ? `url(${urlPrefix}#start${d.markerId(selected_link, d.source)})` : '';
           });
       }
       // add new links. if a link with a new uid is found in the data, add a new path
       path.enter().append('svg:path')
         .attr('class', 'link')
-        .attr('marker-start', function(d) {
-          let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-          return d.left ? `url(${urlPrefix}#start-arrow${sel})` : '';
-        })
         .attr('marker-end', function(d) {
-          let sel = d === selected_link ? '-selected' : (d.cls === 'small' ? '-small' : '');
-          return d.right ? `url(${urlPrefix}#end-arrow${sel})` : '';
+          return d.right ? `url(${urlPrefix}#end${d.markerId(selected_link, d.source)})` : null;
+        })
+        .attr('marker-start', function(d) {
+          return d.left ? `url(${urlPrefix}#start${d.markerId(selected_link, d.source)})` : null;
         })
         .classed('small', function(d) {
           return d.cls == 'small';

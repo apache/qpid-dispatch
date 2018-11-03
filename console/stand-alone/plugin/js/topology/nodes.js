@@ -121,7 +121,9 @@ export class Node {
       }.bind(this));
     }.bind(this)));
   }
-
+  radius() {
+    return nodeProperties[this.nodeType].radius;
+  }
 }
 const nodeProperties = {
   // router types
@@ -153,6 +155,14 @@ export class Nodes {
       max = Math.max(max, nodeProperties[key].radius);
     }
     return max;
+  }
+  // return all possible values of node radii
+  static discrete() {
+    let values = {};
+    for (let key in nodeProperties) {
+      values[nodeProperties[key].radius] = true;
+    }
+    return Object.keys(values);
   }
   // vary the following force graph attributes based on nodeCount
   static forceScale (nodeCount, minmax) {

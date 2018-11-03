@@ -26,6 +26,11 @@ class Link {
     this.cls = cls;
     this.uid = uid;
   }
+  markerId (selected_link, node) {
+    let selhigh = this.highlighted ? 'highlighted' : selected_link && this.uid === selected_link.uid ? 'selected' : '';
+    return `-${selhigh}-${node.radius()}`;
+
+  }
 }
 
 export class Links {
