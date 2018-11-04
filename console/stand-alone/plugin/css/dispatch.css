@@ -994,12 +994,6 @@ svg {
   svg:not(.active):not(.ctrl) {
     cursor: crosshair;
   }
-  #end-selected-28, #start-selected-28,
-  #end-selected-20, #start-selected-20,
-  #end-selected-15, #start-selected-15 {
-      stroke: #33F;
-      fill: #33F;
-  }
   path.link.selected:not(.traffic) {
     /* stroke-dasharray: 10,2; */
     stroke: #33F  !important;
@@ -1019,7 +1013,7 @@ svg {
     cursor: pointer;
   }
 
-  path.link.hittarget {
+  path.hittarget {
     stroke-width: 15px;
     stroke: transparent;
   }
@@ -1032,11 +1026,6 @@ svg {
   }
   path.link.highlighted:not(.traffic) {
       stroke: #6F6 !important;
-  }
-  marker#start-highlighted-28, marker#end-highlighted-28,
-  marker#start-highlighted-20, marker#end-highlighted-20,
-  marker#start-highlighted-15, marker#end-highlighted-15 {
-      fill: #6F6;
   }
   marker {
     fill: #000;

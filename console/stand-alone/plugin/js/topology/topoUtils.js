@@ -252,3 +252,24 @@ export function connectionPopupHTML (d, QDRService) {
   }
   return HTML;
 }
+
+export function addStyles (stend, stateColor, radii) {
+  // the <style>
+  let element = document.querySelector('style');
+  // Reference to the stylesheet
+  let sheet = element.sheet;
+
+  let states = Object.keys(stateColor);
+  // create styles for each combo of 'stend-state-radii'
+  for (let istend=0; istend<stend.length; istend++) {
+    for (let istate=0; istate<states.length; istate++) {
+      let selectors = [];
+      for (let iradii=0; iradii<radii.length; iradii++) {
+        selectors.push(`#${stend[istend]}-${states[istate]}-${radii[iradii]}`);
+      }
+      let color = stateColor[states[istate]];
+      let sels = `${selectors.join(',')} {fill: ${color}; stroke: ${color};}`;
+      sheet.insertRule(sels, 0);
+    }
+  }
+}

@@ -26,7 +26,7 @@ import { Traffic } from './traffic.js';
 import { separateAddresses } from '../chord/filters.js';
 import { Nodes } from './nodes.js';
 import { Links } from './links.js';
-import { nextHop, connectionPopupHTML } from './topoUtils.js';
+import { nextHop, connectionPopupHTML, addStyles } from './topoUtils.js';
 import { BackgroundMap } from './map.js';
 /**
  * @module QDR
@@ -117,8 +117,6 @@ export class TopologyController {
 
     // mouse event vars
     let selected_node = null,
-      selected_link = null,
-      mousedown_link = null,
       mouseover_node = null,
       mouseup_node = null,
       initial_mouse_down_position = null;
@@ -228,7 +226,6 @@ export class TopologyController {
       let oldMouseoverNode = mouseover_node;
       mouseover_node = null;
       selected_node = null;
-      selected_link = null;
 
       d3.select('#SVG_ID').remove();
       svg = d3.select('#topology')
@@ -240,14 +237,6 @@ export class TopologyController {
           clearPopups();
         });
 
-      /*
-      var graticule = d3.geo.graticule();
-      geo.append('path')
-        .datum(graticule)
-        .attr('class', 'graticule')
-        .attr('d', geoPath);
-      */
-
       // the legend
       d3.select('#topo_svg_legend svg').remove();
       lsvg = d3.select('#topo_svg_legend')
@@ -258,12 +247,10 @@ export class TopologyController {
         .selectAll('g');
 
       // mouse event vars
-      mousedown_link = null;
       $scope.mousedown_node = null;
       mouseup_node = null;
 
       // initialize the list of nodes
-      forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
       animate = nodes.initialize(nodeInfo, localStorage, width, height);
       nodes.savePositions();
       // read the map data from the data file and build the map layer
@@ -275,7 +262,6 @@ export class TopologyController {
 
       // initialize the list of links
       let unknowns = [];
-      forceData.links = links = new Links(QDRService, QDRLog);
       if (links.initializeLinks(nodeInfo, nodes, unknowns, localStorage, height)) {
         animate = true;
       }
@@ -317,11 +303,11 @@ export class TopologyController {
           .attr('markerWidth', 4)
           .attr('markerHeight', 4)
           .attr('orient', 'auto')
-          .classed('small', function (d) {return d.sten === 'small';})
           .append('svg:path')
           .attr('d', function (d) {
             return d.sten === 'end' ? 'M 0 -5 L 10 0 L 0 5 z' : 'M 10 -5 L 0 0 L 10 5 z';
           });
+        addStyles (sten, {selected: '#33F', highlighted: '#6F6'}, radii);
       }
       // gradient for sender/receiver client
       let grad = svg.append('svg:defs').append('linearGradient')
@@ -334,12 +320,14 @@ export class TopologyController {
       grad.append('stop').attr('offset', '50%').style('stop-color', '#F0F000');
 
       // handles to link and node element groups
-      path = svg.append('svg:g').attr('class', 'links').selectAll('path'),
+      path = svg.append('svg:g').attr('class', 'links').selectAll('g'),
       circle = svg.append('svg:g').attr('class', 'nodes').selectAll('g');
 
       // app starts here
-      restart(false);
-      force.start();
+      if (unknowns.length === 0) {
+        restart(false);
+        force.start();
+      }
       if (oldSelectedNode) {
         d3.selectAll('circle.inter-router').classed('selected', function (d) {
           if (d.key === oldSelectedNode.key) {
@@ -403,7 +391,6 @@ export class TopologyController {
       $scope.mousedown_node = null;
       mouseover_node = null;
       mouseup_node = null;
-      mousedown_link = null;
     }
 
     // update force layout (called automatically each iteration)
@@ -418,7 +405,7 @@ export class TopologyController {
       });
 
       // draw lines from node centers
-      path
+      path.selectAll('path')
         .attr('d', function(d) {
           return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
         });
@@ -451,8 +438,9 @@ export class TopologyController {
       links.clearHighlighted();
       nodes.clearHighlighted();
     }
-    // takes the nodes and links array of objects and adds svg elements for everything that hasn't already
-    // been added
+    // Takes the forceData.nodes and forceData.links array and creates svg elements
+    // Also updates any existing svg elements based on the updated values in forceData.nodes
+    // and forceData.paths
     function restart(start) {
       if (!circle)
         return;
@@ -465,43 +453,32 @@ export class TopologyController {
         });
 
       // update existing links
-      path.classed('selected', function(d) {
-        return d === selected_link;
-      })
+      path.selectAll('.link')
+        .classed('selected', function(d) {
+          return d.selected;
+        })
         .classed('highlighted', function(d) {
           return d.highlighted;
         });
       // reset the markers based on current highlighted/selected
       if (!$scope.legend.status.optionsOpen || $scope.legendOptions.trafficType === 'dots') {
-        path
+        path.selectAll('.link')
           .attr('marker-end', function(d) {
-            return d.right ? `url(${urlPrefix}#end${d.markerId(selected_link, d.source)})` : '';
+            return d.right ? `url(${urlPrefix}#end${d.markerId(d)})` : null;
           })
           .attr('marker-start', function(d) {
-            return d.left ? `url(${urlPrefix}#start${d.markerId(selected_link, d.source)})` : '';
+            return d.left ? `url(${urlPrefix}#start${d.markerId(d)})` : null;
           });
       }
       // add new links. if a link with a new uid is found in the data, add a new path
-      path.enter().append('svg:path')
-        .attr('class', 'link')
-        .attr('marker-end', function(d) {
-          return d.right ? `url(${urlPrefix}#end${d.markerId(selected_link, d.source)})` : null;
-        })
-        .attr('marker-start', function(d) {
-          return d.left ? `url(${urlPrefix}#start${d.markerId(selected_link, d.source)})` : null;
-        })
-        .classed('small', function(d) {
-          return d.cls == 'small';
-        })
+      let enterpath = path.enter().append('g')
         .on('mouseover', function(d) { // mouse over a path
           let event = d3.event;
-          mousedown_link = d;
-          selected_link = mousedown_link;
+          d.selected = true;
           let updateTooltip = function () {
             $timeout(function () {
               $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d, QDRService));
-              if (selected_link)
-                displayTooltip(event);
+              displayTooltip(event);
             });
           };
           // update the contents of the popup tooltip each time the data is polled
@@ -515,11 +492,11 @@ export class TopologyController {
           restart();
 
         })
-        .on('mouseout', function() { // mouse out of a path
+        .on('mouseout', function(d) { // mouse out of a path
           QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
           d3.select('#popover-div')
             .style('display', 'none');
-          selected_link = null;
+          d.selected = false;
           connectionPopupHTML();
           restart();
         })
@@ -528,6 +505,19 @@ export class TopologyController {
           d3.event.stopPropagation();
           clearPopups();
         });
+
+      enterpath.append('path')
+        .attr('class', 'link')
+        .attr('marker-end', function(d) {
+          return d.right ? `url(${urlPrefix}#end${d.markerId(d)})` : null;
+        })
+        .attr('marker-start', function(d) {
+          return d.left ? `url(${urlPrefix}#start${d.markerId(d)})` : null;
+        });
+
+      enterpath.append('path')
+        .attr('class', 'hittarget');
+
       // remove old links
       path.exit().remove();
 
@@ -613,7 +603,6 @@ export class TopologyController {
           if (!$scope.mousedown_node)
             return;
 
-          selected_link = null;
           // unenlarge target node
           d3.select(this).attr('transform', '');
 
