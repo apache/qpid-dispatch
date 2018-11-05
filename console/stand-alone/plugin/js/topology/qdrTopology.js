@@ -447,10 +447,7 @@ export class TopologyController {
       circle.call(force.drag);
 
       // path (link) group
-      path = path.data(links.links, function(d) {return d.uid;})
-        .attr('id', function (d) {
-          return ['path', d.source.index, d.target.index].join('-');
-        });
+      path = path.data(links.links, function(d) {return d.uid;});
 
       // update existing links
       path.selectAll('.link')
@@ -513,6 +510,9 @@ export class TopologyController {
         })
         .attr('marker-start', function(d) {
           return d.left ? `url(${urlPrefix}#start${d.markerId(d)})` : null;
+        })
+        .attr('id', function (d) {
+          return ['path', d.source.index, d.target.index].join('-');
         });
 
       enterpath.append('path')
