@@ -48,10 +48,8 @@ include(FindPythonLibs)
 
 if (PYTHON_VERSION_MAJOR STREQUAL 3)
     set(PY_STRING "python3")
-    set(PY_UNIT2_STRING "unit2-3")
 elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
-    set(PY_UNIT2_STRING "unit2")
 endif()
 
 # Find python-unittest2
@@ -244,6 +242,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/run.py.in ${CMAKE_CURRENT_BINARY_DIR}/tests/run.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/authservice.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/authservice.py)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/failoverserver.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/failoverserver.py)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_authz_service_plugin.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_authz_service_plugin.py)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_handle_failover.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_handle_failover.py)
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 
 if (NOT UNITTEST2_MISSING)
