@@ -930,7 +930,11 @@ export class TopologyController {
         let pwidth = $('#popover-div').width();
         d3.select('#popover-div')
           .style('visibility', 'visible')
-          .style('left',(Math.min(width-pwidth, event.pageX+5) + 'px'));
+          .style('left',(Math.min(width-pwidth, event.pageX+5) + 'px'))
+          .on('mouseout', function () {
+            d3.select(this)
+              .style('display', 'none');
+          });
       });
     };
 
