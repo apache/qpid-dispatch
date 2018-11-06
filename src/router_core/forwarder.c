@@ -577,6 +577,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
         // so deliveries will be distributed among the subscribers in a round-robin pattern.
         //
         if (DEQ_SIZE(addr->rlinks) > 1) {
+            link_ref = DEQ_HEAD(addr->rlinks);
             DEQ_REMOVE_HEAD(addr->rlinks);
             DEQ_INSERT_TAIL(addr->rlinks, link_ref);
         }
