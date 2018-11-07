@@ -61,6 +61,8 @@ var utils = {
   addr_text: function (addr) {
     if (!addr)
       return '-';
+    if (addr[0] === addr[0].toLowerCase()) 
+      return addr;
     if (addr[0] == 'M')
       return addr.substring(2);
     else
@@ -72,11 +74,14 @@ var utils = {
     if (addr[0] == 'R') return 'router';
     if (addr[0] == 'A') return 'area';
     if (addr[0] == 'L') return 'local';
+    if (addr[0] == 'H') return 'edge';
     if (addr[0] == 'C') return 'link-incoming';
     if (addr[0] == 'E') return 'link-incoming';
     if (addr[0] == 'D') return 'link-outgoing';
     if (addr[0] == 'F') return 'link-outgoing';
     if (addr[0] == 'T') return 'topo';
+    if (addr === 'queue.waypoint') return 'mobile';
+    if (addr === 'link') return 'link';
     return 'unknown: ' + addr[0];
   },
   humanify: function (s) {
