@@ -45,7 +45,7 @@
     "jquery.fancytree": "^2.26.0",
     "notifyjs-browser": "^0.4.2",
     "patternfly": "^3.30.0",
-    "rhea": "^0.2.13",
+    "rhea": "^0.3.4",
     "topojson-client": "^3.0.0"
   },
   "devDependencies": {
