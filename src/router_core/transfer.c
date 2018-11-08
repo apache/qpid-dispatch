@@ -1252,6 +1252,14 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
 
         // This is a multicast delivery or if this is a presettled multi-frame unicast delivery.
         if (in_dlv->multicast || in_dlv->settled) {
+
+            //
+            // If a delivery is settled but did not go into one of the lists, that means that it is going nowhere.
+            // We dont want to deal with such deliveries.
+            //
+            if (in_dlv->settled && in_dlv->where == QDR_DELIVERY_NOWHERE)
+                return;
+
             assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
             //
             // The router will settle on behalf of the receiver in the case of multicast and send out settled
