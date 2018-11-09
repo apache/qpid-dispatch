@@ -137,12 +137,16 @@ find_program(VALGRIND_EXECUTABLE valgrind DOC "Location of the valgrind program"
 mark_as_advanced(VALGRIND_EXECUTABLE)
 find_package_handle_standard_args(VALGRIND DEFAULT_MSG VALGRIND_EXECUTABLE)
 option(USE_VALGRIND "Use valgrind when running tests" OFF)
+option(VALGRIND_XML "Write valgrind output as XML" OFF)
 
 if (USE_VALGRIND)
   if (CMAKE_BUILD_TYPE MATCHES "Coverage")
     message(WARNING "Building for coverage analysis; disabling valgrind run-time error detection")
   else ()
     set(TEST_RUNNER "${VALGRIND_EXECUTABLE} --quiet --leak-check=full --show-leak-kinds=definite --errors-for-leak-kinds=definite --error-exitcode=42 --suppressions=${CMAKE_SOURCE_DIR}/tests/valgrind.supp")
+    if (VALGRIND_XML)
+      set(TEST_RUNNER "${TEST_RUNNER} --xml=yes --xml-file=valgrind-%p.xml")
+    endif()
   endif ()
 endif()
 
