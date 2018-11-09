@@ -1231,7 +1231,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     //
     // If it is already in the undelivered list, don't try to deliver this again.
     //
-    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED || in_dlv->where == QDR_DELIVERY_UNINITIALIZED)
+    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED || in_dlv->where == QDR_DELIVERY_NOWHERE)
         return;
 
     qdr_deliver_continue_peers_CT(core, in_dlv);

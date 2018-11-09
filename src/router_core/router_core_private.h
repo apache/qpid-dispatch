@@ -321,8 +321,7 @@ ALLOC_DECLARE(qdr_router_ref_t);
 DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
 typedef enum {
-    QDR_DELIVERY_UNINITIALIZED = 0,
-    QDR_DELIVERY_NOWHERE,
+    QDR_DELIVERY_NOWHERE = 0,
     QDR_DELIVERY_IN_UNDELIVERED,
     QDR_DELIVERY_IN_UNSETTLED,
     QDR_DELIVERY_IN_SETTLED
