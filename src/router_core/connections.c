@@ -18,6 +18,7 @@
  */
 
 #include <qpid/dispatch/router_core.h>
+#include <qpid/dispatch/discriminator.h>
 #include "route_control.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
@@ -605,33 +606,14 @@ void qdr_link_enqueue_work_CT(qdr_core_t      *core,
 }
 
 
-#define QDR_DISCRIMINATOR_SIZE 16
-static void qdr_generate_discriminator(char *string)
-{
-    static const char *table = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789+_";
-    long int rnd1 = random();
-    long int rnd2 = random();
-    long int rnd3 = random();
-    int      idx;
-    int      cursor = 0;
-
-    for (idx = 0; idx < 5; idx++) {
-        string[cursor++] = table[(rnd1 >> (idx * 6)) & 63];
-        string[cursor++] = table[(rnd2 >> (idx * 6)) & 63];
-        string[cursor++] = table[(rnd3 >> (idx * 6)) & 63];
-    }
-    string[cursor] = '\0';
-}
-
-
 /**
  * Generate a temporary routable address for a destination connected to this
  * router node.
  */
 static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length)
 {
-    char discriminator[QDR_DISCRIMINATOR_SIZE];
-    qdr_generate_discriminator(discriminator);
+    char discriminator[QD_DISCRIMINATOR_SIZE];
+    qd_generate_discriminator(discriminator);
     if (core->router_mode == QD_ROUTER_MODE_EDGE)
         snprintf(buffer, length, "amqp:/_edge/%s/temp.%s", core->router_id, discriminator);
     else
@@ -645,8 +627,8 @@ static void qdr_generate_temp_addr(qdr_core_t *core, char *buffer, size_t length
  */
 static void qdr_generate_mobile_addr(qdr_core_t *core, char *buffer, size_t length)
 {
-    char discriminator[QDR_DISCRIMINATOR_SIZE];
-    qdr_generate_discriminator(discriminator);
+    char discriminator[QD_DISCRIMINATOR_SIZE];
+    qd_generate_discriminator(discriminator);
     snprintf(buffer, length, "amqp:/_$temp.%s", discriminator);
 }
 
@@ -656,8 +638,8 @@ static void qdr_generate_mobile_addr(qdr_core_t *core, char *buffer, size_t leng
  */
 static void qdr_generate_link_name(const char *label, char *buffer, size_t length)
 {
-    char discriminator[QDR_DISCRIMINATOR_SIZE];
-    qdr_generate_discriminator(discriminator);
+    char discriminator[QD_DISCRIMINATOR_SIZE];
+    qd_generate_discriminator(discriminator);
     snprintf(buffer, length, "%s.%s", label, discriminator);
 }
 
@@ -917,10 +899,10 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
     link->credit_pending = conn->link_capacity;
-    link->name           = (char*) malloc(QDR_DISCRIMINATOR_SIZE + 8);
+    link->name           = (char*) malloc(QD_DISCRIMINATOR_SIZE + 8);
     link->disambiguated_name = 0;
     link->terminus_addr  = 0;
-    qdr_generate_link_name("qdlink", link->name, QDR_DISCRIMINATOR_SIZE + 8);
+    qdr_generate_link_name("qdlink", link->name, QD_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
     link->insert_prefix = 0;

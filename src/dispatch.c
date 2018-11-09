@@ -24,6 +24,8 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/static_assert.h>
 #include <qpid/dispatch/alloc.h>
+#include <qpid/dispatch/discriminator.h>
+#include <stdlib.h>
 
 #include "config.h"
 #include "dispatch_private.h"
@@ -60,6 +62,13 @@ const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
 {
+    //
+    // Seed the random number generator
+    //
+    struct timeval time;
+    gettimeofday(&time, NULL);
+    srandom((unsigned int)time.tv_sec + ((unsigned int)time.tv_usec << 11));
+    
     qd_dispatch_t *qd = NEW(qd_dispatch_t);
     ZERO(qd);
 
@@ -176,13 +185,21 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
 {
     qd_dispatch_set_router_default_distribution(qd, qd_entity_opt_string(entity, "defaultDistribution", 0)); QD_ERROR_RET();
     qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
+    qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     if (!qd->router_id) {
-        qd_log_source_t *router_log = qd_log_source("ROUTER");
-        qd_log(router_log, QD_LOG_CRITICAL, "Router Id not specified - process exiting");
-        exit(1);
+        char *mode;
+        switch (qd->router_mode) {
+        case QD_ROUTER_MODE_STANDALONE: mode = "Standalone_"; break;
+        case QD_ROUTER_MODE_INTERIOR:   mode = "Interior_";   break;
+        case QD_ROUTER_MODE_EDGE:       mode = "Edge_";       break;
+        case QD_ROUTER_MODE_ENDPOINT:   mode = "Endpoint_";   break;
+        }
+        
+        qd->router_id = (char*) malloc(strlen(mode) + QD_DISCRIMINATOR_SIZE + 2);
+        strcpy(qd->router_id, mode);
+        qd_generate_discriminator(qd->router_id + strlen(qd->router_id));
     }
 
-    qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     qd->thread_count = qd_entity_opt_long(entity, "workerThreads", 4); QD_ERROR_RET();
     qd->allow_resumable_link_route = qd_entity_opt_bool(entity, "allowResumableLinkRoute", true); QD_ERROR_RET();
 

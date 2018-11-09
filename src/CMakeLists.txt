@@ -60,6 +60,7 @@ set(qpid_dispatch_SOURCES
   compose.c
   connection_manager.c
   container.c
+  discriminator.c
   dispatch.c
   entity.c
   entity_cache.c

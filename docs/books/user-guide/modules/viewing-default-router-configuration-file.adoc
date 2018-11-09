@@ -83,7 +83,7 @@ address {
 }
 ----
 <1> By default, the router operates in _standalone_ mode. This means that it can only communicate with endpoints that are directly connected to it. It cannot connect to other routers, or participate in a router network.
-<2> The unique identifier of the router. This ID is used as the `container-id` (container name) at the AMQP protocol level. It is required, and the router will not start if this attribute is not defined.
+<2> The unique identifier of the router. This ID is used as the `container-id` (container name) at the AMQP protocol level. If it is not specified, the router shall generate a random identifier at startup.
 <3> The `listener` entity handles incoming connections from client endpoints. By default, the router listens on all network interfaces on the default AMQP port (5672).
 <4> By default, the router is configured to use the message routing mechanism. Each `address` entity defines how messages that are received with a particular address `prefix` should be distributed. For example, all messages with addresses that start with `closest` will be distributed using the `closest` distribution pattern.
 
