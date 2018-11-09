@@ -94,6 +94,7 @@ struct qdr_action_t {
             int           router_maskbit;
             int           nh_router_maskbit;
             int           cost;
+            int           treatment_hint;
             qd_bitmask_t *router_set;
             qdr_field_t  *address;
         } route_table;
@@ -193,6 +194,7 @@ struct qdr_general_work_t {
     void                       *on_message_context;
     qd_message_t               *msg;
     uint64_t                    in_conn_id;
+    int                         treatment;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -884,7 +886,7 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv);
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash);
+void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, qd_address_treatment_t treatment);
 void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 
@@ -897,6 +899,7 @@ void qdr_connection_free(qdr_connection_t *conn);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
 qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase, int *priority);
 qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter);
+qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t *core, qd_iterator_t *iter, qd_address_treatment_t default_treatment);
 qdr_edge_t *qdr_edge(qdr_core_t *);
 void qdr_edge_free(qdr_edge_t *);
 void qdr_edge_connection_opened(qdr_edge_t *edge, qdr_connection_t *conn);

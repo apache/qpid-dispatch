@@ -1382,6 +1382,90 @@ class TwoRouterConnection(TestCase):
 
         self.assertTrue(self.success)
 
+class PropagationTest(TestCase):
+
+    inter_router_port = None
+
+    @classmethod
+    def setUpClass(cls):
+        """Start a router and a messenger"""
+        super(PropagationTest, cls).setUpClass()
+
+        def router(name, extra_config):
+
+            config = [
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+
+                ('listener', {'port': cls.tester.get_port()}),
+
+            ] + extra_config
+
+            config = Qdrouterd.Config(config)
+
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+        router('A', [('listener', {'role': 'inter-router', 'port': inter_router_port}), ('address', {'prefix': 'multicast', 'distribution': 'multicast'})])
+        router('B', [('connector', {'role': 'inter-router', 'port': inter_router_port})])
+
+        cls.routers[0].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('QDR.A')
+
+    def test_propagation_of_locally_undefined_address(self):
+        test = MulticastTestClient(self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertEqual(None, test.error)
+        self.assertEqual(test.received, 2)
+
+class CreateReceiver(MessagingHandler):
+    def __init__(self, connection, address):
+        super(CreateReceiver, self).__init__()
+        self.connection = connection
+        self.address = address
+
+    def on_timer_task(self, event):
+        event.container.create_receiver(self.connection, self.address)
+
+class DelayedSend(MessagingHandler):
+    def __init__(self, connection, address, message):
+        super(DelayedSend, self).__init__()
+        self.connection = connection
+        self.address = address
+        self.message = message
+
+    def on_timer_task(self, event):
+        event.container.create_sender(self.connection, self.address).send(self.message)
+
+class MulticastTestClient(MessagingHandler):
+    def __init__(self, router1, router2):
+        super(MulticastTestClient, self).__init__()
+        self.routers = [router1, router2]
+        self.received = 0
+        self.error = None
+
+    def on_start(self, event):
+        self.connections = [event.container.connect(r) for r in self.routers]
+        event.container.create_receiver(self.connections[0], "multicast")
+        # wait for knowledge of receiver1 to propagate to second router
+        event.container.schedule(5, CreateReceiver(self.connections[1], "multicast"))
+        event.container.schedule(7, DelayedSend(self.connections[1], "multicast", Message(body="testing1,2,3")))
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+
+    def on_message(self, event):
+        self.received += 1
+        event.connection.close()
+        if self.received == 2:
+            self.timer.cancel()
+
+    def timeout(self):
+        self.error = "Timeout Expired:received=%d" % self.received
+        for c in self.connections:
+            c.close()
+
+    def run(self):
+        Container(self).run()
 
 if __name__ == '__main__':
     unittest.main(main_module())

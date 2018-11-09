@@ -242,9 +242,10 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
     RouterAdapter *adapter = (RouterAdapter*) self;
     qd_router_t   *router  = adapter->router;
     const char    *addr_string;
+    int            treatment;
     int            maskbit;
 
-    if (!PyArg_ParseTuple(args, "si", &addr_string, &maskbit))
+    if (!PyArg_ParseTuple(args, "sii", &addr_string, &treatment, &maskbit))
         return 0;
 
     if (maskbit >= qd_bitmask_width() || maskbit < 0) {
@@ -252,7 +253,7 @@ static PyObject* qd_map_destination(PyObject *self, PyObject *args)
         return 0;
     }
 
-    qdr_core_map_destination(router->router_core, maskbit, addr_string);
+    qdr_core_map_destination(router->router_core, maskbit, addr_string, treatment);
 
     Py_INCREF(Py_None);
     return Py_None;
@@ -316,7 +317,7 @@ static PyTypeObject RouterAdapterType = {
 };
 
 
-static void qd_router_mobile_added(void *context, const char *address_hash)
+static void qd_router_mobile_added(void *context, const char *address_hash, qd_address_treatment_t treatment)
 {
     qd_router_t *router = (qd_router_t*) context;
     PyObject    *pArgs;
@@ -324,8 +325,9 @@ static void qd_router_mobile_added(void *context, const char *address_hash)
 
     if (pyAdded && router->router_mode == QD_ROUTER_MODE_INTERIOR) {
         qd_python_lock_state_t lock_state = qd_python_lock();
-        pArgs = PyTuple_New(1);
+        pArgs = PyTuple_New(2);
         PyTuple_SetItem(pArgs, 0, PyUnicode_FromString(address_hash));
+        PyTuple_SetItem(pArgs, 1, PyLong_FromLong((long) treatment));
         pValue = PyObject_CallObject(pyAdded, pArgs);
         qd_error_py();
         Py_DECREF(pArgs);

@@ -431,7 +431,7 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
         if (DEQ_SIZE(addr->rlinks) == 1) {
             const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
             if (key && (*key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY || *key == QD_ITER_HASH_PREFIX_MOBILE))
-                qdr_post_mobile_added_CT(core, key);
+                qdr_post_mobile_added_CT(core, key, addr->treatment);
             qdr_addr_start_inlinks_CT(core, addr);
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
         } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
@@ -476,7 +476,7 @@ void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_co
     qdr_add_connection_ref(&addr->conns, conn);
     if (DEQ_SIZE(addr->conns) == 1) {
         const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        qdr_post_mobile_added_CT(core, key);
+        qdr_post_mobile_added_CT(core, key, addr->treatment);
         qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
     }
 }

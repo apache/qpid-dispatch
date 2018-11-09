@@ -1015,12 +1015,17 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connec
 
 qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter)
 {
+    return qdr_treatment_for_address_hash_with_default_CT(core, iter, core->qd->default_treatment);
+}
+
+qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t *core, qd_iterator_t *iter, qd_address_treatment_t default_treatment)
+{
 #define HASH_STORAGE_SIZE 1000
     char  storage[HASH_STORAGE_SIZE + 1];
     char *copy    = storage;
     bool  on_heap = false;
     int   length  = qd_iterator_length(iter);
-    qd_address_treatment_t trt = core->qd->default_treatment;
+    qd_address_treatment_t trt = default_treatment;
 
     if (length > HASH_STORAGE_SIZE) {
         copy    = (char*) malloc(length + 1);

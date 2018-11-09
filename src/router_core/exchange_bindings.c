@@ -927,7 +927,8 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
         }
 
         qdr_post_mobile_added_CT(core,
-                                 (const char*) qd_hash_key_by_handle(ex->qdr_addr->hash_handle));
+                                 (const char*) qd_hash_key_by_handle(ex->qdr_addr->hash_handle),
+                                 ex->qdr_addr->treatment);
     }
 
     return ex;

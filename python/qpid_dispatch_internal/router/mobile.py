@@ -43,6 +43,7 @@ class MobileAddressEngine(object):
         self.added_addrs   = []
         self.deleted_addrs = []
         self.sent_deltas   = {}
+        self.treatments    = {}
 
 
     def tick(self, now):
@@ -52,7 +53,8 @@ class MobileAddressEngine(object):
         ##
         if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0:
             self.mobile_seq += 1
-            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs)
+            hints = [self.treatments[a] for a in self.added_addrs]
+            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs, _hints=hints)
 
             self.sent_deltas[self.mobile_seq] = msg
             if len(self.sent_deltas) > MAX_KEPT_DELTAS:
@@ -68,9 +70,10 @@ class MobileAddressEngine(object):
         return self.mobile_seq
 
 
-    def add_local_address(self, addr):
+    def add_local_address(self, addr, treatment):
         """
         """
+        self.treatments[addr] = treatment
         if self.local_addrs.count(addr) == 0:
             if self.added_addrs.count(addr) == 0:
                 self.added_addrs.append(addr)
@@ -82,6 +85,7 @@ class MobileAddressEngine(object):
     def del_local_address(self, addr):
         """
         """
+        del self.treatments[addr]
         if self.local_addrs.count(addr) > 0:
             if self.deleted_addrs.count(addr) == 0:
                 self.deleted_addrs.append(addr)
@@ -118,8 +122,13 @@ class MobileAddressEngine(object):
                 ## This message represents the next expected sequence, incorporate the deltas
                 ##
                 node.mobile_address_sequence += 1
+                treatments = msg.hints or []
                 for a in msg.add_list:
-                    node.map_address(a)
+                    if len(treatments):
+                        treatment = treatments.pop(0)
+                    else:
+                        treatment = -1
+                    node.map_address(a, treatment)
                 for a in msg.del_list:
                     node.unmap_address(a)
 

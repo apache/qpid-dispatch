@@ -541,9 +541,9 @@ class RouterNode(object):
         return False
 
 
-    def map_address(self, addr):
+    def map_address(self, addr, treatment):
         self.mobile_addresses.append(addr)
-        self.adapter.map_destination(addr, self.maskbit)
+        self.adapter.map_destination(addr, treatment, self.maskbit)
         self.log(LOG_DEBUG, "Remote destination %s mapped to router %s" % (self._logify(addr), self.id))
 
 

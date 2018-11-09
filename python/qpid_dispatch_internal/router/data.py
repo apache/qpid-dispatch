@@ -250,7 +250,7 @@ class MessageLSR(object):
 class MessageMAU(object):
     """
     """
-    def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None):
+    def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None, _hints=None):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
@@ -259,6 +259,7 @@ class MessageMAU(object):
             self.add_list = getOptional(body, 'add', None, list)
             self.del_list = getOptional(body, 'del', None, list)
             self.exist_list = getOptional(body, 'exist', None, list)
+            self.hints = getOptional(body, 'hints', None, list)
         else:
             self.id = _id
             self.version = ProtocolVersion
@@ -267,6 +268,7 @@ class MessageMAU(object):
             self.add_list = _add_list
             self.del_list = _del_list
             self.exist_list = _exist_list
+            self.hints = _hints
 
     def get_opcode(self):
         return 'MAU'
@@ -278,8 +280,9 @@ class MessageMAU(object):
         if self.add_list != None:   _add   = ' add=%r'   % self.add_list
         if self.del_list != None:   _del   = ' del=%r'   % self.del_list
         if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s)" % \
-                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist)
+        if self.hints != None: _hints = ' hints=%r' % self.hints
+        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s%s)" % \
+                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist, _hints)
 
     def to_dict(self):
         body = {'id'         : self.id,
@@ -289,6 +292,7 @@ class MessageMAU(object):
         if self.add_list != None:   body['add']   = self.add_list
         if self.del_list != None:   body['del']   = self.del_list
         if self.exist_list != None: body['exist'] = self.exist_list
+        if self.hints != None: body['hints'] = self.hints
         return body
 
 
