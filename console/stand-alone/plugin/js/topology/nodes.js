@@ -20,11 +20,11 @@ under the License.
 /* global d3 Promise */
 export class Node {
   constructor(QDRService, id, name, nodeType, properties, routerId, x, y, nodeIndex, resultIndex, fixed, connectionContainer) {
-    this.key = id;
-    this.name = name;
-    this.nodeType = nodeType;
+    this.key = id;                  // the router uri for this node (or group of clients) like: amqp:/_topo/0/<router id>/$management
+    this.name = name;               // the router id portion of the key
+    this.nodeType = nodeType;       // router.role
     this.properties = properties;
-    this.routerId = routerId;
+    this.routerId = routerId;       // the router uri of the router we are connected to (for groups)
     this.x = x;
     this.y = y;
     this.id = nodeIndex;
@@ -132,6 +132,10 @@ export class Node {
   }
   radius() {
     return nodeProperties[this.nodeType].radius;
+  }
+  uid(srv) {
+    return srv.utilities.nameFromId(this.key).replace(/ /g,'').replace(/\./g,'') + 
+    (this.connectionId ? this.connectionId : '');
   }
 }
 const nodeProperties = {

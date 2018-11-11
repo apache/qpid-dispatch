@@ -80,9 +80,11 @@ export class Links {
 
   initializeLinks (nodeInfo, nodes, unknowns, localStorage, height) {
     let animate = false;
-    let source = 0;
     let client = 1.0;
-    for (let id in nodeInfo) {
+    let nodeIds = Object.keys(nodeInfo);
+    for (let source=0; source<nodeIds.length; source++) {
+      let id = nodeIds[source];
+      const suid = nodes.get(source).uid(this.QDRService);
       let parts = id.split('/');
       let routerType = parts[1]; // _topo || _edge
       let onode = nodeInfo[id];
@@ -103,7 +105,8 @@ export class Links {
           let connId = connection.container;
           let target = getContainerIndex(connId, nodeInfo, this.QDRService);
           if (target >= 0) {
-            this.getLink(source, target, dir, '', source + '-' + target);
+            const tuid = nodes.get(target).uid(this.QDRService);
+            this.getLink(source, target, dir, '', suid + '-' + tuid);
           }
         }
         // handle external connections
@@ -134,7 +137,8 @@ export class Links {
         let cdir = getLinkDir(id, connection, onode, this.QDRService);
         if (existingNodeIndex >= 0) {
           // make a link between the current router (source) and the existing node
-          this.getLink(source, existingNodeIndex, dir, 'small', connection.name);
+          const tuid = nodes.get(existingNodeIndex).uid(this.QDRService);
+          this.getLink(source, existingNodeIndex, dir, 'small', suid + '-' + tuid);
         } else if (normalInfo.nodesIndex) {
           // get node index of node that contained this connection in its normals array
           let normalSource = this.getLinkSource(normalInfo.nodesIndex);
@@ -143,10 +147,12 @@ export class Links {
               cdir = dir;
             node.cdir = cdir;
             nodes.add(node);
+            const suidn = nodes.get(this.links[normalSource].source).uid(this.QDRService);
+            const tuid = node.uid(this.QDRService);
             // create link from original node to the new node
-            this.getLink(this.links[normalSource].source, nodes.getLength()-1, cdir, 'small', connection.name);
+            this.getLink(this.links[normalSource].source, nodes.getLength()-1, cdir, 'small', suidn + '-' + tuid);
             // create link from this router to the new node
-            this.getLink(source, nodes.getLength()-1, cdir, 'small', connection.name);
+            this.getLink(source, nodes.getLength()-1, cdir, 'small', suid + '-' + tuid);
             // remove the old node from the normals list
             nodes.get(normalInfo.nodesIndex).normals.splice(normalInfo.normalsIndex, 1);
           }
@@ -164,7 +170,7 @@ export class Links {
               nodes.add(node);
               node.normals = [node];
               // now add a link
-              this.getLink(source, nodes.getLength() - 1, cdir, 'small', connection.name);
+              this.getLink(source, nodes.getLength() - 1, cdir, 'small', suid + '-' + node.uid(this.QDRService));
               client++;
             } else {
               normalsParent[nodeType+cdir].normals.push(node);
@@ -176,11 +182,10 @@ export class Links {
         } else {
           nodes.add(node);
           // now add a link
-          this.getLink(source, nodes.getLength() - 1, dir, 'small', connection.name);
+          this.getLink(source, nodes.getLength() - 1, dir, 'small', suid + '-' + node.uid(this.QDRService));
           client++;
         }
       }
-      source++;
     }
     return animate;
   }

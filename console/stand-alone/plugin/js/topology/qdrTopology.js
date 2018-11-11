@@ -530,7 +530,9 @@ export class TopologyController {
           return d.left ? `url(${urlPrefix}#start${d.markerId('start')})` : null;
         })
         .attr('id', function (d) {
-          return ['path', d.source.index, d.target.index].join('-');
+          const si = d.source.uid(QDRService);
+          const ti = d.target.uid(QDRService);
+          return ['path', si, ti].join('-');
         });
 
       enterpath.append('path')
@@ -541,15 +543,9 @@ export class TopologyController {
 
 
       // circle (node) group
-      // nodes are known by id
+      // nodes are known by router id, or for groups, by the router id + 1st connectionId
       circle = circle.data(nodes.nodes, function(d) {
-        if (!d.normals)
-          return d.name;
-        let connIds = [d.routerId];
-        d.normals.forEach( function (n) {
-          connIds.push(n.connectionId);
-        });
-        return connIds.join('.');
+        return d.uid(QDRService);
       });
 
       // update existing nodes visual states
@@ -562,6 +558,10 @@ export class TopologyController {
         })
         .classed('fixed', function(d) {
           return d.fixed & 1;
+        });
+      circle
+        .classed('multiple', function (d) {
+          return (d.normals && d.normals.length > 1);
         });
 
       // add new circle nodes
@@ -1036,7 +1036,9 @@ export class TopologyController {
       initForceGraph();
       // after the graph is displayed fetch all .router.node info. This is done so highlighting between nodes
       // doesn't incur a delay
-      QDRService.management.topology.addUpdateEntities({entity: 'router.node', attrs: ['id','nextHop']});
+      QDRService.management.topology.addUpdateEntities([
+        {entity: 'router.node', attrs: ['id','nextHop']},
+        {entity: 'router.link', attrs: ['linkType', 'connectionId', 'owningAddr', 'linkDir']}]);
       // call this function every time a background update is done
       QDRService.management.topology.addUpdatedAction('topology', function() {
         let changed = hasChanged();
@@ -1075,7 +1077,8 @@ export class TopologyController {
     function setupInitialUpdate() {
       // make sure all router nodes have .connection info. if not then fetch any missing info
       QDRService.management.topology.ensureAllEntities(
-        [{entity: 'connection'}],
+        [{entity: 'connection'},
+          {entity: 'router.link', attrs: ['linkType', 'connectionId', 'owningAddr', 'linkDir']}],
         handleInitialUpdate);
     }
     if (!QDRService.management.connection.is_connected()) {
