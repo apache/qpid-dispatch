@@ -292,6 +292,8 @@ class Topology {
   getConnForLink(link) {
     // find the connection for this link
     var conns = this._nodeInfo[link.nodeId].connection;
+    if (!conns)
+      return {};
     var connIndex = conns.attributeNames.indexOf('identity');
     var linkCons = conns.results.filter(function (conn) {
       return conn[connIndex] === link.connectionId;
