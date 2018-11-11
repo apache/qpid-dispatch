@@ -26,10 +26,9 @@ class Link {
     this.cls = cls;
     this.uid = uid;
   }
-  markerId (linkData) {
+  markerId (end) {
     let selhigh = this.highlighted ? 'highlighted' : this.selected ? 'selected' : '';
-    return `-${selhigh}-${linkData.source.radius()}`;
-
+    return `-${selhigh}-${end === 'end' ? this.target.radius() : this.source.radius()}`;
   }
 }
 
@@ -87,11 +86,11 @@ export class Links {
       let parts = id.split('/');
       let routerType = parts[1]; // _topo || _edge
       let onode = nodeInfo[id];
-      if (!onode['connection'])
+      if (!onode['connection']) {
         continue;
+      }
       let conns = onode['connection'].results;
       let attrs = onode['connection'].attributeNames;
-      //QDRLog.debug("external client parent is " + parent);
       let normalsParent = {}; // 1st normal node for this parent
 
       for (let j = 0; j < conns.length; j++) {

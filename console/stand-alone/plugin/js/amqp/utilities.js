@@ -99,12 +99,23 @@ var utils = {
   isMSIE: function () {
     return (document.documentMode || /Edge/.test(navigator.userAgent));
   },
+  // return the value for a field
   valFor: function (aAr, vAr, key) {
     var idx = aAr.indexOf(key);
     if ((idx > -1) && (idx < vAr.length)) {
       return vAr[idx];
     }
     return null;
+  },
+  // count the number records with a specific value for a field
+  countFor: function (aAr, vAr, key, val) {
+    let count = 0;
+    let idx = aAr.indexOf(key);
+    for (let i=0; i<vAr.length; i++) {
+      if (vAr[idx] === val)
+        count++;
+    }
+    return count;
   },
   // extract the name of the router from the router id
   nameFromId: function (id) {

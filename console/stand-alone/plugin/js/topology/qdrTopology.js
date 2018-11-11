@@ -21,7 +21,7 @@ under the License.
 /**
  * @module QDR
  */
-import { QDRLogger, QDRRedirectWhenConnected } from '../qdrGlobals.js';
+import { QDRLogger, QDRRedirectWhenConnected, QDRTemplatePath } from '../qdrGlobals.js';
 import { Traffic } from './traffic.js';
 import { separateAddresses } from '../chord/filters.js';
 import { Nodes } from './nodes.js';
@@ -129,6 +129,23 @@ export class TopologyController {
     $scope.isRight = function(mode) {
       return mode.right;
     };
+
+    function doDialog(d) {
+      $uibModal.open({
+        backdrop: true,
+        keyboard: true,
+        backdropClick: true,
+        templateUrl: QDRTemplatePath + 'tmplClientDetail.html',
+        controller: 'QDR.DetailDialogController',
+        resolve: {
+          d: function() {
+            return d;
+          }
+        }
+      }).result.then(function() {
+        console.log('detail dialog dismissed');
+      });
+    }
 
     $scope.setFixed = function(b) {
       if ($scope.contextNode) {
@@ -296,12 +313,13 @@ export class TopologyController {
         }
         svg.append('svg:defs').attr('class', 'marker-defs').selectAll('marker')
           .data(defs)
-          .enter().append('svg:marker') 
+          .enter().append('svg:marker')
           .attr('id', function (d) { return [d.sten, d.state, d.r].join('-'); })
           .attr('viewBox', '0 -5 10 10')
-          .attr('refX', function (d) { return d.sten === 'end' ? d.r : -d.r; })
-          .attr('markerWidth', 4)
-          .attr('markerHeight', 4)
+          .attr('refX', function (d) { return Nodes.refX(d.sten, d.r); })
+          .attr('markerWidth', 14)
+          .attr('markerHeight', 14)
+          .attr('markerUnits', 'userSpaceOnUse')
           .attr('orient', 'auto')
           .append('svg:path')
           .attr('d', function (d) {
@@ -440,17 +458,19 @@ export class TopologyController {
     }
     // Takes the forceData.nodes and forceData.links array and creates svg elements
     // Also updates any existing svg elements based on the updated values in forceData.nodes
-    // and forceData.paths
+    // and forceData.links
     function restart(start) {
       if (!circle)
         return;
       circle.call(force.drag);
 
-      // path (link) group
+      // path is a selection of all g elements under the g.links svg:group
+      // here we associate the links.links array with the {g.links g} selection
+      // based on the link.uid
       path = path.data(links.links, function(d) {return d.uid;});
 
-      // update existing links
-      path.selectAll('.link')
+      // update each existing {g.links g.link} element
+      path.select('.link')
         .classed('selected', function(d) {
           return d.selected;
         })
@@ -459,12 +479,12 @@ export class TopologyController {
         });
       // reset the markers based on current highlighted/selected
       if (!$scope.legend.status.optionsOpen || $scope.legendOptions.trafficType === 'dots') {
-        path.selectAll('.link')
+        path.select('.link')
           .attr('marker-end', function(d) {
-            return d.right ? `url(${urlPrefix}#end${d.markerId(d)})` : null;
+            return d.right ? `url(${urlPrefix}#end${d.markerId('end')})` : null;
           })
           .attr('marker-start', function(d) {
-            return d.left ? `url(${urlPrefix}#start${d.markerId(d)})` : null;
+            return d.left ? `url(${urlPrefix}#start${d.markerId('start')})` : null;
           });
       }
       // add new links. if a link with a new uid is found in the data, add a new path
@@ -506,10 +526,10 @@ export class TopologyController {
       enterpath.append('path')
         .attr('class', 'link')
         .attr('marker-end', function(d) {
-          return d.right ? `url(${urlPrefix}#end${d.markerId(d)})` : null;
+          return d.right ? `url(${urlPrefix}#end${d.markerId('end')})` : null;
         })
         .attr('marker-start', function(d) {
-          return d.left ? `url(${urlPrefix}#start${d.markerId(d)})` : null;
+          return d.left ? `url(${urlPrefix}#start${d.markerId('start')})` : null;
         })
         .attr('id', function (d) {
           return ['path', d.source.index, d.target.index].join('-');
@@ -675,7 +695,8 @@ export class TopologyController {
             }
             return;
           } else {
-            // TODO: handle clicking on nodes that represent multiple sub-nodes
+            // handle clicking on nodes that represent multiple sub-nodes
+            //doDialog(d);
           }
           d3.event.stopPropagation();
         });
@@ -901,7 +922,9 @@ export class TopologyController {
           } else if (d.nodeType === 'edge' || d.nodeType === '_edge') {
             return 'Edge';
           }
-          return d.name.length > 7 ? d.name.substr(0, 6) + '...' : d.name;
+          return d.name.length > 7 ?
+            d.name.substr(0, 3) + '...' + d.name.substr(d.name.length-3, 3) :
+            d.name;
         });
     };
     let appendTitle = function(g) {
@@ -947,7 +970,7 @@ export class TopologyController {
         return (nodeInfo[node]['connection']);
       });
       let routers = nodes.nodes.filter( function (node) {
-        return node.nodeType === 'inter-router';
+        return node.nodeType === '_topo';
       });
       if (routers.length > cnodes.length) {
         return -1;

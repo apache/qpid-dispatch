@@ -81,7 +81,7 @@ export class OverviewChartsController {
         name:         'outstandingDeliveries',
         overrideAttrs:['outstandingDeliveries', 'undeliveredCount', 'unsettledCount', 'linkType', 'linkDir'],
         attr:         'outstandingDeliveries',
-        userTitle:    'Deleveries in flight',
+        userTitle:    'Deliveries in flight',
         hideLabel:  true,
         hideLegend:  true,
         hideGridLines: true,

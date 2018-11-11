@@ -78,7 +78,8 @@ export class Node {
 
   clientTooltip () {
     let type = this.title();
-    let title = `<table class="popupTable"><tr><td>Type</td><td>${type}</td></tr>`;
+    let title = '';
+    title += `<table class="popupTable"><tr><td>Type</td><td>${type}</td></tr>`;
     if (!this.normals || this.normals.length < 2)
       title += `<tr><td>Host</td><td>${this.host}</td></tr>`;
     else {
@@ -97,8 +98,17 @@ export class Node {
         // update all the router title text
         let nodes = QDRService.management.topology.nodeInfo();
         let node = nodes[this.key];
+        const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${this.key}</td></tr></table>`;
+        if (!node) {
+          resolve(err);
+          return;
+        }
         let listeners = node['listener'];
         let router = node['router'];
+        if (!listeners || !router) {
+          resolve(err);
+          return;
+        }
         let r = QDRService.utilities.flatten(router.attributeNames, router.results[0]);
         let title = '<table class="popupTable">';
         title += ('<tr><td>Router</td><td>' + r.name + '</td></tr>');
@@ -127,15 +137,16 @@ export class Node {
 }
 const nodeProperties = {
   // router types
-  'inter-router': {radius: 28, linkDistance: [150, 70], charge: [-1800, -900]},
-  '_edge':  {radius: 20, linkDistance: [110, 55], charge: [-1350, -900]},
-  '_topo': {radius: 28, linkDistance: [150, 70], charge: [-1800, -900]},
+  'inter-router': {radius: 28, refX: {end: 32, start: -19}, linkDistance: [150, 70], charge: [-1800, -900]},
+  'edge':  {radius: 20, refX: {end: 24, start: -12}, linkDistance: [110, 55], charge: [-1350, -900]},
   // generated nodes from connections. key is from connection.role
-  'normal':       {radius: 15, linkDistance: [75, 40], charge: [-900, -900]},
-  'on-demand':    {radius: 15, linkDistance: [75, 40], charge: [-900, -900]},
-  'route-container': {radius: 15, linkDistance: [75, 40], charge: [-900, -900]},
-  'edge':  {radius: 20, linkDistance: [110, 55], charge: [-1350, -900]}
+  'normal':       {radius: 15, refX: {end: 20, start: -7}, linkDistance: [75, 40], charge: [-900, -900]},
 };
+// aliases
+nodeProperties._topo = nodeProperties['inter-router'];
+nodeProperties._edge = nodeProperties['edge'];
+nodeProperties['on-demand'] = nodeProperties['normal'];
+nodeProperties['route-container'] = nodeProperties['normal'];
 
 export class Nodes {
   constructor(QDRService, logger) {
@@ -146,7 +157,6 @@ export class Nodes {
   static radius(type) {
     if (nodeProperties[type].radius)
       return nodeProperties[type].radius;
-    console.log(`Requested radius for unknown node type: ${type}`);
     return 15;
   }
   static maxRadius() {
@@ -155,6 +165,13 @@ export class Nodes {
       max = Math.max(max, nodeProperties[key].radius);
     }
     return max;
+  }
+  static refX(end, r) {
+    for (let key in nodeProperties) {
+      if (nodeProperties[key].radius == r)
+        return nodeProperties[key].refX[end];
+    }
+    return 0;
   }
   // return all possible values of node radii
   static discrete() {
