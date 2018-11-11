@@ -82,6 +82,17 @@ class TrafficAnimation {
       if (node.container === name)
         return i;
     }
+    // not found. loop through normals
+    for (let i = 0; i < nodes.length; i++) {
+      let node = nodes[i];
+      if (node.normals) {
+        let normalIndex = node.normals.findIndex( function (normal) {
+          return normal.container === name;
+        });
+        if (normalIndex >= 0)
+          return i;
+      }
+    }
     return -1;
   }
 }
@@ -114,21 +125,26 @@ class Congestion extends TrafficAnimation{
     this.traffic.QDRService.management.topology.ensureAllEntities([{ entity: 'router.link', force: true }, { entity: 'connection' }], function () {
       let links = {};
       let nodeInfo = self.traffic.QDRService.management.topology.nodeInfo();
+      const nodes = self.traffic.topology.nodes.nodes;
+      const srv = self.traffic.QDRService;
       // accumulate all the inter-router links in an object
       // keyed by the svgs path id
       for (let nodeId in nodeInfo) {
         let node = nodeInfo[nodeId];
         let nodeLinks = node['router.link'];
+        if (!nodeLinks)
+          continue;
         for (let n = 0; n < nodeLinks.results.length; n++) {
-          let link = self.traffic.QDRService.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
+          let link = srv.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
           if (link.linkType !== 'router-control') {
-            let f = self.nodeIndexFor(self.traffic.topology.nodes.nodes, self.traffic.QDRService.utilities.nameFromId(nodeId));
+            let f = self.nodeIndexFor(nodes, srv.utilities.nameFromId(nodeId));
             let connection = self.findResult(node, 'connection', 'identity', link.connectionId);
             if (connection) {
-              let t = self.nodeIndexFor(self.traffic.topology.nodes.nodes, connection.container);
+              let t = self.nodeIndexFor(nodes, connection.container);
               let little = Math.min(f, t);
               let big = Math.max(f, t);
-              let key = ['#path', little, big].join('-');
+              let key = ['#path', nodes[little].uid(srv), 
+                nodes[big].uid(srv)].join('-');
               if (!links[key])
                 links[key] = [];
               links[key].push(link);
@@ -150,10 +166,12 @@ class Congestion extends TrafficAnimation{
             .attr('stroke', congestion)
             .classed('traffic', true)
             .attr('marker-start', function (d) {
-              return d.left ? 'url(' + self.traffic.prefix + '#' + id + ')' : '';
+              return null;
+              //return d.left ? 'url(' + self.traffic.prefix + '#' + id + ')' : null;
             })
             .attr('marker-end', function (d) {
-              return d.right ? 'url(' + self.traffic.prefix + '#' + id + ')' : '';
+              return null;
+              //return d.right ? 'url(' + self.traffic.prefix + '#' + id + ')' : null;
             });
         }
       }
@@ -168,8 +186,9 @@ class Congestion extends TrafficAnimation{
         .attr('refX', function (d) {
           return colors[d].dir === 'end' ? 24 : (colors[d].small) ? -24 : -14;
         })
-        .attr('markerWidth', 4)
-        .attr('markerHeight', 4)
+        .attr('markerWidth', 14)
+        .attr('markerHeight', 14)
+        .attr('markerUnits', 'userSpaceOnUse')
         .attr('orient', 'auto')
         .style('fill', function (d) { return colors[d].color; })
         .append('svg:path')
@@ -374,10 +393,10 @@ class Dots extends TrafficAnimation {
       });
   }
   // create dots along the path between routers
-  startAnimation(path, id, hop, rate) {
-    if (!path.node())
+  startAnimation(selection, id, hop, rate) {
+    if (selection.empty())
       return;
-    this.animateDots(path, id, hop, rate);
+    this.animateDots(selection, id, hop, rate);
   }
   animateDots(path, id, hop, rate) {
     let back = hop.back, address = hop.address;
@@ -415,30 +434,43 @@ class Dots extends TrafficAnimation {
     }
     return this.traffic.$scope.addressColors[n];
   }
+  // find the link that carries traffic for this address 
+  // going to nodes[f] if sender is true
+  // coming from nodes[f] if sender if false.
+  // Add the link's id to the hops array
   addClients(hops, nodes, f, val, sender, address) {
-    let cdir = sender ? 'out' : 'in';
-    for (let n = 0; n < nodes.length; n++) {
-      let node = nodes[n];
-      if (node.normals && node.key === nodes[f].key && (node.cdir === cdir || node.cdir === 'both')) {
-        let links = this.traffic.QDRService.management.topology._nodeInfo[node.key]['router.link'];
-        // find the 1st link with type 'endpoint' and owningAddr == address
-        if (!links)
-          continue;
-        for (let l=0; l<links.results.length; l++) {
-          let link = this.traffic.QDRService.utilities.flatten(links.attributeNames, links.results[l]);
-          if ((link.linkType === 'endpoint' ||
-               link.linkType === 'edge-downlink') &&
-               address === this.traffic.QDRService.utilities.addr_text(link.owningAddr)) {
-            for (let n1=n; n1<nodes.length; n1++) {
-              if (link.connectionId === nodes[n1].connectionId) {
-                let key = ['', f, n1].join('-');
-                if (!hops[key])
-                  hops[key] = [];
-                hops[key].push({ val: val, back: !sender, address: address });
-                return;
-              }
-            }
-          }
+    const cdir = sender ? 'out' : 'in';
+    const uuid = nodes[f].uid(this.traffic.QDRService);
+    const key = nodes[f].key;
+    const links = this.traffic.QDRService.management.topology._nodeInfo[key]['router.link'];
+    if (links) {
+      const ilt = links.attributeNames.indexOf('linkType');
+      const ioa = links.attributeNames.indexOf('owningAddr');
+      const ici = links.attributeNames.indexOf('connectionId');
+      const ild = links.attributeNames.indexOf('linkDir');
+      let linkIndex = links.results.findIndex( function (l) {
+        return (l[ilt] === 'endpoint' || l[ilt] === 'edge-downlink') && 
+          address === this.traffic.QDRService.utilities.addr_text(l[ioa]) &&
+          l[ild] === cdir;
+      }, this);
+      if (linkIndex >= 0) {
+        let nodeIndex = nodes.findIndex( function (node) {
+          if (node.normals && node.key === key && (node.cdir === cdir || node.cdir === 'both')) {
+            let ni = node.normals.findIndex( function (normal) {
+              return normal.connectionId === links.results[linkIndex][ici];
+            });
+            return ni >= 0;
+          } else
+            return false;
+        });
+        if (nodeIndex >= 0) {
+          // one of the normals for this node has the traffic
+          const uuid2 = nodes[nodeIndex].uid(this.traffic.QDRService);
+          const key = ['', uuid, uuid2].join('-');
+          if (!hops[key])
+            hops[key] = [];
+          hops[key].push({ val: val, back: !sender, address: address });
+          return;
         }
       }
     }
