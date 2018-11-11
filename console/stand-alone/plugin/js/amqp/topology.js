@@ -267,25 +267,14 @@ class Topology {
   }
   // ensure these nodes have all these entities. don't fetch unless forced to
   ensureEntities(nodes, entityAttribs, callback, extra) {
-    if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
-      entityAttribs = [entityAttribs];
-    }
     if (Object.prototype.toString.call(nodes) !== '[object Array]') {
       nodes = [nodes];
     }
     this.addUpdateEntities(entityAttribs);
-    var q = d3.queue(this.connection.availableQeueuDepth());
-    for (var n = 0; n < nodes.length; ++n) {
-      for (var i = 0; i < entityAttribs.length; ++i) {
-        var ea = entityAttribs[i];
-        // if we don'e already have the entity or we want to force a refresh
-        if (!this._nodeInfo[nodes[n]][ea.entity] || ea.force)
-          q.defer((this.q_ensureNodeInfo).bind(this), nodes[n], ea.entity, ea.attrs || [], q);
-      }
-    }
-    q.await(function () {
-      callback(extra);
-    });
+    this.doget(nodes)
+      .then( function (results) {
+        callback(extra, results);
+      });
   }
   addNodeInfo(id, entity, values) {
     // save the results in the nodeInfo object

@@ -420,11 +420,26 @@ class Dots extends TrafficAnimation {
     for (let n = 0; n < nodes.length; n++) {
       let node = nodes[n];
       if (node.normals && node.key === nodes[f].key && (node.cdir === cdir || node.cdir === 'both')) {
-        let key = ['', f, n].join('-');
-        if (!hops[key])
-          hops[key] = [];
-        hops[key].push({ val: val, back: !sender, address: address });
-        return;
+        let links = this.traffic.QDRService.management.topology._nodeInfo[node.key]['router.link'];
+        // find the 1st link with type 'endpoint' and owningAddr == address
+        if (!links)
+          continue;
+        for (let l=0; l<links.results.length; l++) {
+          let link = this.traffic.QDRService.utilities.flatten(links.attributeNames, links.results[l]);
+          if ((link.linkType === 'endpoint' ||
+               link.linkType === 'edge-downlink') &&
+               address === this.traffic.QDRService.utilities.addr_text(link.owningAddr)) {
+            for (let n1=n; n1<nodes.length; n1++) {
+              if (link.connectionId === nodes[n1].connectionId) {
+                let key = ['', f, n1].join('-');
+                if (!hops[key])
+                  hops[key] = [];
+                hops[key].push({ val: val, back: !sender, address: address });
+                return;
+              }
+            }
+          }
+        }
       }
     }
   }

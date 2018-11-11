@@ -393,12 +393,10 @@ export class TopologyController {
         unknownNodes[unknowns[i].key] = 1;
       }
       unknownNodes = Object.keys(unknownNodes);
-      //QDRLog.info("-- resolveUnknowns: ensuring .connection and .router.link are present for each node")
-      QDRService.management.topology.ensureEntities(unknownNodes, [{entity: 'connection', force: true}, 
-        {entity: 'router.link', attrs: ['linkType','connectionId','linkDir'], force: true}], function () {
-        nodeInfo = QDRService.management.topology.nodeInfo();
+      QDRService.management.topology.ensureEntities(unknownNodes, [ 
+        {entity: 'router.link', attrs: ['linkType','connectionId','linkDir','owningAddr'], force: true}], function (foo, results) {
         forceData.links = links = new Links(QDRService, QDRLog);
-        links.initializeLinks(nodeInfo, nodes, [], localStorage, height);
+        links.initializeLinks(results, nodes, [], localStorage, height);
         animate = true;
         force.nodes(nodes.nodes).links(links.links).start();
         restart(false);

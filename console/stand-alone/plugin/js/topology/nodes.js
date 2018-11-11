@@ -94,9 +94,8 @@ export class Node {
       QDRService.management.topology.ensureEntities(this.key, [
         {entity: 'listener', attrs: ['role', 'port', 'http']},
         {entity: 'router', attrs: ['name', 'version', 'hostName']}
-      ], function () {
+      ], function (foo, nodes) {
         // update all the router title text
-        let nodes = QDRService.management.topology.nodeInfo();
         let node = nodes[this.key];
         const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${this.key}</td></tr></table>`;
         if (!node) {
