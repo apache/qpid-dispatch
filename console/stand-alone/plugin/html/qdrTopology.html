@@ -262,7 +262,7 @@ div.titleBar button {
                                     <li ng-repeat="(address, color) in addresses" class="legend-line">
                                         <checkbox style="background-color: {{addressColors[address]}};"
                                         title="{{address}}" ng-change="addressFilterChanged()"
-                                        ng-model="addresses[address]"></checkbox>
+                                        ng-model="addresses[address]" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()"></checkbox>
                                         <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
                                     </li>
                             </ul>
