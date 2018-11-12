@@ -187,7 +187,7 @@ qd_error_t qd_dispatch_configure_router(qd_dispatch_t *qd, qd_entity_t *entity)
     qd_dispatch_set_router_id(qd, qd_entity_opt_string(entity, "id", 0)); QD_ERROR_RET();
     qd->router_mode = qd_entity_get_long(entity, "mode"); QD_ERROR_RET();
     if (!qd->router_id) {
-        char *mode;
+        char *mode = 0;
         switch (qd->router_mode) {
         case QD_ROUTER_MODE_STANDALONE: mode = "Standalone_"; break;
         case QD_ROUTER_MODE_INTERIOR:   mode = "Interior_";   break;
