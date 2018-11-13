@@ -40,6 +40,7 @@
 #define QDR_CONNECTION_TYPE             15
 #define QDR_CONNECTION_SSL              16
 #define QDR_CONNECTION_OPENED           17
+#define QDR_CONNECTION_ACTIVE           18
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
 const char * const QDR_CONNECTION_DIR_OUT = "out";
@@ -70,6 +71,7 @@ const char *qdr_connection_columns[] =
      "type",
      "ssl",
      "opened",
+     "active",
      0};
 
 const char *CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
@@ -97,7 +99,7 @@ static void qd_get_next_pn_data(pn_data_t **data, const char **d, int *d1)
     }
 
 
-static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_composed_field_t *body, bool as_map)
+static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *conn, int col, qd_composed_field_t *body, bool as_map)
 {
     char id_str[100];
 
@@ -196,6 +198,23 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
         qd_compose_insert_bool(body, conn->connection_info->opened);
         break;
 
+    case QDR_CONNECTION_ACTIVE:
+        if (conn->role == QDR_ROLE_EDGE_CONNECTION) {
+            if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
+                qd_compose_insert_bool(body, true);
+            }
+            else if (core->router_mode  == QD_ROUTER_MODE_EDGE){
+                if (core->active_edge_connection == conn)
+                    qd_compose_insert_bool(body, true);
+                else
+                    qd_compose_insert_bool(body, false);
+            }
+        }
+        else {
+            qd_compose_insert_bool(body, true);
+        }
+        break;
+
     case QDR_CONNECTION_PROPERTIES: {
         pn_data_t *data = conn->connection_info->connection_properties;
         qd_compose_start_map(body);
@@ -238,14 +257,14 @@ static void qdr_connection_insert_column_CT(qdr_connection_t *conn, int col, qd_
 }
 
 
-static void qdr_agent_write_connection_CT(qdr_query_t *query,  qdr_connection_t *conn)
+static void qdr_agent_write_connection_CT(qdr_core_t *core, qdr_query_t *query,  qdr_connection_t *conn)
 {
     qd_composed_field_t *body = query->body;
 
     qd_compose_start_list(body);
     int i = 0;
     while (query->columns[i] >= 0) {
-        qdr_connection_insert_column_CT(conn, query->columns[i], body, false);
+        qdr_connection_insert_column_CT(core, conn, query->columns[i], body, false);
         i++;
     }
     qd_compose_end_list(body);
@@ -287,7 +306,7 @@ void qdra_connection_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offs
     //
     // Write the columns of the object into the response body.
     //
-    qdr_agent_write_connection_CT(query, conn);
+    qdr_agent_write_connection_CT(core, query, conn);
 
     //
     // Advance to the next connection
@@ -315,7 +334,7 @@ void qdra_connection_get_next_CT(qdr_core_t *core, qdr_query_t *query)
         //
         // Write the columns of the connection entity into the response body.
         //
-        qdr_agent_write_connection_CT(query, conn);
+        qdr_agent_write_connection_CT(core, query, conn);
 
         //
         // Advance to the next object
@@ -339,7 +358,7 @@ static void qdr_manage_write_connection_map_CT(qdr_core_t          *core,
 
     for(int i = 0; i < QDR_CONNECTION_COLUMN_COUNT; i++) {
         qd_compose_insert_string(body, qdr_connection_columns[i]);
-        qdr_connection_insert_column_CT(conn, i, body, false);
+        qdr_connection_insert_column_CT(core, conn, i, body, false);
     }
 
     qd_compose_end_map(body);

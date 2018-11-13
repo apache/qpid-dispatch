@@ -54,6 +54,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
         if (cm->active_edge_connection == 0 && conn->role == QDR_ROLE_EDGE_CONNECTION) {
             qd_log(cm->core->log, QD_LOG_INFO, "Edge connection (id=%"PRIu64") to interior established", conn->identity);
             cm->active_edge_connection = conn;
+            cm->core->active_edge_connection = conn;
             qdrc_event_conn_raise(cm->core, QDRC_EVENT_CONN_EDGE_ESTABLISHED, conn);
         }
         break;
@@ -69,6 +70,7 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                        "Edge connection (id=%"PRIu64") to interior lost, activating alternate id=%"PRIu64"",
                        conn->identity, alternate->identity);
                 cm->active_edge_connection = alternate;
+                cm->core->active_edge_connection = alternate;
                 qdrc_event_conn_raise(cm->core, QDRC_EVENT_CONN_EDGE_ESTABLISHED, alternate);
             } else {
                 qd_log(cm->core->log, QD_LOG_INFO,

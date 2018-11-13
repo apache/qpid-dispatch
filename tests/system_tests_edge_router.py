@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from time import sleep
+from threading import Timer
 
 import unittest2 as unittest
 from proton import Message, Timeout
@@ -34,6 +35,7 @@ from test_broker import FakeService
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch.management.client import Node
+from subprocess import PIPE, STDOUT
 
 
 class AddrTimer(object):
@@ -43,6 +45,185 @@ class AddrTimer(object):
     def on_timer_task(self, event):
             self.parent.check_address()
 
+
+class EdgeRouterTest(TestCase):
+
+    inter_router_port = None
+
+    @classmethod
+    def setUpClass(cls):
+        """Start a router"""
+        super(EdgeRouterTest, cls).setUpClass()
+
+        def router(name, mode, connection, extra=None):
+            config = [
+                ('router', {'mode': mode, 'id': name}),
+                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
+                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'multiTenant': 'yes'}),
+                ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'role': 'route-container'}),
+                ('linkRoute', {'prefix': '0.0.0.0/link', 'direction': 'in', 'containerId': 'LRC'}),
+                ('linkRoute', {'prefix': '0.0.0.0/link', 'direction': 'out', 'containerId': 'LRC'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'in'}),
+                ('autoLink', {'addr': '0.0.0.0/queue.waypoint', 'containerId': 'ALC', 'direction': 'out'}),
+                ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+                ('address', {'prefix': 'spread', 'distribution': 'balanced'}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+                ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
+                connection
+            ]
+
+            if extra:
+                config.append(extra)
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+        edge_port_A = cls.tester.get_port()
+        edge_port_B = cls.tester.get_port()
+
+        router('INT.A', 'interior', ('listener', {'role': 'inter-router', 'port': inter_router_port}),
+               ('listener', {'role': 'edge', 'port': edge_port_A}))
+        router('INT.B', 'interior', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}),
+               ('listener', {'role': 'edge', 'port': edge_port_B}))
+        router('EA1', 'edge', ('connector', {'name': 'edge', 'role': 'edge',
+                                             'port': edge_port_A}
+                               ),
+               ('connector', {'name': 'edge.1', 'role': 'edge',
+                              'port': edge_port_B}
+                )
+               )
+
+        cls.routers[0].wait_router_connected('INT.B')
+        cls.routers[1].wait_router_connected('INT.A')
+
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+        self.success = False
+        self.timer_delay = 2
+        self.max_attempts = 3
+        self.attempts = 0
+
+    def run_qdstat(self, args, regexp=None, address=None):
+        p = self.popen(
+            ['qdstat', '--bus', str(address or self.router.addresses[0]),
+             '--timeout', str(TIMEOUT)] + args,
+            name='qdstat-' + self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        if regexp: assert re.search(regexp, out,
+                                    re.I), "Can't find '%s' in '%s'" % (
+        regexp, out)
+        return out
+
+    def can_terminate(self):
+        if self.attempts == self.max_attempts:
+            return True
+
+        if self.success:
+            return True
+
+        return False
+
+    def run_int_b_edge_qdstat(self):
+        outs = self.run_qdstat(['--edge'],
+                               address=self.routers[2].addresses[0])
+        lines = outs.split("\n")
+        for line in lines:
+            if "INT.B" in line and "yes" in line:
+                self.success = True
+
+    def run_int_a_edge_qdstat(self):
+        outs = self.run_qdstat(['--edge'],
+                               address=self.routers[2].addresses[0])
+        lines = outs.split("\n")
+        for line in lines:
+            if "INT.A" in line and "yes" in line:
+                self.success = True
+
+    def schedule_int_a_qdstat_test(self):
+        if self.attempts < self.max_attempts:
+            if not self.success:
+                Timer(self.timer_delay, self.run_int_a_edge_qdstat).start()
+                self.attempts += 1
+
+    def schedule_int_b_qdstat_test(self):
+        if self.attempts < self.max_attempts:
+            if not self.success:
+                Timer(self.timer_delay, self.run_int_b_edge_qdstat).start()
+                self.attempts += 1
+
+    def test_01_active_flag(self):
+        """
+        In this test, we have one edge router connected to two interior
+        routers. One connection is to INT.A and another connection is to
+        INT.B . But only one of these connections is active. We use qdstat
+        to make sure that only one of these connections is active.
+        Then we kill the router with the active connection and make sure
+        that the other connection is now the active one
+        """
+        success = False
+        outs = self.run_qdstat(['--edge'],
+                               address=self.routers[0].addresses[0])
+        lines = outs.split("\n")
+        for line in lines:
+            if "EA1" in line and "yes" in line:
+                success = True
+        if not success:
+            self.fail("Active edge connection not found not found for "
+                      "interior router")
+
+        outs = self.run_qdstat(['--edge'],
+                               address=self.routers[2].addresses[0])
+        conn_map_edge = dict()
+        #
+        # We dont know which interior router the edge will connect to.
+        #
+        conn_map_edge["INT.A"] = False
+        conn_map_edge["INT.B"] = False
+        lines = outs.split("\n")
+        for line in lines:
+            if "INT.A" in line and "yes" in line:
+                conn_map_edge["INT.A"] = True
+            if "INT.B" in line and "yes" in line:
+                conn_map_edge["INT.B"] = True
+
+        if conn_map_edge["INT.A"] and conn_map_edge["INT.B"]:
+            self.fail("Edhe router has two active connections to interior "
+                      "routers. Should have only one")
+
+        if not conn_map_edge["INT.A"] and  not conn_map_edge["INT.B"]:
+            self.fail("There are no active aconnections to interior routers")
+
+        if conn_map_edge["INT.A"]:
+            #
+            # INT.A has the active connection. Let's kill INT.A and see
+            # if the other connection becomes active
+            #
+            EdgeRouterTest.routers[0].teardown()
+            self.schedule_int_b_qdstat_test()
+
+            while not self.can_terminate():
+                pass
+
+            self.assertTrue(self.success)
+
+        elif conn_map_edge["INT.B"]:
+            #
+            # INT.B has the active connection. Let's kill INT.B and see
+            # if the other connection becomes active
+            #
+            EdgeRouterTest.routers[1].teardown()
+            self.schedule_int_a_qdstat_test()
+
+            while not self.can_terminate():
+                pass
+
+            self.assertTrue(self.success)
 
 
 class RouterTest(TestCase):
