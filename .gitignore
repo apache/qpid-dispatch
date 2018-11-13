@@ -8,15 +8,16 @@ install
 tests/system_test.dir/
 tests/policy-1/policy-*.json
 tests/authservice.py
+tests/failoverserver.py
 *.iml
 .idea
 .metadata
 .settings
-console/test/topolgies/config-*
 .history/
 .tox
 .vscode
 console/stand-alone/node_modules/
 console/stand-alone/dist/
+console/stand-alone/package-lock.json
 tools/qdmanage
 tools/qdstat
