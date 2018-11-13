@@ -1,0 +1,113 @@
+2018-10-15 10:57:32.149418 -0400 AGENT (debug) Add entity: LogEntity(enable=trace+, identity=log/DEFAULT, includeSource=False, includeTimestamp=True, module=DEFAULT, name=log/DEFAULT, outputFile=taj-GRN.log, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.149739 -0400 AGENT (debug) Add entity: LogEntity(identity=log/HTTP, module=HTTP, name=log/HTTP, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.149990 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_LS, module=ROUTER_LS, name=log/ROUTER_LS, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.150202 -0400 AGENT (debug) Add entity: LogEntity(identity=log/PYTHON, module=PYTHON, name=log/PYTHON, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.150459 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_MA, module=ROUTER_MA, name=log/ROUTER_MA, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.150681 -0400 AGENT (debug) Add entity: LogEntity(identity=log/CONN_MGR, module=CONN_MGR, name=log/CONN_MGR, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.150949 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_HELLO, module=ROUTER_HELLO, name=log/ROUTER_HELLO, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.151172 -0400 AGENT (debug) Add entity: LogEntity(identity=log/SERVER, module=SERVER, name=log/SERVER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.151411 -0400 AGENT (debug) Add entity: LogEntity(identity=log/POLICY, module=POLICY, name=log/POLICY, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.151673 -0400 AGENT (debug) Add entity: LogEntity(identity=log/CONTAINER, module=CONTAINER, name=log/CONTAINER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.151943 -0400 AGENT (debug) Add entity: LogEntity(identity=log/AGENT, module=AGENT, name=log/AGENT, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.152198 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ERROR, module=ERROR, name=log/ERROR, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.152471 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_CORE, module=ROUTER_CORE, name=log/ROUTER_CORE, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.152716 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER, module=ROUTER, name=log/ROUTER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.152958 -0400 AGENT (debug) Add entity: LogEntity(identity=log/AUTHSERVICE, module=AUTHSERVICE, name=log/AUTHSERVICE, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:57:32.336561 -0400 AGENT (debug) Add entity: RouterEntity(allowResumableLinkRoute=True, allowUnsettledMulticast=False, area=0, defaultDistribution=balanced, helloIntervalSeconds=1, helloMaxAgeSeconds=3, hostName=taj.localdomain, id=central-qdr-green, mode=interior, raIntervalFluxSeconds=4, raIntervalSeconds=30, remoteLsMaxAgeSeconds=60, saslConfigName=qdrouterd, type=org.apache.qpid.dispatch.router, workerThreads=4)
+2018-10-15 10:57:32.337966 -0400 SERVER (warning) HTTP support is not available
+2018-10-15 10:57:32.338005 -0400 SERVER (info) Container Name: central-qdr-green
+2018-10-15 10:57:32.338082 -0400 CONTAINER (trace) Container Initialized
+2018-10-15 10:57:32.338183 -0400 CONTAINER (trace) Node Type Registered - router
+2018-10-15 10:57:32.338237 -0400 CONTAINER (trace) Node of type 'router' installed as default node
+2018-10-15 10:57:32.338297 -0400 ROUTER (info) Router started in Interior mode, area=0 id=central-qdr-green
+2018-10-15 10:57:32.338313 -0400 ROUTER (info) Version: 1.5.0-SNAPSHOT
+2018-10-15 10:57:32.338374 -0400 POLICY (trace) Policy Initialized
+2018-10-15 10:57:32.339516 -0400 ROUTER (info) Router Engine Instantiated: id=central-qdr-green instance=1539615452 max_routers=128
+2018-10-15 10:57:32.378087 -0400 SERVER (notice) Listening on 0.0.0.0:amqp
+2018-10-15 10:57:32.378189 -0400 SERVER (notice) Listening on 0.0.0.0:20001
+2018-10-15 10:57:33.342104 -0400 ROUTER_CORE (trace) Core action 'send_to'
+2018-10-15 10:57:33.342320 -0400 ROUTER_HELLO (trace) SENT: HELLO(id=central-qdr-green pv=1 area=0 inst=1539615452 seen=[])
+2018-10-15 10:57:42.865701 -0400 SERVER (trace) [1]: Accepting incoming connection to '0.0.0.0:amqp'
+2018-10-15 10:57:42.865785 -0400 POLICY (trace) ALLOW Connection '127.0.0.1' based on global connection count. nConnections= 1
+2018-10-15 10:57:42.865801 -0400 SERVER (info) [1]: Accepted connection to 0.0.0.0:amqp from 127.0.0.1:55854
+2018-10-15 10:57:42.865844 -0400 SERVER (trace) [1]:  <- AMQP
+2018-10-15 10:57:42.865872 -0400 SERVER (trace) [1]:0 <- @open(16) [container-id="d45d5f6a-ade4-437b-92eb-5978ddbffb4e", hostname="127.0.0.1", channel-max=32767]
+2018-10-15 10:57:42.865889 -0400 SERVER (trace) [1]:0 <- @begin(17) [next-outgoing-id=0, incoming-window=2147483647, outgoing-window=2147483647]
+2018-10-15 10:57:42.865926 -0400 SERVER (trace) [1]:0 <- @attach(18) [name="29b38f24-8c87-4964-8a19-0b4f3aa44660", handle=0, role=true, snd-settle-mode=2, rcv-settle-mode=0, source=@source(40) [address="collectd/telemetry", durable=0, timeout=0, dynamic=false], target=@target(41) [durable=0, timeout=0, dynamic=false], initial-delivery-count=0, max-message-size=0]
+2018-10-15 10:57:42.865981 -0400 SERVER (trace) [1]:  -> AMQP
+2018-10-15 10:57:42.866110 -0400 ROUTER_CORE (trace) Core action 'connection_opened'
+2018-10-15 10:57:42.866198 -0400 SERVER (trace) [1]:0 -> @open(16) [container-id="central-qdr-green", max-frame-size=16384, channel-max=32767, idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY", properties={:product="qpid-dispatch-router", :version="1.5.0-SNAPSHOT", :"qd.conn-id"=1}]
+2018-10-15 10:57:42.866217 -0400 ROUTER_CORE (trace) Core action 'link_first_attach'
+2018-10-15 10:57:42.866263 -0400 DEFAULT (trace) Parse tree search for 'collectd/telemetry'
+2018-10-15 10:57:42.866274 -0400 DEFAULT (trace) Parse tree match not found
+2018-10-15 10:57:42.866284 -0400 DEFAULT (trace) Parse tree search for 'collectd/telemetry'
+2018-10-15 10:57:42.866323 -0400 SERVER (trace) [1]:0 -> @begin(17) [remote-channel=0, next-outgoing-id=0, incoming-window=2147483647, outgoing-window=2147483647]
+2018-10-15 10:57:42.866441 -0400 SERVER (trace) [1]:0 -> @attach(18) [name="29b38f24-8c87-4964-8a19-0b4f3aa44660", handle=0, role=false, snd-settle-mode=2, rcv-settle-mode=0, source=@source(40) [address="collectd/telemetry", durable=0, expiry-policy=:"session-end", timeout=0, dynamic=false], target=@target(41) [durable=0, expiry-policy=:"session-end", timeout=0, dynamic=false], initial-delivery-count=0, max-message-size=0]
+2018-10-15 10:57:42.866591 -0400 SERVER (trace) [1]:0 <- @flow(19) [next-incoming-id=0, incoming-window=2147483647, next-outgoing-id=0, outgoing-window=2147483647, handle=0, delivery-count=0, link-credit=10, drain=false]
+2018-10-15 10:59:07.454660 -0400 AGENT (debug) Add entity: LogEntity(enable=trace+, identity=log/DEFAULT, includeSource=False, includeTimestamp=True, module=DEFAULT, name=log/DEFAULT, outputFile=taj-GRN.log, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.454984 -0400 AGENT (debug) Add entity: LogEntity(identity=log/HTTP, module=HTTP, name=log/HTTP, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.455250 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_LS, module=ROUTER_LS, name=log/ROUTER_LS, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.455460 -0400 AGENT (debug) Add entity: LogEntity(identity=log/PYTHON, module=PYTHON, name=log/PYTHON, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.455720 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_MA, module=ROUTER_MA, name=log/ROUTER_MA, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.455943 -0400 AGENT (debug) Add entity: LogEntity(identity=log/CONN_MGR, module=CONN_MGR, name=log/CONN_MGR, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.456202 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_HELLO, module=ROUTER_HELLO, name=log/ROUTER_HELLO, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.456422 -0400 AGENT (debug) Add entity: LogEntity(identity=log/SERVER, module=SERVER, name=log/SERVER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.456658 -0400 AGENT (debug) Add entity: LogEntity(identity=log/POLICY, module=POLICY, name=log/POLICY, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.456926 -0400 AGENT (debug) Add entity: LogEntity(identity=log/CONTAINER, module=CONTAINER, name=log/CONTAINER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.457184 -0400 AGENT (debug) Add entity: LogEntity(identity=log/AGENT, module=AGENT, name=log/AGENT, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.457435 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ERROR, module=ERROR, name=log/ERROR, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.457704 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER_CORE, module=ROUTER_CORE, name=log/ROUTER_CORE, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.457951 -0400 AGENT (debug) Add entity: LogEntity(identity=log/ROUTER, module=ROUTER, name=log/ROUTER, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.458187 -0400 AGENT (debug) Add entity: LogEntity(identity=log/AUTHSERVICE, module=AUTHSERVICE, name=log/AUTHSERVICE, type=org.apache.qpid.dispatch.log)
+2018-10-15 10:59:07.583032 -0400 AGENT (debug) Add entity: RouterEntity(allowResumableLinkRoute=True, allowUnsettledMulticast=False, area=0, defaultDistribution=balanced, helloIntervalSeconds=1, helloMaxAgeSeconds=3, hostName=taj.localdomain, id=central-qdr-green, mode=interior, raIntervalFluxSeconds=4, raIntervalSeconds=30, remoteLsMaxAgeSeconds=60, saslConfigName=qdrouterd, type=org.apache.qpid.dispatch.router, workerThreads=4)
+2018-10-15 10:59:07.584383 -0400 SERVER (warning) HTTP support is not available
+2018-10-15 10:59:07.584421 -0400 SERVER (info) Container Name: central-qdr-green
+2018-10-15 10:59:07.584498 -0400 CONTAINER (trace) Container Initialized
+2018-10-15 10:59:07.584600 -0400 CONTAINER (trace) Node Type Registered - router
+2018-10-15 10:59:07.584656 -0400 CONTAINER (trace) Node of type 'router' installed as default node
+2018-10-15 10:59:07.584730 -0400 ROUTER (info) Router started in Interior mode, area=0 id=central-qdr-green
+2018-10-15 10:59:07.584749 -0400 ROUTER (info) Version: 1.5.0-SNAPSHOT
+2018-10-15 10:59:07.584807 -0400 POLICY (trace) Policy Initialized
+2018-10-15 10:59:07.586002 -0400 ROUTER (info) Router Engine Instantiated: id=central-qdr-green instance=1539615547 max_routers=128
+2018-10-15 10:59:07.586126 -0400 ROUTER_CORE (info) Initializing core module: edge_router
+2018-10-15 10:59:07.586184 -0400 ROUTER_CORE (info) Initializing core module: core_test_hooks
+2018-10-15 10:59:07.622921 -0400 SERVER (notice) Operational, 4 Threads Running (process ID 22085)
+2018-10-15 10:59:07.622943 -0400 SERVER (info) Running in DEBUG Mode
+2018-10-15 10:59:07.623098 -0400 SERVER (notice) Listening on 0.0.0.0:20001
+2018-10-15 10:59:07.623218 -0400 SERVER (notice) Listening on 0.0.0.0:amqp
+2018-10-15 10:59:08.587951 -0400 ROUTER_CORE (trace) Core action 'send_to'
+2018-10-15 10:59:08.588089 -0400 ROUTER_HELLO (trace) SENT: HELLO(id=central-qdr-green pv=1 area=0 inst=1539615547 seen=[])
+2018-10-15 10:59:08.588233 -0400 ROUTER_CORE (trace) Core action 'send_to'
+2018-10-15 10:59:08.588319 -0400 ROUTER_LS (trace) SENT: RA(id=central-qdr-green pv=1 area=0 inst=1539615547 ls_seq=0 mobile_seq=0)
+2018-10-15 10:59:08.588402 -0400 ROUTER_CORE (trace) Core action 'process_tick'
+2018-10-15 10:59:09.588673 -0400 ROUTER_CORE (trace) Core action 'send_to'
+2018-10-15 10:59:09.588779 -0400 ROUTER_HELLO (trace) SENT: HELLO(id=central-qdr-green pv=1 area=0 inst=1539615547 seen=[])
+2018-10-15 10:59:09.590682 -0400 ROUTER_CORE (trace) Core action 'process_tick'
+2018-10-15 10:59:09.621170 -0400 SERVER (trace) Accepting connection on 0.0.0.0:20001
+2018-10-15 10:59:09.621347 -0400 SERVER (trace) [1]: Accepting incoming connection to '0.0.0.0:20001'
+2018-10-15 10:59:09.621503 -0400 POLICY (trace) ALLOW Connection '192.168.1.7' based on global connection count. nConnections= 1
+2018-10-15 10:59:09.621530 -0400 SERVER (info) [1]: Accepted connection to 0.0.0.0:20001 from 192.168.1.7:36494
+2018-10-15 10:59:09.621569 -0400 SERVER (trace) [1]:  <- SASL
+2018-10-15 10:59:09.621595 -0400 SERVER (trace) [1]:  -> SASL
+2018-10-15 10:59:09.622163 -0400 SERVER (trace) Accepting connection on 0.0.0.0:20001
+2018-10-15 10:59:09.622280 -0400 SERVER (trace) [2]: Accepting incoming connection to '0.0.0.0:20001'
+2018-10-15 10:59:09.622387 -0400 POLICY (trace) ALLOW Connection '192.168.1.7' based on global connection count. nConnections= 2
+2018-10-15 10:59:09.622410 -0400 SERVER (info) [2]: Accepted connection to 0.0.0.0:20001 from 192.168.1.7:36496
+2018-10-15 10:59:09.624269 -0400 SERVER (trace) [2]:  <- SASL
+2018-10-15 10:59:09.624310 -0400 SERVER (trace) [2]:  -> SASL
+2018-10-15 10:59:09.624629 -0400 SERVER (trace) [1]:0 -> @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS, :"DIGEST-MD5", :PLAIN]]
+2018-10-15 10:59:09.624660 -0400 SERVER (trace) [2]:0 -> @sasl-mechanisms(64) [sasl-server-mechanisms=@PN_SYMBOL[:ANONYMOUS, :"DIGEST-MD5", :PLAIN]]
+2018-10-15 10:59:09.626696 -0400 SERVER (trace) [1]:0 <- @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@ratchet.localdomain"]
+2018-10-15 10:59:09.626787 -0400 SERVER (trace) [2]:0 <- @sasl-init(65) [mechanism=:ANONYMOUS, initial-response=b"anonymous@ratchet.localdomain"]
+2018-10-15 10:59:09.626861 -0400 SERVER (trace) [2]:0 -> @sasl-outcome(68) [code=0]
+2018-10-15 10:59:09.626894 -0400 SERVER (trace) [1]:0 -> @sasl-outcome(68) [code=0]
+2018-10-15 10:59:09.630886 -0400 SERVER (trace) [1]:  <- AMQP
+2018-10-15 10:59:09.630971 -0400 SERVER (trace) [1]:0 <- @open(16) [container-id="collectd", hostname="taj", max-frame-size=16384, channel-max=32767, idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY", properties={:product="qpid-dispatch-router", :version="1.4.0-SNAPSHOT", :"qd.conn-id"=5}]
+2018-10-15 10:59:09.631167 -0400 SERVER (trace) [1]:  -> AMQP
+2018-10-15 10:59:09.631197 -0400 ROUTER_CORE (trace) Core action 'connection_opened'
+2018-10-15 10:59:09.631246 -0400 SERVER (trace) [1]:0 -> @open(16) [container-id="central-qdr-green", max-frame-size=16384, channel-max=32767, idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY", properties={:product="qpid-dispatch-router", :version="1.5.0-SNAPSHOT", :"qd.conn-id"=1}]
+2018-10-15 10:59:09.631949 -0400 SERVER (trace) [2]:  <- AMQP
+2018-10-15 10:59:09.632028 -0400 SERVER (trace) [2]:0 <- @open(16) [container-id="central-qdr-blue", hostname="taj", max-frame-size=16384, channel-max=32767, idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY", properties={:product="qpid-dispatch-router", :version="1.4.0-SNAPSHOT", :"qd.conn-id"=5}]
+2018-10-15 10:59:09.632117 -0400 ROUTER_CORE (trace) Core action 'connection_opened'
+2018-10-15 10:59:09.632148 -0400 SERVER (trace) [2]:  -> AMQP
+2018-10-15 10:59:09.632221 -0400 SERVER (trace) [2]:0 -> @open(16) [container-id="central-qdr-green", max-frame-size=16384, channel-max=32767, idle-time-out=8000, offered-capabilities=:"ANONYMOUS-RELAY", properties={:product="qpid-dispatch-router", :version="1.5.0-SNAPSHOT", :"qd.conn-id"=2}]
