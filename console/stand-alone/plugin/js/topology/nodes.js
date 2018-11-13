@@ -85,7 +85,7 @@ export class Node {
     else {
       title += `<tr><td>Count</td><td>${this.normals.length}</td></tr>`;
     }
-    title += '</table>';
+    title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
     return title;
   }
 
@@ -134,8 +134,7 @@ export class Node {
     return nodeProperties[this.nodeType].radius;
   }
   uid(srv) {
-    return srv.utilities.nameFromId(this.key).replace(/ /g,'').replace(/\./g,'') + 
-    (this.connectionId ? this.connectionId : '');
+    return this.uuid ? this.uuid : srv.utilities.nameFromId(this.key);
   }
 }
 const nodeProperties = {

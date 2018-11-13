@@ -393,14 +393,17 @@ export class TopologyController {
         unknownNodes[unknowns[i].key] = 1;
       }
       unknownNodes = Object.keys(unknownNodes);
-      QDRService.management.topology.ensureEntities(unknownNodes, [ 
-        {entity: 'router.link', attrs: ['linkType','connectionId','linkDir','owningAddr'], force: true}], function (foo, results) {
-        forceData.links = links = new Links(QDRService, QDRLog);
-        links.initializeLinks(results, nodes, [], localStorage, height);
-        animate = true;
-        force.nodes(nodes.nodes).links(links.links).start();
-        restart(false);
-      });
+      QDRService.management.topology.ensureEntities(unknownNodes, 
+        [{entity: 'router.link', 
+          attrs: ['linkType','connectionId','linkDir','owningAddr'], 
+          force: true}], 
+        function (foo, results) {
+          forceData.links = links = new Links(QDRService, QDRLog);
+          links.initializeLinks(results, nodes, [], localStorage, height);
+          animate = true;
+          force.nodes(nodes.nodes).links(links.links).start();
+          restart(false);
+        });
     };
 
     function resetMouseVars() {
@@ -654,6 +657,10 @@ export class TopologyController {
           clearAllHighlights();
           $scope.mousedown_node = null;
           if (!$scope.$$phase) $scope.$apply();
+          // handle clicking on nodes that represent multiple sub-nodes
+          if (d.normals) {
+            //doDialog(d);
+          }
           restart(false);
 
         })
@@ -692,9 +699,6 @@ export class TopologyController {
               window.location = $location.protocol() + '://localhost:8161/hawtio' + artemisPath;
             }
             return;
-          } else {
-            // handle clicking on nodes that represent multiple sub-nodes
-            //doDialog(d);
           }
           d3.event.stopPropagation();
         });
@@ -973,8 +977,6 @@ export class TopologyController {
       if (routers.length > cnodes.length) {
         return -1;
       }
-
-
       if (cnodes.length != Object.keys(savedKeys).length) {
         return cnodes.length > Object.keys(savedKeys).length ? 1 : -1;
       }
@@ -1037,8 +1039,8 @@ export class TopologyController {
       // after the graph is displayed fetch all .router.node info. This is done so highlighting between nodes
       // doesn't incur a delay
       QDRService.management.topology.addUpdateEntities([
-        {entity: 'router.node', attrs: ['id','nextHop']},
-        {entity: 'router.link', attrs: ['linkType', 'connectionId', 'owningAddr', 'linkDir']}]);
+        {entity: 'router.node', attrs: ['id','nextHop']}
+      ]);
       // call this function every time a background update is done
       QDRService.management.topology.addUpdatedAction('topology', function() {
         let changed = hasChanged();
@@ -1077,8 +1079,7 @@ export class TopologyController {
     function setupInitialUpdate() {
       // make sure all router nodes have .connection info. if not then fetch any missing info
       QDRService.management.topology.ensureAllEntities(
-        [{entity: 'connection'},
-          {entity: 'router.link', attrs: ['linkType', 'connectionId', 'owningAddr', 'linkDir']}],
+        [{entity: 'connection'}],
         handleInitialUpdate);
     }
     if (!QDRService.management.connection.is_connected()) {

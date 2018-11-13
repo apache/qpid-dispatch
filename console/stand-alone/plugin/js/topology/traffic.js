@@ -325,7 +325,7 @@ class Dots extends TrafficAnimation {
       let matrixMessages = matrix.matrixMessages();
       // the fastest traffic rate gets 3 times as many dots as the slowest
       let minmax = matrix.getMinMax();
-      let flowScale = d3.scale.linear().domain(minmax).range([1, 1.75]);
+      let flowScale = d3.scale.linear().domain(minmax).range([1, 1.1]);
       // row is ingress router, col is egress router. Value at [row][col] is the rate
       matrixMessages.forEach(function (row, r) {
         row.forEach(function (val, c) {
@@ -363,8 +363,9 @@ class Dots extends TrafficAnimation {
         let hop = hops[id];
         for (let h = 0; h < hop.length; h++) {
           let ahop = hop[h];
-          let flowId = id + '-' + this.addressIndex(this, ahop.address) + (ahop.back ? 'b' : '');
-          let path = d3.select('#path' + id);
+          let pathId = id.replace(/\./g, '\\.').replace(/ /g, '\\ ');
+          let flowId = id.replace(/\./g, '').replace(/ /g, '') + '-' + this.addressIndex(this, ahop.address) + (ahop.back ? 'b' : '');
+          let path = d3.select('#path' + pathId);
           // start the animation. If the animation is already running, this will have no effect
           this.startAnimation(path, flowId, ahop, flowScale(ahop.val));
           keep[flowId] = true;

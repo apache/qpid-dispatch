@@ -164,6 +164,7 @@ export class Links {
             node.host = connection.host;
             node.connectionId = connection.identity;
             node.cdir = cdir;
+            node.uuid = `${node.routerId}${node.nodeType}${node.cdir}`;
             // determine arrow direction by using the link directions
             if (!normalsParent[nodeType+cdir]) {
               normalsParent[nodeType+cdir] = node;

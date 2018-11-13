@@ -71,20 +71,46 @@ class Topology {
   nodeInfo() {
     return this._nodeInfo;
   }
+  saveResults(workInfo) {
+    let workSet = new Set(Object.keys(workInfo));
+    for (let rId in this._nodeInfo) {
+      if (!workSet.has(rId)) {
+        // mark any routers that went away since the last request as removed
+        this._nodeInfo[rId]['removed'] = true;
+      } else {
+        if (this._nodeInfo[rId]['removed'])
+          delete this._nodeInfo[rId]['removed'];
+        // copy entities
+        for (let entity in workInfo[rId]) {
+          if (!this._nodeInfo[rId][entity] ||
+            (workInfo[rId][entity]['timestamp']+'' > this._nodeInfo[rId][entity]['timestamp']+'')) {
+            this._nodeInfo[rId][entity] = utils.copy(workInfo[rId][entity]);
+          }
+        }
+      }
+    }
+    // add any new routers
+    let nodeSet = new Set(Object.keys(this._nodeInfo));
+    for (let rId in workInfo) {
+      if (!nodeSet.has(rId)) {
+        this._nodeInfo[rId] = utils.copy(workInfo[rId]);
+      }
+    }
+  }
   get() {
     return new Promise((function (resolve, reject) {
       this.connection.sendMgmtQuery('GET-MGMT-NODES')
         .then((function (results) {
-          let response = results.response;
-          if (Object.prototype.toString.call(response) === '[object Array]') {
+          let routerIds = results.response;
+          if (Object.prototype.toString.call(routerIds) === '[object Array]') {
             // if there is only one node, it will not be returned
-            if (response.length === 0) {
+            if (routerIds.length === 0) {
               var parts = this.connection.getReceiverAddress().split('/');
               parts[parts.length - 1] = '$management';
-              response.push(parts.join('/'));
+              routerIds.push(parts.join('/'));
             }
             let finish = function (workInfo) {
-              this._nodeInfo = utils.copy(workInfo);
+              this.saveResults(workInfo);
               this.onDone(this._nodeInfo);
               resolve(this._nodeInfo);
             };
@@ -109,10 +135,10 @@ class Topology {
               }
               return routerId;
             };
-            this.doget(response)
+            this.doget(routerIds)
               .then( function (workInfo) {
                 // test for edge case
-                let routerId = connectedToEdge(response, workInfo);
+                let routerId = connectedToEdge(routerIds, workInfo);
                 if (routerId) {
                   this.connection.sendMgmtQuery('GET-MGMT-NODES', routerId)
                     .then((function (results) {
@@ -149,6 +175,7 @@ class Topology {
       }
       var gotResponse = function (nodeName, entity, response) {
         workInfo[nodeName][entity] = response;
+        workInfo[nodeName][entity]['timestamp'] = new Date();
       };
       var q = d3.queue(this.connection.availableQeueuDepth());
       for (var id in workInfo) {
@@ -273,8 +300,9 @@ class Topology {
     this.addUpdateEntities(entityAttribs);
     this.doget(nodes)
       .then( function (results) {
+        this.saveResults(results);
         callback(extra, results);
-      });
+      }.bind(this));
   }
   addNodeInfo(id, entity, values) {
     // save the results in the nodeInfo object
@@ -284,6 +312,7 @@ class Topology {
       }
       // copy the values to allow garbage collection
       this._nodeInfo[id][entity] = values;
+      this._nodeInfo[id][entity]['timestamp'] = new Date();
     }
   }
   isLargeNetwork() {
