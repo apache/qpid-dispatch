@@ -723,6 +723,7 @@ struct qdr_core_t {
     qd_timer_t              *work_timer;
 
     qdr_connection_list_t open_connections;
+    qdr_connection_t     *active_edge_connection;
     qdr_connection_list_t connections_to_activate;
     qdr_link_list_t       open_links;
 
