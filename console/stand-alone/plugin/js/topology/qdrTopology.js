@@ -659,7 +659,7 @@ export class TopologyController {
           if (!$scope.$$phase) $scope.$apply();
           // handle clicking on nodes that represent multiple sub-nodes
           if (d.normals) {
-            //doDialog(d);
+            doDialog(d);
           }
           restart(false);
 

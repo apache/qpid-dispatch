@@ -85,7 +85,8 @@ export class Node {
     else {
       title += `<tr><td>Count</td><td>${this.normals.length}</td></tr>`;
     }
-    title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
+    //title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
+    title += '</table>';
     return title;
   }
 
