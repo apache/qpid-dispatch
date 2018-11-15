@@ -153,14 +153,24 @@ class BusManager(Node):
         heads.append(Header("security"))
         heads.append(Header("authentication"))
         heads.append(Header("tenant"))
-        heads.append(Header("active"))
-
+        
         rows = []
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
         
         if not objects:
             print("No Edge Router Connections")
             return
+        has_active = False
+        
+        first = objects[0]
+        try:
+            if first and first['active']:
+                has_active = True
+        except:
+            pass
+            
+        if has_active:
+            heads.append(Header("active"))
 
         for conn in objects:
             if conn.role == "edge":
@@ -173,10 +183,11 @@ class BusManager(Node):
                            row.append(self.connSecurity(conn))
                            row.append(self.connAuth(conn))
                            row.append(self.noTrailingSlash(get(conn, 'tenant')))
-                           if conn.active:
-                               row.append("yes")
-                           else:
-                               row.append("no")
+                           if has_active:
+                               if conn.active:
+                                   row.append("yes")
+                               else:
+                                   row.append("no")
                            rows.append(row)
         title = "Connections"
         dispRows = rows
