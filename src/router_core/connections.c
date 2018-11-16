@@ -1300,6 +1300,10 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                 }
             }
 
+            if (conn->role == QDR_ROLE_EDGE_CONNECTION && core->router_mode == QD_ROUTER_MODE_INTERIOR) {
+                core->active_edge_connection = conn;
+            }
+
             if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
                 //
                 // Notify the route-control module that a route-container connection has opened.

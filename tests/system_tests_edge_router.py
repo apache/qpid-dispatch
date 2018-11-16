@@ -166,12 +166,22 @@ class EdgeRouterTest(TestCase):
         Then we kill the router with the active connection and make sure
         that the other connection is now the active one
         """
+        success = False
+        outs = self.run_qdstat(['--edge'],
+                               address=self.routers[0].addresses[0])
+        lines = outs.split("\n")
+        for line in lines:
+            if "EA1" in line and "yes" in line:
+                success = True
+        if not success:
+            self.fail("Active edge connection not found not found for "
+                      "interior router")
+
         outs = self.run_qdstat(['--edge'],
                                address=self.routers[2].addresses[0])
         conn_map_edge = dict()
         #
-        # Depending on which interior router starts first, the edge connects
-        # to that interior router
+        # We dont know which interior router the edge will connect to.
         #
         conn_map_edge["INT.A"] = False
         conn_map_edge["INT.B"] = False
