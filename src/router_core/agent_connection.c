@@ -200,11 +200,15 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
 
     case QDR_CONNECTION_ACTIVE:
         if (conn->role == QDR_ROLE_EDGE_CONNECTION) {
-            if (core->active_edge_connection == conn)
+            if (core->router_mode == QD_ROUTER_MODE_INTERIOR) {
                 qd_compose_insert_bool(body, true);
-            else
-                qd_compose_insert_bool(body, false);
-
+            }
+            else if (core->router_mode  == QD_ROUTER_MODE_EDGE){
+                if (core->active_edge_connection == conn)
+                    qd_compose_insert_bool(body, true);
+                else
+                    qd_compose_insert_bool(body, false);
+            }
         }
         else {
             qd_compose_insert_bool(body, true);
