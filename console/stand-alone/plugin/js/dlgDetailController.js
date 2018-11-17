@@ -22,54 +22,137 @@ export class DetailDialogController {
   constructor(QDRService, $scope, $timeout, $uibModalInstance, $sce, d) {
     this.controllerName = 'QDR.DetailDialogController';
 
+    let expandedRows = new Set();
     $scope.d = d;  // the node object
     $scope.detail = {
-      title: d.normals.length + ' ' + (d.nodeType === 'edge' ? 'edge routers' : 'clients'),
-      header: '',
-      details: 'loading...'
+      template: 'edgeRouters.html'
     };
+    $scope.detailFields = [
+      'version',
+      'mode',
+      'presettledDeliveries',
+      'droppedPresettledDeliveries',
+      'acceptedDeliveries',
+      'rejectedDeliveries',
+      'releasedDeliveries',
+      'modifiedDeliveries',
+      'deliveriesIngress',
+      'deliveriesEgress',
+      'deliveriesTransit',
+      'deliveriesIngressRouteContainer',
+      'deliveriesEgressRouteContainer'
+    ];
+    $scope.linkFields = [
+      'linkType',
+      'owningAddr',
+      'priority',
+      'acceptedCount',
+      'unsettledCount'
+    ];
+    $scope.linkRouteFields = [
+      'prefix',
+      'direction',
+      'containerId'
+    ];
+    $scope.autoLinkFields = [
+      'addr',
+      'direction',
+      'containerId'
+    ];
+    $scope.addressFields = [
+      'prefix',
+      'distribution'
+    ];
 
     $scope.okClick = function () {
       $uibModalInstance.close(true);
     };
+    $scope.expandClicked = function (id) {
+      if (expandedRows.has(id)) {
+        expandedRows.delete(id);
+      } else {
+        expandedRows.add(id);
+      }
+    };
+    $scope.expanded = function (id) {
+      return expandedRows.has(id);
+    };
+
     let groupDetail = function () {
-      let q_getEdgeInfo = function (n, response, callback) {
+      let q_getEdgeInfo = function (n, infoPerId, callback) {
         let nodeId = QDRService.utilities.idFromName(n.container, '_edge');
         QDRService.management.topology.fetchEntities(nodeId, 
-          [{entity: 'connection', attrs: []},
-            {entity: 'router.link', attrs: []}],
+          [{entity: 'router', attrs: []},
+            {entity: 'router.link', attrs: []},
+            {entity: 'linkRoute', attrs: $scope.linkRouteFields},
+            {entity: 'autoLink', attrs: $scope.autoLinkFields},
+            {entity: 'address', attrs: []},
+          ],
           function (results) {
-            response.HTML += '<tr>';
-            response.HTML += `<td>${QDRService.utilities.nameFromId(nodeId)}</td>`;
-  
-            let connection = results[nodeId].connection;
-            // count endpoint connections
-            let endpoints = QDRService.utilities.countFor(connection.attributeNames, connection.results, 'role', 'endpoint');
-            response.HTML += `<td align='right'>${endpoints}</td>`;
-  
-            //let link = results[nodeId]['router.link'];
-            //let conn = QDRService.utilities.flatten(results.attributeNames, )
-            response.HTML += '</tr>';
+            let r = results[nodeId].router;
+            infoPerId[n.container] = QDRService.utilities.flatten(r.attributeNames, r.results[0]);
+            infoPerId[n.container].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute);
+            infoPerId[n.container].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink);
+            infoPerId[n.container].addresses = QDRService.utilities.flattenAll(results[nodeId].address);
             callback(null);
           });
       };
       return new Promise( (function (resolve) {
-        let response = {
-          header: '<table><tr><td>Id</td><td>Endpoints</td></tr></table>', 
-          HTML: '<table><tr><td>Id</td><td>endpoints</td></tr>'
-        };
+        let infoPerId = {};
         if (d.nodeType === 'edge') {
+          $scope.detail.template = 'edgeRouters.html';
+          $scope.detail.title = 'edge router';
           let q = d3.queue(10);
           for (let n=0; n<d.normals.length; n++) {
-            q.defer(q_getEdgeInfo, d.normals[n], response);
+            q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
           }
           q.await(function () {
-            response.HTML += '</table>';
-            resolve(response);
+            resolve({
+              description: 'Expand an edge router to see more info',
+              infoPerId: infoPerId
+            });
+          });
+        } else if (d.isConsole) {
+          $scope.detail.template = 'consoles.html';
+          $scope.detail.title = 'console';
+          resolve({
+            description: ''
           });
         } else {
-          response.HTML += '<tr><td>Details for clients go here</td</tr></table>';
-          resolve(response);
+          $scope.detail.template = 'clients.html';
+          $scope.detail.title = 'client';
+          QDRService.management.topology.fetchEntities(d.key, 
+            [{entity: 'router.link', attrs: []}],
+            function (results) {
+              let links = results[d.key]['router.link'];
+              for (let i=0; i<d.normals.length; i++) {
+                let n = d.normals[i];
+                let conn = {};
+                let connectionIndex = links.attributeNames.indexOf('connectionId');
+                infoPerId[n.container] = conn;
+                conn.container = n.container;
+                conn.encrypted = n.encrypted;
+                conn.host = n.host;
+                conn.links = [];
+                for (let l=0; l<links.results.length; l++) {
+                  if (links.results[l][connectionIndex] === n.connectionId) {
+                    let link = QDRService.utilities.flatten(links.attributeNames, links.results[l]);
+                    link.owningAddr = QDRService.utilities.addr_text(link.owningAddr);
+                    conn.links.push(link);
+                  }
+                }
+                conn.linkCount = conn.links.length;
+              }
+              let dir = d.cdir === 'in' ? 'inbound' : d.cdir === 'both' ? 'in and outbound' : 'outbound';
+              let count = d.normals.length;
+              let verb = count > 1 ? 'are' : 'is';
+              let preposition = d.cdir === 'in' ? 'to' : d.cdir === 'both' ? 'for' : 'from';
+              let plural = count > 1 ? 's': '';
+              resolve({
+                description: `There ${verb} ${count} ${dir} connection${plural} ${preposition} ${d.routerId} with role ${d.nodeType}`,
+                infoPerId: infoPerId
+              });
+            });
         }
       }));
     };
@@ -77,8 +160,9 @@ export class DetailDialogController {
     groupDetail()
       .then( function (det) {
         $timeout( function () {
-          $scope.detail.header = $sce.trustAsHtml(det.header);
-          $scope.detail.details = $sce.trustAsHtml(det.HTML);
+          $scope.detail.title = `${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
+          $scope.detail.description = det.description;
+          $scope.detail.infoPerId = det.infoPerId;
         });
       });
   }

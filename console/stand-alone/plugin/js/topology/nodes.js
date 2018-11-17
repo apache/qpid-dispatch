@@ -35,9 +35,9 @@ export class Node {
     this.isConsole = QDRService.utilities.isConsole(this);
     this.isArtemis = QDRService.utilities.isArtemis(this);
   }
-  title () {
+  title (hide) {
     let x = '';
-    if (this.normals && this.normals.length > 1)
+    if (this.normals && this.normals.length > 1 && !hide)
       x = ' x ' + this.normals.length;
     if (this.isConsole)
       return 'Dispatch console' + x;
@@ -77,7 +77,7 @@ export class Node {
   }
 
   clientTooltip () {
-    let type = this.title();
+    let type = this.title(true);
     let title = '';
     title += `<table class="popupTable"><tr><td>Type</td><td>${type}</td></tr>`;
     if (!this.normals || this.normals.length < 2)
@@ -85,8 +85,8 @@ export class Node {
     else {
       title += `<tr><td>Count</td><td>${this.normals.length}</td></tr>`;
     }
-    //title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
-    title += '</table>';
+    if (!this.isConsole && !this.isArtemis)
+      title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
     return title;
   }
 
@@ -268,7 +268,7 @@ export class Nodes {
   }
   // Convert node's x,y coordinates to longitude, lattitude
   saveLonLat (backgroundMap, nodes) {
-    if (!backgroundMap)
+    if (!backgroundMap || !backgroundMap.initialized)
       return;
     // didn't pass nodes, use all nodes
     if (!nodes)

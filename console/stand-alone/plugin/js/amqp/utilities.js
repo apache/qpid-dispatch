@@ -46,6 +46,13 @@ var utils = {
     });
     return flat;
   },
+  flattenAll: function (entity) {
+    let results = [];
+    for (let i=0; i<entity.results.length; i++) {
+      results.push(this.flatten(entity.attributeNames, entity.results[i]));
+    }
+    return results;
+  },
   copy: function (obj) {
     if (obj)
       return JSON.parse(JSON.stringify(obj));
@@ -107,15 +114,16 @@ var utils = {
     }
     return null;
   },
-  // count the number records with a specific value for a field
-  countFor: function (aAr, vAr, key, val) {
-    let count = 0;
+  // return a map with unique values and their counts for a field
+  countsFor: function (aAr, vAr, key) {
+    let counts = {};
     let idx = aAr.indexOf(key);
     for (let i=0; i<vAr.length; i++) {
-      if (vAr[idx] === val)
-        count++;
+      if (!counts[vAr[i][idx]])
+        counts[vAr[i][idx]] = 0;
+      counts[vAr[i][idx]]++;
     }
-    return count;
+    return counts;
   },
   // extract the name of the router from the router id
   nameFromId: function (id) {
@@ -173,6 +181,35 @@ var utils = {
       rates[field] = list.length > 1 ? cumulative / (list.length-1) : 0;
     }
     return rates;
+  },
+  connSecurity: function (conn) {
+    if (!conn.isEncrypted)
+      return 'no-security';
+    if (conn.sasl === 'GSSAPI')
+      return 'Kerberos';
+    return conn.sslProto + '(' + conn.sslCipher + ')';
+  },
+  connAuth: function (conn) {
+    if (!conn.isAuthenticated)
+      return 'no-auth';
+    let sasl = conn.sasl;
+    if (sasl === 'GSSAPI')
+      sasl = 'Kerberos';
+    else if (sasl === 'EXTERNAL')
+      sasl = 'x.509';
+    else if (sasl === 'ANONYMOUS')
+      return 'anonymous-user';
+    if (!conn.user)
+      return sasl;
+    return conn.user + '(' + sasl + ')';
+  },
+  connTenant: function (conn) {
+    if (!conn.tenant) {
+      return '';
+    }
+    if (conn.tenant.length > 1)
+      return conn.tenant.replace(/\/$/, '');
   }
+
 };
 export { utils };

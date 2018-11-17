@@ -449,16 +449,16 @@ class Dots extends TrafficAnimation {
       const ioa = links.attributeNames.indexOf('owningAddr');
       const ici = links.attributeNames.indexOf('connectionId');
       const ild = links.attributeNames.indexOf('linkDir');
-      let linkIndex = links.results.findIndex( function (l) {
+      let foundLinks = links.results.filter( function (l) {
         return (l[ilt] === 'endpoint' || l[ilt] === 'edge-downlink') && 
           address === this.traffic.QDRService.utilities.addr_text(l[ioa]) &&
           l[ild] === cdir;
       }, this);
-      if (linkIndex >= 0) {
+      for (let linkIndex=0; linkIndex<foundLinks.length; linkIndex++) {
         let nodeIndex = nodes.findIndex( function (node) {
           if (node.normals && node.key === key && (node.cdir === cdir || node.cdir === 'both')) {
             let ni = node.normals.findIndex( function (normal) {
-              return normal.connectionId === links.results[linkIndex][ici];
+              return normal.connectionId === foundLinks[linkIndex][ici];
             });
             return ni >= 0;
           } else
@@ -471,7 +471,6 @@ class Dots extends TrafficAnimation {
           if (!hops[key])
             hops[key] = [];
           hops[key].push({ val: val, back: !sender, address: address });
-          return;
         }
       }
     }

@@ -31,7 +31,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
     this.initialized = false;
     this.notify = notifyFn;
     $scope.mapOptions = angular.fromJson(localStorage[MAPOPTIONSKEY]) || {areaColor: defaultLandColor, oceanColor: defaultOceanColor};
-    initLast(this);
+    this.last = {translate: [0,0], scale: null};
   }
   updateLandColor(color) {
     localStorage[MAPOPTIONSKEY] = JSON.stringify(this.$scope.mapOptions);
@@ -116,7 +116,6 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
           .on('dblclick.zoom', null);
 
       // async load of data file. calls resolve when this completes to let caller know
-      //d3.json('plugin/data/world-110m.json', function(error, world) {
       d3.json('plugin/data/countries.json', function(error, world) {
         if (error) 
           reject(error);
@@ -249,7 +248,3 @@ function getMapBounds(projection, maxlat) {
   
   return [xymin,xymax];
 }
-function initLast(map) {
-  map.last = {translate: [0,0], scale: null};
-}
-

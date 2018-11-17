@@ -66,6 +66,7 @@ export function connectionPopupHTML (d, QDRService) {
     linkRateHistory = {};
     return;
   }
+  let utils = QDRService.utilities;
   let getConnsArray = function (d, conn) {
     let conns = [conn];
     if (d.cls === 'small') {
@@ -73,7 +74,7 @@ export function connectionPopupHTML (d, QDRService) {
       let normals = d.target.normals ? d.target.normals : d.source.normals;
       for (let n=0; n<normals.length; n++) {
         if (normals[n].resultIndex !== undefined) {
-          conns.push(QDRService.utilities.flatten(onode['connection'].attributeNames,
+          conns.push(utils.flatten(onode['connection'].attributeNames,
             onode['connection'].results[normals[n].resultIndex]));
         }
       }
@@ -97,7 +98,7 @@ export function connectionPopupHTML (d, QDRService) {
       let out = '';
       out = ar[0];
       for (let i=1; i<ar.length; i++) {
-        let sep = sepfn(ar[i]);
+        let sep = sepfn(ar[i], i===ar.length-1);
         out += (sep[0] + sep[1]);
       }
       return out;
@@ -111,19 +112,23 @@ export function connectionPopupHTML (d, QDRService) {
     let links = [];
     let hasAddress = false;
     for (let n=0; n<nodeLinks.results.length; n++) {
-      let link = QDRService.utilities.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
+      let link = utils.flatten(nodeLinks.attributeNames, nodeLinks.results[n]);
+      let allZero = true;
       if (link.linkType !== 'router-control') {
         if (isLinkFor(link.connectionId, conns)) {
           if (link.owningAddr)
             hasAddress = true;
           if (link.name) {
-            let rate = QDRService.utilities.rates(link, fields, linkRateHistory, link.name, 1);
+            let rates = utils.rates(link, fields, linkRateHistory, link.name, 1);
             // replace the raw value with the rate
             for (let i=0; i<fields.length; i++) {
-              link[fields[i]] = rate[fields[i]];
+              if (rates[fields[i]] > 0)
+                allZero = false;
+              link[fields[i]] = rates[fields[i]];
             }
           }
-          links.push(link);
+          if (!allZero)
+            links.push(link);
         }
       }
     }
@@ -148,6 +153,8 @@ export function connectionPopupHTML (d, QDRService) {
     let td = fields;
     th.unshift('dir');
     td.unshift('linkDir');
+    th.push('priority');
+    td.push('priority');
     // add an address field if any of the links had an owningAddress
     if (hasAddress) {
       th.unshift('address');
@@ -158,7 +165,7 @@ export function connectionPopupHTML (d, QDRService) {
       let rth = th.map( function (t) {
         if (t.endsWith('Count'))
           t = t.replace('Count', 'Rate');
-        return QDRService.utilities.humanify(t);
+        return utils.humanify(t);
       });
       return rth;
     };
@@ -172,15 +179,19 @@ export function connectionPopupHTML (d, QDRService) {
       let link = links[l];
       let vals = td.map( function (f) {
         if (f === 'owningAddr') {
-          let identity = QDRService.utilities.identity_clean(link.owningAddr);
-          return QDRService.utilities.addr_text(identity);
+          let identity = utils.identity_clean(link.owningAddr);
+          return utils.addr_text(identity);
         }
         return link[f];
       });
-      let joinedVals = fnJoin(vals, function (v1) {
-        return ['</td><td' + (isNaN(+v1) ? '': ' align="right"') + '>', QDRService.utilities.pretty(v1 || '0', ',.2f')];
+      let joinedVals = fnJoin(vals, function (v1, last) {
+        return [`</td><td${(isNaN(+v1) ? '': ' align="right"')}>`, last ? v1 : utils.pretty(v1 || '0', ',.2f')];
       });
       HTML += `<tr><td> ${joinedVals} </td></tr>`;
+    }
+    // no rows were added
+    if (links.length === 0) {
+      HTML += `<tr><td align="center" colspan="${th.length}">Calculating rates, or rates were all zero</td></tr>`;
     }
     HTML += '</table>';
     return HTMLHeading + HTML;
@@ -190,37 +201,9 @@ export function connectionPopupHTML (d, QDRService) {
   // left is the connection with dir 'in'
   let right = d.left ? d.target : d.source;
   let onode = QDRService.management.topology.nodeInfo()[left.key];
-  let connSecurity = function (conn) {
-    if (!conn.isEncrypted)
-      return 'no-security';
-    if (conn.sasl === 'GSSAPI')
-      return 'Kerberos';
-    return conn.sslProto + '(' + conn.sslCipher + ')';
-  };
-  let connAuth = function (conn) {
-    if (!conn.isAuthenticated)
-      return 'no-auth';
-    let sasl = conn.sasl;
-    if (sasl === 'GSSAPI')
-      sasl = 'Kerberos';
-    else if (sasl === 'EXTERNAL')
-      sasl = 'x.509';
-    else if (sasl === 'ANONYMOUS')
-      return 'anonymous-user';
-    if (!conn.user)
-      return sasl;
-    return conn.user + '(' + sasl + ')';
-  };
-  let connTenant = function (conn) {
-    if (!conn.tenant) {
-      return '';
-    }
-    if (conn.tenant.length > 1)
-      return conn.tenant.replace(/\/$/, '');
-  };
   // loop through all the connections for left, and find the one for right
   let rightIndex = onode['connection'].results.findIndex( function (conn) {
-    return QDRService.utilities.valFor(onode['connection'].attributeNames, conn, 'container') === right.routerId;
+    return utils.valFor(onode['connection'].attributeNames, conn, 'container') === right.routerId;
   });
   if (rightIndex < 0) {
     // we have a connection to a client/service
@@ -233,16 +216,16 @@ export function connectionPopupHTML (d, QDRService) {
   let HTML = '';
   if (rightIndex >= 0) {
     let conn = onode['connection'].results[rightIndex];
-    conn = QDRService.utilities.flatten(onode['connection'].attributeNames, conn);
+    conn = utils.flatten(onode['connection'].attributeNames, conn);
     let conns = getConnsArray(d, conn);
     if (conns.length === 1) {
       HTML += '<h5>Connection'+(conns.length > 1 ? 's' : '')+'</h5>';
       HTML += '<table class="popupTable"><tr class="header"><td>Security</td><td>Authentication</td><td>Tenant</td><td>Host</td>';
 
       for (let c=0; c<conns.length; c++) {
-        HTML += ('<tr><td>' + connSecurity(conns[c]) + '</td>');
-        HTML += ('<td>' + connAuth(conns[c]) + '</td>');
-        HTML += ('<td>' + (connTenant(conns[c]) || '--') + '</td>');
+        HTML += ('<tr><td>' + utils.connSecurity(conns[c]) + '</td>');
+        HTML += ('<td>' + utils.connAuth(conns[c]) + '</td>');
+        HTML += ('<td>' + (utils.connTenant(conns[c]) || '--') + '</td>');
         HTML += ('<td>' + conns[c].host + '</td>');
         HTML += '</tr>';
       }

@@ -495,8 +495,10 @@ export class TopologyController {
           d.selected = true;
           let updateTooltip = function () {
             $timeout(function () {
-              $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d, QDRService));
-              displayTooltip(event);
+              if (d.selected) {
+                $scope.trustedpopoverContent = $sce.trustAsHtml(connectionPopupHTML(d, QDRService));
+                displayTooltip(event);
+              }
             });
           };
           // update the contents of the popup tooltip each time the data is polled
@@ -658,7 +660,7 @@ export class TopologyController {
           $scope.mousedown_node = null;
           if (!$scope.$$phase) $scope.$apply();
           // handle clicking on nodes that represent multiple sub-nodes
-          if (d.normals) {
+          if (d.normals && !d.isConsole && !d.isArtemis) {
             doDialog(d);
           }
           restart(false);
