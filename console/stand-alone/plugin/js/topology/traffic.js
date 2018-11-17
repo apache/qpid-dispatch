@@ -143,11 +143,13 @@ class Congestion extends TrafficAnimation{
               let t = self.nodeIndexFor(nodes, connection.container);
               let little = Math.min(f, t);
               let big = Math.max(f, t);
-              let key = ['#path', nodes[little].uid(srv), 
-                nodes[big].uid(srv)].join('-');
-              if (!links[key])
-                links[key] = [];
-              links[key].push(link);
+              if (little >= 0) {
+                let key = ['#path', nodes[little].uid(srv), 
+                  nodes[big].uid(srv)].join('-');
+                if (!links[key])
+                  links[key] = [];
+                links[key].push(link);
+              }
             }
           }
         }
@@ -156,7 +158,8 @@ class Congestion extends TrafficAnimation{
       let colors = {};
       for (let key in links) {
         let congestion = self.congestion(links[key]);
-        let path = d3.select(key);
+        let pathId = key.replace(/\./g, '\\.').replace(/ /g, '\\ ');
+        let path = d3.select(pathId);
         if (path && !path.empty()) {
           let dir = path.attr('marker-end') === '' ? 'start' : 'end';
           let small = path.attr('class').indexOf('small') > -1;

@@ -53,18 +53,20 @@
 -->
 <div>
     <div class="modal-header">
-        <h3 class="modal-title">Detail for {{detail.title}}</h3>
+        <h3 class="modal-title">Detail {{detail.title}}</h3>
     </div>
     <div class="modal-body">
         <h4>{{detail.description}}</h4>
-        <div class="details" ng-include="detail.template">
-        </div>
+        <div class="details" ng-include="detail.template"></div>
     </div>
     <div class="modal-footer">
         <button class="btn btn-primary" type="button" ng-click="okClick()">Close</button>
     </div>
 </div>
 
+<script type="text/ng-template" id="loading.html">
+    loading...
+</script>
 <script type="text/ng-template" id="clients.html">
     <table class="table table-striped table-bordered table-hover dataTable no-footer">
         <thead>

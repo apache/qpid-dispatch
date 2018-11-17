@@ -17,15 +17,15 @@ specific language governing permissions and limitations
 under the License.
 */
 
-/* global Promise d3 */
+/* global Promise d3 Set */
 export class DetailDialogController {
-  constructor(QDRService, $scope, $timeout, $uibModalInstance, $sce, d) {
+  constructor(QDRService, $scope, $timeout, $uibModalInstance, d) {
     this.controllerName = 'QDR.DetailDialogController';
 
     let expandedRows = new Set();
     $scope.d = d;  // the node object
     $scope.detail = {
-      template: 'edgeRouters.html'
+      template: 'loading.html',
     };
     $scope.detailFields = [
       'version',
@@ -72,6 +72,7 @@ export class DetailDialogController {
         expandedRows.delete(id);
       } else {
         expandedRows.add(id);
+        $scope.detail.moreInfo(id);
       }
     };
     $scope.expanded = function (id) {
@@ -83,30 +84,43 @@ export class DetailDialogController {
         let nodeId = QDRService.utilities.idFromName(n.container, '_edge');
         QDRService.management.topology.fetchEntities(nodeId, 
           [{entity: 'router', attrs: []},
-            {entity: 'router.link', attrs: []},
-            {entity: 'linkRoute', attrs: $scope.linkRouteFields},
-            {entity: 'autoLink', attrs: $scope.autoLinkFields},
-            {entity: 'address', attrs: []},
           ],
           function (results) {
             let r = results[nodeId].router;
             infoPerId[n.container] = QDRService.utilities.flatten(r.attributeNames, r.results[0]);
-            infoPerId[n.container].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute);
-            infoPerId[n.container].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink);
-            infoPerId[n.container].addresses = QDRService.utilities.flattenAll(results[nodeId].address);
+            infoPerId[n.container].linkRoutes = [];
+            infoPerId[n.container].autoLinks = [];
+            infoPerId[n.container].addresses = [];
             callback(null);
           });
       };
       return new Promise( (function (resolve) {
         let infoPerId = {};
         if (d.nodeType === 'edge') {
-          $scope.detail.template = 'edgeRouters.html';
-          $scope.detail.title = 'edge router';
+          $scope.detail.moreInfo = function (id) {
+            let nodeId = QDRService.utilities.idFromName(id, '_edge');
+            QDRService.management.topology.fetchEntities(nodeId, 
+              [{entity: 'router.link', attrs: []},
+                {entity: 'linkRoute', attrs: $scope.linkRouteFields},
+                {entity: 'autoLink', attrs: $scope.autoLinkFields},
+                {entity: 'address', attrs: []},
+              ],
+              function (results) {
+                $timeout( function () {
+                  infoPerId[id].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute);
+                  infoPerId[id].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink);
+                  infoPerId[id].addresses = QDRService.utilities.flattenAll(results[nodeId].address);
+                });
+              });
+          };
+
           let q = d3.queue(10);
           for (let n=0; n<d.normals.length; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
           }
           q.await(function () {
+            $scope.detail.template = 'edgeRouters.html';
+            $scope.detail.title = 'for edge router';
             resolve({
               description: 'Expand an edge router to see more info',
               infoPerId: infoPerId
@@ -114,13 +128,12 @@ export class DetailDialogController {
           });
         } else if (d.isConsole) {
           $scope.detail.template = 'consoles.html';
-          $scope.detail.title = 'console';
+          $scope.detail.title = 'for console';
           resolve({
             description: ''
           });
         } else {
-          $scope.detail.template = 'clients.html';
-          $scope.detail.title = 'client';
+          $scope.detail.moreInfo = function () {};
           QDRService.management.topology.fetchEntities(d.key, 
             [{entity: 'router.link', attrs: []}],
             function (results) {
@@ -148,6 +161,8 @@ export class DetailDialogController {
               let verb = count > 1 ? 'are' : 'is';
               let preposition = d.cdir === 'in' ? 'to' : d.cdir === 'both' ? 'for' : 'from';
               let plural = count > 1 ? 's': '';
+              $scope.detail.template = 'clients.html';
+              $scope.detail.title = 'for client';
               resolve({
                 description: `There ${verb} ${count} ${dir} connection${plural} ${preposition} ${d.routerId} with role ${d.nodeType}`,
                 infoPerId: infoPerId
@@ -160,11 +175,11 @@ export class DetailDialogController {
     groupDetail()
       .then( function (det) {
         $timeout( function () {
-          $scope.detail.title = `${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
+          $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
           $scope.detail.description = det.description;
           $scope.detail.infoPerId = det.infoPerId;
-        });
+        }, 10);
       });
   }
 }
-DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', '$sce', 'd'];
+DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', 'd'];
