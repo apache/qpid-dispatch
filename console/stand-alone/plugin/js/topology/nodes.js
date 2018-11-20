@@ -135,7 +135,9 @@ export class Node {
     return nodeProperties[this.nodeType].radius;
   }
   uid(srv) {
-    return this.uuid ? this.uuid : srv.utilities.nameFromId(this.key);
+    if (!this.uuid)
+      this.uuid = srv.utilities.nameFromId(this.key);
+    return this.normals ? `${this.uuid}-${this.normals.length}` : this.uuid;
   }
 }
 const nodeProperties = {
