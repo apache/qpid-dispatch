@@ -40,7 +40,7 @@ export class TopologyController {
 
     //  - nodes is an array of router/client info. these are the circles
     //  - links is an array of connections between the routers. these are the lines with arrows
-    let nodes = new Nodes(QDRService, QDRLog);
+    let nodes = new Nodes(QDRLog);
     let links = new Links(QDRService, QDRLog);
     let forceData = {nodes: nodes, links: links};
 
@@ -143,7 +143,6 @@ export class TopologyController {
           }
         }
       }).result.then(function() {
-        console.log('detail dialog dismissed');
       });
     }
 
@@ -234,7 +233,7 @@ export class TopologyController {
 
     // initialize the nodes and links array from the QDRService.topology._nodeInfo object
     var initForceGraph = function() {
-      forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
+      forceData.nodes = nodes = new Nodes(QDRLog);
       forceData.links = links = new Links(QDRService, QDRLog);
       let nodeInfo = QDRService.management.topology.nodeInfo();
       let nodeCount = Object.keys(nodeInfo).length;
@@ -581,7 +580,7 @@ export class TopologyController {
           $scope.current_node = d;
           QDRService.management.topology.delUpdatedAction('connectionPopupHTML');
           let e = d3.event;
-          d.toolTip(QDRService)
+          d.toolTip(QDRService.management.topology)
             .then( function (toolTip) {
               showToolTip(toolTip, e);
             });
@@ -747,7 +746,7 @@ export class TopologyController {
       lsvg = lsvg.append('svg:g')
         .attr('transform', `translate(${Nodes.maxRadius()}, ${Nodes.maxRadius()})`)
         .selectAll('g');
-      let legendNodes = new Nodes(QDRService, QDRLog);
+      let legendNodes = new Nodes(QDRLog);
       legendNodes.addUsing('Router', '', 'inter-router', '', undefined, 0, 0, 0, 0, false, {});
       if (!svg.selectAll('circle.edge').empty() || !svg.selectAll('circle._edge').empty()) {
         legendNodes.addUsing('Router', 'Edge', 'edge', '', undefined, 0, 0, 1, 0, false, {});
@@ -1056,7 +1055,7 @@ export class TopologyController {
           animate = false;
           saveChanged();
           let nodeInfo = QDRService.management.topology.nodeInfo();
-          forceData.nodes = nodes = new Nodes(QDRService, QDRLog);
+          forceData.nodes = nodes = new Nodes(QDRLog);
           animate = nodes.initialize(nodeInfo, localStorage, width, height);
 
           let unknowns = [];

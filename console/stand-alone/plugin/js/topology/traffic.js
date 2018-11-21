@@ -212,7 +212,7 @@ class Congestion extends TrafficAnimation{
   fillColor(v) {
     let color = d3.scale.linear().domain([0, 1, 2, 3])
       .interpolate(d3.interpolateHcl)
-      .range([d3.rgb('#CCCCCC'), d3.rgb('#00FF00'), d3.rgb('#FFA500'), d3.rgb('#FF0000')]);
+      .range([d3.rgb('#000000'), d3.rgb('#00FF00'), d3.rgb('#FFA500'), d3.rgb('#FF0000')]);
     return color(Math.max(0, Math.min(3, v)));
   }
   remove() {

@@ -17,9 +17,11 @@ specific language governing permissions and limitations
 under the License.
 */
 
+import { utils } from '../amqp/utilities.js';
+
 /* global d3 Promise */
 export class Node {
-  constructor(QDRService, id, name, nodeType, properties, routerId, x, y, nodeIndex, resultIndex, fixed, connectionContainer) {
+  constructor(id, name, nodeType, properties, routerId, x, y, nodeIndex, resultIndex, fixed, connectionContainer) {
     this.key = id;                  // the router uri for this node (or group of clients) like: amqp:/_topo/0/<router id>/$management
     this.name = name;               // the router id portion of the key
     this.nodeType = nodeType;       // router.role
@@ -32,8 +34,8 @@ export class Node {
     this.fixed = !!+fixed;
     this.cls = '';
     this.container = connectionContainer;
-    this.isConsole = QDRService.utilities.isConsole(this);
-    this.isArtemis = QDRService.utilities.isArtemis(this);
+    this.isConsole = utils.isConsole(this);
+    this.isArtemis = utils.isArtemis(this);
   }
   title (hide) {
     let x = '';
@@ -64,12 +66,12 @@ export class Node {
       return '';
     }
   }
-  toolTip (QDRService) {
+  toolTip (topology) {
     return new Promise( (function (resolve) {
       if (this.nodeType === 'normal' || this.nodeType === 'edge') {
         resolve(this.clientTooltip());
       } else
-        this.routerTooltip(QDRService)
+        this.routerTooltip(topology)
           .then( function (toolTip) {
             resolve(toolTip);
           });
@@ -90,9 +92,9 @@ export class Node {
     return title;
   }
 
-  routerTooltip (QDRService) {
+  routerTooltip (topology) {
     return new Promise( (function (resolve) {
-      QDRService.management.topology.ensureEntities(this.key, [
+      topology.ensureEntities(this.key, [
         {entity: 'listener', attrs: ['role', 'port', 'http']},
         {entity: 'router', attrs: ['name', 'version', 'hostName']}
       ], function (foo, nodes) {
@@ -109,7 +111,7 @@ export class Node {
           resolve(err);
           return;
         }
-        let r = QDRService.utilities.flatten(router.attributeNames, router.results[0]);
+        let r = utils.flatten(router.attributeNames, router.results[0]);
         let title = '<table class="popupTable">';
         title += ('<tr><td>Router</td><td>' + r.name + '</td></tr>');
         if (r.hostName)
@@ -117,7 +119,7 @@ export class Node {
         title += ('<tr><td>Version</td><td>' + r.version + '</td></tr>');
         let ports = [];
         for (let l=0; l<listeners.results.length; l++) {
-          let listener = QDRService.utilities.flatten(listeners.attributeNames, listeners.results[l]);
+          let listener = utils.flatten(listeners.attributeNames, listeners.results[l]);
           if (listener.role === 'normal') {
             ports.push(listener.port+'');
           }
@@ -134,9 +136,9 @@ export class Node {
   radius() {
     return nodeProperties[this.nodeType].radius;
   }
-  uid(srv) {
+  uid() {
     if (!this.uuid)
-      this.uuid = srv.utilities.nameFromId(this.key);
+      this.uuid = utils.nameFromId(this.key);
     return this.normals ? `${this.uuid}-${this.normals.length}` : this.uuid;
   }
 }
@@ -154,9 +156,8 @@ nodeProperties['on-demand'] = nodeProperties['normal'];
 nodeProperties['route-container'] = nodeProperties['normal'];
 
 export class Nodes {
-  constructor(QDRService, logger) {
+  constructor(logger) {
     this.nodes = [];
-    this.QDRService = QDRService;
     this.logger = logger;
   }
   static radius(type) {
@@ -326,8 +327,8 @@ export class Nodes {
     if (gotNode) {
       return gotNode;
     }
-    let routerId = this.QDRService.utilities.nameFromId(id);
-    return new Node(this.QDRService, id, name, nodeType, properties, routerId, x, y, 
+    let routerId = utils.nameFromId(id);
+    return new Node(id, name, nodeType, properties, routerId, x, y, 
       nodeIndex, resultIndex, fixed, connectionContainer);
   }
   add (obj) {
@@ -351,7 +352,7 @@ export class Nodes {
     let yInit = 50;
     let animate = false;
     for (let id in nodeInfo) {
-      let name = this.QDRService.utilities.nameFromId(id);
+      let name = utils.nameFromId(id);
       // if we have any new nodes, animate the force graph to position them
       let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
       if (!position) {

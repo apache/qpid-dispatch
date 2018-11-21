@@ -17,6 +17,8 @@ specific language governing permissions and limitations
 under the License.
 */
 
+import { utils } from '../amqp/utilities.js';
+
 class Link {
   constructor(source, target, dir, cls, uid) {
     this.source = source;
@@ -33,9 +35,8 @@ class Link {
 }
 
 export class Links {
-  constructor(QDRService, logger) {
+  constructor(logger) {
     this.links = [];
-    this.QDRService = QDRService;
     this.logger = logger;
   }
   getLinkSource (nodesIndex) {
@@ -77,14 +78,13 @@ export class Links {
     return null;
   }
 
-
   initializeLinks (nodeInfo, nodes, unknowns, localStorage, height) {
     let animate = false;
     let client = 1.0;
     let nodeIds = Object.keys(nodeInfo);
     for (let source=0; source<nodeIds.length; source++) {
       let id = nodeIds[source];
-      const suid = nodes.get(source).uid(this.QDRService);
+      const suid = nodes.get(source).uid();
       let parts = id.split('/');
       let routerType = parts[1]; // _topo || _edge
       let onode = nodeInfo[id];
@@ -96,21 +96,21 @@ export class Links {
       let normalsParent = {}; // 1st normal node for this parent
 
       for (let j = 0; j < conns.length; j++) {
-        let connection = this.QDRService.utilities.flatten(attrs, conns[j]);
+        let connection = utils.flatten(attrs, conns[j]);
         let role = connection.role;
         let properties = connection.properties || {};
         let dir = connection.dir;
         if (role == 'inter-router') {
           // there are already 2 router nodes, just link them
           let connId = connection.container;
-          let target = getContainerIndex(connId, nodeInfo, this.QDRService);
+          let target = getContainerIndex(connId, nodeInfo);
           if (target >= 0) {
-            const tuid = nodes.get(target).uid(this.QDRService);
+            const tuid = nodes.get(target).uid();
             this.getLink(source, target, dir, '', suid + '-' + tuid);
           }
         }
         // handle external connections
-        let name = this.QDRService.utilities.nameFromId(id) + '.' + connection.identity;
+        let name = utils.nameFromId(id) + '.' + connection.identity;
         // is this connection for a router connected to an edge router
         if (role == 'edge' && routerType === '_edge') {
           name = connection.container;
@@ -133,11 +133,11 @@ export class Links {
         let existingNodeIndex = nodes.nodeExists(connection.container);
         let normalInfo = nodes.normalExists(connection.container);
         let node = nodes.getOrCreateNode(id, name, role, nodeInfo, nodes.getLength(), position.x, position.y, connection.container, j, position.fixed, properties);
-        let nodeType = this.QDRService.utilities.isAConsole(properties, connection.identity, role, node.key) ? 'console' : 'client';
-        let cdir = getLinkDir(id, connection, onode, this.QDRService);
+        let nodeType = utils.isAConsole(properties, connection.identity, role, node.key) ? 'console' : 'client';
+        let cdir = getLinkDir(connection, onode);
         if (existingNodeIndex >= 0) {
           // make a link between the current router (source) and the existing node
-          const tuid = nodes.get(existingNodeIndex).uid(this.QDRService);
+          const tuid = nodes.get(existingNodeIndex).uid();
           this.getLink(source, existingNodeIndex, dir, 'small', suid + '-' + tuid);
         } else if (normalInfo.nodesIndex) {
           // get node index of node that contained this connection in its normals array
@@ -147,8 +147,8 @@ export class Links {
               cdir = dir;
             node.cdir = cdir;
             nodes.add(node);
-            const suidn = nodes.get(this.links[normalSource].source).uid(this.QDRService);
-            const tuid = node.uid(this.QDRService);
+            const suidn = nodes.get(this.links[normalSource].source).uid();
+            const tuid = node.uid();
             // create link from original node to the new node
             this.getLink(this.links[normalSource].source, nodes.getLength()-1, cdir, 'small', suidn + '-' + tuid);
             // create link from this router to the new node
@@ -171,7 +171,7 @@ export class Links {
               nodes.add(node);
               node.normals = [node];
               // now add a link
-              this.getLink(source, nodes.getLength() - 1, cdir, 'small', suid + '-' + node.uid(this.QDRService));
+              this.getLink(source, nodes.getLength() - 1, cdir, 'small', suid + '-' + node.uid());
               client++;
             } else {
               normalsParent[nodeType+cdir].normals.push(node);
@@ -183,7 +183,7 @@ export class Links {
         } else {
           nodes.add(node);
           // now add a link
-          this.getLink(source, nodes.getLength() - 1, dir, 'small', suid + '-' + node.uid(this.QDRService));
+          this.getLink(source, nodes.getLength() - 1, dir, 'small', suid + '-' + node.uid());
           client++;
         }
       }
@@ -197,24 +197,24 @@ export class Links {
   }
 }
 
-var getContainerIndex = function (_id, nodeInfo, QDRService) {
+var getContainerIndex = function (_id, nodeInfo) {
   let nodeIndex = 0;
   for (let id in nodeInfo) {
-    if (QDRService.utilities.nameFromId(id) === _id)
+    if (utils.nameFromId(id) === _id)
       return nodeIndex;
     ++nodeIndex;
   }
   return -1;
 };
 
-var getLinkDir = function (id, connection, onode, QDRService) {
+var getLinkDir = function (connection, onode) {
   let links = onode['router.link'];
   if (!links) {
     return 'unknown';
   }
   let inCount = 0, outCount = 0;
   links.results.forEach( function (linkResult) {
-    let link = QDRService.utilities.flatten(links.attributeNames, linkResult);
+    let link = utils.flatten(links.attributeNames, linkResult);
     if (link.linkType === 'endpoint' && link.connectionId === connection.identity)
       if (link.linkDir === 'in')
         ++inCount;
