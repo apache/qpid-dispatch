@@ -46,6 +46,12 @@ class Common():
     # the output still shows connections, links, and link state costs.
     arg_index_data = True
 
+    # analysis_level_ludicrous
+    # Adverbl tries too hard to cross reference data
+    # Use these switchs to turn some of the biggest offenders off
+    per_link_detail = True
+    message_progress_tables = True
+
     # first letter of the connection names
     log_char_base = 'A'
 

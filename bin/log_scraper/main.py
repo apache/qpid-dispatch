@@ -398,9 +398,12 @@ def main_except(argv):
     # connection details
     print("<a name=\"c_conndetails\"></a>")
     print("<h3>Connection Details</h3>")
-    for rtrlist in comn.routers:
-        for rtr in rtrlist:
-            rtr.details.show_html()
+    if comn.per_link_detail:
+        for rtrlist in comn.routers:
+            for rtr in rtrlist:
+                rtr.details.show_html()
+    else:
+        print ("details suppressed<br>")
     print("<hr>")
 
     # noteworthy log lines: highlight errors and stuff
@@ -522,7 +525,8 @@ def main_except(argv):
     # data traversing network
     print("<a name=\"c_messageprogress\"></a>")
     print("<h3>Message progress</h3>")
-    for i in range(0, comn.shorteners.short_data_names.len()):
+    if comn.message_progress_tables:
+      for i in range(0, comn.shorteners.short_data_names.len()):
         sname = comn.shorteners.short_data_names.shortname(i)
         size = 0
         for plf in tree:

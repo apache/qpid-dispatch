@@ -243,23 +243,43 @@ class DescribedType:
                     subfields.append("[]")
                     del fields[0]
                 else:
+                    # While extracting this type's fields, include nested described types
+                    # and PN_SYMBOL data enclosed in brackets. Current type ends when close
+                    # bracket seen and nest level is zero.
+                    nest = 0
                     while len(fields) > 0:
-                        if fields[0].endswith('],'):
-                            subfields.append(fields[0][:-2])
-                            subfields.append(']')
-                            del fields[0]
-                            break
-                        if fields[0].endswith(']'):
-                            subfields.append(fields[0][:-1])
-                            subfields.append(']')
+                        if "=@" in fields[0] and "]" not in fields[0] and "=@:" not in fields[0]:
+                            nest += 1
+                        if nest == 0:
+                            if fields[0].endswith('],'):
+                                subfields.append(fields[0][:-2])
+                                subfields.append(']')
+                                del fields[0]
+                                break
+                            if fields[0].endswith(']'):
+                                subfields.append(fields[0][:-1])
+                                subfields.append(']')
+                                del fields[0]
+                                break
+                        elif fields[0].endswith('],') or fields[0].endswith(']'):
+                            nest -= 1
+                        if fields[0].endswith(']]'):
+                            subfields.append(fields[0])
                             del fields[0]
                             break
                         subfields.append(fields[0])
                         del fields[0]
 
+
                 subtype = DescribedType()
                 subtype.parse_dtype_line(val, ' '.join(subfields))
                 self.dict[key] = subtype
+            elif val.startswith("@PN_SYMBOL"):
+                # symbols may end in first field or some later field
+                while not val.endswith(']'):
+                    val += fields[0]
+                    del fields[0]
+                self.dict[key] = val
             elif val.startswith('{'):
                 # handle some embedded map: properties={:product=\"qpid-dispatch-router\", :version=\"1.3.0-SNAPSHOT\"}
                 # pull subtype's data out of fields. The fields list belongs to parent.
@@ -717,7 +737,20 @@ class ParsedLogLine(object):
         try:
             self.datetime = datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
         except:
-            self.datetime = datetime(1970, 1, 1)
+            # old routers flub the timestamp and don't print leading zero in uS time
+            # 2018-11-18 11:31:08.269 should be 2018-11-18 11:31:08.000269
+            td = self.line[:26]
+            parts = td.split('.')
+            us = parts[1]
+            parts_us = us.split(' ')
+            if len(parts_us[0]) < 6:
+                parts_us[0] = '0' * (6 - len(parts_us[0])) + parts_us[0]
+            parts[1] = ' '.join(parts_us)
+            td = '.'.join(parts)
+            try:
+                self.datetime = datetime.strptime(td[:26], '%Y-%m-%d %H:%M:%S.%f')
+            except:
+                self.datetime = datetime(1970, 1, 1)
 
         # extract connection number
         sti = self.line.find(self.server_trace_key)
