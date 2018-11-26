@@ -166,7 +166,6 @@ class Congestion extends TrafficAnimation{
           let id = dir + '-' + congestion.substr(1) + (small ? '-s' : '');
           colors[id] = { dir: dir, color: congestion, small: small };
           path
-            .attr('stroke', congestion)
             .classed('traffic', true)
             .attr('marker-start', function (d) {
               return null;
@@ -176,6 +175,10 @@ class Congestion extends TrafficAnimation{
               return null;
               //return d.right ? 'url(' + self.traffic.prefix + '#' + id + ')' : null;
             });
+          path
+            .transition()
+            .duration(1000)
+            .attr('stroke', congestion);
         }
       }
       // create the svg:def that holds the custom markers
