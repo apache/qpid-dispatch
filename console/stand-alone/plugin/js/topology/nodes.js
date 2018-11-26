@@ -138,8 +138,13 @@ export class Node {
   }
   uid() {
     if (!this.uuid)
-      this.uuid = utils.nameFromId(this.key);
+      this.uuid = this.container;
     return this.normals ? `${this.uuid}-${this.normals.length}` : this.uuid;
+  }
+  setFixed(fixed) {
+    if (!fixed)
+      this.lat = this.lon = null;
+    this.fixed = fixed;
   }
 }
 const nodeProperties = {
@@ -220,9 +225,7 @@ export class Nodes {
   setNodesFixed (name, b) {
     this.nodes.some(function (n) {
       if (n.name === name) {
-        n.fixed = b;
-        if (!b)
-          n.lat = n.lon = null;
+        n.fixed(b);
         return true;
       }
     });
@@ -320,7 +323,7 @@ export class Nodes {
     }
     return undefined;
   }
-  getOrCreateNode (id, name, nodeType, nodeInfo, nodeIndex, x, y, 
+  getOrCreateNode (id, name, nodeType, nodeIndex, x, y, 
     connectionContainer, resultIndex, fixed, properties) {
     properties = properties || {};
     let gotNode = this.find(connectionContainer, properties, name);
@@ -335,9 +338,9 @@ export class Nodes {
     this.nodes.push(obj);
     return obj;
   }
-  addUsing (id, name, nodeType, nodeInfo, nodeIndex, x, y, 
+  addUsing (id, name, nodeType, nodeIndex, x, y, 
     connectContainer, resultIndex, fixed, properties) {
-    let obj = this.getOrCreateNode(id, name, nodeType, nodeInfo, nodeIndex, x, y, 
+    let obj = this.getOrCreateNode(id, name, nodeType, nodeIndex, x, y, 
       connectContainer, resultIndex, fixed, properties);
     this.nodes.push(obj);
     return obj;
@@ -368,7 +371,7 @@ export class Nodes {
         yInit *= -1;
       }
       let parts = id.split('/');
-      this.addUsing(id, name, parts[1], nodeInfo, this.nodes.length, position.x, position.y, name, undefined, position.fixed, {});
+      this.addUsing(id, name, parts[1], this.nodes.length, position.x, position.y, name, undefined, position.fixed, {});
     }
     return animate;
   }

@@ -1006,6 +1006,10 @@ svg {
     cursor: default;
   }
   
+  path.link.unknown {
+    stroke-dasharray: 4 3;
+    stroke: #888888;
+  }
   path:not(.traffic) {
       stroke: #000;
   }

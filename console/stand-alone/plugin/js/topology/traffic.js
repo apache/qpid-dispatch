@@ -457,14 +457,22 @@ class Dots extends TrafficAnimation {
           address === this.traffic.QDRService.utilities.addr_text(l[ioa]) &&
           l[ild] === cdir;
       }, this);
+      // we now have the links involved in traffic for this address that
+      // ingress/egress to/from this router (f).
+      // Now find the created node that the link is to
       for (let linkIndex=0; linkIndex<foundLinks.length; linkIndex++) {
         let nodeIndex = nodes.findIndex( function (node) {
           if (node.normals && node.key === key && (node.cdir === cdir || node.cdir === 'both')) {
-            let ni = node.normals.findIndex( function (normal) {
-              return normal.connectionId === foundLinks[linkIndex][ici];
+            return node.normals.some( function (normal) {
+              return normal.connectionId == foundLinks[linkIndex][ici];
             });
-            return ni >= 0;
-          } else
+          } else if (node.alsoConnectsTo) {
+            return node.alsoConnectsTo.some( function (ac2) {
+              return ac2.key === key && ac2.connectionId === foundLinks[linkIndex][ici] &&
+                (ac2.dir === cdir || ac2.dir === 'both');
+            });
+          }
+          else
             return false;
         });
         if (nodeIndex >= 0) {
