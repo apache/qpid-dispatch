@@ -29,7 +29,6 @@ import re
 import sys
 import traceback
 
-import splitter
 import test_data as td
 import common
 import text
@@ -39,6 +38,55 @@ import router
 def colorize_bg(what):
     # TODO: use the real colorize_bg
     return what
+
+
+def proton_split(line):
+    """
+    Split a log line into fields.
+     * allow commas and spaces in quoted strings.
+     * split on ', ' and on ' '.
+       strip trailing commas between fields.
+     * quoted fields must have both quotes
+    :param line:
+    :return:
+    """
+    result = []
+    indqs = False
+    pending_comma = False
+    res = ""
+    for i in range(len(line)):
+        c = line[i]
+        if c == '\"':
+            if pending_comma:
+                res += ','
+                pending_comma = False
+            indqs = not indqs
+            res += c
+        elif c == ',':
+            if pending_comma:
+                res += c
+            pending_comma = True
+        elif c == ' ':
+            if indqs:
+                if pending_comma:
+                    res += ','
+                    pending_comma = False
+                res += c
+            else:
+                if res != '':
+                    if pending_comma:
+                        pending_comma = False
+                    result.append(res)
+                    res = ''
+        else:
+            res += c
+    if res != '':
+        result.append(str(res))
+    if indqs:
+        raise ValueError("SPLIT ODD QUOTES: %s", line)
+    # print ("SPLIT: line: %s" % line)
+    # print ("SPLIT: flds: %s" % result)
+    return result
 
 
 class LogLineData:
@@ -227,7 +275,7 @@ class DescribedType:
         self.line = self.line[:-1]
 
         # process fields
-        fields = splitter.Splitter.split(self.line)
+        fields = proton_split(self.line)
         while len(fields) > 0 and len(fields[0]) > 0:
             if '=' not in fields[0]:
                 raise ValueError("Field does not contain equal sign '%s'" % fields[0])
@@ -243,23 +291,43 @@ class DescribedType:
                     subfields.append("[]")
                     del fields[0]
                 else:
+                    # While extracting this type's fields, include nested described types
+                    # and PN_SYMBOL data enclosed in brackets. Current type ends when close
+                    # bracket seen and nest level is zero.
+                    nest = 0
                     while len(fields) > 0:
-                        if fields[0].endswith('],'):
-                            subfields.append(fields[0][:-2])
-                            subfields.append(']')
-                            del fields[0]
-                            break
-                        if fields[0].endswith(']'):
-                            subfields.append(fields[0][:-1])
-                            subfields.append(']')
+                        if "=@" in fields[0] and "]" not in fields[0] and "=@:" not in fields[0]:
+                            nest += 1
+                        if nest == 0:
+                            if fields[0].endswith('],'):
+                                subfields.append(fields[0][:-2])
+                                subfields.append(']')
+                                del fields[0]
+                                break
+                            if fields[0].endswith(']'):
+                                subfields.append(fields[0][:-1])
+                                subfields.append(']')
+                                del fields[0]
+                                break
+                        elif fields[0].endswith('],') or fields[0].endswith(']'):
+                            nest -= 1
+                        if fields[0].endswith(']]'):
+                            subfields.append(fields[0])
                             del fields[0]
                             break
                         subfields.append(fields[0])
                         del fields[0]
 
+
                 subtype = DescribedType()
                 subtype.parse_dtype_line(val, ' '.join(subfields))
                 self.dict[key] = subtype
+            elif val.startswith("@PN_SYMBOL"):
+                # symbols may end in first field or some later field
+                while not val.endswith(']'):
+                    val += fields[0]
+                    del fields[0]
+                self.dict[key] = val
             elif val.startswith('{'):
                 # handle some embedded map: properties={:product=\"qpid-dispatch-router\", :version=\"1.3.0-SNAPSHOT\"}
                 # pull subtype's data out of fields. The fields list belongs to parent.
@@ -717,7 +785,20 @@ class ParsedLogLine(object):
         try:
             self.datetime = datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
         except:
-            self.datetime = datetime(1970, 1, 1)
+            # old routers flub the timestamp and don't print leading zero in uS time
+            # 2018-11-18 11:31:08.269 should be 2018-11-18 11:31:08.000269
+            td = self.line[:26]
+            parts = td.split('.')
+            us = parts[1]
+            parts_us = us.split(' ')
+            if len(parts_us[0]) < 6:
+                parts_us[0] = '0' * (6 - len(parts_us[0])) + parts_us[0]
+            parts[1] = ' '.join(parts_us)
+            td = '.'.join(parts)
+            try:
+                self.datetime = datetime.strptime(td[:26], '%Y-%m-%d %H:%M:%S.%f')
+            except:
+                self.datetime = datetime(1970, 1, 1)
 
         # extract connection number
         sti = self.line.find(self.server_trace_key)
@@ -868,7 +949,7 @@ def parse_log_file(fn, log_index, comn):
                 try:
                     if lineno == 130:
                         pass
-                    do_this = comn.arg_index_data
+                    do_this = True if not hasattr(comn.args, 'skip_all_data') else not comn.args.skip_all_data
                     if not do_this:
                         # not indexing data. maybe do this line anyway
                         do_this = not any(s in line for s in [' @transfer', ' @disposition', ' @flow', 'EMPTY FRAME'])
@@ -894,7 +975,19 @@ def parse_log_file(fn, log_index, comn):
 
 
 if __name__ == "__main__":
+    print("Line-by-line split test")
+    try:
+        for line in td.TestData().data():
+            if "transfer" not in line:
+                print(proton_split(line))
+            else:
+                pass  # splitter does not split transfers
+        pass
+    except:
+        traceback.print_exc(file=sys.stdout)
+        pass
 
+    print("Canned data parse test")
     data = td.TestData().data()
     log_index = 0  # from file for router A
     instance = 0  # all from router instance 0
@@ -908,6 +1001,7 @@ if __name__ == "__main__":
         traceback.print_exc(file=sys.stdout)
         pass
 
+    print("Read two-instance file test")
     comn2 = common.Common()
     routers = parse_log_file('test_data/A-two-instances.log', 0, comn2)
     if len(routers) != 2:

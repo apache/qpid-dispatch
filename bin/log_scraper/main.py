@@ -33,6 +33,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import argparse
 import ast
 import cgi
 import os
@@ -40,6 +41,7 @@ import sys
 import traceback
 
 import common
+from log_splitter import main_except as splitter_main
 import parser
 import router
 import text
@@ -77,23 +79,38 @@ def show_noteworthy_line(plf, comn):
 #
 #
 def main_except(argv):
-    """
-    Given a list of log file names, send the javascript web page to stdout
-    """
-    if len(argv) < 2:
-        sys.exit('Usage: %s [--no-data] log-file-name [log-file-name ...]' % argv[0])
-
     # Instantiate a common block
     comn = common.Common()
 
-    # optparse - look for --no-data switch
-    if argv[1] == "--no-data":
-        comn.arg_index_data = False
-        del argv[1]
+    # optparse - look for data-inhibit and program mode control
+    p = argparse.ArgumentParser()
+    p.add_argument('--skip-all-data',
+                   action='store_true',
+                   help='Max load shedding: do not store/index transfer, disposition, flow or EMPTY_FRAME data')
+    p.add_argument('--skip-detail',
+                   action='store_true',
+                   help='Load shedding: do not produce Connection Details tables')
+    p.add_argument('--skip-msg-progress',
+                   action='store_true',
+                   help='Load shedding: do not produce Message Progress tables')
+    p.add_argument('--split',
+                   action='store_true',
+                   help='A file is split into per-connection data. Normal processing is not performed.')
+    p.add_argument('--files', '-f', nargs="+")
+
+    del argv[0]
+    comn.args = p.parse_args(argv)
+
+    # process split function
+    if comn.args.split:
+        # Split processes only a single file
+        if len(comn.args.files) > 1:
+            sys.exit('--split mode takes only one file name')
+        return splitter_main(comn.args.files[0])
 
     # process the log files and add the results to router_array
-    for log_i in range(0, len(sys.argv) - 1):
-        arg_log_file = sys.argv[log_i + 1]
+    for log_i in range(len(comn.args.files)):
+        arg_log_file = comn.args.files[log_i]
         comn.log_fns.append(arg_log_file)
         comn.n_logs += 1
 
@@ -255,8 +272,8 @@ def main_except(argv):
     print(text.web_page_toc())
 
     # Report how much data was skipped if --no-data switch in effect
-    if not comn.arg_index_data:
-        print("--no-data switch in effect. %d log lines skipped" % comn.data_skipped)
+    if comn.args.skip_all_data:
+        print("--skip-all-data switch is in effect. %d log lines skipped" % comn.data_skipped)
         print("<p><hr>")
 
     # file(s) included in this doc
@@ -398,9 +415,12 @@ def main_except(argv):
     # connection details
     print("<a name=\"c_conndetails\"></a>")
     print("<h3>Connection Details</h3>")
-    for rtrlist in comn.routers:
-        for rtr in rtrlist:
-            rtr.details.show_html()
+    if not comn.args.skip_detail:
+        for rtrlist in comn.routers:
+            for rtr in rtrlist:
+                rtr.details.show_html()
+    else:
+        print ("details suppressed<br>")
     print("<hr>")
 
     # noteworthy log lines: highlight errors and stuff
@@ -522,7 +542,8 @@ def main_except(argv):
     # data traversing network
     print("<a name=\"c_messageprogress\"></a>")
     print("<h3>Message progress</h3>")
-    for i in range(0, comn.shorteners.short_data_names.len()):
+    if not comn.args.skip_msg_progress:
+      for i in range(0, comn.shorteners.short_data_names.len()):
         sname = comn.shorteners.short_data_names.shortname(i)
         size = 0
         for plf in tree:
