@@ -151,6 +151,7 @@ extern const char * const QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY;
 /** @name Terminus Addresses */
 /// @{
 extern const char * const QD_TERMINUS_EDGE_ADDRESS_TRACKING;
+extern const char * const QD_TERMINUS_ADDRESS_LOOKUP;
 /// @}
 
 /** @name AMQP error codes. */
