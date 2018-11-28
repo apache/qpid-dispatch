@@ -342,8 +342,8 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         if (qd_message_is_discard(msg)) {
             if (qdr_delivery_disposition(delivery) != 0)
                 pn_delivery_update(pnd, qdr_delivery_disposition(delivery));
+            qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
             pn_delivery_settle(pnd);
-            qdr_delivery_decref(router->router_core, delivery, "release protection of return from delivery discard");
         }
 
         // Link stalling may have ignored some delivery events.
