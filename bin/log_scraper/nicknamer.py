@@ -19,6 +19,8 @@
 # under the License.
 #
 
+from collections import defaultdict
+import common
 import cgi
 
 class ShortNames():
@@ -34,8 +36,9 @@ class ShortNames():
         self.longnames = []
         self.prefix = prefixText
         self.threshold = _threshold
+        self.customer_dict = defaultdict(list)
 
-    def translate(self, lname, show_popup=False):
+    def translate(self, lname, show_popup=False, customer=None):
         '''
         Translate a long name into a short name, maybe.
         Memorize all names, translated or not
@@ -52,12 +55,17 @@ class ShortNames():
             self.longnames.append(lname)
             idx = self.longnames.index(lname)
         # return as-given if short enough
+        if customer is not None:
+            self.customer_dict[lname].append(customer)
         if len(lname) < self.threshold:
             return lname
+        sname = self.prefix + "_" + str(idx)
+        if customer is not None:
+            self.customer_dict[sname].append(customer)
         if show_popup:
-            return "<span title=\"" + cgi.escape(lname) + "\">" + self.prefix + "_" + str(idx) + "</span>"
+            return "<span title=\"" + cgi.escape(lname) + "\">" + sname + "</span>"
         else:
-            return self.prefix + "_" + str(idx)
+            return sname
 
     def len(self):
         return len(self.longnames)
@@ -104,11 +112,19 @@ class ShortNames():
             print ("<ul>")
             for i in range(0, len(self.longnames)):
                 name = self.prefix + "_" + str(i)
+                dump_anchor = "<a name=\"%s_dump\"></a>" % (name)
                 if with_link:
                     name = "<a href=\"#%s\">%s</a>" % (name, name)
-                print ("<li> " + name + " - " + cgi.escape(self.longnames[i]) + "</li>")
+                print ("<li> " + dump_anchor + name + " - " + cgi.escape(self.longnames[i]) + "</li>")
             print ("</ul>")
 
+    def sort_customers(self):
+        for c in common.dict_iterkeys(self.customer_dict):
+            l = self.customer_dict[c]
+            self.customer_dict[c] = sorted(l, key=lambda lfl: lfl.datetime)
+
+    def customers(self, sname):
+        return self.customer_dict[sname]
 
 class Shorteners():
     def __init__(self):

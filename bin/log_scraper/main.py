@@ -222,6 +222,10 @@ def main_except(argv):
         cn_v = comn.router_ids[common.index_of_log_letter(val)]
         comn.conn_peers_display[key] = comn.shorteners.short_rtr_names.translate(cn_v)
         comn.conn_peers_display[val] = comn.shorteners.short_rtr_names.translate(cn_k)
+
+    # sort transfer short name customer lists
+    comn.shorteners.short_data_names.sort_customers()
+
     #
     # Start producing the output stream
     #
@@ -563,10 +567,9 @@ def main_except(argv):
       for i in range(0, comn.shorteners.short_data_names.len()):
         sname = comn.shorteners.short_data_names.shortname(i)
         size = 0
-        for plf in tree:
-            if plf.data.name == "transfer" and plf.transfer_short_name == sname:
-                size = plf.data.transfer_size
-                break
+        for plf in comn.shorteners.short_data_names.customers(sname):
+            size = plf.data.transfer_size
+            break
         print("<a name=\"%s\"></a> <h4>%s (%s)" % (sname, sname, size))
         print(" <span> <a href=\"javascript:toggle_node('%s')\"> %s</a>" % ("data_" + sname, text.lozenge()))
         print(" <div width=\"100%%\"; style=\"display:none; font-weight: normal; margin-bottom: 2px\" id=\"%s\">" %
@@ -580,28 +583,27 @@ def main_except(argv):
             "<th>T delta</th> <th>T elapsed</th><th>Settlement</th><th>S elapsed</th></tr>")
         t0 = None
         tlast = None
-        for plf in tree:
-            if plf.data.name == "transfer" and plf.transfer_short_name == sname:
-                if t0 is None:
-                    t0 = plf.datetime
-                    tlast = plf.datetime
-                    delta = "0.000000"
-                    epsed = "0.000000"
-                else:
-                    delta = time_offset(plf.datetime, tlast)
-                    epsed = time_offset(plf.datetime, t0)
-                    tlast = plf.datetime
-                sepsed = ""
-                if plf.data.final_disposition is not None:
-                    sepsed = time_offset(plf.data.final_disposition.datetime, t0)
-                rid = plf.router.iname
-                peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
-                peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
-                print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
-                      "<td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
-                      (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction,
-                       peerconnid, peer, delta, epsed,
-                       plf.data.disposition_display, sepsed))
+        for plf in comn.shorteners.short_data_names.customers(sname):
+            if t0 is None:
+                t0 = plf.datetime
+                tlast = plf.datetime
+                delta = "0.000000"
+                epsed = "0.000000"
+            else:
+                delta = time_offset(plf.datetime, tlast)
+                epsed = time_offset(plf.datetime, t0)
+                tlast = plf.datetime
+            sepsed = ""
+            if plf.data.final_disposition is not None:
+                sepsed = time_offset(plf.data.final_disposition.datetime, t0)
+            rid = plf.router.iname
+            peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
+            peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
+            print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
+                  "<td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
+                  (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction,
+                   peerconnid, peer, delta, epsed,
+                   plf.data.disposition_display, sepsed))
         print("</table>")
 
     print("<hr>")

@@ -495,8 +495,8 @@ class ParsedLogLine(object):
             res.transfer_more = resdict.get("more", "") == "true"
             res.transfer_resume = resdict.get("resume", "") == "true"
             res.transfer_aborted = resdict.get("aborted", "") == "true"
-            self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare)
-            showdat = "<a href=\"#%s\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
+            self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
+            showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
             res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s - %s bytes" % (
                 res.name, colorize_bg(res.channel_handle), res.delivery_id,
                 self.highlighted("settled", res.transfer_settled, "green"),
