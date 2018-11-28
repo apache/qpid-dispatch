@@ -1061,27 +1061,36 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
 static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_field_t  *addr_field = action->args.io.address;
-    qd_message_t *msg        = action->args.io.message;
-
     if (!discard) {
-        qdr_address_t *addr = 0;
-
-        qd_iterator_reset_view(addr_field->iterator, ITER_VIEW_ADDRESS_HASH);
-        qd_hash_retrieve(core->addr_hash, addr_field->iterator, (void**) &addr);
-        if (addr) {
-            //
-            // Forward the message.  We don't care what the fanout count is.
-            //
-            (void) qdr_forward_message_CT(core, addr, msg, 0, action->args.io.exclude_inprocess,
-                                          action->args.io.control);
-            addr->deliveries_from_container++;
-        } else
-            qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
+        qdr_in_process_send_to_CT(core,
+                                  qdr_field_iterator(action->args.io.address),
+                                  action->args.io.message,
+                                  action->args.io.exclude_inprocess,
+                                  action->args.io.control);
     }
 
-    qdr_field_free(addr_field);
-    qd_message_free(msg);
+    qdr_field_free(action->args.io.address);
+    qd_message_free(action->args.io.message);
+}
+
+
+/**
+ * forward an in-process message based on the destination address
+ */
+void qdr_in_process_send_to_CT(qdr_core_t *core, qd_iterator_t *address, qd_message_t *msg, bool exclude_inprocess, bool control)
+{
+    qdr_address_t *addr = 0;
+
+    qd_iterator_reset_view(address, ITER_VIEW_ADDRESS_HASH);
+    qd_hash_retrieve(core->addr_hash, address, (void**) &addr);
+    if (addr) {
+        //
+        // Forward the message.  We don't care what the fanout count is.
+        //
+        (void) qdr_forward_message_CT(core, addr, msg, 0, exclude_inprocess, control);
+        addr->deliveries_from_container++;
+    } else
+        qd_log(core->log, QD_LOG_DEBUG, "In-process send to an unknown address");
 }
 
 

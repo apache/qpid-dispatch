@@ -184,5 +184,10 @@ extern const char * const QD_AMQP_COND_ILLEGAL_STATE;
 extern const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL;
 /// @};
 
+/** @name AMQP link endpoint role. */
+/// @{
+#define QD_AMQP_LINK_ROLE_SENDER   false
+#define QD_AMQP_LINK_ROLE_RECEIVER true
+/// @};
 
 #endif

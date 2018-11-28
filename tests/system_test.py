@@ -436,11 +436,12 @@ class Qdrouterd(Process):
         except:
             return False
 
-    def wait_address(self, address, subscribers=0, remotes=0, **retry_kwargs):
+    def wait_address(self, address, subscribers=0, remotes=0, containers=0, **retry_kwargs):
         """
         Wait for an address to be visible on the router.
         @keyword subscribers: Wait till subscriberCount >= subscribers
         @keyword remotes: Wait till remoteCount >= remotes
+        @keyword containers: Wait till containerCount >= remotes
         @param retry_kwargs: keyword args for L{retry}
         """
         def check():
@@ -449,11 +450,13 @@ class Qdrouterd(Process):
             # endswith check is because of M0/L/R prefixes
             addrs = self.management.query(
                 type='org.apache.qpid.dispatch.router.address',
-                attribute_names=[u'name', u'subscriberCount', u'remoteCount']).get_entities()
+                attribute_names=[u'name', u'subscriberCount', u'remoteCount', u'containerCount']).get_entities()
 
             addrs = [a for a in addrs if a['name'].endswith(address)]
 
-            return addrs and addrs[0]['subscriberCount'] >= subscribers and addrs[0]['remoteCount'] >= remotes
+            return (addrs and addrs[0]['subscriberCount'] >= subscribers
+                    and addrs[0]['remoteCount'] >= remotes
+                    and addrs[0]['containerCount'] >= containers)
         assert retry(check, **retry_kwargs)
 
     def get_host(self, protocol_family):
