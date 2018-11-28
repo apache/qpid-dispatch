@@ -41,6 +41,7 @@ import sys
 import traceback
 
 import common
+import datetime
 from log_splitter import main_except as splitter_main
 import parser
 import router
@@ -84,22 +85,38 @@ def main_except(argv):
 
     # optparse - look for data-inhibit and program mode control
     p = argparse.ArgumentParser()
-    p.add_argument('--skip-all-data',
+    p.add_argument('--skip-all-data', '-sa',
                    action='store_true',
                    help='Max load shedding: do not store/index transfer, disposition, flow or EMPTY_FRAME data')
-    p.add_argument('--skip-detail',
+    p.add_argument('--skip-detail', '-sd',
                    action='store_true',
                    help='Load shedding: do not produce Connection Details tables')
-    p.add_argument('--skip-msg-progress',
+    p.add_argument('--skip-msg-progress', '-sm',
                    action='store_true',
                    help='Load shedding: do not produce Message Progress tables')
-    p.add_argument('--split',
+    p.add_argument('--split', '-sp',
                    action='store_true',
-                   help='A file is split into per-connection data. Normal processing is not performed.')
+                   help='A single file is split into per-connection data.')
+    p.add_argument('--time-start', '-ts',
+                   help='Ignore log records earlier than this. Format: "2018-08-13 13:15:00.123456"')
+    p.add_argument('--time-end', '-te',
+                   help='Ignore log records later than this. Format: "2018-08-13 13:15:15.123456"')
     p.add_argument('--files', '-f', nargs="+")
 
     del argv[0]
     comn.args = p.parse_args(argv)
+
+    if not comn.args.time_start is None:
+        try:
+            comn.args.time_start = datetime.datetime.strptime(comn.args.time_start, "%Y-%m-%d %H:%M:%S.%f")
+        except:
+            sys.exit("ERROR: Failed to parse time_start '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_start)
+
+    if not comn.args.time_end is None:
+        try:
+            comn.args.time_end = datetime.datetime.strptime(comn.args.time_end, "%Y-%m-%d %H:%M:%S.%f")
+        except:
+            sys.exit("ERROR: Failed to parse time_end '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_end)
 
     # process split function
     if comn.args.split:

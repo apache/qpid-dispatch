@@ -800,6 +800,15 @@ class ParsedLogLine(object):
             except:
                 self.datetime = datetime(1970, 1, 1)
 
+        # Apply time-of-day filters
+        if self.datetime is not None:
+            if self.comn.args.time_start is not None:
+                if self.datetime < self.comn.args.time_start:
+                    raise ValueError("Line too early outside time-of-day limits")
+            if self.comn.args.time_end is not None:
+                if self.datetime > self.comn.args.time_end:
+                    raise ValueError("Line too late outside time-of-day limits")
+
         # extract connection number
         sti = self.line.find(self.server_trace_key)
         if sti < 0:
