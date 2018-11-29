@@ -335,25 +335,17 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
         //
         pn_link_advance(pn_link);
+        next_delivery = pn_link_current(pn_link) != 0;
+
+        if (qdr_delivery_disposition(delivery) != 0)
+            pn_delivery_update(pnd, qdr_delivery_disposition(delivery));
 
         //
         // The entire message has been received but this message needs to be discarded
         //
         if (qd_message_is_discard(msg)) {
-            if (qdr_delivery_disposition(delivery) != 0)
-                pn_delivery_update(pnd, qdr_delivery_disposition(delivery));
             qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
             pn_delivery_settle(pnd);
-        }
-
-        // Link stalling may have ignored some delivery events.
-        // If there's another delivery pending then reschedule this.
-        pn_delivery_t *npnd = pn_link_current(pn_link);
-        if (npnd) {
-            next_delivery = true;
-        }
-
-        if (qd_message_is_discard(msg)) {
             return next_delivery;
         }
     }
@@ -1596,14 +1588,15 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         free(description);
     }
 
-    qdr_link_t *qlink = qdr_delivery_link(dlv);
-    qd_link_t *link = 0;
+    qdr_link_t      *qlink   = qdr_delivery_link(dlv);
+    qd_link_t       *link    = 0;
+    qd_connection_t *qd_conn = 0;
 
     if (qlink) {
         link = (qd_link_t*) qdr_link_get_context(qlink);
         if (link) {
-            qd_connection_t  *conn     = qd_link_connection(link);
-            if (conn == 0)
+            qd_conn = qd_link_connection(link);
+            if (qd_conn == 0)
                 return;
         }
         else
@@ -1616,19 +1609,46 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     // If the disposition has changed, update the proton delivery.
     //
     if (disp != pn_delivery_remote_state(pnd)) {
+        qd_message_t *msg = qdr_delivery_message(dlv);
+
         if (disp == PN_MODIFIED)
             pn_disposition_set_failed(pn_delivery_local(pnd), true);
-
         qdr_delivery_write_extension_state(dlv, pnd, false);
-        pn_delivery_update(pnd, disp);
+
+        //
+        // If the delivery is still arriving, don't push out the disposition change yet.
+        //
+        if (qd_message_receive_complete(msg))
+            pn_delivery_update(pnd, disp);
+        else
+            qdr_delivery_set_disposition(dlv, disp);
     }
 
-    //
-    // If the delivery is settled, remove the linkage and settle the proton delivery.
-    //
     if (settled) {
-        qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
-        pn_delivery_settle(pnd);
+        qd_message_t *msg = qdr_delivery_message(dlv);
+        if (qd_message_receive_complete(msg)) {
+            //
+            // If the delivery is settled and the message has fully arrived, disconnect
+            // the linkages and settle it in Proton now.
+            //
+            qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
+            pn_delivery_settle(pnd);
+        } else {
+            //
+            // If the delivery is settled and it is still arriving, defer the settlement
+            // until the content has fully arrived.
+            //
+            if (disp == PN_RELEASED || disp == PN_MODIFIED) {
+                //
+                // If the disposition is RELEASED or MODIFIED, set the message to discard
+                // and if it is blocked by holdoff, get the link rolling again.
+                //
+                qdr_delivery_set_disposition(dlv, disp);
+                qd_message_set_discard(msg, true);
+                qd_message_Q2_holdoff_disable(msg);
+                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, link);
+            }
+        }
     }
 }
 

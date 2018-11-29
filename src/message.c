@@ -1206,7 +1206,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
-}
+    }
 
     //
     // The discard flag indicates we should keep reading the input stream

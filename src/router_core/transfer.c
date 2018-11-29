@@ -356,6 +356,13 @@ bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery)
     return qd_message_receive_complete(delivery->msg);
 }
 
+void qdr_delivery_set_disposition(qdr_delivery_t *delivery, uint64_t disposition)
+{
+    if (delivery)
+        delivery->disposition = disposition;
+}
+
+
 uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery)
 {
     if (!delivery)
@@ -842,27 +849,18 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             if (dlv->link->link_type == QD_LINK_ENDPOINT)
                 core->dropped_presettled_deliveries++;
         } else {
-            if (more)
-                dlv->disposition = PN_RELEASED;
-            else {
-                qdr_delivery_release_CT(core, dlv);
-                //
-                // Drain credit on the link
-                //
-                qdr_link_issue_credit_CT(core, link, 0, true);
-            }
+            qdr_delivery_release_CT(core, dlv);
+
+            //
+            // Drain credit on the link
+            //
+            qdr_link_issue_credit_CT(core, link, 0, true);
         }
 
         if (qdr_is_addr_treatment_multicast(link->owning_addr))
             qdr_link_issue_credit_CT(core, link, 1, false);
         else
             link->credit_pending++;
-
-        //
-        // Set the discard flag on the message only if the message is not completely received yet.
-        //
-        if (more)
-            qd_message_set_discard(dlv->msg, true);
 
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
         return;
@@ -907,23 +905,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         // If the delivery is not settled, release it.
         //
-        if (!dlv->settled) {
-
-            //
-            // Set the discard flag on the message only if the message is not completely received yet.
-            //
-            if (more) {
-                //
-                // Since more of the messgae is still arriving, we want to wait until after the enter message arrives to release it.
-                // Dont release it now.
-                //
-                qd_message_set_discard(dlv->msg, true);
-                dlv->disposition = PN_RELEASED;
-            }
-            else {
-                qdr_delivery_release_CT(core, dlv);
-            }
-        }
+        if (!dlv->settled)
+            qdr_delivery_release_CT(core, dlv);
 
         //
         // Decrementing the delivery ref count for the action

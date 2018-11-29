@@ -622,7 +622,8 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
 
     case PN_DELIVERY :
         delivery = pn_event_delivery(event);
-        if (pn_delivery_readable(delivery))
+        pn_link  = pn_event_link(event);
+        if (pn_link_is_receiver(pn_link))
             do_receive(delivery);
 
         if (pn_delivery_updated(delivery)) {
