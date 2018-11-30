@@ -36,6 +36,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch.management.client import Node
 from subprocess import PIPE, STDOUT
+import re
 
 
 class AddrTimer(object):
