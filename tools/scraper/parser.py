@@ -890,7 +890,8 @@ class ParsedLogLine(object):
                     self.data.transfer_hdr_annos = self.data.transfer_data[:sti]
                     self.data.transfer_bare = self.data.transfer_data[sti:]
                 else:
-                    raise ValueError("Transfer with no properties. Not really an error but just checking...")
+                    self.data.transfer_hdr_annos = ''
+                    self.data.transfer_bare = self.data.transfer_data
             else:
                 self.data.transfer_size = "0"
                 self.data.transfer_data = "(none)"
