@@ -1,8 +1,11 @@
-#  Scraper - Render qpid-dispatch log files
+#  Scraper - Analyze qpid-dispatch log files
 
-Scraper is a spinoff of https://github.com/ChugR/Adverb that uses qpid-dispatch log
-files as the data source instead of pcap trace files. Scraper is a Python processing
-engine that does not require Wireshark or any network trace capture utilities.
+Scraper provides two analysis modes:
+
+ * Normal mode: combine logs and show details.
+ * Split mode: split a single log into per-connection data and show details.
+ 
+Details are written to stdout in html format. 
 
 ## Apache License, Version 2.0
 
@@ -18,12 +21,16 @@ CONDITIONS OF ANY KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations under the License.
 
 
-## Concepts
+## Normal Mode
 
 Scraper is a data scraping program. It reads qpid-dispatch router log files,
-categorizes and sorts the data, and produces an HTML summary.
+categorizes and sorts the data, and produces an HTML summary. In normal mode
+Scraper can operate on a single log file or on many log files.
+
+Normal mode does not write any files to your file system. The result is printed on stdout.
 
 From each log file Scraper extracts:
+
  * Router version
  * Router container name
  * Router restart times. A single log file may contain data from several router
@@ -61,7 +68,8 @@ From each log file Scraper extracts:
    * Aborted transfers
    * Flow with 'drain' set
  * Transfer messages are sorted by signature. Then a table is made showing where
-   each message leaves or arrives over a connection.
+   each message leaves or arrives over a connection. The signature is limited to the
+   body of the message as shown in the Proton log text.
  * Settlement state for each unsettled transfer is identified, displayed, and
    shown with delta and elapsed time values. See example in the Advanced section.
  * Link name propagation for each named link is shown in a table.
@@ -74,7 +82,54 @@ From each log file Scraper extracts:
    do not include all other routers. In this case the other routers are identified
    visually to indicate that they are unreachable.
 
-### The basics
+## Split Mode
+
+Split mode was developed to help analyze log files that are generally too big to be
+processed by Scraper normal mode. Split mode works equally well on both large and small
+log files.
+
+Split mode rewrites all of the log file's AMQP log data into many, possibly tens of
+thousands, smaller files. Data is confined to a subdirectory named after the original
+log file. Scraper will not overwrite existing output directories.
+
+| Log file   | Scraper output directory|
+|------------|-------------------------|
+| EB2.log    | EB2.log.splits          |
+
+Split mode directs Scraper to accept a single log file and
+break it into per-connection data files. The connections are counted and the volume of
+data handled by each connection is noted. Then each connection's data is written
+to a subfolder whose name indicates the amount of data the connection handled.
+
+| Log lines   | Directory|
+|-------------|----------|
+| 250         | 10e3     |
+| 45,000      | 10e5     |
+| 1,234,567   | 10e7     |
+
+
+Split mode also analyzes:
+
+* Each router reboot starts a new router _instance_. Split mode observes the reboots
+and divides the connection data. Connection names inclued the router instance ID.
+
+    A\<instance\>_\<connectionId\>
+
+* Connection peers are identified. Scraper currently recognizes these peers:
+
+  * Inter-router
+  * Apache activemq-artemis broker
+  * Apache qpidd broker
+  * Apache Qpid-JMS client
+
+* Scraper searches all log lines for AMQP errors and produces a table identifying them.
+* Connections are listed in order based on
+  * Total transfer count
+  * Total log line count
+  * Connections with zero transfers
+* Per-connection files are linked from the connection lists for one-click viewing
+
+## Quick Start
 
 * Enable router logging
 
@@ -93,14 +148,56 @@ The information classes are exposed by enabling log levels.
 
 * Run Scraper to generate web content
 
-    bin/scraper/main.py somefile.log > somefile.html
+    tools/scraper/scraper.py -f somefile.log > somefile.html
 
-    bin/scraper/mina.py *.log > somefile.html
+    tools/scraper/scraper.py -f *.log > somefile.html
 
 * Profit
 
     firefox somefile.html
 
+## Scraper command line
+
+    usage: scraper.py [-h] [--skip-all-data] [--skip-detail] [--skip-msg-progress]
+                      [--split] [--time-start TIME_START] [--time-end TIME_END]
+                      [--files FILES [FILES ...]]
+    
+    optional arguments:
+      -h, --help            show this help message and exit
+      --skip-all-data, -sa  Max load shedding: do not store/index transfer,
+                            disposition, flow, or EMPTY_FRAME data
+      --skip-detail, -sd    Load shedding: do not produce Connection Details
+                            tables
+      --skip-msg-progress, -sm
+                            Load shedding: do not produce Message Progress tables
+      --split, -sp          A single file is split into per-connection data.
+      --time-start TIME_START, -ts TIME_START
+                            Ignore log records earlier than this. Format:
+                            "2018-08-13 13:15:00.123456"
+      --time-end TIME_END, -te TIME_END
+                            Ignore log records later than this. Format:
+                            "2018-08-13 13:15:15.123456"
+      --files FILES [FILES ...], -f FILES [FILES ...]
+
+* Split mode works with a single file and ignores all other switches
+* Normal mode (no --split switch) accepts other swithces and multiple files
+
+### Switch --skip-all-data
+    tools/scraper/scraper.py --skip-all-data -f FILE [FILE ...]
+    
+With _--skip-all-data_ AMQP transfer, disposition, and flow frames in the log files are
+discarded. The resulting web page still includes lots of useful information with
+connection info, link name propagation, and link state analysis.
+
+### Switch --skip-detail
+    tools/scraper/scraper.py --skip-detail -f FILE [FILE ...]
+    
+With _--skip-detail_ the display of per-connection, per-session, per-link tables is skipped.
+
+### Switch --skip-msg-progress
+    tools/scraper/scraper.py --skip-msg-progress -f FILE [FILE ...]
+    
+With _--skip-msg-progress_ the display of transfer analysis tables is skipped.
 ###  Advanced
 
 * Merging multiple qpid-dispatch log files
@@ -108,7 +205,7 @@ The information classes are exposed by enabling log levels.
 Scraper accepts multiple log files names in the command line and
 merges the log data according to the router log timestamps.
 
-    bin/scraper/main.py A.log B.log C.log > abc.html
+    tools/scraper/scraper.py --files A.log B.log C.log > abc.html
 
 Note that the qpid-dispatch host system clocks for merged log files
 must be synchronized to within a few microseconds in order for the
@@ -125,14 +222,8 @@ qpid-dispatch self test.
 Indeed it is and good luck figuring it out. Sometimes, though, it's too much.
 The AMQP transfer data analysis is the worst offender in terms of CPU time, 
 run-time memory usage, and monstrous html output files.
-Scraper provides one command line switch to
-turn off the data analysis:
-
-    bin/scraper/main.py --no-data FILE [FILE ...]
-    
-In no-data mode AMQP transfer, disposition, and flow frames in the log files are
-discarded. The resulting web page still includes lots of useful information with
-connection info, link name propagation, and link state analysis.
+Scraper provides command line switches to
+turn off sections of the data analysis.
 
 * How to read the transfer analysis tables. Here's an instance:
 
@@ -174,6 +265,3 @@ returned to a listener on peer_7. The receiver received the message 0.002142 S a
 sender received the accepted disposition 0.005142 S after the sender sent the message.
 
 The transmit times are in order from top to bottom and the settlement times are in order from bottom to top.
-
-This table will morph a little if one of the router is missing from the analysis. If log file D.log was not
-presented to Scraper then the table would not make as much sense as when all logs are included.
