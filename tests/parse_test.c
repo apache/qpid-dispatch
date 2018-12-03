@@ -145,10 +145,45 @@ static char *test_integer_conversion(void *context)
         {"\x81\xFF\xFF\xFF\xFF\x80\x00\x00\x00", 9, QD_AMQP_INT,  false, INT32_MIN, 0},
         {"\x81\xFF\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 9, QD_AMQP_INT,  false, -1,        0},
 
-        // and cannot convert 64 bit values that are outside the 32bit range as int32
+        // signed/unsigned conversions
+        {"\x70\x7F\xFF\xFF\xFF",                 5, QD_AMQP_INT,  false, INT32_MAX, 0},
+        {"\x71\x7F\xFF\xFF\xFF",                 5, QD_AMQP_UINT, false, 0,         INT32_MAX},
+        {"\x80\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 9, QD_AMQP_LONG, false, INT64_MAX, 0},
+        {"\x81\x7F\xFF\xFF\xFF\xFF\xFF\xFF\xFF", 9, QD_AMQP_ULONG, false,0,         INT64_MAX},
+        {"\x50\x7F",                             2, QD_AMQP_INT,  false, INT8_MAX,  0},
+        {"\x60\x7F\xFF",                         3, QD_AMQP_INT,  false, INT16_MAX,  0},
+        {"\x53\x7F",                             2, QD_AMQP_INT,  false, INT8_MAX,  0},
+        {"\x55\x7F",                             2, QD_AMQP_UINT, false, 0,         INT8_MAX},
+        {"\x51\x7F",                             2, QD_AMQP_UINT, false, 0,         INT8_MAX},
+        {"\x61\x7F\xFF",                         3, QD_AMQP_UINT, false, 0,         INT16_MAX},
+
+        // strings
+        {"\xa1\x02 1",                           4, QD_AMQP_UINT, false, 0,         1},
+        {"\xa1\x02-1",                           4, QD_AMQP_INT,  false, -1,        0},
+
+        {"\xa1\x14" "18446744073709551615",     22, QD_AMQP_ULONG,false, 0,         UINT64_MAX},
+        {"\xa1\x14" "-9223372036854775808",     22, QD_AMQP_LONG, false, INT64_MIN, 0},
+        {"\xa1\x13" "9223372036854775807",      21, QD_AMQP_LONG, false, INT64_MAX, 0},
+        {"\xa3\x13" "9223372036854775807",      21, QD_AMQP_LONG, false, INT64_MAX, 0},
+
+        // cannot convert 64 bit values that are outside the 32bit range as int32
         {"\x80\x00\x00\x00\x01\x00\x00\x00\x00", 9, QD_AMQP_UINT, true,  0, 0},
         {"\x81\x00\x00\x00\x00\x80\x00\x00\x00", 9, QD_AMQP_INT,  true,  0, 0},
         {"\x81\xFF\xFF\xFF\xFF\x7F\xFF\xFF\xFF", 9, QD_AMQP_INT,  true,  0, 0},
+
+        // bad signed/unsigned conversions
+        {"\x80\x80\x00\x00\x00\x00\x00\x00\x00", 9, QD_AMQP_LONG,  true, 0, 0},
+        {"\x81\x80\x00\x00\x00\x00\x00\x00\x00", 9, QD_AMQP_ULONG, true, 0, 0},
+        {"\x70\x80\x00\x00\x00",                 5, QD_AMQP_LONG,  true, 0, 0},
+        {"\x71\x80\x00\x00\x00",                 5, QD_AMQP_ULONG, true, 0, 0},
+        {"\x55\x80",                             2, QD_AMQP_UINT,  true, 0, 0},
+        {"\x51\x80",                             2, QD_AMQP_UINT,  true, 0, 0},
+        {"\x54\x80",                             2, QD_AMQP_UINT,  true, 0, 0},
+        {"\x61\x80\x00",                         3, QD_AMQP_UINT,  true, 0, 0},
+        {"\x53\x80",                             2, QD_AMQP_INT,   true, 0, 0},
+        {"\x52\x80",                             2, QD_AMQP_INT,   true, 0, 0},
+        {"\x50\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
+        {"\x60\x80",                             2, QD_AMQP_LONG,  true, 0, 0},
         {NULL},
     };
 
@@ -165,12 +200,32 @@ static char *test_integer_conversion(void *context)
         }
 
         bool equal = false;
-        if (fs_vectors[i].parse_as == QD_AMQP_UINT) {
+        switch (fs_vectors[i].parse_as) {
+        case QD_AMQP_UINT:
+        {
             uint32_t tmp = qd_parse_as_uint(field);
             equal = (tmp == fs_vectors[i].expected_uint);
-        } else {
+            break;
+        }
+        case QD_AMQP_ULONG:
+        {
+            uint64_t tmp = qd_parse_as_ulong(field);
+            equal = (tmp == fs_vectors[i].expected_uint);
+            break;
+        }
+        case QD_AMQP_INT:
+        {
+
             int32_t tmp = qd_parse_as_int(field);
             equal = (tmp == fs_vectors[i].expected_int);
+            break;
+        }
+        case QD_AMQP_LONG:
+        {
+            int64_t tmp = qd_parse_as_long(field);
+            equal = (tmp == fs_vectors[i].expected_int);
+            break;
+        }
         }
 
         if (!qd_parse_ok(field)) {
