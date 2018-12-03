@@ -114,7 +114,7 @@
                       <exclude>qpid-proton/**</exclude>
                       <exclude>libuv/**</exclude>
                       <exclude>libwebsockets/**</exclude>
-                      <exclude>bin/log_scraper/test_data/**</exclude>
+                      <exclude>tools/scraper/test_data/**</exclude>
                 </excludes>
         </configuration>            
             </plugin>
