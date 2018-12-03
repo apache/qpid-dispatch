@@ -406,6 +406,7 @@ export class TopologyController {
           force: true}], 
         function () {
           let nodeInfo = QDRService.management.topology.nodeInfo();
+          console.log(nodeInfo);
           forceData.nodes = nodes = new Nodes(QDRLog);
           nodes.initialize(nodeInfo, localStorage, width, height);
           forceData.links = links = new Links(QDRLog);

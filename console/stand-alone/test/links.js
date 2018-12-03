@@ -22,24 +22,25 @@ var fs = require('fs');
 var expect = require('chai').expect;
 import { Links } from '../plugin/js/topology/links.js';
 import { Nodes } from '../plugin/js/topology/nodes.js';
-import { QDRService } from '../plugin/js/qdrService.js';
 
 class Log {
   constructor() {
   }
   log (msg) {console.log(msg);}
-  debug (msg) {console.log(msg);}
-  error (msg) {console.log(msg);}
-  info (msg) {console.log(msg);}
-  warn (msg) {console.log(msg);}
+  debug (msg) {console.log(`Debug: ${msg}`);}
+  error (msg) {console.log(`Error: ${msg}`);}
+  info (msg) {console.log(`Info: ${msg}`);}
+  warn (msg) {console.log(`Warning: ${msg}`);}
 }
 var log = new Log();
 var loc = {protocol: function () { return 'http://';}};
 var timeout = {};
-var qdrService = new QDRService(log, timeout, loc);
-var links = new Links(qdrService, log);
-var nodes = new Nodes(qdrService, log);
+var links = new Links(log);
+var edgeLinks = new Links(log);
+var nodes = new Nodes(log);
+var edgeNodes = new Nodes(log);
 var nodeInfo;
+var edgeInfo;
 var unknowns = [];
 const width = 1024;
 const height = 768;
@@ -55,10 +56,13 @@ before(function(done){
     src = PARAM_VALUE;
   }
   
-  console.log('src: ', src);
   fs.readFile(src + './test/nodes.json', 'utf8', function(err, fileContents) {
     if (err) throw err;
     nodeInfo = JSON.parse(fileContents);
+  });
+  fs.readFile(src + './test/nodes-edge.json', 'utf8', function(err, fileContents) {
+    if (err) throw err;
+    edgeInfo = JSON.parse(fileContents);
     done();
   });
 });
@@ -74,6 +78,10 @@ describe('Nodes', function() {
       nodes.initialize(nodeInfo, {}, width, height);
       assert.equal(nodes.nodes.length, 6);
     });
+    it('should initialize edge nodes', function() {
+      edgeNodes.initialize(edgeInfo, {}, width, height);
+      assert.equal(edgeNodes.nodes.length, 2);
+    });
   });
 
 });
@@ -87,6 +95,13 @@ describe('Links', function() {
     it('should initialize', function() {
       links.initialize(nodeInfo, nodes, unknowns, {}, width);
       assert.equal(links.links.length, 10);
+    });
+    it('should initialize edge links', function() {
+      edgeLinks.initialize(edgeInfo, edgeNodes, unknowns, {}, width);
+      assert.equal(edgeLinks.links.length, 6);
+    });
+    it('should add nodes for edge router groups', function() {
+      assert.equal(edgeNodes.nodes.length, 6);
     });
   });
 
