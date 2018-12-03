@@ -103,20 +103,20 @@ class ConsoleTest(system_test.TestCase):
             p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
             p0.wait()
 
-            prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
-            p = self.popen(prg, stdout=PIPE, expect=None)
-            out = p.communicate()[0]
-            pret = p.returncode
+        prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
+        p = self.popen(prg, stdout=PIPE, expect=None)
+        out = p.communicate()[0]
+        pret = p.returncode
 
-            # write the output
-            with open('run_console_test.out', 'w') as popenfile:
-                popenfile.write('returncode was %s\n' % p.returncode)
-                popenfile.write('out was:\n')
-                popenfile.writelines(out)
+        # write the output
+        with open('run_console_test.out', 'w') as popenfile:
+            popenfile.write('returncode was %s\n' % p.returncode)
+            popenfile.write('out was:\n')
+            popenfile.writelines(out)
 
-            # if we created the node_modules dir, remove it
-            if not node_modules:
-                shutil.rmtree(node_dir)
+        # if we created the node_modules dir, remove it
+        if not node_modules:
+            shutil.rmtree(node_dir)
 
         assert pret == 0, \
             "console test exit status %s, output:\n%s" % (pret, out)
