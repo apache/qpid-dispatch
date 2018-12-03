@@ -126,6 +126,8 @@ class SessionDetail:
         self.channel = -1
         self.peer_chan = -1
 
+        self.half_closed = False
+
         self.direction = ""
 
         # seq_no number differentiates items that otherwise have same identifiers.
@@ -424,7 +426,9 @@ class AllDetails():
                     conn_details.unaccounted_frame_list.append(plf)
                     continue
                 # session required
-                channel = plf.data.channel
+                channel = plf.data.channel # For incoming begin this is the remote channel
+                                           # For outgoing begin this is the local channel
+                                           # Assume they are the same for the time being
                 sess_details = conn_details.FindSession(channel)
                 if sess_details == None:
                     sess_details = SessionDetail(conn_details, conn_details.GetSeqNo(), plf.datetime)
@@ -437,7 +441,15 @@ class AllDetails():
                     sess_details.amqp_errors += 1
 
                 if pname in ['begin', 'end', 'disposition']:
-                    sess_details.session_frame_list.append(plf)
+                    sess_details.session_frame_list.append(plf) # Accumulate to current session
+                    if pname == 'end':
+                        # end is closing this session
+                        if sess_details.half_closed:
+                            conn_details.EndChannel(plf.data.channel)
+                        else:
+                            sess_details.half_closed = True
+                    else:
+                        pass # begin handled above; disposition needs no action
 
                 elif pname in ['attach']:
                     handle = plf.data.handle  # proton local handle
