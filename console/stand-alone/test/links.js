@@ -27,11 +27,11 @@ import { QDRService } from '../plugin/js/qdrService.js';
 class Log {
   constructor() {
   }
-  log (msg) {}
-  debug (msg) {}
-  error (msg) {}
-  info (msg) {}
-  warn (msg) {}
+  log (msg) {console.log(msg);}
+  debug (msg) {console.log(msg);}
+  error (msg) {console.log(msg);}
+  info (msg) {console.log(msg);}
+  warn (msg) {console.log(msg);}
 }
 var log = new Log();
 var loc = {protocol: function () { return 'http://';}};
@@ -85,7 +85,7 @@ describe('Links', function() {
   });
   describe('#initializes', function() {
     it('should initialize', function() {
-      links.initializeLinks(nodeInfo, nodes, unknowns, {}, width);
+      links.initialize(nodeInfo, nodes, unknowns, {}, width);
       assert.equal(links.links.length, 10);
     });
   });

@@ -17,70 +17,74 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { utils } from '../amqp/utilities.js';
+import { utils } from "../amqp/utilities.js";
 
 /* global d3 Promise */
 export class Node {
-  constructor(id, name, nodeType, properties, routerId, x, y, nodeIndex, resultIndex, fixed, connectionContainer) {
-    this.key = id;                  // the router uri for this node (or group of clients) like: amqp:/_topo/0/<router id>/$management
-    this.name = name;               // the router id portion of the key
-    this.nodeType = nodeType;       // router.role
+  constructor(
+    id,
+    name,
+    nodeType,
+    properties,
+    routerId,
+    x,
+    y,
+    nodeIndex,
+    resultIndex,
+    fixed,
+    connectionContainer
+  ) {
+    this.key = id; // the router uri for this node (or group of clients) like: amqp:/_topo/0/<router id>/$management
+    this.name = name; // the router id portion of the key
+    this.nodeType = nodeType; // router.role
     this.properties = properties;
-    this.routerId = routerId;       // the router uri of the router we are connected to (for groups)
+    this.routerId = routerId; // the router uri of the router we are connected to (for groups)
     this.x = x;
     this.y = y;
     this.id = nodeIndex;
     this.resultIndex = resultIndex;
     this.fixed = !!+fixed;
-    this.cls = '';
+    this.cls = "";
     this.container = connectionContainer;
     this.isConsole = utils.isConsole(this);
     this.isArtemis = utils.isArtemis(this);
   }
-  title (hide) {
-    let x = '';
+  title(hide) {
+    let x = "";
     if (this.normals && this.normals.length > 1 && !hide)
-      x = ' x ' + this.normals.length;
-    if (this.isConsole)
-      return 'Dispatch console' + x;
-    else if (this.isArtemis)
-      return 'Broker - Artemis' + x;
-    else if (this.properties.product == 'qpid-cpp')
-      return 'Broker - qpid-cpp' + x;
-    else if (this.nodeType === 'edge')
-      return 'Edge Router';
-    else if (this.cdir === 'in')
-      return 'Sender' + x;
-    else if (this.cdir === 'out')
-      return 'Receiver' + x;
-    else if (this.cdir === 'both')
-      return 'Sender/Receiver' + x;
-    else if (this.nodeType === 'normal')
-      return 'client' + x;
-    else if (this.nodeType === 'on-demand')
-      return 'broker';
+      x = " x " + this.normals.length;
+    if (this.isConsole) return "Dispatch console" + x;
+    else if (this.isArtemis) return "Broker - Artemis" + x;
+    else if (this.properties.product == "qpid-cpp")
+      return "Broker - qpid-cpp" + x;
+    else if (this.nodeType === "edge") return "Edge Router";
+    else if (this.cdir === "in") return "Sender" + x;
+    else if (this.cdir === "out") return "Receiver" + x;
+    else if (this.cdir === "both") return "Sender/Receiver" + x;
+    else if (this.nodeType === "normal") return "client" + x;
+    else if (this.nodeType === "on-demand") return "broker";
     else if (this.properties.product) {
       return this.properties.product;
-    }
-    else {
-      return '';
+    } else {
+      return "";
     }
   }
-  toolTip (topology) {
-    return new Promise( (function (resolve) {
-      if (this.nodeType === 'normal' || this.nodeType === 'edge') {
-        resolve(this.clientTooltip());
-      } else
-        this.routerTooltip(topology)
-          .then( function (toolTip) {
+  toolTip(topology) {
+    return new Promise(
+      function(resolve) {
+        if (this.nodeType === "normal" || this.nodeType === "edge") {
+          resolve(this.clientTooltip());
+        } else
+          this.routerTooltip(topology).then(function(toolTip) {
             resolve(toolTip);
           });
-    }.bind(this)));
+      }.bind(this)
+    );
   }
 
-  clientTooltip () {
+  clientTooltip() {
     let type = this.title(true);
-    let title = '';
+    let title = "";
     title += `<table class="popupTable"><tr><td>Type</td><td>${type}</td></tr>`;
     if (!this.normals || this.normals.length < 2)
       title += `<tr><td>Host</td><td>${this.host}</td></tr>`;
@@ -88,77 +92,103 @@ export class Node {
       title += `<tr><td>Count</td><td>${this.normals.length}</td></tr>`;
     }
     if (!this.isConsole && !this.isArtemis)
-      title += '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
+      title +=
+        '<tr><td colspan=2 class="more-info">Click circle for more info</td></tr></table>';
     return title;
   }
 
-  routerTooltip (topology) {
-    return new Promise( (function (resolve) {
-      topology.ensureEntities(this.key, [
-        {entity: 'listener', attrs: ['role', 'port', 'http']},
-        {entity: 'router', attrs: ['name', 'version', 'hostName']}
-      ], function (foo, nodes) {
-        // update all the router title text
-        let node = nodes[this.key];
-        const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${this.key}</td></tr></table>`;
-        if (!node) {
-          resolve(err);
-          return;
-        }
-        let listeners = node['listener'];
-        let router = node['router'];
-        if (!listeners || !router) {
-          resolve(err);
-          return;
-        }
-        let r = utils.flatten(router.attributeNames, router.results[0]);
-        let title = '<table class="popupTable">';
-        title += ('<tr><td>Router</td><td>' + r.name + '</td></tr>');
-        if (r.hostName)
-          title += ('<tr><td>Host Name</td><td>' + r.hostHame + '</td></tr>');
-        title += ('<tr><td>Version</td><td>' + r.version + '</td></tr>');
-        let ports = [];
-        for (let l=0; l<listeners.results.length; l++) {
-          let listener = utils.flatten(listeners.attributeNames, listeners.results[l]);
-          if (listener.role === 'normal') {
-            ports.push(listener.port+'');
-          }
-        }
-        if (ports.length > 0) {
-          title += ('<tr><td>Ports</td><td>' + ports.join(', ') + '</td></tr>');
-        }
-        title += '</table>';
-        resolve(title);
-        return title;
-      }.bind(this));
-    }.bind(this)));
+  routerTooltip(topology) {
+    return new Promise(
+      function(resolve) {
+        topology.ensureEntities(
+          this.key,
+          [
+            { entity: "listener", attrs: ["role", "port", "http"] },
+            { entity: "router", attrs: ["name", "version", "hostName"] }
+          ],
+          function(foo, nodes) {
+            // update all the router title text
+            let node = nodes[this.key];
+            const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${
+              this.key
+            }</td></tr></table>`;
+            if (!node) {
+              resolve(err);
+              return;
+            }
+            let listeners = node["listener"];
+            let router = node["router"];
+            if (!listeners || !router) {
+              resolve(err);
+              return;
+            }
+            let r = utils.flatten(router.attributeNames, router.results[0]);
+            let title = '<table class="popupTable">';
+            title += "<tr><td>Router</td><td>" + r.name + "</td></tr>";
+            if (r.hostName)
+              title += "<tr><td>Host Name</td><td>" + r.hostHame + "</td></tr>";
+            title += "<tr><td>Version</td><td>" + r.version + "</td></tr>";
+            let ports = [];
+            for (let l = 0; l < listeners.results.length; l++) {
+              let listener = utils.flatten(
+                listeners.attributeNames,
+                listeners.results[l]
+              );
+              if (listener.role === "normal") {
+                ports.push(listener.port + "");
+              }
+            }
+            if (ports.length > 0) {
+              title +=
+                "<tr><td>Ports</td><td>" + ports.join(", ") + "</td></tr>";
+            }
+            title += "</table>";
+            resolve(title);
+            return title;
+          }.bind(this)
+        );
+      }.bind(this)
+    );
   }
   radius() {
     return nodeProperties[this.nodeType].radius;
   }
   uid() {
-    if (!this.uuid)
-      this.uuid = this.container;
+    if (!this.uuid) this.uuid = this.container;
     return this.normals ? `${this.uuid}-${this.normals.length}` : this.uuid;
   }
   setFixed(fixed) {
-    if (!fixed)
-      this.lat = this.lon = null;
+    if (!fixed) this.lat = this.lon = null;
     this.fixed = fixed;
   }
 }
 const nodeProperties = {
   // router types
-  'inter-router': {radius: 28, refX: {end: 32, start: -19}, linkDistance: [150, 70], charge: [-1800, -900]},
-  'edge':  {radius: 20, refX: {end: 24, start: -12}, linkDistance: [110, 55], charge: [-1350, -900]},
+  "inter-router": {
+    radius: 28,
+    refX: { end: 32, start: -19 },
+    linkDistance: [150, 70],
+    charge: [-1800, -900]
+  },
+  edge: {
+    radius: 20,
+    refX: { end: 24, start: -12 },
+    linkDistance: [110, 55],
+    charge: [-1350, -900]
+  },
   // generated nodes from connections. key is from connection.role
-  'normal':       {radius: 15, refX: {end: 20, start: -7}, linkDistance: [75, 40], charge: [-900, -900]},
+  normal: {
+    radius: 15,
+    refX: { end: 20, start: -7 },
+    linkDistance: [75, 40],
+    charge: [-900, -900]
+  }
 };
 // aliases
-nodeProperties._topo = nodeProperties['inter-router'];
-nodeProperties._edge = nodeProperties['edge'];
-nodeProperties['on-demand'] = nodeProperties['normal'];
-nodeProperties['route-container'] = nodeProperties['normal'];
+nodeProperties._topo = nodeProperties["inter-router"];
+nodeProperties._edge = nodeProperties["edge"];
+nodeProperties["on-demand"] = nodeProperties["normal"];
+nodeProperties["route-container"] = nodeProperties["normal"];
 
 export class Nodes {
   constructor(logger) {
@@ -166,8 +196,7 @@ export class Nodes {
     this.logger = logger;
   }
   static radius(type) {
-    if (nodeProperties[type].radius)
-      return nodeProperties[type].radius;
+    if (nodeProperties[type].radius) return nodeProperties[type].radius;
     return 15;
   }
   static maxRadius() {
@@ -179,8 +208,7 @@ export class Nodes {
   }
   static refX(end, r) {
     for (let key in nodeProperties) {
-      if (nodeProperties[key].radius == r)
-        return nodeProperties[key].refX[end];
+      if (nodeProperties[key].radius == r) return nodeProperties[key].refX[end];
     }
     return 0;
   }
@@ -193,97 +221,98 @@ export class Nodes {
     return Object.keys(values);
   }
   // vary the following force graph attributes based on nodeCount
-  static forceScale (nodeCount, minmax) {
+  static forceScale(nodeCount, minmax) {
     let count = Math.max(Math.min(nodeCount, 80), 6);
-    let x = d3.scale.linear()
-      .domain([6,80])
+    let x = d3.scale
+      .linear()
+      .domain([6, 80])
       .range(minmax);
     return x(count);
   }
-  linkDistance (d, nodeCount) {
+  linkDistance(d, nodeCount) {
     let range = nodeProperties[d.target.nodeType].linkDistance;
     return Nodes.forceScale(nodeCount, range);
   }
-  charge (d, nodeCount) {
+  charge(d, nodeCount) {
     let charge = nodeProperties[d.nodeType].charge;
     return Nodes.forceScale(nodeCount, charge);
   }
-  gravity (d, nodeCount) {
+  gravity(d, nodeCount) {
     return Nodes.forceScale(nodeCount, [0.0001, 0.1]);
   }
 
-  getLength () {
+  getLength() {
     return this.nodes.length;
   }
-  get (index) {
+  get(index) {
     if (index < this.getLength()) {
       return this.nodes[index];
     }
-    this.logger.error(`Attempted to get node[${index}] but there were only ${this.getLength()} nodes`);
+    this.logger.error(
+      `Attempted to get node[${index}] but there were only ${this.getLength()} nodes`
+    );
     return undefined;
   }
-  setNodesFixed (name, b) {
-    this.nodes.some(function (n) {
+  setNodesFixed(name, b) {
+    this.nodes.some(function(n) {
       if (n.name === name) {
         n.fixed(b);
         return true;
       }
     });
   }
-  nodeFor (name) {
+  nodeFor(name) {
     for (let i = 0; i < this.nodes.length; ++i) {
-      if (this.nodes[i].name == name)
-        return this.nodes[i];
+      if (this.nodes[i].name == name) return this.nodes[i];
     }
     return null;
   }
-  nodeExists (connectionContainer) {
-    return this.nodes.findIndex( function (node) {
+  nodeExists(connectionContainer) {
+    return this.nodes.findIndex(function(node) {
       return node.container === connectionContainer;
     });
   }
-  normalExists (connectionContainer) {
+  normalExists(connectionContainer) {
     let normalInfo = {};
-    for (let i=0; i<this.nodes.length; ++i) {
+    for (let i = 0; i < this.nodes.length; ++i) {
       if (this.nodes[i].normals) {
-        if (this.nodes[i].normals.some(function (normal, j) {
-          if (normal.container === connectionContainer && i !== j) {
-            normalInfo = {nodesIndex: i, normalsIndex: j};
-            return true;
-          }
-          return false;
-        }))
+        if (
+          this.nodes[i].normals.some(function(normal, j) {
+            if (normal.container === connectionContainer && i !== j) {
+              normalInfo = { nodesIndex: i, normalsIndex: j };
+              return true;
+            }
+            return false;
+          })
+        )
           break;
       }
     }
     return normalInfo;
   }
-  savePositions (nodes) {
-    if (!nodes)
-      nodes = this.nodes;
-    if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+  savePositions(nodes) {
+    if (!nodes) nodes = this.nodes;
+    if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
-    this.nodes.forEach( function (d) {
+    this.nodes.forEach(function(d) {
       localStorage[d.name] = JSON.stringify({
         x: Math.round(d.x),
         y: Math.round(d.y),
-        fixed: (d.fixed & 1) ? 1 : 0,
+        fixed: d.fixed & 1 ? 1 : 0
       });
     });
   }
   // Convert node's x,y coordinates to longitude, lattitude
-  saveLonLat (backgroundMap, nodes) {
-    if (!backgroundMap || !backgroundMap.initialized)
-      return;
+  saveLonLat(backgroundMap, nodes) {
+    if (!backgroundMap || !backgroundMap.initialized) return;
     // didn't pass nodes, use all nodes
-    if (!nodes)
-      nodes = this.nodes;
+    if (!nodes) nodes = this.nodes;
     // passed a single node, wrap it in an array
-    if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+    if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
-    for (let i=0; i<nodes.length; i++) {
+    for (let i = 0; i < nodes.length; i++) {
       let n = nodes[i];
       if (n.fixed) {
         let lonlat = backgroundMap.getLonLat(n.x, n.y);
@@ -297,10 +326,9 @@ export class Nodes {
     }
   }
   // convert all nodes' longitude,lattitude to x,y coordinates
-  setXY (backgroundMap) {
-    if (!backgroundMap)
-      return;
-    for (let i=0; i<this.nodes.length; i++) {
+  setXY(backgroundMap) {
+    if (!backgroundMap) return;
+    for (let i = 0; i < this.nodes.length; i++) {
       let n = this.nodes[i];
       if (n.lon && n.lat) {
         let xy = backgroundMap.getXY(n.lon, n.lat);
@@ -312,68 +340,128 @@ export class Nodes {
     }
   }
 
-  find (connectionContainer, properties, name) {
+  find(connectionContainer, properties, name) {
     properties = properties || {};
-    for (let i=0; i<this.nodes.length; ++i) {
-      if (this.nodes[i].name === name || this.nodes[i].container === connectionContainer) {
-        if (properties.product)
-          this.nodes[i].properties = properties;
+    for (let i = 0; i < this.nodes.length; ++i) {
+      if (
+        this.nodes[i].name === name ||
+        this.nodes[i].container === connectionContainer
+      ) {
+        if (properties.product) this.nodes[i].properties = properties;
         return this.nodes[i];
       }
     }
     return undefined;
   }
-  getOrCreateNode (id, name, nodeType, nodeIndex, x, y, 
-    connectionContainer, resultIndex, fixed, properties) {
+  getOrCreateNode(
+    id,
+    name,
+    nodeType,
+    nodeIndex,
+    x,
+    y,
+    connectionContainer,
+    resultIndex,
+    fixed,
+    properties
+  ) {
     properties = properties || {};
     let gotNode = this.find(connectionContainer, properties, name);
     if (gotNode) {
       return gotNode;
     }
     let routerId = utils.nameFromId(id);
-    return new Node(id, name, nodeType, properties, routerId, x, y, 
-      nodeIndex, resultIndex, fixed, connectionContainer);
+    return new Node(
+      id,
+      name,
+      nodeType,
+      properties,
+      routerId,
+      x,
+      y,
+      nodeIndex,
+      resultIndex,
+      fixed,
+      connectionContainer
+    );
   }
-  add (obj) {
+  add(obj) {
     this.nodes.push(obj);
     return obj;
   }
-  addUsing (id, name, nodeType, nodeIndex, x, y, 
-    connectContainer, resultIndex, fixed, properties) {
-    let obj = this.getOrCreateNode(id, name, nodeType, nodeIndex, x, y, 
-      connectContainer, resultIndex, fixed, properties);
+  addUsing(
+    id,
+    name,
+    nodeType,
+    nodeIndex,
+    x,
+    y,
+    connectContainer,
+    resultIndex,
+    fixed,
+    properties
+  ) {
+    let obj = this.getOrCreateNode(
+      id,
+      name,
+      nodeType,
+      nodeIndex,
+      x,
+      y,
+      connectContainer,
+      resultIndex,
+      fixed,
+      properties
+    );
     this.nodes.push(obj);
     return obj;
   }
-  clearHighlighted () {
-    for (let i = 0; i<this.nodes.length; ++i) {
+  clearHighlighted() {
+    for (let i = 0; i < this.nodes.length; ++i) {
       this.nodes[i].highlighted = false;
     }
   }
-  initialize (nodeInfo, localStorage, width, height) {
+  initialize(nodeInfo, localStorage, width, height) {
     let nodeCount = Object.keys(nodeInfo).length;
     let yInit = 50;
     let animate = false;
     for (let id in nodeInfo) {
       let name = utils.nameFromId(id);
       // if we have any new nodes, animate the force graph to position them
-      let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
+      let position = localStorage[name]
+        ? JSON.parse(localStorage[name])
+        : undefined;
       if (!position) {
         animate = true;
         position = {
-          x: Math.round(width / 4 + ((width / 2) / nodeCount) * this.nodes.length),
-          y: Math.round(height / 2 + Math.sin(this.nodes.length / (Math.PI*2.0)) * height / 4),
-          fixed: false,
+          x: Math.round(
+            width / 4 + (width / 2 / nodeCount) * this.nodes.length
+          ),
+          y: Math.round(
+            height / 2 +
+              (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
+          ),
+          fixed: false
         };
       }
       if (position.y > height) {
         position.y = 200 - yInit;
         yInit *= -1;
       }
-      let parts = id.split('/');
-      this.addUsing(id, name, parts[1], this.nodes.length, position.x, position.y, name, undefined, position.fixed, {});
+      let parts = id.split("/");
+      this.addUsing(
+        id,
+        name,
+        parts[1],
+        this.nodes.length,
+        position.x,
+        position.y,
+        name,
+        undefined,
+        position.fixed,
+        {}
+      );
     }
     return animate;
   }
 }
-

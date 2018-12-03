@@ -146,20 +146,26 @@ export class TopologyController {
       });
     }
 
+    // called from the html page's popup menu
     $scope.setFixed = function(b) {
       if ($scope.contextNode) {
         $scope.contextNode.setFixed(b);
         nodes.savePositions();
         nodes.saveLonLat(backgroundMap, $scope.contextNode);
       }
-      if (!b)
-        animate = true;
+      // redraw the circles/links
       restart();
+
+      if (!b) {
+        // let the nodes move to a new position
+        animate = true;
+        force.start(); 
+      }
     };
     $scope.isFixed = function() {
       if (!$scope.contextNode)
         return false;
-      return ($scope.contextNode.fixed & 1);
+      return ($scope.contextNode.fixed);
     };
 
     let mouseX, mouseY;
@@ -255,13 +261,15 @@ export class TopologyController {
         });
 
       // the legend
-      d3.select('#topo_svg_legend svg').remove();
-      lsvg = d3.select('#topo_svg_legend')
-        .append('svg')
-        .attr('id', 'svglegend');
-      lsvg = lsvg.append('svg:g')
-        .attr('transform', `translate(${Nodes.maxRadius()}, ${Nodes.maxRadius()})`)
-        .selectAll('g');
+      //d3.select('#topo_svg_legend svg').remove();
+      if (d3.select('#svglegend').empty()) {
+        lsvg = d3.select('#topo_svg_legend')
+          .append('svg')
+          .attr('id', 'svglegend');
+        lsvg = lsvg.append('svg:g')
+          .attr('transform', `translate(${Nodes.maxRadius()}, ${Nodes.maxRadius()})`)
+          .selectAll('g');
+      }
 
       // mouse event vars
       $scope.mousedown_node = null;
@@ -342,8 +350,8 @@ export class TopologyController {
       circle = svg.append('svg:g').attr('class', 'nodes').selectAll('g');
 
       // app starts here
-      if (unknowns.length === 0)
-        restart();
+      //if (unknowns.length === 0)
+      restart();
       if (oldSelectedNode) {
         d3.selectAll('circle.inter-router').classed('selected', function (d) {
           if (d.key === oldSelectedNode.key) {
@@ -510,11 +518,12 @@ export class TopologyController {
           };
           // update the contents of the popup tooltip each time the data is polled
           QDRService.management.topology.addUpdatedAction('connectionPopupHTML', updateTooltip);
+          // request the data and update the tooltip as soon as it arrives
           QDRService.management.topology.ensureAllEntities(
             [{ entity: 'router.link', force: true},{entity: 'connection'}], function () {
               updateTooltip();
             });
-          // show the tooltip
+          // just show the tooltip with whatever data we have
           updateTooltip();
           restart();
 
@@ -572,7 +581,7 @@ export class TopologyController {
           return (d === selected_node);
         })
         .classed('fixed', function(d) {
-          return d.fixed & 1;
+          return d.fixed;
         });
       circle
         .classed('multiple', function (d) {
@@ -648,9 +657,8 @@ export class TopologyController {
           if (cur_mouse[0] != initial_mouse_down_position[0] ||
             cur_mouse[1] != initial_mouse_down_position[1]) {
             d.setFixed(true);
-            nodes.savePositions(d);
-            nodes.saveLonLat(backgroundMap, d);
-            console.log('savedLonLat for fixed node');
+            nodes.savePositions();
+            nodes.saveLonLat(backgroundMap);
             resetMouseVars();
             restart();
             return;
@@ -670,17 +678,17 @@ export class TopologyController {
           $scope.mousedown_node = null;
           if (!$scope.$$phase) $scope.$apply();
           // handle clicking on nodes that represent multiple sub-nodes
-          if (d.normals && !d.isConsole && !d.isArtemis) {
+          if (d.normals && !d.isArtemis && !d.isQpid) {
             doDialog(d);
           }
+          // apply any data changes to the interface
           restart();
 
         })
         .on('dblclick', function(d) { // circle
           d3.event.preventDefault();
           if (d.fixed) {
-            d.fixed = false;
-            nodes.setNodesFixed(d.name, false);
+            d.setFixed(false);
             restart(); // redraw the node without a dashed line
             force.start(); // let the nodes move to a new position
           }
@@ -841,7 +849,7 @@ export class TopologyController {
           return null;
         })
         .classed('fixed', function(d) {
-          return d.fixed & 1;
+          return d.fixed;
         })
         .classed('normal', function(d) {
           return d.nodeType == 'normal' || QDRService.utilities.isConsole(d);
@@ -997,11 +1005,8 @@ export class TopologyController {
         if (!savedKeys.hasOwnProperty(key))
           return 1;
         // if the number of connections for this node chaanged
-        if (!nodeInfo[key]['connection'])
-          return -1;
-        if (nodeInfo[key]['connection'].results.length != savedKeys[key]) {
-          return -1;
-        }
+        if (nodeInfo[key]['connection'].results.length !== savedKeys[key])
+          return nodeInfo[key]['connection'].results.length - savedKeys[key];
       }
       return 0;
     }
@@ -1061,25 +1066,9 @@ export class TopologyController {
           setupInitialUpdate();
         } else if (changed === -1) {
           // we lost a node (or a client), we can draw the new svg immediately
-          animate = false;
+          QDRService.management.topology.purge();
+          initForceGraph();
           saveChanged();
-          let nodeInfo = QDRService.management.topology.nodeInfo();
-          forceData.nodes = nodes = new Nodes(QDRLog);
-          animate = nodes.initialize(nodeInfo, localStorage, width, height);
-
-          let unknowns = [];
-          forceData.links = links = new Links(QDRLog);
-          if (links.initialize(nodeInfo, nodes, unknowns, localStorage, height)) {
-            animate = true;
-          }
-          if (unknowns.length > 0) {
-            resolveUnknowns(nodeInfo, unknowns);
-          }
-          else {
-            force.nodes(nodes.nodes).links(links.links).start();
-            restart();
-          }
-          //initForceGraph();
         } else {
           //QDRLog.debug("topology didn't change")
         }
@@ -1102,7 +1091,7 @@ export class TopologyController {
 
     animate = true;
     setupInitialUpdate();
-    QDRService.management.topology.startUpdating(false);
+    QDRService.management.topology.startUpdating(true);
 
   }
 }

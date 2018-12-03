@@ -46,10 +46,14 @@ var utils = {
     });
     return flat;
   },
-  flattenAll: function (entity) {
+  flattenAll: function (entity, filter) {
+    if (!filter)
+      filter = function (e) {return e;};
     let results = [];
     for (let i=0; i<entity.results.length; i++) {
-      results.push(this.flatten(entity.attributeNames, entity.results[i]));
+      let f = filter(this.flatten(entity.attributeNames, entity.results[i]));
+      if (f)
+        results.push(f);
     }
     return results;
   },

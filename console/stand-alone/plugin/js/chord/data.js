@@ -99,6 +99,9 @@ class ChordData { // eslint-disable-line no-unused-vars
           // each routers has a different order for the routers
           let ingressRouters = [];
           let routerNode = results[nodeId]['router.node'];
+          if (!routerNode) {
+            continue;
+          }
           let idIndex = routerNode.attributeNames.indexOf('id');
           // ingressRouters is an array of router names in the same order that the ingressHistogram values will be in
           for (let i = 0; i < routerNode.results.length; i++) {

@@ -16,6 +16,9 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
+
+/* global Set */
+
 // highlight the paths between the selected node and the hovered node
 function findNextHopNode(from, d, QDRService, selected_node, nodes) {
   // d is the node that the mouse is over
@@ -35,7 +38,7 @@ function findNextHopNode(from, d, QDRService, selected_node, nodes) {
   let vAr = sInfo['router.node'].results;
   for (let hIdx = 0; hIdx < vAr.length; ++hIdx) {
     let addrT = QDRService.utilities.valFor(aAr, vAr[hIdx], 'id');
-    if (addrT == d.name) {
+    if (d.name && (addrT == d.name)) {
       let next = QDRService.utilities.valFor(aAr, vAr[hIdx], 'nextHop');
       return (next == null) ? nodes.nodeFor(addrT) : nodes.nodeFor(next);
     }
@@ -67,23 +70,44 @@ export function connectionPopupHTML (d, QDRService) {
     return;
   }
   let utils = QDRService.utilities;
-  let getConnsArray = function (d, conn) {
-    let conns = [conn];
-    if (d.cls === 'small') {
-      conns = [];
-      let normals = d.target.normals ? d.target.normals : d.source.normals;
-      for (let n=0; n<normals.length; n++) {
-        if (normals[n].resultIndex !== undefined) {
-          conns.push(utils.flatten(onode['connection'].attributeNames,
-            onode['connection'].results[normals[n].resultIndex]));
+  // return all of onode's connections that connecto to right
+  let getConnsArray = function (onode, key, right) {
+    if (right.normals) {
+      // if we want connections between a router and a client[s]
+      let connIds = new Set();
+      let connIndex = onode.connection.attributeNames.indexOf('identity');
+      for (let n=0; n<right.normals.length; n++) {
+        let normal = right.normals[n];
+        if (normal.key === key) {
+          connIds.add(normal.connectionId);
+        } else if (normal.alsoConnectsTo) {
+          normal.alsoConnectsTo.forEach( function (ac2) {
+            if (ac2.key === key)
+              connIds.add(ac2.connectionId);
+          });
         }
       }
+      return onode.connection.results.filter( function (result) {
+        return connIds.has(result[connIndex]);
+      }).map( function (c) {
+        return utils.flatten(onode.connection.attributeNames, c);
+      });
     }
-    return conns;
+    else {
+    // we want the connection between two routers
+      let container = utils.nameFromId(right.key);
+      let containerIndex = onode.connection.attributeNames.indexOf('container');
+      let roleIndex = onode.connection.attributeNames.indexOf('role');
+      return onode.connection.results.filter( function (conn) {
+        return conn[containerIndex] === container && conn[roleIndex] === 'inter-router';
+      }).map( function (c) {
+        return utils.flatten(onode.connection.attributeNames, c);
+      });
+    }
   };
   // construct HTML to be used in a popup when the mouse is moved over a link.
   // The HTML is sanitized elsewhere before it is displayed
-  let linksHTML = function (onode, conn, d) {
+  let linksHTML = function (onode, conns) {
     const max_links = 10;
     const fields = ['deliveryCount', 'undeliveredCount', 'unsettledCount', 'rejectedCount', 'releasedCount', 'modifiedCount'];
     // local function to determine if a link's connectionId is in any of the connections
@@ -103,7 +127,6 @@ export function connectionPopupHTML (d, QDRService) {
       }
       return out;
     };
-    let conns = getConnsArray(d, conn);
     // if the data for the line is from a client (small circle), we may have multiple connections
     // loop through all links for this router and accumulate those belonging to the connection(s)
     let nodeLinks = onode['router.link'];
@@ -189,50 +212,39 @@ export function connectionPopupHTML (d, QDRService) {
       });
       HTML += `<tr><td> ${joinedVals} </td></tr>`;
     }
-    // no rows were added
-    if (links.length === 0) {
-      HTML += `<tr><td align="center" colspan="${th.length}">Calculating rates, or rates were all zero</td></tr>`;
-    }
-    HTML += '</table>';
-    return HTMLHeading + HTML;
+    return links.length > 0 ? `${HTMLHeading}${HTML}</table>` : '';
   };
 
-  let left = d.left ? d.source : d.target;
-  // left is the connection with dir 'in'
-  let right = d.left ? d.target : d.source;
+  let left, right;
+  if (d.left) {
+    left = d.source;
+    right = d.target;
+  } else {
+    left = d.target;
+    right = d.source;
+  }
+  if (left.normals) {
+    // swap left and right
+    [left, right] = [right, left];
+  }
+  // left is a router. right is either a router or a client[s]
   let onode = QDRService.management.topology.nodeInfo()[left.key];
-  // loop through all the connections for left, and find the one for right
-  let rightIndex = onode['connection'].results.findIndex( function (conn) {
-    return utils.valFor(onode['connection'].attributeNames, conn, 'container') === right.routerId;
-  });
-  if (rightIndex < 0) {
-    // we have a connection to a client/service
-    rightIndex = +left.resultIndex;
-  }
-  if (isNaN(rightIndex)) {
-    // we have a connection to a console
-    rightIndex = +right.resultIndex;
-  }
-  let HTML = '';
-  if (rightIndex >= 0) {
-    let conn = onode['connection'].results[rightIndex];
-    conn = utils.flatten(onode['connection'].attributeNames, conn);
-    let conns = getConnsArray(d, conn);
-    if (conns.length === 1) {
-      HTML += '<h5>Connection'+(conns.length > 1 ? 's' : '')+'</h5>';
-      HTML += '<table class="popupTable"><tr class="header"><td>Security</td><td>Authentication</td><td>Tenant</td><td>Host</td>';
+  // find all the connections for left that go to right
+  let conns = getConnsArray(onode, left.key, right);
 
-      for (let c=0; c<conns.length; c++) {
-        HTML += ('<tr><td>' + utils.connSecurity(conns[c]) + '</td>');
-        HTML += ('<td>' + utils.connAuth(conns[c]) + '</td>');
-        HTML += ('<td>' + (utils.connTenant(conns[c]) || '--') + '</td>');
-        HTML += ('<td>' + conns[c].host + '</td>');
-        HTML += '</tr>';
-      }
-      HTML += '</table>';
-    }
-    HTML += linksHTML(onode, conn, d);
+  let HTML = '';
+  HTML += '<h5>Connection'+(conns.length > 1 ? 's' : '')+'</h5>';
+  HTML += '<table class="popupTable"><tr class="header"><td>Security</td><td>Authentication</td><td>Tenant</td><td>Host</td>';
+
+  for (let c=0; c<Math.min(conns.length, 10); c++) {
+    HTML += ('<tr><td>' + utils.connSecurity(conns[c]) + '</td>');
+    HTML += ('<td>' + utils.connAuth(conns[c]) + '</td>');
+    HTML += ('<td>' + (utils.connTenant(conns[c]) || '--') + '</td>');
+    HTML += ('<td>' + conns[c].host + '</td>');
+    HTML += '</tr>';
   }
+  HTML += '</table>';
+  HTML += linksHTML(onode, conns);
   return HTML;
 }
 

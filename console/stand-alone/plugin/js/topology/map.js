@@ -57,6 +57,10 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
   init($scope, svg, width, height) {
     return new Promise( (function (resolve, reject) {
 
+      if (this.initialized) {
+        resolve();
+        return;
+      }
       this.svg = svg;
       this.width = width;
       this.height = height;

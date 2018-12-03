@@ -90,7 +90,7 @@ import { posint } from './plugin/js/posintDirective.js';
 
   QDR.module.filter('to_trusted', ['$sce', function($sce){
     return function(text) {
-      return $sce.trustAsHtml(text);
+      return $sce.trustAsHtml(text+'');
     };
   }]);
 

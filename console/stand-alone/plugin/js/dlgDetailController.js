@@ -27,44 +27,68 @@ export class DetailDialogController {
     $scope.detail = {
       template: 'loading.html',
     };
-    $scope.detailFields = [
-      'version',
-      'mode',
-      'presettledDeliveries',
-      'droppedPresettledDeliveries',
-      'acceptedDeliveries',
-      'rejectedDeliveries',
-      'releasedDeliveries',
-      'modifiedDeliveries',
-      'deliveriesIngress',
-      'deliveriesEgress',
-      'deliveriesTransit',
-      'deliveriesIngressRouteContainer',
-      'deliveriesEgressRouteContainer'
-    ];
-    $scope.linkFields = [
-      'linkType',
-      'owningAddr',
-      'priority',
-      'acceptedCount',
-      'unsettledCount'
-    ];
-    $scope.linkRouteFields = [
-      'prefix',
-      'direction',
-      'containerId'
-    ];
-    $scope.autoLinkFields = [
-      'addr',
-      'direction',
-      'containerId'
-    ];
-    $scope.addressFields = [
-      'prefix',
-      'distribution'
-    ];
+    let countChars = function (ar) {
+      let count = 0;
+      ar.forEach( function (a) {
+        count += a.length;
+      });
+      return count;
+    };
+
+    $scope.fields = {
+      detailFields: {
+        cols: [
+          'version',
+          'mode',
+          'presettledDeliveries',
+          'droppedPresettledDeliveries',
+          'acceptedDeliveries',
+          'rejectedDeliveries',
+          'releasedDeliveries',
+          'modifiedDeliveries',
+          'deliveriesIngress',
+          'deliveriesEgress',
+          'deliveriesTransit',
+          'deliveriesIngressRouteContainer',
+          'deliveriesEgressRouteContainer'
+        ]
+      },
+      linkFields: {
+        cols: [
+          'linkType',
+          'owningAddr',
+          'priority',
+          'acceptedCount',
+          'unsettledCount'
+        ]
+      },
+      linkRouteFields: {
+        cols: [
+          'prefix',
+          'direction',
+          'containerId'
+        ]
+      },
+      autoLinkFields: {
+        cols: [
+          'addr',
+          'direction',
+          'containerId'
+        ]
+      },
+      addressFields: {
+        cols: [
+          'prefix',
+          'distribution'
+        ]
+      }
+    };
+    for (let f in $scope.fields) {
+      $scope.fields[f].count = countChars($scope.fields[f].cols);
+    }
 
     $scope.okClick = function () {
+      clearInterval(updateTimer);
       $uibModalInstance.close(true);
     };
     $scope.expandClicked = function (id) {
@@ -77,6 +101,30 @@ export class DetailDialogController {
     };
     $scope.expanded = function (id) {
       return expandedRows.has(id);
+    };
+    $scope.cellWidth = function (key, val) {
+      if (key === 'autoLinkFields') {
+        return val === 'addr' ? '40%' : '20%';
+      }
+      let totalChars = $scope.fields[key].count;
+      return `${Math.round(val.length * 100 / totalChars)}%`;
+    };
+    $scope.fieldWidth = function (val, sizes) {
+      if (!sizes)
+        return '10%';
+      return `${Math.round(sizes[val] * 100 / sizes.total)}%`;
+    };
+    let updateSizes = function (fields, sizes, obj) {
+      fields.forEach( function (key) {
+        if (!sizes[key])
+          sizes[key] = QDRService.utilities.humanify(key).length;
+        sizes[key] = Math.max(sizes[key], QDRService.utilities.pretty(obj[key]).length);
+      });
+      sizes.total = 0;
+      for (let key in sizes) {
+        if (key !== 'total')
+          sizes.total += sizes[key];
+      }
     };
 
     let groupDetail = function () {
@@ -101,15 +149,30 @@ export class DetailDialogController {
             let nodeId = QDRService.utilities.idFromName(id, '_edge');
             QDRService.management.topology.fetchEntities(nodeId, 
               [{entity: 'router.link', attrs: []},
-                {entity: 'linkRoute', attrs: $scope.linkRouteFields},
-                {entity: 'autoLink', attrs: $scope.autoLinkFields},
+                {entity: 'linkRoute', attrs: $scope.fields.linkRouteFields.cols},
+                {entity: 'autoLink', attrs: $scope.fields.autoLinkFields.cols},
                 {entity: 'address', attrs: []},
               ],
               function (results) {
                 $timeout( function () {
-                  infoPerId[id].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute);
-                  infoPerId[id].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink);
-                  infoPerId[id].addresses = QDRService.utilities.flattenAll(results[nodeId].address);
+                  infoPerId[id].linkRouteSizes = {};
+                  infoPerId[id].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute,
+                    function (route) {
+                      updateSizes($scope.fields.linkRouteFields.cols, infoPerId[id].linkRouteSizes, route);
+                      return route;
+                    });
+                  infoPerId[id].autoLinkSizes = {};
+                  infoPerId[id].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink, 
+                    function (link) {
+                      updateSizes($scope.fields.autoLinkFields.cols, infoPerId[id].autoLinkSizes, link);
+                      return link;
+                    });
+                  infoPerId[id].addressSizes = {};
+                  infoPerId[id].addresses = QDRService.utilities.flattenAll(results[nodeId].address, 
+                    function (addr) {
+                      updateSizes($scope.fields.addressFields.cols, infoPerId[id].addressSizes, addr);
+                      return addr;
+                    });
                 });
               });
           };
@@ -117,43 +180,44 @@ export class DetailDialogController {
           let q = d3.queue(10);
           for (let n=0; n<d.normals.length; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
+            if (expandedRows.has(d.normals[n].container)) {
+              $scope.detail.moreInfo(d.normals[n].container);
+            }
           }
           q.await(function () {
             $scope.detail.template = 'edgeRouters.html';
-            $scope.detail.title = 'for edge router';
+            $scope.detail.title = 'edge router';
             resolve({
-              description: 'Expand an edge router to see more info',
+              description: 'Select an edge router to see more info',
               infoPerId: infoPerId
             });
           });
-        } else if (d.isConsole) {
-          $scope.detail.template = 'consoles.html';
-          $scope.detail.title = 'for console';
-          resolve({
-            description: ''
-          });
         } else {
           $scope.detail.moreInfo = function () {};
+          let attrs = QDRService.utilities.copy($scope.fields.linkFields.cols);
+          attrs.unshift('connectionId');
           QDRService.management.topology.fetchEntities(d.key, 
-            [{entity: 'router.link', attrs: []}],
+            [{entity: 'router.link', attrs: attrs}],
             function (results) {
               let links = results[d.key]['router.link'];
               for (let i=0; i<d.normals.length; i++) {
                 let n = d.normals[i];
                 let conn = {};
-                let connectionIndex = links.attributeNames.indexOf('connectionId');
                 infoPerId[n.container] = conn;
                 conn.container = n.container;
-                conn.encrypted = n.encrypted;
+                conn.encrypted = n.encrypted ? 'True' : 'False';
                 conn.host = n.host;
-                conn.links = [];
-                for (let l=0; l<links.results.length; l++) {
-                  if (links.results[l][connectionIndex] === n.connectionId) {
-                    let link = QDRService.utilities.flatten(links.attributeNames, links.results[l]);
+                //conn.links = [];
+                conn.sizes = {};
+                conn.links = QDRService.utilities.flattenAll(links, function (link) {
+                  if (link.connectionId === n.connectionId) {
                     link.owningAddr = QDRService.utilities.addr_text(link.owningAddr);
-                    conn.links.push(link);
+                    updateSizes($scope.fields.linkFields.cols, conn.sizes, link);
+                    return link;
+                  } else {
+                    return null;
                   }
-                }
+                });
                 conn.linkCount = conn.links.length;
               }
               let dir = d.cdir === 'in' ? 'inbound' : d.cdir === 'both' ? 'in and outbound' : 'outbound';
@@ -172,14 +236,23 @@ export class DetailDialogController {
       }));
     };
   
-    groupDetail()
-      .then( function (det) {
-        $timeout( function () {
-          $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
-          $scope.detail.description = det.description;
-          $scope.detail.infoPerId = det.infoPerId;
-        }, 10);
-      });
+    let updateDetail = function () {
+      groupDetail()
+        .then( function (det) {
+          $timeout( function () {
+            $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
+            $scope.detail.description = det.description;
+            $scope.detail.infoPerId = Object.keys(det.infoPerId).map( function (id) {
+              return det.infoPerId[id];
+            }).sort( function (a, b) {
+              return a.name > b.name ? 1 : -1;
+            });
+          }, 10);
+        });
+    };
+    let updateTimer = setInterval(updateDetail, 2000);
+    updateDetail();
+
   }
 }
 DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', 'd'];

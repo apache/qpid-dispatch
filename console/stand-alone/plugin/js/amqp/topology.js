@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-/* global Promise d3 */
+/* global Promise d3 Set */
 
-import { utils } from './utilities.js';
+import { utils } from "./utilities.js";
 
 class Topology {
   constructor(connectionManager) {
@@ -32,13 +32,12 @@ class Topology {
     this.updating = false;
   }
   addUpdatedAction(key, action) {
-    if (typeof action === 'function') {
+    if (typeof action === "function") {
       this.updatedActions[key] = action;
     }
   }
   delUpdatedAction(key) {
-    if (key in this.updatedActions)
-      delete this.updatedActions[key];
+    if (key in this.updatedActions) delete this.updatedActions[key];
   }
   executeUpdatedActions(error) {
     for (var action in this.updatedActions) {
@@ -52,7 +51,7 @@ class Topology {
     }
   }
   addUpdateEntities(entityAttribs) {
-    if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
+    if (Object.prototype.toString.call(entityAttribs) !== "[object Array]") {
       entityAttribs = [entityAttribs];
     }
     for (var i = 0; i < entityAttribs.length; i++) {
@@ -61,12 +60,10 @@ class Topology {
     }
   }
   on(eventName, fn, key) {
-    if (eventName === 'updated')
-      this.addUpdatedAction(key, fn);
+    if (eventName === "updated") this.addUpdatedAction(key, fn);
   }
   unregister(eventName, key) {
-    if (eventName === 'updated')
-      this.delUpdatedAction(key);
+    if (eventName === "updated") this.delUpdatedAction(key);
   }
   nodeInfo() {
     return this._nodeInfo;
@@ -76,14 +73,17 @@ class Topology {
     for (let rId in this._nodeInfo) {
       if (!workSet.has(rId)) {
         // mark any routers that went away since the last request as removed
-        this._nodeInfo[rId]['removed'] = true;
+        this._nodeInfo[rId]["removed"] = true;
       } else {
-        if (this._nodeInfo[rId]['removed'])
-          delete this._nodeInfo[rId]['removed'];
+        if (this._nodeInfo[rId]["removed"])
+          delete this._nodeInfo[rId]["removed"];
         // copy entities
         for (let entity in workInfo[rId]) {
-          if (!this._nodeInfo[rId][entity] ||
-            (workInfo[rId][entity]['timestamp']+'' > this._nodeInfo[rId][entity]['timestamp']+'')) {
+          if (
+            !this._nodeInfo[rId][entity] ||
+            workInfo[rId][entity]["timestamp"] + "" >
+              this._nodeInfo[rId][entity]["timestamp"] + ""
+          ) {
             this._nodeInfo[rId][entity] = utils.copy(workInfo[rId][entity]);
           }
         }
@@ -97,111 +97,148 @@ class Topology {
       }
     }
   }
+  // remove any nodes that don't have connection info
+  purge() {
+    for (let id in this._nodeInfo) {
+      let node = this._nodeInfo[id];
+      if (node.removed) {
+        delete this._nodeInfo[id];
+      }
+    }
+  }
   get() {
-    return new Promise((function (resolve, reject) {
-      this.connection.sendMgmtQuery('GET-MGMT-NODES')
-        .then((function (results) {
-          let routerIds = results.response;
-          if (Object.prototype.toString.call(routerIds) === '[object Array]') {
-            // if there is only one node, it will not be returned
-            if (routerIds.length === 0) {
-              var parts = this.connection.getReceiverAddress().split('/');
-              parts[parts.length - 1] = '$management';
-              routerIds.push(parts.join('/'));
-            }
-            let finish = function (workInfo) {
-              this.saveResults(workInfo);
-              this.onDone(this._nodeInfo);
-              resolve(this._nodeInfo);
-            };
-            let connectedToEdge = function (response, workInfo) {
-              let routerId = null;
-              if (response.length === 1) {
-                let parts = response[0].split('/');
-                // we are connected to an edge router
-                if (parts[1] === '_edge') {
-                  // find the role:edge connection
-                  let conn = workInfo[response[0]].connection;
-                  if (conn) {
-                    let roleIndex = conn.attributeNames.indexOf('role');
-                    for (let i=0; i<conn.results.length; i++) {
-                      if (conn.results[i][roleIndex] === 'edge') {
-                        let container = utils.valFor(conn.attributeNames, conn.results[i], 'container');
-                        return utils.idFromName(container, '_topo');
+    return new Promise(
+      function(resolve, reject) {
+        this.connection.sendMgmtQuery("GET-MGMT-NODES").then(
+          function(results) {
+            let routerIds = results.response;
+            if (
+              Object.prototype.toString.call(routerIds) === "[object Array]"
+            ) {
+              // if there is only one node, it will not be returned
+              if (routerIds.length === 0) {
+                var parts = this.connection.getReceiverAddress().split("/");
+                parts[parts.length - 1] = "$management";
+                routerIds.push(parts.join("/"));
+              }
+              let finish = function(workInfo) {
+                this.saveResults(workInfo);
+                this.onDone(this._nodeInfo);
+                resolve(this._nodeInfo);
+              };
+              let connectedToEdge = function(response, workInfo) {
+                let routerId = null;
+                if (response.length === 1) {
+                  let parts = response[0].split("/");
+                  // we are connected to an edge router
+                  if (parts[1] === "_edge") {
+                    // find the role:edge connection
+                    let conn = workInfo[response[0]].connection;
+                    if (conn) {
+                      let roleIndex = conn.attributeNames.indexOf("role");
+                      for (let i = 0; i < conn.results.length; i++) {
+                        if (conn.results[i][roleIndex] === "edge") {
+                          let container = utils.valFor(
+                            conn.attributeNames,
+                            conn.results[i],
+                            "container"
+                          );
+                          return utils.idFromName(container, "_topo");
+                        }
                       }
                     }
                   }
                 }
-              }
-              return routerId;
-            };
-            this.doget(routerIds)
-              .then( function (workInfo) {
-                // test for edge case
-                let routerId = connectedToEdge(routerIds, workInfo);
-                if (routerId) {
-                  this.connection.sendMgmtQuery('GET-MGMT-NODES', routerId)
-                    .then((function (results) {
-                      let response = results.response;
-                      if (Object.prototype.toString.call(response) === '[object Array]') {
-                        // special case of edge case:
-                        // we are connected to an edge router that is connected to
-                        // a router that is not connected to any other interior routers
-                        if (response.length === 0) {
-                          response = [routerId];
-                        }
-                        this.doget(response)
-                          .then( function (workInfo) {
-                            finish.call(this, workInfo);
-                          }.bind(this));
-
-                      }
-                    }).bind(this));
-                } else {
-                  finish.call(this, workInfo);
-                }
-              }.bind(this));
+                return routerId;
+              };
+              this.doget(routerIds).then(
+                function(workInfo) {
+                  // test for edge case
+                  let routerId = connectedToEdge(routerIds, workInfo);
+                  if (routerId) {
+                    this.connection
+                      .sendMgmtQuery("GET-MGMT-NODES", routerId)
+                      .then(
+                        function(results) {
+                          let response = results.response;
+                          if (
+                            Object.prototype.toString.call(response) ===
+                            "[object Array]"
+                          ) {
+                            // special case of edge case:
+                            // we are connected to an edge router that is connected to
+                            // a router that is not connected to any other interior routers
+                            if (response.length === 0) {
+                              response = [routerId];
+                            }
+                            this.doget(response).then(
+                              function(workInfo) {
+                                finish.call(this, workInfo);
+                              }.bind(this)
+                            );
+                          }
+                        }.bind(this)
+                      );
+                  } else {
+                    finish.call(this, workInfo);
+                  }
+                }.bind(this)
+              );
+            }
+          }.bind(this),
+          function(error) {
+            reject(error);
           }
-        }).bind(this), function (error) {
-          reject(error);
-        });
-    }).bind(this));
+        );
+      }.bind(this)
+    );
   }
   doget(ids) {
-    return new Promise((function (resolve) {
-      let workInfo = {};
-      for (var i = 0; i < ids.length; ++i) {
-        workInfo[ids[i]] = {};
-      }
-      var gotResponse = function (nodeName, entity, response) {
-        workInfo[nodeName][entity] = response;
-        workInfo[nodeName][entity]['timestamp'] = new Date();
-      };
-      var q = d3.queue(this.connection.availableQeueuDepth());
-      for (var id in workInfo) {
-        for (var entity in this.entityAttribs) {
-          q.defer((this.q_fetchNodeInfo).bind(this), id, entity, this.entityAttribs[entity], q, gotResponse);
+    return new Promise(
+      function(resolve) {
+        let workInfo = {};
+        for (var i = 0; i < ids.length; ++i) {
+          workInfo[ids[i]] = {};
         }
-      }
-      q.await((function () {
-        // filter out nodes that have no connection info
-        if (this.filtering) {
-          for (var id in workInfo) {
-            if (!(workInfo[id].connection)) {
-              this.flux = true;
-              delete workInfo[id];
-            }
+        var gotResponse = function(nodeName, entity, response) {
+          workInfo[nodeName][entity] = response;
+          workInfo[nodeName][entity]["timestamp"] = new Date();
+        };
+        var q = d3.queue(this.connection.availableQeueuDepth());
+        for (var id in workInfo) {
+          for (var entity in this.entityAttribs) {
+            q.defer(
+              this.q_fetchNodeInfo.bind(this),
+              id,
+              entity,
+              this.entityAttribs[entity],
+              q,
+              gotResponse
+            );
           }
         }
-        resolve(workInfo);
-      }).bind(this));
-    }).bind(this));
+        q.await(
+          function() {
+            // filter out nodes that have no connection info
+            if (this.filtering) {
+              for (var id in workInfo) {
+                if (!workInfo[id].connection) {
+                  this.flux = true;
+                  delete workInfo[id];
+                }
+              }
+            }
+            resolve(workInfo);
+          }.bind(this)
+        );
+      }.bind(this)
+    );
   }
 
   onDone(result) {
     clearTimeout(this._getTimer);
     if (this.updating)
-      this._getTimer = setTimeout((this.get).bind(this), this.updateInterval);
+      this._getTimer = setTimeout(this.get.bind(this), this.updateInterval);
     this.executeUpdatedActions(result);
   }
   startUpdating(filter) {
@@ -219,18 +256,29 @@ class Topology {
   }
   fetchEntity(node, entity, attrs, callback) {
     var results = {};
-    var gotResponse = function (nodeName, dotentity, response) {
+    var gotResponse = function(nodeName, dotentity, response) {
       results = response;
     };
     var q = d3.queue(this.connection.availableQeueuDepth());
-    q.defer((this.q_fetchNodeInfo).bind(this), node, entity, attrs, q, gotResponse);
-    q.await(function () {
+    q.defer(
+      this.q_fetchNodeInfo.bind(this),
+      node,
+      entity,
+      attrs,
+      q,
+      gotResponse
+    );
+    q.await(function() {
       callback(node, entity, results);
     });
   }
   // called from d3.queue.defer so the last argument (callback) is supplied by d3
   q_fetchNodeInfo(nodeId, entity, attrs, q, heartbeat, callback) {
-    this.getNodeInfo(nodeId, entity, attrs, q, function (nodeName, dotentity, response) {
+    this.getNodeInfo(nodeId, entity, attrs, q, function(
+      nodeName,
+      dotentity,
+      response
+    ) {
       heartbeat(nodeName, dotentity, response);
       callback(null);
     });
@@ -240,23 +288,29 @@ class Topology {
     var q = d3.queue(this.connection.availableQeueuDepth());
     var results = {};
     if (!resultCallback) {
-      resultCallback = function (nodeName, dotentity, response) {
-        if (!results[nodeName])
-          results[nodeName] = {};
+      resultCallback = function(nodeName, dotentity, response) {
+        if (!results[nodeName]) results[nodeName] = {};
         results[nodeName][dotentity] = response;
       };
     }
-    var gotAResponse = function (nodeName, dotentity, response) {
+    var gotAResponse = function(nodeName, dotentity, response) {
       resultCallback(nodeName, dotentity, response);
     };
-    if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
+    if (Object.prototype.toString.call(entityAttribs) !== "[object Array]") {
       entityAttribs = [entityAttribs];
     }
     for (var i = 0; i < entityAttribs.length; ++i) {
       var ea = entityAttribs[i];
-      q.defer((this.q_fetchNodeInfo).bind(this), node, ea.entity, ea.attrs || [], q, gotAResponse);
+      q.defer(
+        this.q_fetchNodeInfo.bind(this),
+        node,
+        ea.entity,
+        ea.attrs || [],
+        q,
+        gotAResponse
+      );
     }
-    q.await(function () {
+    q.await(function() {
       doneCallback(results);
     });
   }
@@ -265,44 +319,56 @@ class Topology {
     var q = d3.queue(this.connection.availableQeueuDepth());
     var results = {};
     if (!resultCallback) {
-      resultCallback = function (nodeName, dotentity, response) {
-        if (!results[nodeName])
-          results[nodeName] = {};
+      resultCallback = function(nodeName, dotentity, response) {
+        if (!results[nodeName]) results[nodeName] = {};
         results[nodeName][dotentity] = response;
       };
     }
-    var gotAResponse = function (nodeName, dotentity, response) {
+    var gotAResponse = function(nodeName, dotentity, response) {
       resultCallback(nodeName, dotentity, response);
     };
-    if (Object.prototype.toString.call(entityAttribs) !== '[object Array]') {
+    if (Object.prototype.toString.call(entityAttribs) !== "[object Array]") {
       entityAttribs = [entityAttribs];
     }
     var nodes = Object.keys(this._nodeInfo);
     for (var n = 0; n < nodes.length; ++n) {
       for (var i = 0; i < entityAttribs.length; ++i) {
         var ea = entityAttribs[i];
-        q.defer((this.q_fetchNodeInfo).bind(this), nodes[n], ea.entity, ea.attrs || [], q, gotAResponse);
+        q.defer(
+          this.q_fetchNodeInfo.bind(this),
+          nodes[n],
+          ea.entity,
+          ea.attrs || [],
+          q,
+          gotAResponse
+        );
       }
     }
-    q.await(function () {
+    q.await(function() {
       doneCallback(results);
     });
   }
   // enusre all the topology nones have all these entities
   ensureAllEntities(entityAttribs, callback, extra) {
-    this.ensureEntities(Object.keys(this._nodeInfo), entityAttribs, callback, extra);
+    this.ensureEntities(
+      Object.keys(this._nodeInfo),
+      entityAttribs,
+      callback,
+      extra
+    );
   }
   // ensure these nodes have all these entities. don't fetch unless forced to
   ensureEntities(nodes, entityAttribs, callback, extra) {
-    if (Object.prototype.toString.call(nodes) !== '[object Array]') {
+    if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
     this.addUpdateEntities(entityAttribs);
-    this.doget(nodes)
-      .then( function (results) {
+    this.doget(nodes).then(
+      function(results) {
         this.saveResults(results);
         callback(extra, results);
-      }.bind(this));
+      }.bind(this)
+    );
   }
   addNodeInfo(id, entity, values) {
     // save the results in the nodeInfo object
@@ -312,7 +378,7 @@ class Topology {
       }
       // copy the values to allow garbage collection
       this._nodeInfo[id][entity] = values;
-      this._nodeInfo[id][entity]['timestamp'] = new Date();
+      this._nodeInfo[id][entity]["timestamp"] = new Date();
     }
   }
   isLargeNetwork() {
@@ -321,10 +387,9 @@ class Topology {
   getConnForLink(link) {
     // find the connection for this link
     var conns = this._nodeInfo[link.nodeId].connection;
-    if (!conns)
-      return {};
-    var connIndex = conns.attributeNames.indexOf('identity');
-    var linkCons = conns.results.filter(function (conn) {
+    if (!conns) return {};
+    var connIndex = conns.attributeNames.indexOf("identity");
+    var linkCons = conns.results.filter(function(conn) {
       return conn[connIndex] === link.connectionId;
     });
     return utils.flatten(conns.attributeNames, linkCons[0]);
@@ -356,44 +421,71 @@ class Topology {
   }
   // d3.queue'd function to make a management query for entities/attributes
   q_ensureNodeInfo(nodeId, entity, attrs, q, callback) {
-    this.getNodeInfo(nodeId, entity, attrs, q, (function (nodeName, dotentity, response) {
-      this.addNodeInfo(nodeName, dotentity, response);
-      callback(null);
-    }).bind(this));
+    this.getNodeInfo(
+      nodeId,
+      entity,
+      attrs,
+      q,
+      function(nodeName, dotentity, response) {
+        this.addNodeInfo(nodeName, dotentity, response);
+        callback(null);
+      }.bind(this)
+    );
     return {
-      abort: function () {
+      abort: function() {
         delete this._nodeInfo[nodeId];
       }
     };
   }
   getNodeInfo(nodeName, entity, attrs, q, callback) {
-    var timedOut = function (q) {
+    var timedOut = function(q) {
       q.abort();
     };
     var atimer = setTimeout(timedOut, this.timeout, q);
-    this.connection.sendQuery(nodeName, entity, attrs)
-      .then(function (response) {
+    this.connection.sendQuery(nodeName, entity, attrs).then(
+      function(response) {
         clearTimeout(atimer);
         callback(nodeName, entity, response.response);
-      }, function () {
+      },
+      function() {
         q.abort();
-      });
+      }
+    );
   }
-  getMultipleNodeInfo(nodeNames, entity, attrs, callback, selectedNodeId, aggregate) {
+  getMultipleNodeInfo(
+    nodeNames,
+    entity,
+    attrs,
+    callback,
+    selectedNodeId,
+    aggregate
+  ) {
     var self = this;
-    if (typeof aggregate === 'undefined')
-      aggregate = true;
+    if (typeof aggregate === "undefined") aggregate = true;
     var responses = {};
-    var gotNodesResult = function (nodeName, dotentity, response) {
+    var gotNodesResult = function(nodeName, dotentity, response) {
       responses[nodeName] = response;
     };
     var q = d3.queue(this.connection.availableQeueuDepth());
-    nodeNames.forEach(function (id) {
-      q.defer((self.q_fetchNodeInfo).bind(self), id, entity, attrs, q, gotNodesResult);
+    nodeNames.forEach(function(id) {
+      q.defer(
+        self.q_fetchNodeInfo.bind(self),
+        id,
+        entity,
+        attrs,
+        q,
+        gotNodesResult
+      );
     });
-    q.await(function () {
+    q.await(function() {
       if (aggregate)
-        self.aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback);
+        self.aggregateNodeInfo(
+          nodeNames,
+          entity,
+          selectedNodeId,
+          responses,
+          callback
+        );
       else {
         callback(nodeNames, entity, responses);
       }
@@ -401,10 +493,15 @@ class Topology {
   }
   quiesceLink(nodeId, name) {
     var attributes = {
-      adminStatus: 'disabled',
+      adminStatus: "disabled",
       name: name
     };
-    return this.connection.sendMethod(nodeId, 'router.link', attributes, 'UPDATE');
+    return this.connection.sendMethod(
+      nodeId,
+      "router.link",
+      attributes,
+      "UPDATE"
+    );
   }
   aggregateNodeInfo(nodeNames, entity, selectedNodeId, responses, callback) {
     // aggregate the responses
@@ -420,7 +517,7 @@ class Topology {
       var result = thisNode.results[i];
       var vals = [];
       // there is a val for each attribute in this entity
-      result.forEach(function (val) {
+      result.forEach(function(val) {
         vals.push({
           sum: val,
           detail: []
@@ -428,25 +525,24 @@ class Topology {
       });
       newResponse.aggregates.push(vals);
     }
-    var nameIndex = thisNode.attributeNames.indexOf('name');
+    var nameIndex = thisNode.attributeNames.indexOf("name");
     var ent = self.connection.schema.entityTypes[entity];
     var ids = Object.keys(responses);
     ids.sort();
-    ids.forEach(function (id) {
+    ids.forEach(function(id) {
       var response = responses[id];
       var results = response.results;
-      results.forEach(function (result) {
+      results.forEach(function(result) {
         // find the matching result in the aggregates
-        var found = newResponse.aggregates.some(function (aggregate) {
+        var found = newResponse.aggregates.some(function(aggregate) {
           if (aggregate[nameIndex].sum === result[nameIndex]) {
             // result and aggregate are now the same record, add the graphable values
-            newResponse.attributeNames.forEach(function (key, i) {
+            newResponse.attributeNames.forEach(function(key, i) {
               if (ent.attributes[key] && ent.attributes[key].graph) {
-                if (id != selectedNodeId)
-                  aggregate[i].sum += result[i];
+                if (id != selectedNodeId) aggregate[i].sum += result[i];
               }
               aggregate[i].detail.push({
-                node: utils.nameFromId(id) + ':',
+                node: utils.nameFromId(id) + ":",
                 val: result[i]
               });
             });
@@ -458,13 +554,15 @@ class Topology {
           // this attribute was not found in the aggregates yet
           // because it was not in the selectedNodeId's results
           var vals = [];
-          result.forEach(function (val) {
+          result.forEach(function(val) {
             vals.push({
               sum: val,
-              detail: [{
-                node: utils.nameFromId(id),
-                val: val
-              }]
+              detail: [
+                {
+                  node: utils.nameFromId(id),
+                  val: val
+                }
+              ]
             });
           });
           newResponse.aggregates.push(vals);
