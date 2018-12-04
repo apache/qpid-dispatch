@@ -208,6 +208,14 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
         *unavailable = true;
 
     if (!addr && create_if_not_found) {
+        //
+        // If the address is a router-class address, change treatment to closest.
+        //
+        qd_iterator_reset(iter);
+        if (qd_iterator_octet(iter) == (unsigned char) QD_ITER_HASH_PREFIX_ROUTER) {
+            treat = QD_TREATMENT_ANYCAST_CLOSEST;
+        }
+
         addr = qdr_address_CT(core, treat);
         if (addr) {
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
