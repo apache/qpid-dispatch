@@ -78,6 +78,7 @@ set(qpid_dispatch_SOURCES
   python_embedded.c
   router_agent.c
   router_config.c
+  address_lookup_utils.c
   router_core/agent.c
   router_core/agent_address.c
   router_core/agent_config_address.c
@@ -109,7 +110,7 @@ set(qpid_dispatch_SOURCES
   router_core/modules/edge_router/edge_mgmt.c
   router_core/modules/test_hooks/core_test_hooks.c
   router_core/modules/edge_addr_tracking/edge_addr_tracking.c
-  router_core/modules/address_lookup/address_lookup.c
+  router_core/modules/address_lookup_server/address_lookup_server.c
   router_core/modules/address_lookup_client/lookup_client.c
   router_node.c
   router_pynode.c
