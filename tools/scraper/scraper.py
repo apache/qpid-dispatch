@@ -225,6 +225,7 @@ def main_except(argv):
 
     # sort transfer short name customer lists
     comn.shorteners.short_data_names.sort_customers()
+    comn.shorteners.short_link_names.sort_customers()
 
     #
     # Start producing the output stream
@@ -625,23 +626,22 @@ def main_except(argv):
               "<th>T delta</th> <th>T elapsed</th></tr>")
         t0 = None
         tlast = None
-        for plf in tree:
-            if plf.data.name == "attach" and plf.data.link_short_name == sname:
-                if t0 is None:
-                    t0 = plf.datetime
-                    delta = "0.000000"
-                    epsed = "0.000000"
-                else:
-                    delta = time_offset(plf.datetime, tlast)
-                    epsed = time_offset(plf.datetime, t0)
-                tlast = plf.datetime
-                rid = plf.router.iname
-                peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
-                peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
-                print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
-                      "<td>%s</td> <td>%s</td> <td>%s</td></tr>" %
-                      (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction, peerconnid, peer,
-                       delta, epsed))
+        for plf in comn.shorteners.short_link_names.customers(sname):
+            if t0 is None:
+                t0 = plf.datetime
+                delta = "0.000000"
+                epsed = "0.000000"
+            else:
+                delta = time_offset(plf.datetime, tlast)
+                epsed = time_offset(plf.datetime, t0)
+            tlast = plf.datetime
+            rid = plf.router.iname
+            peerconnid = "%s" % comn.conn_peers_connid.get(plf.data.conn_id, "")
+            peer = plf.router.conn_peer_display.get(plf.data.conn_id, "")  # peer container id
+            print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> "
+                  "<td>%s</td> <td>%s</td> <td>%s</td></tr>" %
+                  (plf.adverbl_link_to(), plf.datetime, rid, plf.data.conn_id, plf.data.direction, peerconnid, peer,
+                   delta, epsed))
         print("</table>")
 
     print("<hr>")

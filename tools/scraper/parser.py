@@ -433,7 +433,7 @@ class ParsedLogLine(object):
             res.role = "receiver" if resdict["role"] == "true" else "sender"
             res.is_receiver = res.role == "receiver"
             name = self.resdict_value(resdict, "name", "None")
-            res.link_short_name_popup = self.shorteners.short_link_names.translate(name, True)
+            res.link_short_name_popup = self.shorteners.short_link_names.translate(name, True, customer=self)
             res.link_short_name = self.shorteners.short_link_names.translate(name, False)
             tmpsrc = self.resdict_value(resdict, "source", None)
             tmptgt = self.resdict_value(resdict, "target", None)
