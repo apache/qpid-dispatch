@@ -469,7 +469,17 @@
                     "create": true,
                     "required": false,
                     "default": true
-                },                
+                },
+                "timestampsInUTC": {
+                    "type": "boolean",
+                    "description": "Use UTC time rather than localtime in logs.",
+                    "create": true
+                },
+                "timestampFormat": {
+                    "type": "string",
+                    "description": "Format string to use for timestamps in logs.",
+                    "create": true
+                },
                 "allowUnsettledMulticast": {
                     "type": "boolean",
                     "description": "(DEPRECATED) If true, allow senders to send unsettled deliveries to multicast addresses.  These deliveries shall be settled by the ingress router.  If false, unsettled deliveries to multicast addresses shall be rejected.",

@@ -22,6 +22,7 @@
 #include <qpid/dispatch/log.h>
 
 void qd_log_initialize(void);
+void qd_log_global_options(const char* format, bool utc);
 void qd_log_finalize(void);
 
 #define QD_LOG_TEXT_MAX 2048

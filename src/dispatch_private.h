@@ -58,6 +58,8 @@ struct qd_dispatch_t {
     qd_router_mode_t  router_mode;
     bool   allow_resumable_link_route;
     bool   test_hooks;
+    bool   timestamps_in_utc;
+    char*  timestamp_format;
 };
 
 /**

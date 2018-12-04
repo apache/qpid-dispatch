@@ -83,6 +83,12 @@ DEQ_DECLARE(log_sink_t, log_sink_list_t);
 static log_sink_list_t sink_list = {0};
 
 const char *format = "%Y-%m-%d %H:%M:%S.%%06lu %z";
+bool utc = false;
+
+void qd_log_global_options(const char* _format, bool _utc) {
+    if (_format) format = _format;
+    utc = _utc;
+}
 
 static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
@@ -303,9 +309,9 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         buf[0] = '\0';
 
         time_t sec = entry->time.tv_sec;
-        struct tm *local_tm = localtime(&sec);
+        struct tm *time = utc ? gmtime(&sec) : localtime(&sec);
         char fmt[100];
-        strftime(fmt, sizeof fmt, format, local_tm);
+        strftime(fmt, sizeof fmt, format, time);
         snprintf(buf, 100, fmt, entry->time.tv_usec);
 
         aprintf(&begin, end, "%s ", buf);
@@ -546,7 +552,6 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         if (qd_entity_has(entity, "includeSource"))
             src->includeSource = qd_entity_get_bool(entity, "includeSource");
         QD_ERROR_BREAK();
-
     } while(0);
 
     if (module)
