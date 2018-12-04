@@ -43,6 +43,7 @@ typedef struct qdr_edge_t            qdr_edge_t;
 
 #include "core_link_endpoint.h"
 #include "core_events.h"
+#include "core_attach_address_lookup.h"
 
 qdr_forwarder_t *qdr_forwarder_CT(qdr_core_t *core, qd_address_treatment_t treatment);
 int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *msg, qdr_delivery_t *in_delivery,
@@ -726,6 +727,8 @@ struct qdr_core_t {
     qdr_connection_t     *active_edge_connection;
     qdr_connection_list_t connections_to_activate;
     qdr_link_list_t       open_links;
+
+    qdrc_attach_addr_lookup_t  addr_lookup_handler;
 
     //
     // Agent section
