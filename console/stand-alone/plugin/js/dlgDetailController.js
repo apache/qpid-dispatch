@@ -102,13 +102,6 @@ export class DetailDialogController {
     $scope.expanded = function (id) {
       return expandedRows.has(id);
     };
-    $scope.cellWidth = function (key, val) {
-      if (key === 'autoLinkFields') {
-        return val === 'addr' ? '40%' : '20%';
-      }
-      let totalChars = $scope.fields[key].count;
-      return `${Math.round(val.length * 100 / totalChars)}%`;
-    };
     $scope.fieldWidth = function (val, sizes) {
       if (!sizes)
         return '10%';
@@ -256,3 +249,25 @@ export class DetailDialogController {
   }
 }
 DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', 'd'];
+
+export class SubTable {
+  constructor () {
+    this.restrict = 'E';
+    this.scope = {
+      sizes: '=sizes',
+      cols: '=cols',
+      rows: '=rows'
+    };
+    this.templateUrl = 'sub-table.html';
+  }
+  link (scope) {
+    scope.fieldWidth = function (val, sizes) {
+      if (!sizes)
+        return '10%';
+      return `${Math.round(sizes[val] * 100 / sizes.total)}%`;
+    };
+  }
+  static create() {
+    return new SubTable();
+  }
+}

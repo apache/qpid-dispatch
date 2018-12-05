@@ -154,29 +154,34 @@
             ng-click="expandClicked(info.container)"
         >
             <td colspan="6">
-                <div class="sub-table">
-                    <div class="sub-table-row header">
-                        <span class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.sizes) }" 
-                            ng-repeat="field in fields.linkFields.cols">
-                            {{field | humanify}}
-                        </span>
-                    </div>
-                    <div class="sub-table-row body" ng-repeat="link in info.links">
-                        <span class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.sizes) }" 
-                            ng-repeat="field in fields.linkFields.cols">
-                            {{link[field] | pretty}}
-                        </span>
-                    </div>
-                </div>
+                <sub-table 
+                    sizes="info.sizes" 
+                    cols="fields.linkFields.cols"
+                    rows="info.links"></sub-table>
             </td>
         </tr>
     </table>
 </script>
 
-<script type="text/ng-template" id="consoles.html">
-
+<script type="text/ng-template" id="sub-table.html">
+    <div class="sub-table">
+            <div class="sub-table-row header">
+                <span 
+                    class="sub-table-col client" 
+                    ng-style="{ width: fieldWidth(field, sizes) }" 
+                    ng-repeat="field in cols">
+                    {{field | humanify}}
+                </span>
+            </div>
+            <div class="sub-table-row body" ng-repeat="link in rows">
+                <span 
+                    class="sub-table-col client" 
+                    ng-style="{ width: fieldWidth(field, sizes) }" 
+                    ng-repeat="field in cols">
+                    {{link[field] | pretty}}
+                </span>
+            </div>
+        </div>
 </script>
 
 <script type="text/ng-template" id="edgeRouters.html">
@@ -207,6 +212,7 @@
             <td class="right">{{info.addrCount}}</td>
             <td class="right">{{info.acceptedDeliveries | pretty}}</td>
         </tr>
+        <!-- hidden row that is exposed when above row is clicked-->
         <tr ng-repeat-end
             ng-class="{hiddenRow: !expanded(info.name)}"
             ng-click="expandClicked(info.name)"
@@ -223,63 +229,22 @@
                 </dl>
     
                 <h4>Link routes</h4>
-                <div class="sub-table">
-                    <div class="sub-table-row header">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.linkRouteSizes) }" 
-                            ng-repeat="field in fields.linkRouteFields.cols">
-                            {{field | humanify}}
-                        </span>
-                    </div>
-                    <div class="sub-table-row body" ng-repeat="link in info.linkRoutes">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.linkRouteSizes) }" 
-                            ng-repeat="field in fields.linkRouteFields.cols">
-                            {{link[field] | pretty}}
-                        </span>
-                    </div>
-                </div>
-    
+                <sub-table 
+                    sizes="info.linkRouteSizes" 
+                    cols="fields.linkRouteFields.cols"
+                    rows="info.linkRoutes"></sub-table>
+
                 <h4>Autolinks</h4>
-                <div class="sub-table">
-                    <div class="sub-table-row header">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.autoLinkSizes) }" 
-                            ng-repeat="field in fields.autoLinkFields.cols">
-                            {{field | humanify}}
-                        </span>
-                    </div>
-                    <div class="sub-table-row body" ng-repeat="link in info.autoLinks">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.autoLinkSizes) }" 
-                            ng-repeat="field in fields.autoLinkFields.cols">
-                            {{link[field] | pretty}}
-                        </span>
-                    </div>
-                </div>
+                <sub-table 
+                    sizes="info.autoLinkSizes" 
+                    cols="fields.autoLinkFields.cols"
+                    rows="info.autoLinks"></sub-table>
+
                 <h4>Addresses</h4>
-                <div class="sub-table">
-                    <div class="sub-table-row header">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.addressSizes) }" 
-                            ng-repeat="field in fields.addressFields.cols">
-                            {{field | humanify}}
-                        </span>
-                    </div>
-                    <div class="sub-table-row body" ng-repeat="link in info.addresses">
-                        <span 
-                            class="sub-table-col client" 
-                            ng-style="{ width: fieldWidth(field, info.addressSizes) }" 
-                            ng-repeat="field in fields.addressFields.cols">
-                            {{link[field] | pretty}}
-                        </span>
-                    </div>
-                </div>
+                <sub-table 
+                    sizes="info.addressSizes" 
+                    cols="fields.addressFields.cols"
+                    rows="info.addresses"></sub-table>
             </td>
         </tr>
     </table>

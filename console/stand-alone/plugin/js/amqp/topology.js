@@ -23,7 +23,7 @@ class Topology {
     this.connection = connectionManager;
     this.updatedActions = {};
     this.entities = []; // which entities to request each topology update
-    this.entityAttribs = {};
+    this.entityAttribs = {connection: []};
     this._nodeInfo = {}; // info about all known nodes and entities
     this.filtering = false; // filter out nodes that don't have connection info
     this.timeout = 5000;

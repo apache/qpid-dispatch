@@ -406,7 +406,6 @@ export class TopologyController {
           force: true}], 
         function () {
           let nodeInfo = QDRService.management.topology.nodeInfo();
-          console.log(nodeInfo);
           forceData.nodes = nodes = new Nodes(QDRLog);
           nodes.initialize(nodeInfo, localStorage, width, height);
           forceData.links = links = new Links(QDRLog);
@@ -570,7 +569,7 @@ export class TopologyController {
       // circle (node) group
       // nodes are known by router id, or for groups, by the router id + 1st connectionId
       circle = circle.data(nodes.nodes, function(d) {
-        return d.uid(QDRService);
+        return d.uid();
       });
 
       // update existing nodes visual states
@@ -1050,8 +1049,8 @@ export class TopologyController {
       // we only need to update connections during steady-state
       QDRService.management.topology.setUpdateEntities(['connection']);
       // we currently have all entities available on all routers
-      saveChanged();
       initForceGraph();
+      saveChanged();
       // after the graph is displayed fetch all .router.node info. This is done so highlighting between nodes
       // doesn't incur a delay
       QDRService.management.topology.addUpdateEntities([

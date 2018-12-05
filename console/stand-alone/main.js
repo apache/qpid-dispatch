@@ -39,7 +39,7 @@ import { ChordController } from './plugin/js/chord/qdrChord.js';
 import { ListController } from './plugin/js/qdrList.js';
 import { TopAddressesController } from './plugin/js/qdrTopAddressesController.js';
 import { ChartDialogController } from './plugin/js/dlgChartController.js';
-import { DetailDialogController } from './plugin/js/dlgDetailController.js';
+import { DetailDialogController, SubTable } from './plugin/js/dlgDetailController.js';
 import { SettingsController } from './plugin/js/qdrSettings.js';
 import { SchemaController } from './plugin/js/qdrSchema.js';
 import { ChartsController } from './plugin/js/qdrCharts.js';
@@ -258,6 +258,7 @@ import { posint } from './plugin/js/posintDirective.js';
   QDR.module.service('QDRService', QDRService);
   QDR.module.service('QDRChartService', QDRChartService);
   QDR.module.directive('posint', posint);
+  QDR.module.directive('subTable', SubTable.create);
   //  .directive('exampleDirective', () => new ExampleDirective);
 }({}));
 

@@ -1088,7 +1088,7 @@ svg {
       stroke-dasharray: 10,2;
   }
   text {
-    font: 12px sans-serif;
+    /*font: 12px sans-serif;*/
     pointer-events: none;
     /*font-family: monospace;*/
   
