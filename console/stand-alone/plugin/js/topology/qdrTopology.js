@@ -409,7 +409,8 @@ export class TopologyController {
           forceData.nodes = nodes = new Nodes(QDRLog);
           nodes.initialize(nodeInfo, localStorage, width, height);
           forceData.links = links = new Links(QDRLog);
-          links.initialize(nodeInfo, nodes, [], localStorage, height);
+          let edgeUnknowns = [];
+          links.initialize(nodeInfo, nodes, edgeUnknowns, localStorage, height);
           animate = true;
           force.nodes(nodes.nodes).links(links.links).start();
           nodes.saveLonLat(backgroundMap);

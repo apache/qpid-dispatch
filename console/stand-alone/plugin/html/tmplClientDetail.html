@@ -194,7 +194,7 @@
                 <th>Auto Links</th>
                 <th>Conns</th>
                 <th>Addrs</th>
-                <th>Accepted</td>
+                <th>Accepted/sec</td>
             </tr>
         </thead>
         <tr ng-repeat-start="info in detail.infoPerId" 
@@ -210,7 +210,7 @@
             <td class="right">{{info.autoLinkCount}}</td>
             <td class="right">{{info.connectionCount}}</td>
             <td class="right">{{info.addrCount}}</td>
-            <td class="right">{{info.acceptedDeliveries | pretty}}</td>
+            <td class="right">{{info.acceptedDeliveriesRate | pretty}}</td>
         </tr>
         <!-- hidden row that is exposed when above row is clicked-->
         <tr ng-repeat-end

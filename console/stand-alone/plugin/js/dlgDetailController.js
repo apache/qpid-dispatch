@@ -18,23 +18,26 @@ under the License.
 */
 
 /* global Promise d3 Set */
+import { utils } from "./amqp/utilities.js";
+
 export class DetailDialogController {
   constructor(QDRService, $scope, $timeout, $uibModalInstance, d) {
     this.controllerName = 'QDR.DetailDialogController';
+    this.rates = {};
 
     let expandedRows = new Set();
     $scope.d = d;  // the node object
     $scope.detail = {
       template: 'loading.html',
     };
+    // count the number of characters in an array of strings
     let countChars = function (ar) {
       let count = 0;
-      ar.forEach( function (a) {
-        count += a.length;
-      });
+      ar.forEach( a => count += a.length);
       return count;
     };
 
+    // which attributes to fetch and display
     $scope.fields = {
       detailFields: {
         cols: [
@@ -83,14 +86,17 @@ export class DetailDialogController {
         ]
       }
     };
+    // used for calculating sub-table cell widths
     for (let f in $scope.fields) {
       $scope.fields[f].count = countChars($scope.fields[f].cols);
     }
 
+    // close button clicked
     $scope.okClick = function () {
       clearInterval(updateTimer);
       $uibModalInstance.close(true);
     };
+    // a row was expanded/collapsed. add/remove it to/from the Set
     $scope.expandClicked = function (id) {
       if (expandedRows.has(id)) {
         expandedRows.delete(id);
@@ -102,16 +108,12 @@ export class DetailDialogController {
     $scope.expanded = function (id) {
       return expandedRows.has(id);
     };
-    $scope.fieldWidth = function (val, sizes) {
-      if (!sizes)
-        return '10%';
-      return `${Math.round(sizes[val] * 100 / sizes.total)}%`;
-    };
+    // keep an array of column sizes
     let updateSizes = function (fields, sizes, obj) {
       fields.forEach( function (key) {
         if (!sizes[key])
-          sizes[key] = QDRService.utilities.humanify(key).length;
-        sizes[key] = Math.max(sizes[key], QDRService.utilities.pretty(obj[key]).length);
+          sizes[key] = utils.humanify(key).length;
+        sizes[key] = Math.max(sizes[key], utils.pretty(obj[key]).length);
       });
       sizes.total = 0;
       for (let key in sizes) {
@@ -120,15 +122,20 @@ export class DetailDialogController {
       }
     };
 
+    // get the detail info for the popup
     let groupDetail = function () {
+      let self = this;
+      // queued function to get the .router info for an edge router
       let q_getEdgeInfo = function (n, infoPerId, callback) {
-        let nodeId = QDRService.utilities.idFromName(n.container, '_edge');
+        let nodeId = utils.idFromName(n.container, '_edge');
         QDRService.management.topology.fetchEntities(nodeId, 
           [{entity: 'router', attrs: []},
           ],
           function (results) {
             let r = results[nodeId].router;
-            infoPerId[n.container] = QDRService.utilities.flatten(r.attributeNames, r.results[0]);
+            infoPerId[n.container] = utils.flatten(r.attributeNames, r.results[0]);
+            let rates = utils.rates(infoPerId[n.container], ["acceptedDeliveries"], self.rates, n.container, 1);
+            infoPerId[n.container].acceptedDeliveriesRate = Math.round(rates.acceptedDeliveries, 2);
             infoPerId[n.container].linkRoutes = [];
             infoPerId[n.container].autoLinks = [];
             infoPerId[n.container].addresses = [];
@@ -137,9 +144,11 @@ export class DetailDialogController {
       };
       return new Promise( (function (resolve) {
         let infoPerId = {};
+        // we are getting info for an edge router
         if (d.nodeType === 'edge') {
+          // called for each expanded row to get further details about the edge router
           $scope.detail.moreInfo = function (id) {
-            let nodeId = QDRService.utilities.idFromName(id, '_edge');
+            let nodeId = utils.idFromName(id, '_edge');
             QDRService.management.topology.fetchEntities(nodeId, 
               [{entity: 'router.link', attrs: []},
                 {entity: 'linkRoute', attrs: $scope.fields.linkRouteFields.cols},
@@ -148,20 +157,21 @@ export class DetailDialogController {
               ],
               function (results) {
                 $timeout( function () {
+                  // save the results (and sizes) for each entity requested
                   infoPerId[id].linkRouteSizes = {};
-                  infoPerId[id].linkRoutes = QDRService.utilities.flattenAll(results[nodeId].linkRoute,
+                  infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute,
                     function (route) {
                       updateSizes($scope.fields.linkRouteFields.cols, infoPerId[id].linkRouteSizes, route);
                       return route;
                     });
                   infoPerId[id].autoLinkSizes = {};
-                  infoPerId[id].autoLinks = QDRService.utilities.flattenAll(results[nodeId].autoLink, 
+                  infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink, 
                     function (link) {
                       updateSizes($scope.fields.autoLinkFields.cols, infoPerId[id].autoLinkSizes, link);
                       return link;
                     });
                   infoPerId[id].addressSizes = {};
-                  infoPerId[id].addresses = QDRService.utilities.flattenAll(results[nodeId].address, 
+                  infoPerId[id].addresses = utils.flattenAll(results[nodeId].address, 
                     function (addr) {
                       updateSizes($scope.fields.addressFields.cols, infoPerId[id].addressSizes, addr);
                       return addr;
@@ -170,6 +180,7 @@ export class DetailDialogController {
               });
           };
 
+          // async send up to 10 requests
           let q = d3.queue(10);
           for (let n=0; n<d.normals.length; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
@@ -177,17 +188,20 @@ export class DetailDialogController {
               $scope.detail.moreInfo(d.normals[n].container);
             }
           }
+          // await until all sent requests have completed
           q.await(function () {
             $scope.detail.template = 'edgeRouters.html';
             $scope.detail.title = 'edge router';
+            // send the results
             resolve({
               description: 'Select an edge router to see more info',
               infoPerId: infoPerId
             });
           });
         } else {
+          // we are getting info for a group of clients or consoles
           $scope.detail.moreInfo = function () {};
-          let attrs = QDRService.utilities.copy($scope.fields.linkFields.cols);
+          let attrs = utils.copy($scope.fields.linkFields.cols);
           attrs.unshift('connectionId');
           QDRService.management.topology.fetchEntities(d.key, 
             [{entity: 'router.link', attrs: attrs}],
@@ -202,9 +216,9 @@ export class DetailDialogController {
                 conn.host = n.host;
                 //conn.links = [];
                 conn.sizes = {};
-                conn.links = QDRService.utilities.flattenAll(links, function (link) {
+                conn.links = utils.flattenAll(links, function (link) {
                   if (link.connectionId === n.connectionId) {
-                    link.owningAddr = QDRService.utilities.addr_text(link.owningAddr);
+                    link.owningAddr = utils.addr_text(link.owningAddr);
                     updateSizes($scope.fields.linkFields.cols, conn.sizes, link);
                     return link;
                   } else {
@@ -230,7 +244,7 @@ export class DetailDialogController {
     };
   
     let updateDetail = function () {
-      groupDetail()
+      groupDetail.call(this)
         .then( function (det) {
           $timeout( function () {
             $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
@@ -240,16 +254,17 @@ export class DetailDialogController {
             }).sort( function (a, b) {
               return a.name > b.name ? 1 : -1;
             });
-          }, 10);
+          });
         });
     };
-    let updateTimer = setInterval(updateDetail, 2000);
-    updateDetail();
+    let updateTimer = setInterval(updateDetail.bind(this), 2000);
+    updateDetail.call(this);
 
   }
 }
 DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', 'd'];
 
+// SubTable directive
 export class SubTable {
   constructor () {
     this.restrict = 'E';
