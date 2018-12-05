@@ -634,6 +634,8 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_t *d = DEQ_HEAD(undelivered);
     while (d) {
         assert(d->where == QDR_DELIVERY_IN_UNDELIVERED);
+        if (d->presettled)
+            core->dropped_presettled_deliveries++;
         d->where = QDR_DELIVERY_NOWHERE;
         d = DEQ_NEXT(d);
     }
