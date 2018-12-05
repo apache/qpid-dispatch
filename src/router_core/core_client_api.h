@@ -42,10 +42,10 @@ typedef struct qdrc_client_t qdrc_client_t;
  * @param user_context - as passed to qdrc_client_CT()
  * @param active - true if both links are opened, else false
  */
-typedef void (*qdrc_client_on_state_CT_t)(qdr_core_t *core,
+typedef void (*qdrc_client_on_state_CT_t)(qdr_core_t    *core,
                                           qdrc_client_t *client,
-                                          uintptr_t user_context,
-                                          bool active);
+                                          void          *user_context,
+                                          bool           active);
 
 
 /**
@@ -57,11 +57,11 @@ typedef void (*qdrc_client_on_state_CT_t)(qdr_core_t *core,
  * @param available_credit - current credit allocation
  * @param drain - if true client must consume all credit
  */
-typedef void (*qdrc_client_on_flow_CT_t)(qdr_core_t *core,
+typedef void (*qdrc_client_on_flow_CT_t)(qdr_core_t    *core,
                                          qdrc_client_t *client,
-                                         uintptr_t user_context,
-                                         int available_credit,
-                                         bool drain);
+                                         void          *user_context,
+                                         int            available_credit,
+                                         bool           drain);
 
 /**
  * Final disposition received for sent message
@@ -72,11 +72,11 @@ typedef void (*qdrc_client_on_flow_CT_t)(qdr_core_t *core,
  * @param request_context - as passed to qdrc_client_request_CT()
  * @param disposition - for the associated sent message
  */
-typedef void (*qdrc_client_on_ack_CT_t)(qdr_core_t *core,
+typedef void (*qdrc_client_on_ack_CT_t)(qdr_core_t    *core,
                                         qdrc_client_t *client,
-                                        uintptr_t user_context,
-                                        uintptr_t request_context,
-                                        uint64_t disposition);
+                                        void          *user_context,
+                                        void          *request_context,
+                                        uint64_t       disposition);
 
 /**
  * A reply message has arrived for a given request
@@ -91,19 +91,19 @@ typedef void (*qdrc_client_on_ack_CT_t)(qdr_core_t *core,
  *        - user must free the iterator when done.
  * @return final disposition for the received reply message
  */
-typedef uint64_t (*qdrc_client_on_reply_CT_t)(qdr_core_t *core,
+typedef uint64_t (*qdrc_client_on_reply_CT_t)(qdr_core_t    *core,
                                               qdrc_client_t *client,
-                                              uintptr_t user_context,
-                                              uintptr_t request_context,
+                                              void          *user_context,
+                                              void          *request_context,
                                               qd_iterator_t *app_properties,
                                               qd_iterator_t *body);
 
 
-typedef void (*qdrc_client_request_done_CT_t)(qdr_core_t *core,
+typedef void (*qdrc_client_request_done_CT_t)(qdr_core_t    *core,
                                               qdrc_client_t *client,
-                                              uintptr_t user_context,
-                                              uintptr_t request_context,
-                                              const char *error);
+                                              void          *user_context,
+                                              void          *request_context,
+                                              const char    *error);
 
 
 /**
@@ -118,13 +118,13 @@ typedef void (*qdrc_client_request_done_CT_t)(qdr_core_t *core,
  * @param on_flow_cb - callback when sender credit is updated.
  * @return a new core client
  */
-qdrc_client_t *qdrc_client_CT(qdr_core_t *core,
-                              qdr_connection_t *conn,
-                              qdr_terminus_t *target,
-                              int credit_window,
-                              uintptr_t user_context,
-                              qdrc_client_on_state_CT_t on_state_cb,
-                              qdrc_client_on_flow_CT_t  on_flow_cb);
+qdrc_client_t *qdrc_client_CT(qdr_core_t                *core,
+                              qdr_connection_t          *conn,
+                              qdr_terminus_t            *target,
+                              int                        credit_window,
+                              void                      *user_context,
+                              qdrc_client_on_state_CT_t  on_state_cb,
+                              qdrc_client_on_flow_CT_t   on_flow_cb);
 
 
 /**
@@ -154,12 +154,12 @@ void qdrc_client_free_CT(qdrc_client_t *client);
  * @param done_cb - (optional) called once request is done (for cleanup)
  * @return zero on success.
  */
-int qdrc_client_request_CT(qdrc_client_t *client,
-                           uintptr_t  request_context,
-                           qd_composed_field_t *app_properties,
-                           qd_composed_field_t *body,
-                           qdrc_client_on_reply_CT_t on_reply_cb,
-                           qdrc_client_on_ack_CT_t   on_ack_cb,
-                           qdrc_client_request_done_CT_t done_cb);
+int qdrc_client_request_CT(qdrc_client_t                 *client,
+                           void                          *request_context,
+                           qd_composed_field_t           *app_properties,
+                           qd_composed_field_t           *body,
+                           qdrc_client_on_reply_CT_t      on_reply_cb,
+                           qdrc_client_on_ack_CT_t        on_ack_cb,
+                           qdrc_client_request_done_CT_t  done_cb);
 
 #endif // #define qd_router_core_client_api_h 1

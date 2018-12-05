@@ -480,13 +480,13 @@ struct test_client_t {
     qdr_connection_t          *conn;
     qdrc_client_t             *core_client;
     int                        credit;
-    int                        counter;
+    int64_t                    counter;
 };
 
-static uint64_t _client_on_reply_cb(qdr_core_t *core,
+static uint64_t _client_on_reply_cb(qdr_core_t    *core,
                                     qdrc_client_t *client,
-                                    uintptr_t user_context,
-                                    uintptr_t request_context,
+                                    void          *user_context,
+                                    void          *request_context,
                                     qd_iterator_t *app_properties,
                                     qd_iterator_t *body)
 {
@@ -499,23 +499,23 @@ static uint64_t _client_on_reply_cb(qdr_core_t *core,
     return PN_ACCEPTED;
 }
 
-static void _client_on_ack_cb(qdr_core_t *core,
+static void _client_on_ack_cb(qdr_core_t    *core,
                               qdrc_client_t *client,
-                              uintptr_t user_context,
-                              uintptr_t request_context,
-                              uint64_t disposition)
+                              void          *user_context,
+                              void          *request_context,
+                              uint64_t       disposition)
 {
     test_client_t *tc = (test_client_t *)user_context;
     qd_log(core->log, QD_LOG_TRACE,
            "client test request ack rc=%"PRIxPTR" d=%"PRIu64,
            request_context, disposition);
-    assert(request_context < tc->counter);
+    assert((int64_t)request_context < tc->counter);
 }
-static void _client_on_done_cb(qdr_core_t *core,
+static void _client_on_done_cb(qdr_core_t    *core,
                                qdrc_client_t *client,
-                               uintptr_t user_context,
-                               uintptr_t request_context,
-                               const char *error)
+                               void          *user_context,
+                               void          *request_context,
+                               const char    *error)
 {
     qd_log(core->log, QD_LOG_TRACE,
            "client test request done rc=%"PRIxPTR" error=%s",
@@ -535,12 +535,12 @@ static void _do_send(test_client_t *tc)
         qd_compose_insert_string(props, "action");
         qd_compose_insert_string(props, "echo");
         qd_compose_insert_string(props, "counter");
-        qd_compose_insert_int(props, tc->counter);
+        qd_compose_insert_long(props, tc->counter);
         qd_compose_end_map(props);
         qd_compose_insert_string(body, "HI THERE");
 
         qdrc_client_request_CT(tc->core_client,
-                               tc->counter,  // request context
+                               (void *)tc->counter,  // request context
                                props,
                                body,
                                _client_on_reply_cb,
@@ -555,7 +555,7 @@ static void _do_send(test_client_t *tc)
 }
 
 static void _client_on_state_cb(qdr_core_t *core, qdrc_client_t *core_client,
-                                uintptr_t user_context, bool active)
+                                void *user_context, bool active)
 {
     test_client_t *tc = (test_client_t *)user_context;
     qd_log(tc->module->core->log, QD_LOG_TRACE,
@@ -563,7 +563,7 @@ static void _client_on_state_cb(qdr_core_t *core, qdrc_client_t *core_client,
 }
 
 static void _client_on_flow_cb(qdr_core_t *core, qdrc_client_t *core_client,
-                               uintptr_t user_context, int available_credit,
+                               void *user_context, int available_credit,
                                bool drain)
 {
     test_client_t *tc = (test_client_t *)user_context;
@@ -605,7 +605,7 @@ static void _on_conn_event(void *context, qdrc_event_t type, qdr_connection_t *c
                                              tc->conn,
                                              target,
                                              10,   // credit window
-                                             (uintptr_t)tc,   // user context
+                                             tc,   // user context
                                              _client_on_state_cb,
                                              _client_on_flow_cb);
             assert(tc->core_client);

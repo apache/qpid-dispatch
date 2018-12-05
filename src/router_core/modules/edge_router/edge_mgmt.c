@@ -32,8 +32,8 @@ static qdrc_client_t *_client;              // req/resp client
 static qdrc_event_subscription_t *_event_handle;  // edge conn up/down
 
 
-static void _mgmt_on_state_cb_CT(qdr_core_t *, qdrc_client_t *, uintptr_t, bool);
-static void _mgmt_on_flow_cb_CT(qdr_core_t *, qdrc_client_t *, uintptr_t, int, bool);
+static void _mgmt_on_state_cb_CT(qdr_core_t *, qdrc_client_t *, void *, bool);
+static void _mgmt_on_flow_cb_CT(qdr_core_t *, qdrc_client_t *, void *, int, bool);
 
 
 //
@@ -129,10 +129,10 @@ exit:
 
 
 // mgmt client link state changed
-static void _mgmt_on_state_cb_CT(qdr_core_t *core,
+static void _mgmt_on_state_cb_CT(qdr_core_t    *core,
                                  qdrc_client_t *client,
-                                 uintptr_t user_context,
-                                 bool active)
+                                 void          *user_context,
+                                 bool           active)
 {
     qd_log(core->log, QD_LOG_TRACE,
            "edge mgmt client state change: uc=%"PRIuPTR" %s",
@@ -147,11 +147,11 @@ static void _mgmt_on_state_cb_CT(qdr_core_t *core,
 
 
 // mgmt client credit granted by interior router
-static void _mgmt_on_flow_cb_CT(qdr_core_t *core,
+static void _mgmt_on_flow_cb_CT(qdr_core_t    *core,
                                 qdrc_client_t *client,
-                                uintptr_t user_context,
-                                int available_credit,
-                                bool drain)
+                                void          *user_context,
+                                int            available_credit,
+                                bool           drain)
 {
     qd_log(core->log, QD_LOG_TRACE,
            "edge mgmt client flow: uc=%"PRIuPTR" c=%d d=%s",
@@ -165,11 +165,11 @@ static void _mgmt_on_flow_cb_CT(qdr_core_t *core,
 
 
 // terminal disposition set on sent request
-static void _mgmt_on_ack_cb_CT(qdr_core_t *core,
+static void _mgmt_on_ack_cb_CT(qdr_core_t    *core,
                                qdrc_client_t *client,
-                               uintptr_t user_context,
-                               uintptr_t request_context,
-                               uint64_t disposition)
+                               void          *user_context,
+                               void          *request_context,
+                               uint64_t       disposition)
 {
     qcm_edge_mgmt_request_t *req = (qcm_edge_mgmt_request_t *)request_context;
 
@@ -188,10 +188,10 @@ static void _mgmt_on_ack_cb_CT(qdr_core_t *core,
 
 
 // reply message received
-static uint64_t _mgmt_on_reply_cb_CT(qdr_core_t *core,
+static uint64_t _mgmt_on_reply_cb_CT(qdr_core_t    *core,
                                      qdrc_client_t *client,
-                                     uintptr_t user_context,
-                                     uintptr_t request_context,
+                                     void          *user_context,
+                                     void          *request_context,
                                      qd_iterator_t *app_properties,
                                      qd_iterator_t *body)
 {
@@ -225,11 +225,11 @@ static uint64_t _mgmt_on_reply_cb_CT(qdr_core_t *core,
 
 
 // request completed or aborted due to error
-static void _mgmt_on_done_cb_CT(qdr_core_t *core,
+static void _mgmt_on_done_cb_CT(qdr_core_t    *core,
                                 qdrc_client_t *client,
-                                uintptr_t user_context,
-                                uintptr_t request_context,
-                                const char *error)
+                                void          *user_context,
+                                void          *request_context,
+                                const char    *error)
 {
     qcm_edge_mgmt_request_t *req = (qcm_edge_mgmt_request_t *)request_context;
     qd_log(core->log, QD_LOG_TRACE,
@@ -288,7 +288,7 @@ int qcm_edge_mgmt_request_CT(qdr_core_t           *core,
     qd_compose_end_map(ap_fld);
 
     return qdrc_client_request_CT(_client,
-                                  (uintptr_t)req,   // request context
+                                  req,   // request context
                                   ap_fld,
                                   body,
                                   _mgmt_on_reply_cb_CT,

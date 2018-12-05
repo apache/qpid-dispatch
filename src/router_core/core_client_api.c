@@ -35,7 +35,7 @@ struct qdrc_client_request_t {
     DEQ_LINKS_N(REPLY, qdrc_client_request_t);
 
     qdrc_client_t      *client;
-    uintptr_t           req_context;
+    void               *req_context;
 
     char                 correlation_id[CORRELATION_ID_LEN];
     qd_iterator_t       *correlation_key;
@@ -77,7 +77,7 @@ struct qdrc_client_t {
     int                         rx_credit;
     int                         tx_credit;
 
-    uintptr_t                   user_context;
+    void                       *user_context;
     qdrc_client_on_state_CT_t   on_state_cb;
     qdrc_client_on_flow_CT_t    on_flow_cb;
 
@@ -142,7 +142,7 @@ qdrc_client_t *qdrc_client_CT(qdr_core_t *core,
                               qdr_connection_t *conn,
                               qdr_terminus_t *target,
                               int credit_window,
-                              uintptr_t user_context,
+                              void *user_context,
                               qdrc_client_on_state_CT_t on_state_cb,
                               qdrc_client_on_flow_CT_t on_flow_cb)
 {
@@ -225,13 +225,13 @@ void qdrc_client_free_CT(qdrc_client_t *client)
 
 
 // send a message
-int qdrc_client_request_CT(qdrc_client_t *client,
-                           uintptr_t  request_context,
-                           qd_composed_field_t *app_properties,
-                           qd_composed_field_t *body,
-                           qdrc_client_on_reply_CT_t on_reply_cb,
-                           qdrc_client_on_ack_CT_t on_ack_cb,
-                           qdrc_client_request_done_CT_t done_cb)
+int qdrc_client_request_CT(qdrc_client_t                 *client,
+                           void                          *request_context,
+                           qd_composed_field_t           *app_properties,
+                           qd_composed_field_t           *body,
+                           qdrc_client_on_reply_CT_t      on_reply_cb,
+                           qdrc_client_on_ack_CT_t        on_ack_cb,
+                           qdrc_client_request_done_CT_t  done_cb)
 {
     qd_log(client->core->log, QD_LOG_TRACE,
            "New core client request created c=%p, rc=%"PRIuPTR")",
