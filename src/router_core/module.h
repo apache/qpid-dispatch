@@ -22,6 +22,19 @@
 #include "router_core_private.h"
 
 /**
+ * Callback to test whether a moduel should be enabled.
+ *
+ * If this gate returns true, the init callback will be invoked at core startup
+ * and the final callback will be invoked at core shutdown.  If the gate returns
+ * false, neither the init nor the final callbacks will be invoked.
+ *
+ * @param core Pointer to the core object
+ * @return True iff the module should be initialized
+ */
+typedef bool (*qdrc_module_enable_t) (qdr_core_t *core);
+
+
+/**
  * Callback to initialize a core module at core thread startup
  *
  * @param core Pointer to the core object
@@ -47,10 +60,13 @@ typedef void (*qdrc_module_final_t) (void *module_context);
  * @param on_init Pointer to a function for module initialization, called at core thread startup
  * @param on_final Pointer to a function for module finalization, called at core thread shutdown
  */
-#define QDR_CORE_MODULE_DECLARE(name,on_init,on_final)   \
+#define QDR_CORE_MODULE_DECLARE(name,enable,on_init,on_final)   \
     static void modstart() __attribute__((constructor)); \
-    void modstart() { qdr_register_core_module(name, on_init, on_final); }
-void qdr_register_core_module(const char *name, qdrc_module_init_t on_init, qdrc_module_final_t on_final);
+    void modstart() { qdr_register_core_module(name, enable, on_init, on_final); }
+void qdr_register_core_module(const char *name,
+                              qdrc_module_enable_t enable,
+                              qdrc_module_init_t on_init,
+                              qdrc_module_final_t on_final);
 
 
 #endif

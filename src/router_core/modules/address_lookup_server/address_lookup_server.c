@@ -324,14 +324,14 @@ static qdrc_endpoint_desc_t _endpoint_handlers =
 };
 
 
+static bool _addres_lookup_enable_CT(qdr_core_t *core)
+{
+    return core->router_mode == QD_ROUTER_MODE_INTERIOR;
+}
+
+
 static void _address_lookup_init_CT(qdr_core_t *core, void **module_context)
 {
-    //
-    // Address resolution service is provided by interior routers only
-    //
-    if (core->router_mode != QD_ROUTER_MODE_INTERIOR)
-        return;
-
     _server_state.core = core;
 
     //
@@ -357,4 +357,4 @@ static void _address_lookup_final_CT(void *module_context)
 }
 
 
-QDR_CORE_MODULE_DECLARE("address lookup", _address_lookup_init_CT, _address_lookup_final_CT)
+QDR_CORE_MODULE_DECLARE("address_lookup_server", _addres_lookup_enable_CT, _address_lookup_init_CT, _address_lookup_final_CT)

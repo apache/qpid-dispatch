@@ -32,19 +32,22 @@ typedef struct {
 } qcm_edge_t;
 
 
+static bool qcm_edge_router_enable_CT(qdr_core_t *core)
+{
+    return core->router_mode == QD_ROUTER_MODE_EDGE;
+}
+
+
 static void qcm_edge_router_init_CT(qdr_core_t *core, void **module_context)
 {
-    if (core->router_mode == QD_ROUTER_MODE_EDGE) {
-        qcm_edge_t *edge = NEW(qcm_edge_t);
-        edge->core = core;
-        edge->conn_mgr   = qcm_edge_conn_mgr(core);
-        edge->addr_proxy = qcm_edge_addr_proxy(core);
-        qcm_edge_mgmt_init_CT(core);
-        qcm_edge_link_route_init_CT(core);
-        // TODO - Add initialization of other edge-router functions here
-        *module_context = edge;
-    } else
-        *module_context = 0;
+    qcm_edge_t *edge = NEW(qcm_edge_t);
+    edge->core = core;
+    edge->conn_mgr   = qcm_edge_conn_mgr(core);
+    edge->addr_proxy = qcm_edge_addr_proxy(core);
+    qcm_edge_mgmt_init_CT(core);
+    qcm_edge_link_route_init_CT(core);
+    // TODO - Add initialization of other edge-router functions here
+    *module_context = edge;
 }
 
 
@@ -52,15 +55,13 @@ static void qcm_edge_router_final_CT(void *module_context)
 {
     qcm_edge_t *edge = (qcm_edge_t*) module_context;
 
-    if (edge) {
-        qcm_edge_conn_mgr_final(edge->conn_mgr);
-        qcm_edge_addr_proxy_final(edge->addr_proxy);
-        qcm_edge_mgmt_final_CT(edge->core);
-        qcm_edge_link_route_final_CT(edge->core);
-        // TODO - Add finalization of other edge-router functions here
-        free(edge);
-    }
+    qcm_edge_conn_mgr_final(edge->conn_mgr);
+    qcm_edge_addr_proxy_final(edge->addr_proxy);
+    qcm_edge_mgmt_final_CT(edge->core);
+    qcm_edge_link_route_final_CT(edge->core);
+    // TODO - Add finalization of other edge-router functions here
+    free(edge);
 }
 
 
-QDR_CORE_MODULE_DECLARE("edge_router", qcm_edge_router_init_CT, qcm_edge_router_final_CT)
+QDR_CORE_MODULE_DECLARE("edge_router", qcm_edge_router_enable_CT, qcm_edge_router_init_CT, qcm_edge_router_final_CT)

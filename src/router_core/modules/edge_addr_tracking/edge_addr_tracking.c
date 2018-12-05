@@ -315,19 +315,18 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
 }
 
 
-static void qdrc_edge_address_tracking_module_init_CT(qdr_core_t *core, void **module_context)
+static bool qdrc_edge_address_tracking_enable_CT(qdr_core_t *core)
 {
-    //
-    // Address tracking is ennabled only on interior routers
-    //
-    if (core->router_mode != QD_ROUTER_MODE_INTERIOR)
-        return;
+    return core->router_mode == QD_ROUTER_MODE_INTERIOR;
+}
 
+
+static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_context)
+{
     qdr_addr_tracking_module_context_t *context = NEW(qdr_addr_tracking_module_context_t);
     ZERO(context);
     context->core = core;
     *module_context = context;
-
 
     //
     // Bind to the static address QD_TERMINUS_EDGE_ADDRESS_TRACKING
@@ -351,11 +350,8 @@ static void qdrc_edge_address_tracking_module_init_CT(qdr_core_t *core, void **m
 }
 
 
-static void qdrc_edge_address_tracking_module_final_CT(void *module_context)
+static void qdrc_edge_address_tracking_final_CT(void *module_context)
 {
-    if (module_context == 0)
-        return;
-
     qdr_addr_tracking_module_context_t *mc = ( qdr_addr_tracking_module_context_t *)module_context;
 
     // If there are any endpoint states still hanging around, clean it up.
@@ -370,4 +366,4 @@ static void qdrc_edge_address_tracking_module_final_CT(void *module_context)
 }
 
 
-QDR_CORE_MODULE_DECLARE("edge_addr_tracking", qdrc_edge_address_tracking_module_init_CT, qdrc_edge_address_tracking_module_final_CT)
+QDR_CORE_MODULE_DECLARE("edge_addr_tracking", qdrc_edge_address_tracking_enable_CT, qdrc_edge_address_tracking_init_CT, qdrc_edge_address_tracking_final_CT)

@@ -356,6 +356,12 @@ static void qcm_addr_lookup_CT(qdr_core_t       *core,
 }
 
 
+static bool qcm_addr_lookup_client_enable_CT(qdr_core_t *core)
+{
+    return true;
+}
+
+
 static void qcm_addr_lookup_client_init_CT(qdr_core_t *core, void **module_context)
 {
     assert(core->addr_lookup_handler == 0);
@@ -372,4 +378,4 @@ static void qcm_addr_lookup_client_final_CT(void *module_context)
 }
 
 
-QDR_CORE_MODULE_DECLARE("address_lookup_client", qcm_addr_lookup_client_init_CT, qcm_addr_lookup_client_final_CT)
+QDR_CORE_MODULE_DECLARE("address_lookup_client", qcm_addr_lookup_client_enable_CT, qcm_addr_lookup_client_init_CT, qcm_addr_lookup_client_final_CT)

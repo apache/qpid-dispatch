@@ -656,16 +656,14 @@ static void qdrc_test_client_api_finalize(test_module_t *test_module)
 }
 
 
+static bool qdrc_test_hooks_enable_CT(qdr_core_t *core)
+{
+    return core->qd->test_hooks;
+}
+
+
 static void qdrc_test_hooks_init_CT(qdr_core_t *core, void **module_context)
 {
-    //
-    // Exit if the test hooks are not enabled (by the --test-hooks command line option)
-    //
-    if (!core->qd->test_hooks) {
-        *module_context = 0;
-        return;
-    }
-
     test_module_t *test_module = NEW(test_module_t);
     ZERO(test_module);
     test_module->core = core;
@@ -677,12 +675,10 @@ static void qdrc_test_hooks_init_CT(qdr_core_t *core, void **module_context)
 
 static void qdrc_test_hooks_final_CT(void *module_context)
 {
-    if (!!module_context) {
-        qdrc_test_hooks_core_endpoint_finalize(module_context);
-        qdrc_test_client_api_finalize(module_context);
-        free(module_context);
-    }
+    qdrc_test_hooks_core_endpoint_finalize(module_context);
+    qdrc_test_client_api_finalize(module_context);
+    free(module_context);
 }
 
 
-QDR_CORE_MODULE_DECLARE("core_test_hooks", qdrc_test_hooks_init_CT, qdrc_test_hooks_final_CT)
+QDR_CORE_MODULE_DECLARE("core_test_hooks", qdrc_test_hooks_enable_CT, qdrc_test_hooks_init_CT, qdrc_test_hooks_final_CT)
