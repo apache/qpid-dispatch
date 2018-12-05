@@ -58,7 +58,19 @@ From each log file Scraper extracts:
  * Connection data lists are searched to discover router-to-router and router-to-client
    connection pairs.
  * Per connection data are subdivided into per-session and per-link lists, sorting
-   the AMQP data into per-link-only views.
+   the AMQP data into per-link-only views. This information is shown in the _Connection 
+   Details_ section. Clicking on the lozenge will expand a connection into a view that 
+   shows all the sessions. Clicking on a session lozenge will expand into a view that
+   shows all the links.
+   
+   Each link shows a lozenge that will toggle the link data visibility and a hyperlink
+   that will go to the link data. When the table of links is small and visible on one
+   screen then it's easy to see what's going on. But when the table of links is large,
+   say 2000 links, then the data for each link is 2000 lines later in the web page.
+   When you click the lozenge you don't see the data. For larger data sets the usage
+   rule is to first click the lozenge to expose the data, and then click the hyperlink
+   go make the data visible.
+   
  * Bulk AMQP data may be shown or hidden on arbitrary per-connection selections.
  * Noteworthy AMQP frames are identified. By hand these are hard to find.
    * AMQP errors
@@ -67,9 +79,14 @@ From each log file Scraper extracts:
    * Resumed transfers
    * Aborted transfers
    * Flow with 'drain' set
+   * Probable unsettled transfers.
+   * Possible unsettled transfers. When log files are truncated and not all log lines
+     for this connection, session, and link are present then settlement calculations
+     are compromised. Transfers may appear to be unsettled but the settlement could
+     not be correlated properly with the transfer.
  * Transfer messages are sorted by signature. Then a table is made showing where
    each message leaves or arrives over a connection. The signature is limited to the
-   body of the message as shown in the Proton log text.
+   body of the message as shown in the Qpid Proton log text.
  * Settlement state for each unsettled transfer is identified, displayed, and
    shown with delta and elapsed time values. See example in the Advanced section.
  * Link name propagation for each named link is shown in a table.

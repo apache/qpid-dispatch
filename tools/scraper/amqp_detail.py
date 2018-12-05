@@ -385,21 +385,21 @@ class AllDetails():
                                              "connid:%s, line:%s\n" %
                                              (snd_disposition.data.conn_id, snd_disposition.lineno))
                     else:
-                        result = "rcvr: absent"
+                        result = "receive settlement absent"
                 else:
                     # two settlements expected
                     if rcv_disposition is not None:
-                        result = "rcvr: " + rtext
+                        result = "receiver: " + rtext
                         if snd_disposition is not None:
-                            result += ", sndr: " + stext
+                            result += ", sender: " + stext
                         else:
-                            result += ", sndr: absent"
+                            result += ", sender settlement absent"
                     else:
-                        result = "rcvr: absent"
+                        result = "receiver settlement absent"
                         if snd_disposition is not None:
-                            result += ", sndr: " + stext
+                            result += ", sender: " + stext
                         else:
-                            result += ", sndr: absent"
+                            result += ", sender settlement absent"
         return result
 
     def __init__(self, _router, _common):
@@ -513,11 +513,13 @@ class AllDetails():
                     ns = conn_details.FindSession(channel)
                     if ns is None:
                         conn_details.unaccounted_frame_list.append(plf)
+                        plf.no_parent_link = True
                         continue
                     handle = plf.data.handle
                     nl = ns.FindLinkByHandle(handle, plf.data.direction_is_in())
                     if nl is None:
                         ns.session_frame_list.append(plf)
+                        plf.no_parent_link = True
                     else:
                         if plf.data.amqp_error:
                             nl.amqp_errors += 1
@@ -572,7 +574,7 @@ class AllDetails():
 
             # loop to print session details
             for sess in conn_detail.session_list:
-                # show the session toggle and title
+                # show the session 'toggle goto' and title
                 print("<a href=\"javascript:toggle_node('%s_sess_%s')\">%s%s</a>" %
                       (id, sess.conn_epoch, text.lozenge(), text.nbsp()))
                 print("Session %s: channel: %s, peer channel: %s; Time: start %s, Counts: frames: %d %s<br>" % \
@@ -599,11 +601,13 @@ class AllDetails():
                 for link in sess.link_list:
                     # show the link toggle and title
                     showthis = ("<a href=\"javascript:toggle_node('%s_sess_%s_link_%s')\">%s</a>" %
+                                (id, sess.conn_epoch, link.session_seq, text.lozenge()))
+                    visitthis = ("<a href=\"#%s_sess_%s_link_%s_data\">%s</a>" %
                                 (id, sess.conn_epoch, link.session_seq, link.display_name))
                     role = "receiver" if link.is_receiver else "sender"
-                    print("<tr><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
+                    print("<tr><td>%s %s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
                           "<td>%s</td><td>%d</td><td>%s</td></tr>" % \
-                          (showthis, link.direction, role, link.first_address,
+                          (showthis, visitthis, link.direction, role, link.first_address,
                            (link.sender_class + '-' + link.receiver_class), link.snd_settle_mode,
                            link.rcv_settle_mode, link.time_start, link.FrameCount(),
                            self.format_errors(link.amqp_errors)))
@@ -613,6 +617,8 @@ class AllDetails():
                     print(
                         "<div id=\"%s_sess_%s_link_%s\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">" %
                         (id, sess.conn_epoch, link.session_seq))
+                    print("<a name=\"%s_sess_%s_link_%s_data\"></a>" %
+                                (id, sess.conn_epoch, link.session_seq))
                     print("<h4>Connection %s Session %s Link %s</h4>" %
                           (id, sess.conn_epoch, link.display_name))
                     for plf in link.frame_list:

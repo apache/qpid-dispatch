@@ -127,6 +127,7 @@ class LogLineData:
         self.disposition_state = "?absent?"
         self.snd_settle_mode = ""  # Attach
         self.rcv_settle_mode = ""  # Attach
+        self.transfer = False
         self.transfer_data = ""  # protonized transfer data value
         self.transfer_bare = ""  # bare message from transfer_data
         self.transfer_hdr_annos = ""  # header and annotation sections
@@ -146,6 +147,7 @@ class LogLineData:
         self.link_class = "normal"  # attach sees: normal, router, router-data (, management?)
         self.disposition_display = ""
         self.final_disposition = None
+        self.no_parent_link = False
 
 
 class DescribedType:
@@ -486,6 +488,7 @@ class ParsedLogLine(object):
         elif perf == 0x14:
             # Performative: transfer [channel,handle] (id)
             res.name = "transfer"
+            res.transfer = True
             res.handle = resdict["handle"]
             res.channel_handle = "[%s,%s]" % (res.channel, res.handle)
             res.delivery_id = self.resdict_value(resdict, "delivery-id", "none")

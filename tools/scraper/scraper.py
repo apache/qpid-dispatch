@@ -392,6 +392,7 @@ def main_except(argv):
         (tConn, tLines, tLinks, tBytes, tErrs))
     print("</table>")
 
+    print("<a name=\"c_connectchrono\"></a>")
     print("<h3>Router Restart and Connection chronology</h3>")
 
     cl = []
@@ -454,6 +455,8 @@ def main_except(argv):
     n_resume = 0
     n_aborted = 0
     n_drain = 0
+    n_unsettled = 0
+    n_unsettled_no_parent = 0 # without link/session can't match xfers with dispositions
     for plf in tree:
         if plf.data.amqp_error:
             n_errors += 1
@@ -467,6 +470,11 @@ def main_except(argv):
             n_aborted += 1
         if plf.data.flow_drain:
             n_drain += 1
+        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None):
+            if plf.data.no_parent_link:
+                n_unsettled_no_parent += 1 # possibly unsettled
+            else:
+                n_unsettled += 1 # probably unsettled
     # amqp errors
     print("<a href=\"javascript:toggle_node('noteworthy_errors')\">%s%s</a> AMQP errors: %d<br>" %
           (text.lozenge(), text.nbsp(), n_errors))
@@ -525,6 +533,26 @@ def main_except(argv):
           "id=\"noteworthy_drain\">")
     for plf in tree:
         if plf.data.flow_drain:
+            show_noteworthy_line(plf, comn)
+    print("</div>")
+    # probable unsettled transfers
+    print("<a href=\"javascript:toggle_node('noteworthy_unsettled')\">%s%s</a> Probable unsettled transfers: %d<br>" %
+          (text.lozenge(), text.nbsp(), n_unsettled))
+    print(" <div width=\"100%%\"; "
+          "style=\"display:none; font-weight: normal; margin-bottom: 2px; margin-left: 10px\" "
+          "id=\"noteworthy_unsettled\">")
+    for plf in tree:
+        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None) and not plf.data.no_parent_link:
+            show_noteworthy_line(plf, comn)
+    print("</div>")
+    # possible unsettled transfers
+    print("<a href=\"javascript:toggle_node('noteworthy_unsettled_qm')\">%s%s</a> Possible unsettled transfers: %d<br>" %
+          (text.lozenge(), text.nbsp(), n_unsettled_no_parent))
+    print(" <div width=\"100%%\"; "
+          "style=\"display:none; font-weight: normal; margin-bottom: 2px; margin-left: 10px\" "
+          "id=\"noteworthy_unsettled_qm\">")
+    for plf in tree:
+        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None) and plf.data.no_parent_link:
             show_noteworthy_line(plf, comn)
     print("</div>")
     print("<hr>")
