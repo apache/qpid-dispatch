@@ -434,6 +434,11 @@ qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery)
     return delivery->error;
 }
 
+bool qdr_delivery_presettled(const qdr_delivery_t *delivery)
+{
+    return delivery->presettled;
+}
+
 
 //==================================================================================
 // In-Thread Functions
@@ -441,11 +446,24 @@ qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery)
 
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
-    bool push = dlv->disposition != PN_RELEASED;
+    bool push = false;
+    bool moved = false;
 
-    dlv->disposition = PN_RELEASED;
-    dlv->settled = true;
-    bool moved = qdr_delivery_settled_CT(core, dlv);
+    if (dlv->presettled) {
+        //
+        // The delivery is presettled. We simply want to call CORE_delivery_update which in turn will
+        // restart stalled links if the q2_holdoff has been hit.
+        // For single frame presettled deliveries, calling CORE_delivery_update does not do anything.
+        //
+        push = true;
+    }
+    else {
+        push = dlv->disposition != PN_RELEASED;
+        dlv->disposition = PN_RELEASED;
+        dlv->settled = true;
+        moved = qdr_delivery_settled_CT(core, dlv);
+
+    }
 
     if (push || moved)
         qdr_delivery_push_CT(core, dlv);
@@ -848,6 +866,13 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             link->dropped_presettled_deliveries++;
             if (dlv->link->link_type == QD_LINK_ENDPOINT)
                 core->dropped_presettled_deliveries++;
+
+            //
+            // The delivery is pre-settled. Call the qdr_delivery_release_CT so if this delivery is multi-frame
+            // we can restart receiving the delivery in case it is stalled. Note that messages will not
+            // *actually* be released because these are presettled messages.
+            //
+            qdr_delivery_release_CT(core, dlv);
         } else {
             qdr_delivery_release_CT(core, dlv);
 

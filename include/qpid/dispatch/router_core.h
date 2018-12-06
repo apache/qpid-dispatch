@@ -682,6 +682,7 @@ void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char 
 void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *length);
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
+bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition);
 bool qdr_delivery_send_complete(const qdr_delivery_t *delivery);
 bool qdr_delivery_tag_sent(const qdr_delivery_t *delivery);
