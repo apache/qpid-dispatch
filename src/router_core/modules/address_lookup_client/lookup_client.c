@@ -20,8 +20,52 @@
 #include "module.h"
 #include "core_attach_address_lookup.h"
 #include "router_core_private.h"
+#include "core_events.h"
+#include "core_client_api.h"
+#include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/discriminator.h>
+#include <qpid/dispatch/address_lookup_server.h>
 #include <stdio.h>
+
+static uint64_t on_reply(qdr_core_t    *core,
+                         qdrc_client_t *api_client,
+                         void          *user_context,
+                         void          *request_context,
+                         qd_iterator_t *app_properties,
+                         qd_iterator_t *body);
+
+static void on_request_done(qdr_core_t    *core,
+                            qdrc_client_t *api_client,
+                            void          *user_context,
+                            void          *request_context,
+                            const char    *error);
+
+
+typedef struct qcm_addr_lookup_request_t {
+    DEQ_LINKS(struct qcm_addr_lookup_request_t);
+    qdr_connection_t  *conn;
+    qdr_link_t        *link;
+    qd_direction_t     dir;
+    qdr_terminus_t    *source;
+    qdr_terminus_t    *target;
+} qcm_addr_lookup_request_t;
+
+DEQ_DECLARE(qcm_addr_lookup_request_t, qcm_addr_lookup_request_list_t);
+ALLOC_DECLARE(qcm_addr_lookup_request_t);
+ALLOC_DEFINE(qcm_addr_lookup_request_t);
+
+
+typedef struct qcm_lookup_client_t {
+    qdr_core_t                     *core;
+    qdrc_event_subscription_t      *event_sub;
+    qdr_connection_t               *edge_conn;
+    uint32_t                        request_credit;
+    bool                            client_api_active;
+    qdrc_client_t                  *client_api;
+    qcm_addr_lookup_request_list_t  pending_requests;
+    qcm_addr_lookup_request_list_t  sent_requests;
+} qcm_lookup_client_t;
+
 
 static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original)
 {
@@ -338,23 +382,268 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
 }
 
 
-static void qcm_addr_lookup_CT(qdr_core_t       *core,
+static void qcm_addr_lookup_local_search(qcm_lookup_client_t *client, qcm_addr_lookup_request_t *request)
+{
+    bool            link_route;
+    bool            unavailable;
+    bool            core_endpoint;
+    qdr_terminus_t *term = request->dir == QD_INCOMING ? request->target : request->source;
+    qdr_address_t  *addr = qdr_lookup_terminus_address_CT(client->core,
+                                                          request->dir,
+                                                          request->conn,
+                                                          term,
+                                                          true,
+                                                          true,
+                                                          &link_route,
+                                                          &unavailable,
+                                                          &core_endpoint);
+    qdr_link_react_to_first_attach_CT(client->core,
+                                      request->conn,
+                                      addr,
+                                      request->link,
+                                      request->dir,
+                                      request->source,
+                                      request->target,
+                                      link_route,
+                                      unavailable,
+                                      core_endpoint);
+}
+
+
+static void qcm_addr_lookup_process_pending_requests_CT(qcm_lookup_client_t *client)
+{
+    int result;
+
+    while (client->request_credit > 0 && DEQ_SIZE(client->pending_requests) > 0) {
+        qcm_addr_lookup_request_t *request = DEQ_HEAD(client->pending_requests);
+        DEQ_REMOVE_HEAD(client->pending_requests);
+
+        do {
+            qd_composed_field_t *props;
+            qd_composed_field_t *body;
+            qd_iterator_t       *iter = qdr_terminus_get_address(request->dir == QD_INCOMING ? request->target : request->source);
+
+            if (iter) {
+                result = qcm_link_route_lookup_request(iter, request->dir, &props, &body);
+                if (result == 0) {
+                    result = qdrc_client_request_CT(client->client_api, request, props, body, on_reply, 0, on_request_done);
+                    if (result == 0) {
+                        DEQ_INSERT_TAIL(client->sent_requests, request);
+                        client->request_credit--;
+                        break;
+                    }
+
+                    //
+                    // TODO - set a timer (or use a timeout in the client API)
+                    //
+
+                    qd_compose_free(props);
+                    qd_compose_free(body);
+                }
+            }
+
+            //
+            // If we get here, we failed to launch the asynchronous lookup.  Fall back to a local,
+            // synchronous lookup.
+            //
+            qcm_addr_lookup_local_search(client, request);
+            free_qcm_addr_lookup_request_t(request);
+        } while (false);
+    }
+}
+
+
+//================================================================================
+// Address Lookup Handler
+//================================================================================
+
+static void qcm_addr_lookup_CT(void             *context,
                                qdr_connection_t *conn,
                                qdr_link_t       *link,
                                qd_direction_t    dir,
                                qdr_terminus_t   *source,
                                qdr_terminus_t   *target)
-
 {
-    bool link_route;
-    bool unavailable;
-    bool core_endpoint;
-    qdr_terminus_t *term = dir == QD_INCOMING ? target : source;
+    qcm_lookup_client_t *client = (qcm_lookup_client_t*) context;
+    bool                 link_route;
+    bool                 unavailable;
+    bool                 core_endpoint;
+    qdr_terminus_t      *term = dir == QD_INCOMING ? target : source;
 
-    qdr_address_t *addr = qdr_lookup_terminus_address_CT(core, dir, conn, term, true, true, &link_route, &unavailable, &core_endpoint);
-    qdr_link_react_to_first_attach_CT(core, conn, addr, link, dir, source, target, link_route, unavailable, core_endpoint);
+    if (client->core->router_mode == QD_ROUTER_MODE_EDGE
+        && client->client_api_active
+        && qdr_terminus_get_address(term) != 0) {
+        //
+        // We are in edge mode, there is an active edge connection, and the terminus has an address.
+        // Set up and scehdule an asynchronous lookup request.
+        //
+        qcm_addr_lookup_request_t *request = new_qcm_addr_lookup_request_t();
+        DEQ_ITEM_INIT(request);
+        request->conn   = conn;
+        request->link   = link;
+        request->dir    = dir;
+        request->source = source;
+        request->target = target;
+
+        DEQ_INSERT_TAIL(client->pending_requests, request);
+        qcm_addr_lookup_process_pending_requests_CT(client);
+    } else {
+        //
+        // If this lookup doesn't meet the criteria for asynchronous action, perform the built-in, synchronous address lookup
+        //
+        qdr_address_t *addr = qdr_lookup_terminus_address_CT(client->core, dir, conn, term, true, true, &link_route, &unavailable, &core_endpoint);
+        qdr_link_react_to_first_attach_CT(client->core, conn, addr, link, dir, source, target, link_route, unavailable, core_endpoint);
+    }
 }
 
+
+//================================================================================
+// Core Client API Handlers
+//================================================================================
+
+static void on_state(qdr_core_t    *core,
+                     qdrc_client_t *api_client,
+                     void          *user_context,
+                     bool           active)
+{
+    qcm_lookup_client_t *client = (qcm_lookup_client_t*) user_context;
+
+    client->client_api_active = active;
+    if (!active) {
+        //
+        // Client-API links are down, set our available credit to zero.
+        //
+        client->request_credit = 0;
+
+        //
+        // Locally process all pending requests
+        //
+        qcm_addr_lookup_request_t *request = DEQ_HEAD(client->pending_requests);
+        while (request) {
+            DEQ_REMOVE_HEAD(client->pending_requests);
+            qcm_addr_lookup_local_search(client, request);
+            free_qcm_addr_lookup_request_t(request);
+            request = DEQ_HEAD(client->pending_requests);
+        }
+    }
+}
+
+
+static void on_flow(qdr_core_t    *core,
+                    qdrc_client_t *api_client,
+                    void          *user_context,
+                    int            available_credit,
+                    bool           drain)
+{
+    qcm_lookup_client_t *client = (qcm_lookup_client_t*) user_context;
+
+    client->request_credit = available_credit;
+
+    //
+    // If we have positive credit, process any pending requests
+    //
+    if (client->request_credit > 0)
+        qcm_addr_lookup_process_pending_requests_CT(client);
+
+    if (drain)
+        client->request_credit = 0;
+}
+
+
+static uint64_t on_reply(qdr_core_t    *core,
+                         qdrc_client_t *api_client,
+                         void          *user_context,
+                         void          *request_context,
+                         qd_iterator_t *app_properties,
+                         qd_iterator_t *body)
+{
+    qcm_lookup_client_t         *client  = (qcm_lookup_client_t*) user_context;
+    qcm_addr_lookup_request_t   *request = (qcm_addr_lookup_request_t*) request_context;
+    qcm_address_lookup_status_t  status;
+    bool                         is_link_route;
+    bool                         has_destinations;
+
+    status = qcm_link_route_lookup_decode(app_properties, body, &is_link_route, &has_destinations);
+    if (status == QCM_ADDR_LOOKUP_OK) {
+        //
+        // TODO - Add resolution using the received data
+        //
+        qcm_addr_lookup_local_search(client, request);
+    } else {
+        qcm_addr_lookup_local_search(client, request);
+    }
+
+    return 0;
+}
+
+
+static void on_request_done(qdr_core_t    *core,
+                            qdrc_client_t *api_client,
+                            void          *user_context,
+                            void          *request_context,
+                            const char    *error)
+{
+    qcm_lookup_client_t       *client  = (qcm_lookup_client_t*) user_context;
+    qcm_addr_lookup_request_t *request = (qcm_addr_lookup_request_t*) request_context;
+
+    if (error) {
+        qcm_addr_lookup_local_search(client, request);
+    }
+
+    DEQ_REMOVE(client->sent_requests, request);
+    free_qcm_addr_lookup_request_t(request);
+}
+
+
+//================================================================================
+// Event Handlers
+//================================================================================
+
+static void on_conn_event(void             *context,
+                          qdrc_event_t      event_type,
+                          qdr_connection_t *conn)
+{
+    qcm_lookup_client_t *client = (qcm_lookup_client_t*) context;
+
+    switch (event_type) {
+    case QDRC_EVENT_CONN_EDGE_ESTABLISHED:
+        client->edge_conn      = conn;
+        client->request_credit = 0;
+
+        //
+        // Set up a Client API session on the edge connection.
+        //
+        qdr_terminus_t *target = qdr_terminus(0);
+        qdr_terminus_set_address(target, QD_TERMINUS_ADDRESS_LOOKUP);
+        client->client_api = qdrc_client_CT(client->core,
+                                            client->edge_conn,
+                                            target,
+                                            250,
+                                            client,
+                                            on_state,
+                                            on_flow);
+        break;
+
+    case QDRC_EVENT_CONN_EDGE_LOST:
+        client->edge_conn      = 0;
+        client->request_credit = 0;
+
+        //
+        // Remove the Client API session.
+        //
+        qdrc_client_free_CT(client->client_api);
+        client->client_api = 0;
+        break;
+
+    default:
+        assert(false);
+        break;
+    }
+}
+
+//================================================================================
+// Module Handlers
+//================================================================================
 
 static bool qcm_addr_lookup_client_enable_CT(qdr_core_t *core)
 {
@@ -365,16 +654,26 @@ static bool qcm_addr_lookup_client_enable_CT(qdr_core_t *core)
 static void qcm_addr_lookup_client_init_CT(qdr_core_t *core, void **module_context)
 {
     assert(core->addr_lookup_handler == 0);
+    qcm_lookup_client_t *client = NEW(qcm_lookup_client_t);
+    ZERO(client);
+
+    client->core      = core;
+    client->event_sub = qdrc_event_subscribe_CT(client->core,
+                                                QDRC_EVENT_CONN_EDGE_ESTABLISHED | QDRC_EVENT_CONN_EDGE_LOST,
+                                                on_conn_event, 0, 0,
+                                                client);
 
     core->addr_lookup_handler = qcm_addr_lookup_CT;
-    *module_context           = core;
+    core->addr_lookup_context = client;
+    *module_context           = client;
 }
 
 
 static void qcm_addr_lookup_client_final_CT(void *module_context)
 {
-    qdr_core_t *core = (qdr_core_t*) module_context;
-    core->addr_lookup_handler = 0;
+    qcm_lookup_client_t *client = (qcm_lookup_client_t*) module_context;
+    client->core->addr_lookup_handler = 0;
+    free(client);
 }
 
 

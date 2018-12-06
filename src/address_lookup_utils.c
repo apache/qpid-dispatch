@@ -28,10 +28,10 @@
 /* create the message application properties and body for the link route lookup
  * request message
  */
-int qcm_link_route_lookup_msg(qd_iterator_t        *address,
-                              qd_direction_t        dir,
-                              qd_composed_field_t **properties,
-                              qd_composed_field_t **body)
+int qcm_link_route_lookup_request(qd_iterator_t        *address,
+                                  qd_direction_t        dir,
+                                  qd_composed_field_t **properties,
+                                  qd_composed_field_t **body)
 {
     *properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
     if (!*properties)

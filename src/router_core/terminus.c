@@ -166,7 +166,7 @@ void qdr_terminus_set_address_iterator(qdr_terminus_t *term, qd_iterator_t *addr
 
 qd_iterator_t *qdr_terminus_get_address(qdr_terminus_t *term)
 {
-    if (qdr_terminus_is_anonymous(term))
+    if (term->address == 0)
         return 0;
 
     return term->address->iterator;

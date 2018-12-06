@@ -1356,7 +1356,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 // This link has a target address
                 //
                 if (core->addr_lookup_handler)
-                    core->addr_lookup_handler(core, conn, link, dir, source, target);
+                    core->addr_lookup_handler(core->addr_lookup_context, conn, link, dir, source, target);
                 else {
                     qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                     qdr_terminus_free(source);
@@ -1383,7 +1383,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
             if (core->addr_lookup_handler)
-                core->addr_lookup_handler(core, conn, link, dir, source, target);
+                core->addr_lookup_handler(core->addr_lookup_context, conn, link, dir, source, target);
             else {
                 qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                 qdr_terminus_free(source);

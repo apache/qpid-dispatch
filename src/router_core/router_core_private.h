@@ -729,6 +729,7 @@ struct qdr_core_t {
     qdr_link_list_t       open_links;
 
     qdrc_attach_addr_lookup_t  addr_lookup_handler;
+    void                      *addr_lookup_context;
 
     //
     // Agent section

@@ -35,14 +35,14 @@
  * message or link routing.  This operation may be synchronoue (completed before it
  * returns) or asynchronous (completed later).
  *
- * @param core Pointer to the core state.
+ * @param context Module context for address-lookup module
  * @param conn Pointer to the connection over which the attach arrived.
  * @param link Pointer to the attaching link.
  * @param dir The direction of message flow for the link.
  * @param source The source terminus for the attach.
  * @param target The target terminus for the attach.
  */
-typedef void (*qdrc_attach_addr_lookup_t) (qdr_core_t       *core,
+typedef void (*qdrc_attach_addr_lookup_t) (void             *context,
                                            qdr_connection_t *conn,
                                            qdr_link_t       *link,
                                            qd_direction_t    dir,
