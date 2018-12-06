@@ -64,6 +64,9 @@ class ConnectionDetail():
         # combined amqp_error frames on this connection
         self.amqp_errors = 0
 
+        # unsettled transfer count
+        self.unsettled = 0
+
         # session_list holds all SessionDetail records either active or retired
         # Sessions for a connection are identified by the local channel number.
         # There may be many sessions all using the same channel number.
@@ -122,6 +125,8 @@ class SessionDetail:
         self.time_end = start_time
 
         self.amqp_errors = 0
+
+        self.unsettled = 0
 
         self.channel = -1
         self.peer_chan = -1
@@ -263,6 +268,10 @@ class LinkDetail():
 
         self.amqp_errors = 0
 
+        self.unsettled = 0
+        self.unsettled_list = []
+
+
         # paired handles
         self.output_handle = -1
         self.input_handle = -1
@@ -295,7 +304,10 @@ class AllDetails():
     #
     #
     def format_errors(self, n_errors):
-        return ("<span style=\"background-color:yellow\">%d</span>" % n_errors) if n_errors > 0 else ""
+        return ("<span style=\"background-color:yellow\">errors: %d</span>" % n_errors) if n_errors > 0 else ""
+
+    def format_unsettled(self, n_unsettled):
+        return ("<span style=\"background-color:orange\">unsettled: %d</span>" % n_unsettled) if n_unsettled > 0 else ""
 
     def classify_connection(self, id):
         """
@@ -426,9 +438,7 @@ class AllDetails():
                     conn_details.unaccounted_frame_list.append(plf)
                     continue
                 # session required
-                channel = plf.data.channel # For incoming begin this is the remote channel
-                                           # For outgoing begin this is the local channel
-                                           # Assume they are the same for the time being
+                channel = plf.data.channel # Assume in/out channels are the same for the time being
                 sess_details = conn_details.FindSession(channel)
                 if sess_details == None:
                     sess_details = SessionDetail(conn_details, conn_details.GetSeqNo(), plf.datetime)
@@ -543,6 +553,32 @@ class AllDetails():
                                                  (splf.data.conn_id))
                             sdispmap[did] = splf
 
+    def compute_settlement(self):
+        for conn in self.rtr.conn_list:
+            id = self.rtr.conn_id(conn)
+            conn_detail = self.rtr.details.conn_details[id]
+            for sess in conn_detail.session_list:
+                for link in sess.link_list:
+                    for plf in link.frame_list:
+                        if plf.data.transfer:
+                            tdid = plf.data.delivery_id
+                            if plf.data.direction == "->":
+                                rmap = sess.rx_rcvr_disposition_map
+                                tmap = sess.rx_sndr_disposition_map
+                            else:
+                                rmap = sess.tx_rcvr_disposition_map
+                                tmap = sess.tx_sndr_disposition_map
+                            plf.data.disposition_display = self.resolve_settlement(link, plf,
+                                                                                   rmap.get(tdid),
+                                                                                   tmap.get(tdid))
+                            if common.transfer_is_possibly_unsettled(plf):
+                                if tdid not in link.unsettled_list:
+                                    link.unsettled_list.append(tdid)
+                                    link.unsettled += 1
+                                    sess.unsettled += 1
+                                    conn_detail.unsettled += 1
+
+
     def show_html(self):
         for conn in self.rtr.conn_list:
             id = self.rtr.conn_id(conn)
@@ -556,8 +592,9 @@ class AllDetails():
             peer = self.rtr.conn_peer_display.get(id, "")  # peer container id
             peerconnid = self.comn.conn_peers_connid.get(id, "")
             # show the connection title
-            print("%s %s %s %s (nFrames=%d) %s<br>" % \
-                  (id, dir, peerconnid, peer, len(conn_frames), self.format_errors(conn_detail.amqp_errors)))
+            print("%s %s %s %s (nFrames=%d) %s %s<br>" % \
+                  (id, dir, peerconnid, peer, len(conn_frames), self.format_errors(conn_detail.amqp_errors),
+                   self.format_unsettled(conn_detail.unsettled)))
             # data div
             print("<div id=\"%s_data\" style=\"display:none; margin-bottom: 2px; margin-left: 10px\">" % id)
 
@@ -577,9 +614,10 @@ class AllDetails():
                 # show the session 'toggle goto' and title
                 print("<a href=\"javascript:toggle_node('%s_sess_%s')\">%s%s</a>" %
                       (id, sess.conn_epoch, text.lozenge(), text.nbsp()))
-                print("Session %s: channel: %s, peer channel: %s; Time: start %s, Counts: frames: %d %s<br>" % \
+                print("Session %s: channel: %s, peer channel: %s; Time: start %s, Counts: frames: %d %s %s<br>" % \
                       (sess.conn_epoch, sess.channel, sess.peer_chan, sess.time_start, \
-                       sess.FrameCount(), self.format_errors(sess.amqp_errors)))
+                       sess.FrameCount(), self.format_errors(sess.amqp_errors),
+                       self.format_unsettled(sess.unsettled)))
                 print("<div id=\"%s_sess_%s\" style=\"display:none; margin-bottom: 2px; margin-left: 10px\">" %
                       (id, sess.conn_epoch))
                 # show the session-level frames
@@ -597,7 +635,7 @@ class AllDetails():
                 print("<table")
                 print("<tr><th>Link</th> <th>Dir</th> <th>Role</th>  <th>Address</th>  <th>Class</th>  "
                       "<th>snd-settle-mode</th>  <th>rcv-settle-mode</th>  <th>Start time</th>  <th>Frames</th> "
-                      "<th>AMQP errors</tr>")
+                      "<th>AMQP errors</th> <th>Unsettled</th> </tr>")
                 for link in sess.link_list:
                     # show the link toggle and title
                     showthis = ("<a href=\"javascript:toggle_node('%s_sess_%s_link_%s')\">%s</a>" %
@@ -606,11 +644,12 @@ class AllDetails():
                                 (id, sess.conn_epoch, link.session_seq, link.display_name))
                     role = "receiver" if link.is_receiver else "sender"
                     print("<tr><td>%s %s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
-                          "<td>%s</td><td>%d</td><td>%s</td></tr>" % \
+                          "<td>%s</td><td>%d</td><td>%s</td> <td>%s</td></tr>" % \
                           (showthis, visitthis, link.direction, role, link.first_address,
                            (link.sender_class + '-' + link.receiver_class), link.snd_settle_mode,
                            link.rcv_settle_mode, link.time_start, link.FrameCount(),
-                           self.format_errors(link.amqp_errors)))
+                           self.format_errors(link.amqp_errors),
+                           self.format_unsettled(link.unsettled)))
                 print("</table>")
                 # second loop prints the link's frames
                 for link in sess.link_list:
@@ -622,17 +661,6 @@ class AllDetails():
                     print("<h4>Connection %s Session %s Link %s</h4>" %
                           (id, sess.conn_epoch, link.display_name))
                     for plf in link.frame_list:
-                        if plf.data.name == "transfer":
-                            tdid = plf.data.delivery_id
-                            if plf.data.direction == "->":
-                                rmap = sess.rx_rcvr_disposition_map
-                                tmap = sess.rx_sndr_disposition_map
-                            else:
-                                rmap = sess.tx_rcvr_disposition_map
-                                tmap = sess.tx_sndr_disposition_map
-                            plf.data.disposition_display = self.resolve_settlement(link, plf,
-                                                                                   rmap.get(tdid),
-                                                                                   tmap.get(tdid))
                         print(plf.adverbl_link_to(), plf.datetime, plf.data.direction, peer, plf.data.web_show_str,
                               plf.data.disposition_display, "<br>")
                     print("</div>")  # end link <id>_sess_<conn_epoch>_link_<sess_seq>

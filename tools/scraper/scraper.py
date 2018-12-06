@@ -227,6 +227,12 @@ def main_except(argv):
     comn.shorteners.short_data_names.sort_customers()
     comn.shorteners.short_link_names.sort_customers()
 
+    # compute settlement
+    if not comn.args.skip_detail:
+        for rtrlist in comn.routers:
+            for rtr in rtrlist:
+                rtr.details.compute_settlement()
+
     #
     # Start producing the output stream
     #
@@ -334,11 +340,11 @@ def main_except(argv):
 
     # print the connection peer tables
     #
-    # +------+--------------------+-----+--------------------+-------+-------+----------+--------+
-    # | View |       Router       | Dir |       Peer         | Log   | N     | Transfer | AMQP   |
-    # |      +-----------+--------+     +--------+-----------+ lines | links | bytes    | errors |
-    # |      | container | connid |     | connid | container |       |       |          |        |
-    # +------+-----------+--------+-----+--------+-----------+-------+-------+----------+--------+
+    # +------+--------------------+-----+--------------------+-------+-------+----------+--------+-------+
+    # | View |       Router       | Dir |       Peer         | Log   | N     | Transfer | AMQP   | unset |
+    # |      +-----------+--------+     +--------+-----------+ lines | links | bytes    | errors | tled  |
+    # |      | container | connid |     | connid | container |       |       |          |        |       |
+    # +------+-----------+--------+-----+--------+-----------+-------+-------+----------+--------+-------+
 
     print("<a name=\"c_connections\"></a>")
     print("<h3>Connections</h3>")
@@ -352,7 +358,7 @@ def main_except(argv):
     print("<h3>Connections by ConnectionId</h3>")
     print(
         "<table><tr> <th rowspan=\"2\">View</th> <th colspan=\"2\">Router</th> <th rowspan=\"2\">Dir</th> <th colspan=\"2\">Peer</th> <th rowspan=\"2\">Log lines</th> "
-        "<th rowspan=\"2\">N links</th><th rowspan=\"2\">Transfer bytes</th> <th rowspan=\"2\">AMQP errors</th> <th rowspan=\"2\">Open time</th> <th rowspan=\"2\">Close time</th></tr>")
+        "<th rowspan=\"2\">N links</th><th rowspan=\"2\">Transfer bytes</th> <th rowspan=\"2\">AMQP errors</th> <th rowspan=\"2\">Unsettled</th> <th rowspan=\"2\">Open time</th> <th rowspan=\"2\">Close time</th></tr>")
     print("<tr> <th>container</th> <th>connid</th> <th>connid</th> <th>container</th></tr>")
 
     tConn = 0
@@ -378,13 +384,14 @@ def main_except(argv):
                 etime = rtr.conn_close_time.get(id, text.nbsp())
                 if etime != text.nbsp():
                     etime = etime.datetime
+                conn_details = rtr.details.conn_details[id]
                 print("<tr>")
                 print("<td> <input type=\"checkbox\" id=\"cb_sel_%s\" " % id)
                 print("checked=\"true\" onclick=\"javascript:show_if_cb_sel_%s()\"> </td>" % (id))
                 print("<td>%s</td><td><a href=\"#cd_%s\">%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
-                      "<td>%d</td><td>%s</td><td>%d</td><td>%s</td><td>%s</td></tr>" %
+                      "<td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>" %
                       (rid, id, id, rtr.conn_dir[id], peerconnid, peer, rtr.conn_log_lines[id], n_links,
-                       rtr.conn_xfer_bytes[id], errs, stime, etime))
+                       rtr.conn_xfer_bytes[id], errs, conn_details.unsettled, stime, etime))
                 tLines += rtr.conn_log_lines[id]
                 tBytes += rtr.conn_xfer_bytes[id]
     print(
@@ -470,7 +477,7 @@ def main_except(argv):
             n_aborted += 1
         if plf.data.flow_drain:
             n_drain += 1
-        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None):
+        if common.transfer_is_possibly_unsettled(plf):
             if plf.data.no_parent_link:
                 n_unsettled_no_parent += 1 # possibly unsettled
             else:
@@ -542,7 +549,7 @@ def main_except(argv):
           "style=\"display:none; font-weight: normal; margin-bottom: 2px; margin-left: 10px\" "
           "id=\"noteworthy_unsettled\">")
     for plf in tree:
-        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None) and not plf.data.no_parent_link:
+        if common.transfer_is_possibly_unsettled(plf) and not plf.data.no_parent_link:
             show_noteworthy_line(plf, comn)
     print("</div>")
     # possible unsettled transfers
@@ -552,7 +559,7 @@ def main_except(argv):
           "style=\"display:none; font-weight: normal; margin-bottom: 2px; margin-left: 10px\" "
           "id=\"noteworthy_unsettled_qm\">")
     for plf in tree:
-        if plf.data.transfer and not (plf.data.transfer_settled or plf.data.final_disposition is not None) and plf.data.no_parent_link:
+        if common.transfer_is_possibly_unsettled(plf) and plf.data.no_parent_link:
             show_noteworthy_line(plf, comn)
     print("</div>")
     print("<hr>")

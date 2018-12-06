@@ -123,7 +123,7 @@ class LogLineData:
         self.target = ""
         self.first = ""  # undecorated number - '10'
         self.last = ""  # undecorated number - '20'
-        self.settled = ""  # Disposition or Transfer settled field
+        self.settled = ""  # Disposition or Transfer settled field from log line
         self.disposition_state = "?absent?"
         self.snd_settle_mode = ""  # Attach
         self.rcv_settle_mode = ""  # Attach
@@ -259,8 +259,7 @@ class DescribedType:
         :return:
         """
         self.dtype = _dtype
-        self.oline = str(_line)
-        self.line = self.oline
+        self.line = str(_line)
         self.dtype_name = DescribedType.dtype_name(self.dtype)
         self.dtype_number = DescribedType.dtype_number(self.dtype)
 
@@ -751,7 +750,6 @@ class ParsedLogLine(object):
                 ParsedLogLine.server_info_key in _line or
                 ParsedLogLine.router_ls_key in _line):
             raise ValueError("Line is not a candidate for parsing")
-        self.oline = _line  # original line
         self.index = _log_index  # router prefix 0 for A, 1 for B
         self.instance = _instance  # router instance in log file
         self.lineno = _lineno  # log line number
@@ -950,7 +948,17 @@ def parse_log_file(fn, log_index, comn):
                 search_for_in_progress = False
                 rtr.container_name = line[(line.find(key2) + len(key2)):].strip().split()[0]
             elif key3 in line:
-                pl = ParsedLogLine(log_index, instance, lineno, line, comn, rtr)
+                pl = None
+                try:
+                    pl = ParsedLogLine(log_index, instance, lineno, line, comn, rtr)
+                except ValueError as ve:
+                    pass
+                except Exception as e:
+                    # t, v, tb = sys.exc_info()
+                    if hasattr(e, 'message'):
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e.message))
+                    else:
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e))
                 if pl is not None:
                     if pl.data.is_router_ls:
                         rtr.router_ls.append(pl)
