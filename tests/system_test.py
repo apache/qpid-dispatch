@@ -717,11 +717,14 @@ def main_module():
 class AsyncTestReceiver(MessagingHandler):
     """
     A simple receiver that runs in the background and queues any received
-    messages.  Messages can be retrieved from this thread via the queue member
+    messages.  Messages can be retrieved from this thread via the queue member.
+    :param wait: block the constructor until the link has been fully
+                 established.
     """
     Empty = Queue.Empty
 
-    def __init__(self, address, source, conn_args=None, container_id=None):
+    def __init__(self, address, source, conn_args=None, container_id=None,
+                 wait=True):
         super(AsyncTestReceiver, self).__init__()
         self.address = address
         self.source = source
@@ -736,7 +739,7 @@ class AsyncTestReceiver(MessagingHandler):
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
-        if self._ready.wait(timeout=TIMEOUT) is False:
+        if wait and self._ready.wait(timeout=TIMEOUT) is False:
             raise Exception("Timed out waiting for receiver start")
 
     def _main(self):

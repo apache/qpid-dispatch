@@ -39,6 +39,11 @@ from proton.reactor import AtMostOnce
 from system_test import TIMEOUT
 
 
+class FakeBrokerStop(Exception):
+    """stop the broker from a handler callback"""
+    pass
+
+
 class FakeBroker(MessagingHandler):
     """
     A fake broker-like service that listens for client connections
@@ -104,14 +109,23 @@ class FakeBroker(MessagingHandler):
     def _main(self):
         self._container.timeout = 1.0
         self._container.start()
-        while self._container.process():
-            if self._stop_thread:
-                if self.acceptor:
-                    self.acceptor.close()
-                    self.acceptor = None
-                for c in self._connections:
-                    c.close()
-                self._connections = []
+
+        try:
+            while self._container.process():
+                if self._stop_thread:
+                    break
+
+            if self.acceptor:
+                self.acceptor.close()
+                self.acceptor = None
+            for c in self._connections:
+                c.close()
+            self._connections = []
+            self._container.process()
+        except FakeBrokerStop:
+            # this abruptly kills the broker useful to test how dispatch deals
+            # with hung/stopped containers
+            pass
 
     def join(self):
         self._stop_thread = True
