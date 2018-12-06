@@ -427,6 +427,16 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_43_dropped_presettled_receiver_stops(self):
+        local_node = Node.connect(self.address, timeout=TIMEOUT)
+        res = local_node.query('org.apache.qpid.dispatch.router')
+        deliveries_ingress = res.attribute_names.index(
+            'deliveriesIngress')
+        ingress_delivery_count = res.results[0][deliveries_ingress]
+        test = DroppedPresettledTest(self.address, 200, ingress_delivery_count)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -1006,6 +1016,104 @@ class PreSettled ( MessagingHandler ) :
             self.bail ( None )
 
 
+class PresettledCustomTimeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        local_node = Node.connect(self.parent.addr, timeout=TIMEOUT)
+        res = local_node.query('org.apache.qpid.dispatch.router')
+        deliveries_ingress = res.attribute_names.index(
+            'deliveriesIngress')
+        ingress_delivery_count = res.results[0][deliveries_ingress]
+        self.parent.cancel_custom()
+
+        # Without the fix for DISPATCH--1213  the ingress count will be less than
+        # 200 because the sender link has stalled. The q2_holdoff happened
+        # and so all the remaining messages are still in the
+        # proton buffers.
+
+        if ingress_delivery_count - self.parent.begin_ingress_count > self.parent.n_messages:
+            self.parent.bail(None)
+        else:
+            self.parent.bail("Messages sent to the router is %d, "
+                             "Messages processed by the router is %d",
+                             (self.parent.n_messages,
+                              ingress_delivery_count - self.parent.begin_ingress_count))
+
+
+class DroppedPresettledTest(MessagingHandler):
+    def __init__(self, addr, n_messages, begin_ingress_count):
+        super (DroppedPresettledTest, self).__init__()
+        self.addr = addr
+        self.n_messages = n_messages
+        self.sender = None
+        self.receiver = None
+        self.sender_conn = None
+        self.recv_conn = None
+        self.n_sent = 0
+        self.n_received = 0
+        self.error = None
+        self.test_timer = None
+        self.max_receive = 10
+        self.custom_timer = None
+        self.timer = None
+        self.begin_ingress_count = begin_ingress_count
+        self.str1 = "0123456789abcdef"
+        self.msg_str = ""
+        for i in range(8192):
+            self.msg_str += self.str1
+
+    def run (self):
+        Container(self).run()
+
+    def bail(self, travail):
+        self.error = travail
+        self.sender_conn.close()
+        if self.recv_conn:
+            self.recv_conn.close()
+        self.timer.cancel()
+
+    def timeout(self,):
+        self.bail("Timeout Expired: %d messages received, %d expected." %
+                  (self.n_received, self.n_messages))
+
+    def on_start (self, event):
+        self.sender_conn = event.container.connect(self.addr)
+        self.recv_conn = event.container.connect(self.addr)
+        self.receiver = event.container.create_receiver(self.recv_conn,
+                                                        "test_43")
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    "test_43")
+        self.timer = event.reactor.schedule(10, Timeout(self))
+
+    def cancel_custom(self):
+        self.custom_timer.cancel()
+
+    def on_sendable(self, event):
+        while self.n_sent < self.n_messages:
+            msg = Message(id=(self.n_sent + 1),
+                          body={'sequence': (self.n_sent + 1),
+                                'msg_str': self.msg_str})
+            # Presettle the delivery.
+            dlv = self.sender.send (msg)
+            dlv.settle()
+            self.n_sent += 1
+
+    def on_message(self, event):
+        self.n_received += 1
+        if self.n_received == self.max_receive:
+            # Receiver bails after receiving max_receive messages.
+            self.receiver.close()
+            self.recv_conn.close()
+
+            # The sender is only sending 200 large messages which is less
+            # that the initial credit of 250 that the router gives.
+            # Lets do a qdstat to find out if all 200 messages is handled
+            # by the router.
+            self.custom_timer = event.reactor.schedule(1,
+                                                       PresettledCustomTimeout(
+                                                           self))
 
 class MulticastUnsettled ( MessagingHandler ) :
     def __init__ ( self,

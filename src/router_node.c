@@ -1605,7 +1605,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     //
     // If the disposition has changed, update the proton delivery.
     //
-    if (disp != pn_delivery_remote_state(pnd)) {
+    if (disp != pn_delivery_remote_state(pnd) && !qdr_delivery_presettled(dlv)) {
         qd_message_t *msg = qdr_delivery_message(dlv);
 
         if (disp == PN_MODIFIED)
@@ -1635,7 +1635,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
             // If the delivery is settled and it is still arriving, defer the settlement
             // until the content has fully arrived.
             //
-            if (disp == PN_RELEASED || disp == PN_MODIFIED) {
+            if (disp == PN_RELEASED || disp == PN_MODIFIED || qdr_delivery_presettled(dlv)) {
                 //
                 // If the disposition is RELEASED or MODIFIED, set the message to discard
                 // and if it is blocked by holdoff, get the link rolling again.
