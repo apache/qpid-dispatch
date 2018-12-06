@@ -1262,9 +1262,6 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     case QD_ROUTER_MODE_ENDPOINT:   qd_log(router->log_source, QD_LOG_INFO, "Router started in Endpoint mode");  break;
     }
 
-    if (router->router_mode == QD_ROUTER_MODE_EDGE)
-        qd_log(router->log_source, QD_LOG_WARNING, "Edge mode is not fully implemented");
-
     qd_log(router->log_source, QD_LOG_INFO, "Version: %s", QPID_DISPATCH_VERSION);
 
     return router;

@@ -50,6 +50,13 @@ int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *
                            bool exclude_inprocess, bool control);
 bool qdr_forward_attach_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *in_link, qdr_terminus_t *source,
                            qdr_terminus_t *target);
+void qdr_forward_link_direct_CT(qdr_core_t       *core,
+                                qdr_connection_t *conn,
+                                qdr_link_t       *in_link,
+                                qdr_terminus_t   *source,
+                                qdr_terminus_t   *target,
+                                char             *strip,
+                                char             *insert);
 
 typedef enum {
     QDR_CONDITION_NO_ROUTE_TO_DESTINATION,

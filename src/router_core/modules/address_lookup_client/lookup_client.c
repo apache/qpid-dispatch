@@ -472,6 +472,7 @@ static void qcm_addr_lookup_CT(void             *context,
 
     if (client->core->router_mode == QD_ROUTER_MODE_EDGE
         && client->client_api_active
+        && conn != client->edge_conn
         && qdr_terminus_get_address(term) != 0) {
         //
         // We are in edge mode, there is an active edge connection, and the terminus has an address.
@@ -522,6 +523,8 @@ static void on_state(qdr_core_t    *core,
         while (request) {
             DEQ_REMOVE_HEAD(client->pending_requests);
             qcm_addr_lookup_local_search(client, request);
+            qdr_terminus_free(request->source);
+            qdr_terminus_free(request->target);
             free_qcm_addr_lookup_request_t(request);
             request = DEQ_HEAD(client->pending_requests);
         }
@@ -566,10 +569,30 @@ static uint64_t on_reply(qdr_core_t    *core,
     status = qcm_link_route_lookup_decode(app_properties, body, &is_link_route, &has_destinations);
     if (status == QCM_ADDR_LOOKUP_OK) {
         //
-        // TODO - Add resolution using the received data
+        // The lookup decode is of a valid service response.
         //
-        qcm_addr_lookup_local_search(client, request);
+        if (!is_link_route)
+            //
+            // The address is not for a link route.  Use the local search.
+            //
+            qcm_addr_lookup_local_search(client, request);
+
+        else if (!has_destinations)
+            //
+            // The address is for a link route, but there are no destinations upstream.  Fail with no-route.
+            //
+            qdr_link_outbound_detach_CT(core, request->link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+
+        else
+            //
+            // The address is for a link route and there are destinations upstream.  Directly forward the attach.
+            //
+            qdr_forward_link_direct_CT(core, client->edge_conn, request->link, request->source, request->target, 0, 0);
+
     } else {
+        //
+        // The reply was not a valid server response.  Fall back to the local search.
+        //
         qcm_addr_lookup_local_search(client, request);
     }
 

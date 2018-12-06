@@ -885,48 +885,59 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
     }
 
     if (conn) {
-        qdr_link_t *out_link = new_qdr_link_t();
-        ZERO(out_link);
-        out_link->core           = core;
-        out_link->identity       = qdr_identifier(core);
-        out_link->conn           = conn;
-        out_link->link_type      = QD_LINK_ENDPOINT;
-        out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
-        out_link->admin_enabled  = true;
-        out_link->terminus_addr  = 0;
-
-        if (strip) {
-            out_link->strip_prefix = strip;
-        }
-        if (insert) {
-            out_link->insert_prefix = insert;
-        }
-
-        out_link->oper_status    = QDR_LINK_OPER_DOWN;
-
-        out_link->name = strdup(in_link->disambiguated_name ? in_link->disambiguated_name : in_link->name);
-
-        out_link->connected_link = in_link;
-        in_link->connected_link  = out_link;
-
-        DEQ_INSERT_TAIL(core->open_links, out_link);
-        qdr_add_link_ref(&conn->links, out_link, QDR_LINK_LIST_CLASS_CONNECTION);
-
-        qdr_connection_work_t *work = new_qdr_connection_work_t();
-        ZERO(work);
-        work->work_type = QDR_CONNECTION_WORK_FIRST_ATTACH;
-        work->link      = out_link;
-        work->source    = source;
-        work->target    = target;
-
-        qdr_connection_enqueue_work_CT(core, conn, work);
-
+        qdr_forward_link_direct_CT(core, conn, in_link, source, target, strip, insert);
         return true;
     }
 
     free(insert);
     free(strip);
     return false;
+}
+
+
+void qdr_forward_link_direct_CT(qdr_core_t       *core,
+                                qdr_connection_t *conn,
+                                qdr_link_t       *in_link,
+                                qdr_terminus_t   *source,
+                                qdr_terminus_t   *target,
+                                char             *strip,
+                                char             *insert)
+{
+    qdr_link_t *out_link = new_qdr_link_t();
+    ZERO(out_link);
+    out_link->core           = core;
+    out_link->identity       = qdr_identifier(core);
+    out_link->conn           = conn;
+    out_link->link_type      = QD_LINK_ENDPOINT;
+    out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
+    out_link->admin_enabled  = true;
+    out_link->terminus_addr  = 0;
+
+    if (strip) {
+        out_link->strip_prefix = strip;
+    }
+    if (insert) {
+        out_link->insert_prefix = insert;
+    }
+
+    out_link->oper_status    = QDR_LINK_OPER_DOWN;
+
+    out_link->name = strdup(in_link->disambiguated_name ? in_link->disambiguated_name : in_link->name);
+
+    out_link->connected_link = in_link;
+    in_link->connected_link  = out_link;
+
+    DEQ_INSERT_TAIL(core->open_links, out_link);
+    qdr_add_link_ref(&conn->links, out_link, QDR_LINK_LIST_CLASS_CONNECTION);
+
+    qdr_connection_work_t *work = new_qdr_connection_work_t();
+    ZERO(work);
+    work->work_type = QDR_CONNECTION_WORK_FIRST_ATTACH;
+    work->link      = out_link;
+    work->source    = source;
+    work->target    = target;
+
+    qdr_connection_enqueue_work_CT(core, conn, work);
 }
 
 
