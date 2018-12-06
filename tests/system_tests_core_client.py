@@ -24,6 +24,7 @@ from __future__ import print_function
 
 from system_test import TestCase
 from system_test import Qdrouterd
+from system_test import QdManager
 from system_test import TIMEOUT
 
 from proton import Message
@@ -83,6 +84,12 @@ class CoreClientAPITest(TestCase):
         ts.run()
         self.assertTrue(ts.error is None)
         self.assertTrue(ts.accepted)
+
+    def test_call_timeout(self):
+        qm = QdManager(self, self.router.addresses[0])
+        ts = TestCallTimeout(self.router.addresses[0], qm)
+        ts.run()
+        self.assertEqual("TIMED OUT!", ts.error)
 
 
 class TestService(MessagingHandler):
@@ -218,3 +225,33 @@ class TestOldCorrelationId(TestService):
 
     def on_accepted(self, event):
         self.accepted = True
+
+
+class TestCallTimeout(TestService):
+    # test that the timeout is handled properly
+
+    class PeriodicLogScrape(object):
+        # periodically scan the log for the timeout error
+        def __init__(self, service):
+            self.service = service
+
+        def on_timer_task(self, event):
+            log = self.service.qm.get_log()
+            for e in log:
+                if (e[0] == 'ROUTER_CORE'
+                    and e[1] == 'error'
+                    # yes this is the line you're looking for:
+                    and e[2] == 'client test request done error=Timed out'):
+                    self.service.error = "TIMED OUT!"
+                    if self.service._conn:
+                        self.service._conn.close()
+                    return
+            event.reactor.schedule(1, TestCallTimeout.PeriodicLogScrape(self.service))
+
+    def __init__(self, address, qm):
+        super(TestCallTimeout, self).__init__(address, credit=1)
+        self.qm = qm
+
+    def on_message(self, event):
+        # drop it
+        event.reactor.schedule(1, self.PeriodicLogScrape(self))

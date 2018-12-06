@@ -517,9 +517,11 @@ static void _client_on_done_cb(qdr_core_t    *core,
                                void          *request_context,
                                const char    *error)
 {
-    qd_log(core->log, QD_LOG_TRACE,
-           "client test request done rc=%"PRIxPTR" error=%s",
-           request_context,
+    // the system_tests_core_client.py looks for the following
+    // log message during the tests
+    qd_log_level_t level = (error) ? QD_LOG_ERROR : QD_LOG_TRACE;
+    qd_log(core->log, level,
+           "client test request done error=%s",
            (error) ? error : "None");
 }
 
@@ -543,6 +545,7 @@ static void _do_send(test_client_t *tc)
                                (void *)tc->counter,  // request context
                                props,
                                body,
+                               5,  // timeout
                                _client_on_reply_cb,
                                _client_on_ack_cb,
                                _client_on_done_cb);

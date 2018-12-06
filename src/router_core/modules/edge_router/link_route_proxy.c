@@ -127,9 +127,10 @@ static void _sync_interior_proxies(qdr_core_t *core)
                                      lrp, // context
                                      "CREATE",
                                      CONN_LINK_ROUTE_TYPE,
-                                     0,
+                                     0,  // id
                                      lrp->proxy_name,
                                      _create_body(lrp),
+                                     10,  // timeout
                                      _on_create_reply_CT,
                                      _on_create_error_CT);
             _available_credit -= 1;
@@ -154,6 +155,7 @@ static void _sync_interior_proxies(qdr_core_t *core)
                                      lrp->proxy_id,
                                      lrp->proxy_name,
                                      body,
+                                     10,  // timeout
                                      _on_delete_reply_CT,
                                      _on_delete_error_CT);
             _available_credit -= 1;

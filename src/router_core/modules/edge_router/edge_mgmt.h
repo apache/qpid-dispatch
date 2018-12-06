@@ -78,6 +78,9 @@ typedef void (*qcm_edge_mgmt_error_CT_t)(qdr_core_t *core,
  * @param name - (optional) the entity's name
  * @param body - message body content.  Ownership is transferred - the caller
  *               must not reference this on return.
+ * @param timeout - time in seconds to wait for request to complete.  If this
+ *                  timer expires the error_cb will be invoked with the
+ *                  error "Timed out"
  * @param reply_cb - Callback for reply message.
  * @param error_cb - Callback if error occurs
  * @return zero on success, else error. On success a callback is
@@ -90,6 +93,7 @@ int qcm_edge_mgmt_request_CT(qdr_core_t *core,
                              const char *identity,
                              const char *name,
                              qd_composed_field_t *body,
+                             uint32_t                 timeout,
                              qcm_edge_mgmt_reply_CT_t reply_cb,
                              qcm_edge_mgmt_error_CT_t error_cb);
 

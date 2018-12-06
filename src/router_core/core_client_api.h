@@ -141,14 +141,14 @@ void qdrc_client_free_CT(qdrc_client_t *client);
  * @param client - as returned by qdrc_client_CT()
  * @param request_context - context for this request that will be passed to
  *        callbacks
-
  * @param app_properties - the application properties for the sent message.
  *        Ownership is transferred to this call - the caller must not reference the
  *        composed field on return.
-
  * @param body - the message body for the sent message. Ownership is transferred
  *        to this call - the caller must not reference the composed field on return.
-
+ * @param timeout - abort the request if it does not complete in timeout
+ *                  seconds. On timeout done_cb will be called with error
+ *                  set to "Timed out" (timeout=0 means never timeout).
  * @param on_reply_cb - (optional) invoked when reply message arrives
  * @param on_ack_cb - (optional) invoked when sent message disposition is set
  * @param done_cb - (optional) called once request is done (for cleanup)
@@ -158,6 +158,7 @@ int qdrc_client_request_CT(qdrc_client_t                 *client,
                            void                          *request_context,
                            qd_composed_field_t           *app_properties,
                            qd_composed_field_t           *body,
+                           uint32_t                       timeout,
                            qdrc_client_on_reply_CT_t      on_reply_cb,
                            qdrc_client_on_ack_CT_t        on_ack_cb,
                            qdrc_client_request_done_CT_t  done_cb);

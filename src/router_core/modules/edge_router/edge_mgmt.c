@@ -251,6 +251,7 @@ int qcm_edge_mgmt_request_CT(qdr_core_t           *core,
                              const char           *identity,
                              const char           *name,
                              qd_composed_field_t  *body,
+                             uint32_t                 timeout,
                              qcm_edge_mgmt_reply_CT_t reply_cb,
                              qcm_edge_mgmt_error_CT_t error_cb)
 {
@@ -291,6 +292,7 @@ int qcm_edge_mgmt_request_CT(qdr_core_t           *core,
                                   req,   // request context
                                   ap_fld,
                                   body,
+                                  timeout,
                                   _mgmt_on_reply_cb_CT,
                                   _mgmt_on_ack_cb_CT,
                                   _mgmt_on_done_cb_CT);

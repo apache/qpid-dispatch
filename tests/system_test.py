@@ -867,6 +867,12 @@ class QdManager(object):
     def query(self, long_type):
         return json.loads(self('QUERY --type=%s' % long_type))
 
+    def get_log(self, limit=None):
+        cmd = 'GET-LOG'
+        if (limit):
+            cmd += " limit=%s" % limit
+        return json.loads(self(cmd))
+
 
 class MgmtMsgProxy(object):
     """

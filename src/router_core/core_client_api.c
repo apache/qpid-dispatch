@@ -41,6 +41,7 @@ struct qdrc_client_request_t {
     qd_iterator_t       *correlation_key;
     qd_hash_handle_t    *hash_handle;
     qdr_delivery_t      *delivery;
+    qdr_core_timer_t    *timer;
 
     qd_composed_field_t *app_properties;
     qd_composed_field_t *body;
@@ -119,6 +120,7 @@ static void _free_request_CT(qdrc_client_t *client,
                              const char *error);
 static qd_message_t *_create_message_CT(qdrc_client_t *client,
                                         qdrc_client_request_t *req);
+static void _timer_expired(qdr_core_t *core, void *context);
 
 
 static qdrc_endpoint_desc_t sender_endpoint = {
@@ -229,12 +231,13 @@ int qdrc_client_request_CT(qdrc_client_t                 *client,
                            void                          *request_context,
                            qd_composed_field_t           *app_properties,
                            qd_composed_field_t           *body,
+                           uint32_t                       timeout,
                            qdrc_client_on_reply_CT_t      on_reply_cb,
                            qdrc_client_on_ack_CT_t        on_ack_cb,
                            qdrc_client_request_done_CT_t  done_cb)
 {
     qd_log(client->core->log, QD_LOG_TRACE,
-           "New core client request created c=%p, rc=%"PRIuPTR")",
+           "New core client request created c=%p, rc=%"PRIuPTR,
            client, request_context);
 
     qdrc_client_request_t *req = new_qdrc_client_request_t();
@@ -246,6 +249,10 @@ int qdrc_client_request_CT(qdrc_client_t                 *client,
     req->on_reply_cb    = on_reply_cb;
     req->on_ack_cb      = on_ack_cb;
     req->done_cb        = done_cb;
+    if (timeout) {
+        req->timer = qdr_core_timer_CT(client->core, _timer_expired, req);
+        qdr_core_timer_schedule_CT(client->core, req->timer, timeout);
+    }
 
     _send_request_CT(client, req);
     return 0;
@@ -287,7 +294,7 @@ static void _flush_send_queue_CT(qdrc_client_t *client)
         req->on_send_queue = false;
 
         qd_log(client->core->log, QD_LOG_TRACE,
-               "Core client request sent c=%p, rc=%"PRIuPTR" dlv=%p cid=%s)",
+               "Core client request sent c=%p, rc=%"PRIuPTR" dlv=%p cid=%s",
                client, req->req_context, req->delivery,
                *req->correlation_id ? req->correlation_id : "<none>");
 
@@ -313,6 +320,9 @@ static void _free_request_CT(qdrc_client_t *client,
                              qdrc_client_request_t *req,
                              const char *error)
 {
+    if (req->timer) {
+        qdr_core_timer_free_CT(client->core, req->timer);
+    }
     if (req->on_send_queue)
         DEQ_REMOVE_N(SEND_Q, client->send_queue, req);
     if (req->on_unsettled_list)
@@ -347,8 +357,9 @@ static void _free_request_CT(qdrc_client_t *client,
     }
 
     qd_log(client->core->log, QD_LOG_TRACE,
-           "Freeing core client request c=%p, rc=%"PRIuPTR")",
-           client, req->req_context);
+           "Freeing core client request c=%p, rc=%"PRIuPTR" (%s)",
+           client, req->req_context,
+           error ? error : "request complete");
 
     free_qdrc_client_request_t(req);
 }
@@ -682,4 +693,13 @@ static qd_message_t *_create_message_CT(qdrc_client_t *client,
     req->app_properties = 0;
 
     return message;
+}
+
+
+// a request has timed out
+static void _timer_expired(qdr_core_t *core, void *context)
+{
+    qdrc_client_request_t *req = (qdrc_client_request_t *)context;
+    qdrc_client_t *client = req->client;
+    _free_request_CT(client, req, "Timed out");
 }

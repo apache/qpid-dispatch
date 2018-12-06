@@ -412,6 +412,7 @@ static void qcm_addr_lookup_local_search(qcm_lookup_client_t *client, qcm_addr_l
 
 static void qcm_addr_lookup_process_pending_requests_CT(qcm_lookup_client_t *client)
 {
+    const uint32_t timeout = 3;
     int result;
 
     while (client->request_credit > 0 && DEQ_SIZE(client->pending_requests) > 0) {
@@ -426,7 +427,7 @@ static void qcm_addr_lookup_process_pending_requests_CT(qcm_lookup_client_t *cli
             if (iter) {
                 result = qcm_link_route_lookup_request(iter, request->dir, &props, &body);
                 if (result == 0) {
-                    result = qdrc_client_request_CT(client->client_api, request, props, body, on_reply, 0, on_request_done);
+                    result = qdrc_client_request_CT(client->client_api, request, props, body, timeout, on_reply, 0, on_request_done);
                     if (result == 0) {
                         DEQ_INSERT_TAIL(client->sent_requests, request);
                         client->request_credit--;
