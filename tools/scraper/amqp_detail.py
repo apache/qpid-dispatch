@@ -50,11 +50,13 @@ class ConnectionDetail():
     Holds facts about sessions over the connection's lifetime
     """
 
-    def __init__(self, id):
+    def __init__(self, id, router, conn):
         # id in form 'A_15':
         #   A is the router logfile key
         #   15 is the log connection number [15]
         self.id = id
+        self.router = router
+        self.conn = conn     # from router.conn_list
 
         # seq_no number differentiates items that otherwise have same identifiers.
         # Sessions, for example: a given connection may have N distinct session
@@ -113,8 +115,9 @@ class SessionDetail:
     Holds facts about a session
     """
 
-    def __init__(self, conn_detail, conn_seq, start_time):
+    def __init__(self, id, conn_detail, conn_seq, start_time):
         # parent connection
+        self.id = id
         self.conn_detail = conn_detail
 
         # some seq number
@@ -251,7 +254,8 @@ class LinkDetail():
     This structure binds input and output links with same name
     """
 
-    def __init__(self, session_detail, session_seq, link_name, start_time):
+    def __init__(self, id, session_detail, session_seq, link_name, start_time):
+        self.id = id
         # parent session
         self.session_detail = session_detail
 
@@ -427,7 +431,7 @@ class AllDetails():
 
         for conn in self.rtr.conn_list:
             id = self.rtr.conn_id(conn)
-            self.conn_details[id] = ConnectionDetail(id)
+            self.conn_details[id] = ConnectionDetail(id, self.rtr, conn)
             conn_details = self.conn_details[id]
             conn_frames = self.rtr.conn_to_frame_map[id]
             for plf in conn_frames:
@@ -441,7 +445,8 @@ class AllDetails():
                 channel = plf.data.channel # Assume in/out channels are the same for the time being
                 sess_details = conn_details.FindSession(channel)
                 if sess_details == None:
-                    sess_details = SessionDetail(conn_details, conn_details.GetSeqNo(), plf.datetime)
+                    new_id = len(conn_details.session_list)
+                    sess_details = SessionDetail(new_id, conn_details, conn_details.GetSeqNo(), plf.datetime)
                     conn_details.session_list.append(sess_details)
                     conn_details.EndChannel(channel)
                     conn_details.chan_map[channel] = sess_details
@@ -473,7 +478,8 @@ class AllDetails():
                         sess_details.amqp_errors += 1
                     if nl is None:
                         # Creating a new link from scratch resulting in a half attached link pair
-                        nl = LinkDetail(sess_details, sess_details.GetSeqNo(), link_name, plf.datetime)
+                        new_id = len(sess_details.link_list)
+                        nl = LinkDetail(new_id, sess_details, sess_details.GetSeqNo(), link_name, plf.datetime)
                         sess_details.link_list.append(nl)
                         sess_details.link_name_to_detail_map[link_name_unambiguous] = nl
                         sess_details.link_name_conflict_map[link_name] = nl
@@ -578,6 +584,13 @@ class AllDetails():
                                     sess.unsettled += 1
                                     conn_detail.unsettled += 1
 
+    def index_addresses(self):
+        for conn in self.rtr.conn_list:
+            id = self.rtr.conn_id(conn)
+            conn_detail = self.rtr.details.conn_details[id]
+            for sess in conn_detail.session_list:
+                for link in sess.link_list:
+                    self.comn.shorteners.short_addr_names.translate(link.first_address, False, link)
 
     def show_html(self):
         for conn in self.rtr.conn_list:

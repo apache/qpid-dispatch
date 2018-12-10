@@ -118,6 +118,7 @@ def web_page_toc():
 <tr><td><a href=\"#c_logfiles\"       >Log files</a></td>             <td>Router and log file info</td></tr>
 <tr><td><a href=\"#c_rtrinstances\"   >Router Instances</a></td>      <td>Router reboot chronology</td></tr>
 <tr><td><a href=\"#c_connections\"    >Connections</a></td>           <td>Connection overview; per connection log data view control</td></tr>
+<tr><td><a href=\"#c_addresses\"      >Addresses</a></td>             <td>AMQP address usage</td></tr>
 <tr><td><a href=\"#c_connectchrono\"  >Connection Chronology</a></td> <td>Router restart and connection chronology</td></tr>
 <tr><td><a href=\"#c_conndetails\"    >Connection Details</a></td>    <td>Connection details; frames sorted by link</td></tr>
 <tr><td><a href=\"#c_noteworthy\"     >Noteworthy log lines</a></td>  <td>AMQP errors and interesting flags</td></tr>

@@ -70,8 +70,16 @@ From each log file Scraper extracts:
    When you click the lozenge you don't see the data. For larger data sets the usage
    rule is to first click the lozenge to expose the data, and then click the hyperlink
    go make the data visible.
+ 
+ * For each link the first AMQP Attach is examined to discover the link's source or
+   target address. All the addresses named in all the links are aggregated into a table.
    
+   To view the link traffic first click the lozenge in the Link column to make the data
+   visible and then click the hyperlinked link name to see the data.
+ 
  * Bulk AMQP data may be shown or hidden on arbitrary per-connection selections.
+   Note: This feature is slow when a few tens of thousands of lines are being shown or
+   hidden.
  * Noteworthy AMQP frames are identified. By hand these are hard to find.
    * AMQP errors
    * Presettled transfers
