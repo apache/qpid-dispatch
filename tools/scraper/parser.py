@@ -144,7 +144,7 @@ class LogLineData:
         self.is_router_ls = False  # line is ROUTER_LS (info)
         self.fid = ""  # Log line (frame) id as used in javascript code
         self.amqp_error = False
-        self.link_class = "normal"  # attach sees: normal, router, router-data (, management?)
+        self.link_class = "client"  # attach sees: normal, router, router-data (, management?)
         self.disposition_display = ""
         self.final_disposition = None
         self.no_parent_link = False
@@ -707,8 +707,11 @@ class ParsedLogLine(object):
 
         if "error" in resdict:
             res.amqp_error = True
+            dct = resdict["error"].dict
+            condi = dct["condition"]
+            descr = dct["description"] if "description" in dct else ""
             res.web_show_str += (" <span style=\"background-color:yellow\">error</span> "
-                                 "%s %s" % (resdict["error"].dict["condition"], resdict["error"].dict["description"]))
+                                 "%s %s" % (condi, descr))
 
     def adverbl_link_to(self):
         """
@@ -996,6 +999,14 @@ def parse_log_file(fn, log_index, comn):
 
 
 if __name__ == "__main__":
+    class dummy_args():
+        skip_all_data = False
+        skip_detail = False
+        skip_msg_progress = False
+        split = False
+        time_start = None
+        time_end = None
+
     print("Line-by-line split test")
     try:
         for line in td.TestData().data():
@@ -1013,6 +1024,7 @@ if __name__ == "__main__":
     log_index = 0  # from file for router A
     instance = 0  # all from router instance 0
     comn = common.Common()
+    comn.args = dummy_args()
     try:
         for i in range(len(data)):
             temp = ParsedLogLine(log_index, instance, i, data[i], comn, None)
@@ -1024,6 +1036,7 @@ if __name__ == "__main__":
 
     print("Read two-instance file test")
     comn2 = common.Common()
+    comn2.args = dummy_args()
     routers = parse_log_file('test_data/A-two-instances.log', 0, comn2)
     if len(routers) != 2:
         print("ERROR: Expected two router instances in log file")
