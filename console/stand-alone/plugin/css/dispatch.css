@@ -1143,12 +1143,6 @@ svg {
     /*height: 100%; */
   }
   
-  div#topologyForm .ngViewport, div#topologyForm .gridStyle {
-    height: auto !important;
-    min-height: initial !important;
-    overflow: initial;
-  }
-  
   div#multiple_details, div#link_details {
       height: 300px;
       width: 700px;
@@ -1817,10 +1811,6 @@ span.logo {
   
   #svg_legend {
     top: 10px;
-  }
-  
-  #topologyForm > div {
-    width: auto;
   }
   
   div.chartContainer {

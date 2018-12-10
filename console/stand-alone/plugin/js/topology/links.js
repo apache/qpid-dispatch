@@ -17,7 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { utils } from "../amqp/utilities.js";
+import {
+  utils
+} from "../amqp/utilities.js";
 
 class Link {
   constructor(source, target, dir, cls, uid) {
@@ -29,15 +31,13 @@ class Link {
     this.uid = uid;
   }
   markerId(end) {
-    let selhigh = this.highlighted
-      ? "highlighted"
-      : this.selected
-        ? "selected"
-        : "";
+    let selhigh = this.highlighted ?
+      "highlighted" :
+      (this.selected ?
+        "selected" :
+        "");
     if (selhigh === "" && (!this.left && !this.right)) selhigh = "unknown";
-    return `-${selhigh}-${
-      end === "end" ? this.target.radius() : this.source.radius()
-    }`;
+    return `-${selhigh}-${end === "end" ? this.target.radius() : this.source.radius()}`;
   }
 }
 
@@ -45,6 +45,9 @@ export class Links {
   constructor(logger) {
     this.links = [];
     this.logger = logger;
+  }
+  reset() {
+    this.links.length = 0;
   }
   getLinkSource(nodesIndex) {
     for (let i = 0; i < this.links.length; ++i) {
@@ -70,7 +73,7 @@ export class Links {
     }
     //this.logger.debug("creating new link (" + (links.length) + ") between " + nodes[_source].name + " and " + nodes[_target].name);
     if (
-      this.links.some(function(l) {
+      this.links.some(function (l) {
         return l.uid === uid;
       })
     )
@@ -88,10 +91,8 @@ export class Links {
     return null;
   }
 
-  getPosition(name, nodes, source, client, localStorage, height) {
-    let position = localStorage[name]
-      ? JSON.parse(localStorage[name])
-      : undefined;
+  getPosition(name, nodes, source, client, height, localStorage) {
+    let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
     if (typeof position == "undefined") {
       position = {
         x: Math.round(
@@ -109,10 +110,12 @@ export class Links {
         nodes.get(source).y + 40 + Math.cos(client / (Math.PI * 2.0))
       );
     }
+    position.fixed = position.fixed ? true : false;
     return position;
   }
 
-  initialize(nodeInfo, nodes, unknowns, localStorage, height) {
+  initialize(nodeInfo, nodes, unknowns, height, localStorage) {
+    this.reset();
     let connectionsPerContainer = {};
     let nodeIds = Object.keys(nodeInfo);
     // collect connection info for each router
@@ -158,7 +161,10 @@ export class Links {
     // create map of type:id:dir to [containers]
     for (let container in connectionsPerContainer) {
       let key = getKey(connectionsPerContainer[container]);
-      if (!unique[key]) unique[key] = { c: [], nodes: [] };
+      if (!unique[key]) unique[key] = {
+        c: [],
+        nodes: []
+      };
       unique[key].c.push(container);
     }
     for (let key in unique) {
@@ -176,8 +182,8 @@ export class Links {
           nodes,
           container.source,
           container.resultsIndex,
-          localStorage,
-          height
+          height,
+          localStorage
         );
 
         let node = nodes.getOrCreateNode(
@@ -242,7 +248,7 @@ export class Links {
   }
 }
 
-var getContainerIndex = function(_id, nodeInfo) {
+var getContainerIndex = function (_id, nodeInfo) {
   let nodeIndex = 0;
   for (let id in nodeInfo) {
     if (utils.nameFromId(id) === _id) return nodeIndex;
@@ -251,7 +257,7 @@ var getContainerIndex = function(_id, nodeInfo) {
   return -1;
 };
 
-var getLinkDir = function(connection, onode) {
+var getLinkDir = function (connection, onode) {
   let links = onode["router.link"];
   if (!links) {
     return "unknown";
@@ -261,12 +267,12 @@ var getLinkDir = function(connection, onode) {
   let typeIndex = links.attributeNames.indexOf("linkType");
   let connectionIdIndex = links.attributeNames.indexOf("connectionId");
   let dirIndex = links.attributeNames.indexOf("linkDir");
-  links.results.forEach(function(linkResult) {
+  links.results.forEach(function (linkResult) {
     if (
       linkResult[typeIndex] === "endpoint" &&
       linkResult[connectionIdIndex] === connection.identity
     )
-      if (linkResult[dirIndex] === "in") ++inCount;
+      if (linkResult[dirIndex] === "in")++inCount;
       else ++outCount;
   });
   if (inCount > 0 && outCount > 0) return "both";
@@ -274,7 +280,7 @@ var getLinkDir = function(connection, onode) {
   if (outCount > 0) return "out";
   return "unknown";
 };
-var getKey = function(containers) {
+var getKey = function (containers) {
   let parts = [];
   let connection = containers[0].connection;
   let d = {

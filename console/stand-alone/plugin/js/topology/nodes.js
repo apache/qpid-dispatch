@@ -17,7 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { utils } from "../amqp/utilities.js";
+import {
+  utils
+} from "../amqp/utilities.js";
 
 /* global d3 Promise */
 export class Node {
@@ -43,7 +45,7 @@ export class Node {
     this.y = y;
     this.id = nodeIndex;
     this.resultIndex = resultIndex;
-    this.fixed = !!+fixed;
+    this.fixed = fixed ? true : false;
     this.cls = "";
     this.container = connectionContainer;
     this.isConsole = utils.isConsole(this);
@@ -71,11 +73,11 @@ export class Node {
   }
   toolTip(topology) {
     return new Promise(
-      function(resolve) {
+      function (resolve) {
         if (this.nodeType === "normal" || this.nodeType === "edge") {
           resolve(this.clientTooltip());
         } else
-          this.routerTooltip(topology).then(function(toolTip) {
+          this.routerTooltip(topology).then(function (toolTip) {
             resolve(toolTip);
           });
       }.bind(this)
@@ -99,19 +101,23 @@ export class Node {
 
   routerTooltip(topology) {
     return new Promise(
-      function(resolve) {
+      function (resolve) {
         topology.ensureEntities(
           this.key,
-          [
-            { entity: "listener", attrs: ["role", "port", "http"] },
-            { entity: "router", attrs: ["name", "version", "hostName"] }
+          [{
+            entity: "listener",
+            attrs: ["role", "port", "http"]
+          },
+          {
+            entity: "router",
+            attrs: ["name", "version", "hostName"]
+          }
           ],
-          function(foo, nodes) {
+          function (foo, nodes) {
             // update all the router title text
             let node = nodes[this.key];
             const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${
-              this.key
-            }</td></tr></table>`;
+              this.key}</td></tr></table>`;
             if (!node) {
               resolve(err);
               return;
@@ -154,32 +160,43 @@ export class Node {
     return nodeProperties[this.nodeType].radius;
   }
   uid() {
-    if (!this.uuid) this.uuid = this.container;
+    if (!this.uuid)
+      this.uuid = `${this.container}`;
     return this.normals ? `${this.uuid}-${this.normals.length}` : this.uuid;
   }
   setFixed(fixed) {
-    if (!fixed) this.lat = this.lon = null;
-    this.fixed = fixed;
+    if (!fixed & 1)
+      this.lat = this.lon = null;
+    this.fixed = fixed & 1 ? true : false;
   }
 }
 const nodeProperties = {
   // router types
   "inter-router": {
     radius: 28,
-    refX: { end: 32, start: -19 },
+    refX: {
+      end: 32,
+      start: -19
+    },
     linkDistance: [150, 70],
     charge: [-1800, -900]
   },
   edge: {
     radius: 20,
-    refX: { end: 24, start: -12 },
+    refX: {
+      end: 24,
+      start: -12
+    },
     linkDistance: [110, 55],
     charge: [-1350, -900]
   },
   // generated nodes from connections. key is from connection.role
   normal: {
     radius: 15,
-    refX: { end: 20, start: -7 },
+    refX: {
+      end: 20,
+      start: -7
+    },
     linkDistance: [75, 40],
     charge: [-900, -900]
   }
@@ -240,7 +257,13 @@ export class Nodes {
   gravity(d, nodeCount) {
     return Nodes.forceScale(nodeCount, [0.0001, 0.1]);
   }
-
+  setFixed(d, fixed) {
+    let n = this.find(d.container, d.properties, d.name);
+    if (n) {
+      n.fixed = fixed;
+    }
+    d.setFixed(fixed);
+  }
   getLength() {
     return this.nodes.length;
   }
@@ -253,14 +276,6 @@ export class Nodes {
     );
     return undefined;
   }
-  setNodesFixed(name, b) {
-    this.nodes.some(function(n) {
-      if (n.name === name) {
-        n.fixed(b);
-        return true;
-      }
-    });
-  }
   nodeFor(name) {
     for (let i = 0; i < this.nodes.length; ++i) {
       if (this.nodes[i].name == name) return this.nodes[i];
@@ -268,7 +283,7 @@ export class Nodes {
     return null;
   }
   nodeExists(connectionContainer) {
-    return this.nodes.findIndex(function(node) {
+    return this.nodes.findIndex(function (node) {
       return node.container === connectionContainer;
     });
   }
@@ -277,9 +292,12 @@ export class Nodes {
     for (let i = 0; i < this.nodes.length; ++i) {
       if (this.nodes[i].normals) {
         if (
-          this.nodes[i].normals.some(function(normal, j) {
+          this.nodes[i].normals.some(function (normal, j) {
             if (normal.container === connectionContainer && i !== j) {
-              normalInfo = { nodesIndex: i, normalsIndex: j };
+              normalInfo = {
+                nodesIndex: i,
+                normalsIndex: j
+              };
               return true;
             }
             return false;
@@ -295,11 +313,11 @@ export class Nodes {
     if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
-    this.nodes.forEach(function(d) {
+    this.nodes.forEach(function (d) {
       localStorage[d.name] = JSON.stringify({
         x: Math.round(d.x),
         y: Math.round(d.y),
-        fixed: d.fixed & 1 ? 1 : 0
+        fixed: d.fixed
       });
     });
   }
@@ -413,24 +431,23 @@ export class Nodes {
       fixed,
       properties
     );
-    this.nodes.push(obj);
-    return obj;
+    return this.add(obj);
   }
   clearHighlighted() {
     for (let i = 0; i < this.nodes.length; ++i) {
       this.nodes[i].highlighted = false;
     }
   }
-  initialize(nodeInfo, localStorage, width, height) {
+
+  initialize(nodeInfo, width, height, localStorage) {
+    this.nodes.length = 0;
     let nodeCount = Object.keys(nodeInfo).length;
     let yInit = 50;
     let animate = false;
     for (let id in nodeInfo) {
       let name = utils.nameFromId(id);
       // if we have any new nodes, animate the force graph to position them
-      let position = localStorage[name]
-        ? JSON.parse(localStorage[name])
-        : undefined;
+      let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
       if (!position) {
         animate = true;
         position = {
@@ -439,7 +456,7 @@ export class Nodes {
           ),
           y: Math.round(
             height / 2 +
-              (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
+            (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
           ),
           fixed: false
         };
@@ -448,6 +465,7 @@ export class Nodes {
         position.y = 200 - yInit;
         yInit *= -1;
       }
+      position.fixed = position.fixed ? true : false;
       let parts = id.split("/");
       this.addUsing(
         id,
@@ -458,8 +476,7 @@ export class Nodes {
         position.y,
         name,
         undefined,
-        position.fixed,
-        {}
+        position.fixed, {}
       );
     }
     return animate;

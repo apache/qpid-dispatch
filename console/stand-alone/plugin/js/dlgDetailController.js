@@ -33,7 +33,7 @@ export class DetailDialogController {
     // count the number of characters in an array of strings
     let countChars = function (ar) {
       let count = 0;
-      ar.forEach( a => count += a.length);
+      ar.forEach(a => count += a.length);
       return count;
     };
 
@@ -110,7 +110,7 @@ export class DetailDialogController {
     };
     // keep an array of column sizes
     let updateSizes = function (fields, sizes, obj) {
-      fields.forEach( function (key) {
+      fields.forEach(function (key) {
         if (!sizes[key])
           sizes[key] = utils.humanify(key).length;
         sizes[key] = Math.max(sizes[key], utils.pretty(obj[key]).length);
@@ -128,8 +128,8 @@ export class DetailDialogController {
       // queued function to get the .router info for an edge router
       let q_getEdgeInfo = function (n, infoPerId, callback) {
         let nodeId = utils.idFromName(n.container, '_edge');
-        QDRService.management.topology.fetchEntities(nodeId, 
-          [{entity: 'router', attrs: []},
+        QDRService.management.topology.fetchEntities(nodeId,
+          [{ entity: 'router', attrs: [] },
           ],
           function (results) {
             let r = results[nodeId].router;
@@ -142,21 +142,22 @@ export class DetailDialogController {
             callback(null);
           });
       };
-      return new Promise( (function (resolve) {
+      return new Promise((function (resolve) {
         let infoPerId = {};
         // we are getting info for an edge router
         if (d.nodeType === 'edge') {
           // called for each expanded row to get further details about the edge router
           $scope.detail.moreInfo = function (id) {
             let nodeId = utils.idFromName(id, '_edge');
-            QDRService.management.topology.fetchEntities(nodeId, 
-              [{entity: 'router.link', attrs: []},
-                {entity: 'linkRoute', attrs: $scope.fields.linkRouteFields.cols},
-                {entity: 'autoLink', attrs: $scope.fields.autoLinkFields.cols},
-                {entity: 'address', attrs: []},
+            QDRService.management.topology.fetchEntities(nodeId,
+              [
+                { entity: 'router.link', attrs: [] },
+                { entity: 'linkRoute', attrs: $scope.fields.linkRouteFields.cols },
+                { entity: 'autoLink', attrs: $scope.fields.autoLinkFields.cols },
+                { entity: 'address', attrs: [] },
               ],
               function (results) {
-                $timeout( function () {
+                $timeout(function () {
                   // save the results (and sizes) for each entity requested
                   infoPerId[id].linkRouteSizes = {};
                   infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute,
@@ -165,13 +166,13 @@ export class DetailDialogController {
                       return route;
                     });
                   infoPerId[id].autoLinkSizes = {};
-                  infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink, 
+                  infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink,
                     function (link) {
                       updateSizes($scope.fields.autoLinkFields.cols, infoPerId[id].autoLinkSizes, link);
                       return link;
                     });
                   infoPerId[id].addressSizes = {};
-                  infoPerId[id].addresses = utils.flattenAll(results[nodeId].address, 
+                  infoPerId[id].addresses = utils.flattenAll(results[nodeId].address,
                     function (addr) {
                       updateSizes($scope.fields.addressFields.cols, infoPerId[id].addressSizes, addr);
                       return addr;
@@ -182,7 +183,7 @@ export class DetailDialogController {
 
           // async send up to 10 requests
           let q = d3.queue(10);
-          for (let n=0; n<d.normals.length; n++) {
+          for (let n = 0; n < d.normals.length; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
             if (expandedRows.has(d.normals[n].container)) {
               $scope.detail.moreInfo(d.normals[n].container);
@@ -200,14 +201,14 @@ export class DetailDialogController {
           });
         } else {
           // we are getting info for a group of clients or consoles
-          $scope.detail.moreInfo = function () {};
+          $scope.detail.moreInfo = function () { };
           let attrs = utils.copy($scope.fields.linkFields.cols);
           attrs.unshift('connectionId');
-          QDRService.management.topology.fetchEntities(d.key, 
-            [{entity: 'router.link', attrs: attrs}],
+          QDRService.management.topology.fetchEntities(d.key,
+            [{ entity: 'router.link', attrs: attrs }],
             function (results) {
               let links = results[d.key]['router.link'];
-              for (let i=0; i<d.normals.length; i++) {
+              for (let i = 0; i < d.normals.length; i++) {
                 let n = d.normals[i];
                 let conn = {};
                 infoPerId[n.container] = conn;
@@ -231,7 +232,7 @@ export class DetailDialogController {
               let count = d.normals.length;
               let verb = count > 1 ? 'are' : 'is';
               let preposition = d.cdir === 'in' ? 'to' : d.cdir === 'both' ? 'for' : 'from';
-              let plural = count > 1 ? 's': '';
+              let plural = count > 1 ? 's' : '';
               $scope.detail.template = 'clients.html';
               $scope.detail.title = 'for client';
               resolve({
@@ -242,16 +243,16 @@ export class DetailDialogController {
         }
       }));
     };
-  
+
     let updateDetail = function () {
       groupDetail.call(this)
-        .then( function (det) {
-          $timeout( function () {
+        .then(function (det) {
+          $timeout(function () {
             $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
             $scope.detail.description = det.description;
-            $scope.detail.infoPerId = Object.keys(det.infoPerId).map( function (id) {
+            $scope.detail.infoPerId = Object.keys(det.infoPerId).map(function (id) {
               return det.infoPerId[id];
-            }).sort( function (a, b) {
+            }).sort(function (a, b) {
               return a.name > b.name ? 1 : -1;
             });
           });
@@ -266,7 +267,7 @@ DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModal
 
 // SubTable directive
 export class SubTable {
-  constructor () {
+  constructor() {
     this.restrict = 'E';
     this.scope = {
       sizes: '=sizes',
@@ -275,7 +276,7 @@ export class SubTable {
     };
     this.templateUrl = 'sub-table.html';
   }
-  link (scope) {
+  link(scope) {
     scope.fieldWidth = function (val, sizes) {
       if (!sizes)
         return '10%';

@@ -1,5 +1,5 @@
 /*
- * Copyright 2015 Red Hat Inc.
+ * Copyright 2018 Red Hat Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +15,7 @@
  */
 
 /* global d3 */
-var ddd = typeof window === 'undefined' ? require ('d3') : d3;
+var ddd = typeof window === 'undefined' ? require('d3') : d3;
 
 var utils = {
   isAConsole: function (properties, connectionId, nodeType, key) {
@@ -40,7 +40,7 @@ var utils = {
     if (!attributes || !result)
       return {};
     var flat = {};
-    attributes.forEach(function(attr, i) {
+    attributes.forEach(function (attr, i) {
       if (result && result.length > i)
         flat[attr] = result[i];
     });
@@ -48,9 +48,11 @@ var utils = {
   },
   flattenAll: function (entity, filter) {
     if (!filter)
-      filter = function (e) {return e;};
+      filter = function (e) {
+        return e;
+      };
     let results = [];
-    for (let i=0; i<entity.results.length; i++) {
+    for (let i = 0; i < entity.results.length; i++) {
       let f = filter(this.flatten(entity.attributeNames, entity.results[i]));
       if (f)
         results.push(f);
@@ -72,7 +74,7 @@ var utils = {
   addr_text: function (addr) {
     if (!addr)
       return '-';
-    if (addr[0] === addr[0].toLowerCase()) 
+    if (addr[0] === addr[0].toLowerCase())
       return addr;
     if (addr[0] == 'M')
       return addr.substring(2);
@@ -122,7 +124,7 @@ var utils = {
   countsFor: function (aAr, vAr, key) {
     let counts = {};
     let idx = aAr.indexOf(key);
-    for (let i=0; i<vAr.length; i++) {
+    for (let i = 0; i < vAr.length; i++) {
       if (!counts[vAr[i][idx]])
         counts[vAr[i][idx]] = 0;
       counts[vAr[i][idx]]++;
@@ -139,7 +141,7 @@ var utils = {
 
     var parts = id.split('/');
     // remove $management
-    parts.pop(); 
+    parts.pop();
 
     // remove the area if present
     if (parts[2] === '0')
@@ -171,18 +173,21 @@ var utils = {
       list.shift();
     }
     let rates = {};
-    list.push({date: new Date(), val: Object.assign({}, obj)});
+    list.push({
+      date: new Date(),
+      val: Object.assign({}, obj)
+    });
 
-    for (let i=0; i<fields.length; i++) {
+    for (let i = 0; i < fields.length; i++) {
       let cumulative = 0;
       let field = fields[i];
-      for (let j=0; j<list.length-1; j++) {
-        let elapsed = list[j+1].date - list[j].date;
-        let diff = list[j+1].val[field] - list[j].val[field];
+      for (let j = 0; j < list.length - 1; j++) {
+        let elapsed = list[j + 1].date - list[j].date;
+        let diff = list[j + 1].val[field] - list[j].val[field];
         if (elapsed > 100)
-          cumulative += diff/(elapsed / 1000);
+          cumulative += diff / (elapsed / 1000);
       }
-      rates[field] = list.length > 1 ? cumulative / (list.length-1) : 0;
+      rates[field] = list.length > 1 ? cumulative / (list.length - 1) : 0;
     }
     return rates;
   },
@@ -216,4 +221,6 @@ var utils = {
   }
 
 };
-export { utils };
+export {
+  utils
+};

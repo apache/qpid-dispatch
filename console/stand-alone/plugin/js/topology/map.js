@@ -30,8 +30,14 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
     this.$scope = $scope;
     this.initialized = false;
     this.notify = notifyFn;
-    $scope.mapOptions = angular.fromJson(localStorage[MAPOPTIONSKEY]) || {areaColor: defaultLandColor, oceanColor: defaultOceanColor};
-    this.last = {translate: [0,0], scale: null};
+    $scope.mapOptions = angular.fromJson(localStorage[MAPOPTIONSKEY]) || {
+      areaColor: defaultLandColor,
+      oceanColor: defaultOceanColor
+    };
+    this.last = {
+      translate: [0, 0],
+      scale: null
+    };
   }
   updateLandColor(color) {
     localStorage[MAPOPTIONSKEY] = JSON.stringify(this.$scope.mapOptions);
@@ -55,7 +61,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
   }
 
   init($scope, svg, width, height) {
-    return new Promise( (function (resolve, reject) {
+    return new Promise((function (resolve, reject) {
 
       if (this.initialized) {
         resolve();
@@ -82,9 +88,9 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
 
       // setup the projection with some defaults
       this.projection = d3.geo.mercator()
-        .rotate([this.rotate,0])
+        .rotate([this.rotate, 0])
         .scale(1)
-        .translate([width/2, height/2]);
+        .translate([width / 2, height / 2]);
 
       // this path will hold the land coordinates once they are loaded
       this.geoPath = d3.geo.path()
@@ -92,22 +98,26 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
 
       // set up the scale extent and initial scale for the projection
       var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
-        s = width/(b[1][0]-b[0][0]);
-      this.scaleExtent = [s, 15*s];
+        s = width / (b[1][0] - b[0][0]);
+      this.scaleExtent = [s, 15 * s];
 
       this.projection
         .scale(this.scaleExtent[0]);
-      this.lastProjection = angular.fromJson(localStorage[MAPPOSITIONKEY]) || {rotate: 20, scale: this.scaleExtent[0], translate: [width/2, height/2]};
+      this.lastProjection = angular.fromJson(localStorage[MAPPOSITIONKEY]) || {
+        rotate: 20,
+        scale: this.scaleExtent[0],
+        translate: [width / 2, height / 2]
+      };
 
       this.zoom = d3.behavior.zoom()
         .scaleExtent(this.scaleExtent)
         .scale(this.projection.scale())
-        .translate([0,0])               // not linked directly to projection
+        .translate([0, 0]) // not linked directly to projection
         .on('zoom', this.zoomed.bind(this));
 
       this.geo = svg.append('g')
         .attr('class', 'geo')
-        .style('opacity', this.$scope.legend.status.mapOpen ? '1': '0');
+        .style('opacity', this.$scope.legend.status.mapOpen ? '1' : '0');
 
       this.geo.append('rect')
         .attr('class', 'ocean')
@@ -115,13 +125,14 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
         .attr('height', height)
         .attr('fill', '#FFF');
 
-      if (this.$scope.legend.status.mapOpen)
+      if (this.$scope.legend.status.mapOpen) {
         this.svg.call(this.zoom)
           .on('dblclick.zoom', null);
+      }
 
       // async load of data file. calls resolve when this completes to let caller know
-      d3.json('plugin/data/countries.json', function(error, world) {
-        if (error) 
+      d3.json('plugin/data/countries.json', function (error, world) {
+        if (error)
           reject(error);
 
         this.geo.append('path')
@@ -148,6 +159,8 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
 
   setMapOpacity(opacity) {
     opacity = opacity ? 1 : 0;
+    if (this.width && this.width < 768)
+      opacity = 0;
     if (this.geo)
       this.geo.style('opacity', opacity);
   }
@@ -180,11 +193,11 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
   }
 
   zoomed() {
-    if (d3.event && !this.$scope.current_node && !this.$scope.mousedown_node && this.$scope.legend.status.mapOpen) { 
+    if (d3.event && !this.$scope.current_node && !this.$scope.mousedown_node && this.$scope.legend.status.mapOpen) {
       let scale = d3.event.scale,
         t = d3.event.translate,
-        dx = t[0]-this.last.translate[0],
-        dy = t[1]-this.last.translate[1],
+        dx = t[0] - this.last.translate[0],
+        dy = t[1] - this.last.translate[1],
         yaw = this.projection.rotate()[0],
         tp = this.projection.translate();
       // zoomed
@@ -209,21 +222,21 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
         dy = my - this.projection([0, lonlat[1]])[1];
 
         // rotate the map so that the longitude under the mouse is where it was before the scale
-        this.projection.rotate([yaw+dx ,0, 0]);
+        this.projection.rotate([yaw + dx, 0, 0]);
 
         // translate the map so that the lattitude under the mouse is where it was before the scale
-        this.projection.translate([tp[0], tp[1]+dy]);
+        this.projection.translate([tp[0], tp[1] + dy]);
       } else {
         // rotate instead of translate in the x direction
-        this.projection.rotate([yaw+360.0*dx/this.width*this.scaleExtent[0]/scale, 0, 0]);
+        this.projection.rotate([yaw + 360.0 * dx / this.width * this.scaleExtent[0] / scale, 0, 0]);
         // translate only in the y direction. don't translate beyond the max lattitude north or south
         var bnorth = getMapBounds(this.projection, maxnorth),
           bsouth = getMapBounds(this.projection, maxsouth);
-        if (bnorth[0][1] + dy > 0) 
+        if (bnorth[0][1] + dy > 0)
           dy = -bnorth[0][1];
-        else if (bsouth[1][1] + dy < this.height) 
-          dy = this.height-bsouth[1][1];
-        this.projection.translate([tp[0],tp[1]+dy]);
+        else if (bsouth[1][1] + dy < this.height)
+          dy = this.height - bsouth[1][1];
+        this.projection.translate([tp[0], tp[1] + dy]);
       }
       this.last.scale = scale;
       this.last.translate = t;
@@ -247,8 +260,8 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
 // find the top left and bottom right of current projection
 function getMapBounds(projection, maxlat) {
   var yaw = projection.rotate()[0],
-    xymax = projection([-yaw+180-1e-6,-maxlat]),
-    xymin = projection([-yaw-180+1e-6, maxlat]);
-  
-  return [xymin,xymax];
+    xymax = projection([-yaw + 180 - 1e-6, -maxlat]),
+    xymin = projection([-yaw - 180 + 1e-6, maxlat]);
+
+  return [xymin, xymax];
 }

@@ -18,13 +18,16 @@ under the License.
 -->
 
 <style>
-@media (min-width: 768px) {
+    @media (min-width: 768px) {
   .showLeft {
       display: block;
   }
 }
 @media (max-width: 767px) {
   .showLeft {
+      display: none;
+  }
+  #backgroundMap {
       display: none;
   }
   div.qdrTopology div.legend-container.page-menu {
@@ -35,7 +38,7 @@ under the License.
   }
 }
 
-#popover-div, #fixed-popup {
+#popover-div {
     position: absolute;
     z-index: 200;
     border-radius: 4px;
@@ -51,41 +54,6 @@ under the License.
   table.popupTable td {
     padding-right: 5px;
     font-size: 10px;
-  }
-
-#topologyForm {
-  border-right: 1px solid lightgray;
-  border-bottom: 1px solid lightgray;
-  padding: 2px;
-  /* position: absolute; */
-  background-color: #333333;
-  width: 300px;
-}
-
-  #topologyForm .infoGrid span {
-      display: inline-block;
-      width: 50%;
-      height: 28px;
-      padding: 3px 6px 2px 6px;
-      border-right: 1px solid #666666;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-      overflow: hidden;
-  }
-
-  #topologyForm .infoGrid span:last-child {
-      text-align: right;
-      border-right: 0;
-  }
-  #topologyForm .infoGrid div {
-      height: 28px;
-  }
-  #topologyForm .infoGrid div.odd {
-      background-color: #444444;
-  }
-
-  #topologyForm .infoGrid div.listening-on {
-      background-color: #336633;
   }
 
   .legend-container {
@@ -135,8 +103,8 @@ under the License.
     margin-bottom: 0;
     padding-bottom: 0;
 }
-  /* the checkboxes for the addresses */
-  #topo_legend ul li input[type=checkbox]:checked + label::before {
+/* the checkboxes for the addresses */
+#topo_legend ul li input[type=checkbox]:checked + label::before {
     content:'\2713';
     font-weight: bold;
     font-size: 16px;
@@ -146,12 +114,12 @@ under the License.
     position: absolute;
     top: -8px;
     left: -1px;
-  }
-  /* The aggregate addresses need a black checkbox on the white background */
-  #topo_legend ul li input[type=checkbox]:checked + label.aggregate::before {
+}
+/* The aggregate addresses need a black checkbox on the white background */
+#topo_legend ul li input[type=checkbox]:checked + label.aggregate::before {
     color: black;
-    /* left: 1px; */
-  }
+/* left: 1px; */
+}
 #topo_legend ul.addresses button.btn-default {
     background-image: none;
     color: white;
@@ -159,8 +127,8 @@ under the License.
 }
 
 #topo_legend li.legend-sublist ul {
-        margin-bottom: 0.5em;
-    }
+    margin-bottom: 0.5em;
+}
 
 #topo_legend li.legend-sublist ul.addresses{
     max-height: 11.6em;   /* show up to 4 addresses */
@@ -171,11 +139,11 @@ li.legend-sublist > ul ul {
     margin-left: 1em;
 }
 
-#popover-div h5, #fixed-popup h5 {
+#popover-div h5 {
     margin-top: 1em;
     margin-bottom: 0;
 }
-#popover-div h5:first-of-type, #fixed-popup h5:first-of-type {
+#popover-div h5:first-of-type {
     margin-top:0;
 }
 
@@ -198,23 +166,23 @@ table.popupTable td {
 }
 
 .graticule {
-  fill: none;
-  stroke: #777;
-  stroke-width: .5px;
-  stroke-opacity: .5;
+    fill: none;
+    stroke: #777;
+    stroke-width: .5px;
+    stroke-opacity: .5;
 }
 
 g.geo path.land {
-  fill: #dcedf7;
-  stroke: #000;
-  stroke-opacity: 1;
-  stroke-width: 1px;
+    fill: #dcedf7;
+    stroke: #000;
+    stroke-opacity: 1;
+    stroke-width: 1px;
 }
 
 .boundary {
-  fill: none;
-  stroke: #333;
-  stroke-width: 5px;
+    fill: none;
+    stroke: #333;
+    stroke-width: 5px;
 }
 
 .panel-group {
@@ -254,40 +222,44 @@ td.more-info {
     <div class="legend-container page-menu navbar-collapse collapse">
         <uib-accordion id="topo_legend" close-others="false">
             <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Show Traffic">
-              <ul class="options">
-                  <li class="legend-sublist" ng-hide="!legendOptions.showTraffic">
-                    <ul>
-                        <li><label>
-                            <input type='radio' ng-model="legendOptions.trafficType" value="dots" />
-                        Message path by address
-                        </label></li>
-                        <li>
-                            <ul class="addresses" ng-show="legendOptions.trafficType === 'dots'">
+                <ul class="options">
+                    <li class="legend-sublist" ng-hide="!legendOptions.showTraffic">
+                        <ul>
+                            <li><label>
+                                    <input type='radio' ng-model="legendOptions.trafficType" value="dots" />
+                                    Message path by address
+                                </label></li>
+                            <li>
+                                <ul class="addresses" ng-show="legendOptions.trafficType === 'dots'">
                                     <li ng-repeat="(address, color) in addresses" class="legend-line">
-                                        <checkbox style="background-color: {{addressColors[address]}};"
-                                        title="{{address}}" ng-change="addressFilterChanged()"
-                                        ng-model="addresses[address]" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()"></checkbox>
-                                        <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()" ng-click="addressClick(address)" title="{{address}}">{{address | limitTo : 15}}{{address.length>15 ? '…' : ''}}</span>
+                                        <checkbox style="background-color: {{addressColors[address]}};" title="{{address}}"
+                                            ng-change="addressFilterChanged()" ng-model="addresses[address]"
+                                            ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()"></checkbox>
+                                        <span class="legend-text" ng-mouseenter="enterLegend(address)" ng-mouseleave="leaveLegend()"
+                                            ng-click="addressClick(address)" title="{{address}}">{{address | limitTo :
+                                            15}}{{address.length>15 ? '…' : ''}}</span>
                                     </li>
-                            </ul>
-                        </li>
-                    </ul>
-                    <ul>
-                        <li><label>
-                            <input type='radio' ng-model="legendOptions.trafficType" value="congestion" />
-                        Link utilization
-                        </label></li>
-                        <li>
-                            <ul class="congestion" ng-show="legendOptions.trafficType === 'congestion'">
+                                </ul>
+                            </li>
+                        </ul>
+                        <ul>
+                            <li><label>
+                                    <input type='radio' ng-model="legendOptions.trafficType" value="congestion" />
+                                    Link utilization
+                                </label></li>
+                            <li>
+                                <ul class="congestion" ng-show="legendOptions.trafficType === 'congestion'">
                                     <li>
-                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" version="1.1" preserveAspectRatio="xMidYMid meet" width="140" height="40">
+                                        <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+                                            version="1.1" preserveAspectRatio="xMidYMid meet" width="140" height="40">
                                             <defs>
-                                                <linearGradient xmlns="http://www.w3.org/2000/svg" id="gradienta1bEihLEHL" gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="100%" y2="0%">
-                                                    <stop style="stop-color: #000000;stop-opacity: 1" offset="0"/>
-                                                    <stop style="stop-color: #000000;stop-opacity: 1" offset="0.06"/>
-                                                    <stop style="stop-color: #00FF00;stop-opacity: 1" offset="0.333"/>
-                                                    <stop style="stop-color: #FFA500;stop-opacity: 1" offset="0.666"/>
-                                                    <stop style="stop-color: #FF0000;stop-opacity: 1" offset="1"/></linearGradient>
+                                                <linearGradient xmlns="http://www.w3.org/2000/svg" id="gradienta1bEihLEHL"
+                                                    gradientUnits="userSpaceOnUse" x1="0%" y1="0%" x2="100%" y2="0%">
+                                                    <stop style="stop-color: #999999;stop-opacity: 1" offset="0" />
+                                                    <stop style="stop-color: #00FF00;stop-opacity: 1" offset="0.333" />
+                                                    <stop style="stop-color: #FFA500;stop-opacity: 1" offset="0.666" />
+                                                    <stop style="stop-color: #FF0000;stop-opacity: 1" offset="1" />
+                                                </linearGradient>
                                             </defs>
                                             <g>
                                                 <rect width="140" height="20" x="0" y="0" fill="url(#gradienta1bEihLEHL)"></rect>
@@ -295,34 +267,39 @@ td.more-info {
                                                 <text x="106" y="30" class="label">Busy</text>
                                             </g>
                                         </svg></li>
-                            </ul>
-                        </li>
-                    </ul>
-                </li>
-              </ul>
+                                </ul>
+                            </li>
+                        </ul>
+                    </li>
+                </ul>
             </div>
             <div uib-accordion-group class="panel-default" is-open="legend.status.legendOpen" heading="Legend">
                 <div id="topo_svg_legend"></div>
             </div>
-            <div uib-accordion-group class="panel-default" is-open="legend.status.mapOpen" heading="Background map">
+            <div id="backgroundMap" uib-accordion-group class="panel-default" is-open="legend.status.mapOpen" heading="Background map">
                 <div id="topo_mapOptions">
                     <div class="colorPicker">
                         <ul>
                             <li>
-                                <label><span class='map-label'>Land</span> <input id="areaColor" name="areaColor" type="color" ng-model="mapOptions.areaColor"/></label>
+                                <label><span class='map-label'>Land</span> <input id="areaColor" name="areaColor" type="color"
+                                        ng-model="mapOptions.areaColor" /></label>
                             </li>
                             <li>
-                                <label><span class='map-label'>Ocean</span> <input id="oceanColor" name="oceanColor" type="color" ng-model="mapOptions.oceanColor"/></label>
+                                <label><span class='map-label'>Ocean</span> <input id="oceanColor" name="oceanColor"
+                                        type="color" ng-model="mapOptions.oceanColor" /></label>
                             </li>
                         </ul>
                     </div>
                 </div>
             </div>
-          </uib-accordion>
+        </uib-accordion>
     </div>
     <div class="diagram">
-        <div id="topology"><!-- d3 toplogy here --></div>
-        <div id="crosssection"></div><div id="crosshtml" ng-bind-html="crosshtml"></div>
+        <div id="topology">
+            <!-- d3 toplogy here -->
+        </div>
+        <div id="crosssection"></div>
+        <div id="crosshtml" ng-bind-html="crosshtml"></div>
 
         <div id="node_context_menu" class="contextMenu">
             <ul>
