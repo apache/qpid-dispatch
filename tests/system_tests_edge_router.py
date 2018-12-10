@@ -670,28 +670,44 @@ class LinkRouteProxyTest(TestCase):
 
         cls.routers = []
 
+        interrouter_port = cls.tester.get_port()
+        cls.INTA_edge_port   = cls.tester.get_port()
+        cls.INTB_edge_port   = cls.tester.get_port()
+
         router('INT.A', 'interior',
-               [('listener', {'role': 'inter-router', 'port': cls.tester.get_port()})])
+               [('listener', {'role': 'inter-router', 'port': interrouter_port}),
+                ('listener', {'role': 'edge', 'port': cls.INTA_edge_port})])
         cls.INT_A = cls.routers[0]
+        cls.INT_A.listener = cls.INT_A.addresses[0]
 
         router('INT.B', 'interior',
                [('connector', {'name': 'connectorToA', 'role': 'inter-router',
-                               'port': cls.INT_A.ports[1]})])
+                               'port': interrouter_port}),
+                ('listener', {'role': 'edge', 'port': cls.INTB_edge_port})])
         cls.INT_B = cls.routers[1]
+        cls.INT_B.listener = cls.INT_B.addresses[0]
 
         router('EA1', 'edge',
                [('listener', {'name': 'rc', 'role': 'route-container',
                               'port': cls.tester.get_port()}),
                 ('connector', {'name': 'uplink', 'role': 'edge',
-                               'port': cls.INT_A.ports[0]}),
+                               'port': cls.INTA_edge_port}),
                 ('linkRoute', {'prefix': 'CfgLinkRoute1', 'containerId': 'FakeBroker', 'direction': 'in'}),
                 ('linkRoute', {'prefix': 'CfgLinkRoute1', 'containerId': 'FakeBroker', 'direction': 'out'})])
         cls.EA1 = cls.routers[2]
+        cls.EA1.listener = cls.EA1.addresses[0]
+        cls.EA1.route_container = cls.EA1.addresses[1]
 
         router('EB1', 'edge',
                [('connector', {'name': 'uplink', 'role': 'edge',
-                               'port': cls.INT_B.ports[0]})])
+                               'port': cls.INTB_edge_port}),
+                ('listener', {'name': 'rc', 'role': 'route-container',
+                              'port': cls.tester.get_port()}),
+                ('linkRoute', {'pattern': '*.cfg.pattern.#', 'containerId': 'FakeBroker', 'direction': 'in'}),
+                ('linkRoute', {'pattern': '*.cfg.pattern.#', 'containerId': 'FakeBroker', 'direction': 'out'})])
         cls.EB1 = cls.routers[3]
+        cls.EB1.listener = cls.EB1.addresses[0]
+        cls.EB1.route_container = cls.EB1.addresses[1]
 
         cls.INT_A.wait_router_connected('INT.B')
         cls.INT_B.wait_router_connected('INT.A')
@@ -708,6 +724,10 @@ class LinkRouteProxyTest(TestCase):
         return list(filter(lambda a: a['name'].find(address) != -1,
                            addrs))
 
+    def _wait_address_gone(self, router, address):
+        while self._get_address(router, address):
+            sleep(0.1)
+
     def _test_traffic(self, sender, receiver, address, count=5):
         tr = AsyncTestReceiver(receiver, address)
         ts = AsyncTestSender(sender, address, count)
@@ -721,20 +741,41 @@ class LinkRouteProxyTest(TestCase):
         Activate the configured link routes via a FakeService, verify proxies
         created by passing traffic from/to and interior router
         """
+        a_type = 'org.apache.qpid.dispatch.router.address'
 
-        fs = FakeService(self.EA1.addresses[1])
+        fs = FakeService(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1")
-        self._test_traffic(self.INT_B.addresses[0],
-                           self.INT_B.addresses[0],
+        self._test_traffic(self.INT_B.listener,
+                           self.INT_B.listener,
                            "CfgLinkRoute1/hi",
                            count=5)
         fs.join()
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
 
+        # now that FakeService is gone, the link route should no longer be
+        # active:
+        self._wait_address_gone(self.INT_A, "CfgLinkRoute1")
+
+        # repeat test, but this time with patterns:
+
+        fs = FakeService(self.EB1.route_container)
+        self.INT_A.wait_address("*.cfg.pattern.#")
+        self._test_traffic(self.INT_A.listener,
+                           self.INT_A.listener,
+                           "MATCH.cfg.pattern",
+                           count=5)
+        fs.join()
+        self.assertEqual(5, fs.in_count)
+        self.assertEqual(5, fs.out_count)
+        self._wait_address_gone(self.INT_A, "*.cfg.pattern.#")
+
     def test_conn_link_route_proxy(self):
         """
-        Test connection scoped link routes
+        Test connection scoped link routes by connecting a fake service to the
+        Edge via the route-container connection.  Have the fake service
+        configured some link routes.  Then have clients on the interior
+        exchange messages via the fake service.
         """
         fs = ConnLinkRouteService(self.EA1.addresses[1],
                                   container_id="FakeService",
@@ -749,16 +790,22 @@ class LinkRouteProxyTest(TestCase):
         self.INT_B.wait_address("Conn/*/One")
         self.assertEqual(2, len(self._get_address(self.INT_A, "Conn/*/One")))
 
-        self._test_traffic(self.INT_B.addresses[0],
-                           self.INT_A.addresses[0],
+        # between interiors
+        self._test_traffic(self.INT_B.listener,
+                           self.INT_A.listener,
                            "Conn/BLAB/One",
                            count=5)
-        fs.join()
-        self.assertEqual(5, fs.in_count)
-        self.assertEqual(5, fs.out_count)
 
-        # the link route service connection is closed, verify delete
-        self.assertEqual(0, len(self._get_address(self.INT_A, "Conn/*/One")))
+        # edge to edge
+        self._test_traffic(self.EB1.listener,
+                           self.EA1.listener,
+                           "Conn/BLECH/One",
+                           count=5)
+        fs.join()
+        self.assertEqual(10, fs.in_count)
+        self.assertEqual(10, fs.out_count)
+
+        self._wait_address_gone(self.INT_A, "Conn/*/One")
 
     def test_interior_conn_lost(self):
         """
@@ -783,28 +830,34 @@ class LinkRouteProxyTest(TestCase):
         fs = FakeService(er.addresses[1])
         er.wait_address("Edge1/*")
 
-
         # create the connection to interior
         er_mgmt = er.management
         ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
                               name='toA',
                               attributes={'role': 'edge',
-                                          'port': self.INT_A.ports[0]})
+                                          'port': self.INTA_edge_port})
         self.INT_B.wait_address("Edge1/*")
 
         # delete it, and verify the routes are removed
         ctor.delete()
-        while self._get_address(self.INT_B, "Edge1/*"):
-            sleep(0.5)
+        self._wait_address_gone(self.INT_B, "Edge1/*")
 
         # now recreate and verify routes re-appear
         ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
                               name='toA',
                               attributes={'role': 'edge',
-                                          'port': self.INT_A.ports[0]})
+                                          'port': self.INTA_edge_port})
         self.INT_B.wait_address("Edge1/*")
-        er.teardown()
+        self._test_traffic(self.INT_B.listener,
+                           self.INT_B.listener,
+                           "Edge1/One",
+                           count=5)
+        fs.join()
+        self.assertEqual(5, fs.in_count)
+        self.assertEqual(5, fs.out_count)
 
+        er.teardown()
+        self._wait_address_gone(self.INT_B, "Edge1/*")
 
     def test_thrashing_link_routes(self):
         """
@@ -832,6 +885,9 @@ class LinkRouteProxyTest(TestCase):
                 self.INT_B.wait_address("Test/*/9/#")
             lr1.delete()
             lr2.delete()
+
+        fs.join()
+        self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
 
 class Timeout(object):

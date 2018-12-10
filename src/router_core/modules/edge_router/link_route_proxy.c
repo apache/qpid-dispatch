@@ -343,9 +343,16 @@ static void _link_route_deleted_CT(qdr_core_t *core, qdr_address_t *addr)
     qd_log(core->log, QD_LOG_TRACE,
            "edge deleting proxy link route for '%s'", address);
 
+    size_t len = strlen(&address[1]);  // skip prefix
+    if (QDR_IS_LINK_ROUTE_PREFIX(address[0])) {
+        // see above comment re: prefix handling.  Need to ignore the trailing \#
+        assert(len > 2);
+        len -= 2;
+    }
+
     qd_direction_t dir = QDR_LINK_ROUTE_DIR(address[0]);
     link_route_proxy_t *lrp = DEQ_HEAD(_link_route_proxies);
-    DEQ_FIND(lrp, dir == lrp->direction && strcmp(lrp->address, &address[1]) == 0);
+    DEQ_FIND(lrp, dir == lrp->direction && strncmp(lrp->address, &address[1], len) == 0);
     if (lrp) {
         switch (lrp->proxy_state) {
         case QDR_LINK_ROUTE_PROXY_NEW:
