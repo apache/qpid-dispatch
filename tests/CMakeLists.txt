@@ -84,6 +84,7 @@ foreach(py_test_module
 #   system_tests_broker
     system_tests_link_routes
     system_tests_link_routes_add_external_prefix
+    system_tests_link_route_credit
     system_tests_autolinks
     system_tests_drain
     system_tests_management

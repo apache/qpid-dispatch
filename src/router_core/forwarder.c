@@ -911,7 +911,6 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->link_type      = QD_LINK_ENDPOINT;
     out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
     out_link->admin_enabled  = true;
-    out_link->terminus_addr  = 0;
 
     if (strip) {
         out_link->strip_prefix = strip;
@@ -938,6 +937,10 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     work->target    = target;
 
     qdr_connection_enqueue_work_CT(core, conn, work);
+
+    if (qdr_link_direction(in_link) == QD_OUTGOING && in_link->credit_to_core > 0) {
+        qdr_link_issue_credit_CT(core, out_link, in_link->credit_to_core, false);
+    }
 }
 
 
