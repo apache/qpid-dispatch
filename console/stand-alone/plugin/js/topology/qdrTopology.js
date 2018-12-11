@@ -484,6 +484,19 @@ export class TopologyController {
       forceData.links.clearHighlighted();
       forceData.nodes.clearHighlighted();
     }
+
+    let popupCancelled = true;
+    function handleMouseOutPath(d) {
+      // mouse out of a path
+      popupCancelled = true;
+      QDRService.management.topology.delUpdatedAction(
+        "connectionPopupHTML"
+      );
+      d3.select("#popover-div").style("display", "none");
+      d.selected = false;
+      connectionPopupHTML();
+    }
+
     // Takes the forceData.nodes and forceData.links array and creates svg elements
     // Also updates any existing svg elements based on the updated values in forceData.nodes
     // and forceData.links
@@ -535,6 +548,7 @@ export class TopologyController {
           // mouse over a path
           let event = d3.event;
           d.selected = true;
+          popupCancelled = false;
           let updateTooltip = function () {
             $timeout(function () {
               if (d.selected) {
@@ -545,9 +559,12 @@ export class TopologyController {
                   )
                 );
                 displayTooltip(event);
+              } else {
+                handleMouseOutPath(d);
               }
             });
           };
+
           // update the contents of the popup tooltip each time the data is polled
           QDRService.management.topology.addUpdatedAction(
             "connectionPopupHTML",
@@ -560,23 +577,14 @@ export class TopologyController {
               force: true
             }, {
               entity: "connection"
-            }],
-            function () {
-              updateTooltip();
-            }
+            }], updateTooltip
           );
           // just show the tooltip with whatever data we have
           updateTooltip();
           restart();
         })
         .on("mouseout", function (d) {
-          // mouse out of a path
-          QDRService.management.topology.delUpdatedAction(
-            "connectionPopupHTML"
-          );
-          d3.select("#popover-div").style("display", "none");
-          d.selected = false;
-          connectionPopupHTML();
+          handleMouseOutPath(d);
           restart();
         })
         // left click a path
@@ -640,6 +648,7 @@ export class TopologyController {
             "connectionPopupHTML"
           );
           let e = d3.event;
+          popupCancelled = false;
           d.toolTip(QDRService.management.topology).then(function (toolTip) {
             showToolTip(toolTip, e);
           });
@@ -669,6 +678,7 @@ export class TopologyController {
           $scope.current_node = null;
           // unenlarge target node
           d3.select("#popover-div").style("display", "none");
+          popupCancelled = true;
           d3.select(this).attr("transform", "");
           clearAllHighlights();
           mouseover_node = null;
@@ -816,14 +826,20 @@ export class TopologyController {
 
     function displayTooltip(event) {
       $timeout(function () {
+        if (popupCancelled) {
+          d3.select("#popover-div").style("display", "none");
+          return;
+        }
         let top = $("#topology").offset().top - 5;
         let width = $("#topology").width();
+        // hide popup while getting its width
         d3.select("#popover-div")
           .style("visibility", "hidden")
           .style("display", "block")
           .style("left", event.pageX + 5 + "px")
           .style("top", event.pageY - top + "px");
         let pwidth = $("#popover-div").width();
+        // show popup
         d3.select("#popover-div")
           .style("visibility", "visible")
           .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
