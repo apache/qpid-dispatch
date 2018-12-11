@@ -959,9 +959,9 @@ def parse_log_file(fn, log_index, comn):
                 except Exception as e:
                     # t, v, tb = sys.exc_info()
                     if hasattr(e, 'message'):
-                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e.message))
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e.message))
                     else:
-                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e))
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e))
                 if pl is not None:
                     if pl.data.is_router_ls:
                         rtr.router_ls.append(pl)
@@ -988,9 +988,9 @@ def parse_log_file(fn, log_index, comn):
                 except Exception as e:
                     # t, v, tb = sys.exc_info()
                     if hasattr(e, 'message'):
-                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e.message))
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e.message))
                     else:
-                        sys.stderr.write("Failed to parse file '%s', line %d : %s\n" % (fn, lineno, e))
+                        sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e))
                     # raise t, v, tb
             else:
                 # ignore this log line
