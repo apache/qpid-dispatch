@@ -446,8 +446,9 @@ def main_except(argv):
     # address overview
     print("<a name=\"c_addresses\"></a>")
     print("<h3>AMQP Addresses Overview</h3>")
-    # loop to print table with no expanded data
-    print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Unsettled</th> </tr>")
+    # compute with and without data lists
+    w_data = []
+    wo_data = []
     for i in range(0, comn.shorteners.short_addr_names.len()):
         sname = comn.shorteners.short_addr_names.shortname(i)
         lname = comn.shorteners.short_addr_names.longnames[i]
@@ -457,10 +458,28 @@ def main_except(argv):
         visitthis = ("<a href=\"#@@addr_%d_data\">%s</a>" %
                      (i, lname))
         n_frames = sum(len(linkd.frame_list) for linkd in links)
+        n_transfers = 0
+        for linkd in links:
+            n_transfers += sum(1 for plf in linkd.frame_list if plf.data.transfer)
         n_unsettled = sum(linkd.unsettled for linkd in links)
-        print("<tr><td>%s %s</td> <td>%d</td> <td>%d</td> <td>%d</td></tr>" %
-              (showthis, visitthis, len(links), n_frames, n_unsettled))
+        line = ("<tr><td>%s %s</td> <td>%d</td> <td>%d</td> <td>%d</td> <td>%d</td></tr>" %
+                (showthis, visitthis, len(links), n_frames, n_transfers, n_unsettled))
+        if n_transfers == 0:
+            wo_data.append(line)
+        else:
+            w_data.append(line)
+
+    # loop to print table with no expanded data
+    print("<h4>With transfer data (N=%d)</h4>" % len(w_data))
+    print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
+    for line in w_data: print(line)
     print("</table>")
+
+    print("<h4>With no transfer data (N=%d)</h4>" % len(wo_data))
+    print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
+    for line in wo_data: print(line)
+    print("</table>")
+
     # loop to print expandable sub tables
     print("<h3>AMQP Addresses Details</h3>")
     for i in range(0, comn.shorteners.short_addr_names.len()):
@@ -471,7 +490,8 @@ def main_except(argv):
               (i))
         print("<a name=\"@@addr_%d_data\"></a>" % (i))
         print("<h4>Address %s - %s</h4>" % (sname, lname))
-        print("<table><tr> <th colspan=\"2\">Router</th> <th rowspan=\"2\">Dir</th> <th colspan=\"2\">Peer</th> <th rowspan=\"2\">Role</th> <th rowspan=\"2\">Link</th> <th rowspan=\"2\">Frames</th> <th rowspan=\"2\">Unsettled</th></tr>")
+        print("<table><tr> <th colspan=\"2\">Router</th> <th rowspan=\"2\">Dir</th> <th colspan=\"2\">Peer</th> <th rowspan=\"2\">Role</th> "
+              "<th rowspan=\"2\">Link</th> <th rowspan=\"2\">Frames</th>  <th rowspan=\"2\">Transfers</th> <th rowspan=\"2\">Unsettled</th></tr>")
         print("<tr> <th>container</th> <th>connid</th> <th>connid</th> <th>container</th></tr>")
         for linkd in links:
             # linkd                         # LinkDetail
@@ -484,12 +504,13 @@ def main_except(argv):
             peer = rtr.conn_peer_display.get(id, "")  # peer container id
             peerconnid = comn.conn_peers_connid.get(id, "")
             role = "receiver" if linkd.is_receiver else "sender"
+            transfers = sum(1 for plf in linkd.frame_list if plf.data.transfer)
             showall = ("<a href=\"javascript:void(0)\" onclick=\"show_node(%s_data); show_node(%s_sess_%s); show_node(%s_sess_%s_link_%s)\">%s</a>" %
                        (id, id, sessd.conn_epoch, id, sessd.conn_epoch, linkd.session_seq, text.lozenge()))
             visitthis = ("<a href=\"#%s_sess_%s_link_%s_data\">%s</a>" %
                          (id, sessd.conn_epoch, linkd.session_seq, linkd.display_name))
-            print("<tr> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s %s</td> <td>%d</td> <td>%d</td> </tr>" %
-                  (rid, id, rtr.conn_dir[id], peerconnid, peer, role, showall, visitthis, len(linkd.frame_list), linkd.unsettled))
+            print("<tr> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s %s</td> <td>%d</td> <td>%d</td> <td>%d</td> </tr>" %
+                  (rid, id, rtr.conn_dir[id], peerconnid, peer, role, showall, visitthis, len(linkd.frame_list), transfers, linkd.unsettled))
         print("</table>")
         print("</div>")
     print("<hr>")
