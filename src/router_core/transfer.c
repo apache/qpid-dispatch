@@ -781,6 +781,13 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             qdr_link_enqueue_work_CT(core, clink, work);
         }
     } else {
+        if (link->attach_count == 1)
+            //
+            // The link is half-open.  Store the pending credit to be dealt with once the link is
+            // progressed to the next step.
+            //
+            link->credit_stored += credit;
+
         //
         // Handle the replenishing of credit outbound
         //

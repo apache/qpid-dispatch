@@ -882,6 +882,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->oper_status    = QDR_LINK_OPER_DOWN;
     link->insert_prefix = 0;
     link->strip_prefix = 0;
+    link->attach_count = 1;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -1304,6 +1305,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     qdr_terminus_t    *target = action->args.connection.target;
 
     //
+    // Start the attach count.
+    //
+    link->attach_count = 1;
+
+    //
     // Put the link into the proper lists for tracking.
     //
     DEQ_INSERT_TAIL(core->open_links, link);
@@ -1422,6 +1428,7 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
     qdr_terminus_t   *target = action->args.connection.target;
 
     link->oper_status = QDR_LINK_OPER_UP;
+    link->attach_count++;
 
     //
     // Mark the link as an edge link if it's inside an edge connection.

@@ -419,6 +419,7 @@ struct qdr_link_t {
     char                    *name;
     char                    *disambiguated_name;
     char                    *terminus_addr;
+    int                      attach_count;       ///< 1 or 2 depending on the state of the lifecycle
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
@@ -433,6 +434,7 @@ struct qdr_link_t {
     int                      capacity;
     int                      credit_to_core; ///< Number of the available credits incrementally given to the core
     int                      credit_pending; ///< Number of credits to be issued once consumers are available
+    int                      credit_stored;  ///< Number of credits given to the link before it was ready to process them.
     bool                     admin_enabled;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
