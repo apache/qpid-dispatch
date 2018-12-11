@@ -185,7 +185,6 @@ export class DetailDialogController {
 
           // async send up to 10 requests
           let q = d3.queue(10);
-          console.log(`getting info for normals ${dStart} - ${dStop}`);
           for (let n = dStart; n < dStop; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
             if (expandedRows.has(d.normals[n].container)) {
@@ -252,7 +251,6 @@ export class DetailDialogController {
     let cachedInfo = [];
     let updateTimer;
     let doUpdateDetail = function () {
-      console.log('-----------');
       cachedInfo = [];
       updateDetail.call(this);
     };
