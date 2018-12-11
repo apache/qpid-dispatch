@@ -216,6 +216,7 @@
         <tr ng-repeat-end
             ng-class="{hiddenRow: !expanded(info.name)}"
             ng-click="expandClicked(info.name)"
+            ng-if="expanded(info.name)"
         >
             <td colspan="7">
                 <h4>Details for edge router {{info.name}}</h4>

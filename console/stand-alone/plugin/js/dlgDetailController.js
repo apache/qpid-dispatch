@@ -93,7 +93,7 @@ export class DetailDialogController {
 
     // close button clicked
     $scope.okClick = function () {
-      clearInterval(updateTimer);
+      clearTimeout(updateTimer);
       $uibModalInstance.close(true);
     };
     // a row was expanded/collapsed. add/remove it to/from the Set
@@ -159,31 +159,34 @@ export class DetailDialogController {
               function (results) {
                 $timeout(function () {
                   // save the results (and sizes) for each entity requested
-                  infoPerId[id].linkRouteSizes = {};
-                  infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute,
-                    function (route) {
-                      updateSizes($scope.fields.linkRouteFields.cols, infoPerId[id].linkRouteSizes, route);
-                      return route;
-                    });
-                  infoPerId[id].autoLinkSizes = {};
-                  infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink,
-                    function (link) {
-                      updateSizes($scope.fields.autoLinkFields.cols, infoPerId[id].autoLinkSizes, link);
-                      return link;
-                    });
-                  infoPerId[id].addressSizes = {};
-                  infoPerId[id].addresses = utils.flattenAll(results[nodeId].address,
-                    function (addr) {
-                      updateSizes($scope.fields.addressFields.cols, infoPerId[id].addressSizes, addr);
-                      return addr;
-                    });
+                  if (infoPerId[id]) {
+                    infoPerId[id].linkRouteSizes = {};
+                    infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute,
+                      function (route) {
+                        updateSizes($scope.fields.linkRouteFields.cols, infoPerId[id].linkRouteSizes, route);
+                        return route;
+                      });
+                    infoPerId[id].autoLinkSizes = {};
+                    infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink,
+                      function (link) {
+                        updateSizes($scope.fields.autoLinkFields.cols, infoPerId[id].autoLinkSizes, link);
+                        return link;
+                      });
+                    infoPerId[id].addressSizes = {};
+                    infoPerId[id].addresses = utils.flattenAll(results[nodeId].address,
+                      function (addr) {
+                        updateSizes($scope.fields.addressFields.cols, infoPerId[id].addressSizes, addr);
+                        return addr;
+                      });
+                  }
                 });
               });
           };
 
           // async send up to 10 requests
           let q = d3.queue(10);
-          for (let n = 0; n < d.normals.length; n++) {
+          console.log(`getting info for normals ${dStart} - ${dStop}`);
+          for (let n = dStart; n < dStop; n++) {
             q.defer(q_getEdgeInfo, d.normals[n], infoPerId);
             if (expandedRows.has(d.normals[n].container)) {
               $scope.detail.moreInfo(d.normals[n].container);
@@ -244,23 +247,40 @@ export class DetailDialogController {
       }));
     };
 
+    let dStart = 0;
+    let dStop = Math.min(d.normals.length, 10);
+    let cachedInfo = [];
+    let updateTimer;
+    let doUpdateDetail = function () {
+      console.log('-----------');
+      cachedInfo = [];
+      updateDetail.call(this);
+    };
     let updateDetail = function () {
       groupDetail.call(this)
         .then(function (det) {
-          $timeout(function () {
-            $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
-            $scope.detail.description = det.description;
-            $scope.detail.infoPerId = Object.keys(det.infoPerId).map(function (id) {
-              return det.infoPerId[id];
-            }).sort(function (a, b) {
-              return a.name > b.name ? 1 : -1;
-            });
+          Object.keys(det.infoPerId).forEach(function (id) {
+            cachedInfo.push(det.infoPerId[id]);
           });
-        });
+          if (dStop < d.normals.length) {
+            dStart = dStop;
+            dStop = Math.min(d.normals.length, dStart + 10);
+            setTimeout(updateDetail.bind(this), 1);
+          } else {
+            $timeout(function () {
+              $scope.detail.title = `for ${d.normals.length} ${$scope.detail.title}${d.normals.length > 1 ? 's' : ''}`;
+              $scope.detail.description = det.description;
+              $scope.detail.infoPerId = cachedInfo.sort(function (a, b) {
+                return a.name > b.name ? 1 : -1;
+              });
+              dStart = 0;
+              dStop = Math.min(d.normals.length, 10);
+              updateTimer = setTimeout(doUpdateDetail.bind(this), 2000);
+            }.bind(this));
+          }
+        }.bind(this));
     };
-    let updateTimer = setInterval(updateDetail.bind(this), 2000);
-    updateDetail.call(this);
-
+    doUpdateDetail.call(this);
   }
 }
 DetailDialogController.$inject = ['QDRService', '$scope', '$timeout', '$uibModalInstance', 'd'];
