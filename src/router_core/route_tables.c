@@ -292,7 +292,7 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
             // This record will be found whenever a "foreign" topological address to this
             // remote router is looked up.
             //
-            addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST);
+            addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_CLOSEST, 0);
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
         }
@@ -604,7 +604,12 @@ static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool 
 
         qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
         if (!addr) {
-            addr = qdr_address_CT(core, qdr_treatment_for_address_hash_with_default_CT(core, iter, default_treatment(core, treatment_hint)));
+            qdr_address_config_t   *addr_config;
+            qd_address_treatment_t  treatment = qdr_treatment_for_address_hash_with_default_CT(core,
+                                                                                               iter,
+                                                                                               default_treatment(core, treatment_hint),
+                                                                                               &addr_config);
+            addr = qdr_address_CT(core, treatment, addr_config);
             if (!addr) {
                 qd_log(core->log, QD_LOG_CRITICAL, "map_destination: ignored");
                 break;
@@ -712,7 +717,7 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
 
         qd_hash_retrieve(core->addr_hash, address->iterator, (void**) &addr);
         if (!addr) {
-            addr = qdr_address_CT(core, action->args.io.treatment);
+            addr = qdr_address_CT(core, action->args.io.treatment, 0);
             if (addr) {
                 qd_hash_insert(core->addr_hash, address->iterator, addr, &addr->hash_handle);
                 DEQ_ITEM_INIT(addr);

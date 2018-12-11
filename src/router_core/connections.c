@@ -967,7 +967,7 @@ void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase, int *priority)
+qdr_address_config_t *qdr_config_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter)
 {
     qdr_address_config_t *addr = 0;
     qd_iterator_view_t old_view = qd_iterator_get_view(iter);
@@ -979,21 +979,19 @@ qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connec
     qd_iterator_annotate_prefix(iter, '\0');
     qd_iterator_reset_view(iter, old_view);
 
-    if (in_phase)  *in_phase  = addr ? addr->in_phase  : 0;
-    if (out_phase) *out_phase = addr ? addr->out_phase : 0;
-    if (priority)  *priority  = addr ? addr->priority  : -1;
-
-
-    return addr ? addr->treatment : core->qd->default_treatment;
+    return addr;
 }
 
 
-qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter)
+qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter, qdr_address_config_t **addr_config)
 {
-    return qdr_treatment_for_address_hash_with_default_CT(core, iter, core->qd->default_treatment);
+    return qdr_treatment_for_address_hash_with_default_CT(core, iter, core->qd->default_treatment, addr_config);
 }
 
-qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t *core, qd_iterator_t *iter, qd_address_treatment_t default_treatment)
+qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t              *core,
+                                                                      qd_iterator_t           *iter,
+                                                                      qd_address_treatment_t   default_treatment,
+                                                                      qdr_address_config_t   **addr_config)
 {
 #define HASH_STORAGE_SIZE 1000
     char  storage[HASH_STORAGE_SIZE + 1];
@@ -1001,6 +999,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t
     bool  on_heap = false;
     int   length  = qd_iterator_length(iter);
     qd_address_treatment_t trt = default_treatment;
+    qdr_address_config_t *addr = 0;
 
     if (length > HASH_STORAGE_SIZE) {
         copy    = (char*) malloc(length + 1);
@@ -1021,7 +1020,6 @@ qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t
         // Handle the mobile address case
         //
         qd_iterator_t *config_iter = qd_iterator_string(&copy[2], ITER_VIEW_ADDRESS_WITH_SPACE);
-        qdr_address_config_t *addr = 0;
         qd_parse_tree_retrieve_match(core->addr_parse_tree, config_iter, (void **) &addr);
         if (addr)
             trt = addr->treatment;
@@ -1031,6 +1029,7 @@ qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t
     if (on_heap)
         free(copy);
 
+    *addr_config = addr;
     return trt;
 }
 
@@ -1282,7 +1281,7 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED);
+       addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED, 0);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
         DEQ_INSERT_TAIL(core->addrs, addr);
     }

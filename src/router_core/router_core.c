@@ -289,18 +289,23 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 }
 
 
-qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment)
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment, qdr_address_config_t *config)
 {
     if (treatment == QD_TREATMENT_UNAVAILABLE)
         return 0;
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
+    addr->config    = config;
     addr->treatment = treatment;
     addr->forwarder = qdr_forwarder_CT(core, treatment);
     addr->rnodes    = qd_bitmask(0);
     addr->add_prefix = 0;
     addr->del_prefix = 0;
     addr->priority   = -1;
+
+    if (config)
+        config->ref_count++;
+
     return addr;
 }
 
@@ -316,7 +321,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qdr_address_CT(core, treatment);
+        addr = qdr_address_CT(core, treatment, 0);
         if (addr) {
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
@@ -348,7 +353,7 @@ qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char *prefix, c
 
     qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
     if (!addr) {
-        addr = qdr_address_CT(core, treatment);
+        addr = qdr_address_CT(core, treatment, 0);
         if (addr) {
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
@@ -393,8 +398,19 @@ void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
     free_qdr_link_route_t(lr);
 }
 
+static void free_address_config(qdr_address_config_t *addr)
+{
+    free(addr->name);
+    free(addr->pattern);
+    free_qdr_address_config_t(addr);
+}
+
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 {
+    qdr_address_config_t *config = addr->config;
+    if (config && --config->ref_count == 0)
+        free_address_config(config);
+
     // Remove the address from the list, hash index, and parse tree
     DEQ_REMOVE(core->addrs, addr);
     if (addr->hash_handle) {
@@ -500,14 +516,11 @@ void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr
     // Remove the address from the list and the parse tree
     DEQ_REMOVE(core->addr_config, addr);
     qd_parse_tree_remove_pattern(core->addr_parse_tree, pattern);
+    addr->ref_count--;
 
-    // Free resources associated with this address.
-    if (addr->name) {
-        free(addr->name);
-    }
+    if (addr->ref_count == 0)
+        free_address_config(addr);
     qd_iterator_free(pattern);
-    free(addr->pattern);
-    free_qdr_address_config_t(addr);
 }
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)

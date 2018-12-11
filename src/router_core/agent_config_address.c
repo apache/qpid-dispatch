@@ -430,6 +430,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
 
         addr = new_qdr_address_config_t();
         DEQ_ITEM_INIT(addr);
+        addr->ref_count = 1; // Represents the reference from the addr_config list
         addr->name      = name ? (char*) qd_iterator_copy(name) : 0;
         addr->identity  = qdr_identifier(core);
         addr->treatment = qdra_address_treatment_CT(distrib_field);

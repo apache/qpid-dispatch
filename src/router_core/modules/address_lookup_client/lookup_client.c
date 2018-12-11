@@ -193,7 +193,7 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
             qd_iterator_t *temp_iter = qd_iterator_string(temp_addr, ITER_VIEW_ADDRESS_HASH);
             qd_hash_retrieve(core->addr_hash, temp_iter, (void**) &addr);
             if (!addr) {
-                addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED);
+                addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED, 0);
                 qd_hash_insert(core->addr_hash, temp_iter, addr, &addr->hash_handle);
                 DEQ_INSERT_TAIL(core->addrs, addr);
                 qdr_terminus_set_address(terminus, temp_addr);
@@ -235,11 +235,27 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     //
     // There was no match for a link-route destination, look for a message-route address.
     //
-    int in_phase;
-    int out_phase;
+    int in_phase  = 0;
+    int out_phase = 0;
     int addr_phase;
-    int priority;
-    qd_address_treatment_t treat = qdr_treatment_for_address_CT(core, conn, iter, &in_phase, &out_phase, &priority);
+    int priority  = -1;
+    qd_address_treatment_t  treat       = core->qd->default_treatment;
+    qdr_address_config_t   *addr_config = qdr_config_for_address_CT(core, conn, iter);
+
+    if (addr_config) {
+        in_phase  = addr_config->in_phase;
+        out_phase = addr_config->out_phase;
+        priority  = addr_config->priority;
+        treat     = addr_config->treatment;
+    }
+
+    //
+    // If the terminus has a waypoint capability, override the configured phases and use the waypoint phases.
+    //
+    if (qdr_terminus_has_capability(terminus, QD_CAPABILITY_WAYPOINT1)) {
+        in_phase  = 1;
+        out_phase = 0;
+    }
 
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
     qd_iterator_annotate_prefix(iter, '\0'); // Cancel previous override
@@ -260,8 +276,9 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
             treat = QD_TREATMENT_ANYCAST_CLOSEST;
         }
 
-        addr = qdr_address_CT(core, treat);
+        addr = qdr_address_CT(core, treat, addr_config);
         if (addr) {
+            addr->config = addr_config;
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
         }

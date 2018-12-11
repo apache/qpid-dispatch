@@ -42,10 +42,11 @@ void qdrc_endpoint_bind_mobile_address_CT(qdr_core_t           *core,
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &addr);
     if (!addr) {
-        qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0, 0);
+        qdr_address_config_t   *addr_config = qdr_config_for_address_CT(core, 0, iter);
+        qd_address_treatment_t  treatment   = addr_config ? addr_config->treatment : QD_TREATMENT_ANYCAST_BALANCED;
         if (treatment == QD_TREATMENT_UNAVAILABLE)
             treatment = QD_TREATMENT_ANYCAST_BALANCED;
-        addr = qdr_address_CT(core, treatment);
+        addr = qdr_address_CT(core, treatment, addr_config);
         DEQ_INSERT_TAIL(core->addrs, addr);
         qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
     }

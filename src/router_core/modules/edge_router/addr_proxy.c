@@ -92,8 +92,21 @@ static qdr_terminus_t *qdr_terminus_normal(const char *addr)
 static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t *addr)
 {
     if (addr->edge_inlink == 0) {
+        qdr_terminus_t *term = qdr_terminus_normal(key + 2);
+
+        if (addr->config && addr->config->out_phase > 0) {
+            //
+            // If this address is configured as multi-phase, check to see if it is
+            // an inlink on phase-0.  If so, tell the Interior peer that this is
+            // for a waypoint.
+            //
+            const char *key = (char*) qd_hash_key_by_handle(addr->hash_handle);
+            if (key[0] == QD_ITER_HASH_PREFIX_MOBILE && key[1] == '0')
+                qdr_terminus_add_capability(term, QD_CAPABILITY_WAYPOINT1);
+        }
+
         qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_INCOMING,
-                                              qdr_terminus_normal(key + 2), qdr_terminus_normal(0));
+                                              term, qdr_terminus_normal(0));
         qdr_core_bind_address_link_CT(ap->core, addr, link);
         addr->edge_inlink = link;
     }
@@ -119,8 +132,21 @@ static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_
         // happen later when the interior tells us that there are upstream destinations
         // for the address (see on_transfer below).
         //
+        qdr_terminus_t *term = qdr_terminus_normal(key + 2);
+
+        if (addr->config && addr->config->out_phase > 0) {
+            //
+            // If this address is configured as multi-phase, check to see if it is
+            // an outlink on phase-1.  If so, tell the Interior peer that this is
+            // for a waypoint.
+            //
+            const char *key = (char*) qd_hash_key_by_handle(addr->hash_handle);
+            if (key[0] == QD_ITER_HASH_PREFIX_MOBILE && key[1] == '1')
+                qdr_terminus_add_capability(term, QD_CAPABILITY_WAYPOINT1);
+        }
+
         qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
-                                              qdr_terminus_normal(0), qdr_terminus_normal(key + 2));
+                                              qdr_terminus_normal(0), term);
         addr->edge_outlink = link;
     }
 }

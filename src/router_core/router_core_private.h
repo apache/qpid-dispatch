@@ -484,6 +484,7 @@ void qdr_del_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_
 
 struct qdr_address_t {
     DEQ_LINKS(qdr_address_t);
+    qdr_address_config_t      *config;
     qdr_subscription_list_t    subscriptions; ///< In-process message subscribers
     qdr_connection_ref_list_t  conns;         ///< Local Connections for route-destinations
     qdr_link_ref_list_t        rlinks;        ///< Locally-Connected Consumers
@@ -543,7 +544,7 @@ struct qdr_address_t {
 ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
-qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment);
+qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment, qdr_address_config_t *config);
 qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const char *addr, qd_address_treatment_t treatment);
 qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char* prefix, const char *addr, qd_address_treatment_t treatment, bool edge);
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
@@ -556,6 +557,7 @@ struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
     char                   *name;
     uint64_t                identity;
+    uint32_t                ref_count;
     char                   *pattern;
     bool                    is_prefix;
     qd_address_treatment_t  treatment;
@@ -909,9 +911,9 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *pe
 void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv);
 void qdr_connection_free(qdr_connection_t *conn);
 void qdr_connection_activate_CT(qdr_core_t *core, qdr_connection_t *conn);
-qd_address_treatment_t qdr_treatment_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter, int *in_phase, int *out_phase, int *priority);
-qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter);
-qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t *core, qd_iterator_t *iter, qd_address_treatment_t default_treatment);
+qdr_address_config_t *qdr_config_for_address_CT(qdr_core_t *core, qdr_connection_t *conn, qd_iterator_t *iter);
+qd_address_treatment_t qdr_treatment_for_address_hash_CT(qdr_core_t *core, qd_iterator_t *iter, qdr_address_config_t **addr_config);
+qd_address_treatment_t qdr_treatment_for_address_hash_with_default_CT(qdr_core_t *core, qd_iterator_t *iter, qd_address_treatment_t default_treatment, qdr_address_config_t **addr_config);
 qdr_edge_t *qdr_edge(qdr_core_t *);
 void qdr_edge_free(qdr_edge_t *);
 void qdr_edge_connection_opened(qdr_edge_t *edge, qdr_connection_t *conn);

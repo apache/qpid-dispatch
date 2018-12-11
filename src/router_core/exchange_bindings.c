@@ -905,8 +905,9 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
         qd_iterator_annotate_phase(address, (char) phase + '0');
         qd_hash_retrieve(core->addr_hash, address, (void **)&ex->qdr_addr);
         if (!ex->qdr_addr) {
-            ex->qdr_addr = qdr_address_CT(core, qdr_treatment_for_address_hash_CT(core,
-                                                                                  address));
+            qdr_address_config_t   *addr_config;
+            qd_address_treatment_t  treatment = qdr_treatment_for_address_hash_CT(core, address, &addr_config);
+            ex->qdr_addr = qdr_address_CT(core, treatment, addr_config);
             qd_hash_insert(core->addr_hash, address, ex->qdr_addr, &ex->qdr_addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, ex->qdr_addr);
         }
@@ -1046,9 +1047,9 @@ static next_hop_t *next_hop(qdr_exchange_t *ex,
         qd_hash_retrieve(ex->core->addr_hash, address, (void **)&nh->qdr_addr);
         if (!nh->qdr_addr) {
             qdr_core_t *core = ex->core;
-            nh->qdr_addr = qdr_address_CT(core,
-                                          qdr_treatment_for_address_hash_CT(core,
-                                                                            address));
+            qdr_address_config_t   *addr_config;
+            qd_address_treatment_t  treatment = qdr_treatment_for_address_hash_CT(core, address, &addr_config);
+            nh->qdr_addr = qdr_address_CT(core, treatment, addr_config);
             qd_hash_insert(core->addr_hash, address, nh->qdr_addr, &nh->qdr_addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, nh->qdr_addr);
         }

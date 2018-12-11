@@ -340,7 +340,7 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
         qd_iterator_t *a_iter = qd_iterator_string(addr_hash, ITER_VIEW_ALL);
         qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
         if (!lr->addr) {
-            lr->addr = qdr_address_CT(core, treatment);
+            lr->addr = qdr_address_CT(core, treatment, 0);
             if (lr->add_prefix) {
                 lr->addr->add_prefix = (char*) malloc(strlen(lr->add_prefix) + 1);
                 strcpy(lr->addr->add_prefix, lr->add_prefix);
@@ -489,12 +489,14 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
     if (!al->addr) {
-        qd_address_treatment_t treatment = qdr_treatment_for_address_CT(core, 0, iter, 0, 0, 0);
+        qdr_address_config_t   *addr_config = qdr_config_for_address_CT(core, 0, iter);
+        qd_address_treatment_t  treatment   = addr_config ? addr_config->treatment : QD_TREATMENT_ANYCAST_BALANCED;
+
         if (treatment == QD_TREATMENT_UNAVAILABLE) {
             //if associated address is not defined, assume balanced
             treatment = QD_TREATMENT_ANYCAST_BALANCED;
         }
-        al->addr = qdr_address_CT(core, treatment);
+        al->addr = qdr_address_CT(core, treatment, addr_config);
         DEQ_INSERT_TAIL(core->addrs, al->addr);
         qd_hash_insert(core->addr_hash, iter, al->addr, &al->addr->hash_handle);
     }
@@ -710,7 +712,7 @@ qdr_link_route_t *qdr_route_add_conn_route_CT(qdr_core_t             *core,
     lr->pattern   = strdup(addr_pattern);
     lr->parent_conn = conn;
 
-        //
+    //
     // Add the address to the routing hash table and map it as a pattern in the
     // wildcard pattern parse tree
     //
@@ -719,7 +721,7 @@ qdr_link_route_t *qdr_route_add_conn_route_CT(qdr_core_t             *core,
         qd_iterator_t *a_iter = qd_iterator_string(addr_hash, ITER_VIEW_ALL);
         qd_hash_retrieve(core->addr_hash, a_iter, (void*) &lr->addr);
         if (!lr->addr) {
-            lr->addr = qdr_address_CT(core, lr->treatment);
+            lr->addr = qdr_address_CT(core, lr->treatment, 0);
             DEQ_INSERT_TAIL(core->addrs, lr->addr);
             qd_hash_insert(core->addr_hash, a_iter, lr->addr, &lr->addr->hash_handle);
             qdr_link_route_map_pattern_CT(core, a_iter, lr->addr);
