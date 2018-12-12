@@ -35,6 +35,9 @@ import sys
 import traceback
 from collections import defaultdict
 
+import common
+import parser
+import text
 
 class connection():
     def __init__(self, instance, conn_id, logfile):
@@ -42,6 +45,7 @@ class connection():
         self.conn_id = conn_id
         self.logfile = logfile
         self.lines = []
+        self.attaches = []
         self.key_name = connection.keyname(instance, conn_id)
         self.transfers = 0
         self.peer_open = ""
@@ -77,6 +81,7 @@ class LogFile:
         self.instance = 0   # incremented when router restarts in log file
         self.amqp_lines = 0 # server trace lines
         self.transfers = 0  # server transfers
+        self.attaches = 0   # server attach
 
         # restarts
         self.restarts = []
@@ -138,6 +143,7 @@ class LogFile:
         key_error = "@error(29)"
         key_openin = "<- @open(16)"
         key_xfer = "@transfer"
+        key_attach = "@attach"
         key_prod_dispatch = ':product="qpid-dispatch-router"'
         key_prod_aartemis = ':product="apache-activemq-artemis"'
         key_prod_aqpidcpp = ':product="qpid-cpp"'
@@ -173,6 +179,9 @@ class LogFile:
                                 self.broker_connections.append(curr_conn)
                                 curr_conn.peer_open = line
                                 curr_conn.peer_type = k
+                elif key_attach in line:
+                    self.attaches += 1
+                    curr_conn.attaches.append(line)
                 elif self.parse_identify(key_xfer, line):
                     self.transfers += 1
                     curr_conn.transfers += 1
@@ -222,24 +231,61 @@ class LogFile:
 
         # Write the web doc to stdout
         print ("""<!DOCTYPE html>
-        <html>
-        <head>
-        <title>%s qpid-dispatch log split</title>
+<html>
+<head>
+<title>%s qpid-dispatch log split</title>
 
-        <style>
-            * { 
-            font-family: sans-serif; 
-        }
-        table {
-            border-collapse: collapse;
-        }
-        table, td, th {
-            border: 1px solid black;
-            padding: 3px;
-        }
-        </style>
+<style>
+    * { 
+    font-family: sans-serif; 
+}
+table {
+    border-collapse: collapse;
+}
+table, td, th {
+    border: 1px solid black;
+    padding: 3px;
+}
+</style>
+<script src="http://ajax.googleapis.com/ajax/libs/dojo/1.4/dojo/dojo.xd.js" type="text/javascript"></script>
+<!-- <script src="http://ajax.googleapis.com/ajax/libs/dojo/1.4/dojo/dojo.xd.js" type="text/javascript"></script> -->
+<script type="text/javascript">
+function node_is_visible(node)
+{
+  if(dojo.isString(node))
+    node = dojo.byId(node);
+  if(!node) 
+    return false;
+  return node.style.display == "block";
+}
+function set_node(node, str)
+{
+  if(dojo.isString(node))
+    node = dojo.byId(node);
+  if(!node) return;
+  node.style.display = str;
+}
+function toggle_node(node)
+{
+  if(dojo.isString(node))
+    node = dojo.byId(node);
+  if(!node) return;
+  set_node(node, (node_is_visible(node)) ? 'none' : 'block');
+}
+function hide_node(node)
+{
+  set_node(node, 'none');
+}
+function show_node(node)
+{
+  set_node(node, 'block');
+}
+
 """ % self.log_fn)
 
+        print("</script>")
+        print("</head>")
+        print("<body>")
         print("""
 <h3>Contents</h3>
 <table>
@@ -252,6 +298,7 @@ class LogFile:
 <tr><td><a href=\"#c_conn_xfersize\"  >Conn by N transfers</a></td>       <td>Connections sorted by transfer log count</td></tr>
 <tr><td><a href=\"#c_conn_xfer0\"     >Conn with no transfers</a></td>    <td>Connections with no transfers</td></tr>
 <tr><td><a href=\"#c_conn_logsize\"   >Conn by N log lines</a></td>       <td>Connections sorted by total log line count</td></tr>
+<tr><td><a href=\"#c_addresses\"      >Addresses</a></td>                 <td>AMQP address usage</td></tr>
 </table>
 <hr>
 """)
@@ -265,6 +312,7 @@ class LogFile:
         print("<tr><td>AMQP log lines</td>     <td>%s</td></tr>" % str(self.amqp_lines))
         print("<tr><td>AMQP errors</td>        <td>%s</td></tr>" % str(len(self.errors)))
         print("<tr><td>AMQP transfers</td>     <td>%s</td></tr>" % str(self.transfers))
+        print("<tr><td>AMQP attaches</td>     <td>%s</td></tr>" % str(self.attaches))
         print("</table>")
         print("<hr>")
 
@@ -386,6 +434,90 @@ class LogFile:
         print("</table>")
         print("<hr>")
 
+    def aggregate_addresses(self):
+        class dummy_args():
+            skip_all_data = False
+            skip_detail = False
+            skip_msg_progress = False
+            split = False
+            time_start = None
+            time_end = None
+
+        comn = common.Common()
+        comn.args = dummy_args
+
+        print("<a name=\"c_addresses\"></a>")
+
+        # Aggregate link source/target addresses where the names are referenced in the attach:
+        #  observe source and target addresses regardless of the role of the link
+        # TODO speed this up a little
+        nn2 = defaultdict(list)
+        for k, conn in dict_iteritems(self.connections):
+            for aline in conn.attaches:
+                try:
+                    pl = parser.ParsedLogLine(0, conn.instance, 0, aline, comn, None, k)
+                except Exception as e:
+                    # t, v, tb = sys.exc_info()
+                    if hasattr(e, 'message'):
+                        sys.stderr.write("Failed to parse %s. Analysis continuing...\n" % (e.message))
+                    else:
+                        sys.stderr.write("Failed to parse %s. Analysis continuing...\n" % (e))
+                if pl is not None:
+                    nn2[pl.data.source].append(pl)
+                    if pl.data.source != pl.data.target:
+                        nn2[pl.data.target].append(pl)
+
+        print("<h3>Verbose AMQP Addresses Overview (N=%d)</h3>" % len(nn2))
+        showthis = ("<a href=\"javascript:toggle_node('addr_table_2')\">%s</a>" %
+                    (text.lozenge()))
+        print(" %s This table shows addresses that referenced in Attach performatives. <br>" % showthis)
+        print("<div id=\"addr_table_2\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
+        addr_many = []
+        addr_few = []
+        ADDR_LEVEL = 4
+        n = 0
+        for k, plfs in dict_iteritems(nn2):
+            showthis = ("<a href=\"javascript:toggle_node('@@addr2_%d')\">%s</a>" %
+                        (n, text.lozenge()))
+            visitthis = ("<a href=\"#@@addr2_%d_data\">%s</a>" %
+                         (n, k))
+            line = ("<tr><td>%s %s</td> <td>%d</td> </tr>" %
+                  (showthis, visitthis, len(plfs)))
+            if len(plfs) <= ADDR_LEVEL:
+                addr_few.append(line)
+            else:
+                addr_many.append(line)
+            n += 1
+        print("<h4>Addresses with many links (N=%d)</h4>" % (len(addr_many)))
+        print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
+        for line in addr_many: print(line)
+        print("</table>")
+
+        print("<h4>Addresses with few links (N=%d)</h4>" % (len(addr_few)))
+        print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
+        for line in addr_few: print(line)
+        print("</table>")
+
+        # loop to print expandable sub tables
+        print("<h3>AMQP Addresses Details</h3>")
+        n = 0
+        for k, plfss in dict_iteritems(nn2):
+            plfs = sorted(plfss, key=lambda lfl: lfl.datetime)
+            print("<div id=\"@@addr2_%d\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">" %
+                  (n))
+            print("<a name=\"@@addr2_%d_data\"></a>" % (n))
+            print("<h4>Address %s</h4>" % (k))
+            print("<table><tr><th>Time</th> <th>Connection</th> <th>Dir</th> <th>Peer</th> <th>Role</th> <th>Source</th> <th>Target</th> </tr>")
+            for plf in plfs:
+                print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
+                      (plf.datetime, plf.data.conn_id,
+                       plf.data.direction, self.connections[plf.opaque].peer_type,
+                       plf.data.role, plf.data.source, plf.data.target))
+            print("</table>")
+            print("</div>")
+            n += 1
+        print("</div>")
+
 
 # py 2-3 compat
 
@@ -428,6 +560,7 @@ def main_except(log_fn):
     for lf in log_files:
         lf.summarize_connections() # prints web page to console
         lf.write_subfiles()        # generates split files one-per-connection
+        lf.aggregate_addresses()   # print address table html to console
     pass
 
 def main(argv):

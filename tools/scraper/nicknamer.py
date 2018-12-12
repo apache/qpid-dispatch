@@ -126,6 +126,9 @@ class ShortNames():
     def customers(self, sname):
         return self.customer_dict[sname]
 
+    def sorted_indexes(self):
+        return [self.longnames.index(sln) for sln in sorted(self.longnames)]
+
 class Shorteners():
     def __init__(self):
         self.short_link_names = ShortNames("link", 15)

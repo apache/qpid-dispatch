@@ -153,6 +153,8 @@ and divides the connection data. Connection names inclued the router instance ID
   * Total log line count
   * Connections with zero transfers
 * Per-connection files are linked from the connection lists for one-click viewing
+* AMQP Addresses from every every AMQP Attach are indexed. A table for each address
+  shows when the address was referenced and some connection details.
 
 ## Quick Start
 
