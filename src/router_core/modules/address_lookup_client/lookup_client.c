@@ -471,6 +471,20 @@ static void qcm_addr_lookup_process_pending_requests_CT(qcm_lookup_client_t *cli
 }
 
 
+static bool qcm_terminus_has_local_link_route(qdr_core_t *core, qdr_connection_t *conn, qdr_terminus_t *terminus, qd_direction_t dir)
+{
+    qdr_address_t *addr;
+    qd_iterator_t *iter = qd_iterator_dup(qdr_terminus_get_address(terminus));
+    qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_WITH_SPACE);
+    if (conn->tenant_space)
+        qd_iterator_annotate_space(iter, conn->tenant_space, conn->tenant_space_len);
+    qd_parse_tree_retrieve_match(core->link_route_tree[dir], iter, (void**) &addr);
+    qd_iterator_free(iter);
+    return addr && (DEQ_SIZE(addr->conns) > 0);
+}
+
+
+
 //================================================================================
 // Address Lookup Handler
 //================================================================================
@@ -491,10 +505,11 @@ static void qcm_addr_lookup_CT(void             *context,
     if (client->core->router_mode == QD_ROUTER_MODE_EDGE
         && client->client_api_active
         && conn != client->edge_conn
-        && qdr_terminus_get_address(term) != 0) {
+        && qdr_terminus_get_address(term) != 0
+        && !qcm_terminus_has_local_link_route(client->core, conn, term, dir)) {
         //
-        // We are in edge mode, there is an active edge connection, and the terminus has an address.
-        // Set up and scehdule an asynchronous lookup request.
+        // We are in edge mode, there is an active edge connection, the terminus has an address,
+        // and there is no local link route for this address.  Set up the asynchronous lookup.
         //
         qcm_addr_lookup_request_t *request = new_qcm_addr_lookup_request_t();
         DEQ_ITEM_INIT(request);
@@ -506,13 +521,16 @@ static void qcm_addr_lookup_CT(void             *context,
 
         DEQ_INSERT_TAIL(client->pending_requests, request);
         qcm_addr_lookup_process_pending_requests_CT(client);
-    } else {
-        //
-        // If this lookup doesn't meet the criteria for asynchronous action, perform the built-in, synchronous address lookup
-        //
-        qdr_address_t *addr = qdr_lookup_terminus_address_CT(client->core, dir, conn, term, true, true, &link_route, &unavailable, &core_endpoint);
-        qdr_link_react_to_first_attach_CT(client->core, conn, addr, link, dir, source, target, link_route, unavailable, core_endpoint);
+        return;
     }
+
+    //
+    // If this lookup doesn't meet the criteria for asynchronous action, perform the built-in, synchronous address lookup
+    //
+    qdr_address_t *addr = qdr_lookup_terminus_address_CT(client->core, dir, conn, term, true, true,
+                                                         &link_route, &unavailable, &core_endpoint);
+    qdr_link_react_to_first_attach_CT(client->core, conn, addr, link, dir, source, target,
+                                      link_route, unavailable, core_endpoint);
 }
 
 
