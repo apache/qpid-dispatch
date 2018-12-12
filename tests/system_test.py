@@ -921,6 +921,11 @@ class MgmtMsgProxy(object):
               'type': 'org.apache.qpid.dispatch.router.config.linkRoute'}
         return Message(properties=ap, reply_to=self.reply_addr)
 
+    def query_addresses(self):
+        ap = {'operation': 'QUERY',
+              'type': 'org.apache.qpid.dispatch.router.address'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
     def create_link_route(self, name, kwargs):
         ap = {'operation': 'CREATE',
               'type': 'org.apache.qpid.dispatch.router.config.linkRoute',
@@ -934,7 +939,7 @@ class MgmtMsgProxy(object):
               'name': name}
         return Message(properties=ap, reply_to=self.reply_addr)
 
-    def create_connector(self, name, kwargs):
+    def create_connector(self, name, **kwargs):
         ap = {'operation': 'CREATE',
               'type': 'org.apache.qpid.dispatch.connector',
               'name': name}
