@@ -34,7 +34,6 @@ from system_test import AsyncTestSender
 from system_test import QdManager
 from system_tests_link_routes import ConnLinkRouteService
 from test_broker import FakeService
-from test_broker import FakeBrokerStop
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from proton.utils import BlockingConnection
@@ -723,22 +722,110 @@ class LinkRouteProxyTest(TestCase):
         cls.CONNECTOR_TYPE = 'org.apache.qpid.dispatch.connector'
 
     def _get_address(self, router, address):
+        """Lookup address in route table"""
         a_type = 'org.apache.qpid.dispatch.router.address'
         addrs = router.management.query(a_type).get_dicts()
         return list(filter(lambda a: a['name'].find(address) != -1,
                            addrs))
 
     def _wait_address_gone(self, router, address):
+        """Block until address is removed from the route table"""
         while self._get_address(router, address):
             sleep(0.1)
 
     def _test_traffic(self, sender, receiver, address, count=5):
+        """Generate message traffic between two normal clients"""
         tr = AsyncTestReceiver(receiver, address)
         ts = AsyncTestSender(sender, address, count)
         ts.wait()  # wait until all sent
         for i in range(count):
             tr.queue.get(timeout=TIMEOUT)
         tr.stop()
+
+    def _test_attach_weirdness(self, service):
+        """Exercise a service that simulates link attach failures"""
+
+        # create a consumer, do not wait for link to open, reattach
+        # on received detach
+        rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
+                               wait=False, recover_link=True)
+        service.link_dropped.wait(timeout=TIMEOUT)
+        service.join() # wait for thread exit
+        del service
+
+        # now attach a working service to the same address,
+        # make sure it all works
+        fs = FakeService(self.EA1.route_container)
+        self.INT_B.wait_address("CfgLinkRoute1")
+
+        if True:   # 
+            rx.stop()
+            fs.join()
+        else:
+            tx = AsyncTestSender(self.EA1.listener, 'CfgLinkRoute1/foo',
+
+                                 body="HEY HO LET'S GO!")
+            tx.wait()
+
+            msg = rx.queue.get(timeout=TIMEOUT)
+            self.assertTrue(msg.body == "HEY HO LET'S GO!")
+            rx.stop()
+            fs.join()
+            self.assertEqual(1, fs.in_count)
+            self.assertEqual(1, fs.out_count)
+
+    def test_01_immedate_detach_reattach(self):
+        """
+        Have a service for a link routed address abruptly detach
+        in response to an incoming link attach
+
+        The attaching client from EB1 will get an attach response then an
+        immediate detach.  The client will immediately re-establish the link.
+        """
+        class AttachDropper(FakeService):
+            def __init__(self, *args, **kwargs):
+                super(AttachDropper, self).__init__(*args, **kwargs)
+                self.link_dropped = Event()
+
+            def on_link_remote_open(self, event):
+                # drop it
+                event.link.close()
+                event.connection.close()
+                self.link_dropped.set()
+
+        ad = AttachDropper(self.EA1.route_container)
+        self.INT_B.wait_address("CfgLinkRoute1")
+        self._test_attach_weirdness(ad)
+
+    def test_02_thrashing_link_routes(self):
+        """
+        Rapidly add and delete link routes at the edge
+        """
+
+        # activate the pre-configured link routes
+        ea1_mgmt = self.EA1.management
+        fs = FakeService(self.EA1.route_container)
+        self.INT_B.wait_address("CfgLinkRoute1")
+
+        for i in range(10):
+            lr1 = ea1_mgmt.create(type=self.CFG_LINK_ROUTE_TYPE,
+                                  name="TestLRout%d" % i,
+                                  attributes={'pattern': 'Test/*/%d/#' % i,
+                                              'containerId': 'FakeBroker',
+                                              'direction': 'out'})
+            lr2 = ea1_mgmt.create(type=self.CFG_LINK_ROUTE_TYPE,
+                                  name="TestLRin%d" % i,
+                                  attributes={'pattern': 'Test/*/%d/#' % i,
+                                              'containerId': 'FakeBroker',
+                                              'direction': 'in'})
+            # verify that they are correctly propagated (once)
+            if i == 9:
+                self.INT_B.wait_address("Test/*/9/#")
+            lr1.delete()
+            lr2.delete()
+
+        fs.join()
+        self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
     def _validate_topology(self, router, expected_links, address):
         """
@@ -765,7 +852,59 @@ class LinkRouteProxyTest(TestCase):
                              test_links)
             self.assertTrue(len(matches) == 1)
 
-    def test_link_topology(self):
+    def test_03_interior_conn_lost(self):
+        """
+        What happens when the interior connection bounces?
+        """
+        config = Qdrouterd.Config([('router', {'mode': 'edge',
+                                               'id': 'Edge1'}),
+                                   ('listener', {'role': 'normal',
+                                                 'port': self.tester.get_port()}),
+                                   ('listener', {'name': 'rc',
+                                                 'role': 'route-container',
+                                                 'port': self.tester.get_port()}),
+                                   ('linkRoute', {'pattern': 'Edge1/*',
+                                                  'containerId': 'FakeBroker',
+                                                  'direction': 'in'}),
+                                   ('linkRoute', {'pattern': 'Edge1/*',
+                                                  'containerId': 'FakeBroker',
+                                                  'direction': 'out'})])
+        er = self.tester.qdrouterd('Edge1', config, wait=True)
+
+        # activate the link routes before the connection exists
+        fs = FakeService(er.addresses[1])
+        er.wait_address("Edge1/*")
+
+        # create the connection to interior
+        er_mgmt = er.management
+        ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
+                              name='toA',
+                              attributes={'role': 'edge',
+                                          'port': self.INTA_edge_port})
+        self.INT_B.wait_address("Edge1/*")
+
+        # delete it, and verify the routes are removed
+        ctor.delete()
+        self._wait_address_gone(self.INT_B, "Edge1/*")
+
+        # now recreate and verify routes re-appear
+        ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
+                              name='toA',
+                              attributes={'role': 'edge',
+                                          'port': self.INTA_edge_port})
+        self.INT_B.wait_address("Edge1/*")
+        self._test_traffic(self.INT_B.listener,
+                           self.INT_B.listener,
+                           "Edge1/One",
+                           count=5)
+        fs.join()
+        self.assertEqual(5, fs.in_count)
+        self.assertEqual(5, fs.out_count)
+
+        er.teardown()
+        self._wait_address_gone(self.INT_B, "Edge1/*")
+
+    def test_50_link_topology(self):
         """
         Verify that the link topology that results from activating a link route
         and sending traffic is correct
@@ -825,7 +964,7 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(1, fs.in_count)
         self.assertEqual(1, fs.out_count)
 
-    def test_link_route_proxy_configured(self):
+    def test_51_link_route_proxy_configured(self):
         """
         Activate the configured link routes via a FakeService, verify proxies
         created by passing traffic from/to and interior router
@@ -834,10 +973,12 @@ class LinkRouteProxyTest(TestCase):
 
         fs = FakeService(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1")
+
         self._test_traffic(self.INT_B.listener,
                            self.INT_B.listener,
                            "CfgLinkRoute1/hi",
                            count=5)
+
         fs.join()
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
@@ -850,16 +991,19 @@ class LinkRouteProxyTest(TestCase):
 
         fs = FakeService(self.EB1.route_container)
         self.INT_A.wait_address("*.cfg.pattern.#")
+
         self._test_traffic(self.INT_A.listener,
                            self.INT_A.listener,
                            "MATCH.cfg.pattern",
                            count=5)
+
         fs.join()
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
         self._wait_address_gone(self.INT_A, "*.cfg.pattern.#")
 
-    def test_conn_link_route_proxy(self):
+
+    def test_52_conn_link_route_proxy(self):
         """
         Test connection scoped link routes by connecting a fake service to the
         Edge via the route-container connection.  Have the fake service
@@ -895,88 +1039,6 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(10, fs.out_count)
 
         self._wait_address_gone(self.INT_A, "Conn/*/One")
-
-    def test_interior_conn_lost(self):
-        """
-        What happens when the interior connection bounces?
-        """
-        config = Qdrouterd.Config([('router', {'mode': 'edge',
-                                               'id': 'Edge1'}),
-                                   ('listener', {'role': 'normal',
-                                                 'port': self.tester.get_port()}),
-                                   ('listener', {'name': 'rc',
-                                                 'role': 'route-container',
-                                                 'port': self.tester.get_port()}),
-                                   ('linkRoute', {'pattern': 'Edge1/*',
-                                                  'containerId': 'FakeBroker',
-                                                  'direction': 'in'}),
-                                   ('linkRoute', {'pattern': 'Edge1/*',
-                                                  'containerId': 'FakeBroker',
-                                                  'direction': 'out'})])
-        er = self.tester.qdrouterd('Edge1', config, wait=True)
-
-        # activate the link routes before the connection exists
-        fs = FakeService(er.addresses[1])
-        er.wait_address("Edge1/*")
-
-        # create the connection to interior
-        er_mgmt = er.management
-        ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
-                              name='toA',
-                              attributes={'role': 'edge',
-                                          'port': self.INTA_edge_port})
-        self.INT_B.wait_address("Edge1/*")
-
-        # delete it, and verify the routes are removed
-        ctor.delete()
-        self._wait_address_gone(self.INT_B, "Edge1/*")
-
-        # now recreate and verify routes re-appear
-        ctor = er_mgmt.create(type=self.CONNECTOR_TYPE,
-                              name='toA',
-                              attributes={'role': 'edge',
-                                          'port': self.INTA_edge_port})
-        self.INT_B.wait_address("Edge1/*")
-        self._test_traffic(self.INT_B.listener,
-                           self.INT_B.listener,
-                           "Edge1/One",
-                           count=5)
-        fs.join()
-        self.assertEqual(5, fs.in_count)
-        self.assertEqual(5, fs.out_count)
-
-        er.teardown()
-        self._wait_address_gone(self.INT_B, "Edge1/*")
-
-    def test_thrashing_link_routes(self):
-        """
-        Rapidly add and delete link routes at the edge
-        """
-
-        # activate the pre-configured link routes
-        ea1_mgmt = self.EA1.management
-        fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
-
-        for i in range(10):
-            lr1 = ea1_mgmt.create(type=self.CFG_LINK_ROUTE_TYPE,
-                                  name="TestLRout%d" % i,
-                                  attributes={'pattern': 'Test/*/%d/#' % i,
-                                              'containerId': 'FakeBroker',
-                                              'direction': 'out'})
-            lr2 = ea1_mgmt.create(type=self.CFG_LINK_ROUTE_TYPE,
-                                  name="TestLRin%d" % i,
-                                  attributes={'pattern': 'Test/*/%d/#' % i,
-                                              'containerId': 'FakeBroker',
-                                              'direction': 'in'})
-            # verify that they are correctly propagated (once)
-            if i == 9:
-                self.INT_B.wait_address("Test/*/9/#")
-            lr1.delete()
-            lr2.delete()
-
-        fs.join()
-        self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
 
 class Timeout(object):

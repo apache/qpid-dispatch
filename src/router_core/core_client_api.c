@@ -286,6 +286,7 @@ static void _flush_send_queue_CT(qdrc_client_t *client)
         req->delivery = qdrc_endpoint_delivery_CT(client->core,
                                                   client->sender,
                                                   msg);
+        qdr_delivery_incref(req->delivery, "core client send request");
         qdrc_endpoint_send_CT(client->core,
                               client->sender,
                               req->delivery,
@@ -345,6 +346,10 @@ static void _free_request_CT(qdrc_client_t *client,
 
     if (req->app_properties) {
         qd_compose_free(req->app_properties);
+    }
+
+    if (req->delivery) {
+        qdr_delivery_decref_CT(client->core, req->delivery, "core client send request");
     }
 
     // notify user that the request has completed
@@ -477,6 +482,10 @@ static void _sender_update_CT(void *context,
             // remove from unsettled list
             DEQ_REMOVE_N(UNSETTLED, client->unsettled_list, req);
             req->on_unsettled_list = false;
+
+            // delivery no longer needed
+            qdr_delivery_decref_CT(client->core, req->delivery, "core client send request");
+            req->delivery = 0;
 
             if (!req->on_reply_list || disposition != PN_ACCEPTED) {
                 // no reply is coming, release the request

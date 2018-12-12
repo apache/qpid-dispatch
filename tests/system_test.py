@@ -43,6 +43,7 @@ except ImportError:
 from threading import Thread
 from threading import Event
 import json
+import uuid
 
 import proton
 from proton import Message, Timeout
@@ -720,11 +721,12 @@ class AsyncTestReceiver(MessagingHandler):
     messages.  Messages can be retrieved from this thread via the queue member.
     :param wait: block the constructor until the link has been fully
                  established.
+    :param recover_link: restart on remote link detach
     """
     Empty = Queue.Empty
 
     def __init__(self, address, source, conn_args=None, container_id=None,
-                 wait=True):
+                 wait=True, recover_link=False):
         super(AsyncTestReceiver, self).__init__()
         self.address = address
         self.source = source
@@ -732,9 +734,11 @@ class AsyncTestReceiver(MessagingHandler):
         self.queue = Queue.Queue()
         self._conn = None
         self._container = Container(self)
-        if container_id is not None:
-            self._container.container_id = container_id
+        cid = container_id or "ATR-%s:%s" % (source, uuid.uuid4())
+        self._container.container_id = cid
         self._ready = Event()
+        self._recover_link = recover_link
+        self._recover_count = 0
         self._stop_thread = False
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
@@ -770,6 +774,17 @@ class AsyncTestReceiver(MessagingHandler):
     def on_link_opened(self, event):
         self._ready.set()
 
+    def on_link_closing(self, event):
+        event.link.close()
+        if self._recover_link and not self._stop_thread:
+            # lesson learned: the generated link name will be the same as the
+            # old link (which is bad) so we specify a new one
+            self._recover_count += 1
+            kwargs = {'source': self.source,
+                      'name': "%s:%s" % (event.link.name, self._recover_count)}
+            rcv = event.container.create_receiver(event.connection,
+                                                  **kwargs)
+
     def on_message(self, event):
         self.queue.put(event.message)
 
@@ -787,8 +802,8 @@ class AsyncTestSender(MessagingHandler):
         self._unaccepted = count
         self._body = body or "test"
         self._container = Container(self)
-        if container_id is not None:
-            self._container.container_id = container_id
+        cid = container_id or "ATS-%s:%s" % (target, uuid.uuid4())
+        self._container.container_id = cid
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
