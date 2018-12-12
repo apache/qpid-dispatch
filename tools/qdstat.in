@@ -343,6 +343,7 @@ class BusManager(Node):
         heads.append(Header("addr"))
         heads.append(Header("phs"))
         heads.append(Header("cap"))
+        heads.append(Header("pri"))
         heads.append(Header("undel"))
         heads.append(Header("unsett"))
         heads.append(Header("del"))
@@ -373,7 +374,6 @@ class BusManager(Node):
         heads.append(Header("mod"))
         heads.append(Header("admin"))
         heads.append(Header("oper"))
-        heads.append(Header("priority"))
         if self.opts.verbose:
             heads.append(Header("name"))
 
@@ -388,6 +388,7 @@ class BusManager(Node):
             row.append(self._addr_text(link.owningAddr))
             row.append(self._addr_phase(link.owningAddr))
             row.append(link.capacity)
+            row.append(link.priority)
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
@@ -400,7 +401,6 @@ class BusManager(Node):
             row.append(link.modifiedCount)
             row.append(link.adminStatus)
             row.append(link.operStatus)
-            row.append(link.priority)
             if self.opts.verbose:
                 row.append(link.linkName)
             rows.append(row)
@@ -463,6 +463,7 @@ class BusManager(Node):
         heads.append(Header("addr"))
         heads.append(Header("phs"))
         heads.append(Header("distrib"))
+        heads.append(Header("pri"))
         heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -472,7 +473,6 @@ class BusManager(Node):
         heads.append(Header("thru", Header.COMMAS))
         heads.append(Header("to-proc", Header.COMMAS))
         heads.append(Header("from-proc", Header.COMMAS))
-        heads.append(Header("priority"))
         rows = []
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
                 'containerCount', 'deliveriesIngress', 'deliveriesEgress',
@@ -486,6 +486,7 @@ class BusManager(Node):
             row.append(self._addr_text(addr.name))
             row.append(self._addr_phase(addr.name))
             row.append(addr.distribution)
+            row.append(addr.priority if addr.priority >= 0 else "")
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
@@ -495,7 +496,6 @@ class BusManager(Node):
             row.append(addr.deliveriesTransit)
             row.append(addr.deliveriesToContainer)
             row.append(addr.deliveriesFromContainer)
-            row.append(addr.priority)
             rows.append(row)
         title = "Router Addresses"
         sorter = Sorter(heads, rows, 'addr', 0, True)

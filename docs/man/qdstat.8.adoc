@@ -69,6 +69,9 @@ The security or encryption method, if any, used for this connection.
 authentication::
 The authentication method and user ID of the connection's authenticated user.
 
+tenant::
+If the connection is to a listener using multi-tenancy, this column displays the tenant namespace for the connection.
+
 qdstat -l
 ~~~~~~~~~
 type::
@@ -110,6 +113,10 @@ The phase of the address bound to the link.
 
 cap::
 The capacity, in deliveries, of the link.
+
+pri::
+The priority of the link.  Priority influences the order in which links are processed within a connection.
+Higher numbers represent higher priorities.
 
 undel::
 The number of undelivered messages stored on the link's FIFO.
@@ -196,6 +203,10 @@ One of the following distribution methods used for this address:
   - 'closest' - Each message is delivered to only one consumer for the address. The closest (lowest cost) consumer will be chosen. If there are multiple lowest-cost consumers, deliveries will be spread across those consumers.
   - 'balanced' - Each message is delivered to only one consumer for the address. The consumer with the fewest outstanding (unsettled) deliveries will be chosen. The cost of the route to the consumer is a threshold for delivery (that is, higher cost consumers will only receive deliveries if closer consumers are backed up).
   - 'flood' - Used only for router-control traffic. This is multicast without the prevention of duplicate deliveries.
+
+pri::
+The priority of the address.  If the address prefix/pattern is configured with a priority, that priority will appear
+in this column.  Messages for addresses configured with a priority will be forwarded according to the address's priority.
 
 in-proc::
 The number of in-process consumers for this address.

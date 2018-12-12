@@ -95,7 +95,7 @@ class QdstatTest(system_test.TestCase):
         self.assertGreaterEqual(len(lines), 2)
 
         # see if the header line has the word priority in it
-        priorityregexp = r'priority'
+        priorityregexp = r'pri'
         priority_column = re.search(priorityregexp, lines[1]).start()
         self.assertGreater(priority_column, -1)
 
@@ -167,7 +167,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         self.assertGreaterEqual(len(lines), 2)
 
         # see if the header line has the word priority in it
-        priorityregexp = r'priority'
+        priorityregexp = r'pri'
         priority_column = re.search(priorityregexp, lines[1]).start()
         self.assertGreater(priority_column, -1)
 
