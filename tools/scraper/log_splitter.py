@@ -30,13 +30,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import cgi
+from datetime import *
 import os
 import sys
 import traceback
 from collections import defaultdict
 
 import common
-import parser
 import text
 
 class connection():
@@ -68,6 +68,86 @@ class connection():
         self.file_name = self.disp_name() + ".log"
         self.path_name = self.log_n_dir + "/" + self.file_name
 
+
+class parsed_attach():
+    """
+    Parse an attach log line. The usual parser is way too slow
+    so this does the essentials for --split.
+    """
+    def find_field(self, key, line):
+        sti = line.find(key)
+        if sti < 0:
+            return 'none'
+        ste = line.find(',', sti + len(key))
+        if ste < 0:
+            raise ValueError("Value not properly delimited. Key '%s'. line: %s" % (key, self.line))
+        val = line[sti + len(key):ste]
+        if val.startswith('"'):
+            val = val[1:-1]
+        return val
+
+
+    def __init__(self, instance, line, opaque):
+        self.instance = instance
+        self.line = line
+        self.opaque = opaque
+        self.datetime = None
+        self.conn_num = ""
+        self.conn_id = ""
+        self.direction = ""
+        self.role = ""
+        self.source = ""
+        self.target = ""
+
+        # timestamp
+        try:
+            self.datetime = datetime.strptime(self.line[:26], '%Y-%m-%d %H:%M:%S.%f')
+        except:
+            # old routers flub the timestamp and don't print leading zero in uS time
+            # 2018-11-18 11:31:08.269 should be 2018-11-18 11:31:08.000269
+            td = self.line[:26]
+            parts = td.split('.')
+            us = parts[1]
+            parts_us = us.split(' ')
+            if len(parts_us[0]) < 6:
+                parts_us[0] = '0' * (6 - len(parts_us[0])) + parts_us[0]
+            parts[1] = ' '.join(parts_us)
+            td = '.'.join(parts)
+            try:
+                self.datetime = datetime.strptime(td[:26], '%Y-%m-%d %H:%M:%S.%f')
+            except:
+                self.datetime = datetime(1970, 1, 1)
+        key_strace = "SERVER (trace) ["
+        sti = self.line.find(key_strace)
+        if sti < 0:
+            raise ValueError("'%s' not found in line %s" % (key_strace, self.line))
+        self.line = self.line[sti + len(key_strace):]
+        ste = self.line.find(']')
+        if ste < 0:
+            print("Failed to parse line ", self.line)
+            raise ValueError("'%s' not found in line %s" % ("]", self.line))
+        self.conn_num = self.line[:ste]
+        self.line = self.line[ste + 1:]
+        self.conn_id = "A" + str(self.instance) + "_" + str(self.conn_num)
+        # get the session (channel) number
+        if self.line.startswith(':'):
+            self.line = self.line[1:]
+        sti = self.line.find(' ')
+        if sti < 0:
+            raise ValueError("space not found after channel number at head of line %s" % (self.line))
+        if sti > 0:
+            self.channel = self.line[:sti]
+        self.line = self.line[sti + 1:]
+        self.line = self.line.lstrip()
+        # direction
+        if self.line.startswith('<') or self.line.startswith('-'):
+            self.direction = self.line[:2]
+            self.line = self.line[3:]
+        else:
+            raise ValueError("line does not have direction arrow: %s" % (self.line))
+        self.role = "receiver" if self.find_field('role=', self.line) == "true" else "sender"
+        self.source = self.find_field('@source(40) [address=', self.line)
+        self.target = self.find_field('@target(41) [address=', self.line)
 
 class LogFile:
     def __init__(self, fn, top_n=24):
@@ -455,7 +535,7 @@ function show_node(node)
         for k, conn in dict_iteritems(self.connections):
             for aline in conn.attaches:
                 try:
-                    pl = parser.ParsedLogLine(0, conn.instance, 0, aline, comn, None, k)
+                    pl = parsed_attach(conn.instance, aline, k)
                 except Exception as e:
                     # t, v, tb = sys.exc_info()
                     if hasattr(e, 'message'):
@@ -463,20 +543,17 @@ function show_node(node)
                     else:
                         sys.stderr.write("Failed to parse %s. Analysis continuing...\n" % (e))
                 if pl is not None:
-                    nn2[pl.data.source].append(pl)
-                    if pl.data.source != pl.data.target:
-                        nn2[pl.data.target].append(pl)
+                    nn2[pl.source].append(pl)
+                    if pl.source != pl.target:
+                        nn2[pl.target].append(pl)
 
         print("<h3>Verbose AMQP Addresses Overview (N=%d)</h3>" % len(nn2))
-        showthis = ("<a href=\"javascript:toggle_node('addr_table_2')\">%s</a>" %
-                    (text.lozenge()))
-        print(" %s This table shows addresses that referenced in Attach performatives. <br>" % showthis)
-        print("<div id=\"addr_table_2\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         addr_many = []
         addr_few = []
         ADDR_LEVEL = 4
         n = 0
-        for k, plfs in dict_iteritems(nn2):
+        for k in sorted(nn2.keys()):
+            plfs = nn2[k]
             showthis = ("<a href=\"javascript:toggle_node('@@addr2_%d')\">%s</a>" %
                         (n, text.lozenge()))
             visitthis = ("<a href=\"#@@addr2_%d_data\">%s</a>" %
@@ -488,20 +565,31 @@ function show_node(node)
             else:
                 addr_many.append(line)
             n += 1
+        showthis = ("<a href=\"javascript:toggle_node('addr_table_many')\">%s</a>" %
+                    (text.lozenge()))
+        print(" %s Addresses attached more than %d times (N=%d) <br>" % (showthis, ADDR_LEVEL, len(addr_many)))
+        print("<div id=\"addr_table_many\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with many links (N=%d)</h4>" % (len(addr_many)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
         for line in addr_many: print(line)
         print("</table>")
+        print("</div>")
 
+        showthis = ("<a href=\"javascript:toggle_node('addr_table_few')\">%s</a>" %
+                    (text.lozenge()))
+        print(" %s Addresses attached %d times or fewer (N=%d)<br>" % (showthis, ADDR_LEVEL, len(addr_few)))
+        print("<div id=\"addr_table_few\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with few links (N=%d)</h4>" % (len(addr_few)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
         for line in addr_few: print(line)
         print("</table>")
+        print("</div>")
 
         # loop to print expandable sub tables
         print("<h3>AMQP Addresses Details</h3>")
         n = 0
-        for k, plfss in dict_iteritems(nn2):
+        for k in sorted(nn2.keys()):
+            plfss = nn2[k]
             plfs = sorted(plfss, key=lambda lfl: lfl.datetime)
             print("<div id=\"@@addr2_%d\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">" %
                   (n))
@@ -510,13 +598,12 @@ function show_node(node)
             print("<table><tr><th>Time</th> <th>Connection</th> <th>Dir</th> <th>Peer</th> <th>Role</th> <th>Source</th> <th>Target</th> </tr>")
             for plf in plfs:
                 print("<tr><td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> </tr>" %
-                      (plf.datetime, plf.data.conn_id,
-                       plf.data.direction, self.connections[plf.opaque].peer_type,
-                       plf.data.role, plf.data.source, plf.data.target))
+                      (plf.datetime, plf.conn_id,
+                       plf.direction, self.connections[plf.opaque].peer_type,
+                       plf.role, plf.source, plf.target))
             print("</table>")
             print("</div>")
             n += 1
-        print("</div>")
 
 
 # py 2-3 compat
