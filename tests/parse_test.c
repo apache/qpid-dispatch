@@ -74,57 +74,69 @@ struct fs_vector_t {
 static char *test_parser_fixed_scalars(void *context)
 {
     int idx = 0;
+    qd_iterator_t *field = NULL;
+    qd_parsed_field_t *parsed = NULL;
     static char error[1024];
 
+    error[0] = 0;
+
     while (fs_vectors[idx].data) {
-        qd_iterator_t *field  = qd_iterator_binary(fs_vectors[idx].data,
-                                                   fs_vectors[idx].length, ITER_VIEW_ALL);
-        qd_parsed_field_t *parsed = qd_parse(field);
+        field = qd_iterator_binary(fs_vectors[idx].data,
+                                   fs_vectors[idx].length, ITER_VIEW_ALL);
+        parsed = qd_parse(field);
 
         qd_iterator_t *typed_iter = qd_parse_typed(parsed);
 
         int length = qd_iterator_length(typed_iter);
 
-        if (length != fs_vectors[idx].length)
-            return "Length of typed iterator does not match actual length";
+        if (length != fs_vectors[idx].length) {
+            strcpy(error, "Length of typed iterator does not match actual length");
+            break;
+        }
 
-        if (!qd_parse_ok(parsed)) return "Unexpected Parse Error";
+        if (!qd_parse_ok(parsed)) {
+            strcpy(error, "Unexpected Parse Error");
+            break;
+        }
         if (qd_parse_tag(parsed) != fs_vectors[idx].expected_tag) {
             sprintf(error, "(%d) Tag: Expected %02x, Got %02x", idx,
                     fs_vectors[idx].expected_tag, qd_parse_tag(parsed));
-            return error;
+            break;
         }
         if (fs_vectors[idx].check_uint &&
             qd_parse_as_uint(parsed) != fs_vectors[idx].expected_ulong) {
             sprintf(error, "(%d) UINT: Expected %"PRIx64", Got %"PRIx32, idx,
                     fs_vectors[idx].expected_ulong, qd_parse_as_uint(parsed));
-            return error;
+            break;
         }
         if (fs_vectors[idx].check_ulong &&
             qd_parse_as_ulong(parsed) != fs_vectors[idx].expected_ulong) {
             sprintf(error, "(%d) ULONG: Expected %"PRIx64", Got %"PRIx64, idx,
                     fs_vectors[idx].expected_ulong, qd_parse_as_ulong(parsed));
-            return error;
+            break;
         }
         if (fs_vectors[idx].check_int &&
             qd_parse_as_int(parsed) != fs_vectors[idx].expected_long) {
             sprintf(error, "(%d) INT: Expected %"PRIx64", Got %"PRIx32, idx,
                     fs_vectors[idx].expected_long, qd_parse_as_int(parsed));
-            return error;
+            break;
         }
         if (fs_vectors[idx].check_long &&
             qd_parse_as_long(parsed) != fs_vectors[idx].expected_long) {
             sprintf(error, "(%d) LONG: Expected %"PRIx64", Got %"PRIx64, idx,
                     fs_vectors[idx].expected_long, qd_parse_as_long(parsed));
-            return error;
+            break;
         }
         idx++;
-
         qd_iterator_free(field);
+        field = 0;
         qd_parse_free(parsed);
+        parsed = 0;
     }
 
-    return 0;
+    qd_iterator_free(field);
+    qd_parse_free(parsed);
+    return *error ? error : 0;
 }
 
 static char *test_integer_conversion(void *context)
@@ -370,10 +382,14 @@ static char *test_parser_errors(void *context)
                                                    err_vectors[idx].length, ITER_VIEW_ALL);
         qd_parsed_field_t *parsed = qd_parse(field);
         if (qd_parse_ok(parsed)) {
+            qd_parse_free(parsed);
+            qd_iterator_free(field);
             sprintf(error, "(%d) Unexpected Parse Success", idx);
             return error;
         }
         if (strcmp(qd_parse_error(parsed), err_vectors[idx].expected_error) != 0) {
+            qd_parse_free(parsed);
+            qd_iterator_free(field);
             sprintf(error, "(%d) Error: Expected %s, Got %s", idx,
                     err_vectors[idx].expected_error, qd_parse_error(parsed));
             return error;
@@ -394,6 +410,7 @@ static char *test_tracemask(void *context)
     qd_buffer_list_t list;
     static char      error[1024];
 
+    error[0] = 0;
     qd_iterator_set_address(false, "0", "ROUTER");
 
     qd_tracemask_add_router(tm, "amqp:/_topo/0/Router.A", 0);
@@ -435,11 +452,11 @@ static char *test_tracemask(void *context)
     bm = qd_tracemask_create(tm, pf, &ingress);
     if (qd_bitmask_cardinality(bm) != 3) {
         sprintf(error, "Expected cardinality of 3, got %d", qd_bitmask_cardinality(bm));
-        return error;
+        goto cleanup;
     }
     if (ingress != 0) {
         sprintf(error, "(A) Expected ingress index of 0, got %d", ingress);
-        return error;
+        goto cleanup;
     }
     int total = 0;
     int bit, c;
@@ -448,23 +465,25 @@ static char *test_tracemask(void *context)
     }
     if (total != 17) {
         sprintf(error, "Expected total bit value of 17, got %d", total);
-        return error;
+        goto cleanup;
     }
 
     qd_bitmask_free(bm);
+    bm = 0;
     qd_tracemask_del_router(tm, 3);
     qd_tracemask_remove_link(tm, 0);
 
     ingress = -1;
     bm = qd_tracemask_create(tm, pf, &ingress);
     qd_parse_free(pf);
+    pf = 0;
     if (qd_bitmask_cardinality(bm) != 1) {
         sprintf(error, "Expected cardinality of 1, got %d", qd_bitmask_cardinality(bm));
-        return error;
+        goto cleanup;
     }
     if (ingress != 0) {
         sprintf(error, "(B) Expected ingress index of 0, got %d", ingress);
-        return error;
+        goto cleanup;
     }
 
     total = 0;
@@ -473,16 +492,18 @@ static char *test_tracemask(void *context)
     }
     if (total != 3) {
         sprintf(error, "Expected total bit value of 3, got %d", total);
-        return error;
+        // fallthrough
     }
 
+cleanup:
+    qd_parse_free(pf);
     qd_tracemask_free(tm);
     qd_bitmask_free(bm);
     for (qd_buffer_t *buf = DEQ_HEAD(list); buf; buf = DEQ_HEAD(list)) {
         DEQ_REMOVE_HEAD(list);
         qd_buffer_free(buf);
     }
-    return 0;
+    return *error ? error : 0;
 }
 
 

@@ -30,35 +30,75 @@ static char *test_add_remove(void *context)
     qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     void *payload;
 
-    if (qd_parse_tree_remove_pattern(node, piter))
+    if (qd_parse_tree_remove_pattern(node, piter)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Failed to remove a non-existing pattern";
+    }
 
-    if (qd_parse_tree_get_pattern(node, piter, &payload))
+    if (qd_parse_tree_get_pattern(node, piter, &payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Got a non-existing pattern";
+    }
 
-    if (qd_parse_tree_add_pattern(node, piter, "Hi Sam"))
+    if (qd_parse_tree_add_pattern(node, piter, "Hi Sam")) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Add returned existing value";
+    }
 
-    if (qd_parse_tree_add_pattern(node, piter2, "Bye Sam"))
+    if (qd_parse_tree_add_pattern(node, piter2, "Bye Sam")) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Add returned existing value";
+    }
 
-    if (!qd_parse_tree_get_pattern(node, piter, &payload))
+    if (!qd_parse_tree_get_pattern(node, piter, &payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp("Hi Sam", (char *)payload))
+    if (!payload || strcmp("Hi Sam", (char *)payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Got bad pattern";
+    }
 
-    if (!qd_parse_tree_get_pattern(node, piter2, &payload))
+    if (!qd_parse_tree_get_pattern(node, piter2, &payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp("Bye Sam", (char *)payload))
+    if (!payload || strcmp("Bye Sam", (char *)payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Got bad pattern";
+    }
 
-    if (!qd_parse_tree_remove_pattern(node, piter))
+    if (!qd_parse_tree_remove_pattern(node, piter)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Failed to remove an existing pattern";
+    }
 
-    if (!qd_parse_tree_remove_pattern(node, piter2))
+    if (!qd_parse_tree_remove_pattern(node, piter2)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
+        qd_iterator_free(piter2);
         return "Failed to remove an existing pattern";
+    }
 
     qd_parse_tree_free(node);
     qd_iterator_free(piter);
@@ -73,26 +113,40 @@ static char *test_add_and_match_str(void *context)
     qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     void *payload;
 
-    if (qd_parse_tree_add_pattern_str(node, str1, "Hi Sam"))
+    if (qd_parse_tree_add_pattern_str(node, str1, "Hi Sam")) {
+        qd_parse_tree_free(node);
         return "Add returned existing value (1)";
+    }
 
-    if (qd_parse_tree_add_pattern_str(node, str2, "Bye Sam"))
+    if (qd_parse_tree_add_pattern_str(node, str2, "Bye Sam")) {
+        qd_parse_tree_free(node);
         return "Add returned existing value (2)";
+    }
 
-    if (!qd_parse_tree_retrieve_match_str(node, str1, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, str1, &payload)) {
+        qd_parse_tree_free(node);
         return "Failed to get expected match (1)";
+    }
 
-    if (!qd_parse_tree_retrieve_match_str(node, str2, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, str2, &payload)) {
+        qd_parse_tree_free(node);
         return "Failed to get expected match (2)";
+    }
 
-    if (qd_parse_tree_retrieve_match_str(node, "notSoFast", &payload))
+    if (qd_parse_tree_retrieve_match_str(node, "notSoFast", &payload)) {
+        qd_parse_tree_free(node);
         return "Match pattern should not match but did match";
+    }
 
-    if (!qd_parse_tree_remove_pattern_str(node, str1))
+    if (!qd_parse_tree_remove_pattern_str(node, str1)) {
+        qd_parse_tree_free(node);
         return "Failed to remove an existing pattern str";
+    }
 
-    if (qd_parse_tree_retrieve_match_str(node, str1, &payload))
+    if (qd_parse_tree_retrieve_match_str(node, str1, &payload)) {
+        qd_parse_tree_free(node);
         return "Removed pattern should not match but did match";
+    }
 
     qd_parse_tree_free(node);
     return NULL;
@@ -108,57 +162,87 @@ static char *test_usurpation_recovery_str(void *context)
     void *deposed;
 
     // rightful owner is ensconsced
-    if (qd_parse_tree_add_pattern_str(node, A, (void *)A))
+    if (qd_parse_tree_add_pattern_str(node, A, (void *)A)) {
+        qd_parse_tree_free(node);
         return "Add returned existing value (1)";
+    }
 
     // matches on A or B both return A
-    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(A, (char *)payload))
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
-    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(A, (char *)payload))
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
     // usurper comes along
     usurped = qd_parse_tree_add_pattern_str(node, B, (void *)B);
-    if (!usurped || strcmp(A, (char *)usurped))
+    if (!usurped || strcmp(A, (char *)usurped)) {
+        qd_parse_tree_free(node);
         return "Usurper should have grabbed '#' optimized match";
+    }
 
     // matches on A or B both return B
-    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(B, (char *)payload))
+    if (!payload || strcmp(B, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
-    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(B, (char *)payload))
+    if (!payload || strcmp(B, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
     // Restore rightful owner
     deposed = qd_parse_tree_add_pattern_str(node, usurped, usurped);
-    if (!deposed || strcmp(B, (char *)deposed))
+    if (!deposed || strcmp(B, (char *)deposed)) {
+        qd_parse_tree_free(node);
         return "Failed to depose B";
+    }
 
     // matches on A or B both return A
-    if (!qd_parse_tree_retrieve_match_str(node, A, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(A, (char *)payload))
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
-    if (!qd_parse_tree_retrieve_match_str(node, B, &payload))
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload)) {
+        qd_parse_tree_free(node);
         return "Could not get pattern";
+    }
 
-    if (!payload || strcmp(A, (char *)payload))
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
         return "Got bad pattern";
+    }
 
     qd_parse_tree_free(node);
     return NULL;
@@ -209,26 +293,46 @@ static char *check_normalize(const char *input,
     qd_iterator_t *iter = qd_iterator_string(input, ITER_VIEW_ALL);
     void *payload;
 
-    if (qd_parse_tree_add_pattern(node, iter, (void *)input) != NULL)
+    if (qd_parse_tree_add_pattern(node, iter, (void *)input) != NULL) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Unexpected duplicate pattern";
-    if (!qd_parse_tree_get_pattern(node, iter, &payload))
+    }
+    if (!qd_parse_tree_get_pattern(node, iter, &payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Could not find added pattern";
-    if (!payload || strcmp((const char *)payload, input))
+    }
+    if (!payload || strcmp((const char *)payload, input)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Failed to find pattern";
+    }
 
     qd_parse_tree_walk(node, visit_all, &vh);
-    if (vh.count != 1)
+    if (vh.count != 1) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Did not find expected pattern";
-    if (strcmp(vh.payloads[0], input))
+    }
+    if (strcmp(vh.payloads[0], input)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Unexpected payload!";
+    }
     if (strcmp(vh.patterns[0], expected)) {
         fprintf(stderr, "%s %s\n", vh.patterns[0], expected);
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Incorrect normalization";
     }
 
     payload = qd_parse_tree_remove_pattern(node, iter);
-    if (!payload || strcmp((const char *)payload, input))
+    if (!payload || strcmp((const char *)payload, input)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(iter);
         return "Failed to remove pattern";
+    }
 
     qd_parse_tree_free(node);
     qd_iterator_free(iter);
@@ -274,8 +378,11 @@ static char *match_test(qd_parse_tree_type_t type,
     qd_parse_tree_t *node = qd_parse_tree_new(type);
     void *payload = (void *)"found";
 
-    if (qd_parse_tree_add_pattern(node, piter, payload))
+    if (qd_parse_tree_add_pattern(node, piter, payload)) {
+        qd_parse_tree_free(node);
+        qd_iterator_free(piter);
         return "Unexpected payload when adding pattern";
+    }
 
     for (int i = 0; tests[i].address && !rc; i++) {
         qd_iterator_t *iter = qd_iterator_string(tests[i].address, ITER_VIEW_ALL);
@@ -283,6 +390,9 @@ static char *match_test(qd_parse_tree_type_t type,
         if (match != tests[i].match) {
             printf("match address '%s' to pattern '%s': expected %d got %d\n",
                    tests[i].address, pattern, (int)tests[i].match, (int)match);
+            qd_iterator_free(iter);
+            qd_parse_tree_free(node);
+            qd_iterator_free(piter);
             return "Match test failed";
         }
         qd_iterator_free(iter);
@@ -509,6 +619,8 @@ static char *multiple_matches(qd_parse_tree_type_t type,
         qd_iterator_t *pattern = qd_iterator_string(patterns[i], ITER_VIEW_ALL);
         if (qd_parse_tree_add_pattern(node, pattern, (void *)patterns[i])) {
             printf("Failed to add pattern %s to parse tree\n", patterns[i]);
+            qd_iterator_free(pattern);
+            qd_parse_tree_free(node);
             return "failed adding pattern to tree";
         }
         qd_iterator_free(pattern);
@@ -517,16 +629,20 @@ static char *multiple_matches(qd_parse_tree_type_t type,
     {
         // read all patterns and verify all are present
         qd_parse_tree_walk(node, visit_all, &vh);
-        if (vh.count != PCOUNT)
+        if (vh.count != PCOUNT) {
+            qd_parse_tree_free(node);
             return "Not all patterns in tree";
+        }
         for (int i = 0; i < PCOUNT; i++) {
             bool found = false;
             for (int j = 0; j < PCOUNT; j++) {
                 if (strcmp(patterns[i], vh.patterns[j]) == 0)
                     found = true;
             }
-            if (!found)
+            if (!found) {
+                qd_parse_tree_free(node);
                 return "All patterns not visited";
+            }
         }
     }
 
@@ -539,12 +655,19 @@ static char *multiple_matches(qd_parse_tree_type_t type,
         //for (int i = 0; i < vh.count; i++)
         //  printf("%s, ", vh.patterns[i]);
         //printf("count = %d\n", vh.count);
-        if (vh.count != tests[k].count)
+        if (vh.count != tests[k].count) {
+            qd_iterator_free(find_me);
+            qd_parse_tree_free(node);
             return "Unexpected match count";
-        for (int i = 0; i < tests[k].count; i++) {
-            if (strcmp(vh.patterns[i], tests[k].matches[i]))
-                return "Unexpected pattern match";
         }
+        for (int i = 0; i < tests[k].count; i++) {
+            if (strcmp(vh.patterns[i], tests[k].matches[i])) {
+                qd_iterator_free(find_me);
+                qd_parse_tree_free(node);
+                return "Unexpected pattern match";
+            }
+        }
+
         qd_iterator_free(find_me);
     }
 
@@ -556,10 +679,15 @@ static char *multiple_matches(qd_parse_tree_type_t type,
         // printf("best match for %s: %s\n", tests[k].address, vh.patterns[0]);
         if (tests[k].count == 0) {
             if (vh.count != 0) {
+                qd_iterator_free(find_me);
+                qd_parse_tree_free(node);
                 return "Did not expect to find a best match!";
             }
-        } else if (vh.count == 0 || strcmp(vh.patterns[0], tests[k].matches[0]))
-                return "Unexpected best pattern match";
+        } else if (vh.count == 0 || strcmp(vh.patterns[0], tests[k].matches[0])) {
+            qd_iterator_free(find_me);
+            qd_parse_tree_free(node);
+            return "Unexpected best pattern match";
+        }
         qd_iterator_free(find_me);
     }
 
@@ -657,38 +785,46 @@ static char *test_multiple_matches(void *context)
 static char *test_validation(void *context)
 {
     qd_iterator_t *iter = qd_iterator_string("sam.*.am.#", ITER_VIEW_ALL);
+    qd_iterator_t *iter_good = qd_iterator_string("sam/+/a.#.m/#", ITER_VIEW_ALL);
+    qd_iterator_t *iter_bad = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);
+    qd_iterator_t *iter_const = qd_iterator_string("sam/I/am", ITER_VIEW_ALL);
     qd_parse_tree_t *mqtt_tree = qd_parse_tree_new(QD_PARSE_TREE_MQTT);
     qd_parse_tree_t *addr_tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     qd_parse_tree_t *amqp_tree = qd_parse_tree_new(QD_PARSE_TREE_AMQP_0_10);
 
+    char *error = 0;
+
     if (!qd_parse_tree_validate_pattern(addr_tree, iter) ||
         !qd_parse_tree_validate_pattern(amqp_tree, iter)) {
-        return "expected to skip validation";
+        error = "expected to skip validation";
+        goto cleanup;
     }
-    qd_iterator_free(iter);
 
-    qd_iterator_t *iter_good = qd_iterator_string("sam/+/a.#.m/#", ITER_VIEW_ALL);
     if (!qd_parse_tree_validate_pattern(mqtt_tree, iter_good)) {
-        return "expected to pass mqtt validation";
+        error = "expected to pass mqtt validation";
+        goto cleanup;
     }
-    qd_iterator_free(iter_good);
 
-    qd_iterator_t *iter_bad = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);
     if (qd_parse_tree_validate_pattern(mqtt_tree, iter_bad)) {
-        return "expected to fail mqtt validation";
+        error = "expected to fail mqtt validation";
+        goto cleanup;
     }
-    qd_iterator_free(iter_bad);
 
-    qd_iterator_t *iter_const = qd_iterator_string("sam/I/am", ITER_VIEW_ALL);
     if (!qd_parse_tree_validate_pattern(mqtt_tree, iter_const)) {
-        return "expected to pass mqtt constant string validation";
+        error = "expected to pass mqtt constant string validation";
+        // fallthrough
     }
+
+cleanup:
+    qd_iterator_free(iter);
+    qd_iterator_free(iter_good);
+    qd_iterator_free(iter_bad);
     qd_iterator_free(iter_const);
 
     qd_parse_tree_free(mqtt_tree);
     qd_parse_tree_free(addr_tree);
     qd_parse_tree_free(amqp_tree);
-    return NULL;
+    return error ? error : 0;
 }
 
 

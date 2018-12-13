@@ -237,7 +237,7 @@ int qdrc_client_request_CT(qdrc_client_t                 *client,
                            qdrc_client_request_done_CT_t  done_cb)
 {
     qd_log(client->core->log, QD_LOG_TRACE,
-           "New core client request created c=%p, rc=%"PRIuPTR,
+           "New core client request created c=%p, rc=%p",
            client, request_context);
 
     qdrc_client_request_t *req = new_qdrc_client_request_t();
@@ -294,7 +294,7 @@ static void _flush_send_queue_CT(qdrc_client_t *client)
         req->on_send_queue = false;
 
         qd_log(client->core->log, QD_LOG_TRACE,
-               "Core client request sent c=%p, rc=%"PRIuPTR" dlv=%p cid=%s",
+               "Core client request sent c=%p, rc=%p dlv=%p cid=%s",
                client, req->req_context, req->delivery,
                *req->correlation_id ? req->correlation_id : "<none>");
 
@@ -357,7 +357,7 @@ static void _free_request_CT(qdrc_client_t *client,
     }
 
     qd_log(client->core->log, QD_LOG_TRACE,
-           "Freeing core client request c=%p, rc=%"PRIuPTR" (%s)",
+           "Freeing core client request c=%p, rc=%p (%s)",
            client, req->req_context,
            error ? error : "request complete");
 
@@ -519,7 +519,7 @@ static void _receiver_transfer_CT(void *client_context,
             if (req) {
 
                 qd_log(core->log, QD_LOG_TRACE,
-                       "Core client received msg c=%p rc=%"PRIuPTR" cid=%s",
+                       "Core client received msg c=%p rc=%p cid=%s",
                        client, req->req_context, req->correlation_id);
 
                 qd_hash_remove_by_handle(client->correlations, req->hash_handle);

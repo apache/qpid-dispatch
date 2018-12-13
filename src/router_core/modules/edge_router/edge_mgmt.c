@@ -135,7 +135,7 @@ static void _mgmt_on_state_cb_CT(qdr_core_t    *core,
                                  bool           active)
 {
     qd_log(core->log, QD_LOG_TRACE,
-           "edge mgmt client state change: uc=%"PRIuPTR" %s",
+           "edge mgmt client state change: uc=%p %s",
            user_context,
            (active) ? "active" : "down");
 
@@ -154,7 +154,7 @@ static void _mgmt_on_flow_cb_CT(qdr_core_t    *core,
                                 bool           drain)
 {
     qd_log(core->log, QD_LOG_TRACE,
-           "edge mgmt client flow: uc=%"PRIuPTR" c=%d d=%s",
+           "edge mgmt client flow: uc=%p c=%d d=%s",
            user_context, available_credit,
            (drain) ? "T" : "F");
 
@@ -174,7 +174,7 @@ static void _mgmt_on_ack_cb_CT(qdr_core_t    *core,
     qcm_edge_mgmt_request_t *req = (qcm_edge_mgmt_request_t *)request_context;
 
     qd_log(core->log, QD_LOG_TRACE,
-           "edge mgmt request update: rc=%"PRIuPTR" d=0x%"PRIx64,
+           "edge mgmt request update: rc=%p d=0x%"PRIx64,
            req->req_context, disposition);
 
     if (disposition != PN_ACCEPTED) {
@@ -209,7 +209,7 @@ static uint64_t _mgmt_on_reply_cb_CT(qdr_core_t    *core,
 
     qd_log(core->log, QD_LOG_TRACE,
            "Edge management request reply:"
-           " rc=%"PRIuPTR" status=%"PRId32": %s",
+           " rc=%p status=%"PRId32": %s",
            req->req_context, statusCode,
            (statusDescription) ? statusDescription : "<no description>");
 
@@ -233,7 +233,7 @@ static void _mgmt_on_done_cb_CT(qdr_core_t    *core,
 {
     qcm_edge_mgmt_request_t *req = (qcm_edge_mgmt_request_t *)request_context;
     qd_log(core->log, QD_LOG_TRACE,
-           "edge mgmt request done: uc=%"PRIuPTR" rc=%"PRIuPTR" %s",
+           "edge mgmt request done: uc=%p rc=%p %s",
            user_context, request_context, error ? error : "");
 
     if (error && req->error_callback)
@@ -257,7 +257,7 @@ int qcm_edge_mgmt_request_CT(qdr_core_t           *core,
 {
 
     qd_log(core->log, QD_LOG_TRACE,
-           "New Edge management request: rc=%"PRIuPTR" %s type=%s id=%s",
+           "New Edge management request: rc=%p %s type=%s id=%s",
            request_context, operation, entity_type,
            (identity) ? identity : "<unset>");
 

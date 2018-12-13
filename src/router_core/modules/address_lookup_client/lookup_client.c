@@ -559,8 +559,6 @@ static void on_state(qdr_core_t    *core,
         while (request) {
             DEQ_REMOVE_HEAD(client->pending_requests);
             qcm_addr_lookup_local_search(client, request);
-            qdr_terminus_free(request->source);
-            qdr_terminus_free(request->target);
             free_qcm_addr_lookup_request_t(request);
             request = DEQ_HEAD(client->pending_requests);
         }

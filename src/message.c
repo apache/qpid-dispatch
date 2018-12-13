@@ -788,7 +788,6 @@ static void qd_message_parse_priority(qd_message_t *in_msg)
                 qd_parsed_field_t *priority_field = qd_parse_sub_value(field, 1);
                 if (qd_parse_tag(priority_field) != QD_AMQP_NULL) {
                     uint32_t value = qd_parse_as_uint(priority_field);
-                    content->priority = value >= QDR_N_PRIORITIES ? QDR_N_PRIORITIES - 1 : (uint8_t) (value & 0x00ff);
                     content->priority = value > QDR_MAX_PRIORITY ? QDR_MAX_PRIORITY : (uint8_t) (value & 0x00ff);
                     content->priority_present = true;
                 }

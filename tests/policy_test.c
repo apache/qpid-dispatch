@@ -97,40 +97,64 @@ static char *test_link_name_tree_lookup(void *context)
 
     qd_parse_tree_add_pattern_str(node, "${user}.xyz", payload);
 
-    if (!_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz", node))
+    if (!_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz", node)) {
+        qd_parse_tree_free(node);
         return "proposed link 'chuck.xyz' should tree-match allow links with ${user} but does not";
+    }
 
-    if (_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz.ynot", node))
+    if (_qd_policy_approve_link_name_tree("chuck", "p,,.xyz", "chuck.xyz.ynot", node)) {
+        qd_parse_tree_free(node);
         return "proposed link 'chuck.xyz.ynot' should not tree-match allow links with ${user} but does";
+    }
 
     qd_parse_tree_add_pattern_str(node, "${user}.#", payload);
 
-    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic", node))
+    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic", node)) {
+        qd_parse_tree_free(node);
         return "proposed link 'motronic' should tree-match allow links with ${user} but does not";
+    }
 
-    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic.stubs.wobbler", node))
+    if (!_qd_policy_approve_link_name_tree("motronic", "p,,.#", "motronic.stubs.wobbler", node)) {
+        qd_parse_tree_free(node);
         return "proposed link 'motronic.stubs.wobbler' should tree-match allow links with ${user} but does not";
+    }
 
     qd_parse_tree_t *node2 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     qd_parse_tree_add_pattern_str(node2, "abc.${user}", payload);
 
-    if (!_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.chuck", node2))
+    if (!_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.chuck", node2)) {
+        qd_parse_tree_free(node);
+        qd_parse_tree_free(node2);
         return "proposed link 'abc.chuck' should tree-match allow links with ${user} but does not";
+    }
 
-    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.ynot.chuck", node2))
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.ynot.chuck", node2)) {
+        qd_parse_tree_free(node);
+        qd_parse_tree_free(node2);
         return "proposed link 'abc.ynot.chuck' should not tree-match allow links with ${user} but does";
+    }
 
-    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.achuck", node2))
+    if (_qd_policy_approve_link_name_tree("chuck", "s,abc.,", "abc.achuck", node2)) {
+        qd_parse_tree_free(node);
+        qd_parse_tree_free(node2);
         return "proposed link 'abc.achuck' should not tree-match allow links with ${user} but does";
+    }
 
-    if (_qd_policy_approve_link_name_tree("chuckginormous", "s,abc.,", "abc.chuck", node2))
+    if (_qd_policy_approve_link_name_tree("chuckginormous", "s,abc.,", "abc.chuck", node2)) {
+        qd_parse_tree_free(node);
+        qd_parse_tree_free(node2);
         return "proposed link 'abc.chuck' should not tree-match allow links with ${user} but does";
+    }
 
     qd_parse_tree_t *node3 = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     qd_parse_tree_add_pattern_str(node3, "${user}", payload);
 
-    if (!_qd_policy_approve_link_name_tree("chuck", "p,,", "chuck", node3))
+    if (!_qd_policy_approve_link_name_tree("chuck", "p,,", "chuck", node3)) {
+        qd_parse_tree_free(node);
+        qd_parse_tree_free(node2);
+        qd_parse_tree_free(node3);
         return "proposed link 'chuck' should tree-match allow links with ${user} but does not";
+    }
 
     qd_parse_tree_free(node);
     qd_parse_tree_free(node2);
@@ -145,33 +169,45 @@ static char *test_link_name_csv_parser(void *context)
     char * result;
 
     result = qd_policy_compile_allowed_csv("ttt");
-    if (!!strcmp(result, "a,ttt,"))
+    if (!!strcmp(result, "a,ttt,")) {
+        free(result);
         return "simple csv with no subst failed";
+    }
     free(result);
 
     result = qd_policy_compile_allowed_csv("ttt,uuu,vvvv");
-    if (!!strcmp(result, "a,ttt,,a,uuu,,a,vvvv,"))
+    if (!!strcmp(result, "a,ttt,,a,uuu,,a,vvvv,")) {
+        free(result);
         return "moderate csv with no subst failed";
+    }
     free(result);
 
     result = qd_policy_compile_allowed_csv("*");
-    if (!!strcmp(result, "*,,"))
+    if (!!strcmp(result, "*,,")) {
+        free(result);
         return "wildcard csv failed";
+    }
     free(result);
 
     result = qd_policy_compile_allowed_csv("${user}-temp");
-    if (!!strcmp(result, "p,,-temp"))
+    if (!!strcmp(result, "p,,-temp")) {
+        free(result);
         return "csv with prefix subst failed";
+    }
     free(result);
 
     result = qd_policy_compile_allowed_csv("temp-${user}");
-    if (!!strcmp(result, "s,temp-,"))
+    if (!!strcmp(result, "s,temp-,")) {
+        free(result);
         return "csv with suffix subst failed";
+    }
     free(result);
 
     result = qd_policy_compile_allowed_csv("temp-${user}-home");
-    if (!!strcmp(result, "e,temp-,-home"))
+    if (!!strcmp(result, "e,temp-,-home")) {
+        free(result);
         return "csv with embedded subst failed";
+    }
     free(result);
 
     return 0;

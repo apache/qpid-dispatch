@@ -66,18 +66,23 @@ qcm_address_lookup_status_t qcm_link_route_lookup_decode(qd_iterator_t *properti
                                                          bool          *is_link_route,
                                                          bool          *has_destinations)
 {
+    qd_parsed_field_t *props = NULL;
+    qd_parsed_field_t *bod = NULL;
+
     qcm_address_lookup_status_t rc = QCM_ADDR_LOOKUP_OK;
     *is_link_route = false;
     *has_destinations = false;
 
-    qd_parsed_field_t *props = qd_parse(properties);
-    if (!props || !qd_parse_ok(props) || !qd_parse_is_map(props))
-        return QCM_ADDR_LOOKUP_INVALID_REQUEST;
+    props = qd_parse(properties);
+    if (!props || !qd_parse_ok(props) || !qd_parse_is_map(props)) {
+        rc = QCM_ADDR_LOOKUP_INVALID_REQUEST;
+        goto exit;
+    }
 
-    qd_parsed_field_t *bod = qd_parse(body);
+    bod = qd_parse(body);
     if (!bod || !qd_parse_ok(bod) || !qd_parse_is_list(bod)) {
-        qd_parse_free(props);
-        return QCM_ADDR_LOOKUP_INVALID_REQUEST;
+        rc = QCM_ADDR_LOOKUP_INVALID_REQUEST;
+        goto exit;
     }
 
     qd_parsed_field_t *tmp = qd_parse_value_by_key(props, "status");

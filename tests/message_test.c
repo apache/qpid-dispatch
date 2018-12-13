@@ -102,7 +102,10 @@ static char* test_receive_from_messenger(void *context)
 
     size_t       size = 10000;
     int result = pn_message_encode(pn_msg, buffer, &size);
-    if (result != 0) return "Error in pn_message_encode";
+    if (result != 0) {
+        pn_message_free(pn_msg);
+        return "Error in pn_message_encode";
+    }
 
     qd_message_t         *msg     = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
@@ -110,26 +113,42 @@ static char* test_receive_from_messenger(void *context)
     set_content(content, size);
 
     int valid = qd_message_check(msg, QD_DEPTH_ALL);
-    if (!valid) return "qd_message_check returns 'invalid'";
+    if (!valid) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
+        return "qd_message_check returns 'invalid'";
+    }
 
     qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_TO);
-    if (iter == 0) return "Expected an iterator for the 'to' field";
+    if (iter == 0) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
+        return "Expected an iterator for the 'to' field";
+    }
 
     if (!qd_iterator_equal(iter, (unsigned char*) "test_addr_1")) {
         qd_iterator_free(iter);
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
         return "Mismatched 'to' field contents";
     }
     qd_iterator_free(iter);
 
     ssize_t  test_len = (size_t)qd_message_field_length(msg, QD_FIELD_TO);
-    if (test_len != 11)
+    if (test_len != 11) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
         return "Incorrect field length";
+    }
 
     char test_field[100];
     size_t hdr_length;
     test_len = qd_message_field_copy(msg, QD_FIELD_TO, test_field, &hdr_length);
-    if (test_len - hdr_length != 11)
+    if (test_len - hdr_length != 11) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
         return "Incorrect length returned from field_copy";
+    }
 
     if (test_len < 0) {
         pn_message_free(pn_msg);
@@ -178,35 +197,47 @@ static char* test_message_properties(void *context)
 
     qd_iterator_t *iter = qd_message_field_iterator(msg, QD_FIELD_CORRELATION_ID);
     if (!iter) {
+        qd_message_free(msg);
         return "Expected iterator for the 'correlation-id' field";
     }
     if (qd_iterator_length(iter) != 13) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Bad length for correlation-id";
     }
     if (!qd_iterator_equal(iter, (const unsigned char *)"correlationId")) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Invalid correlation-id";
     }
     qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
-    if (!iter) return "Expected iterator for the 'subject' field";
+    if (!iter) {
+        qd_iterator_free(iter);
+        qd_message_free(msg);
+        return "Expected iterator for the 'subject' field";
+    }
     if (!qd_iterator_equal(iter, (const unsigned char *)subject)) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Bad value for subject";
     }
     qd_iterator_free(iter);
 
     iter = qd_message_field_iterator(msg, QD_FIELD_MESSAGE_ID);
-    if (!iter)
+    if (!iter) {
+        qd_message_free(msg);
         return "Expected iterator for the 'message-id' field";
+    }
     if (qd_iterator_length(iter) != 9) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Bad length for message-id";
     }
     if (!qd_iterator_equal(iter, (const unsigned char *)"messageId")) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Invalid message-id";
     }
     qd_iterator_free(iter);
@@ -214,6 +245,7 @@ static char* test_message_properties(void *context)
     iter = qd_message_field_iterator(msg, QD_FIELD_TO);
     if (iter) {
         qd_iterator_free(iter);
+        qd_message_free(msg);
         return "Expected no iterator for the 'to' field";
     }
     qd_iterator_free(iter);
@@ -240,13 +272,22 @@ static char* test_check_multiple(void *context)
     set_content(content, size);
 
     int valid = qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS);
-    if (!valid) return "qd_message_check returns 'invalid' for DELIVERY_ANNOTATIONS";
+    if (!valid) {
+        qd_message_free(msg);
+        return "qd_message_check returns 'invalid' for DELIVERY_ANNOTATIONS";
+    }
 
     valid = qd_message_check(msg, QD_DEPTH_BODY);
-    if (!valid) return "qd_message_check returns 'invalid' for BODY";
+    if (!valid) {
+        qd_message_free(msg);
+        return "qd_message_check returns 'invalid' for BODY";
+    }
 
     valid = qd_message_check(msg, QD_DEPTH_PROPERTIES);
-    if (!valid) return "qd_message_check returns 'invalid' for PROPERTIES";
+    if (!valid) {
+        qd_message_free(msg);
+        return "qd_message_check returns 'invalid' for PROPERTIES";
+    }
 
     qd_message_free(msg);
 
@@ -340,10 +381,14 @@ static char* test_q2_input_holdoff_sensing(void *context)
         qd_message_content_t *content = MSG_CONTENT(msg);
 
         set_content_bufs(content, nbufs);
-        if (qd_message_Q2_holdoff_should_block(msg) != (nbufs >= QD_QLIMIT_Q2_UPPER))
+        if (qd_message_Q2_holdoff_should_block(msg) != (nbufs >= QD_QLIMIT_Q2_UPPER)) {
+            qd_message_free(msg);
             return "qd_message_holdoff_would_block was miscalculated";
-        if (qd_message_Q2_holdoff_should_unblock(msg) != (nbufs < QD_QLIMIT_Q2_LOWER))
+        }
+        if (qd_message_Q2_holdoff_should_unblock(msg) != (nbufs < QD_QLIMIT_Q2_LOWER)) {
+            qd_message_free(msg);
             return "qd_message_holdoff_would_unblock was miscalculated";
+        }
 
         qd_message_free(msg);
     }

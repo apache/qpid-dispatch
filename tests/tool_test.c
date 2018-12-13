@@ -256,30 +256,69 @@ static char* test_bitmask(void *context)
 
     bm = qd_bitmask(0);
     if (!bm)                             return "Can't allocate a bit mask";
-    if (qd_bitmask_first_set(bm, &num))  return "Expected no first set bit";
-    if (qd_bitmask_cardinality(bm) != 0) return "Expected cardinality == 0";
+    if (qd_bitmask_first_set(bm, &num)) {
+        qd_bitmask_free(bm);
+        return "Expected no first set bit";
+    }
+    if (qd_bitmask_cardinality(bm) != 0) {
+        qd_bitmask_free(bm);
+        return "Expected cardinality == 0";
+    }
 
     old = qd_bitmask_set_bit(bm, 3);
-    if (old)                             return "Expected old value to be zero";
-    if (qd_bitmask_cardinality(bm) != 1) return "Expected cardinality == 1";
+    if (old) {
+        qd_bitmask_free(bm);
+        return "Expected old value to be zero";
+    }
+    if (qd_bitmask_cardinality(bm) != 1) {
+        qd_bitmask_free(bm);
+        return "Expected cardinality == 1";
+    }
     old = qd_bitmask_set_bit(bm, 3);
-    if (!old)                            return "Expected old value to be one";
+    if (!old) {
+        qd_bitmask_free(bm);
+        return "Expected old value to be one";
+    }
     qd_bitmask_set_bit(bm, 100);
-    if (qd_bitmask_cardinality(bm) != 2) return "Expected cardinality == 2";
+    if (qd_bitmask_cardinality(bm) != 2) {
+        qd_bitmask_free(bm);
+        return "Expected cardinality == 2";
+    }
 
-    if (!qd_bitmask_first_set(bm, &num)) return "Expected first set bit";
-    if (num != 3)                        return "Expected first set bit to be 3";
+    if (!qd_bitmask_first_set(bm, &num)) {
+        qd_bitmask_free(bm);
+        return "Expected first set bit";
+    }
+    if (num != 3) {
+        qd_bitmask_free(bm);
+        return "Expected first set bit to be 3";
+    }
 
     old = qd_bitmask_clear_bit(bm, num);
-    if (!old)                            return "Expected old value to be one(2)";
+    if (!old) {
+        qd_bitmask_free(bm);
+        return "Expected old value to be one(2)";
+    }
     old = qd_bitmask_clear_bit(bm, num);
-    if (old)                             return "Expected old value to be zero(2)";
+    if (old) {
+        qd_bitmask_free(bm);
+        return "Expected old value to be zero(2)";
+    }
 
-    if (!qd_bitmask_first_set(bm, &num)) return "Expected first set bit (2)";
-    if (num != 100)                      return "Expected first set bit to be 100";
+    if (!qd_bitmask_first_set(bm, &num)) {
+        qd_bitmask_free(bm);
+        return "Expected first set bit (2)";
+    }
+    if (num != 100) {
+        qd_bitmask_free(bm);
+        return "Expected first set bit to be 100";
+    }
 
     qd_bitmask_clear_bit(bm, num);
-    if (qd_bitmask_first_set(bm, &num)) return "Expected no first set bit (2)";
+    if (qd_bitmask_first_set(bm, &num)) {
+        qd_bitmask_free(bm);
+        return "Expected no first set bit (2)";
+    }
 
     qd_bitmask_set_bit(bm, 6);
     qd_bitmask_set_bit(bm, 2);
@@ -289,7 +328,10 @@ static char* test_bitmask(void *context)
     qd_bitmask_clear_bit(bm, 8);
     qd_bitmask_clear_bit(bm, 80);
 
-    if (qd_bitmask_cardinality(bm) != 4) return "Expected cardinality == 4";
+    if (qd_bitmask_cardinality(bm) != 4) {
+        qd_bitmask_free(bm);
+        return "Expected cardinality == 4";
+    }
 
     total = 0;
     count = 0;
@@ -297,8 +339,14 @@ static char* test_bitmask(void *context)
         total += num;
         count++;
     }
-    if (count != 4)  return "Expected count to be 4";
-    if (total != 82) return "Expected bit-number total to be 82";
+    if (count != 4) {
+        qd_bitmask_free(bm);
+        return "Expected count to be 4";
+    }
+    if (total != 82) {
+        qd_bitmask_free(bm);
+        return "Expected bit-number total to be 82";
+    }
 
     qd_bitmask_free(bm);
 

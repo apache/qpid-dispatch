@@ -306,11 +306,12 @@ static void _on_first_detach(void *link_context,
                              qdr_error_t *error)
 {
     _endpoint_ref_t *epr = (_endpoint_ref_t *)link_context;
-    qdrc_endpoint_detach_CT(_server_state.core, epr->endpoint, 0);
-    DEQ_REMOVE(_server_state.endpoints, epr);
     qd_log(_server_state.core->log, QD_LOG_TRACE,
            "Client detached from address lookup server (container=%s, endpoint=%p)",
            epr->container_id, (void *)epr->endpoint);
+
+    qdrc_endpoint_detach_CT(_server_state.core, epr->endpoint, 0);
+    DEQ_REMOVE(_server_state.endpoints, epr);
     free__endpoint_ref_t(epr);
 }
 

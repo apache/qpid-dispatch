@@ -491,7 +491,7 @@ static uint64_t _client_on_reply_cb(qdr_core_t    *core,
                                     qd_iterator_t *body)
 {
     qd_log(core->log, QD_LOG_TRACE,
-           "client test reply received rc=%"PRIxPTR, request_context);
+           "client test reply received rc=%p", request_context);
 
     qd_iterator_free(app_properties);
     qd_iterator_free(body);
@@ -507,7 +507,7 @@ static void _client_on_ack_cb(qdr_core_t    *core,
 {
     test_client_t *tc = (test_client_t *)user_context;
     qd_log(core->log, QD_LOG_TRACE,
-           "client test request ack rc=%"PRIxPTR" d=%"PRIu64,
+           "client test request ack rc=%p d=%"PRIu64,
            request_context, disposition);
     assert((int64_t)request_context < tc->counter);
 }
@@ -553,7 +553,7 @@ static void _do_send(test_client_t *tc)
         ++tc->counter;
         --tc->credit;
         qd_log(tc->module->core->log, QD_LOG_TRACE,
-               "client test message sent id=%d c=%d", tc->counter + 1, tc->credit);
+               "client test message sent id=%"PRIi64" c=%d", tc->counter + 1, tc->credit);
     }
 }
 
