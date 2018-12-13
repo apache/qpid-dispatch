@@ -170,11 +170,10 @@ class LeakError(ErrorBase):
         return s
 
 
-class InvalidMemRWError(ErrorBase):
+class InvalidMemError(ErrorBase):
     def __init__(self, error_xml):
         kind = error_xml.find("kind").text
-        assert(kind in ['InvalidRead', 'InvalidWrite'])
-        super(InvalidMemRWError, self).__init__(kind)
+        super(InvalidMemError, self).__init__(kind)
         # expect
         #  what
         #  stack  (invalid access)
@@ -202,7 +201,7 @@ class InvalidMemRWError(ErrorBase):
     def __hash__(self):
         # for now don't include what/auxwhat as it may
         # be different for the same codepath
-        h = super(InvalidMemRWError, self).__hash__()
+        h = super(InvalidMemError, self).__hash__()
         for f in self._stack:
             h += hash(f)
         for s in self._aux_stacks:
@@ -211,14 +210,14 @@ class InvalidMemRWError(ErrorBase):
         return h
 
     def __str__(self):
-        s = super(InvalidMemRWError, self).__str__() + "\n"
+        s = super(InvalidMemError, self).__str__() + "\n"
         s += "%s\n" % self._what
         s += "Stack:"
         for frame in self._stack:
             s += "\n  %s" % str(frame)
 
         for what, stack in zip(self._auxwhat, self._aux_stacks):
-            s += "\n  %s" % what
+            s += "\n%s:" % what
             for frame in stack:
                 s += "\n  %s" % str(frame)
         return s
@@ -265,16 +264,16 @@ class SignalError(ErrorBase):
 
 
 _ERROR_CLASSES = {
-    'InvalidRead':         InvalidMemRWError,
-    'InvalidWrite':        InvalidMemRWError,
+    'InvalidRead':         InvalidMemError,
+    'InvalidWrite':        InvalidMemError,
     'Leak_DefinitelyLost': LeakError,
     'Leak_IndirectlyLost': LeakError,
     'Leak_PossiblyLost':   LeakError,
     'Leak_StillReachable': LeakError,
     'UninitCondition':     GeneralError,
     'SyscallParam':        GeneralError,
+    'InvalidFree':         InvalidMemError,
     # TBD:
-    'InvalidFree': None,
     'InvalidJump': None,
     'UninitValue': None,
 }
