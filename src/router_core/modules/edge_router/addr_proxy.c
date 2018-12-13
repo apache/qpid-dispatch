@@ -343,6 +343,9 @@ static void on_second_attach(void           *link_context,
     qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
 
     qdrc_endpoint_flow_CT(ap->core, ap->tracking_endpoint, INITIAL_CREDIT, false);
+
+    qdr_terminus_free(remote_source);
+    qdr_terminus_free(remote_target);
 }
 
 

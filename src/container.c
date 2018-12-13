@@ -395,18 +395,21 @@ static void add_link_to_free_list(qd_pn_free_link_session_list_t *free_link_sess
  * using links/sessions after they are freed. Investigate and simplify if
  * possible.
 */
-void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn)
+void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed)
 {
     qd_pn_free_link_session_t *to_free = DEQ_HEAD(qd_conn->free_link_session_list);
 
     while(to_free) {
-        if (to_free->pn_link)
-            pn_link_free(to_free->pn_link);
-        if (to_free->pn_session)
-            pn_session_free(to_free->pn_session);
+        if (!conn_closed) {
+            if (to_free->pn_link)
+                pn_link_free(to_free->pn_link);
+            if (to_free->pn_session)
+                pn_session_free(to_free->pn_session);
+        }
         DEQ_REMOVE_HEAD(qd_conn->free_link_session_list);
         free_qd_pn_free_link_session_t(to_free);
         to_free = DEQ_HEAD(qd_conn->free_link_session_list);
+
     }
 }
 
@@ -448,6 +451,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
         if (pn_connection_state(conn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
             close_links(container, conn, false);
             pn_connection_close(conn);
+            qd_conn_event_batch_complete(container, qd_conn, true);
         }
         break;
 

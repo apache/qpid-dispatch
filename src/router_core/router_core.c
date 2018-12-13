@@ -135,6 +135,12 @@ void qdr_core_free(qdr_core_t *core)
         qdr_core_delete_link_route(core, link_route);
     }
 
+    qdr_auto_link_t *auto_link = 0;
+    while ( (auto_link = DEQ_HEAD(core->auto_links))) {
+        DEQ_REMOVE_HEAD(core->auto_links);
+        qdr_core_delete_auto_link(core, auto_link);
+    }
+
     qdr_exchange_free_all(core);
 
     qdr_address_t *addr = 0;
@@ -396,6 +402,13 @@ void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
     free(lr->name);
     free(lr->pattern);
     free_qdr_link_route_t(lr);
+}
+
+void qdr_core_delete_auto_link(qdr_core_t *core, qdr_auto_link_t *al)
+{
+    free(al->name);
+    free(al->external_addr);
+    free_qdr_auto_link_t(al);
 }
 
 static void free_address_config(qdr_address_config_t *addr)

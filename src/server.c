@@ -731,7 +731,7 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 }
 
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
-void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn);
+void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
 
 static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
@@ -1022,7 +1022,7 @@ static void *thread_run(void *arg)
         // processing.
         //
         if (qd_conn)
-            qd_conn_event_batch_complete(qd_server->container, qd_conn);
+            qd_conn_event_batch_complete(qd_server->container, qd_conn, false);
 
         pn_proactor_done(qd_server->proactor, events);
     }

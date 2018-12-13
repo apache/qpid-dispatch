@@ -70,6 +70,9 @@ static qd_message_t *qdcm_edge_create_address_dlv(qdr_core_t *core, qdr_address_
     // Finally, compose and retuen the message so it can be sent out.
     qd_message_compose_3(msg, fld, body);
 
+    qd_compose_free(body);
+    qd_compose_free(fld);
+
     return msg;
 }
 
@@ -130,6 +133,7 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
     qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
     DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
     free_qdr_addr_endpoint_state_t(endpoint_state);
+    qdr_error_free(error);
 }
 
 

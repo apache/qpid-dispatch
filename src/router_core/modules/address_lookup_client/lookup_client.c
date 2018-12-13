@@ -630,6 +630,9 @@ static uint64_t on_reply(qdr_core_t    *core,
         qcm_addr_lookup_local_search(client, request);
     }
 
+    qd_iterator_free(body);
+    qd_iterator_free(app_properties);
+
     return 0;
 }
 
@@ -729,6 +732,7 @@ static void qcm_addr_lookup_client_init_CT(qdr_core_t *core, void **module_conte
 static void qcm_addr_lookup_client_final_CT(void *module_context)
 {
     qcm_lookup_client_t *client = (qcm_lookup_client_t*) module_context;
+    qdrc_event_unsubscribe_CT(client->core, client->event_sub);
     client->core->addr_lookup_handler = 0;
     free(client);
 }

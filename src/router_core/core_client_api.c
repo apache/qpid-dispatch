@@ -600,6 +600,8 @@ static void _sender_detached_CT(void *client_context,
 
         _state_updated_CT(client);
     }
+
+    qdr_error_free(error);
     client->sender = NULL;
 }
 
@@ -627,6 +629,7 @@ static void _receiver_detached_CT(void *client_context,
 
         _state_updated_CT(client);
     }
+    qdr_error_free(error);
     client->receiver = NULL;
 }
 

@@ -656,6 +656,7 @@ struct qdr_link_route_t {
 
 ALLOC_DECLARE(qdr_link_route_t);
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
+void qdr_core_delete_auto_link (qdr_core_t *core,  qdr_auto_link_t *al);
 
 // Core timer related field/data structures
 typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
