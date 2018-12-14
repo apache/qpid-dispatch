@@ -401,10 +401,15 @@ class AllDetails():
                                              "connid:%s, line:%s\n" %
                                              (snd_disposition.data.conn_id, snd_disposition.lineno))
                     else:
-                        result = "receive settlement absent"
+                        if transfer.data.transfer_more:
+                            result = "(pending)"
+                        else:
+                            result = "receive settlement absent"
                 else:
                     # two settlements expected
-                    if rcv_disposition is not None:
+                    if transfer.data.transfer_more:
+                        result = "(pending)"
+                    elif rcv_disposition is not None:
                         result = "receiver: " + rtext
                         if snd_disposition is not None:
                             result += ", sender: " + stext

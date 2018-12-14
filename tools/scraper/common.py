@@ -141,5 +141,5 @@ class RestartRec():
         self.datetime = _datetime
 
 def transfer_is_possibly_unsettled(plf):
-    return (plf.data.transfer and
+    return (plf.data.transfer and not plf.data.transfer_more and
             not (plf.data.transfer_settled or plf.data.final_disposition is not None))
