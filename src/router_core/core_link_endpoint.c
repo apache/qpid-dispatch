@@ -210,11 +210,15 @@ void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error
     if (ep->link->detach_count == 1) {
         if (!!ep->desc->on_first_detach)
             ep->desc->on_first_detach(ep->link_context, error);
-        else
+        else {
             qdr_link_outbound_detach_CT(core, ep->link, 0, QDR_CONDITION_NONE, true);
+            qdr_error_free(error);
+        }
     } else {
         if (!!ep->desc->on_second_detach)
             ep->desc->on_second_detach(ep->link_context, error);
+        else
+            qdr_error_free(error);
         ep->link->core_endpoint = 0;
         free_qdrc_endpoint_t(ep);
     }
