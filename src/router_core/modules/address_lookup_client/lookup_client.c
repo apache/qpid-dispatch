@@ -252,9 +252,10 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
     //
     // If the terminus has a waypoint capability, override the configured phases and use the waypoint phases.
     //
-    if (qdr_terminus_has_capability(terminus, QD_CAPABILITY_WAYPOINT1)) {
-        in_phase  = 1;
-        out_phase = 0;
+    int waypoint_ordinal = qdr_terminus_waypoint_capability(terminus);
+    if (waypoint_ordinal > 0) {
+        in_phase  = waypoint_ordinal;
+        out_phase = waypoint_ordinal - 1;
     }
 
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);

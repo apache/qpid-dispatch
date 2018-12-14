@@ -437,6 +437,7 @@ bool qd_policy_open_lookup_user(
                         settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                     }
                     settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
+                    settings->allowWaypointLinks   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
                     if (settings->sources == 0) { //don't override if configured by authz plugin
                         settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                     }
@@ -873,6 +874,24 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
 }
 
 
+static bool qd_policy_terminus_is_waypoint(pn_terminus_t *term)
+{
+    pn_data_t *cap = pn_terminus_capabilities(term);
+    if (cap) {
+        pn_data_rewind(cap);
+        pn_data_next(cap);
+        if (cap && pn_data_type(cap) == PN_SYMBOL) {
+            pn_bytes_t sym = pn_data_get_symbol(cap);
+            size_t     len = strlen(QD_CAPABILITY_WAYPOINT_DEFAULT);
+            if (sym.size >= len && strncmp(sym.start, QD_CAPABILITY_WAYPOINT_DEFAULT, len) == 0)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {
     const char *hostip = qd_connection_remote_ip(qd_conn);
@@ -897,6 +916,17 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     bool lookup;
     if (target && *target) {
         // a target is specified
+        if (!qd_conn->policy_settings->allowWaypointLinks) {
+            bool waypoint = qd_policy_terminus_is_waypoint(pn_link_remote_target(pn_link));
+            if (waypoint) {
+                qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
+                       "[%"PRIu64"]: DENY AMQP Attach sender link '%s' for user '%s', rhost '%s', vhost '%s'.  Waypoint capability not permitted",
+                       qd_conn->connection_id, target, qd_conn->user_id, hostip, vhost);
+                _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
+                return false;
+            }
+        }
+
         lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, target, false);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
@@ -959,6 +989,17 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
     if (source && *source) {
         // a source is specified
+        if (!qd_conn->policy_settings->allowWaypointLinks) {
+            bool waypoint = qd_policy_terminus_is_waypoint(pn_link_remote_source(pn_link));
+            if (waypoint) {
+                qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
+                       "[%"PRIu64"]: DENY AMQP Attach receiver link '%s' for user '%s', rhost '%s', vhost '%s'.  Waypoint capability not permitted",
+                       qd_conn->connection_id, source, qd_conn->user_id, hostip, vhost);
+                _qd_policy_deny_amqp_sender_link(pn_link, qd_conn, QD_AMQP_COND_UNAUTHORIZED_ACCESS);
+                return false;
+            }
+        }
+
         bool lookup = qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings, source, true);
 
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),

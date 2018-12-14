@@ -127,7 +127,16 @@ extern const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
 extern const char * const QD_CAPABILITY_ROUTER_CONTROL;
 extern const char * const QD_CAPABILITY_ROUTER_DATA;
 extern const char * const QD_CAPABILITY_EDGE_DOWNLINK;
+extern const char * const QD_CAPABILITY_WAYPOINT_DEFAULT;
 extern const char * const QD_CAPABILITY_WAYPOINT1;
+extern const char * const QD_CAPABILITY_WAYPOINT2;
+extern const char * const QD_CAPABILITY_WAYPOINT3;
+extern const char * const QD_CAPABILITY_WAYPOINT4;
+extern const char * const QD_CAPABILITY_WAYPOINT5;
+extern const char * const QD_CAPABILITY_WAYPOINT6;
+extern const char * const QD_CAPABILITY_WAYPOINT7;
+extern const char * const QD_CAPABILITY_WAYPOINT8;
+extern const char * const QD_CAPABILITY_WAYPOINT9;
 /// @}
 
 /** @name Dynamic Node Properties */

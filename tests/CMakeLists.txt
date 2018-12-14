@@ -126,6 +126,7 @@ foreach(py_test_module
     system_tests_priority
     system_tests_core_client
     system_tests_address_lookup
+    system_tests_multi_phase
     )
 
   add_test(${py_test_module} ${TEST_WRAP} -x unit2 -v ${py_test_module})

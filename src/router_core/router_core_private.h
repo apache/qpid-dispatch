@@ -422,6 +422,7 @@ struct qdr_link_t {
     int                      attach_count;       ///< 1 or 2 depending on the state of the lifecycle
     int                      detach_count;       ///< 0, 1, or 2 depending on the state of the lifecycle
     qdr_address_t           *owning_addr;        ///< [ref] Address record that owns this link
+    int                      phase;
     qdr_link_t              *connected_link;     ///< [ref] If this is a link-route, reference the connected link
     qdrc_endpoint_t         *core_endpoint;      ///< [ref] Set if this link terminates on an in-core endpoint
     qdr_link_ref_t          *ref[QDR_LINK_LIST_CLASSES];  ///< Pointers to containing reference objects

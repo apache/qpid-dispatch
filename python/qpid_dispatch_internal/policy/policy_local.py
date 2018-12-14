@@ -70,6 +70,7 @@ class PolicyKeys(object):
     KW_ALLOW_DYNAMIC_SRC        = "allowDynamicSource"
     KW_ALLOW_ANONYMOUS_SENDER   = "allowAnonymousSender"
     KW_ALLOW_USERID_PROXY       = "allowUserIdProxy"
+    KW_ALLOW_WAYPOINT_LINKS     = "allowWaypointLinks"
     KW_SOURCES                  = "sources"
     KW_TARGETS                  = "targets"
     KW_SOURCE_PATTERN           = "sourcePattern"
@@ -143,6 +144,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
         PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
         PolicyKeys.KW_ALLOW_USERID_PROXY,
+        PolicyKeys.KW_ALLOW_WAYPOINT_LINKS,
         PolicyKeys.KW_SOURCES,
         PolicyKeys.KW_TARGETS,
         PolicyKeys.KW_SOURCE_PATTERN,
@@ -243,6 +245,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_SRC] = False
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_ALLOW_USERID_PROXY] = False
+        policy_out[PolicyKeys.KW_ALLOW_WAYPOINT_LINKS] = True
         policy_out[PolicyKeys.KW_SOURCES] = ''
         policy_out[PolicyKeys.KW_TARGETS] = ''
         policy_out[PolicyKeys.KW_SOURCE_PATTERN] = ''
@@ -278,7 +281,8 @@ class PolicyCompiler(object):
                 policy_out[key] = val_out
             elif key in [PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
                          PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
-                         PolicyKeys.KW_ALLOW_USERID_PROXY
+                         PolicyKeys.KW_ALLOW_USERID_PROXY,
+                         PolicyKeys.KW_ALLOW_WAYPOINT_LINKS
                          ]:
                 if isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)) and val.lower() in ['true', 'false']:
                     val = True if val == 'true' else False

@@ -316,6 +316,17 @@ void qdr_terminus_add_capability(qdr_terminus_t *term, const char *capability);
 bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability);
 
 /**
+ * qdr_terminus_waypoint_capability
+ *
+ * If the terminus has a waypoint capability, return the ordinal of the
+ * waypoint.  If not, return zero.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ * @return 1..9 if the terminus has waypoint capability, 0 otherwise
+ */
+int qdr_terminus_waypoint_capability(qdr_terminus_t *term);
+
+/**
  * qdr_terminus_is_anonymous
  *
  * Indicate whether this terminus represents an anonymous endpoint.

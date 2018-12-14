@@ -453,12 +453,14 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 
 void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
 {
+    const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
     link->owning_addr = addr;
+    if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE))
+        link->phase = (int) (key[1] - '0');
 
     if (link->link_direction == QD_OUTGOING) {
         qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->rlinks) == 1) {
-            const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
             if (key && (*key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY || *key == QD_ITER_HASH_PREFIX_MOBILE))
                 qdr_post_mobile_added_CT(core, key, addr->treatment);
             qdr_addr_start_inlinks_CT(core, addr);

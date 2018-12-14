@@ -128,6 +128,26 @@ bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability)
 }
 
 
+int qdr_terminus_waypoint_capability(qdr_terminus_t *term)
+{
+    pn_data_t *cap = term->capabilities;
+    pn_data_rewind(cap);
+    pn_data_next(cap);
+    if (cap && pn_data_type(cap) == PN_SYMBOL) {
+        pn_bytes_t sym = pn_data_get_symbol(cap);
+        size_t     len = strlen(QD_CAPABILITY_WAYPOINT_DEFAULT);
+        if (sym.size >= len && strncmp(sym.start, QD_CAPABILITY_WAYPOINT_DEFAULT, len) == 0) {
+            if (sym.size == len)
+                return 1;    // This is the default ordinal
+            if (sym.size == len + 2 && sym.start[len + 1] > '0' && sym.start[len + 1] <= '9')
+                return (int) (sym.start[len + 1] - '0');
+        }
+    }
+
+    return 0;
+}
+
+
 bool qdr_terminus_is_anonymous(qdr_terminus_t *term)
 {
     return term == 0 || (term->address == 0 && !term->dynamic);
