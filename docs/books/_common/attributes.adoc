@@ -76,7 +76,7 @@ under the License
 :qdstatManPageUrl: {DispatchRouterUrlBase}/man/qdstat.html
 :qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page^]
 
-:QpidDispatchReadmeUrl: https://git-wip-us.apache.org/repos/asf?p=qpid-dispatch.git;a=blob_plain;f=README;hb={DispatchRouterVersion}
+:QpidDispatchReadmeUrl: https://gitbox.apache.org/repos/asf?p=qpid-dispatch.git;a=blob_plain;f=README;hb={DispatchRouterVersion}
 :QpidDispatchReadmeLink: link:{QpidDispatchReadmeUrl}[Qpid Dispatch README^]
 
 :ClientAmqpPythonUrl: https://qpid.apache.org/proton/

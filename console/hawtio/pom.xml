@@ -39,9 +39,9 @@
   </issueManagement>
 
   <scm>
-    <connection>scm:git:http://git-wip-us.apache.org/repos/asf/qpid-dispatch.git</connection>
-    <developerConnection>scm:git:https://git-wip-us.apache.org/repos/asf/qpid-dispatch.git</developerConnection>
-    <url>https://git-wip-us.apache.org/repos/asf?p=qpid-dispatch.git</url>
+    <connection>scm:git:http://gitbox.apache.org/repos/asf/qpid-dispatch.git</connection>
+    <developerConnection>scm:git:https://gitbox.apache.org/repos/asf/qpid-dispatch.git</developerConnection>
+    <url>https://gitbox.apache.org/repos/asf?p=qpid-dispatch.git</url>
   </scm>
 
   <prerequisites>

@@ -47,7 +47,7 @@ addons:
 
 install:
 - PREFIX=$PWD/install
-- git submodule add https://git-wip-us.apache.org/repos/asf/qpid-proton.git
+- git submodule add https://gitbox.apache.org/repos/asf/qpid-proton.git
 - git submodule update --init
 
 # Build and install latest proton from source.
