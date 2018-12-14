@@ -720,7 +720,7 @@ class ParsedLogLine(object):
         return "<a href=\"#%s\">%s</a>" % (self.fid, "%s%d_%s" %
                                            (common.log_letter_of(self.index), self.instance, str(self.lineno)))
 
-    def __init__(self, _log_index, _instance, _lineno, _line, _comn, _router, opaque):
+    def __init__(self, _log_index, _instance, _lineno, _line, _comn, _router, opaque=None):
         """
         Process a naked qpid-dispatch log line
         A log line looks like this:
