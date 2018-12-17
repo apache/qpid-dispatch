@@ -45,6 +45,8 @@ typedef struct qcm_addr_lookup_request_t {
     DEQ_LINKS(struct qcm_addr_lookup_request_t);
     qdr_connection_t  *conn;
     qdr_link_t        *link;
+    uint32_t           conn_sequence;
+    uint32_t           link_sequence;
     qd_direction_t     dir;
     qdr_terminus_t    *source;
     qdr_terminus_t    *target;
@@ -520,6 +522,9 @@ static void qcm_addr_lookup_CT(void             *context,
         request->source = source;
         request->target = target;
 
+        request->conn_sequence = qd_alloc_sequence(conn);
+        request->link_sequence = qd_alloc_sequence(link);
+
         DEQ_INSERT_TAIL(client->pending_requests, request);
         qcm_addr_lookup_process_pending_requests_CT(client);
         return;
@@ -600,6 +605,18 @@ static uint64_t on_reply(qdr_core_t    *core,
     qcm_address_lookup_status_t  status;
     bool                         is_link_route;
     bool                         has_destinations;
+
+    //
+    // If the pointer sequences mismatch for either the connection or link,
+    // exit without processing because either the connection or link has
+    // been freed while the request was in-flight.
+    //
+    if (request->conn_sequence != qd_alloc_sequence(request->conn) ||
+        request->link_sequence != qd_alloc_sequence(request->link)) {
+        qdr_terminus_free(request->source);
+        qdr_terminus_free(request->target);
+        return 0;
+    }
 
     status = qcm_link_route_lookup_decode(app_properties, body, &is_link_route, &has_destinations);
     if (status == QCM_ADDR_LOOKUP_OK) {

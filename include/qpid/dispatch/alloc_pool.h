@@ -73,6 +73,7 @@ typedef struct {
 void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
 /** De-allocate from a thread pool. Use via ALLOC_DECLARE */
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p);
+uint32_t qd_alloc_sequence(void *p);
 
 /**
  * Declare functions new_T and alloc_T

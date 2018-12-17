@@ -319,6 +319,11 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_29_fast_teardown_test(self):
+        test = LRFastTeardownTest(self.routers[2].addresses[0], "normal.29")
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -576,6 +581,42 @@ class LRDestReceiverFlowTest(MessagingHandler):
     def run(self):
         container = Container(self)
         container.container_id = 'LRC_R'
+        container.run()
+
+
+class LRFastTeardownTest(MessagingHandler):
+    def __init__(self, host, address):
+        super(LRFastTeardownTest, self).__init__(prefetch=0)
+        self.host    = host
+        self.address = address
+
+        self.conn        = None
+        self.sender      = None
+        self.error       = None
+        self.last_action = "Test initialization"
+
+    def fail(self, text):
+        self.error = text
+        self.conn.close()
+        self.timer.cancel()
+
+    def timeout(self):
+        self.error = "Timeout Expired - last_action: %s" % (self.last_action)
+        self.conn.close()
+
+    def on_start(self, event):
+        self.reactor     = event.reactor
+        self.timer       = event.reactor.schedule(7.0, Timeout(self))
+        self.conn        = event.container.connect(self.host)
+        self.last_action = "on_start"
+
+    def on_connection_opened(self, event):
+        self.sender = event.container.create_sender(self.conn, self.address)
+        self.conn.close()
+        self.timer.cancel()
+
+    def run(self):
+        container = Container(self)
         container.run()
 
 

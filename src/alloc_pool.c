@@ -49,6 +49,7 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 
 struct qd_alloc_item_t {
     DEQ_LINKS(qd_alloc_item_t);
+    uint32_t              sequence;
 #ifdef QD_MEMORY_DEBUG
     qd_alloc_type_desc_t *desc;
     uint32_t              header;
@@ -185,6 +186,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
                 break;
             DEQ_ITEM_INIT(item);
             DEQ_INSERT_TAIL(pool->free_list, item);
+            item->sequence = 0;
 #if QD_MEMORY_STATS
             desc->stats->held_by_threads++;
             desc->stats->total_alloc_from_heap++;
@@ -239,6 +241,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
 
     qd_alloc_pool_t *pool = *tpool;
 
+    item->sequence++;
     DEQ_INSERT_TAIL(pool->free_list, item);
 
     if (DEQ_SIZE(pool->free_list) <= desc->config->local_free_list_max)
@@ -275,6 +278,16 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     }
 
     sys_mutex_unlock(desc->lock);
+}
+
+
+uint32_t qd_alloc_sequence(void *p)
+{
+    if (!p)
+        return 0;
+
+    qd_alloc_item_t *item = ((qd_alloc_item_t*) p) - 1;
+    return item->sequence;
 }
 
 

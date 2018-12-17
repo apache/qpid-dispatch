@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <stdint.h>
+
 /**
  *@file
  *
@@ -37,6 +39,7 @@
 
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
 
+static inline uint32_t qd_alloc_sequence(void *p) { return 0; }
 static inline void qd_alloc_initialize(void) {}
 static inline void qd_alloc_debug_dump(const char *file) {}
 static inline void qd_alloc_finalize(void) {}
