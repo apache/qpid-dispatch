@@ -121,6 +121,8 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
         //
         *link_context = 0;
         qdrc_endpoint_detach_CT(bc->core, endpoint, 0);
+        qdr_terminus_free(remote_source);
+        qdr_terminus_free(remote_target);
     }
 }
 

@@ -163,6 +163,20 @@ void qdr_core_free(qdr_core_t *core)
         qdr_router_node_free(core, rnode);
     }
 
+    qdr_link_t *link = DEQ_HEAD(core->open_links);
+    while (link) {
+        DEQ_REMOVE_HEAD(core->open_links);
+        free(link->name);
+        free(link->disambiguated_name);
+        free(link->terminus_addr);
+        free(link->ingress_histogram);
+        free(link->insert_prefix);
+        free(link->strip_prefix);
+        link->name = 0;
+        free_qdr_link_t(link);
+        link = DEQ_HEAD(core->open_links);
+    }
+
     qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
     while (conn) {
         DEQ_REMOVE_HEAD(core->open_connections);

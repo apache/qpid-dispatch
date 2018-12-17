@@ -282,6 +282,8 @@ static void _on_first_attach(void            *bind_context,
         qd_log(_server_state.core->log, QD_LOG_ERROR,
                "Attempt to attach to address lookup server rejected (container=%s)",
                (conn->connection_info) ? conn->connection_info->container : "<unknown>");
+        qdr_terminus_free(remote_source);
+        qdr_terminus_free(remote_target);
         return;
     }
 
