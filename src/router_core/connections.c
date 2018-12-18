@@ -70,6 +70,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
+                                        bool                   policy_allow_dynamic_link_routes,
                                         int                    link_capacity,
                                         const char            *vhost,
                                         qdr_connection_info_t *connection_info,
@@ -89,6 +90,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->inter_router_cost     = cost;
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
+    conn->policy_allow_dynamic_link_routes = policy_allow_dynamic_link_routes;
     conn->link_capacity         = link_capacity;
     conn->mask_bit              = -1;
     DEQ_INIT(conn->links);

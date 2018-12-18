@@ -173,6 +173,7 @@ typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* 
  *        correlate the connection with waypoints and link-route destinations that use the connection.
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
  * @param strip_annotations_out True if configured to remove annotations on outbound messages.
+ * @param policy_allow_dynamic_link_routes True if this connection is allowed by policy to create link route destinations.
  * @param link_capacity The capacity, in deliveries, for links in this connection.
  * @param vhost If non-null, this is the vhost of the connection to be used for multi-tenancy.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
@@ -186,6 +187,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         const char            *remote_container_id,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
+                                        bool                   policy_allow_dynamic_link_routes,
                                         int                    link_capacity,
                                         const char            *vhost,
                                         qdr_connection_info_t *connection_info,

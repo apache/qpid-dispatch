@@ -1152,6 +1152,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                           pn_connection_remote_container(pn_conn),
                           conn->strip_annotations_in,
                           conn->strip_annotations_out,
+                          conn->policy_settings ? conn->policy_settings->allowDynamicLinkRoutes : true,
                           link_capacity,
                           vhost,
                           connection_info,

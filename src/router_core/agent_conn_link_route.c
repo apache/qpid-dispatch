@@ -158,9 +158,9 @@ static qdr_link_route_t *_find_link_route_CT(qdr_connection_t *conn,
 
 
 void qdra_conn_link_route_create_CT(qdr_core_t         *core,
-                                        qd_iterator_t      *name,
-                                        qdr_query_t        *query,
-                                        qd_parsed_field_t  *in_body)
+                                    qd_iterator_t      *name,
+                                    qdr_query_t        *query,
+                                    qd_parsed_field_t  *in_body)
 {
     char *pattern = NULL;
 
@@ -176,6 +176,12 @@ void qdra_conn_link_route_create_CT(qdr_core_t         *core,
     qdr_connection_t *conn = _find_conn_CT(core, query->in_conn);
     if (!conn) {
         query->status.description = "Parent connection no longer exists";
+        goto exit;
+    }
+
+    // fail if forbidden by policy
+    if (!conn->policy_allow_dynamic_link_routes) {
+        query->status = QD_AMQP_FORBIDDEN;
         goto exit;
     }
 

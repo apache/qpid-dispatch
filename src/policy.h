@@ -52,6 +52,7 @@ struct qd_policy__settings_s {
     bool allowAnonymousSender;
     bool allowUserIdProxy;
     bool allowWaypointLinks;
+    bool allowDynamicLinkRoutes;
     char *sources;
     char *targets;
     char *sourcePattern;

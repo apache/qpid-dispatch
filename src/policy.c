@@ -436,8 +436,9 @@ bool qd_policy_open_lookup_user(
                     if (!settings->allowDynamicSource) { //don't override if enabled by authz plugin
                         settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                     }
-                    settings->allowUserIdProxy     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                    settings->allowWaypointLinks   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
+                    settings->allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
+                    settings->allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
+                    settings->allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
                     if (settings->sources == 0) { //don't override if configured by authz plugin
                         settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                     }

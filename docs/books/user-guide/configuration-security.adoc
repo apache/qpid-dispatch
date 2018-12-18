@@ -616,6 +616,15 @@ A list of authenticated users for this user group. Use commas to separate multip
 `remoteHosts`::
 A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard `*`. To deny access from all remote hosts, leave this attribute blank.
 
+`allowDynamicSource`::
+If true, connections from users in this group are permitted to attach receivers to dynamic sources.  This permits creation of listners to temporary addresses or termporary queues.  If false, use of dynamic sources is forbidden.
+
+`allowWaypointLinks`::
+If true, connections from users in this group are permitted to attach links using waypoint capabilities.  This allows endpoints to act as waypoints (i.e. brokers) without the need for configuring auto-links.  If false, use of waypoint capabilities is forbidden.
+
+`allowDynamicLinkRoutes`::
+If true, connections from users in this group may dynamically create connection-scoped link route destinations.  This allows endpoints to act as link route destinations (i.e. brokers) without the need for configuring link-routes.  If false, creation of dynamic link route destintations is forbidden.
+
 `sources` | `sourcePattern`::
 A list of AMQP source addresses from which users in this group may receive messages.
 +
