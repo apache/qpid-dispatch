@@ -441,7 +441,8 @@ struct qdr_link_t {
     bool                     strip_annotations_out;
     bool                     drain_mode;
     bool                     stalled_outbound;  ///< Indicates that this link is stalled on outbound buffer backpressure
-    bool                     detach_received;
+    bool                     detach_received;   ///< True on core receipt of inbound attach
+    bool                     detach_send_done;  ///< True once the detach has been sent by the I/O thread
     bool                     edge;              ///< True if this link is in an edge-connection
     char                    *strip_prefix;
     char                    *insert_prefix;
