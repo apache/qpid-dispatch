@@ -28,10 +28,6 @@
 #include "entity_cache.h"
 #include "config.h"
 
-#if !defined(NDEBUG)
-#define QD_MEMORY_DEBUG 1
-#endif
-
 const char *QD_ALLOCATOR_TYPE = "allocator";
 
 typedef struct qd_alloc_type_t qd_alloc_type_t;
@@ -149,6 +145,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         item->desc   = desc;
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
+        QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
 #endif
         return &item[1];
     }
@@ -202,6 +199,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         item->desc = desc;
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
+        QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
 #endif
         return &item[1];
     }
@@ -224,6 +222,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     assert (*((uint32_t*) (p + desc->total_size)) == PATTERN_BACK);
     assert (item->desc == desc);  // Check for double-free
     item->desc = 0;
+    QD_MEMORY_FILL(p, QD_MEMORY_FREE, desc->total_size);
 #endif
 
     //

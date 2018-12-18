@@ -20,6 +20,7 @@
  */
 
 #include <stdint.h>
+#include <string.h>
 
 /**
  *@file
@@ -32,9 +33,14 @@
     T *new_##T(void);                           \
     void free_##T(T *p)
 
-#define ALLOC_DEFINE_CONFIG(T,S,A,C)                                    \
-    T *new_##T(void) { size_t *a = (A); return (T*) malloc((S)+ (a ? *a : 0)); } \
-    void free_##T(T *p) { free(p); } \
+#define ALLOC_DEFINE_CONFIG(T,S,A,C)                \
+    T *new_##T(void) { size_t *a = (A);             \
+        T *p = malloc((S)+ (a ? *a : 0));           \
+        QD_MEMORY_FILL(p, QD_MEMORY_INIT, (S) + (a ? *a : 0)); \
+        return p; }                                 \
+    void free_##T(T *p) { size_t *a = (A);          \
+        QD_MEMORY_FILL(p, QD_MEMORY_FREE, (S) + (a ? *a : 0)); \
+        free(p); }                                  \
     void *unused##T
 
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)
