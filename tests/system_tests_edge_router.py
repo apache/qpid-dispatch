@@ -850,7 +850,7 @@ class LinkRouteProxyTest(TestCase):
                                         and
                                         conns[l['connectionId']]['role'] == elink[2]),
                              test_links)
-            self.assertTrue(len(matches) == 1)
+            self.assertTrue(len(list(matches)) == 1)
 
     def test_03_interior_conn_lost(self):
         """

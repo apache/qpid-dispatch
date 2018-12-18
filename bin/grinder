@@ -273,6 +273,7 @@ _ERROR_CLASSES = {
     'UninitCondition':     GeneralError,
     'SyscallParam':        GeneralError,
     'InvalidFree':         InvalidMemError,
+    'FishyValue':          InvalidMemError,
     # TBD:
     'InvalidJump': None,
     'UninitValue': None,
