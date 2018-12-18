@@ -48,8 +48,8 @@ class ManPageWriter(SchemaWriter):
     def attribute_type(self, attr, holder):
         # Don't show read-only attributes
         if not attr.create and not attr.update:
-            # It is ok to show the console attributes
-            if not holder.short_name == "console":
+            # It is ok to show the console and log attributes
+            if not holder.short_name == "console" and not holder.short_name == "log":
                 return
         super(ManPageWriter, self).attribute_type(attr, holder, show_create=False, show_update=False)
 
