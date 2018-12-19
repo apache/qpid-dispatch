@@ -482,7 +482,7 @@ struct test_client_t {
     qdr_connection_t          *conn;
     qdrc_client_t             *core_client;
     int                        credit;
-    int64_t                    counter;
+    long                       counter;
 };
 
 static uint64_t _client_on_reply_cb(qdr_core_t    *core,
@@ -511,7 +511,7 @@ static void _client_on_ack_cb(qdr_core_t    *core,
     qd_log(core->log, QD_LOG_TRACE,
            "client test request ack rc=%p d=%"PRIu64,
            request_context, disposition);
-    assert((int64_t)request_context < tc->counter);
+    assert((long) request_context < tc->counter);
 }
 
 static void _client_on_done_cb(qdr_core_t    *core,
