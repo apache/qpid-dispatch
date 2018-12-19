@@ -593,7 +593,7 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
             if (link->link_direction ==  QD_INCOMING)
                 core->rejected_deliveries++;
         }
-        else if (delivery->disposition == PN_RELEASED) {
+        else if (delivery->disposition == PN_RELEASED && !delivery->presettled) {
             link->released_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->released_deliveries++;
