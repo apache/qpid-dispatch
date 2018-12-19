@@ -1249,66 +1249,67 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     qdr_delivery_t *in_dlv  = action->args.connection.delivery;
     bool more = action->args.connection.more;
 
-    // This decref is for the action reference
-    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action");
-
     //
     // If it is already in the undelivered list, don't try to deliver this again.
     //
-    if (in_dlv->where == QDR_DELIVERY_IN_UNDELIVERED)
-        return;
+    if (in_dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
+        qdr_deliver_continue_peers_CT(core, in_dlv);
 
-    qdr_deliver_continue_peers_CT(core, in_dlv);
+        qd_message_t *msg = qdr_delivery_message(in_dlv);
 
-    qd_message_t *msg = qdr_delivery_message(in_dlv);
-
-    if (!more && !qd_message_is_discard(msg)) {
-        //
-        // The entire message has now been received. Check to see if there are in process subscriptions that need to
-        // receive this message. in process subscriptions, at this time, can deal only with full messages.
-        //
-        qdr_subscription_t *sub = DEQ_HEAD(in_dlv->subscriptions);
-        while (sub) {
-            DEQ_REMOVE_HEAD(in_dlv->subscriptions);
-            qdr_forward_on_message_CT(core, sub, in_dlv->link, in_dlv->msg);
-            sub = DEQ_HEAD(in_dlv->subscriptions);
-        }
-
-        // This is a multicast delivery or if this is a presettled multi-frame unicast delivery.
-        if (in_dlv->multicast || in_dlv->settled) {
-
+        if (!more && !qd_message_is_discard(msg)) {
             //
-            // If a delivery is settled but did not go into one of the lists, that means that it is going nowhere.
-            // We dont want to deal with such deliveries.
+            // The entire message has now been received. Check to see if there are in process subscriptions that need to
+            // receive this message. in process subscriptions, at this time, can deal only with full messages.
             //
-            if (in_dlv->settled && in_dlv->where == QDR_DELIVERY_NOWHERE)
-                return;
-
-            assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
-            //
-            // The router will settle on behalf of the receiver in the case of multicast and send out settled
-            // deliveries to the receivers.
-            //
-            in_dlv->disposition = PN_ACCEPTED;
-            qdr_delivery_push_CT(core, in_dlv);
-
-            //
-            // The in_dlv has one or more peers. These peers will have to be unlinked.
-            //
-            qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
-            qdr_delivery_t *next_peer = 0;
-            while (peer) {
-                next_peer = qdr_delivery_next_peer_CT(in_dlv);
-                qdr_delivery_unlink_peers_CT(core, in_dlv, peer);
-                peer = next_peer;
+            qdr_subscription_t *sub = DEQ_HEAD(in_dlv->subscriptions);
+            while (sub) {
+                DEQ_REMOVE_HEAD(in_dlv->subscriptions);
+                qdr_forward_on_message_CT(core, sub, in_dlv->link, in_dlv->msg);
+                sub = DEQ_HEAD(in_dlv->subscriptions);
             }
 
-            // Remove the delivery from the settled list and decref the in_dlv.
-            in_dlv->where = QDR_DELIVERY_NOWHERE;
-            DEQ_REMOVE(in_dlv->link->settled, in_dlv);
-            qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from settled list");
+            // This is a multicast delivery or if this is a presettled multi-frame unicast delivery.
+            if (in_dlv->multicast || in_dlv->settled) {
+
+                //
+                // If a delivery is settled but did not go into one of the lists, that means that it is going nowhere.
+                // We dont want to deal with such deliveries.
+                //
+                if (in_dlv->settled && in_dlv->where == QDR_DELIVERY_NOWHERE) {
+                    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action 1");
+                    return;
+                }
+
+                assert(in_dlv->where == QDR_DELIVERY_IN_SETTLED);
+                //
+                // The router will settle on behalf of the receiver in the case of multicast and send out settled
+                // deliveries to the receivers.
+                //
+                in_dlv->disposition = PN_ACCEPTED;
+                qdr_delivery_push_CT(core, in_dlv);
+
+                //
+                // The in_dlv has one or more peers. These peers will have to be unlinked.
+                //
+                qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
+                qdr_delivery_t *next_peer = 0;
+                while (peer) {
+                    next_peer = qdr_delivery_next_peer_CT(in_dlv);
+                    qdr_delivery_unlink_peers_CT(core, in_dlv, peer);
+                    peer = next_peer;
+                }
+
+                // Remove the delivery from the settled list and decref the in_dlv.
+                in_dlv->where = QDR_DELIVERY_NOWHERE;
+                DEQ_REMOVE(in_dlv->link->settled, in_dlv);
+                qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from settled list");
+            }
         }
     }
+
+    // This decref is for the action reference
+    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action 2");
 }
 
 
