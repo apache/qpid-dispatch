@@ -22,6 +22,9 @@ dist: trusty
 sudo: true
 language: c
 cache: ccache
+env:
+  - PROTON_VERSION=master BUILD_TYPE=Coverage
+  - PROTON_VERSION=0.26.0 BUILD_TYPE=RelWithDebInfo
 
 addons:
   apt:
@@ -47,8 +50,7 @@ addons:
 
 install:
 - PREFIX=$PWD/install
-- git submodule add https://gitbox.apache.org/repos/asf/qpid-proton.git
-- git submodule update --init
+- git clone --depth=10 --branch=$PROTON_VERSION https://github.com/apache/qpid-proton.git
 
 # Build and install latest proton from source.
 - mkdir qpid-proton/build
@@ -63,18 +65,17 @@ before_script:
 - source qpid-proton/build/config.sh
 - mkdir build
 - pushd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=Coverage
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
 - cmake --build . --target install
 
 script:
 - pushd ../qpid-proton
-- echo $(echo "Current proton checkout:") $(git rev-parse HEAD)
+- echo $(echo "Current proton commit:") $(git rev-parse HEAD) "(${PROTON_VERSION})"
 - popd
-- ctest -V && cmake --build . --target coverage
+- ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
 - popd
 - mvn apache-rat:check
 
 after_success:
 - pushd build
-- bash <(curl -s https://codecov.io/bash) || echo "Codecov did not collect coverage reports"
-
+- if [ "$BUILD_TYPE" = "Coverage" ]; then bash <(curl -s https://codecov.io/bash); fi
