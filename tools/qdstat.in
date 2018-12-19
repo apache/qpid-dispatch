@@ -343,11 +343,7 @@ class BusManager(Node):
         heads.append(Header("addr"))
         heads.append(Header("phs"))
         heads.append(Header("cap"))
-        heads.append(Header("pri"))
-        heads.append(Header("undel"))
-        heads.append(Header("unsett"))
-        heads.append(Header("del"))
-        heads.append(Header("presett"))
+
 
         rows = []
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
@@ -358,12 +354,23 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         has_dropped_presettled_count = False
+        has_priority = False
 
         if objects:
             first_row = objects[0]
             if first_row:
                 if hasattr(first_row, 'droppedPresettledCount'):
                     has_dropped_presettled_count = True
+                if hasattr(first_row, 'priority'):
+                    has_priority = True
+
+        if has_priority:
+            heads.append(Header("pri"))
+        heads.append(Header("undel"))
+        heads.append(Header("unsett"))
+        heads.append(Header("del"))
+        heads.append(Header("presett"))
+
 
         if has_dropped_presettled_count:
             heads.append(Header("psdrop"))
@@ -388,7 +395,8 @@ class BusManager(Node):
             row.append(self._addr_text(link.owningAddr))
             row.append(self._addr_phase(link.owningAddr))
             row.append(link.capacity)
-            row.append(link.priority)
+            if has_priority:
+                row.append(link.priority)
             row.append(link.undeliveredCount)
             row.append(link.unsettledCount)
             row.append(link.deliveryCount)
@@ -463,7 +471,24 @@ class BusManager(Node):
         heads.append(Header("addr"))
         heads.append(Header("phs"))
         heads.append(Header("distrib"))
-        heads.append(Header("pri"))
+
+        rows = []
+        cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
+                'containerCount', 'deliveriesIngress', 'deliveriesEgress',
+                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name', 'priority')
+
+        objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
+
+        has_priority = False
+
+        if objects:
+            first_row = objects[0]
+            if first_row:
+                if hasattr(first_row, 'priority'):
+                    has_priority = True
+
+        if has_priority:
+            heads.append(Header("pri"))
         heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
@@ -473,12 +498,6 @@ class BusManager(Node):
         heads.append(Header("thru", Header.COMMAS))
         heads.append(Header("to-proc", Header.COMMAS))
         heads.append(Header("from-proc", Header.COMMAS))
-        rows = []
-        cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
-                'containerCount', 'deliveriesIngress', 'deliveriesEgress',
-                'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name', 'priority')
-
-        objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
         for addr in objects:
             row = []
@@ -486,7 +505,8 @@ class BusManager(Node):
             row.append(self._addr_text(addr.name))
             row.append(self._addr_phase(addr.name))
             row.append(addr.distribution)
-            row.append(addr.priority if addr.priority >= 0 else "")
+            if has_priority:
+                row.append(addr.priority if addr.priority >= 0 else "")
             row.append(addr.inProcess)
             row.append(addr.subscriberCount)
             row.append(addr.remoteCount)
