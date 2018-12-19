@@ -50,7 +50,7 @@ of the configuration:
 
 * `interior` - This mode is used for each router in the interior of a network
   of routers.  Interior routers are connected to each other using `connector`
-  and `listener` configurations in the `inter-router` role.  There is au upper
+  and `listener` configurations in the `inter-router` role.  There is an upper
   limit of 128 total interior routers in a network.  Interior routers that are
   connected together in an arbitrary topology automatically compute the lowest
   cost paths across the network.
@@ -104,11 +104,11 @@ equal participants in a bi-directional connection.  For the purposes of
 routing AMQP traffic across the network, the direction of connection
 establishment is not relevant.
 
-When establishing inter-router connections, the deployed must choose which
-router will be the listener and which will be the connector.  There should ne
+When establishing inter-router connections, the deployer must choose which
+router will be the listener and which will be the connector.  There should be
 only one connection between any pair of routers.  There is no need, and it is
 in fact undesirable, to create two connections in opposite directions between
-to routers.  Don't do it.
+two routers.  Don't do it.
 
 The selection of connector vs. listener is sometimes arbitrary because it
 doesn't matter.  In other cases, the direction may be important because of IP
@@ -125,15 +125,3 @@ to one or two central "hub" routers would most easily be set up with listeners
 on the hub and connectors on the spokes.  This way, new spoke routers may be
 added without changing the configuration of the hub.
 
-[id='network-topologies-examples-{context}']
-== Example Router Networks
-
-=== A Router Pair for Availability
-
-=== A Network for Multiple Cloud Sites
-
-=== A Network for Multiple Geographies
-
-=== Edge Routers Per-Server in a Data Center
-
-=== Edge Router for Inter-Process-Communication with an Uplink
