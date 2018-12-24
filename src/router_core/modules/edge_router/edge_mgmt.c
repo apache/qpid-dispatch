@@ -139,10 +139,7 @@ static void _mgmt_on_state_cb_CT(qdr_core_t    *core,
            user_context,
            (active) ? "active" : "down");
 
-    if (!active) {
-        // stop the syncing of link routes by setting credit=0
-        qcm_edge_link_route_proxy_flow_CT(core, 0, true);
-    }
+    qcm_edge_link_route_proxy_state_CT(core, active);
 }
 
 
@@ -150,16 +147,16 @@ static void _mgmt_on_state_cb_CT(qdr_core_t    *core,
 static void _mgmt_on_flow_cb_CT(qdr_core_t    *core,
                                 qdrc_client_t *client,
                                 void          *user_context,
-                                int            available_credit,
+                                int            more_credit,
                                 bool           drain)
 {
     qd_log(core->log, QD_LOG_TRACE,
            "edge mgmt client flow: uc=%p c=%d d=%s",
-           user_context, available_credit,
+           user_context, more_credit,
            (drain) ? "T" : "F");
 
     qcm_edge_link_route_proxy_flow_CT(core,
-                                      available_credit,
+                                      more_credit,
                                       drain);
 }
 

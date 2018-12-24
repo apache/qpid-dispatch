@@ -430,11 +430,20 @@ static void _on_addr_event(void          *context,
 // Public API
 //
 
+// called by edge mgmt API when link(s) detach
+void qcm_edge_link_route_proxy_state_CT(qdr_core_t *core, bool active)
+{
+    if (!active)
+        _available_credit = 0;  // stop sending pending syncs
+    else if (_available_credit > 0)
+        _sync_interior_proxies(core);
+}
+
 
 // called by the edge mgmt API when credit has been granted:
 void qcm_edge_link_route_proxy_flow_CT(qdr_core_t *core, int available_credit, bool drain)
 {
-    _available_credit = available_credit;
+    _available_credit += available_credit;
     _sync_interior_proxies(core);
     if (drain) {
         _available_credit = 0;

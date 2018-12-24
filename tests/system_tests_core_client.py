@@ -32,11 +32,11 @@ from proton import Endpoint
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 
-# test the request/response core client messaging API These tests rely on
-# enabling the router test hooks, which instantiates a test client (see
-# modules/test_hooks/core_test_hooks)
+# test the request/response core client messaging API
+#
+# These tests rely on enabling the router test hooks, which instantiates a test
+# client (see modules/test_hooks/core_test_hooks) see core_test_hooks.c
 
-# see core_test_hooks.c
 CONTAINER_ID = "org.apache.qpid.dispatch.test_core_client"
 TARGET_ADDR = "test_core_client_address"
 
@@ -53,11 +53,11 @@ class CoreClientAPITest(TestCase):
         cls.router = cls.tester.qdrouterd("A", config, cl_args=["-T"])
 
     def test_send_receive(self):
-        ts = TestService(self.router.addresses[0], credit=10)
+        ts = TestService(self.router.addresses[0], credit=250)
         ts.run()
         self.assertTrue(ts.error is None)
-        self.assertEqual(10, ts.in_count)
-        self.assertEqual(10, ts.out_count)
+        self.assertEqual(250, ts.in_count)
+        self.assertEqual(250, ts.out_count)
 
     def test_credit_starve(self):
         ts = TestCreditStarve(self.router.addresses[0])
@@ -71,7 +71,6 @@ class CoreClientAPITest(TestCase):
         ts.run()
         self.assertTrue(ts.error is None)
         self.assertTrue(ts.in_count >= 1)
-
 
     def test_bad_format(self):
         ts = TestNoCorrelationId(self.router.addresses[0])
@@ -125,7 +124,6 @@ class TestService(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, self.Timeout(self))
-
         self._conn = event.container.connect(self.address)
 
     def on_link_opening(self, event):

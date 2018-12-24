@@ -474,6 +474,8 @@ static void qdrc_test_hooks_core_endpoint_finalize(test_module_t *module)
 // tests.  Any changes here may require updates to those tests.
 //
 
+static void _do_send(test_client_t *tc);
+
 struct test_client_t {
     test_module_t             *module;
     qdrc_event_subscription_t *conn_events;
@@ -511,6 +513,7 @@ static void _client_on_ack_cb(qdr_core_t    *core,
            request_context, disposition);
     assert((int64_t)request_context < tc->counter);
 }
+
 static void _client_on_done_cb(qdr_core_t    *core,
                                qdrc_client_t *client,
                                void          *user_context,
@@ -519,16 +522,21 @@ static void _client_on_done_cb(qdr_core_t    *core,
 {
     // the system_tests_core_client.py looks for the following
     // log message during the tests
+    test_client_t *tc = (test_client_t *)user_context;
     qd_log_level_t level = (error) ? QD_LOG_ERROR : QD_LOG_TRACE;
     qd_log(core->log, level,
            "client test request done error=%s",
            (error) ? error : "None");
+    if (!error && tc->credit > 0) {
+        _do_send(tc);
+    }
 }
 
+// send a single request if credit available
 static void _do_send(test_client_t *tc)
 {
     int rc = 0;
-    while (tc->credit > 0) {
+    if (tc->credit > 0) {
 
         qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
         qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
@@ -553,7 +561,7 @@ static void _do_send(test_client_t *tc)
         ++tc->counter;
         --tc->credit;
         qd_log(tc->module->core->log, QD_LOG_TRACE,
-               "client test message sent id=%"PRIi64" c=%d", tc->counter + 1, tc->credit);
+               "client test message sent id=%"PRIi64" c=%d", tc->counter - 1, tc->credit);
     }
 }
 
@@ -577,9 +585,12 @@ static void _client_on_flow_cb(qdr_core_t *core, qdrc_client_t *core_client,
     qd_log(tc->module->core->log, QD_LOG_TRACE,
            "client test on flow c=%d d=%c", available_credit, drain ? 'T' : 'F');
     tc->credit = available_credit;
-    _do_send(tc);
-    if (drain)
-        tc->credit = 0;
+    if (drain) {
+        while (tc->credit > 0)
+            _do_send(tc);
+    } else {
+        _do_send(tc);
+    }
 }
 
 static void _on_conn_event(void *context, qdrc_event_t type, qdr_connection_t *conn)
@@ -607,7 +618,7 @@ static void _on_conn_event(void *context, qdrc_event_t type, qdr_connection_t *c
             tc->core_client = qdrc_client_CT(tc->module->core,
                                              tc->conn,
                                              target,
-                                             10,   // credit window
+                                             10,   // reply credit window
                                              tc,   // user context
                                              _client_on_state_cb,
                                              _client_on_flow_cb);

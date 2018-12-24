@@ -29,5 +29,5 @@
 void qcm_edge_link_route_init_CT(qdr_core_t *core);
 void qcm_edge_link_route_final_CT(qdr_core_t *core);
 void qcm_edge_link_route_proxy_flow_CT(qdr_core_t *core, int available_credit, bool drain);
-
+void qcm_edge_link_route_proxy_state_CT(qdr_core_t *core, bool active);
 #endif
