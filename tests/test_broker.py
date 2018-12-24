@@ -107,15 +107,12 @@ class FakeBroker(MessagingHandler):
 
         while self._container.process():
             if self._stop_thread:
-                break
-
-        if self.acceptor:
-            self.acceptor.close()
-            self.acceptor = None
-        for c in self._connections:
-            c.close()
-        self._connections = []
-        self._container.process()
+                if self.acceptor:
+                    self.acceptor.close()
+                    self.acceptor = None
+                for c in self._connections:
+                    c.close()
+                self._connections = []
 
     def join(self):
         self._stop_thread = True
