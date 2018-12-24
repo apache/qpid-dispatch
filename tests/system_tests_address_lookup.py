@@ -143,8 +143,9 @@ class LinkRouteLookupTest(TestCase):
         """
 
         # fire up a fake broker attached to the router local to the edge router
+        # wait until both in and out addresses are ready
         fb = FakeBroker(self.INT_A.broker_connector, container_id='FakeBrokerA')
-        self.INT_A.wait_address("org.apache.A", containers=1)
+        self.INT_A.wait_address("org.apache.A", containers=1, count=2)
 
         # create a fake edge and lookup the target address
         bc = BlockingConnection(self.INT_A.edge_listener, timeout=TIMEOUT)
@@ -162,7 +163,7 @@ class LinkRouteLookupTest(TestCase):
 
         # now fire up a fake broker attached to the remote router
         fb = FakeBroker(self.INT_B.broker_connector, container_id='FakeBrokerB')
-        self.INT_A.wait_address("org.apache.B", remotes=1)
+        self.INT_A.wait_address("org.apache.B", remotes=1, count=2)
 
         for direction in [True, False]:
             rsp = self._check_response(srr.call(self._lookup_request("org.apache.B.foo", direction)))
