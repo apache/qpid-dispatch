@@ -575,12 +575,12 @@ static void on_state(qdr_core_t    *core,
 static void on_flow(qdr_core_t    *core,
                     qdrc_client_t *api_client,
                     void          *user_context,
-                    int            available_credit,
+                    int            more_credit,
                     bool           drain)
 {
     qcm_lookup_client_t *client = (qcm_lookup_client_t*) user_context;
 
-    client->request_credit = available_credit;
+    client->request_credit += more_credit;
 
     //
     // If we have positive credit, process any pending requests

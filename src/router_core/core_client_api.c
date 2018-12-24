@@ -435,11 +435,11 @@ static void _sender_flow_CT(void *context,
     qdrc_client_t *client = (qdrc_client_t *)context;
     qdr_core_t *core = client->core;
 
+    client->tx_credit += available_credit;
     qd_log(core->log, QD_LOG_TRACE,
            "Core client sender flow granted c=%p credit=%d d=%s",
-           client, available_credit, (drain) ? "T" : "F");
-    client->tx_credit = available_credit;
-    if (available_credit > 0) {
+           client, client->tx_credit, (drain) ? "T" : "F");
+    if (client->tx_credit > 0) {
         _flush_send_queue_CT(client);
     }
 
