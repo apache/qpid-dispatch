@@ -437,12 +437,14 @@ class Qdrouterd(Process):
         except:
             return False
 
-    def wait_address(self, address, subscribers=0, remotes=0, containers=0, **retry_kwargs):
+    def wait_address(self, address, subscribers=0, remotes=0, containers=0,
+                     count=1, **retry_kwargs ):
         """
         Wait for an address to be visible on the router.
         @keyword subscribers: Wait till subscriberCount >= subscribers
         @keyword remotes: Wait till remoteCount >= remotes
         @keyword containers: Wait till containerCount >= remotes
+        @keyword count: Wait until >= count matching addresses are found
         @param retry_kwargs: keyword args for L{retry}
         """
         def check():
@@ -455,7 +457,8 @@ class Qdrouterd(Process):
 
             addrs = [a for a in addrs if a['name'].endswith(address)]
 
-            return (addrs and addrs[0]['subscriberCount'] >= subscribers
+            return (len(addrs) >= count
+                    and addrs[0]['subscriberCount'] >= subscribers
                     and addrs[0]['remoteCount'] >= remotes
                     and addrs[0]['containerCount'] >= containers)
         assert retry(check, **retry_kwargs)
