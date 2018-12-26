@@ -55,7 +55,7 @@ class FakeBroker(MessagingHandler):
         def unsubscribe(self, consumer):
             if consumer in self.consumers:
                 self.consumers.remove(consumer)
-            return len(self.consumers) == 0 and (self.dynamic or self.queue.count == 0)
+            return len(self.consumers) == 0 and (self.dynamic or len(self.queue) == 0)
 
         def publish(self, message):
             self.queue.append(message)
