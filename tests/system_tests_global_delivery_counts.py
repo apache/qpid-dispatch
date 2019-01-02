@@ -495,10 +495,8 @@ class IngressEgressTwoRouterTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn_sender = event.container.connect(self.address1)
         self.conn_recv = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn_recv, self.dest)
-        self.sender = event.container.create_sender(self.conn_sender, self.dest)
 
     def on_sendable(self, event):
         if not self.start:
@@ -512,6 +510,9 @@ class IngressEgressTwoRouterTest(MessagingHandler):
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
             self.start = True
+            self.conn_sender = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn_sender,
+                                                        self.dest)
 
     def on_message(self, event):
         if event.receiver == self.receiver:
@@ -597,8 +598,6 @@ class RouteContainerEgressTest(MessagingHandler):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_conn = event.container.connect(self.route_container_addr)
         self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
-        self.sender_conn = event.container.connect(self.sender_addr)
-        self.sender = event.container.create_sender(self.sender_conn, self.dest)
 
     def timeout(self):
         self.error = "Timeout Expired: self.n_sent=%d self.n_received=%d" % (self.n_sent, self.self.n_received)
@@ -624,6 +623,8 @@ class RouteContainerEgressTest(MessagingHandler):
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
             self.start = True
+            self.sender_conn = event.container.connect(self.sender_addr)
+            self.sender = event.container.create_sender(self.sender_conn, self.dest)
 
     def run(self):
         Container(self).run()
@@ -726,11 +727,12 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_conn = event.container.connect(self.receiver_addr)
         self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
-        self.sender_conn = event.container.connect(self.sender_addr)
-        self.sender = event.container.create_sender(self.sender_conn, self.dest)
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
+            self.sender_conn = event.container.connect(self.sender_addr)
+            self.sender = event.container.create_sender(self.sender_conn,
+                                                        self.dest)
             self.start = True
 
     def on_sendable(self, event):
