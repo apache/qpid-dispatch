@@ -1420,11 +1420,8 @@ class MobileAddressMulticastTest(MessagingHandler):
                 local_node.close()
 
     def on_start(self, event):
-        if self.large_msg:
-            self.timer = event.reactor.schedule(10.0, Timeout(self))
-        else:
-            self.timer = event.reactor.schedule(20.0, Timeout(self))
-
+        self.timer = event.reactor.schedule(20.0 if self.large_msg else 10.0,
+                                            Timeout(self))
         # Create two receivers
         self.receiver1_conn = event.container.connect(self.receiver1_host)
         self.receiver2_conn = event.container.connect(self.receiver2_host)
