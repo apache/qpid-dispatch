@@ -31,6 +31,7 @@ struct qdr_addr_endpoint_state_t {
     qdrc_endpoint_t                    *endpoint;
     qdr_connection_t                   *conn;    // The connection associated with the endpoint.
     qdr_addr_tracking_module_context_t *mc;
+    qdr_link_t                         *link;
 };
 
 DEQ_DECLARE(qdr_addr_endpoint_state_t, qdr_addr_endpoint_state_list_t);
@@ -134,6 +135,12 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
     qdrc_endpoint_detach_CT(endpoint_state->mc->core, endpoint_state->endpoint, 0);
     qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
     DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
+    endpoint_state->conn = 0;
+    endpoint_state->endpoint = 0;
+    if (endpoint_state->link) {
+        endpoint_state->link->edge_context = 0;
+        endpoint_state->link = 0;
+    }
     free_qdr_addr_endpoint_state_t(endpoint_state);
     qdr_error_free(error);
 }
@@ -217,7 +224,8 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
                     qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                     if (qdrc_can_send_address(addr, endpoint_state->conn) ) {
                         qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
-                        qdrc_send_message(addr_tracking->core, addr, endpoint, true);
+                        if (endpoint)
+                            qdrc_send_message(addr_tracking->core, addr, endpoint, true);
                     }
                 }
                 inlink = DEQ_NEXT(inlink);
@@ -237,7 +245,8 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
                     if(inlink->link->edge_context != 0) {
                         qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                         qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
-                        qdrc_send_message(addr_tracking->core, addr, endpoint, false);
+                        if (endpoint)
+                            qdrc_send_message(addr_tracking->core, addr, endpoint, false);
                     }
                     inlink = DEQ_NEXT(inlink);
                 }
@@ -308,6 +317,7 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
             if (addr && qdr_address_is_mobile_CT(addr)) {
                 qdr_addr_endpoint_state_t *endpoint_state = qdrc_get_endpoint_state_for_connection(mc->endpoint_state_list, link->conn, link);
                 link->edge_context = endpoint_state;
+                endpoint_state->link = link;
 
                 if (qdrc_can_send_address(addr, link->conn) && endpoint_state) {
                     qdrc_send_message(mc->core, addr, endpoint_state->endpoint, true);
@@ -315,6 +325,17 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
             }
             break;
         }
+        case QDRC_EVENT_LINK_EDGE_DATA_DETACHED :
+        {
+            if (link->edge_context) {
+                qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)link->edge_context;
+                endpoint_state->link = 0;
+                link->edge_context = 0;
+            }
+
+            break;
+        }
+
         default:
             break;
     }
@@ -348,7 +369,7 @@ static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_c
     context->event_sub = qdrc_event_subscribe_CT(core,
             QDRC_EVENT_ADDR_BECAME_LOCAL_DEST | QDRC_EVENT_ADDR_ONE_LOCAL_DEST |
             QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST | QDRC_EVENT_ADDR_BECAME_DEST | QDRC_EVENT_ADDR_TWO_DEST |
-            QDRC_EVENT_LINK_EDGE_DATA_ATTACHED,
+            QDRC_EVENT_LINK_EDGE_DATA_ATTACHED | QDRC_EVENT_LINK_EDGE_DATA_DETACHED,
             0,
             on_link_event,
             on_addr_event,
