@@ -655,18 +655,19 @@ void qdr_delivery_link_peers_CT(qdr_delivery_t *in_dlv, qdr_delivery_t *out_dlv)
 
     out_dlv->peer = in_dlv;
 
-    qdr_delivery_incref(out_dlv, "qdr_delivery_link_peers_CT - linked to peer (1)");
-    qdr_delivery_incref(in_dlv, "qdr_delivery_link_peers_CT - linked to peer (2)");
+    qdr_delivery_incref(out_dlv, "qdr_delivery_link_peers_CT - linked to peer (out delivery)");
+    qdr_delivery_incref(in_dlv, "qdr_delivery_link_peers_CT - linked to peer (in delivery)");
 }
 
 
 void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
-
     // If there is no delivery or a peer, we cannot proceed.
     if (!dlv || !peer)
         return;
 
+    // first, drop dlv's reference to its peer
+    //
     if (dlv->peer) {
         //
         // This is the easy case. One delivery has only one peer. we can simply
@@ -674,30 +675,37 @@ void qdr_delivery_unlink_peers_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_del
         //
         assert(dlv->peer == peer);
         dlv->peer  = 0;
-        peer->peer = 0;
-        qdr_delivery_decref_CT(core, dlv, "qdr_delivery_unlink_peers_CT - unlinked from peer (1)");
-        qdr_delivery_decref_CT(core, peer, "qdr_delivery_unlink_peers_CT - unlinked from peer (2)");
-    }
-    else {
+    } else {
         //
-        // The dlv has more than one peer. We are going to find the peer of dlv that match with the passed in peer
-        // and delete that peer.
+        // This is the not so easy case
+        //
+        // dlv has more than one peer, so we have to search for our target peer
+        // in the list of peers
         //
         qdr_delivery_ref_t *peer_ref = DEQ_HEAD(dlv->peers);
-        while (peer_ref) {
-            qdr_delivery_t *peer_dlv = peer_ref->dlv;
-            if (peer_dlv == peer) {
-                qdr_del_delivery_ref(&dlv->peers, peer_ref);
-                if (peer->peer == dlv)  {
-                    peer->peer = 0;
-                    qdr_delivery_decref_CT(core, dlv, "qdr_delivery_unlink_peers_CT - unlinked from peer (3)");
-                }
-                qdr_delivery_decref_CT(core, peer, "qdr_delivery_unlink_peers_CT - unlinked from peer (4)");
-                break;
-            }
+        while (peer_ref && peer_ref->dlv != peer) {
             peer_ref = DEQ_NEXT(peer_ref);
         }
+        assert(peer_ref != 0);
+        qdr_del_delivery_ref(&dlv->peers, peer_ref);
     }
+
+    // now drop the peer's reference to dlv
+    //
+    if (peer->peer) {
+        assert(peer->peer == dlv);
+        peer->peer = 0;
+    }  else {
+        qdr_delivery_ref_t *peer_ref = DEQ_HEAD(peer->peers);
+        while (peer_ref && peer_ref->dlv != dlv) {
+            peer_ref = DEQ_NEXT(peer_ref);
+        }
+        assert(peer_ref != 0);
+        qdr_del_delivery_ref(&peer->peers, peer_ref);
+    }
+
+    qdr_delivery_decref_CT(core, dlv, "qdr_delivery_unlink_peers_CT - unlinked from peer (delivery)");
+    qdr_delivery_decref_CT(core, peer, "qdr_delivery_unlink_peers_CT - unlinked from delivery (peer)");
 }
 
 
