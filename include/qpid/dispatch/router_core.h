@@ -705,6 +705,7 @@ void qdr_delivery_set_disposition(qdr_delivery_t *delivery, uint64_t disposition
 uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
 void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted);
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery);
+void qdr_delivery_add_num_closed_receivers(qdr_delivery_t *delivery);
 
 /**
  ******************************************************************************

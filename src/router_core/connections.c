@@ -687,9 +687,25 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         DEQ_REMOVE_HEAD(undelivered);
         peer = qdr_delivery_first_peer_CT(dlv);
         while (peer) {
-            qdr_delivery_release_CT(core, peer);
+            if (peer->multicast) {
+                //
+                // If the address of the delivery is a multicast address and if there are no receivers for this address, the peer delivery must be released.
+                //
+                // If the address of the delivery is a multicast address and there is at least one other receiver for the address, dont do anything
+                //
+                if (peer->link && peer->link->owning_addr && DEQ_SIZE(peer->link->owning_addr->rlinks) == 0 &&  qd_bitmask_cardinality(peer->link->owning_addr->rnodes) == 0)  {
+                    qdr_delivery_release_CT(core, peer);
+                }
+            }
+            else {
+                qdr_delivery_release_CT(core, peer);
+            }
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = qdr_delivery_next_peer_CT(dlv);
+        }
+
+        if (dlv->link->link_direction == QD_OUTGOING) {
+            qdr_delivery_add_num_closed_receivers(dlv);
         }
 
         //
