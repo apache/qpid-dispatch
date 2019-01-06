@@ -108,6 +108,7 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
     sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
+    int                  num_closed_receivers;
     qd_link_t           *input_link;                     // message received on this link
 
     bool                 ma_parsed;                      // have parsed annotations in incoming message

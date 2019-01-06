@@ -1077,6 +1077,22 @@ void qd_message_add_fanout(qd_message_t *in_msg)
     sys_atomic_inc(&msg->content->fanout);
 }
 
+int qd_message_num_closed_receivers(qd_message_t *in_msg)
+{
+    if (!in_msg)
+        return 0;
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    return msg->content->num_closed_receivers;
+}
+
+void qd_message_add_num_closed_receivers(qd_message_t *in_msg)
+{
+    assert(in_msg);
+    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+    msg->content->num_closed_receivers++;
+}
+
+
 /**
 * There are two sources of priority information --
 * message and address. Address takes precedence, falling
@@ -1466,7 +1482,6 @@ void qd_message_send(qd_message_t *in_msg,
     qd_buffer_t          *buf     = 0;
     pn_link_t            *pnl     = qd_link_pn(link);
 
-    int                  fanout   = qd_message_fanout(in_msg);
     *restart_rx                   = false;
     *q3_stalled                   = false;
 
@@ -1606,7 +1621,8 @@ void qd_message_send(qd_message_t *in_msg,
         if (next_buf) {
             // There is a next buffer, the previous buffer has been fully sent by now.
             qd_buffer_add_fanout(buf);
-            if (fanout == qd_buffer_fanout(buf)) {
+
+            if (qd_message_fanout(in_msg) - qd_message_num_closed_receivers(in_msg) == qd_buffer_fanout(buf)) {
                 qd_buffer_t *local_buf = DEQ_HEAD(content->buffers);
                 while (local_buf && local_buf != next_buf) {
                     DEQ_REMOVE_HEAD(content->buffers);

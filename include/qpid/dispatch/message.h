@@ -374,6 +374,17 @@ size_t qd_message_fanout(qd_message_t *msg);
 void qd_message_add_fanout(qd_message_t *msg);
 
 /**
+ * Increments the num_closed_receivers by 1. This is necessary to track the number of receivers that
+ * dropped out during or just before transmission of a large message.
+ */
+void qd_message_add_num_closed_receivers(qd_message_t *in_msg);
+
+/**
+ * Returns the value of num_closed_receivers
+ */
+int qd_message_num_closed_receivers(qd_message_t *msg);
+
+/**
  * Disable the Q2-holdoff for this message.
  *
  * @param msg A pointer to the message

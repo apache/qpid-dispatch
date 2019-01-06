@@ -384,16 +384,20 @@ void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
 void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted)
 {
     assert(delivery);
-
     qd_message_set_aborted(delivery->msg, aborted);
 }
-
 
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
 {
     if (!delivery)
         return false;
     return qd_message_aborted(delivery->msg);
+}
+
+void qdr_delivery_add_num_closed_receivers(qdr_delivery_t *delivery)
+{
+    assert(delivery);
+    qd_message_add_num_closed_receivers(delivery->msg);
 }
 
 
@@ -908,6 +912,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
 
     int fanout = 0;
 
+    dlv->multicast = qdr_is_addr_treatment_multicast(addr);
+
     if (addr) {
         fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
         if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER) {
@@ -954,7 +960,6 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (1)");
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
-        dlv->multicast = qdr_is_addr_treatment_multicast(addr);
         if (dlv->settled || dlv->multicast) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue

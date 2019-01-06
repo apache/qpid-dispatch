@@ -639,6 +639,16 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_40_drop_rx_client_multicast_large_message(self):
+        # test what happens if some multicast receivers close in the middle of
+        # a multiframe transfer
+        test = MobileAddrMcastDroppedRxTest(self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            "multicast.40")
+        test.run()
+        self.assertEqual(None, test.error)
 
 
 class LinkRouteProxyTest(TestCase):
@@ -1488,6 +1498,49 @@ class MobileAddressMulticastTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class MobileAddrMcastDroppedRxTest(MobileAddressMulticastTest):
+    # failure scenario - cause some receiving clients to close while a large
+    # message is in transit
+    def __init__(self, receiver1_host, receiver2_host, receiver3_host,
+                 sender_host, address, check_addr_host=None):
+        super(MobileAddrMcastDroppedRxTest, self).__init__(receiver1_host,
+                                                           receiver2_host,
+                                                           receiver3_host,
+                                                           sender_host,
+                                                           address,
+                                                           check_addr_host=check_addr_host,
+                                                           large_msg=True)
+        self.n_accepted = 0
+        self.n_released = 0
+        self.recv1_closed = False
+        self.recv2_closed = False
+
+    def _check_done(self):
+        if self.n_accepted + self.n_released == self.count:
+            self.receiver3_conn.close()
+            self.sender_conn.close()
+            self.timer.cancel()
+
+    def on_message(self, event):
+        super(MobileAddrMcastDroppedRxTest, self).on_message(event)
+
+        # start closing receivers
+        if self.n_rcvd1 == 50:
+            if not self.recv1_closed:
+                self.receiver1_conn.close()
+                self.recv1_closed = True
+        if self.n_rcvd2 == 75:
+            if not self.recv2_closed:
+                self.recv2_closed = True
+                self.receiver2_conn.close()
+
+    def on_accepted(self, event):
+        self.n_accepted += 1
+        self._check_done()
+
+    def on_released(self, event):
+        self.n_released += 1
+        self._check_done()
 
 class MobileAddressEventTest(MessagingHandler):
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
