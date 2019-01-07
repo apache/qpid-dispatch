@@ -272,17 +272,14 @@ class LinkRouteLookupTest(TestCase):
         Verify that clients connected via non-edge connections fail
         """
         bc = BlockingConnection(self.INT_A.listener, timeout=TIMEOUT)
-        with self.assertRaises(LinkDetached):
-            SyncRequestResponse(bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
+        self.assertRaises(LinkDetached, SyncRequestResponse, bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
         bc.close()
 
         bc = BlockingConnection(self.INT_A.inter_router_listener, timeout=TIMEOUT)
-        with self.assertRaises(LinkDetached):
-            SyncRequestResponse(bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
+        self.assertRaises(LinkDetached, SyncRequestResponse, bc, self.QD_TERMINUS_ADDRESS_LOOKUP)
         bc.close()
 
         # consuming from the lookup address is forbidden:
         bc = BlockingConnection(self.INT_A.edge_listener, timeout=TIMEOUT)
-        with self.assertRaises(LinkDetached):
-            rcv = bc.create_receiver(self.QD_TERMINUS_ADDRESS_LOOKUP)
+        self.assertRaises(LinkDetached, bc.create_receiver, self.QD_TERMINUS_ADDRESS_LOOKUP)
         bc.close()
