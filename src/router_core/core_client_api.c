@@ -26,7 +26,7 @@
 #include <time.h>
 
 #define CORRELATION_ID_LEN 32
-const char *CORRELATION_ID_FMT = "client-%016"PRIxPTR"%08"PRIx32;
+const char *CORRELATION_ID_FMT = "client-%016"PRIx64"%08"PRIx32;
 
 typedef struct qdrc_client_request_t qdrc_client_request_t;
 struct qdrc_client_request_t {
