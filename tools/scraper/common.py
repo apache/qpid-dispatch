@@ -143,3 +143,20 @@ class RestartRec():
 def transfer_is_possibly_unsettled(plf):
     return (plf.data.transfer and not plf.data.transfer_more and
             not (plf.data.transfer_settled or plf.data.final_disposition is not None))
+
+global_colors = {
+    "errors": "yellow",
+    "unsettled": "tomato",
+    "presettled": "aqua",
+    "accepted": "aquamarine",
+    "rejected": "orange",     # hard coded in resolve_settlement
+    "released": "orange",
+    "modified": "orange",
+    "aborted": "crimson",
+    "more": "chartreuse",
+    "drain": "gold",
+    "no_credit": "beige"
+}
+
+def color_of(obj_type):
+    return global_colors.get(obj_type, "pink")

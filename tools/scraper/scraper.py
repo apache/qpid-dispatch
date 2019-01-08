@@ -40,6 +40,7 @@ import os
 import sys
 import traceback
 
+import amqp_detail
 import common
 import datetime
 from log_splitter import main_except as splitter_main
@@ -233,6 +234,7 @@ def main_except(argv):
             for rtr in rtrlist:
                 rtr.details.compute_settlement()
                 rtr.details.index_addresses()
+                rtr.details.evaluate_credit()
 
     #
     # Start producing the output stream
@@ -359,8 +361,9 @@ def main_except(argv):
     print("<h3>Connections by ConnectionId</h3>")
     print(
         "<table><tr> <th rowspan=\"2\">View</th> <th colspan=\"2\">Router</th> <th rowspan=\"2\">Dir</th> <th colspan=\"2\">Peer</th> <th rowspan=\"2\">Log lines</th> "
-        "<th rowspan=\"2\">N links</th><th rowspan=\"2\">Transfer bytes</th> <th rowspan=\"2\">AMQP errors</th> <th rowspan=\"2\">Unsettled</th> <th rowspan=\"2\">Open time</th> <th rowspan=\"2\">Close time</th></tr>")
-    print("<tr> <th>container</th> <th>connid</th> <th>connid</th> <th>container</th></tr>")
+        "<th rowspan=\"2\">N links</th><th rowspan=\"2\">Transfer bytes</th> %s </tr>" % amqp_detail.Counts.show_table_heads1())
+    print("<tr> <th>container</th> <th>connid</th> <th>connid</th> <th>container</th> %s </tr>" %
+          amqp_detail.Counts.show_table_heads2())
 
     tConn = 0
     tLines = 0
@@ -377,22 +380,15 @@ def main_except(argv):
                 peerconnid = comn.conn_peers_connid.get(id, "")
                 n_links = rtr.details.links_in_connection(id)
                 tLinks += n_links
-                errs = sum(1 for plf in rtr.conn_to_frame_map[id] if plf.data.amqp_error)
-                tErrs += errs
-                stime = rtr.conn_open_time.get(id, text.nbsp())
-                if stime != text.nbsp():
-                    stime = stime.datetime
-                etime = rtr.conn_close_time.get(id, text.nbsp())
-                if etime != text.nbsp():
-                    etime = etime.datetime
                 conn_details = rtr.details.conn_details[id]
+                tErrs += conn_details.counts.errors
                 print("<tr>")
                 print("<td> <input type=\"checkbox\" id=\"cb_sel_%s\" " % id)
                 print("checked=\"true\" onclick=\"javascript:show_if_cb_sel_%s()\"> </td>" % (id))
                 print("<td>%s</td><td><a href=\"#cd_%s\">%s</a></td><td>%s</td><td>%s</td><td>%s</td><td>%s</td>"
-                      "<td>%d</td><td>%s</td><td>%d</td><td>%d</td><td>%s</td><td>%s</td></tr>" %
+                      "<td>%d</td><td>%s</td> %s </tr>" %
                       (rid, id, id, rtr.conn_dir[id], peerconnid, peer, rtr.conn_log_lines[id], n_links,
-                       rtr.conn_xfer_bytes[id], errs, conn_details.unsettled, stime, etime))
+                       rtr.conn_xfer_bytes[id], conn_details.counts.show_table_data() ))
                 tLines += rtr.conn_log_lines[id]
                 tBytes += rtr.conn_xfer_bytes[id]
     print(
@@ -461,7 +457,7 @@ def main_except(argv):
         n_transfers = 0
         for linkd in links:
             n_transfers += sum(1 for plf in linkd.frame_list if plf.data.transfer)
-        n_unsettled = sum(linkd.unsettled for linkd in links)
+        n_unsettled = sum(linkd.counts.unsettled for linkd in links)
         line = ("<tr><td>%s %s</td> <td>%d</td> <td>%d</td> <td>%d</td> <td>%d</td></tr>" %
                 (showthis, visitthis, len(links), n_frames, n_transfers, n_unsettled))
         if n_transfers == 0:
@@ -510,7 +506,7 @@ def main_except(argv):
             visitthis = ("<a href=\"#%s_sess_%s_link_%s_data\">%s</a>" %
                          (id, sessd.conn_epoch, linkd.session_seq, linkd.display_name))
             print("<tr> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s</td> <td>%s %s</td> <td>%d</td> <td>%d</td> <td>%d</td> </tr>" %
-                  (rid, id, rtr.conn_dir[id], peerconnid, peer, role, showall, visitthis, len(linkd.frame_list), transfers, linkd.unsettled))
+                  (rid, id, rtr.conn_dir[id], peerconnid, peer, role, showall, visitthis, len(linkd.frame_list), transfers, linkd.counts.unsettled))
         print("</table>")
         print("</div>")
     print("<hr>")

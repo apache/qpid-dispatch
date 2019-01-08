@@ -134,9 +134,11 @@ class LogLineData:
         self.transfer_size = ""  # size declared by number in parenthesis
         self.transfer_short_name = ""
         self.transfer_settled = False
+        self.transfer_presettled = False
         self.transfer_more = False
         self.transfer_resume = False
         self.transfer_aborted = False
+        self.transfer_exhausted_credit = False
         self.link_short_name = ""
         self.link_short_name_popup = ""
         self.is_policy_trace = False  # line is POLICY (trace)
@@ -482,7 +484,7 @@ class ParsedLogLine(object):
             res.flow_cnt_credit = "(%s,%s)" % (res.flow_deliverycnt, res.flow_linkcredit)
             res.web_show_str = "<strong>%s</strong> %s (%s,%s) %s" % (
                 res.name, colorize_bg(res.channel_handle), res.flow_deliverycnt, res.flow_linkcredit,
-                self.highlighted("drain", res.flow_drain, "yellow"))
+                self.highlighted("drain", res.flow_drain, common.color_of("drain")))
 
         elif perf == 0x14:
             # Performative: transfer [channel,handle] (id)
@@ -501,10 +503,10 @@ class ParsedLogLine(object):
             showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
             res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s - %s bytes" % (
                 res.name, colorize_bg(res.channel_handle), res.delivery_id,
-                self.highlighted("settled", res.transfer_settled, "green"),
-                self.highlighted("more", res.transfer_more, "purple"),
-                self.highlighted("resume", res.transfer_resume, "orange"),
-                self.highlighted("aborted", res.transfer_aborted, "yellow"),
+                self.highlighted("settled", res.transfer_settled, common.color_of("presettled")),
+                self.highlighted("more", res.transfer_more, common.color_of("more")),
+                self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
+                self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
                 showdat, res.transfer_size)
 
         elif perf == 0x15:
@@ -710,8 +712,8 @@ class ParsedLogLine(object):
             dct = resdict["error"].dict
             condi = dct["condition"]
             descr = dct["description"] if "description" in dct else ""
-            res.web_show_str += (" <span style=\"background-color:yellow\">error</span> "
-                                 "%s %s" % (condi, descr))
+            res.web_show_str += (" <span style=\"background-color:%s\">error</span> "
+                                 "%s %s" % (common.color_of("errors"), condi, descr))
 
     def adverbl_link_to(self):
         """
