@@ -92,22 +92,22 @@ class QdstatTest(system_test.TestCase):
         lines = out.split("\n")
 
         # make sure the output contains a header line
-        self.assertGreaterEqual(len(lines), 2)
+        self.assertTrue(len(lines) >= 2)
 
         # see if the header line has the word priority in it
         priorityregexp = r'pri'
         priority_column = re.search(priorityregexp, lines[1]).start()
-        self.assertGreater(priority_column, -1)
+        self.assertTrue(priority_column > -1)
 
         # extract the number in the priority column of every address
         for i in range(3, len(lines) - 1):
             pri = re.findall('\d+', lines[i][priority_column:])
             # make sure the priority found is a number
-            self.assertGreater(len(pri), 0, "Can not find numeric priority in '%s'" % lines[i])
+            self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
             priority = int(pri[0])
             # make sure the priority is from -1 to 9
-            self.assertGreaterEqual(priority, -1, "Priority was less than -1")
-            self.assertLessEqual(priority, 9, "Priority was greater than 9")
+            self.assertTrue(priority >= -1, "Priority was less than -1")
+            self.assertTrue(priority <= 9, "Priority was greater than 9")
 
     def test_address_with_limit(self):
         out = self.run_qdstat(['--address', '--limit=1'])
@@ -164,12 +164,12 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         lines = out.split("\n")
 
         # make sure the output contains a header line
-        self.assertGreaterEqual(len(lines), 2)
+        self.assertTrue(len(lines) >= 2)
 
         # see if the header line has the word priority in it
         priorityregexp = r'pri'
         priority_column = re.search(priorityregexp, lines[1]).start()
-        self.assertGreater(priority_column, -1)
+        self.assertTrue(priority_column > -1)
 
         # extract the number in the priority column of every inter-router link
         priorities = {}
@@ -177,11 +177,11 @@ class QdstatLinkPriorityTest(system_test.TestCase):
             if re.search(r'inter-router', lines[i]):
                 pri = re.findall('\d+', lines[i][priority_column:])
                 # make sure the priority found is a number
-                self.assertGreater(len(pri), 0, "Can not find numeric priority in '%s'" % lines[i])
+                self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
                 priority = int(pri[0])
                 # make sure the priority is from 0 to 9
-                self.assertGreaterEqual(priority, 0, "Priority was less than 0")
-                self.assertLessEqual(priority, 9, "Priority was greater than 9")
+                self.assertTrue(priority >= 0, "Priority was less than 0")
+                self.assertTrue(priority <= 9, "Priority was greater than 9")
 
                 # mark this priority as present
                 priorities[priority] = True
