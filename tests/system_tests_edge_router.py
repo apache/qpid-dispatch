@@ -650,6 +650,16 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_41_drop_rx_client_multicast_small_message(self):
+        # test what happens if some multicast receivers close in the middle of
+        # a multiframe transfer
+        test = MobileAddrMcastDroppedRxTest(self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            self.routers[2].addresses[0],
+                                            "multicast.40",large_msg=False)
+        test.run()
+        self.assertEqual(None, test.error)
 
 class LinkRouteProxyTest(TestCase):
     """
@@ -1502,14 +1512,14 @@ class MobileAddrMcastDroppedRxTest(MobileAddressMulticastTest):
     # failure scenario - cause some receiving clients to close while a large
     # message is in transit
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
-                 sender_host, address, check_addr_host=None):
+                 sender_host, address, check_addr_host=None, large_msg=True):
         super(MobileAddrMcastDroppedRxTest, self).__init__(receiver1_host,
                                                            receiver2_host,
                                                            receiver3_host,
                                                            sender_host,
                                                            address,
                                                            check_addr_host=check_addr_host,
-                                                           large_msg=True)
+                                                           large_msg=large_msg)
         self.n_accepted = 0
         self.n_released = 0
         self.recv1_closed = False
