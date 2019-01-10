@@ -693,7 +693,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
                 //
                 // If the address of the delivery is a multicast address and there is at least one other receiver for the address, dont do anything
                 //
-                if (DEQ_SIZE(peer->peers) == 1)  {
+                if (DEQ_SIZE(peer->peers) == 1 || peer->peer)  {
                     qdr_delivery_release_CT(core, peer);
                 }
             }
