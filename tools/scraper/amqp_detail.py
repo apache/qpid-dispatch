@@ -63,6 +63,7 @@ class Counts():
         # interesting transfers
         self.aborted = 0
         self.more = 0
+        self.incomplete = 0
         # link drained
         self.drain = 0
         # link out of credit
@@ -103,6 +104,7 @@ class Counts():
         res += self.highlight("modified", self.modified, common.color_of("modified"))
         res += self.highlight("aborted", self.aborted, common.color_of("aborted"))
         res += self.highlight("more", self.more, common.color_of("more"))
+        res += self.highlight("incomplete", self.incomplete, common.color_of("unsettled"))
         res += self.highlight("drain", self.drain, common.color_of("drain"))
         res += self.highlight_duration("initial", self.initial_no_credit_duration, common.color_of("no_credit"))
         res += self.highlight("no_credit", self.no_credit, common.color_of("no_credit"))
@@ -114,7 +116,7 @@ class Counts():
     def show_table_heads1(cls):
         return "<th rowspan=\"2\"><span title=\"AMQP errors\">ERR</span></th>" \
                "<th colspan=\"6\">Settlement - disposition</th>" \
-               "<th colspan=\"2\">Transfer</th>" \
+               "<th colspan=\"3\">Transfer</th>" \
                "<th>Flow</th>" \
                "<th colspan=\"4\">Credit starvation</th>"
 
@@ -128,6 +130,7 @@ class Counts():
                "<th><span title=\"Disposition: modified\">MDFD</span></th>" \
                "<th><span title=\"Transfer abort=true\">ABRT</span></th>" \
                "<th><span title=\"Transfer: more=true\">MOR</span></th>" \
+               "<th><span title=\"Transfer: incomplete; all frames had more=true\">INC</span></th>" \
                "<th><span title=\"Flow: drain=true\">DRN</span></th>" \
                "<th><span title=\"Initial stall (S)\">initial (S)</span></th>" \
                "<th><span title=\"Credit exhausted\">-> 0</span></th>" \
@@ -156,6 +159,7 @@ class Counts():
         res += self.show_table_element("modified", self.modified, common.color_of("modified"))
         res += self.show_table_element("aborted", self.aborted, common.color_of("aborted"))
         res += self.show_table_element("more", self.more, common.color_of("more"))
+        res += self.show_table_element("incomplete", self.incomplete, common.color_of("unsettled"))
         res += self.show_table_element("drain", self.drain, common.color_of("drain"))
         res += self.show_table_duration(self.initial_no_credit_duration)
         res += self.show_table_element("no_credit", self.no_credit, common.color_of("no_credit"))
@@ -778,6 +782,7 @@ class AllDetails():
                     delivery_limit = 0 # first unreachable delivery id from flow
                     n_attaches = 0
                     tod_of_second_attach = None
+                    multiframe_in_progress = False
                     init_stall = True
                     credit_stall = False
                     tod_of_no_credit = None
@@ -858,8 +863,10 @@ class AllDetails():
                                         tod_of_no_credit = plf.datetime
                                     else:
                                         pass # still have credit
+                                    multiframe_in_progress = False
                                 else:
-                                    pass # transfers with 'more' set don't consume credit
+                                    # transfers with 'more' set don't consume credit
+                                    multiframe_in_progress = True
                             else:
                                 pass   # transfer in wrong direction??
 
@@ -893,6 +900,12 @@ class AllDetails():
                             link.counts.no_credit_duration += dur
                             sess.counts.no_credit_duration += dur
                             conn_detail.counts.no_credit_duration += dur
+
+                    # record multiframe transfer that didn't complete
+                    if multiframe_in_progress:
+                        link.counts.incomplete += 1
+                        sess.counts.incomplete += 1
+                        conn_detail.counts.incomplete += 1
 
     def show_html(self):
         for conn in self.rtr.conn_list:
