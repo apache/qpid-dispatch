@@ -855,12 +855,21 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     qdr_link_cleanup_deliveries_CT(core, conn, link);
 
     //
-    // Remove the reference to this link in the connection's reference lists
+    // Remove all references to this link in the connection's and owning
+    // address reference lists
     //
     sys_mutex_lock(conn->work_lock);
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     qdr_del_link_ref(conn->links_with_work + link->priority, link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
+
+    if (link->ref[QDR_LINK_LIST_CLASS_ADDRESS]) {
+        assert(link->owning_addr);
+        qdr_del_link_ref((link->link_direction == QD_OUTGOING)
+                         ? &link->owning_addr->rlinks
+                         : &link->owning_addr->inlinks,
+                         link,  QDR_LINK_LIST_CLASS_ADDRESS);
+    }
 
     //
     // Free the link's name and terminus_addr
@@ -1256,6 +1265,7 @@ static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
         qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        link->owning_addr = 0;
         core->control_links_by_mask_bit[conn->mask_bit] = 0;
         qdr_post_link_lost_CT(core, conn->mask_bit);
     }

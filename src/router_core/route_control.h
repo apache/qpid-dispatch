@@ -54,6 +54,7 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn);
 
 void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr_address_t *addr);
 void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address);
+void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identifier_t *cid);
 
 /**
  * Actions to be performed when an auto link detaches.

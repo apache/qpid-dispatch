@@ -116,7 +116,6 @@ void qdr_core_free(qdr_core_t *core)
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
 
-
     //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
     //already been shut down. But, all the action would have done at this point is free the subscriptions
     //so we just do that directly.
@@ -155,8 +154,6 @@ void qdr_core_free(qdr_core_t *core)
     qd_parse_tree_free(core->addr_parse_tree);
     qd_parse_tree_free(core->link_route_tree[QD_INCOMING]);
     qd_parse_tree_free(core->link_route_tree[QD_OUTGOING]);
-    qd_hash_free(core->conn_id_hash);
-    //TODO what about the actual connection identifier objects?
 
     qdr_node_t *rnode = 0;
     while ( (rnode = DEQ_HEAD(core->routers)) ) {
@@ -166,6 +163,8 @@ void qdr_core_free(qdr_core_t *core)
     qdr_link_t *link = DEQ_HEAD(core->open_links);
     while (link) {
         DEQ_REMOVE_HEAD(core->open_links);
+        qdr_del_link_ref(&link->conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
+        qdr_del_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
         free(link->name);
         free(link->disambiguated_name);
         free(link->terminus_addr);
@@ -180,9 +179,16 @@ void qdr_core_free(qdr_core_t *core)
     qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
     while (conn) {
         DEQ_REMOVE_HEAD(core->open_connections);
+        if (conn->conn_id) {
+            qdr_del_connection_ref(&conn->conn_id->connection_refs, conn);
+            qdr_route_check_id_for_deletion_CT(core, conn->conn_id);
+        }
         qdr_connection_free(conn);
         conn = DEQ_HEAD(core->open_connections);
     }
+
+    // at this point all the conn identifiers have been freed
+    qd_hash_free(core->conn_id_hash);
 
     if (core->query_lock)                sys_mutex_free(core->query_lock);
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
@@ -411,6 +417,17 @@ bool qdr_is_addr_treatment_multicast(qdr_address_t *addr)
 
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
 {
+    if (lr->conn_id) {
+        DEQ_REMOVE_N(REF, lr->conn_id->link_route_refs, lr);
+        qdr_route_check_id_for_deletion_CT(core, lr->conn_id);
+    }
+
+    if (lr->addr) {
+        if (--lr->addr->ref_count == 0) {
+            qdr_check_addr_CT(core, lr->addr);
+        }
+    }
+
     free(lr->add_prefix);
     free(lr->del_prefix);
     free(lr->name);
@@ -420,6 +437,15 @@ void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
 
 void qdr_core_delete_auto_link(qdr_core_t *core, qdr_auto_link_t *al)
 {
+    if (al->conn_id) {
+        DEQ_REMOVE_N(REF, al->conn_id->auto_link_refs, al);
+        qdr_route_check_id_for_deletion_CT(core, al->conn_id);
+    }
+
+    qdr_address_t *addr = al->addr;
+    if (addr && --addr->ref_count == 0)
+        qdr_check_addr_CT(core, addr);
+
     free(al->name);
     free(al->external_addr);
     qdr_core_timer_free_CT(core, al->retry_timer);
@@ -453,6 +479,17 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     }
 
     // Free resources associated with this address
+
+    DEQ_APPEND(addr->rlinks, addr->inlinks);
+    qdr_link_ref_t *lref = DEQ_HEAD(addr->rlinks);
+    while (lref) {
+        qdr_link_t *link = lref->link;
+        assert(link->owning_addr == addr);
+        link->owning_addr = 0;
+        qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        lref = DEQ_HEAD(addr->rlinks);
+    }
+
     qd_bitmask_free(addr->rnodes);
     if (addr->treatment == QD_TREATMENT_ANYCAST_CLOSEST) {
         qd_bitmask_free(addr->closest_remotes);
@@ -460,6 +497,13 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     else if (addr->treatment == QD_TREATMENT_ANYCAST_BALANCED) {
         free(addr->outstanding_deliveries);
     }
+
+    qdr_connection_ref_t *cr = DEQ_HEAD(addr->conns);
+    while (cr) {
+        qdr_del_connection_ref(&addr->conns, cr->conn);
+        cr = DEQ_HEAD(addr->conns);
+    }
+
     free(addr->add_prefix);
     free(addr->del_prefix);
     free_qdr_address_t(addr);

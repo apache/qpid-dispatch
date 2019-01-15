@@ -91,7 +91,7 @@ static qdr_conn_identifier_t *qdr_route_declare_id_CT(qdr_core_t    *core,
 }
 
 
-static void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identifier_t *cid)
+void qdr_route_check_id_for_deletion_CT(qdr_core_t *core, qdr_conn_identifier_t *cid)
 {
     //
     // If this connection identifier has no open connection and no referencing routes,
@@ -428,8 +428,7 @@ void qdr_route_auto_link_closed_CT(qdr_core_t *core, qdr_link_t *link)
 void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
 {
     //
-    // Disassociate from the connection identifier.  Check to see if the identifier
-    // should be removed.
+    // Deactivate the link route on all connections
     //
     qdr_conn_identifier_t *cid = lr->conn_id;
     if (cid) {
@@ -438,17 +437,7 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
             qdr_link_route_deactivate_CT(core, lr, cref->conn);
             cref = DEQ_NEXT(cref);
         }
-        DEQ_REMOVE_N(REF, cid->link_route_refs, lr);
-        qdr_route_check_id_for_deletion_CT(core, cid);
     }
-
-    //
-    // Disassociate the link route from its address.  Check to see if the address
-    // (and its associated pattern) should be removed.
-    //
-    qdr_address_t *addr = lr->addr;
-    if (addr && --addr->ref_count == 0)
-        qdr_check_addr_CT(core, addr);
 
     //
     // Remove the link route from the core list.
@@ -541,26 +530,13 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
             qdr_auto_link_deactivate_CT(core, al, cref->conn);
             cref = DEQ_NEXT(cref);
         }
-        DEQ_REMOVE_N(REF, cid->auto_link_refs, al);
-        qdr_route_check_id_for_deletion_CT(core, cid);
     }
-
-    //
-    // Disassociate the auto link from its address.  Check to see if the address
-    // should be removed.
-    //
-    qdr_address_t *addr = al->addr;
-    if (addr && --addr->ref_count == 0)
-        qdr_check_addr_CT(core, addr);
 
     //
     // Remove the auto link from the core list.
     //
     DEQ_REMOVE(core->auto_links, al);
-    free(al->name);
-    free(al->external_addr);
-    qdr_core_timer_free_CT(core, al->retry_timer);
-    free_qdr_auto_link_t(al);
+    qdr_core_delete_auto_link(core, al);
 }
 
 
@@ -753,14 +729,6 @@ void qdr_route_del_conn_route_CT(qdr_core_t       *core,
 {
     qdr_connection_t *conn = lr->parent_conn;
     qdr_link_route_deactivate_CT(core, lr, conn);
-
-    //
-    // Disassociate the link route from its address.  Check to see if the address
-    // (and its associated pattern) should be removed.
-    //
-    qdr_address_t *addr = lr->addr;
-    if (addr && --addr->ref_count == 0)
-        qdr_check_addr_CT(core, addr);
 
     //
     // Remove the link route from the parent's link route list
