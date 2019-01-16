@@ -56,20 +56,20 @@ target_link_libraries(unit_tests_size qpid-dispatch)
 
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
-add_test(unit_tests_size_10000 ${TEST_WRAP} -x unit_tests_size 10000)
-add_test(unit_tests_size_512   ${TEST_WRAP} -x unit_tests_size 512)
-add_test(unit_tests_size_10    ${TEST_WRAP} -x unit_tests_size 10)
-add_test(unit_tests_size_7     ${TEST_WRAP} -x unit_tests_size 7)
-add_test(unit_tests_size_5     ${TEST_WRAP} -x unit_tests_size 5)
-add_test(unit_tests_size_3     ${TEST_WRAP} -x unit_tests_size 3)
-add_test(unit_tests_size_2     ${TEST_WRAP} -x unit_tests_size 2)
-add_test(unit_tests_size_1     ${TEST_WRAP} -x unit_tests_size 1)
-add_test(unit_tests            ${TEST_WRAP} -x unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
+add_test(unit_tests_size_10000 ${TEST_WRAP} unit_tests_size 10000)
+add_test(unit_tests_size_512   ${TEST_WRAP} unit_tests_size 512)
+add_test(unit_tests_size_10    ${TEST_WRAP} unit_tests_size 10)
+add_test(unit_tests_size_7     ${TEST_WRAP} unit_tests_size 7)
+add_test(unit_tests_size_5     ${TEST_WRAP} unit_tests_size 5)
+add_test(unit_tests_size_3     ${TEST_WRAP} unit_tests_size 3)
+add_test(unit_tests_size_2     ${TEST_WRAP} unit_tests_size 2)
+add_test(unit_tests_size_1     ${TEST_WRAP} unit_tests_size 1)
+add_test(unit_tests            ${TEST_WRAP} unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
 
 # Unit test python modules
-add_test(router_engine_test    ${TEST_WRAP} -x unit2 -v router_engine_test)
-add_test(management_test       ${TEST_WRAP} -x unit2 -v management)
-add_test(router_policy_test    ${TEST_WRAP} -x unit2 -v router_policy_test)
+add_test(router_engine_test    ${TEST_WRAP} unit2 -v router_engine_test)
+add_test(management_test       ${TEST_WRAP} unit2 -v management)
+add_test(router_policy_test    ${TEST_WRAP} unit2 -v router_policy_test)
 
 if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
@@ -129,7 +129,7 @@ foreach(py_test_module
     system_tests_multi_phase
     )
 
-  add_test(${py_test_module} ${TEST_WRAP} -x unit2 -v ${py_test_module})
+  add_test(${py_test_module} ${TEST_WRAP} unit2 -v ${py_test_module})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
 endforeach()
 
