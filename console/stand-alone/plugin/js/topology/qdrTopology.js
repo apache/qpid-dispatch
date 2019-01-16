@@ -193,12 +193,6 @@ export class TopologyController {
       }
       // redraw the circles/links
       restart();
-
-      if (!b) {
-        // let the nodes move to a new position
-        animate = true;
-        force.start();
-      }
     };
     $scope.isFixed = function () {
       if (!$scope.contextNode) return false;
@@ -232,7 +226,6 @@ export class TopologyController {
 
     let svg; // main svg
     let force;
-    let animate = false; // should the force graph organize itself when it is displayed
     let path, circle;   // the d3 selections for links and nodes respectively
     let savedKeys = {}; // so we can redraw the svg if the topology changes
     let width = 0;
@@ -303,17 +296,16 @@ export class TopologyController {
       mouseup_node = null;
 
       // initialize the list of nodes
-      animate = forceData.nodes.initialize(nodeInfo, width, height, localStorage);
+      forceData.nodes.initialize(nodeInfo, width, height, localStorage);
       forceData.nodes.savePositions();
 
       // initialize the list of links
       let unknowns = [];
-      if (forceData.links.initialize(nodeInfo,
+      forceData.links.initialize(nodeInfo,
         forceData.nodes,
         unknowns,
         height,
-        localStorage))
-        animate = true;
+        localStorage);
       $scope.schema = QDRService.management.schema();
       // init D3 force layout
       force = d3.layout
@@ -414,7 +406,6 @@ export class TopologyController {
           forceData.nodes.initialize(nodeInfo, width, height, localStorage);
           let edgeUnknowns = [];
           forceData.links.initialize(nodeInfo, forceData.nodes, edgeUnknowns, height, localStorage);
-          animate = true;
           force
             .nodes(forceData.nodes.nodes)
             .links(forceData.links.links)
@@ -447,11 +438,6 @@ export class TopologyController {
       path.selectAll("path").attr("d", function (d) {
         return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
       });
-
-      if (!animate) {
-        animate = true;
-        force.stop();
-      }
     }
 
     function nextHopHighlight(selected_node, d) {
@@ -930,7 +916,6 @@ export class TopologyController {
         // there is a new node, we need to get all of it's entities before drawing the graph
         if (changed > 0) {
           QDRService.management.topology.delUpdatedAction("topology");
-          animate = true;
           setupInitialUpdate();
         } else if (changed === -1) {
           // we lost a node (or a client), we can draw the new svg immediately
@@ -958,7 +943,6 @@ export class TopologyController {
       return;
     }
 
-    animate = true;
     setupInitialUpdate();
     QDRService.management.topology.startUpdating(true);
   }
