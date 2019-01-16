@@ -198,10 +198,10 @@ def message(**properties):
         setattr(m, name, value)
     return m
 
+
 class Process(subprocess.Popen):
     """
     Popen that can be torn down at the end of a TestCase and stores its output.
-    Use $TEST_RUNNER as a prefix to the executable if it is defined in the environment.
     """
 
     # Expected states of a Process at teardown
@@ -231,7 +231,6 @@ class Process(subprocess.Popen):
         self.outdir = os.getcwd()
         self.outfile = os.path.abspath(self.unique(self.name))
         self.torndown = False
-        args = os.environ.get('QPID_DISPATCH_TEST_RUNNER', '').split() + args
         with open(self.outfile + '.out', 'w') as out:
             kwargs.setdefault('stdout', out)
             kwargs.setdefault('stderr', subprocess.STDOUT)
@@ -351,6 +350,8 @@ class Qdrouterd(Process):
             args += ['-I', pyinclude]
         elif env_home:
             args += ['-I', os.path.join(env_home, 'python')]
+
+        args = os.environ.get('QPID_DISPATCH_RUNNER', '').split() + args
         super(Qdrouterd, self).__init__(args, name=name, expect=Process.RUNNING)
         self._management = None
         self._wait_ready = False
