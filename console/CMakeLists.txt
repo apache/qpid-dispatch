@@ -20,7 +20,7 @@
 ##
 ## Add cmake option to choose whether to install stand-alone console
 ##
-option(CONSOLE_INSTALL "Build and install console (requires npm 5.2+)" ON)
+option(CONSOLE_INSTALL "Build and install console (requires npm 3.1.10+)" ON)
 
 if(CONSOLE_INSTALL)
   find_program (NPM_EXECUTABLE npm DOC "Location of npm package manager")
@@ -28,10 +28,7 @@ if(CONSOLE_INSTALL)
   if (NPM_EXECUTABLE)
     execute_process(COMMAND ${NPM_EXECUTABLE} --version
         OUTPUT_VARIABLE NPM_VERSION)
-    if(${NPM_VERSION} VERSION_EQUAL "5.2.0" OR ${NPM_VERSION} VERSION_GREATER "5.2.0")
-
-      find_program(NPX_EXE npx DOC "Location of the npx task runner")
-        if (NPX_EXE)
+    if(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))
 
           set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
           set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
@@ -40,6 +37,7 @@ if(CONSOLE_INSTALL)
           configure_file( ${CONSOLE_SOURCE_DIR}/package.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
           configure_file( ${CONSOLE_SOURCE_DIR}/package-lock.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
           configure_file( ${CONSOLE_SOURCE_DIR}/tslint.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
+          configure_file( ${CONSOLE_SOURCE_DIR}/.eslintrc ${CONSOLE_BUILD_DIR}/ COPYONLY)
           configure_file( ${CONSOLE_SOURCE_DIR}/gulpfile.js ${CONSOLE_BUILD_DIR}/ COPYONLY)
           configure_file( ${CONSOLE_SOURCE_DIR}/vendor-js.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
           configure_file( ${CONSOLE_SOURCE_DIR}/vendor-css.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
@@ -54,8 +52,8 @@ if(CONSOLE_INSTALL)
           ## Files created during the console build
           set(CONSOLE_ARTIFACTS
             ${CONSOLE_BUILD_DIR}/dist/js/vendor.min.js
-            ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
             ${CONSOLE_BUILD_DIR}/dist/css/vendor.min.css
+            ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
           )
 
           ## Tell cmake how and when to build ${CONSOLE_ARTIFACTS}
@@ -63,7 +61,7 @@ if(CONSOLE_INSTALL)
             OUTPUT ${CONSOLE_ARTIFACTS}
             COMMENT "Running console build"
             COMMAND npm install --loglevel=error
-            COMMAND ${NPX_EXE} gulp --src ${CONSOLE_SOURCE_DIR} --build "production"
+            COMMAND ${NPM_EXECUTABLE} run build -- --src ${CONSOLE_SOURCE_DIR} --target "production"
             DEPENDS ${ALL_CONSOLE_SOURCES}
             WORKING_DIRECTORY ${CONSOLE_BUILD_DIR}/
             )
@@ -134,12 +132,9 @@ if(CONSOLE_INSTALL)
           install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/data/
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/data
           )
-        else(NPX_EXE)
-          message(STATUS "Cannot build console, npx not found.")
-        endif(NPX_EXE)
-    else(${NPM_VERSION} VERSION_EQUAL "5.2.0" OR ${NPM_VERSION} VERSION_GREATER "5.2.0")
-      message(STATUS "Cannot build console. npm version 5.2 or greater is required.")
-    endif(${NPM_VERSION} VERSION_EQUAL "5.2.0" OR ${NPM_VERSION} VERSION_GREATER "5.2.0")
+    else(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))
+      message(STATUS "Cannot build console. npm version 3.1.10 or greater is required.")
+    endif(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))
   endif(NPM_EXECUTABLE)
 
 endif(CONSOLE_INSTALL)

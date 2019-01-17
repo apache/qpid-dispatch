@@ -38,10 +38,9 @@ const gulp = require('gulp'),
   fs = require('fs'),
   tsc = require('gulp-typescript'),
   tslint = require('gulp-tslint'),
-  through = require('through2'),
-  runSequence = require('run-sequence');
+  through = require('through2');
 
-  // temp directory for converted typescript files
+// temp directory for converted typescript files
 const built_ts = 'built_ts';
 
 // fetch command line arguments
@@ -66,7 +65,7 @@ const arg = (argList => {
 })(process.argv);
 
 var src = arg.src ? arg.src + '/' : '';
-var production = (arg.build === 'production');
+var production = (arg.target === 'production');
 
 const paths = {
   typescript: {
@@ -82,20 +81,20 @@ const paths = {
     dest: 'dist/js/'
   }
 };
-var touch = through.obj(function(file, enc, done) {
+var touch = through.obj(function (file, enc, done) {
   var now = new Date;
   fs.utimes(file.path, now, now, done);
 });
 
-gulp.task('clean', function () {
-  return del(['dist',built_ts ]);
-});
+var clean = function () {
+  return del(['dist', built_ts]);
+};
 
-gulp.task('cleanup', function () {
+var cleanup = function () {
   return del([built_ts]);
-});
+};
 
-gulp.task('styles', function () {
+var styles = function () {
   return gulp.src(paths.styles.src)
     .pipe(maps.init())
     .pipe(cleanCSS())
@@ -106,11 +105,11 @@ gulp.task('styles', function () {
     .pipe(insert.prepend(license))
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
-});
+};
 
-gulp.task('vendor_styles', function () {
+var vendor_styles = function () {
   var vendor_lines = fs.readFileSync('vendor-css.txt').toString().split('\n');
-  var vendor_files = vendor_lines.filter( function (line) {
+  var vendor_files = vendor_lines.filter(function (line) {
     return (!line.startsWith('-') && line.length > 0);
   });
   return gulp.src(vendor_files)
@@ -123,12 +122,12 @@ gulp.task('vendor_styles', function () {
     }))
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.styles.dest));
-});
+};
 
 
-gulp.task('vendor_scripts', function () {
+var vendor_scripts = function () {
   var vendor_lines = fs.readFileSync('vendor-js.txt').toString().split('\n');
-  var vendor_files = vendor_lines.filter( function (line) {
+  var vendor_files = vendor_lines.filter(function (line) {
     return (!line.startsWith('-') && line.length > 0);
   });
   return gulp.src(vendor_files)
@@ -138,7 +137,7 @@ gulp.task('vendor_scripts', function () {
     .pipe(maps.write('./'))
     .pipe(gulp.dest(paths.scripts.dest))
     .pipe(touch);
-});
+};
 
 /*
 function watch() {
@@ -147,12 +146,12 @@ function watch() {
 }
 */
 
-gulp.task('lint', function () {
+var lint = function () {
   return gulp.src('plugin/**/*.js')
     .pipe(eslint())
     .pipe(eslint.format())
     .pipe(eslint.failAfterError());
-});
+};
 
 //function _typescript() {
 //  return tsProject.src({files: src + 'plugin/**/*.ts'})
@@ -160,21 +159,21 @@ gulp.task('lint', function () {
 //    .js.pipe(gulp.dest('build/dist'));
 //}
 
-gulp.task('typescript', function() {
+var typescript = function () {
   var tsResult = gulp.src(paths.typescript.src)
     .pipe(tsc());
   return tsResult.js.pipe(gulp.dest(paths.typescript.dest));
-});
+};
 
-gulp.task('ts_lint', function() {
+var ts_lint = function () {
   return gulp.src('plugin/js/**/*.ts')
     .pipe(tslint({
       formatter: 'verbose'
     }))
     .pipe(tslint.report());
-});
+};
 
-gulp.task('scripts', function() {
+var scripts = function () {
   return rollup({
     input: src + './main.js',
     sourcemap: true,
@@ -182,78 +181,66 @@ gulp.task('scripts', function() {
   }).on('error', e => {
     console.error(`${e.stack}`);
   })
-  
-  // point to the entry file and gives the name of the output file.
+
+    // point to the entry file and gives the name of the output file.
     .pipe(source('main.min.js', src))
-  
-  // buffer the output. most gulp plugins, including gulp-sourcemaps, don't support streams.
+
+    // buffer the output. most gulp plugins, including gulp-sourcemaps, don't support streams.
     .pipe(buffer())
-  
-  // tell gulp-sourcemaps to load the inline sourcemap produced by rollup-stream.
-    .pipe(maps.init({loadMaps: true}))
-  // transform the code further here.
-  /*
-    .pipe(babel(
-      {presets: [
-        ['env', {
-          targets: {
-            'browsers': [
-              'Chrome >= 52',
-              'FireFox >= 44',
-              'Safari >= 7',
-              'Explorer 11',
-              'last 4 Edge versions'
-            ]
-          },
-          useBuiltIns: true,
-          //debug: true
-        }],
-        'es2015'
-      ],
-      'ignore': [
-        'node_modules'
-      ]
-      }
-    ))
-    */
+
+    // tell gulp-sourcemaps to load the inline sourcemap produced by rollup-stream.
+    .pipe(maps.init({ loadMaps: true }))
+    // transform the code further here.
+    /*
+      .pipe(babel(
+        {presets: [
+          ['env', {
+            targets: {
+              'browsers': [
+                'Chrome >= 52',
+                'FireFox >= 44',
+                'Safari >= 7',
+                'Explorer 11',
+                'last 4 Edge versions'
+              ]
+            },
+            useBuiltIns: true,
+            //debug: true
+          }],
+          'es2015'
+        ],
+        'ignore': [
+          'node_modules'
+        ]
+        }
+      ))
+      */
     .pipe(ngAnnotate())
     //.pipe(gulpif(production, uglify()))
     .pipe(gulpif(production, terser()))
     .pipe(gulpif(production, insert.prepend(license)))
-  // write the sourcemap alongside the output file.
+    // write the sourcemap alongside the output file.
     .pipe(maps.write('.'))
-  
-  // and output to ./dist/main.js as normal.
+
+    // and output to ./dist/main.js as normal.
     .pipe(gulp.dest(paths.scripts.dest));
-});
+};
 
-gulp.task('test', function() {
-  return gulp.src(['test/**/*.js'], {read: false})
-    .pipe(mocha({require: ['babel-core/register'], exit: true}))
+var test = function () {
+  return gulp.src(['test/**/*.js'], { read: false })
+    .pipe(mocha({ require: ['babel-core/register'], exit: true }))
     .on('error', console.error);
-});
+};
 
-gulp.task('build', function(callback) {
-  runSequence('clean',
-    'lint',
-    ['vendor_styles', 'vendor_scripts', 'styles'],
-    'cleanup',
-    callback);
-});
-/*
-For use with gulp 4.0 when that is supported
 var build = gulp.series(
   clean,                          // removes the dist/ dir
   lint,                           // lints the .js
   gulp.parallel(vendor_styles, vendor_scripts, styles), // uglify and concat
   cleanup                         // remove .js that were converted from .ts
 );
-*/
-/* var vendor = gulp.parallel(vendor_styles, vendor_scripts); */
+var vendor = gulp.parallel(vendor_styles, vendor_scripts);
 
-/*
 exports.clean = clean;
-exports.watch = watch;
 exports.build = build;
 exports.lint = lint;
 exports.tslint = ts_lint;
@@ -262,5 +249,4 @@ exports.scripts = scripts;
 exports.styles = styles;
 exports.vendor = vendor;
 exports.test = test;
-*/
-gulp.task('default', ['build']);
+exports.build = build;
