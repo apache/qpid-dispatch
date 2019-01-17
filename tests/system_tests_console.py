@@ -102,6 +102,7 @@ class ConsoleTest(system_test.TestCase):
         if not node_modules:
             p0 = subprocess.Popen(['npm', 'install', '--loglevel=error'], stdout=PIPE, cwd=src_dir)
             p0.wait()
+            shutil.copy2("%s/package-lock.json" % src_dir, "%s/package-lock.json.tmp" % src_dir)
 
         prg = [test_cmd,'--require', 'babel-core/register', test_dir, '--http_port=%s' % self.http_port, '--src=%s/' % src_dir]
         p = self.popen(prg, stdout=PIPE, expect=None)
@@ -117,6 +118,8 @@ class ConsoleTest(system_test.TestCase):
         # if we created the node_modules dir, remove it
         if not node_modules:
             shutil.rmtree(node_dir)
+            shutil.copy2("%s/package-lock.json.tmp" % src_dir, "%s/package-lock.json" % src_dir)
+            os.remove("%s/package-lock.json.tmp" % src_dir)            
 
         assert pret == 0, \
             "console test exit status %s, output:\n%s" % (pret, out)
