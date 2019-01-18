@@ -513,6 +513,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         pn_delivery_update(pnd, PN_RELEASED);
         pn_delivery_settle(pnd);
         qd_message_free(msg);
+        qd_bitmask_free(link_exclusions);
         return next_delivery;
     }
 
@@ -589,8 +590,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index);
     }
 
-
-
     if (delivery) {
         //
         // Settle the proton delivery only if all the data has arrived
@@ -609,6 +608,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         //
         // If there is no delivery, the message is now and will always be unroutable because there is no address.
         //
+        qd_bitmask_free(link_exclusions);
         qd_message_set_discard(msg, true);
         pn_link_flow(pn_link, 1);
         pn_delivery_update(pnd, PN_REJECTED);
