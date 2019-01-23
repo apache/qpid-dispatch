@@ -284,6 +284,8 @@ class BusManager(Node):
 
     def _list_clean(self, inlist):
         outlist = []
+        if not inlist:
+            return outlist
         for i in inlist:
             outlist.append(str(i))
         return outlist
