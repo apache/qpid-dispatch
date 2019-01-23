@@ -20,65 +20,68 @@ Licensed to the Apache Software Foundation (ASF) under one
 import { Management as dm } from './amqp/management.js';
 import { utils } from './amqp/utilities.js';
 
-import { QDR_LAST_LOCATION, QDRLogger} from './qdrGlobals.js';
+import { QDR_LAST_LOCATION, QDRLogger, QDR_INTERVAL } from './qdrGlobals.js';
 
+// number of milliseconds between topology updates
+const DEFAULT_INTERVAL = 5000;
 export class QDRService {
   constructor($log, $timeout, $location) {
     this.$timeout = $timeout;
     this.$location = $location;
-    this.management = new dm($location.protocol());
+    this.management = new dm($location.protocol(), localStorage[QDR_INTERVAL] || DEFAULT_INTERVAL);
     this.utilities = utils;
     this.QDRLog = new QDRLogger($log, 'QDRService');
   }
-  
+
   // Example service function
-  onReconnect () {
-    this.management.connection.on('disconnected', this.onDisconnect);
+  onReconnect() {
+    this.management.connection.on('disconnected', this.onDisconnect.bind(this));
     let org = localStorage[QDR_LAST_LOCATION] || '/overview';
-    this.$timeout ( function () {
+    this.$timeout(function () {
       this.$location.path(org);
       this.$location.search('org', null);
       this.$location.replace();
     });
   }
-  onDisconnect () {
-    this.management.connection.on('connected', this.onReconnect);
-    this.$timeout( function () {
-      this.$location.path('/connect');
-      let curPath = this.$location.path();
-      let parts = curPath.split('/');
-      let org = parts[parts.length-1];
-      if (org && org.length > 0 && org !== 'connect') {
-        this.$location.search('org', org);
-      } else {
-        this.$location.search('org', null);
-      }
-      this.$location.replace();
-    });
-  }
-  connect (connectOptions) {
+  onDisconnect() {
     let self = this;
-    return new Promise ( function (resolve, reject) {
+    this.$timeout(function () {
+      self.$location.path('/connect');
+      let curPath = self.$location.path();
+      let parts = curPath.split('/');
+      let org = parts[parts.length - 1];
+      if (org && org.length > 0 && org !== 'connect') {
+        self.$location.search('org', org);
+      } else {
+        self.$location.search('org', null);
+      }
+      self.$location.replace();
+    });
+    this.management.connection.on('connected', this.onReconnect.bind(this));
+  }
+  connect(connectOptions) {
+    let self = this;
+    return new Promise(function (resolve, reject) {
       self.management.connection.connect(connectOptions)
-        .then( function (r) {
+        .then(function (r) {
           // if we are ever disconnected, show the connect page and wait for a reconnect
-          self.management.connection.on('disconnected', self.onDisconnect);
+          self.management.connection.on('disconnected', self.onDisconnect.bind(self));
 
           self.management.getSchema()
-            .then( function () {
+            .then(function () {
               self.QDRLog.info('got schema after connection');
               self.management.topology.setUpdateEntities([]);
               self.QDRLog.info('requesting a topology');
               self.management.topology.get() // gets the list of routers
-                .then( function () {
+                .then(function () {
                   self.QDRLog.info('got initial topology');
                   let curPath = self.$location.path();
                   let parts = curPath.split('/');
-                  let org = parts[parts.length-1];
+                  let org = parts[parts.length - 1];
                   if (org === '' || org === 'connect') {
                     org = localStorage[QDR_LAST_LOCATION] || '/overview';
                   }
-                  self.$timeout ( function () {
+                  self.$timeout(function () {
                     self.$location.path(org);
                     self.$location.search('org', null);
                     self.$location.replace();
@@ -91,17 +94,17 @@ export class QDRService {
         });
     });
   }
-  disconnect () {
+  disconnect() {
     this.management.connection.disconnect();
     delete this.management;
-    this.management = new dm(this.$location.protocol());
+    this.management = new dm(this.$location.protocol(), localStorage[QDR_INTERVAL] || DEFAULT_INTERVAL);
   }
 }
 
 QDRService.$inject = ['$log', '$timeout', '$location'];
 
-(function() {
-  console.dump = function(o) {
+(function () {
+  console.dump = function (o) {
     if (window.JSON && window.JSON.stringify)
       console.log(JSON.stringify(o, undefined, 2));
     else
