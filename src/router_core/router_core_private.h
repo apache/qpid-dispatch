@@ -234,7 +234,7 @@ typedef struct qdr_connection_work_t {
 
 ALLOC_DECLARE(qdr_connection_work_t);
 DEQ_DECLARE(qdr_connection_work_t, qdr_connection_work_list_t);
-
+void qdr_connection_work_free_CT(qdr_connection_work_t *work);
 
 //
 // Link Work
@@ -947,6 +947,7 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body,
                        uint64_t                 conn_id);
+void qdr_modules_finalize(qdr_core_t *core);
 
 /**
  * Create a new timer which will only be used inside the code thread.

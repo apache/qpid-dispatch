@@ -368,7 +368,8 @@ static void _link_route_deleted_CT(qdr_core_t *core, qdr_address_t *addr)
             lrp->proxy_state = QDR_LINK_ROUTE_PROXY_CANCELLED;
             break;
         default:
-            assert(false);
+            // close in process (connection dropped while link closing)
+            break;
         }
     }
 }

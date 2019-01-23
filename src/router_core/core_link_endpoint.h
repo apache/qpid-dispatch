@@ -117,7 +117,7 @@ typedef void (*qdrc_detach_t) (void        *link_context,
 
 
 /**
- * Event - A core-endpoint link has been cleaned up (not cleanly detached)
+ * Event - A core-endpoint link is being freed.
  *
  * This handler must free all resources associated with the link-context.
  *
@@ -263,7 +263,7 @@ void qdrc_endpoint_do_second_attach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoi
 void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_delivery_t *delivery);
 void qdrc_endpoint_do_update_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_delivery_t *delivery, bool settled);
 void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, int credit, bool drain);
-void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_error_t *error);
+void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint, qdr_error_t *error, qd_detach_type_t dt);
 void qdrc_endpoint_do_cleanup_CT(qdr_core_t *core, qdrc_endpoint_t *endpoint);
 
 #endif

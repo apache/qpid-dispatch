@@ -254,10 +254,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             break;
         }
 
-        qdr_terminus_free(work->source);
-        qdr_terminus_free(work->target);
-        free_qdr_connection_work_t(work);
-
+        qdr_connection_work_free_CT(work);
         work = DEQ_HEAD(work_list);
     }
 
@@ -880,7 +877,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     free(link->ingress_histogram);
     free(link->insert_prefix);
     free(link->strip_prefix);
-    link->name = 0;
+    free_qdr_link_t(link);
 }
 
 
@@ -1217,7 +1214,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         // Clean up the link and all its associated state.
         //
         qdr_link_cleanup_CT(core, conn, link); // link_cleanup disconnects and frees the ref.
-        free_qdr_link_t(link);
         link_ref = DEQ_HEAD(conn->links);
     }
 
@@ -1227,9 +1223,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     qdr_connection_work_t *work = DEQ_HEAD(conn->work_list);
     while (work) {
         DEQ_REMOVE_HEAD(conn->work_list);
-        qdr_terminus_free(work->source);
-        qdr_terminus_free(work->target);
-        free_qdr_connection_work_t(work);
+        qdr_connection_work_free_CT(work);
         work = DEQ_HEAD(conn->work_list);
     }
 
@@ -1572,7 +1566,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
     ++link->detach_count;
 
     if (link->core_endpoint) {
-        qdrc_endpoint_do_detach_CT(core, link->core_endpoint, error);
+        qdrc_endpoint_do_detach_CT(core, link->core_endpoint, error, dt);
         return;
 
     } else {
@@ -1600,7 +1594,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             //
             if (link->detach_send_done) {
                 qdr_link_cleanup_CT(core, conn, link);
-                free_qdr_link_t(link);
             }
 
             return;
@@ -1694,12 +1687,10 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         } else {
             // no detach can be sent out because the connection was lost
             qdr_link_cleanup_CT(core, conn, link);
-            free_qdr_link_t(link);
         }
     } else if (link->detach_send_done) {  // detach count indicates detach has been scheduled
         // I/O thread is finished sending detach, ok to free link now
         qdr_link_cleanup_CT(core, conn, link);
-        free_qdr_link_t(link);
     }
 
     //
@@ -1728,7 +1719,6 @@ static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool
         if (link->conn && link->detach_received) {
             // link is fully detached
             qdr_link_cleanup_CT(core, link->conn, link);
-            free_qdr_link_t(link);
         }
     }
 }
