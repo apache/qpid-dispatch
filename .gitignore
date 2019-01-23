@@ -9,6 +9,8 @@ tests/system_test.dir/
 tests/policy-1/policy-*.json
 tests/authservice.py
 tests/failoverserver.py
+tests/system_tests_authz_service_plugin.py
+tests/system_tests_handle_failover.py
 *.iml
 .idea
 .metadata
