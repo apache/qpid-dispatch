@@ -68,16 +68,8 @@ static void qdr_activate_connections_CT(qdr_core_t *core)
 }
 
 
-void *router_core_thread(void *arg)
+void qdr_modules_init(qdr_core_t *core)
 {
-    qdr_core_t        *core = (qdr_core_t*) arg;
-    qdr_action_list_t  action_list;
-    qdr_action_t      *action;
-
-    qdr_forwarder_setup_CT(core);
-    qdr_route_table_setup_CT(core);
-    qdr_agent_setup_CT(core);
-
     //
     // Initialize registered modules
     //
@@ -89,9 +81,41 @@ void *router_core_thread(void *arg)
             qd_log(core->log, QD_LOG_INFO, "Core module enabled: %s", module->name);
         } else
             qd_log(core->log, QD_LOG_INFO, "Core module present but disabled: %s", module->name);
-            
+
         module = DEQ_NEXT(module);
     }
+
+}
+
+
+void qdr_modules_finalize(qdr_core_t *core)
+{
+    //
+    // Finalize registered modules
+    //
+    qdrc_module_t *module = DEQ_TAIL(registered_modules);
+    while (module) {
+        if (module->enabled) {
+            qd_log(core->log, QD_LOG_INFO, "Finalizing core module: %s", module->name);
+            module->on_final(module->context);
+        }
+        module = DEQ_PREV(module);
+    }
+
+}
+
+
+void *router_core_thread(void *arg)
+{
+    qdr_core_t        *core = (qdr_core_t*) arg;
+    qdr_action_list_t  action_list;
+    qdr_action_t      *action;
+
+    qdr_forwarder_setup_CT(core);
+    qdr_route_table_setup_CT(core);
+    qdr_agent_setup_CT(core);
+
+    qdr_modules_init(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
@@ -130,18 +154,6 @@ void *router_core_thread(void *arg)
         // Activate all connections that were flagged for activation during the above processing
         //
         qdr_activate_connections_CT(core);
-    }
-
-    //
-    // Finalize registered modules
-    //
-    module = DEQ_TAIL(registered_modules);
-    while (module) {
-        if (module->enabled) {
-            qd_log(core->log, QD_LOG_INFO, "Finalizing core module: %s", module->name);
-            module->on_final(module->context);
-        }
-        module = DEQ_PREV(module);
     }
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");

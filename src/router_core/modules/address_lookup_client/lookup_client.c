@@ -752,6 +752,7 @@ static void qcm_addr_lookup_client_final_CT(void *module_context)
     qcm_lookup_client_t *client = (qcm_lookup_client_t*) module_context;
     qdrc_event_unsubscribe_CT(client->core, client->event_sub);
     client->core->addr_lookup_handler = 0;
+    qdrc_client_free_CT(client->client_api);
     free(client);
 }
 

@@ -163,6 +163,8 @@ void qdr_core_free(qdr_core_t *core)
     qdr_link_t *link = DEQ_HEAD(core->open_links);
     while (link) {
         DEQ_REMOVE_HEAD(core->open_links);
+        if (link->core_endpoint)
+            qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
         qdr_del_link_ref(&link->conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
         qdr_del_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
         free(link->name);
@@ -179,16 +181,27 @@ void qdr_core_free(qdr_core_t *core)
     qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
     while (conn) {
         DEQ_REMOVE_HEAD(core->open_connections);
+
         if (conn->conn_id) {
             qdr_del_connection_ref(&conn->conn_id->connection_refs, conn);
             qdr_route_check_id_for_deletion_CT(core, conn->conn_id);
         }
+
+        qdr_connection_work_t *work = DEQ_HEAD(conn->work_list);
+        while (work) {
+            DEQ_REMOVE_HEAD(conn->work_list);
+            qdr_connection_work_free_CT(work);
+            work = DEQ_HEAD(conn->work_list);
+        }
+
         qdr_connection_free(conn);
         conn = DEQ_HEAD(core->open_connections);
     }
 
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
+
+    qdr_modules_finalize(core);
 
     if (core->query_lock)                sys_mutex_free(core->query_lock);
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
@@ -728,3 +741,10 @@ void qdr_reset_sheaf(qdr_core_t *core, uint8_t n)
   memset(sheaf->links, 0, QDR_N_PRIORITIES * sizeof(void *));
 }
 
+
+void qdr_connection_work_free_CT(qdr_connection_work_t *work)
+{
+    qdr_terminus_free(work->source);
+    qdr_terminus_free(work->target);
+    free_qdr_connection_work_t(work);
+}

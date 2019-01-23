@@ -100,8 +100,7 @@ void qdrc_endpoint_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t 
 {
     qdr_link_outbound_detach_CT(core, ep->link, error, QDR_CONDITION_NONE, true);
     if (ep->link->detach_count == 2) {
-        ep->link->core_endpoint = 0;
-        free_qdrc_endpoint_t(ep);
+        qdrc_endpoint_do_cleanup_CT(core, ep);
     }
 }
 
@@ -205,9 +204,13 @@ void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit,
 }
 
 
-void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error)
+void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error, qd_detach_type_t dt)
 {
-    if (ep->link->detach_count == 1) {
+    if (dt == QD_LOST) {
+        qdrc_endpoint_do_cleanup_CT(core, ep);
+        qdr_error_free(error);
+
+    } else if (ep->link->detach_count == 1) {
         if (!!ep->desc->on_first_detach)
             ep->desc->on_first_detach(ep->link_context, error);
         else {
@@ -219,8 +222,7 @@ void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error
             ep->desc->on_second_detach(ep->link_context, error);
         else
             qdr_error_free(error);
-        ep->link->core_endpoint = 0;
-        free_qdrc_endpoint_t(ep);
+        qdrc_endpoint_do_cleanup_CT(core, ep);
     }
 }
 
@@ -229,6 +231,7 @@ void qdrc_endpoint_do_cleanup_CT(qdr_core_t *core, qdrc_endpoint_t *ep)
 {
     if (!!ep->desc->on_cleanup)
         ep->desc->on_cleanup(ep->link_context);
+    ep->link->core_endpoint = 0;
     free_qdrc_endpoint_t(ep);
 }
 

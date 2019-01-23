@@ -341,17 +341,13 @@ static void on_first_detach(void        *link_context,
     if (ep->node->behavior == TEST_NODE_ECHO) {
         if (!!ep->peer) {
             qdrc_endpoint_detach_CT(ep->node->core, ep->peer->ep, error);
+            ep->peer = 0;
             return;
         }
     }
 
     qdrc_endpoint_detach_CT(ep->node->core, ep->ep, 0);
-
-    if (ep->in_action_list) {
-        ep->detached = true;
-    } else {
-        free_endpoint(ep);
-    }
+    qdr_error_free(error);
 }
 
 
@@ -364,23 +360,26 @@ static void on_second_detach(void        *link_context,
         if (ep->node->behavior == TEST_NODE_ECHO) {
             if (!!ep->peer) {
                 qdrc_endpoint_detach_CT(ep->node->core, ep->peer->ep, error);
-                if (ep->peer->in_action_list)
-                    ep->peer->detached = true;
-                else
-                    free_endpoint(ep->peer);
+                error = 0;
             }
         }
-
-        if (ep->in_action_list)
-            ep->detached = true;
-        else
-            free_endpoint(ep);
     }
+    qdr_error_free(error);
+    // on_cleanup(ep) is called on return
 }
 
 
 static void on_cleanup(void *link_context)
 {
+    if (!link_context) return;
+
+    test_endpoint_t *ep = (test_endpoint_t*) link_context;
+    if (ep->in_action_list) {
+        ep->detached = true;
+        ep->ep = 0;
+    } else {
+        free_endpoint(ep);
+    }
 }
 
 
