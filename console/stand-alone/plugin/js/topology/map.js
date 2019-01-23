@@ -51,7 +51,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
       color = this.$scope.mapOptions.oceanColor;
     d3.select('g.geo rect.ocean')
       .style('fill', color);
-    if (this.$scope.legend.status.mapOpen) {
+    if (this.$scope.legendOptions.map.open) {
       d3.select('#main_container')
         .style('background-color', color);
     } else {
@@ -117,7 +117,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
 
       this.geo = svg.append('g')
         .attr('class', 'geo')
-        .style('opacity', this.$scope.legend.status.mapOpen ? '1' : '0');
+        .style('opacity', this.$scope.legendOptions.map.open ? '1' : '0');
 
       this.geo.append('rect')
         .attr('class', 'ocean')
@@ -125,7 +125,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
         .attr('height', height)
         .attr('fill', '#FFF');
 
-      if (this.$scope.legend.status.mapOpen) {
+      if (this.$scope.legendOptions.map.open) {
         this.svg.call(this.zoom)
           .on('dblclick.zoom', null);
       }
@@ -193,7 +193,7 @@ export class BackgroundMap { // eslint-disable-line no-unused-vars
   }
 
   zoomed() {
-    if (d3.event && !this.$scope.current_node && !this.$scope.mousedown_node && this.$scope.legend.status.mapOpen) {
+    if (d3.event && !this.$scope.current_node && !this.$scope.mousedown_node && this.$scope.legendOptions.map.open) {
       let scale = d3.event.scale,
         t = d3.event.translate,
         dx = t[0] - this.last.translate[0],

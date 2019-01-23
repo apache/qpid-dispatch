@@ -48,7 +48,7 @@ export class TopologyController {
     this.controllerName = "QDR.TopologyController";
 
     let QDRLog = new QDRLogger($log, "TopologyController");
-    const TOPOOPTIONSKEY = "topoOptions";
+    const TOPOOPTIONSKEY = "topoLegendOptions";
 
     //  - nodes is an array of router/client info. these are the circles
     //  - links is an array of connections between the routers. these are the lines with arrows
@@ -59,20 +59,23 @@ export class TopologyController {
 
     // restore the state of the legend sections
     $scope.legendOptions = angular.fromJson(localStorage[TOPOOPTIONSKEY]) || {
-      showTraffic: false,
-      trafficType: "dots",
-      mapOpen: false,
-      legendOpen: true
+      traffic: {
+        open: false,
+        dots: false,
+        congestion: false
+      },
+      legend: {
+        open: true
+      },
+      map: {
+        open: false
+      }
     };
-    if (typeof $scope.legendOptions.mapOpen == "undefined")
-      $scope.legendOptions.mapOpen = false;
-    if (typeof $scope.legendOptions.legendOpen == "undefined")
-      $scope.legendOptions.legendOpen = false;
     let backgroundMap = new BackgroundMap(
       $scope,
       // notify: called each time a pan/zoom is performed
       function () {
-        if ($scope.legend.status.mapOpen) {
+        if ($scope.legendOptions.map.open) {
           // set all the nodes' x,y position based on their saved lon,lat
           forceData.nodes.setXY(backgroundMap);
           forceData.nodes.savePositions();
@@ -86,17 +89,6 @@ export class TopologyController {
     let urlPrefix = $location.absUrl();
     urlPrefix = urlPrefix.split("#")[0];
 
-    if (!$scope.legendOptions.trafficType)
-      $scope.legendOptions.trafficType = "dots";
-    $scope.legend = {
-      status: {
-        legendOpen: true,
-        optionsOpen: true,
-        mapOpen: false
-      }
-    };
-    $scope.legend.status.optionsOpen = $scope.legendOptions.showTraffic;
-    $scope.legend.status.mapOpen = $scope.legendOptions.mapOpen;
     let traffic = new Traffic(
       $scope,
       $timeout,
@@ -104,41 +96,46 @@ export class TopologyController {
       separateAddresses,
       Nodes.radius("inter-router"),
       forceData,
-      $scope.legendOptions.trafficType,
+      ["dots", "congestion"].filter(t => $scope.legendOptions.traffic[t]),
       urlPrefix
     );
 
-    // the showTraaffic checkbox was just toggled (or initialized)
-    $scope.$watch("legend.status.optionsOpen", function () {
-      $scope.legendOptions.showTraffic = $scope.legend.status.optionsOpen;
+    let changeTraffic = function (checked, type) {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
-      if ($scope.legend.status.optionsOpen) {
-        traffic.start();
-      } else {
-        traffic.stop();
-        traffic.remove();
-        restart();
+      if ($scope.legendOptions.traffic.open) {
+        if (checked) {
+          traffic.addAnimationType(type, separateAddresses, Nodes.radius("inter-router"));
+        } else {
+          traffic.remove(type);
+        }
       }
+      restart();
+    };
+    // the dots animation was checked/unchecked
+    $scope.$watch("legendOptions.traffic.dots", function (newValue) {
+      changeTraffic(newValue, "dots");
     });
-    // the traffic type was just changed or initialized
-    $scope.$watch("legendOptions.trafficType", function () {
+    // the congestion animation was checked/unchecked
+    $scope.$watch("legendOptions.traffic.congestion", function (newValue) {
+      changeTraffic(newValue, "congestion");
+    });
+    // the traffic section was opened/closed
+    $scope.$watch("legendOptions.traffic.open", function () {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
-      if ($scope.legendOptions.showTraffic) {
-        restart();
-        traffic.setAnimationType(
-          $scope.legendOptions.trafficType,
-          separateAddresses,
-          Nodes.radius("inter-router")
-        );
-        traffic.start();
+      if ($scope.legendOptions.traffic.open) {
+        // opened the traffic area
+        changeTraffic($scope.legendOptions.traffic.dots, "dots");
+        changeTraffic($scope.legendOptions.traffic.congestion, "congestion");
+      } else {
+        traffic.remove();
       }
+      restart();
     });
     // the background map was shown or hidden
-    $scope.$watch("legend.status.mapOpen", function (newvalue, oldvalue) {
-      $scope.legendOptions.mapOpen = $scope.legend.status.mapOpen;
+    $scope.$watch("legendOptions.map.open", function (newvalue, oldvalue) {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
       // map was shown
-      if ($scope.legend.status.mapOpen && backgroundMap.initialized) {
+      if ($scope.legendOptions.map.open && backgroundMap.initialized) {
         // respond to pan/zoom events
         backgroundMap.restartZoom();
         // set the main_container div's background color to the ocean color
@@ -260,7 +257,7 @@ export class TopologyController {
     // initialize the nodes and links array from the QDRService.topology._nodeInfo object
     var initForceGraph = function () {
       if (width < 768) {
-        $scope.legend.status.mapOpen = false;
+        $scope.legendOptions.map.open = false;
       }
       let nodeInfo = QDRService.management.topology.nodeInfo();
       let nodeCount = Object.keys(nodeInfo).length;
@@ -283,7 +280,7 @@ export class TopologyController {
         // read the map data from the data file and build the map layer
         backgroundMap.init($scope, svg, width, height).then(function () {
           forceData.nodes.saveLonLat(backgroundMap);
-          backgroundMap.setMapOpacity($scope.legend.status.mapOpen);
+          backgroundMap.setMapOpacity($scope.legendOptions.map.open);
         });
         addDefs(svg);
         addGradient(svg);
@@ -512,8 +509,8 @@ export class TopologyController {
 
       // reset the markers based on current highlighted/selected
       if (
-        !$scope.legend.status.optionsOpen ||
-        $scope.legendOptions.trafficType === "dots"
+        !$scope.legendOptions.traffic.open ||
+        !$scope.legendOptions.traffic.congestion
       ) {
         path
           .select(".link")

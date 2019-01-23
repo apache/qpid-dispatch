@@ -221,16 +221,16 @@ td.more-info {
 <div class="qdrTopology" ng-controller="QDR.TopologyController">
     <div class="legend-container page-menu navbar-collapse collapse">
         <uib-accordion id="topo_legend" close-others="false">
-            <div uib-accordion-group class="panel-default" is-open="legend.status.optionsOpen" heading="Show Traffic">
+            <div uib-accordion-group class="panel-default" is-open="legendOptions.traffic.open" heading="Show Traffic">
                 <ul class="options">
-                    <li class="legend-sublist" ng-hide="!legendOptions.showTraffic">
+                    <li class="legend-sublist" ng-hide="!legendOptions.traffic.open">
                         <ul>
                             <li><label>
-                                    <input type='radio' ng-model="legendOptions.trafficType" value="dots" />
+                                    <input type='checkbox' ng-model="legendOptions.traffic.dots" value="dots" />
                                     Message path by address
                                 </label></li>
                             <li>
-                                <ul class="addresses" ng-show="legendOptions.trafficType === 'dots'">
+                                <ul class="addresses" ng-show="legendOptions.traffic.dots">
                                     <li ng-repeat="(address, color) in addresses" class="legend-line">
                                         <checkbox style="background-color: {{addressColors[address]}};" title="{{address}}"
                                             ng-change="addressFilterChanged()" ng-model="addresses[address]"
@@ -244,11 +244,11 @@ td.more-info {
                         </ul>
                         <ul>
                             <li><label>
-                                    <input type='radio' ng-model="legendOptions.trafficType" value="congestion" />
+                                    <input type='checkbox' ng-model="legendOptions.traffic.congestion" value="congestion" />
                                     Link utilization
                                 </label></li>
                             <li>
-                                <ul class="congestion" ng-show="legendOptions.trafficType === 'congestion'">
+                                <ul class="congestion" ng-show="legendOptions.traffic.congestion">
                                     <li>
                                         <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
                                             version="1.1" preserveAspectRatio="xMidYMid meet" width="140" height="40">
@@ -273,10 +273,10 @@ td.more-info {
                     </li>
                 </ul>
             </div>
-            <div uib-accordion-group class="panel-default" is-open="legend.status.legendOpen" heading="Legend">
+            <div uib-accordion-group class="panel-default" is-open="legendOptions.legend.open" heading="Legend">
                 <div id="topo_svg_legend"></div>
             </div>
-            <div id="backgroundMap" uib-accordion-group class="panel-default" is-open="legend.status.mapOpen" heading="Background map">
+            <div id="backgroundMap" uib-accordion-group class="panel-default" is-open="legendOptions.map.open" heading="Background map">
                 <div id="topo_mapOptions">
                     <div class="colorPicker">
                         <ul>

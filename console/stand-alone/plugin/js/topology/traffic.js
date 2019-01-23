@@ -44,19 +44,22 @@ export class Traffic {
     converter,
     radius,
     topology,
-    type,
+    types,
     prefix
   ) {
     $scope.addressColors = {};
     this.QDRService = QDRService;
-    this.type = type; // moving dots or colored path
     this.prefix = prefix; // url prefix used in svg url()s
+    this.types = [];
+    this.viss = [];
     this.topology = topology; // contains the list of router nodes
     this.$scope = $scope;
     this.$timeout = $timeout;
     // internal variables
     this.interval = null; // setInterval handle
-    this.setAnimationType(type, converter, radius);
+    types.forEach(function (t) {
+      this.addAnimationType(t, converter, radius);
+    }.bind(this));
   }
   // stop updating the traffic data
   stop() {
@@ -67,26 +70,37 @@ export class Traffic {
   }
   // start updating the traffic data
   start() {
+    this.stop();
     this.doUpdate();
     this.interval = setInterval(this.doUpdate.bind(this), transitionDuration);
   }
-  // remove any animations that are in progress
-  remove() {
-    if (this.vis) this.vis.remove();
+  // remove animations that are in progress
+  remove(type) {
+    let all = !(type);
+    let i = this.viss.length - 1;
+    while (i >= 0) {
+      if (all || this.viss[i].type === type) {
+        this.viss[i].remove();
+        this.viss.splice(i, 1);
+      }
+      i--;
+    }
+    if (this.viss.length === 0) {
+      this.stop();
+    }
   }
-  // called when one of the address checkboxes is toggled
-  setAnimationType(type, converter, radius) {
-    this.stop();
-    this.remove();
-    this.type = type;
-    this.vis =
-      type === "dots" ?
+  // called when one of the address checkboxes is toggled on
+  addAnimationType(type, converter, radius) {
+    if (!this.viss.some(v => v.type === type)) {
+      this.viss.push(type === "dots" ?
         new Dots(this, converter, radius) :
-        new Congestion(this);
+        new Congestion(this));
+    }
+    this.start();
   }
   // called periodically to refresh the traffic flow
   doUpdate() {
-    this.vis.doUpdate();
+    this.viss.forEach(v => v.doUpdate());
   }
 }
 
@@ -118,6 +132,7 @@ class TrafficAnimation {
 class Congestion extends TrafficAnimation {
   constructor(traffic) {
     super(traffic);
+    this.type = "congestion";
     this.init_markerDef();
   }
   init_markerDef() {
@@ -304,6 +319,7 @@ class Congestion extends TrafficAnimation {
 class Dots extends TrafficAnimation {
   constructor(traffic, converter, radius) {
     super(traffic);
+    this.type = "dots";
     this.excludedAddresses = localStorage[CHORDFILTERKEY] ?
       JSON.parse(localStorage[CHORDFILTERKEY]) :
       [];
