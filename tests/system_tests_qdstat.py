@@ -242,6 +242,7 @@ try:
 
         def get_ssl_args(self):
             args = dict(
+                sasl_external = ['--sasl-mechanisms', 'EXTERNAL'],
                 trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
                 bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
                 client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
@@ -316,6 +317,9 @@ try:
         def test_ssl_bad_trustfile_to_auth(self):
             self.ssl_test_bad('auth_s', ['bad_trustfile', 'client_cert_all'])
 
+        def test_ssl_cert_explicit_external_to_auth(self):
+            self.ssl_test('auth_s', ['sasl_external', 'client_cert_all'])
+
 
         # Unsecured SSL listener, allows non-SSL
         def test_ssl_none_to_unsecured(self):
@@ -349,6 +353,7 @@ try:
         """
         def get_ssl_args(self):
             args = dict(
+                sasl_external = ['--sasl-mechanisms', 'EXTERNAL'],
                 trustfile = ['--ssl-trustfile', self.ssl_file('ca-certificate.pem')],
                 bad_trustfile = ['--ssl-trustfile', self.ssl_file('bad-ca-certificate.pem')],
                 client_cert = ['--ssl-certificate', self.ssl_file('client-certificate.pem')],
