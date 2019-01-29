@@ -46,7 +46,7 @@ ALLOC_DECLARE(qd_parsed_turbo_t);
 ALLOC_DEFINE(qd_parsed_turbo_t);
 
 /**
- * size = the number of bytes following the tag
+ * size = the number of bytes following tag:size (payload, including the count)
  * count = the number of elements. Applies only to compound structures
  */
 static char *get_type_info(qd_iterator_t *iter, uint8_t *tag, uint32_t *size, uint32_t *count, uint32_t *length_of_size, uint32_t *length_of_count)
@@ -723,7 +723,7 @@ const char *qd_parse_annotations_v1(
             qd_iterator_t *key_iter =
                 qd_iterator_buffer(anno->bufptr.buffer,
                                 anno->bufptr.cursor - qd_buffer_base(anno->bufptr.buffer),
-                                anno->size,
+                                anno->size + anno->length_of_size,
                                 ITER_VIEW_ALL);
             assert(key_iter);
 
@@ -739,7 +739,7 @@ const char *qd_parse_annotations_v1(
             qd_iterator_t *val_iter =
                 qd_iterator_buffer(anno_val->bufptr.buffer,
                                 anno_val->bufptr.cursor - qd_buffer_base(anno_val->bufptr.buffer),
-                                anno_val->size,
+                                anno_val->size + anno_val->length_of_size,
                                 ITER_VIEW_ALL);
             assert(val_iter);
 
