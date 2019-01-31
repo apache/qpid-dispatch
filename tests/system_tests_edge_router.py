@@ -661,6 +661,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+
 class LinkRouteProxyTest(TestCase):
     """
     Test edge router's ability to proxy configured and connection-scoped link
@@ -762,38 +763,6 @@ class LinkRouteProxyTest(TestCase):
             tr.queue.get(timeout=TIMEOUT)
         tr.stop()
 
-    def _test_attach_weirdness(self, service):
-        """Exercise a service that simulates link attach failures"""
-
-        # create a consumer, do not wait for link to open, reattach
-        # on received detach
-        rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
-                               wait=False, recover_link=True)
-        service.link_dropped.wait(timeout=TIMEOUT)
-        service.join() # wait for thread exit
-        del service
-
-        # now attach a working service to the same address,
-        # make sure it all works
-        fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
-
-        if True:   # 
-            rx.stop()
-            fs.join()
-        else:
-            tx = AsyncTestSender(self.EA1.listener, 'CfgLinkRoute1/foo',
-
-                                 body="HEY HO LET'S GO!")
-            tx.wait()
-
-            msg = rx.queue.get(timeout=TIMEOUT)
-            self.assertTrue(msg.body == "HEY HO LET'S GO!")
-            rx.stop()
-            fs.join()
-            self.assertEqual(1, fs.in_count)
-            self.assertEqual(1, fs.out_count)
-
     def test_01_immedate_detach_reattach(self):
         """
         Have a service for a link routed address abruptly detach
@@ -815,7 +784,39 @@ class LinkRouteProxyTest(TestCase):
 
         ad = AttachDropper(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1")
-        self._test_attach_weirdness(ad)
+
+        # create a consumer, do not wait for link to open, reattach
+        # on received detach
+        rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
+                               wait=False, recover_link=True)
+        ad.link_dropped.wait(timeout=TIMEOUT)
+        ad.join() # wait for thread exit
+
+        # wait until prefix addresses are removed
+        self._wait_address_gone(self.INT_B, "CCfgLinkRoute1")
+        self._wait_address_gone(self.INT_B, "DCfgLinkRoute1")
+        rx.stop()
+
+        # now attach a working service to the same address,
+        # make sure it all works
+        fs = FakeService(self.EA1.route_container)
+        self.INT_B.wait_address("CfgLinkRoute1")
+        rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
+                               wait=False, recover_link=True)
+        tx = AsyncTestSender(self.EA1.listener, 'CfgLinkRoute1/foo',
+                             body="HEY HO LET'S GO!")
+        tx.wait()
+
+        msg = rx.queue.get(timeout=TIMEOUT)
+        self.assertTrue(msg.body == "HEY HO LET'S GO!")
+        rx.stop()
+        fs.join()
+        self.assertEqual(1, fs.in_count)
+        self.assertEqual(1, fs.out_count)
+
+        # wait until addresses are cleaned up
+        self._wait_address_gone(self.INT_A, "CfgLinkRoute1")
+        self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
 
     def test_02_thrashing_link_routes(self):
         """
