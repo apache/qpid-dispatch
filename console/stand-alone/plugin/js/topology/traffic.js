@@ -133,6 +133,7 @@ class Congestion extends TrafficAnimation {
   constructor(traffic) {
     super(traffic);
     this.type = "congestion";
+    this.stopped = false;
     this.init_markerDef();
   }
   init_markerDef() {
@@ -161,6 +162,7 @@ class Congestion extends TrafficAnimation {
     return null;
   }
   doUpdate() {
+    this.stopped = false;
     let self = this;
     this.traffic.QDRService.management.topology.ensureAllEntities(
       [{
@@ -170,6 +172,9 @@ class Congestion extends TrafficAnimation {
         entity: "connection"
       }],
       function () {
+        // animation was stopped between the ensureAllEntities request and the response
+        if (self.stopped)
+          return;
         let links = {};
         let nodeInfo = self.traffic.QDRService.management.topology.nodeInfo();
         const nodes = self.traffic.topology.nodes.nodes;
@@ -304,6 +309,7 @@ class Congestion extends TrafficAnimation {
     return color(Math.max(0, Math.min(3, v)));
   }
   remove() {
+    this.stopped = true;
     d3.select("#SVG_ID")
       .selectAll("path.traffic")
       .classed("traffic", false);
@@ -416,6 +422,9 @@ class Dots extends TrafficAnimation {
         attrs: ["id", "nextHop"]
       }],
       function () {
+        // if we were stopped between the request and response, just exit
+        if (self.stopped)
+          return;
         // get the ingressHistogram data for all routers
         self.chordData.getMatrix().then(self.render.bind(self), function (e) {
           console.log("Could not get message histogram" + e);
