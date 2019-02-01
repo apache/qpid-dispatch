@@ -130,7 +130,11 @@ var vendor_scripts = function () {
   var vendor_files = vendor_lines.filter(function (line) {
     return (!line.startsWith('-') && line.length > 0);
   });
-  return gulp.src(vendor_files)
+  return gulp.src(vendor_files, { allowEmpty: true })
+    .on('error', function (src) {
+      console.error(src.message);
+      this.emit('end');
+    })
     .pipe(maps.init())
     .pipe(uglify())
     .pipe(concat('vendor.min.js'))

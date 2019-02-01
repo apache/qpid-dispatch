@@ -38,8 +38,11 @@ node_modules/d3-geo/dist/d3-geo.js
 node_modules/d3-geo-projection/dist/d3-geo-projection.js
 node_modules/d3-queue/build/d3-queue.min.js
 node_modules/d3-time/build/d3-time.min.js
+node_modules/d3-time/dist/d3-time.min.js
 node_modules/d3-time-format/build/d3-time-format.min.js
+node_modules/d3-time-format/dist/d3-time-format.min.js
 node_modules/d3-path/build/d3-path.min.js
+node_modules/d3-path/dist/d3-path.min.js
 node_modules/topojson-client/dist/topojson-client.js
 node_modules/c3/c3.min.js
 node_modules/notifyjs-browser/dist/notify.js
