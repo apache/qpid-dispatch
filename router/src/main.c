@@ -189,7 +189,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, b
                 int getcwd_error = 0;
                 cur_path = (char *) calloc(path_size, sizeof(char));
 
-                while ( getcwd(cur_path, path_size) == NULL ) {
+                while ((cur_path = getcwd(cur_path, path_size)) == NULL) {
                     free(cur_path);
                     if ( errno != ERANGE ) {
                         // If unable to get current directory
