@@ -69,25 +69,6 @@ void _qd_policy_deny_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_co
 void _qd_policy_deny_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *qd_conn, const char *condition);
 
 
-/** Perform user name substitution into proposed link name.
- * The scheme is to substitute '${user}' into the incoming link name whereever the
- * the username is present. Then it can be matched against the original template with
- * a minimum of substitutions. For example:
- * uname    : joe
- * proposed : temp_joe_1
- * obuf     : temp_${user}_1
- * Note: substituted names are limited to osize characters
- * Note: only the first (leftmost) user name is substituted.
- *
- * @param[in] uname auth user name
- * @param[in] proposed the link name from the AMQP frame
- * @param[out] obuf where the constructed link name is returned
- * @param[in] osize size in bytes of obuf
- * @return NULL if uname is not present in proposed link name.
- */
-char * _qd_policy_link_user_name_subst(const char *uname, const char *proposed, char *obuf, int osize);
-
-
 /** Approve link by source/target name.
  * This match supports trailing wildcard match:
  *    proposed 'temp-305' matches allowed 'temp-*'
