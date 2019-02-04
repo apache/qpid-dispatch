@@ -267,6 +267,7 @@ export class TopologyController {
       mouseover_node = null;
       selected_node = null;
 
+      d3.select("#SVG_ID").remove();
       if (d3.select("#SVG_ID").empty()) {
         svg = d3
           .select("#topology")
@@ -623,7 +624,7 @@ export class TopologyController {
           );
         });
 
-      appendCircle(enterCircle)
+      appendCircle(enterCircle, urlPrefix)
         .on("mouseover", function (d) {
           // mouseover a circle
           $scope.current_node = d;
@@ -795,8 +796,8 @@ export class TopologyController {
 
     function updateLegend() {
       // dynamically create/update the legend based on which node types are present
-      let lsvg = new Legend(svg);
-      lsvg.update(svg, QDRLog, urlPrefix);
+      let lsvg = new Legend(svg, QDRLog, urlPrefix);
+      lsvg.update(svg);
     }
 
     function showToolTip(title, event) {

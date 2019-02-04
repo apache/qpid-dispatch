@@ -1064,9 +1064,6 @@ svg {
   circle.node.inter-router {
       fill: #EAEAEA;
   }
-  circle.node.normal {
-    fill: #FAFAFA;
-  }
   circle.node.normal.in {
       fill: #F0F000;
   }
