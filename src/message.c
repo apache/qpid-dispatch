@@ -1484,7 +1484,9 @@ void qd_message_send(qd_message_t *in_msg,
             // Declare the message to be sent,
             msg->send_complete = true;
             // the link has an outgoing deliver. abort it.
-            pn_delivery_abort(pn_link_current(pnl));
+            if (!pn_delivery_aborted(pn_link_current(pnl))) {
+                pn_delivery_abort(pn_link_current(pnl));
+            }
             return;
         }
 
@@ -1591,7 +1593,9 @@ void qd_message_send(qd_message_t *in_msg,
         if (msg->content->aborted) {
             if (pn_link_current(pnl)) {
                 msg->send_complete = true;
-                pn_delivery_abort(pn_link_current(pnl));
+                if (!pn_delivery_aborted(pn_link_current(pnl))) {
+                    pn_delivery_abort(pn_link_current(pnl));
+                }
             }
             break;
         }
@@ -1655,7 +1659,9 @@ void qd_message_send(qd_message_t *in_msg,
                 msg->cursor.cursor = 0;
 
                 if (msg->content->aborted) {
-                    pn_delivery_abort(pn_link_current(pnl));
+                    if (!pn_delivery_aborted(pn_link_current(pnl))) {
+                        pn_delivery_abort(pn_link_current(pnl));
+                    }
                 }
             }
             else {
