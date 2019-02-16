@@ -17,7 +17,12 @@
 ## under the License.
 ##
 
-# Set default build type. Must come before project() which sets default to ""
+cmake_minimum_required(VERSION 2.8.12)
+project(qpid-dispatch C)
+
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
+
+# Set default build type. Must use FORCE because project() sets default to ""
 if (NOT CMAKE_BUILD_TYPE)
   set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
     "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
@@ -27,17 +32,12 @@ if (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
 message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
 
-project(qpid-dispatch C)
-
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
-
 # Build time switch to turn off memory pooling.
 option(USE_MEMORY_POOL "Use per-thread memory pools" ON)
 option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
-cmake_minimum_required(VERSION 2.6.2)
 include(CheckLibraryExists)
 include(CheckSymbolExists)
 include(CheckFunctionExists)
