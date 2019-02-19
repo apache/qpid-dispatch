@@ -19,8 +19,8 @@
 
 # Downloads and installs apache proton and qpid dispatch on the latest version of Fedora and starts the dispatch router
 # /main is the top level folder under which proton (/main/qpid-proton/) and dispatch (/main/qpid-dispatch) source code is downloaded from github
-# /usr/local/lib64 is the folder in which the proton artifacts are installed.
-# /usr/local/sbin is the folder in which dispatch executable installed
+# /usr/lib64 is the folder in which the proton artifacts are installed.
+# /usr/sbin is the folder in which dispatch executable installed
 # Copy this docker file to your local folder. Build the docker file like this - sudo docker build -t <username>/dispatch --file=Dockerfile-fedora . (don't miss the dot at the end)
 # To run it - sudo docker run -i -t <username>/dispatch (this will launch the dispatch router)
 
@@ -50,5 +50,5 @@ RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make install
 # RUN ctest -VV
 
 # Start the dispatch router
-CMD ["qdrouterd"]
+ENTRYPOINT ["qdrouterd"]
 # CMD ["/bin/bash"]

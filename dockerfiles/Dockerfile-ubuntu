@@ -52,5 +52,5 @@ ENV PYTHONPATH=/usr/lib/python2.7/site-packages
 WORKDIR /qpid-dispatch
 
 # Start the dispatch router
-CMD ["qdrouterd"]
+ENTRYPOINT ["qdrouterd"]
 #CMD ["/bin/bash"]
