@@ -19,12 +19,12 @@
 
 # Downloads, builds and installs apache proton and qpid dispatch on Centos and starts the dispatch router
 # /main is the top level folder under which proton (/main/qpid-proton/) and dispatch (/main/qpid-dispatch) source code is downloaded from github
-# /usr/local/lib64 is the folder in which the proton artifacts are installed.
-# /usr/local/sbin is the folder in which dispatch executable installed
+# /usr/lib64 is the folder in which the proton artifacts are installed.
+# /usr/sbin is the folder in which dispatch executable installed
 
 
 # Copy this docker file to your local folder. Build the docker image like this:
-# > sudo docker build -t <username>/dispatch --file=Dockerfile-centos .
+# > sudo docker build -t <username>/dispatch --file=Dockerfile .
 
 # "<username>/dispatch" is a convention, you can call it whatever you want
 
@@ -67,5 +67,5 @@ RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make install
 # RUN ctest -VV
 
 # Start the dispatch router
-CMD ["qdrouterd"]
+ENTRYPOINT ["qdrouterd"]
 
