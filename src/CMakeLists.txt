@@ -35,21 +35,6 @@ add_custom_command (
   OUTPUT ${GENERATED_SOURCES}
   COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   DEPENDS ${GENERATOR_DEPENDS})
-  
-if(NOT LIBWEBSOCKETS_FOUND)
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/router_core
-  ${CMAKE_CURRENT_BINARY_DIR}
-  )
-else()
-include_directories(
-  ${CMAKE_CURRENT_SOURCE_DIR}
-  ${CMAKE_CURRENT_SOURCE_DIR}/router_core
-  ${CMAKE_CURRENT_BINARY_DIR}
-  ${LIBWEBSOCKETS_INCLUDE_DIRS}
-  )
-endif()
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
@@ -121,11 +106,28 @@ set(qpid_dispatch_SOURCES
   python_utils.c
   )
 
+set(qpid_dispatch_INCLUDES
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/router_core
+  ${CMAKE_CURRENT_BINARY_DIR}
+  )
+
+set(qpid_dispatch_LIBRARIES
+  ${Proton_Core_LIBRARIES}
+  ${Proton_Proactor_LIBRARIES}
+  ${CMAKE_THREAD_LIBS_INIT}
+  ${rt_lib}
+  ${CMAKE_DL_LIBS}
+  ${PYTHON_LIBRARIES}
+  )
+
 # USE_LIBWEBSOCKETS is true only if LIBWEBSOCKETS_FOUND
 if(USE_LIBWEBSOCKETS)
-  set(qpid_dispatch_SOURCES ${qpid_dispatch_SOURCES} http-libwebsockets.c)
+  list(APPEND qpid_dispatch_SOURCES http-libwebsockets.c)
+  list(APPEND qpid_dispatch_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
+  list(APPEND qpid_dispatch_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
 else(USE_LIBWEBSOCKETS)
-  set(qpid_dispatch_SOURCES ${qpid_dispatch_SOURCES} http-none.c)
+  list(APPEND qpid_dispatch_SOURCES http-none.c)
 endif(USE_LIBWEBSOCKETS)
 
 if(USE_MEMORY_POOL)
@@ -141,11 +143,8 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-if(NOT LIBWEBSOCKETS_FOUND)
-target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES})
-else()
-target_link_libraries(qpid-dispatch ${Proton_Core_LIBRARIES} ${Proton_Proactor_LIBRARIES} ${pthread_lib} ${rt_lib} ${dl_lib} ${PYTHON_LIBRARIES} ${LIBWEBSOCKETS_LIBRARIES})
-endif()
+target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
+target_link_libraries(qpid-dispatch ${qpid_dispatch_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${CATCH_UNDEFINED}"
   )
