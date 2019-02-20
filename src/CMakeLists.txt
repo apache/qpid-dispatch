@@ -134,20 +134,18 @@ if(USE_MEMORY_POOL)
   list(APPEND qpid_dispatch_SOURCES alloc_pool.c)
 endif()
 
-# strict aliasing optimization is only available in GCC
+# DISPATCH-654 There are, in fact, no strict-aliasing violations and newer compilers don't complain.
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
     set_property(
       SOURCE python_embedded.c router_pynode.c
-      PROPERTY COMPILE_FLAGS -Wno-strict-aliasing
-    )
+      PROPERTY COMPILE_FLAGS -Wno-strict-aliasing)
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
 target_link_libraries(qpid-dispatch ${qpid_dispatch_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
-  LINK_FLAGS "${CATCH_UNDEFINED}"
-  )
+  LINK_FLAGS "${CATCH_UNDEFINED}")
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
