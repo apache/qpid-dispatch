@@ -152,6 +152,7 @@ set_target_properties(qpid-dispatch PROPERTIES
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 
-set (QPID_DISPATCH_LIB "libqpid-dispatch.so")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+# https://stackoverflow.com/questions/54771452/expanding-a-variable-cmakedefine-and-generator-expression-in-template-file
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" CONFIG_H_IN)
+string(CONFIGURE "${CONFIG_H_IN}" CONFIG_H_TMP)
+file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/config.h" CONTENT "${CONFIG_H_TMP}")
