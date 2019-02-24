@@ -213,8 +213,8 @@ struct qd_http_server_t {
     work_queue_t work;
     qd_log_source_t *log;
     struct lws_context *context;
-    pn_timestamp_t now;         /* Cache current time in thread_run */
-    pn_timestamp_t next_tick;   /* Next requested tick service */
+    qd_timestamp_t now;         /* Cache current time in thread_run */
+    qd_timestamp_t next_tick;   /* Next requested tick service */
 };
 
 static void work_queue_destroy(work_queue_t *wq) {
