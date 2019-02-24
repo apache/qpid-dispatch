@@ -33,7 +33,7 @@
  */
 
 typedef struct qd_timer_t qd_timer_t;
-/** Absolute time stamp, milliseconds since epoch */
+/** Absolute time stamp from monotonic clock source, milliseconds since arbitrary (fixed) instant */
 typedef int64_t qd_timestamp_t;
 /** Relative duration in milliseconds */
 typedef int64_t qd_duration_t;
