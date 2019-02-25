@@ -836,7 +836,7 @@
                 },
                 "httpRootDir": {
                     "type": "path",
-                    "description": "Serve HTTP files from this directory, defaults to the installed stand-alone console directory",
+                    "description": "Serve static HTTP files from this directory.",
                     "deprecationName": "httpRoot",
                     "create": true
                 },
