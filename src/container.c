@@ -401,8 +401,14 @@ void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd
 
     while(to_free) {
         if (!conn_closed) {
-            if (to_free->pn_link)
+            if (to_free->pn_link) {
+                qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(to_free->pn_link);
+                if (qd_link) {
+                    qd_link->pn_link = 0;
+                }
+                pn_link_set_context(to_free->pn_link, 0);
                 pn_link_free(to_free->pn_link);
+            }
             if (to_free->pn_session)
                 pn_session_free(to_free->pn_session);
         }
