@@ -43,7 +43,9 @@ struct qdr_delivery_t {
     qd_message_t           *msg;
     qd_iterator_t          *to_addr;
     qd_iterator_t          *origin;
-    uint64_t                disposition;
+    uint64_t                disposition;         ///< local disposition, will be pushed to remote endpoint
+    uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
+    uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
     uint32_t                ingress_time;
     pn_data_t              *extension_state;
     qdr_error_t            *error;
@@ -81,6 +83,7 @@ void qdr_delivery_tag(const qdr_delivery_t *delivery, const char **tag, int *len
 bool qdr_delivery_tag_sent(const qdr_delivery_t *delivery);
 void qdr_delivery_set_tag_sent(const qdr_delivery_t *delivery, bool tag_sent);
 
+// note: access to _local_ endpoint disposition (not remote endpoint)
 uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
 void qdr_delivery_set_disposition(qdr_delivery_t *delivery, uint64_t disposition);
 
@@ -106,9 +109,10 @@ void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest
 /* release dlv and possibly schedule its deletion on the core thread */
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label);
 
-/* handles disposition/settlement changes from remote delivery and schedules Core thread */
-void qdr_delivery_update_disposition(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
-                                     bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given);
+/* handles delivery disposition and settlement changes from the remote end of
+ * the link, and schedules Core thread */
+void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
+                                       bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given);
 
 /* invoked when incoming message data arrives - schedule core thread */
 qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery);
@@ -143,6 +147,20 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv);
 
 /* update the links counters with respect to its delivery */
 void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+
+/**
+ * multicast delivery state and settlement management
+ */
+
+// remote updated disposition/settlement for incoming delivery
+void qdr_delivery_mcast_inbound_update_CT(qdr_core_t *core, qdr_delivery_t *in_dlv,
+                                          uint64_t new_disp, bool settled);
+// remote update disposition/settlement for outgoing delivery
+void qdr_delivery_mcast_outbound_update_CT(qdr_core_t *core, qdr_delivery_t *in_dlv,
+                                           qdr_delivery_t *out_peer,
+                                           uint64_t new_disp, bool settled);
+// number of unsettled peer (outbound) deliveries for in_dlv
+int qdr_delivery_peer_count_CT(const qdr_delivery_t *in_dlv);
 
 
 #endif // __delivery_h__

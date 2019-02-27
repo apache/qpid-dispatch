@@ -344,8 +344,10 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         pn_link_advance(pn_link);
         next_delivery = pn_link_current(pn_link) != 0;
 
-        if (qdr_delivery_disposition(delivery) != 0)
-            pn_delivery_update(pnd, qdr_delivery_disposition(delivery));
+        uint64_t local_disp = qdr_delivery_disposition(delivery);
+        if (local_disp != 0) {
+            pn_delivery_update(pnd, local_disp);
+        }
     }
 
     if (qd_message_is_discard(msg)) {
@@ -689,12 +691,12 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     //
     // Update the disposition of the delivery
     //
-    qdr_delivery_update_disposition(router->router_core, delivery,
-                                    pn_delivery_remote_state(pnd),
-                                    pn_delivery_settled(pnd),
-                                    error,
-                                    pn_disposition_data(disp),
-                                    false);
+    qdr_delivery_remote_state_updated(router->router_core, delivery,
+                                      pn_delivery_remote_state(pnd),
+                                      pn_delivery_settled(pnd),
+                                      error,
+                                      pn_disposition_data(disp),
+                                      false);
 
     //
     // If settled, close out the delivery
@@ -1707,10 +1709,13 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         //
         // If the delivery is still arriving, don't push out the disposition change yet.
         //
-        if (qd_message_receive_complete(msg))
+        if (qd_message_receive_complete(msg)) {
             pn_delivery_update(pnd, disp);
-        else
+        } else {
+            // just update the local disposition for now - AMQP_rx_handler will
+            // write this to proton once the message is fully received.
             qdr_delivery_set_disposition(dlv, disp);
+        }
     }
 
     if (settled) {

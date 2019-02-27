@@ -341,22 +341,11 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     bool          bypass_valid_origins = addr->forwarder->bypass_valid_origins;
     int           fanout               = 0;
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
-    bool          presettled           = !!in_delivery ? in_delivery->settled : true;
     bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
     uint8_t       priority             = qdr_forward_effective_priority(msg, addr);
 
     qdr_forward_deliver_info_list_t deliver_info_list;
     DEQ_INIT(deliver_info_list);
-
-    //
-    // If the delivery is not presettled, set the settled flag for forwarding so all
-    // outgoing deliveries will be presettled.
-    //
-    // NOTE:  This is the only multicast mode currently supported.  Others will likely be
-    //        implemented in the future.
-    //
-    if (!presettled)
-        in_delivery->settled = true;
 
     //
     // Forward to local subscribers
@@ -492,26 +481,6 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         DEQ_REMOVE_HEAD(deliver_info_list);
         free_qdr_forward_deliver_info_t(deliver_info);
         deliver_info = DEQ_HEAD(deliver_info_list);
-    }
-
-    if (in_delivery && !presettled) {
-        if (fanout == 0)
-            //
-            // The delivery was not presettled and it was not forwarded to any
-            // destinations, return it to its original unsettled state.
-            //
-            in_delivery->settled = false;
-        else {
-            //
-            // The delivery was not presettled and it was forwarded to at least
-            // one destination.  Accept and settle the delivery only if the entire delivery
-            // has been received.
-            //
-            if (receive_complete) {
-                in_delivery->disposition = PN_ACCEPTED;
-                qdr_delivery_push_CT(core, in_delivery);
-            }
-        }
     }
 
     return fanout;
@@ -1000,8 +969,6 @@ int qdr_forward_message_CT(qdr_core_t *core, qdr_address_t *addr, qd_message_t *
     int fanout = 0;
     if (addr->forwarder)
         fanout = addr->forwarder->forward_message(core, addr, msg, in_delivery, exclude_inprocess, control);
-
-    // TODO - Deal with this delivery's disposition
     return fanout;
 }
 

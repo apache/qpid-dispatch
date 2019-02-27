@@ -730,22 +730,26 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_t *peer;
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
+
+        // expect: an inbound undelivered multicast should
+        // have no peers (has not been forwarded yet)
+        assert(dlv->multicast
+               ? qdr_delivery_peer_count_CT(dlv) == 0
+               : true);
+
         peer = qdr_delivery_first_peer_CT(dlv);
         while (peer) {
             if (peer->multicast) {
                 //
-                // If the address of the delivery is a multicast address and if there are no receivers for this address, the peer delivery must be released.
+                // dlv is outgoing mcast - tell its incoming peer that it has
+                // been released and settled.  This will unlink these peers.
                 //
-                // If the address of the delivery is a multicast address and there is at least one other receiver for the address, dont do anything
-                //
-                if (DEQ_SIZE(peer->peers) == 1 || peer->peer)  {
-                    qdr_delivery_release_CT(core, peer);
-                }
+                qdr_delivery_mcast_outbound_update_CT(core, peer, dlv, PN_RELEASED, true);
             }
             else {
                 qdr_delivery_release_CT(core, peer);
+                qdr_delivery_unlink_peers_CT(core, dlv, peer);
             }
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = qdr_delivery_next_peer_CT(dlv);
         }
 
@@ -785,12 +789,29 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             qdr_deliver_continue_peers_CT(core, dlv);
         }
 
-        peer = qdr_delivery_first_peer_CT(dlv);
-        while (peer) {
-            if (link->link_direction == QD_OUTGOING)
-                qdr_delivery_failed_CT(core, peer);
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
-            peer = qdr_delivery_next_peer_CT(dlv);
+        if (dlv->multicast) {
+            //
+            // forward settlement
+            //
+            qdr_delivery_mcast_inbound_update_CT(core, dlv,
+                                                 PN_MODIFIED,
+                                                 true);  // true == settled
+        } else {
+            peer = qdr_delivery_first_peer_CT(dlv);
+            while (peer) {
+                if (peer->multicast) {
+                    //
+                    // peer is incoming multicast and dlv is one of its corresponding
+                    // outgoing deliveries.  This will unlink these peers.
+                    //
+                    qdr_delivery_mcast_outbound_update_CT(core, peer, dlv, PN_MODIFIED, true);
+                } else {
+                    if (link->link_direction == QD_OUTGOING)
+                        qdr_delivery_failed_CT(core, peer);
+                    qdr_delivery_unlink_peers_CT(core, dlv, peer);
+                }
+                peer = qdr_delivery_next_peer_CT(dlv);
+            }
         }
 
         //

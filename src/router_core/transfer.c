@@ -124,6 +124,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 }
 
 
+// send up to credit pending outgoing deliveries
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 {
     qdr_connection_t *conn = link->conn;
@@ -216,9 +217,13 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 }
                 sys_mutex_unlock(conn->work_lock);
 
-                // the core will need to update the delivery's disposition
-                if (new_disp)
-                    qdr_delivery_update_disposition(core, dlv, new_disp, true, 0, 0, false);
+                if (new_disp) {
+                    // the remote sender-settle-mode forced us to pre-settle the
+                    // message.  The core needs to know this, so we "fake" receiving a
+                    // settle+disposition update from the remote end of the link:
+                    qdr_delivery_remote_state_updated(core, dlv, new_disp, true, 0, 0, false);
+                }
+
                 qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - done processing");
             } else {
                 sys_mutex_unlock(conn->work_lock);
@@ -424,38 +429,32 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         // We are trying to forward a delivery on an address that has no outbound paths
         // AND the incoming link is targeted (not anonymous).
         //
-        // We shall release the delivery (it is currently undeliverable).
+        // We shall release the delivery (it is currently undeliverable). Since
+        // there are no receivers we will try to drain credit to prevent the
+        // sender from attempting to send more to this address.
         //
         if (dlv->settled) {
             // Increment the presettled_dropped_deliveries on the in_link
             link->dropped_presettled_deliveries++;
             if (dlv_link->link_type == QD_LINK_ENDPOINT)
                 core->dropped_presettled_deliveries++;
-
-            //
-            // The delivery is pre-settled. Call the qdr_delivery_release_CT so if this delivery is multi-frame
-            // we can restart receiving the delivery in case it is stalled. Note that messages will not
-            // *actually* be released because these are presettled messages.
-            //
-            qdr_delivery_release_CT(core, dlv);
-        } else {
-            qdr_delivery_release_CT(core, dlv);
-
-            //
-            // Drain credit on the link if it is not in an edge connection
-            //
-            if (!link->edge)
-                qdr_link_issue_credit_CT(core, link, 0, true);
         }
 
         //
-        // If the distribution is multicast or it's on an edge connection, we will replenish the credit.
-        // Otherwise, we will allow the credit to drain.
+        // Note if the message was pre-settled we still call the
+        // qdr_delivery_release_CT so if this delivery is multi-frame we can
+        // restart receiving the delivery in case it is stalled. Note that
+        // messages will not *actually* be released in this case because these
+        // are presettled messages.
         //
-        if (link->edge || qdr_is_addr_treatment_multicast(link->owning_addr))
-            qdr_link_issue_credit_CT(core, link, 1, false);
-        else
+        qdr_delivery_release_CT(core, dlv);
+
+        if (!link->edge) {
+            qdr_link_issue_credit_CT(core, link, 0, true);  // drain
             link->credit_pending++;
+        } else {
+            qdr_link_issue_credit_CT(core, link, 1, false);
+        }
 
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
         return;
@@ -543,7 +542,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (1)");
         qdr_link_issue_credit_CT(core, link, 1, false);
     } else if (fanout > 0) {
-        if (dlv->settled || dlv->multicast) {
+        if (dlv->settled) {
             //
             // The delivery is settled.  Keep it off the unsettled list and issue
             // replacement credit for it now.

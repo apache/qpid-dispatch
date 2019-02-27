@@ -26,6 +26,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
 from time import sleep
 import unittest2 as unittest
 
@@ -41,30 +42,24 @@ from system_test import TestCase
 from system_test import Qdrouterd
 from system_test import main_module
 from system_test import TIMEOUT
+from system_test import TestTimeout
 
 
-class TestTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-MAX_FRAME=1025
+MAX_FRAME=1023
 W_THREADS=2
+LARGE_PAYLOAD = ("X" * MAX_FRAME) * 19
 
 # check for leaks of the following entities
 ALLOC_STATS=["qd_message_t",
              "qd_buffer_t",
              "qdr_delivery_t"]
 
+
 class MulticastLinearTest(TestCase):
     """
     Verify the multicast forwarding logic across a multihop linear router
     configuration
     """
-
     @classmethod
     def setUpClass(cls):
         """Start a router"""
@@ -158,34 +153,32 @@ class MulticastLinearTest(TestCase):
             # edge router EA1:
             {'router':      cls.EA1,
              'senders':     ['S-EA1-1'],
-             'receivers':   [],
-             'subscribers': 1,
+             'receivers':   ['R-EA1-1', 'R-EA1-2'],
+             'subscribers': 2,
              'remotes':     0
             },
             # Interior router INT_A:
             {'router':      cls.INT_A,
-             'senders':     [],
-             # 'receivers':   ['R-INT_A-1'],
-             'receivers':   [],
-             'subscribers': 0,
+             'senders':     ['S-INT_A-1'],
+             'receivers':   ['R-INT_A-1', 'R-INT_A-2'],
+             'subscribers': 3,
              'remotes':     1,
             },
             # Interior router INT_B:
             {'router':      cls.INT_B,
              'senders':     [],
-             'receivers':   [],
-             'subscribers': 1,
-             'remotes':     0,
+             'receivers':   ['R-INT_B-1', 'R-INT_B-2'],
+             'subscribers': 3,
+             'remotes':     1,
             },
             # edge router EB1
             {'router':      cls.EB1,
              'senders':     [],
-             'receivers':   ['R-EB1-1'],
-             'subscribers': 1,
+             'receivers':   ['R-EB1-1', 'R-EB1-2'],
+             'subscribers': 2,
              'remotes':     0,
             }
         ]
-
 
     def _get_alloc_stats(self, router, stats):
         # return a map of the current allocator counters for each entity type
@@ -209,22 +202,6 @@ class MulticastLinearTest(TestCase):
             d[name] = list(filter(lambda a: a['typeName'] == name, q))[0]
         return d
 
-    def test_51_maybe_presettled_large_msg(self):
-        body = " MCAST MAYBE PRESETTLED LARGE "
-        body += "X" * (MAX_FRAME * 19)
-        for repeat in range(5):
-            test = MulticastPresettled(self.config, 100, body, SendMaybePresettled())
-            test.run()
-            self.assertEqual(None, test.error)
-
-    def test_51_presettled_large_msg(self):
-        body = " MCAST PRESETTLED LARGE "
-        body += "X" * (MAX_FRAME * 23)
-        for repeat in range(5):
-            test = MulticastPresettled(self.config, 100, body, SendMustBePresettled())
-            test.run()
-            self.assertEqual(None, test.error)
-
     def _check_for_leaks(self):
         for r in self.routers:
             stats = self._get_alloc_stats(r, ALLOC_STATS)
@@ -233,42 +210,236 @@ class MulticastLinearTest(TestCase):
                 max_allowed  = ((W_THREADS + 1)
                                 * stats[name]['localFreeListMax'])
                 held = stats[name]['heldByThreads']
-                import sys; sys.stdout.flush()
                 if held >= (2 * max_allowed):
                     print("OOPS!!! %s: (%s) - held=%d max=%d\n   %s\n"
                           % (r.config.router_id,
                              name, held, max_allowed, stats))
-                    import sys; sys.stdout.flush()
+                    sys.stdout.flush()
                     self.assertFalse(held >= (2 * max_allowed))
+
+    #
+    # run all the negative tests first so that if we screw up the internal
+    # state of the brokers the positive tests will likely fail
+    #
+
+    def _presettled_large_msg_rx_detach(self, config, count, drop_clients):
+        # detach receivers during receive
+        body = " MCAST PRESETTLED LARGE RX DETACH " + LARGE_PAYLOAD
+        test = MulticastPresettledRxFail(config, count,
+                                         drop_clients,
+                                         detach=True,
+                                         body=body)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_01_presettled_large_msg_rx_detach(self):
+        self._presettled_large_msg_rx_detach(self.config, 10, ['R-EA1-1', 'R-EB1-2'])
+        self._presettled_large_msg_rx_detach(self.config, 10, ['R-INT_A-2', 'R-INT_B-1'])
+
+    def _presettled_large_msg_rx_close(self, config, count, drop_clients):
+        # close receiver connections during receive
+        body = " MCAST PRESETTLED LARGE RX CLOSE " + LARGE_PAYLOAD
+        test = MulticastPresettledRxFail(config, count,
+                                         drop_clients,
+                                         detach=False,
+                                         body=body)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_02_presettled_large_msg_rx_close(self):
+        self._presettled_large_msg_rx_close(self.config, 10, ['R-EA1-2', 'R-EB1-1'])
+        self._presettled_large_msg_rx_close(self.config, 10, ['R-INT_A-1', 'R-INT_B-2'])
+
+    def _unsettled_large_msg_rx_detach(self, config, count, drop_clients):
+        # detach receivers during the test
+        body = " MCAST UNSETTLED LARGE RX DETACH " + LARGE_PAYLOAD
+        test = MulticastUnsettledRxFail(self.config, count, drop_clients, detach=True, body=body)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_10_unsettled_large_msg_rx_detach(self):
+        self._unsettled_large_msg_rx_detach(self.config, 10, ['R-EA1-1', 'R-EB1-2'])
+        self._unsettled_large_msg_rx_detach(self.config, 10, ['R-INT_A-2', 'R-INT_B-1'])
+
+    def _unsettled_large_msg_rx_close(self, config, count, drop_clients):
+        # close receiver connections during test
+        body = " MCAST UNSETTLED LARGE RX CLOSE " + LARGE_PAYLOAD
+        test = MulticastUnsettledRxFail(self.config, count, drop_clients, detach=False, body=body)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_11_unsettled_large_msg_rx_close(self):
+        self._unsettled_large_msg_rx_close(self.config, 10, ['R-EA1-2', 'R-EB1-1', ])
+        self._unsettled_large_msg_rx_close(self.config, 10, ['R-INT_A-1', 'R-INT_B-2'])
+
+    #
+    # now the positive tests
+    #
+
+    def test_50_presettled(self):
+        # Simply send a bunch of pre-settled multicast messages
+        body = " MCAST PRESETTLED "
+        test = MulticastPresettled(self.config, 10, body, SendPresettled())
+        test.run()
+
+    def test_51_presettled_mixed_large_msg(self):
+        # Same as above, but large message bodies (mixed sender settle mode)
+        body = " MCAST MAYBE PRESETTLED LARGE " + LARGE_PAYLOAD
+        test = MulticastPresettled(self.config, 11, body, SendMixed())
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_52_presettled_large_msg(self):
+        # Same as above, (pre-settled sender settle mode)
+        body = " MCAST PRESETTLED LARGE " + LARGE_PAYLOAD
+        test = MulticastPresettled(self.config, 13, body, SendPresettled())
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_60_unsettled_3ack(self):
+        # Sender sends unsettled, waits for Outcome from Receiver then settles
+        # Expect all messages to be accepted
+        body = " MCAST UNSETTLED "
+        test = MulticastUnsettled3Ack(self.config, 10, body)
+        test.run()
+        self.assertEqual(None, test.error)
+        self.assertEqual(test.n_outcomes[Delivery.ACCEPTED], test.n_sent)
+
+    def test_61_unsettled_3ack_large_msg(self):
+        # Same as above but with multiframe streaming
+        body = " MCAST UNSETTLED LARGE " + LARGE_PAYLOAD
+        test = MulticastUnsettled3Ack(self.config, 11, body=body)
+        test.run()
+        self.assertEqual(None, test.error)
+        self.assertEqual(test.n_outcomes[Delivery.ACCEPTED], test.n_sent)
+
+    def _unsettled_3ack_outcomes(self,
+                                 config,
+                                 count,
+                                 outcomes,
+                                 expected):
+        body = " MCAST UNSETTLED 3ACK OUTCOMES " + LARGE_PAYLOAD
+        test = MulticastUnsettled3Ack(self.config,
+                                      count,
+                                      body,
+                                      outcomes=outcomes)
+        test.run()
+        self.assertEqual(None, test.error)
+        self.assertEqual(test.n_outcomes[expected], test.n_sent)
+
+    def test_63_unsettled_3ack_outcomes(self):
+        # Verify the expected outcome is returned to the sender when the
+        # receivers return different outcome values.  If no outcome is
+        # specified for a receiver it will default to ACCEPTED
+
+        # expect REJECTED if any reject:
+        self._unsettled_3ack_outcomes(self.config, 3,
+                                      {'R-EB1-1': Delivery.REJECTED,
+                                       'R-EB1-2': Delivery.MODIFIED,
+                                       'R-INT_B-2': Delivery.RELEASED},
+                                      Delivery.REJECTED)
+        self._unsettled_3ack_outcomes(self.config, 3,
+                                      {'R-EB1-1': Delivery.REJECTED,
+                                       'R-INT_B-2': Delivery.RELEASED},
+                                      Delivery.REJECTED)
+        # expect ACCEPT if no rejects
+        self._unsettled_3ack_outcomes(self.config, 3,
+                                      {'R-EB1-2': Delivery.MODIFIED,
+                                       'R-INT_B-2': Delivery.RELEASED},
+                                      Delivery.ACCEPTED)
+        # expect MODIFIED over RELEASED
+        self._unsettled_3ack_outcomes(self.config, 3,
+                                      {'R-EA1-1': Delivery.RELEASED,
+                                       'R-EA1-2': Delivery.RELEASED,
+                                       'R-INT_A-1': Delivery.RELEASED,
+                                       'R-INT_A-2': Delivery.RELEASED,
+                                       'R-INT_B-1': Delivery.RELEASED,
+                                       'R-INT_B-2': Delivery.RELEASED,
+                                       'R-EB1-1': Delivery.RELEASED,
+                                       'R-EB1-2': Delivery.MODIFIED},
+                                      Delivery.MODIFIED)
+
+        # and released only if all released
+        self._unsettled_3ack_outcomes(self.config, 3,
+                                      {'R-EA1-1': Delivery.RELEASED,
+                                       'R-EA1-2': Delivery.RELEASED,
+                                       'R-INT_A-1': Delivery.RELEASED,
+                                       'R-INT_A-2': Delivery.RELEASED,
+                                       'R-INT_B-1': Delivery.RELEASED,
+                                       'R-INT_B-2': Delivery.RELEASED,
+                                       'R-EB1-1': Delivery.RELEASED,
+                                       'R-EB1-2': Delivery.RELEASED},
+                                      Delivery.RELEASED)
+
+    def test_70_unsettled_1ack(self):
+        # Sender sends unsettled, expects both outcome and settlement from
+        # receiver before sender settles locally
+        body = " MCAST UNSETTLED 1ACK "
+        test = MulticastUnsettled1Ack(self.config, 10, body)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_71_unsettled_1ack_large_msg(self):
+        # Same as above but with multiframe streaming
+        body = " MCAST UNSETTLED 1ACK LARGE " + LARGE_PAYLOAD
+        test = MulticastUnsettled1Ack(self.config, 10, body)
+        test.run()
+        self.assertEqual(None, test.error)
 
     def test_999_check_for_leaks(self):
         self._check_for_leaks()
 
 
-class SendMaybePresettled(LinkOption):
-    """
-    Set the default send settlement modes on link negotiation to mixed
-    """
-    def apply(self, link):
-        link.snd_settle_mode = Link.SND_MIXED
-        link.rcv_settle_mode = Link.RCV_FIRST
+#
+# Settlement options for Link attach
+#
 
-
-class SendMustBePresettled(LinkOption):
+class SendPresettled(LinkOption):
     """
-    Set the default send settlement modes on a link to presettled
+    All messages are sent presettled
     """
     def apply(self, link):
         link.snd_settle_mode = Link.SND_SETTLED
         link.rcv_settle_mode = Link.RCV_FIRST
 
 
+class SendMixed(LinkOption):
+    """
+    Messages may be sent unsettled or settled
+    """
+    def apply(self, link):
+        link.snd_settle_mode = Link.SND_MIXED
+        link.rcv_settle_mode = Link.RCV_FIRST
+
+
+class Link1Ack(LinkOption):
+    """
+    Messages will be sent unsettled
+    """
+    def apply(self, link):
+        link.snd_settle_mode = Link.SND_UNSETTLED
+        link.rcv_settle_mode = Link.RCV_FIRST
+
+
+class Link3Ack(LinkOption):
+    """
+    Messages will be sent unsettled and the receiver will wait for sender to
+    settle first.
+    """
+    def apply(self, link):
+        link.snd_settle_mode = Link.SND_UNSETTLED
+        link.rcv_settle_mode = Link.RCV_SECOND
+
+
 class MulticastBase(MessagingHandler):
+    """
+    Common multicast boilerplate code
+    """
     def __init__(self, config, count, body, topic=None, **handler_kwargs):
         super(MulticastBase, self).__init__(**handler_kwargs)
         self.msg_count = count
         self.config = config
-        self.topic = topic or "whatevahcast/test"
+        self.topic = topic or "multicast/test"
         self.body = body
 
         # totals
@@ -294,12 +465,6 @@ class MulticastBase(MessagingHandler):
 
         # count per outcome
         self.n_outcomes = {}
-
-        # self.c_accepted = {}
-        # self.c_released = {}
-        # self.c_rejected = {}
-        # self.c_modified = {}
-        # self.c_settled  = {}
 
         self.error = None
         self.timers = []
@@ -402,7 +567,6 @@ class MulticastBase(MessagingHandler):
 
     def on_settled(self, event):
         self.n_settled += 1
-        name = event.link.name
 
     def run(self):
         Container(self).run()
@@ -460,9 +624,9 @@ class MulticastPresettled(MulticastBase):
 
     def check_if_done(self):
         # wait for all present receivers to receive all messages
-        # and for all received messagest to be settled by the
+        # and for all received messages to be settled by the
         # sender
-        to_rcv = self.n_senders * self.msg_count
+        to_rcv = self.n_senders * self.msg_count * self.n_receivers
         if to_rcv == self.n_received and not self.unsettled_deliveries:
             self.done()
 
@@ -470,6 +634,8 @@ class MulticastPresettled(MulticastBase):
         super(MulticastPresettled, self).on_message(event)
         if event.receiver:
             if not event.delivery.settled:
+                # it may be that settle will come after on_message
+                # so track that here
                 event.delivery.update(Delivery.ACCEPTED)
                 self.unexpected_unsettled += 1
                 tag = str(event.delivery.tag)
@@ -488,12 +654,197 @@ class MulticastPresettled(MulticastBase):
             self.sender_settled += 1
             tag = str(event.delivery.tag)
             try:
+                # got a delayed settle
                 self.unsettled_deliveries[tag] -= 1
                 if self.unsettled_deliveries[tag] == 0:
                     del self.unsettled_deliveries[tag]
             except KeyError:
                 pass
             self.check_if_done()
+
+
+class MulticastPresettledRxFail(MulticastPresettled):
+    """
+    Spontaineously close a receiver or connection on message received
+    """
+    def __init__(self, config, count, drop_clients, detach, body):
+        super(MulticastPresettledRxFail, self).__init__(config, count, body, SendPresettled())
+        self.drop_clients = drop_clients
+        self.detach = detach
+
+    def check_if_done(self):
+        # Verify each receiver got the expected number of messages.
+        # Avoid waiting for dropped receivers.
+        done = True
+        to_rcv = self.n_senders * self.msg_count
+        for name, count in self.c_received.items():
+            if name not in self.drop_clients:
+                if count != to_rcv:
+                    done = False
+        if done:
+            self.done()
+
+    def on_message(self, event):
+        # close the receiver on arrival of the first message
+        r_name = event.receiver.name
+        if r_name in self.drop_clients:
+            if self.detach:
+                if event.receiver.state & Link.LOCAL_ACTIVE:
+                    event.receiver.close()
+            elif event.connection.state & Connection.LOCAL_ACTIVE:
+                event.connection.close()
+        super(MulticastPresettledRxFail, self).on_message(event)
+
+
+class MulticastUnsettled3Ack(MulticastBase):
+    """
+    Send count messages per sender, senders wait for terminal outcome from
+    receivers before settling
+    """
+    def __init__(self, config, count, body, outcomes=None):
+        pfetch = int((count + 1)/2)
+        super(MulticastUnsettled3Ack, self).__init__(config,
+                                                     count,
+                                                     body,
+                                                     prefetch=pfetch,
+                                                     auto_accept=False,
+                                                     auto_settle=False)
+        self.outcomes = outcomes or {}
+
+    def create_receiver(self, container, conn, source, name):
+        return container.create_receiver(conn, source=source, name=name,
+                                         options=Link3Ack())
+
+    def create_sender(self, container, conn, target, name):
+        return container.create_sender(conn, target=target, name=name,
+                                       options=Link3Ack())
+
+    def do_send(self, sender):
+        for i in range(self.msg_count):
+            msg = Message(body=" %s -> %s:%s" % (sender.name, i, self.body))
+            dlv = sender.send(msg)
+            self.n_sent += 1
+
+    def on_message(self, event):
+        # receiver: send outcome do not settle
+        super(MulticastUnsettled3Ack, self).on_message(event)
+        if event.delivery.settled:
+            self.error = "Unexpected pre-settled message received!"
+            self.done()
+            return
+        r_name = event.receiver.name
+        outcome = self.outcomes.get(r_name, Delivery.ACCEPTED)
+        event.delivery.update(outcome)
+        if event.receiver.credit == 0:
+            event.receiver.flow(1)
+
+    def on_settled(self, event):
+        super(MulticastUnsettled3Ack, self).on_settled(event)
+        event.delivery.settle()
+        self.check_if_done()
+
+    def on_accepted(self, event):
+        super(MulticastUnsettled3Ack, self).on_accepted(event)
+        event.delivery.settle()
+        self.check_if_done()
+
+    def on_released(self, event):
+        super(MulticastUnsettled3Ack, self).on_released(event)
+        event.delivery.settle()
+        self.check_if_done()
+
+    def on_modified(self, event):
+        super(MulticastUnsettled3Ack, self).on_modified(event)
+        event.delivery.settle()
+        self.check_if_done()
+
+    def on_rejected(self, event):
+        super(MulticastUnsettled3Ack, self).on_rejected(event)
+        event.delivery.settle()
+        self.check_if_done()
+
+    def check_if_done(self):
+        to_send = self.msg_count * self.n_senders
+        to_rcv = to_send * self.n_receivers
+
+        n_outcomes = (self.n_accepted + self.n_rejected
+                      + self.n_modified + self.n_released)
+
+        # expect senders to see settlement
+        if (self.n_sent == to_send
+                and self.n_received == to_rcv
+                and n_outcomes == to_send
+                and self.n_settled == to_rcv):
+            self.done()
+
+
+class MulticastUnsettled1Ack(MulticastUnsettled3Ack):
+    """
+    Sender sends unsettled, the receiver sets outcome and immediately settles
+    """
+    def __init__(self, config, count, body, outcomes=None):
+        super(MulticastUnsettled1Ack, self).__init__(config,
+                                                     count,
+                                                     outcomes)
+
+    def create_receiver(self, container, conn, source, name):
+        return container.create_receiver(conn, source=source, name=name,
+                                         options=Link1Ack())
+
+    def create_sender(self, container, conn, target, name):
+        return container.create_sender(conn, target=target, name=name,
+                                       options=Link1Ack())
+
+    def on_message(self, event):
+        # receiver: send outcome and settle
+        super(MulticastUnsettled1Ack, self).on_message(event)
+        event.delivery.settle()
+
+    def check_if_done(self):
+        to_send = self.msg_count * self.n_senders
+        to_rcv = to_send * self.n_receivers
+
+        n_outcomes = (self.n_accepted + self.n_rejected
+                      + self.n_modified + self.n_released)
+
+        # expect sender to see settlement
+        if (self.n_received == to_rcv
+                and n_outcomes == to_send
+                and self.n_settled == to_send):
+            self.done()
+
+
+class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
+    """
+    Spontaineously close a receiver or connection on message received
+    """
+    def __init__(self, config, count, drop_clients, detach, body):
+        super(MulticastUnsettledRxFail, self).__init__(config, count, body)
+        self.drop_clients = drop_clients
+        self.detach = detach
+
+    def check_if_done(self):
+        # Verify each receiver got the expected number of messages.
+        # Avoid waiting for dropped receivers.
+        done = True
+        to_rcv = self.n_senders * self.msg_count
+        for name, count in self.c_received.items():
+            if name not in self.drop_clients:
+                if count != to_rcv:
+                    done = False
+        if done:
+            self.done()
+
+    def on_message(self, event):
+        # close the receiver on arrival of the first message
+        r_name = event.receiver.name
+        if r_name in self.drop_clients:
+            if self.detach:
+                if event.receiver.state & Link.LOCAL_ACTIVE:
+                    event.receiver.close()
+            elif event.connection.state & Connection.LOCAL_ACTIVE:
+                event.connection.close()
+        super(MulticastUnsettledRxFail, self).on_message(event)
 
 
 if __name__ == '__main__':

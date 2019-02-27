@@ -46,7 +46,7 @@ import json
 import uuid
 
 import proton
-from proton import Message, Timeout
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
 from proton.reactor import AtLeastOnce, Container
@@ -995,3 +995,14 @@ class MgmtMsgProxy(object):
               'name': name}
         return Message(properties=ap, reply_to=self.reply_addr)
 
+
+class TestTimeout(object):
+    """
+    A callback object for MessagingHandler class
+    parent: A MessagingHandler with a timeout() method
+    """
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()

@@ -194,7 +194,7 @@ void qdrc_endpoint_do_deliver_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_deli
 void qdrc_endpoint_do_update_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t *dlv, bool settled)
 {
     if (!!ep->desc->on_update)
-        ep->desc->on_update(ep->link_context, dlv, settled, dlv->disposition);
+        ep->desc->on_update(ep->link_context, dlv, settled, dlv->remote_disposition);
 }
 
 
