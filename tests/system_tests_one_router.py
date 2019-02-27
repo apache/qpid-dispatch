@@ -670,17 +670,25 @@ class MessageAnnotaionsPreExistingOverride(MessagingHandler):
 
 class SemanticsMulticast(MessagingHandler):
     def __init__(self, address):
-        super(SemanticsMulticast, self).__init__()
+        """
+        Verify that for every 1 unsettled mcast message received, N messages are sent
+        out (where N == number of receivers).  Assert that multiple received
+        dispositions are summarized to send out one disposition.
+        """
+        super(SemanticsMulticast, self).__init__(auto_accept=False)
         self.address = address
         self.dest = "multicast.2"
         self.error = None
         self.n_sent = 0
+        self.n_settled = 0
         self.count = 3
         self.n_received_a = 0
         self.n_received_b = 0
         self.n_received_c = 0
+        self.n_accepts = 0
         self.timer = None
-        self.conn = None
+        self.conn_1 = None
+        self.conn_2 = None
         self.sender = None
         self.receiver_a = None
         self.receiver_b = None
@@ -688,22 +696,29 @@ class SemanticsMulticast(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn = event.container.connect(self.address)
-        self.sender = event.container.create_sender(self.conn, self.dest)
-        self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
-        self.receiver_b = event.container.create_receiver(self.conn, self.dest, name="B")
-        self.receiver_c = event.container.create_receiver(self.conn, self.dest, name="C")
+        self.conn_1 = event.container.connect(self.address)
+        self.conn_2 = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn_1, self.dest)
+        self.receiver_a = event.container.create_receiver(self.conn_2, self.dest, name="A")
+        self.receiver_b = event.container.create_receiver(self.conn_1, self.dest, name="B")
+        self.receiver_c = event.container.create_receiver(self.conn_2, self.dest, name="C")
 
     def timeout(self):
         self.error = "Timeout Expired: sent=%d rcvd=%d/%d/%d" % \
                      (self.n_sent, self.n_received_a, self.n_received_b, self.n_received_c)
-        self.conn.close()
+        self.conn_1.close()
+        self.conn_2.close()
 
     def check_if_done(self):
-        if self.n_received_a + self.n_received_b + self.n_received_c == self.count and \
-                self.n_received_a == self.n_received_b and self.n_received_c == self.n_received_b:
+        c = self.n_received_a + self.n_received_b + self.n_received_c
+        if (c == self.count
+                and self.n_received_a == self.n_received_b
+                and self.n_received_c == self.n_received_b
+                and self.n_accepts == self.n_sent
+                and self.n_settled == self.count):
             self.timer.cancel()
-            self.conn.close()
+            self.conn_1.close()
+            self.conn_2.close()
 
     def on_sendable(self, event):
         if self.n_sent == 0:
@@ -718,8 +733,14 @@ class SemanticsMulticast(MessagingHandler):
             self.n_received_b += 1
         if event.receiver == self.receiver_c:
             self.n_received_c += 1
+        event.delivery.update(Delivery.ACCEPTED)
 
     def on_accepted(self, event):
+        self.n_accepts += 1
+        event.delivery.settle()
+
+    def on_settled(self, event):
+        self.n_settled += 1
         self.check_if_done()
 
     def run(self):
@@ -1177,7 +1198,7 @@ class MulticastUnsettled ( MessagingHandler ) :
                    n_messages,
                    n_receivers
                  ) :
-        super ( MulticastUnsettled, self ) . __init__ ( prefetch = n_messages )
+        super ( MulticastUnsettled, self ) . __init__ (auto_accept=False, prefetch=n_messages)
         self.addr        = addr
         self.n_messages  = n_messages
         self.n_receivers = n_receivers
@@ -1213,7 +1234,7 @@ class MulticastUnsettled ( MessagingHandler ) :
 
         self.sender = event.container.create_sender   ( self.send_conn, self.addr )
         for i in range ( self.n_receivers ) :
-            rcvr = event.container.create_receiver ( self.send_conn, self.addr, name = "receiver_" + str(i) )
+            rcvr = event.container.create_receiver ( self.recv_conn, self.addr, name = "receiver_" + str(i) )
             self.receivers.append ( rcvr )
             rcvr.flow ( self.n_messages )
             self.n_received.append ( 0 )
@@ -2358,8 +2379,12 @@ class UnavailableReceiver(UnavailableBase):
         self.receiver = event.container.create_receiver(self.conn, self.dest, name=self.link_name)
 
 class MulticastUnsettledTest(MessagingHandler):
+    """
+    Send N unsettled multicast messages to 2 receivers.  Ensure sender is
+    notified of settlement and disposition changes from the receivers.
+    """
     def __init__(self, address):
-        super(MulticastUnsettledTest, self).__init__(prefetch=0)
+        super(MulticastUnsettledTest, self).__init__(auto_accept=False, prefetch=0)
         self.address = address
         self.dest = "multicast.MUtest"
         self.error = None
@@ -2380,9 +2405,14 @@ class MulticastUnsettledTest(MessagingHandler):
     def on_start(self, event):
         self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
-        self.sender    = event.container.create_sender(self.conn, self.dest)
-        self.receiver1 = event.container.create_receiver(self.conn, self.dest, name="A")
-        self.receiver2 = event.container.create_receiver(self.conn, self.dest, name="B")
+        self.sender    = event.container.create_sender(self.conn, self.dest,
+                                                       options=AtLeastOnce())
+        self.receiver1 = event.container.create_receiver(self.conn, self.dest,
+                                                         name="A",
+                                                         options=AtLeastOnce())
+        self.receiver2 = event.container.create_receiver(self.conn, self.dest,
+                                                         name="B",
+                                                         options=AtLeastOnce());
         self.receiver1.flow(self.count)
         self.receiver2.flow(self.count)
 
@@ -2397,8 +2427,10 @@ class MulticastUnsettledTest(MessagingHandler):
         self.check_if_done()
 
     def on_message(self, event):
-        if not event.delivery.settled:
-            self.error = "Received unsettled delivery"
+        if event.delivery.settled:
+            self.error = "Received settled delivery"
+        event.delivery.update(Delivery.ACCEPTED)
+        event.delivery.settle()
         self.n_received += 1
         self.check_if_done()
 
