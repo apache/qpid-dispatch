@@ -215,4 +215,11 @@ char * qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPatter
  * @return the ruleset string to be used in policy settings.
  */
 char * qd_policy_compile_allowed_csv(char * csv);
+/**
+ * Approve sending of message on anonymous link based on connection's policy.
+ *
+ * @param[in] address the address from the message 'to' field
+ * @param[in] qd_conn dispatch connection with policy settings
+ */
+bool qd_policy_approve_message_target(qd_iterator_t *address, qd_connection_t *qd_conn);
 #endif

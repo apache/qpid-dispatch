@@ -126,8 +126,19 @@ mech_list: SCRAM-SHA-1 PLAIN
         client = DynamicSourceAnonymousSender()
         container.connect("admin:admin@127.0.0.1:%d" % self.router_port, handler=client)
         container.run()
+        self.assertEqual(1, client.accepted)
         self.assertEqual('hello', client.message)
         self.assertEqual(0, len(client.errors))
+
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    def test_unauthorized_anonymous_sender_target(self):
+        container = Container()
+        client = DynamicSourceAnonymousSender()
+        container.connect("guest:guest@127.0.0.1:%d" % self.router_port, handler=client)
+        container.run()
+        self.assertEqual(0, client.accepted)
+        self.assertEqual(1, client.rejected)
+        self.assertEqual(None, client.message)
 
 
 class AuthServicePluginAuthzDeprecatedTest(AuthServicePluginAuthzTest):
@@ -189,11 +200,12 @@ class DynamicSourceAnonymousSender(MessagingHandler):
         super(DynamicSourceAnonymousSender, self).__init__()
         self.sender = None
         self.message = None
+        self.accepted = 0
+        self.rejected = 0
         self.errors = []
 
     def on_message(self, event):
         self.message = event.message.body;
-        event.connection.close()
 
     def on_link_opened(self, event):
         if event.receiver:
@@ -202,6 +214,14 @@ class DynamicSourceAnonymousSender(MessagingHandler):
     def on_connection_opened(self, event):
         event.container.create_receiver(event.connection, None, dynamic=True)
         self.sender = event.container.create_sender(event.connection, None)
+
+    def on_accepted(self, event):
+        self.accepted += 1
+        event.connection.close()
+
+    def on_rejected(self, event):
+        self.rejected += 1
+        event.connection.close()
 
 if __name__ == '__main__':
     unittest.main(main_module())

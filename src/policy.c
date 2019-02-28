@@ -892,6 +892,43 @@ static bool qd_policy_terminus_is_waypoint(pn_terminus_t *term)
     return false;
 }
 
+bool qd_policy_approve_message_target(qd_iterator_t *address, qd_connection_t *qd_conn)
+{
+#define ON_STACK_SIZE 2048
+    char  on_stack[ON_STACK_SIZE + 1];
+    char *buffer    = on_stack;
+    bool  on_heap = false;
+    int   length  = qd_iterator_length(address);
+
+    if (length > ON_STACK_SIZE) {
+        buffer    = (char*) malloc(length + 1);
+        on_heap = true;
+    }
+
+    const char* target = qd_iterator_strncpy(address, buffer, length + 1);
+
+    bool lookup = false;
+    if (qd_conn->policy_settings->targetParseTree) {
+        lookup = _qd_policy_approve_link_name_tree(qd_conn->user_id, qd_conn->policy_settings->targetPattern, target, qd_conn->policy_settings->targetParseTree);
+    } else if (qd_conn->policy_settings->targets) {
+        lookup = _qd_policy_approve_link_name(qd_conn->user_id, qd_conn->policy_settings->targets, target);
+    }
+
+    const char *hostip = qd_connection_remote_ip(qd_conn);
+    const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
+    qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
+           "[%"PRIu64"]: %s AMQP message to '%s' for user '%s', rhost '%s', vhost '%s' based on target address",
+           qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), target, qd_conn->user_id, hostip, vhost);
+
+    if (on_heap)
+        free(buffer);
+
+    if (!lookup) {
+        return false;
+    } else {
+        return true;
+    }
+}
 
 bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_conn)
 {

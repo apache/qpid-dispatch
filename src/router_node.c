@@ -550,11 +550,22 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
 
         if (addr_iter) {
-            qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
-            if (phase > 0)
-                qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
-            delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
-                                           link_exclusions, ingress_index);
+            if (!conn->policy_settings || qd_policy_approve_message_target(addr_iter, conn)) {
+                qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
+                if (phase > 0)
+                    qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
+                delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
+                                               link_exclusions, ingress_index);
+            } else {
+                //reject
+                qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to policy violation on target. User:%s", conn->user_id);
+                pn_link_flow(pn_link, 1);
+                pn_delivery_update(pnd, PN_REJECTED);
+                pn_delivery_settle(pnd);
+                qd_message_free(msg);
+                qd_iterator_free(addr_iter);
+                return next_delivery;
+            }
         }
     } else {
         //
