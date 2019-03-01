@@ -51,6 +51,7 @@ set(qpid_dispatch_SOURCES
   entity_cache.c
   failoverlist.c
   hash.c
+  immediate.c
   iterator.c
   log.c
   message.c

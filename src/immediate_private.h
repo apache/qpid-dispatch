@@ -1,5 +1,5 @@
-#ifndef __timer_private_h__
-#define __timer_private_h__ 1
+#ifndef __immediate_private_h__
+#define __immediate_private_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -19,28 +19,27 @@
  * under the License.
  */
 
-#include "immediate_private.h"
-#include <qpid/dispatch/ctools.h>
-#include <qpid/dispatch/timer.h>
-#include <qpid/dispatch/threading.h>
 
-struct qd_timer_t {
-    DEQ_LINKS(qd_timer_t);
-    qd_server_t      *server;
-    qd_timer_cb_t     handler;
-    void             *context;
-    qd_timestamp_t    delta_time;
-    qd_immediate_t   *immediate; /* Optimized path for schedule(0) */
-    bool              scheduled; /* true means on scheduled list, false on idle list */
-};
+#include <qpid/dispatch/dispatch.h>
+#include <qpid/dispatch/server.h>
+#include <stdint.h>
 
-DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
+/* Immediate actions - used by timer to optimize schedule(0) */
 
-void qd_timer_initialize(sys_mutex_t *server_lock);
-void qd_timer_finalize(void);
-void qd_timer_visit();
+void qd_immediate_initialize(void);
+void qd_immediate_finalize(void);
+void qd_immediate_visit(void);
 
-/// For tests only
-sys_mutex_t* qd_timer_lock();
+typedef struct qd_immediate_t qd_immediate_t;
+
+qd_immediate_t *qd_immediate(qd_dispatch_t *qd, void (*handler)(void*), void* context);
+
+/* Arm causes a call to handler(context) ASAP in a server thread. */
+void qd_immediate_arm(qd_immediate_t *);
+
+/* After disarm() returns, there will be no handler() call unless re-armed. */
+void qd_immediate_disarm(qd_immediate_t *);
+
+void qd_immediate_free(qd_immediate_t *);
 
 #endif
