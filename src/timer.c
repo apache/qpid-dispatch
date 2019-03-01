@@ -182,10 +182,10 @@ void qd_timer_cancel(qd_timer_t *timer)
 //=========================================================================
 
 
-void qd_timer_initialize(sys_mutex_t *server_lock)
+void qd_timer_initialize()
 {
     qd_immediate_initialize();
-    lock = server_lock;
+    lock = sys_mutex();
     DEQ_INIT(idle_timers);
     DEQ_INIT(scheduled_timers);
     time_base = 0;
@@ -194,6 +194,7 @@ void qd_timer_initialize(sys_mutex_t *server_lock)
 
 void qd_timer_finalize(void)
 {
+    sys_mutex_free(lock);
     lock = 0;
     qd_immediate_finalize();
 }
