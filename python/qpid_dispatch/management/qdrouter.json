@@ -836,7 +836,7 @@
                 },
                 "httpRootDir": {
                     "type": "path",
-                    "description": "Serve static HTTP files from this directory.",
+                    "description": "Absolute path to a directory from which to serve static HTTP files. For example, /usr/share/qpid-dispatch/console/stand-alone.",
                     "deprecationName": "httpRoot",
                     "create": true
                 },

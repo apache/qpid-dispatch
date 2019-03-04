@@ -51,10 +51,10 @@ Dispatch Router should be available as a tab in the console.
 
 On the Dispatch Router's console page, select the Connect sub tab. Enter the address of a dispatch router. Enter the port of a websockets to tcp proxy and click the Connect button.
 
-### Websockts to tcp proxy
+### Websockets to tcp proxy
 
 The console communicates to a router using websockets. 
-The router listens for tcp. Therefore a websockts/tcp proxy is required.
+The router listens for tcp. Therefore a websockets/tcp proxy is required.
 
 A popular python based proxy is [websockify](https://github.com/kanaka/websockify). To use it:
 
