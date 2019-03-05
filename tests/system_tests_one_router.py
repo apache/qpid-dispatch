@@ -24,11 +24,12 @@ from __future__ import print_function
 
 import unittest2 as unittest
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
+import os, json
 
 CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 CONNECTION_PROPERTIES_SYMBOL = dict()
@@ -59,9 +60,12 @@ class OneRouterTest(TestCase):
         """Start a router and a messenger"""
         super(OneRouterTest, cls).setUpClass()
         name = "test-router"
+        policy_config_path = os.path.join(DIR, 'one-router-policy')
         OneRouterTest.listen_port = cls.tester.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR', 'allowUnsettledMulticast': 'yes'}),
+            ('policy', {'policyDir': policy_config_path,
+                        'enableVhostPolicy': 'true'}),
 
             # Setting the stripAnnotations to 'no' so that the existing tests will work.
             # Setting stripAnnotations to no will not strip the annotations and any tests that were already in this file
@@ -115,7 +119,9 @@ class OneRouterTest(TestCase):
         test.run ( )
         self.assertEqual ( None, test.error )
 
-
+    # DISPATCH-1277. This test will fail with a policy but without the fix in policy_local.py
+    # In other words, if the max-frame-size was 2147483647 and not 16384, this
+    # test would fail.
     def test_04_disposition_returns_to_closed_connection ( self ) :
         addr = self.address + '/closest/' + str(OneRouterTest.closest_count)
         OneRouterTest.closest_count += 1
@@ -992,7 +998,6 @@ class PreSettled ( MessagingHandler ) :
     def on_start ( self, event ):
         self.send_conn = event.container.connect ( self.addr )
         self.recv_conn = event.container.connect ( self.addr )
-
         self.sender   = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver = event.container.create_receiver ( self.send_conn, self.addr )
         self.receiver.flow ( self.n_messages )
