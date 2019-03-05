@@ -25,7 +25,6 @@
                     "remoteHosts": "*",
                     "allowDynamicSource": true,
                     "allowAnonymousSender": true,
-		    "allowAdminStatusUpdate": true,
 		    "targets": "*",
 		    "sources": "*"
                 }
