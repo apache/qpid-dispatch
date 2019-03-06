@@ -41,9 +41,18 @@
 #define QDR_CONNECTION_SSL              16
 #define QDR_CONNECTION_OPENED           17
 #define QDR_CONNECTION_ACTIVE           18
+#define QDR_CONNECTION_ADMIN_STATUS     19
+#define QDR_CONNECTION_OPER_STATUS      20
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
 const char * const QDR_CONNECTION_DIR_OUT = "out";
+
+const char * QDR_CONNECTION_ADMIN_STATUS_DELETED = "deleted";
+const char * QDR_CONNECTION_ADMIN_STATUS_ENABLED = "enabled";
+
+const char * QDR_CONNECTION_OPER_STATUS_UP      = "up";
+const char * QDR_CONNECTION_OPER_STATUS_CLOSING = "closing";
+
 
 const char *qdr_connection_roles[] =
     {"normal",
@@ -72,6 +81,8 @@ const char *qdr_connection_columns[] =
      "ssl",
      "opened",
      "active",
+     "adminStatus",
+     "operStatus",
      0};
 
 const char *CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
@@ -102,6 +113,7 @@ static void qd_get_next_pn_data(pn_data_t **data, const char **d, int *d1)
 static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *conn, int col, qd_composed_field_t *body, bool as_map)
 {
     char id_str[100];
+    const char *text = 0;
 
     if (as_map)
         qd_compose_insert_string(body, qdr_connection_columns[col]);
@@ -213,6 +225,16 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
         else {
             qd_compose_insert_bool(body, true);
         }
+        break;
+
+    case QDR_CONNECTION_ADMIN_STATUS:
+        text = conn->closed ? QDR_CONNECTION_ADMIN_STATUS_DELETED : QDR_CONNECTION_ADMIN_STATUS_ENABLED;
+        qd_compose_insert_string(body, text);
+        break;
+
+    case QDR_CONNECTION_OPER_STATUS:
+        text = conn->closed ? QDR_CONNECTION_OPER_STATUS_CLOSING : QDR_CONNECTION_OPER_STATUS_UP;
+        qd_compose_insert_string(body, text);
         break;
 
     case QDR_CONNECTION_PROPERTIES: {
@@ -364,6 +386,17 @@ static void qdr_manage_write_connection_map_CT(qdr_core_t          *core,
     qd_compose_end_map(body);
 }
 
+static qdr_connection_t *_find_conn_CT(qdr_core_t *core, uint64_t conn_id)
+{
+    qdr_connection_t *conn = DEQ_HEAD(core->open_connections);
+    while (conn) {
+        if (conn->identity == conn_id)
+            break;
+        conn = DEQ_NEXT(conn);
+    }
+    return conn;
+}
+
 
 static qdr_connection_t *qdr_connection_find_by_identity_CT(qdr_core_t *core, qd_iterator_t *identity)
 {
@@ -419,3 +452,126 @@ void qdra_connection_get_CT(qdr_core_t    *core,
     //
     qdr_agent_enqueue_response_CT(core, query);
 }
+
+
+static void qdra_connection_set_bad_request(qdr_query_t *query)
+{
+    query->status = QD_AMQP_BAD_REQUEST;
+    qd_compose_start_map(query->body);
+    qd_compose_end_map(query->body);
+}
+
+
+static void qdra_connection_update_set_status(qdr_core_t *core, qdr_query_t *query, qdr_connection_t *conn, qd_parsed_field_t *admin_state)
+{
+    if (conn) {
+        qd_iterator_t *admin_status_iter = qd_parse_raw(admin_state);
+
+        if (qd_iterator_equal(admin_status_iter, (unsigned char*) QDR_CONNECTION_ADMIN_STATUS_DELETED)) {
+            // This connection has been force-closed.
+            // Inter-router and edge connections may not be force-closed
+            if (conn->role != QDR_ROLE_INTER_ROUTER && conn->role != QDR_ROLE_EDGE_CONNECTION) {
+                conn->closed = true;
+                conn->error  = qdr_error(QD_AMQP_COND_CONNECTION_FORCED, "Connection forced-closed by management request");
+                conn->admin_status = QDR_CONN_ADMIN_DELETED;
+
+                qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection force-closed by request from connection [C%"PRIu64"]", conn->identity, query->in_conn);
+
+                //Activate the connection, so the I/O threads can finish the job.
+                qdr_connection_activate_CT(core, conn);
+                query->status = QD_AMQP_OK;
+                qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
+            }
+            else {
+                //
+                // You are trying to delete an inter-router connection and that is always forbidden, no matter what
+                // policy rights you have.
+                //
+                query->status = QD_AMQP_FORBIDDEN;
+                query->status.description = "You are not allowed to perform this operation.";
+                qd_compose_start_map(query->body);
+                qd_compose_end_map(query->body);
+            }
+
+        }
+        else if (qd_iterator_equal(admin_status_iter, (unsigned char*) QDR_CONNECTION_ADMIN_STATUS_ENABLED)) {
+            query->status = QD_AMQP_OK;
+            qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
+        }
+        else {
+            qdra_connection_set_bad_request(query);
+        }
+    }
+    else {
+        query->status = QD_AMQP_NOT_FOUND;
+        qd_compose_start_map(query->body);
+        qd_compose_end_map(query->body);
+    }
+}
+
+
+
+void qdra_connection_update_CT(qdr_core_t      *core,
+                             qd_iterator_t     *name,
+                             qd_iterator_t     *identity,
+                             qdr_query_t       *query,
+                             qd_parsed_field_t *in_body)
+{
+    // If the request was successful then the statusCode MUST contain 200 (OK) and the body of the message
+    // MUST contain a map containing the actual attributes of the entity updated. These MAY differ from those
+    // requested.
+    // A map containing attributes that are not applicable for the entity being created, or invalid values for a
+    // given attribute, MUST result in a failure response with a statusCode of 400 (Bad Request).
+    if (qd_parse_is_map(in_body)) {
+        // The absence of an attribute name implies that the entity should retain its already existing value.
+        // If the map contains a key-value pair where the value is null then the updated entity should have no value
+        // for that attribute, removing any previous value.
+        qd_parsed_field_t *admin_state = qd_parse_value_by_key(in_body, qdr_connection_columns[QDR_CONNECTION_ADMIN_STATUS]);
+
+        // Find the connection that the user connected on. This connection must have the correct policy rights which
+        // will allow the user on this connection to terminate some other connection.
+        qdr_connection_t *user_conn = _find_conn_CT(core, query->in_conn);
+
+        if (!user_conn) {
+            // This is bad. The user connection (that was requesting that some
+            // other connection be dropped) is gone
+            query->status.description = "Parent connection no longer exists";
+            qdra_connection_set_bad_request(query);
+        }
+
+        else {
+            if (!user_conn->policy_allow_admin_status_update) {
+                //
+                // Policy on the connection that is requesting that some other connection be deleted does not allow
+                // for the other connection to be deleted.Set the status to QD_AMQP_FORBIDDEN and just quit.
+                //
+                query->status = QD_AMQP_FORBIDDEN;
+                query->status.description = "You are not allowed to perform this operation.";
+                qd_compose_start_map(query->body);
+                qd_compose_end_map(query->body);
+             }
+            else if (admin_state) { //admin state is the only field that can be updated via the update management request
+                if (identity) {
+                    qdr_connection_t *conn = qdr_connection_find_by_identity_CT(core, identity);
+                    qdra_connection_update_set_status(core, query, conn, admin_state);
+                }
+                else {
+                    qdra_connection_set_bad_request(query);
+                }
+            }
+            else
+                qdra_connection_set_bad_request(query);
+        }
+    }
+    else
+        qdra_connection_set_bad_request(query);
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+
+
+
+}
+

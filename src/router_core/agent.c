@@ -414,7 +414,7 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_CONFIG_LINK_ROUTE: qdra_config_link_route_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_CONFIG_AUTO_LINK:  qdra_config_auto_link_delete_CT(core, query, name, identity); break;
-    case QD_ROUTER_CONNECTION:        break;
+    case QD_ROUTER_CONNECTION:        qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_ROUTER:            qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_LINK:              break;
     case QD_ROUTER_ADDRESS:           break;
@@ -439,7 +439,7 @@ static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_CONFIG_ADDRESS:    break;
     case QD_ROUTER_CONFIG_LINK_ROUTE: break;
     case QD_ROUTER_CONFIG_AUTO_LINK:  break;
-    case QD_ROUTER_CONNECTION:        break;
+    case QD_ROUTER_CONNECTION:        qdra_connection_update_CT(core, name, identity, query, in_body); break;
     case QD_ROUTER_ROUTER:            break;
     case QD_ROUTER_LINK:              qdra_link_update_CT(core, name, identity, query, in_body); break;
     case QD_ROUTER_ADDRESS:           break;

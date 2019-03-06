@@ -458,6 +458,10 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
             close_links(container, conn, false);
             pn_connection_close(conn);
             qd_conn_event_batch_complete(container, qd_conn, true);
+        } else if (pn_connection_state(conn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
+            close_links(container, conn, false);
+            notify_closed(container, qd_conn, qd_connection_get_context(qd_conn));
+            qd_conn_event_batch_complete(container, qd_conn, true);
         }
         break;
 
@@ -682,7 +686,6 @@ void qd_container_free(qd_container_t *container)
     if (!container) return;
     if (container->default_node)
         qd_container_destroy_node(container->default_node);
-
     qd_link_t *link = DEQ_HEAD(container->links);
     while (link) {
         DEQ_REMOVE_HEAD(container->links);

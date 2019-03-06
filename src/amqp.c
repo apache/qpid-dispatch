@@ -84,6 +84,7 @@ const char * const QD_AMQP_COND_PRECONDITION_FAILED = "amqp:precondition-failed"
 const char * const QD_AMQP_COND_RESOURCE_DELETED = "amqp:resource-deleted";
 const char * const QD_AMQP_COND_ILLEGAL_STATE = "amqp:illegal-state";
 const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL = "amqp:frame-size-too-small";
+const char * const QD_AMQP_COND_CONNECTION_FORCED = "amqp:connection:forced";
 
 const char * const QD_AMQP_PORT_STR = "5672";
 const char * const QD_AMQPS_PORT_STR = "5671";

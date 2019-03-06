@@ -604,6 +604,7 @@ vhost {
         $default: {
             remoteHosts: *
             allowDynamicSource: true,
+            allowAdminStatusUpdate: true,
             sources: myqueue1, myqueue2
             targets: myqueue1, myqueue2
         }
@@ -618,6 +619,10 @@ A list of remote hosts from which the users may connect. A host can be a hostnam
 
 `allowDynamicSource`::
 If true, connections from users in this group are permitted to attach receivers to dynamic sources.  This permits creation of listners to temporary addresses or termporary queues.  If false, use of dynamic sources is forbidden.
+
+`allowAdminStatusUpdate`::
+If true, connections from users in this group are permitted to modify the adminStatus of connections.  This permits termination of sender or receiver connections.  If false, the users of this group are prohibited from terminating any connections. Inter-router connections can never be terminated by any user under any circumstance. Defaults to true, no policy required.
+
 
 `allowWaypointLinks`::
 If true, connections from users in this group are permitted to attach links using waypoint capabilities.  This allows endpoints to act as waypoints (i.e. brokers) without the need for configuring auto-links.  If false, use of waypoint capabilities is forbidden.
