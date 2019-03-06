@@ -133,6 +133,11 @@ typedef struct qd_server_config_t {
     char *protocol_family;
 
     /**
+     * Export metrics.
+     */
+    bool metrics;
+
+    /**
      * Accept HTTP connections, allow WebSocket "amqp" protocol upgrades.
      */
     bool http;

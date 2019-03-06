@@ -149,6 +149,42 @@ class RouterTestHttp(TestCase):
         # https not configured
         self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
+    def test_http_metrics(self):
+
+        if not sys.version_info >= (2, 7):
+            return
+
+        config = Qdrouterd.Config([
+            ('router', {'id': 'QDR.METRICS'}),
+            ('listener', {'port': self.get_port(), 'http': 'yes'}),
+            ('listener', {'port': self.get_port(), 'httpRootDir': os.path.dirname(__file__)}),
+        ])
+        r = self.qdrouterd('metrics-test-router', config)
+
+        def test(port):
+            result = urlopen("http://localhost:%d/metrics" % port, cafile=self.ssl_file('ca-certificate.pem'))
+            self.assertEqual(200, result.getcode())
+            data = result.read().decode('utf-8')
+            assert('connections' in data)
+            assert('deliveries_ingress' in data)
+
+        # Sequential calls on multiple ports
+        for port in r.ports: test(port)
+
+        # Concurrent calls on multiple ports
+        class TestThread(threading.Thread):
+            def __init__(self, port):
+                threading.Thread.__init__(self)
+                self.port, self.ex = port, None
+                self.start()
+            def run(self):
+                try: test(self.port)
+                except Exception as e: self.ex = e
+        threads = [TestThread(p) for p in r.ports + r.ports]
+        for t in threads: t.join()
+        for t in threads:
+            if t.ex: raise t.ex
+
     def test_https_get(self):
         if not sys.version_info >= (2, 9):
             return

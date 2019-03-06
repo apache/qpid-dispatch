@@ -124,4 +124,6 @@ void qd_dispatch_unregister_entity(qd_dispatch_t *qd, void *impl);
 /** Set the agent */
 void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
 
+qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd);
+
 #endif

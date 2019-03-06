@@ -828,6 +828,12 @@
                     "deprecationName": "failoverList",
                     "description": "A comma-separated list of failover urls to be supplied to connected clients.  Form: [(amqp|amqps|ws|wss)://]host_or_ip[:port]"
                 },
+                "metrics": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Export metrics in prometheus text format for the router (using path /metrics).",
+                    "create": true
+                },
                 "http": {
                     "type": "boolean",
                     "default": false,

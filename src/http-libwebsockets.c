@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/amqp.h>
+#include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/timer.h>
 
@@ -95,6 +96,14 @@ typedef struct connection_t {
     struct lws *wsi;
 } connection_t;
 
+typedef struct stats_t {
+    size_t current;
+    bool headers_sent;
+    qdr_global_stats_t stats;
+    qd_http_server_t *server;
+    struct lws *wsi;
+} stats_t;
+
 /* Navigating from WSI pointer to qd objects */
 static qd_http_server_t *wsi_server(struct lws *wsi);
 static qd_http_listener_t *wsi_listener(struct lws *wsi);
@@ -106,6 +115,8 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
                          void *user, void *in, size_t len);
 static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
                            void *user, void *in, size_t len);
+static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
+                               void *user, void *in, size_t len);
 
 static struct lws_protocols protocols[] = {
     /* HTTP only protocol comes first */
@@ -127,6 +138,11 @@ static struct lws_protocols protocols[] = {
         "binary",
         callback_amqpws,
         sizeof(connection_t),
+    },
+    {
+        "http",
+        callback_metrics,
+        sizeof(stats_t),
     },
     { NULL, NULL, 0, 0 } /* terminator */
 };
@@ -161,7 +177,7 @@ static int handle_events(connection_t* c) {
 
 /* The server has a bounded, thread-safe queue for external work */
 typedef struct work_t {
-    enum { W_NONE, W_LISTEN, W_CLOSE, W_WAKE, W_STOP } type;
+    enum { W_NONE, W_LISTEN, W_CLOSE, W_WAKE, W_STOP, W_HANDLE_STATS } type;
     void *value;
 } work_t;
 
@@ -177,6 +193,7 @@ typedef struct work_queue_t {
 /* HTTP Server runs in a single thread, communication from other threads via work_queue */
 struct qd_http_server_t {
     qd_server_t *server;
+    qdr_core_t *core;
     sys_thread_t *thread;
     work_queue_t work;
     qd_log_source_t *log;
@@ -230,6 +247,7 @@ struct qd_http_listener_t {
     qd_http_server_t *server;
     struct lws_vhost *vhost;
     struct lws_http_mount mount;
+    struct lws_http_mount metrics;
 };
 
 void qd_http_listener_free(qd_http_listener_t *hl) {
@@ -283,6 +301,14 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
     m->def = "index.html";  /* Default file name */
     m->origin_protocol = LWSMPRO_FILE; /* mount type is a directory in a filesystem */
     m->extra_mimetypes = mime_types;
+    if (config->metrics) {
+        struct lws_http_mount *metrics = &hl->metrics;
+        m->mount_next = metrics;
+        metrics->mountpoint = "/metrics";
+        metrics->mountpoint_len = strlen(metrics->mountpoint);
+        metrics->origin_protocol = LWSMPRO_CALLBACK;
+        metrics->protocol = "http";
+    }
 
     struct lws_context_creation_info info = {0};
     info.mounts = m;
@@ -358,6 +384,143 @@ static void connection_wake(qd_connection_t *qd_conn)
         qd_http_server_t *hs = qd_conn->listener->http->server;
         work_t w = { W_WAKE, c };
         work_push(hs, w);
+    }
+}
+
+static void handle_stats_results(void *context)
+{
+    stats_t* stats = (stats_t*) context;
+    qd_http_server_t *hs = stats->server;
+    if (hs) {
+        work_t w = { W_HANDLE_STATS, stats->wsi };
+        work_push(hs, w);
+    }
+}
+
+typedef int (*int_metric) (qdr_global_stats_t *stats);
+typedef struct metric_definition {
+    const char* name;
+    const char* type;
+    int_metric value;
+} metric_definition;
+
+static int stats_get_connections(qdr_global_stats_t *stats) { return stats->connections; }
+static int stats_get_links(qdr_global_stats_t *stats) { return stats->links; }
+static int stats_get_addrs(qdr_global_stats_t *stats) { return stats->addrs; }
+static int stats_get_routers(qdr_global_stats_t *stats) { return stats->routers; }
+static int stats_get_link_routes(qdr_global_stats_t *stats) { return stats->link_routes; }
+static int stats_get_auto_links(qdr_global_stats_t *stats) { return stats->auto_links; }
+static int stats_get_presettled_deliveries(qdr_global_stats_t *stats) { return stats->presettled_deliveries; }
+static int stats_get_dropped_presettled_deliveries(qdr_global_stats_t *stats) { return stats->dropped_presettled_deliveries; }
+static int stats_get_accepted_deliveries(qdr_global_stats_t *stats) { return stats->accepted_deliveries; }
+static int stats_get_released_deliveries(qdr_global_stats_t *stats) { return stats->released_deliveries; }
+static int stats_get_rejected_deliveries(qdr_global_stats_t *stats) { return stats->rejected_deliveries; }
+static int stats_get_modified_deliveries(qdr_global_stats_t *stats) { return stats->modified_deliveries; }
+static int stats_get_deliveries_ingress(qdr_global_stats_t *stats) { return stats->deliveries_ingress; }
+static int stats_get_deliveries_egress(qdr_global_stats_t *stats) { return stats->deliveries_egress; }
+static int stats_get_deliveries_transit(qdr_global_stats_t *stats) { return stats->deliveries_transit; }
+static int stats_get_deliveries_ingress_route_container(qdr_global_stats_t *stats) { return stats->deliveries_ingress_route_container; }
+static int stats_get_deliveries_egress_route_container(qdr_global_stats_t *stats) { return stats->deliveries_egress_route_container; }
+
+static struct metric_definition metrics[] = {
+    {"connections", "gauge", stats_get_connections},
+    {"links", "gauge", stats_get_links},
+    {"addresses", "gauge", stats_get_addrs},
+    {"routers", "gauge", stats_get_routers},
+    {"link_routes", "gauge", stats_get_link_routes},
+    {"auto_links", "gauge", stats_get_auto_links},
+    {"presettled_deliveries", "counter", stats_get_presettled_deliveries},
+    {"dropped_presettled_deliveries", "counter", stats_get_dropped_presettled_deliveries},
+    {"accepted_deliveries", "counter", stats_get_accepted_deliveries},
+    {"released_deliveries", "counter", stats_get_released_deliveries},
+    {"rejected_deliveries", "counter", stats_get_rejected_deliveries},
+    {"modified_deliveries", "counter", stats_get_modified_deliveries},
+    {"deliveries_ingress", "counter", stats_get_deliveries_ingress},
+    {"deliveries_egress", "counter", stats_get_deliveries_egress},
+    {"deliveries_transit", "counter", stats_get_deliveries_transit},
+    {"deliveries_ingress_route_container", "counter", stats_get_deliveries_ingress_route_container},
+    {"deliveries_egress_route_container", "counter", stats_get_deliveries_egress_route_container}
+};
+static size_t metrics_length = sizeof(metrics)/sizeof(metrics[0]);
+
+static bool write_stats(uint8_t **position, const uint8_t * const end, const char* name, const char* type, int value)
+{
+    //11 chars + type + 2*name + 20 chars for int
+    size_t length = 11 + strlen(type) + strlen(name)*2 + 20;
+    if (end - *position >= length) {
+        *position += lws_snprintf((char*) *position, end - *position, "# TYPE %s %s\n", name, type);
+        *position += lws_snprintf((char*) *position, end - *position, "%s %i\n", name, value);
+        return true;
+    } else {
+        return false;
+    }
+}
+
+static bool write_metric(uint8_t **position, const uint8_t * const end, metric_definition* definition, qdr_global_stats_t* stats)
+{
+    return write_stats(position, end, definition->name, definition->type, definition->value(stats));
+}
+
+static int add_header_by_name(struct lws *wsi, const char* name, const char* value, uint8_t** position, uint8_t* end)
+{
+    return lws_add_http_header_by_name(wsi, (unsigned char*) name, (unsigned char*) value, strlen(value), position, end);
+}
+
+static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
+                               void *user, void *in, size_t len)
+{
+    qd_http_server_t *hs = wsi_server(wsi);
+    stats_t *stats = (stats_t*) user;
+    uint8_t buffer[LWS_PRE + 2048];
+    uint8_t *start = &buffer[LWS_PRE], *position = start, *end = &buffer[sizeof(buffer) - LWS_PRE - 1];
+
+    switch (reason) {
+
+    case LWS_CALLBACK_HTTP: {
+        stats->wsi = wsi;
+        stats->server = hs;
+        //request stats from core thread
+        qdr_request_global_stats(hs->core, &stats->stats, handle_stats_results, (void*) stats);
+        return 0;
+    }
+
+    case LWS_CALLBACK_HTTP_WRITEABLE: {
+        //encode stats into buffer
+        if (!stats->headers_sent) {
+            if (lws_add_http_header_status(wsi, HTTP_STATUS_OK, &position, end)
+                || add_header_by_name(wsi, "content-type:", "text/plain", &position, end)
+                || add_header_by_name(wsi, "connection:", "close", &position, end))
+                return 1;
+            if (lws_finalize_http_header(wsi, &position, end))
+                return 1;
+            stats->headers_sent = true;
+        }
+
+        while (stats->current < metrics_length) {
+            if (write_metric(&position, end, &metrics[stats->current], &stats->stats)) {
+                stats->current++;
+                qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %i of %i", stats->current, metrics_length);
+            } else {
+                qd_log(hs->log, QD_LOG_DEBUG, "insufficient space in buffer");
+                break;
+            }
+        }
+        int n = stats->current < metrics_length ? LWS_WRITE_HTTP : LWS_WRITE_HTTP_FINAL;
+
+        //write buffer
+        size_t available = position - start;
+	if (lws_write(wsi, (unsigned char*) start, available, n) != available)
+            return 1;
+        if (n == LWS_WRITE_HTTP_FINAL) {
+            if (lws_http_transaction_completed(wsi)) return -1;
+        } else {
+            lws_callback_on_writable(wsi);
+        }
+        return 0;
+    }
+
+    default:
+        return 0;
     }
 }
 
@@ -494,6 +657,9 @@ static void* http_thread_run(void* v) {
             case W_CLOSE:
                 listener_close((qd_http_listener_t*)w.value, hs);
                 break;
+            case W_HANDLE_STATS:
+                lws_callback_on_writable((struct lws*) w.value);
+                break;
             case W_WAKE: {
                 connection_t *c = w.value;
                 pn_collector_put(c->driver.collector, PN_OBJECT, c->driver.connection,
@@ -546,6 +712,7 @@ qd_http_server_t *qd_http_server(qd_server_t *s, qd_log_source_t *log) {
         hs->context = lws_create_context(&info);
         hs->server = s;
         hs->log = log;              /* For messages from this file */
+        hs->core = 0; // not yet available
         if (!hs->context) {
             qd_log(hs->log, QD_LOG_CRITICAL, "No memory starting HTTP server");
             qd_http_server_free(hs);
@@ -559,6 +726,7 @@ qd_http_server_t *qd_http_server(qd_server_t *s, qd_log_source_t *log) {
 
 qd_http_listener_t *qd_http_server_listen(qd_http_server_t *hs, qd_listener_t *li)
 {
+    hs->core = qd_dispatch_router_core(qd_server_dispatch(hs->server));
     sys_mutex_lock(hs->work.lock);
     if (!hs->thread) {
         hs->thread = sys_thread(http_thread_run, hs);
