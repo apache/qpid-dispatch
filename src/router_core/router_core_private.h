@@ -166,6 +166,15 @@ struct qdr_action_t {
         } agent;
 
         //
+        // Arguments for stats request actions
+        //
+        struct {
+            qdr_global_stats_t             *stats;
+            qdr_global_stats_handler_t     handler;
+            void                           *context;
+        } stats_request;
+
+        //
         // Arguments for general use
         //
         struct {
@@ -218,6 +227,8 @@ struct qdr_general_work_t {
     uint64_t                     in_conn_id;
     int                          treatment;
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;
+    qdr_global_stats_handler_t  stats_handler;
+    void                       *context;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -315,7 +326,6 @@ struct qdr_query_t {
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
-
 
 struct qdr_node_t {
     DEQ_LINKS(qdr_node_t);

@@ -837,4 +837,28 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            int              ssl_ssf,
                                            bool             ssl);
 
+
+typedef struct {
+    size_t connections;
+    size_t links;
+    size_t addrs;
+    size_t routers;
+    size_t link_routes;
+    size_t auto_links;
+    size_t presettled_deliveries;
+    size_t dropped_presettled_deliveries;
+    size_t accepted_deliveries;
+    size_t rejected_deliveries;
+    size_t released_deliveries;
+    size_t modified_deliveries;
+    size_t deliveries_ingress;
+    size_t deliveries_egress;
+    size_t deliveries_transit;
+    size_t deliveries_ingress_route_container;
+    size_t deliveries_egress_route_container;
+}  qdr_global_stats_t;
+ALLOC_DECLARE(qdr_global_stats_t);
+typedef void (*qdr_global_stats_handler_t) (void *context);
+void qdr_request_global_stats(qdr_core_t *core, qdr_global_stats_t *stats, qdr_global_stats_handler_t callback, void *context);
+
 #endif

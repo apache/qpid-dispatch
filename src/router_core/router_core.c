@@ -749,3 +749,45 @@ void qdr_connection_work_free_CT(qdr_connection_work_t *work)
     qdr_terminus_free(work->target);
     free_qdr_connection_work_t(work);
 }
+
+static void qdr_post_global_stats_response(qdr_core_t *core, qdr_general_work_t *work)
+{
+    work->stats_handler(work->context);
+}
+
+static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_global_stats_t *stats = action->args.stats_request.stats;
+    stats->addrs = DEQ_SIZE(core->addrs);
+    stats->links = DEQ_SIZE(core->open_links);
+    stats->routers = DEQ_SIZE(core->routers);
+    stats->connections = DEQ_SIZE(core->open_connections);
+    stats->link_routes = DEQ_SIZE(core->link_routes);
+    stats->auto_links = DEQ_SIZE(core->auto_links);
+    stats->presettled_deliveries = core->presettled_deliveries;
+    stats->dropped_presettled_deliveries = core->dropped_presettled_deliveries;
+    stats->accepted_deliveries = core->accepted_deliveries;
+    stats->rejected_deliveries = core->rejected_deliveries;
+    stats->released_deliveries = core->released_deliveries;
+    stats->modified_deliveries = core->modified_deliveries;
+    stats->deliveries_ingress = core->deliveries_ingress;
+    stats->deliveries_egress = core->deliveries_egress;
+    stats->deliveries_transit = core->deliveries_transit;
+    stats->deliveries_ingress_route_container = core->deliveries_ingress_route_container;
+    stats->deliveries_egress_route_container = core->deliveries_egress_route_container;
+
+    qdr_general_work_t *work = qdr_general_work(qdr_post_global_stats_response);
+    work->stats_handler = action->args.stats_request.handler;
+    work->context = action->args.stats_request.context;
+    qdr_post_general_work_CT(core, work);
+}
+
+void qdr_request_global_stats(qdr_core_t *core, qdr_global_stats_t *stats, qdr_global_stats_handler_t callback, void *context)
+{
+    qdr_action_t *action = qdr_action(qdr_global_stats_request_CT, "global_stats_request");
+    action->args.stats_request.stats = stats;
+    action->args.stats_request.handler = callback;
+    action->args.stats_request.context = context;
+    qdr_action_enqueue(core, action);
+}
+
