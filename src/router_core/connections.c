@@ -72,6 +72,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         bool                   policy_allow_dynamic_link_routes,
+                                        bool                   policy_allow_admin_status_update,
                                         int                    link_capacity,
                                         const char            *vhost,
                                         qdr_connection_info_t *connection_info,
@@ -92,8 +93,11 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
     conn->policy_allow_dynamic_link_routes = policy_allow_dynamic_link_routes;
+    conn->policy_allow_admin_status_update = policy_allow_admin_status_update;
     conn->link_capacity         = link_capacity;
     conn->mask_bit              = -1;
+    conn->admin_status          = QDR_CONN_ADMIN_ENABLED;
+    conn->oper_status           = QDR_CONN_OPER_UP;
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
     conn->connection_info->role = conn->role;
@@ -221,6 +225,11 @@ int qdr_connection_process(qdr_connection_t *conn)
     bool            detach_sent;
 
     int event_count = 0;
+
+    if (conn->force_closed) {
+        core->conn_force_closed_handler(core->user_context, conn);
+        return 0;
+    }
 
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
@@ -538,31 +547,33 @@ static void qdr_link_detach_sent(qdr_link_t *link)
 }
 
 
-void qdr_connection_handlers(qdr_core_t                *core,
-                             void                      *context,
-                             qdr_connection_activate_t  activate,
-                             qdr_link_first_attach_t    first_attach,
-                             qdr_link_second_attach_t   second_attach,
-                             qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow,
-                             qdr_link_offer_t           offer,
-                             qdr_link_drained_t         drained,
-                             qdr_link_drain_t           drain,
-                             qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver,
-                             qdr_delivery_update_t      delivery_update)
+void qdr_connection_handlers(qdr_core_t                   *core,
+                             void                         *context,
+                             qdr_connection_activate_t     activate,
+                             qdr_link_first_attach_t       first_attach,
+                             qdr_link_second_attach_t      second_attach,
+                             qdr_link_detach_t             detach,
+                             qdr_link_flow_t               flow,
+                             qdr_link_offer_t              offer,
+                             qdr_link_drained_t            drained,
+                             qdr_link_drain_t              drain,
+                             qdr_link_push_t               push,
+                             qdr_link_deliver_t            deliver,
+                             qdr_delivery_update_t         delivery_update,
+                             qdr_connection_force_closed_t force_closed)
 {
-    core->user_context            = context;
-    core->first_attach_handler    = first_attach;
-    core->second_attach_handler   = second_attach;
-    core->detach_handler          = detach;
-    core->flow_handler            = flow;
-    core->offer_handler           = offer;
-    core->drained_handler         = drained;
-    core->drain_handler           = drain;
-    core->push_handler            = push;
-    core->deliver_handler         = deliver;
-    core->delivery_update_handler = delivery_update;
+    core->user_context              = context;
+    core->first_attach_handler      = first_attach;
+    core->second_attach_handler     = second_attach;
+    core->detach_handler            = detach;
+    core->flow_handler              = flow;
+    core->offer_handler             = offer;
+    core->drained_handler           = drained;
+    core->drain_handler             = drain;
+    core->push_handler              = push;
+    core->deliver_handler           = deliver;
+    core->delivery_update_handler   = delivery_update;
+    core->conn_force_closed_handler = force_closed;
 }
 
 

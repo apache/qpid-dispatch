@@ -28,8 +28,12 @@ from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
+from proton.handlers import MessagingHandler
+from proton.utils import BlockingConnection
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
+
+CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 
 TOTAL_ENTITIES=29   # for tests that check the total # of entities
 
@@ -430,6 +434,36 @@ class QdmanageTest(TestCase):
         self.run_qdmanage('DELETE --type=sslProfile --name=' +
         ssl_profile_name)
 
+    def test_delete_connection(self):
+        """
+        This test creates a blocking connection and tries to delete that connection.
+        There is no policy associated with the connection so allowAdminStatusUpdate defaults to False
+        Make sure we are Forbidden from deleting a connection.
+        :return:
+        """
+        connection = BlockingConnection(self.address(), properties=CONNECTION_PROPERTIES_UNICODE_STRING)
+        query_command = 'QUERY --type=connection'
+        outputs = json.loads(self.run_qdmanage(query_command))
+        identity = None
+        passed = False
+        for output in outputs:
+            if output.get('properties'):
+                conn_properties = output['properties']
+                if conn_properties.get('int_property'):
+                    identity = output.get("identity")
+                    print (identity)
+                    if identity:
+                        delete_command = 'DELETE --type=connection --id=' + identity
+                        try:
+                            outs = json.loads(self.run_qdmanage(delete_command))
+                        except Exception as e:
+                            if "Forbidden" in e.message:
+                                passed = True
+
+        # The test has passed since we were forbidden from deleting a connection
+        # due to lack of policy permissions.
+        self.assertTrue(passed)
+
     def test_create_delete_address_pattern(self):
         config = [('mercury.*.earth.#', 'closest'),
                   ('*/mars/*/#', 'multicast'),
@@ -479,7 +513,6 @@ class QdmanageTest(TestCase):
             if pattern is not None:
                 for p in config:
                     self.assertNotEqual(p[0], pattern)
-
 
 if __name__ == '__main__':
     unittest.main(main_module())

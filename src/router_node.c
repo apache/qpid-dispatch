@@ -1164,6 +1164,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                           conn->strip_annotations_in,
                           conn->strip_annotations_out,
                           conn->policy_settings ? conn->policy_settings->allowDynamicLinkRoutes : true,
+                          conn->policy_settings ? conn->policy_settings->allowAdminStatusUpdate : false, // By default the allowAdminStatusUpdate is false.
                           link_capacity,
                           vhost,
                           connection_info,
@@ -1339,6 +1340,25 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     pn_link_open(qd_link_pn(qlink));
 }
 
+static void CORE_force_close_connection(void *context, qdr_connection_t *qdr_conn)
+{
+    if (qdr_conn) {
+        qd_connection_t *qd_conn = qdr_connection_get_context(qdr_conn);
+        if (qd_conn) {
+            pn_connection_t *pn_conn = qd_connection_pn(qd_conn);
+            if (pn_conn) {
+                // This will close the proton connevtion which will close the
+                // socket and take care of the rest;
+                pn_connection_close(pn_conn);
+            }
+            qd_connection_set_context(qd_conn, 0);
+        }
+
+        // This will clean up the qdr_connection and close the auto links, link routes etc
+        qdr_connection_set_context(qdr_conn, 0);
+        qdr_connection_closed(qdr_conn);
+    }
+}
 
 static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close)
 {
@@ -1678,7 +1698,8 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             CORE_link_drain,
                             CORE_link_push,
                             CORE_link_deliver,
-                            CORE_delivery_update);
+                            CORE_delivery_update,
+                            CORE_force_close_connection);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);

@@ -23,13 +23,13 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from time import sleep
-import json
+import json, os
 import unittest2 as unittest
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
 from proton import Message, Timeout, Delivery
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import AsyncTestReceiver
 
 from proton.handlers import MessagingHandler
@@ -48,12 +48,15 @@ class TwoRouterTest(TestCase):
         super(TwoRouterTest, cls).setUpClass()
 
         def router(name, client_server, connection):
+            policy_config_path = os.path.join(DIR, 'two-router-policy')
 
             config = [
                 # Use the deprecated attributes helloInterval, raInterval, raIntervalFlux, remoteLsMaxAge
                 # The routers should still start successfully after using these deprecated entities.
                 ('router', {'remoteLsMaxAge': 60, 'helloInterval': 1, 'raInterval': 30, 'raIntervalFlux': 4,
                             'mode': 'interior', 'id': 'QDR.%s'%name, 'allowUnsettledMulticast': 'yes'}),
+                ('policy', {'policyDir': policy_config_path,
+                            'enableVhostPolicy': 'true'}),
 
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no', 'linkCapacity': 500}),
 
@@ -99,6 +102,21 @@ class TwoRouterTest(TestCase):
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
+
+    def address(self):
+        return self.routers[0].addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception(out if out else str(e))
+        return out
 
     def test_01_pre_settled(self):
         test = DeliveriesInTransit(self.routers[0].addresses[0], self.routers[1].addresses[0])
@@ -266,6 +284,34 @@ class TwoRouterTest(TestCase):
         test = SingleCharacterDestinationTest(self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_19_delete_inter_router_connection(self):
+        """
+        This test tries to delete an inter-router connection but is
+        prevented from doing so. All users with allowAdminStatusUpdate
+        permissions will still be prevented from deleting inter-router
+        connections.
+        """
+        query_command = 'QUERY --type=connection'
+        outputs = json.loads(self.run_qdmanage(query_command))
+        identity = None
+        passed = False
+
+        for output in outputs:
+            if "inter-router" == output['role']:
+                identity = output['identity']
+                if identity:
+                    delete_command = 'DELETE --type=connection --id=' + identity
+                    try:
+                        json.loads(self.run_qdmanage(delete_command))
+                    except Exception as e:
+                        if "Forbidden" in e.message:
+                            passed = True
+
+        # The test has passed since we were forbidden from deleting
+        # inter-router connections even though our policy allows us
+        # to delete connections.
+        self.assertTrue(passed)
 
 
 class Timeout(object):

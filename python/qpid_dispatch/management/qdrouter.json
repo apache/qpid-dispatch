@@ -1588,6 +1588,14 @@
             "description": "Connections to the router's container.",
             "extends": "operationalEntity",
             "attributes": {
+                "adminStatus": {
+                    "type": ["enabled", "deleted"],
+                    "default": "enabled",
+                    "update": true
+                },
+                "operStatus": {
+                    "type": ["up"]
+                },            
                 "container": {
                     "description": "The container for this connection",
                     "type": "string"
@@ -1882,6 +1890,13 @@
                     "required": false,
                     "create": true
                 },
+                "allowAdminStatusUpdate": {
+                    "type": "boolean",
+                    "description": "Whether this connection is allowed to update the admin status of other connections. Note: Inter-router connections cannot be deleted at any time.",
+                    "default": false,
+                    "required": false,
+                    "create": true
+                },                
                 "sources": {
                     "type": "string",
                     "description": "A list of source addresses from which users in this group may receive messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses. You can use the substitution token '${user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name. You may specify attributes 'sources' or 'sourcePattern' but not both at the same time.",

@@ -414,7 +414,7 @@ static void qdr_manage_delete_CT(qdr_core_t *core, qdr_action_t *action, bool di
     case QD_ROUTER_CONFIG_ADDRESS:    qdra_config_address_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_CONFIG_LINK_ROUTE: qdra_config_link_route_delete_CT(core, query, name, identity); break;
     case QD_ROUTER_CONFIG_AUTO_LINK:  qdra_config_auto_link_delete_CT(core, query, name, identity); break;
-    case QD_ROUTER_CONNECTION:        break;
+    case QD_ROUTER_CONNECTION:        qdra_connection_delete_CT(core, query, identity); break; //Connection objects are created by the router and they have an id and no name
     case QD_ROUTER_ROUTER:            qdr_agent_forbidden(core, query, false); break;
     case QD_ROUTER_LINK:              break;
     case QD_ROUTER_ADDRESS:           break;

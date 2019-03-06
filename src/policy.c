@@ -439,6 +439,11 @@ bool qd_policy_open_lookup_user(
                     settings->allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
                     settings->allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
                     settings->allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
+
+                    //
+                    // By default, deleting connections are disabled. To enable, set the allowAdminStatusUpdate to true in a policy.
+                    //
+                    settings->allowAdminStatusUpdate = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAdminStatusUpdate", false);
                     if (settings->sources == 0) { //don't override if configured by authz plugin
                         settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                     }
@@ -629,6 +634,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
         // degenerate case of blank proposed name being opened. will never match anything.
         return false;
     }
+
     size_t a_len = strlen(allowed);
     if (a_len == 0) {
         // no names in 'allowed'.
@@ -651,6 +657,7 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
         free(dup);
         return false;
     }
+
     size_t pName_sz = QPALN_SIZE;
 
     bool result = false;

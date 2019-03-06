@@ -28,7 +28,7 @@ void qdra_connection_get_CT(qdr_core_t          *core,
                             qd_iterator_t       *identity,
                             qdr_query_t         *query,
                             const char          *qdr_connection_columns[]);
-
+void qdra_connection_delete_CT(qdr_core_t *core, qdr_query_t *query, qd_iterator_t *identity);
 
 #define QDR_CONNECTION_COLUMN_COUNT 19
 const char *qdr_connection_columns[QDR_CONNECTION_COLUMN_COUNT + 1];

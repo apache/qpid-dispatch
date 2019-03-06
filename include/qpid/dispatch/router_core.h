@@ -188,6 +188,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_in,
                                         bool                   strip_annotations_out,
                                         bool                   policy_allow_dynamic_link_routes,
+                                        bool                   policy_allow_admin_status_update,
                                         int                    link_capacity,
                                         const char            *vhost,
                                         qdr_connection_info_t *connection_info,
@@ -664,6 +665,7 @@ typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool 
 typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int limit);
 typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
+typedef void (*qdr_connection_force_closed_t)    (void *context, qdr_connection_t *conn);
 
 void qdr_connection_handlers(qdr_core_t             *core,
                              void                      *context,
@@ -677,7 +679,8 @@ void qdr_connection_handlers(qdr_core_t             *core,
                              qdr_link_drain_t           drain,
                              qdr_link_push_t            push,
                              qdr_link_deliver_t         deliver,
-                             qdr_delivery_update_t      delivery_update);
+                             qdr_delivery_update_t      delivery_update,
+                             qdr_connection_force_closed_t force_closed);
 
 /**
  ******************************************************************************

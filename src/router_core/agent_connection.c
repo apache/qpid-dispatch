@@ -419,3 +419,45 @@ void qdra_connection_get_CT(qdr_core_t    *core,
     //
     qdr_agent_enqueue_response_CT(core, query);
 }
+
+
+void qdra_connection_delete_CT(qdr_core_t    *core,
+                               qdr_query_t   *query,
+                               qd_iterator_t *identity)
+{
+    if (!identity) {
+        query->status = QD_AMQP_BAD_REQUEST;
+        query->status.description = "No identity provided";
+        qd_log(core->agent_log, QD_LOG_ERROR, "Error performing DELETE of %s: %s", CONNECTION_TYPE, query->status.description);
+    }
+    else {
+        // This is the connection that will be deleted.
+        qdr_connection_t *conn = qdr_connection_find_by_identity_CT(core, identity);
+
+        if (conn) {
+            // This connection has been force closed.
+            // Inter router connection can never be force closed
+            if (conn->policy_allow_admin_status_update && conn->role != QDR_ROLE_INTER_ROUTER) {
+                conn->force_closed = true;
+                conn->admin_status = QDR_CONN_ADMIN_DELETED;
+
+                //Activate the connection, so the I/O threads can finish the job.
+                qdr_connection_activate_CT(core, conn);
+                query->status = QD_AMQP_NO_CONTENT;
+            }
+            else {
+                query->status = QD_AMQP_FORBIDDEN;
+            }
+        }
+        else {
+            query->status = QD_AMQP_NOT_FOUND;
+        }
+
+    }
+
+    //
+    // Enqueue the response.
+    //
+    qdr_agent_enqueue_response_CT(core, query);
+
+}

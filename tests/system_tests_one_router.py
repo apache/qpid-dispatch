@@ -24,12 +24,13 @@ from __future__ import print_function
 
 import unittest2 as unittest
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
 import os, json
+from subprocess import PIPE, STDOUT
 
 CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 CONNECTION_PROPERTIES_SYMBOL = dict()
@@ -93,6 +94,18 @@ class OneRouterTest(TestCase):
         cls.both_strip_addr = cls.router.addresses[2]
         cls.out_strip_addr  = cls.router.addresses[3]
         cls.in_strip_addr   = cls.router.addresses[4]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address, '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception(out if out else str(e))
+        return out
 
 
     def test_01_listen_error(self):
@@ -442,6 +455,55 @@ class OneRouterTest(TestCase):
         test = DroppedPresettledTest(self.address, 200, ingress_delivery_count)
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_44_delete_connection(self):
+        """
+        This test creates a blocking connection and tries to delete that connection.
+        Since the policy associated with this router set allowAdminStatusUpdate as true,
+        the delete operation will be permitted.
+        """
+
+        # Create a connection with some properties so we can easily identify the connection
+        connection = BlockingConnection(self.address,
+                                        properties=CONNECTION_PROPERTIES_UNICODE_STRING)
+        query_command = 'QUERY --type=connection'
+        outputs = json.loads(self.run_qdmanage(query_command))
+        identity = None
+        passed = False
+
+        for output in outputs:
+            if output.get('properties'):
+                conn_properties = output['properties']
+                # Find the connection that has our properties - CONNECTION_PROPERTIES_UNICODE_STRING
+                # Delete that connection and run another qdmanage to see
+                # if the connection is gone.
+                if conn_properties.get('int_property'):
+                    identity = output.get("identity")
+                    if identity:
+                        delete_command = 'DELETE --type=connection --id=' + identity
+                        try:
+                            self.run_qdmanage(delete_command)
+                            query_command = 'QUERY --type=connection'
+                            outputs = json.loads(
+                                self.run_qdmanage(query_command))
+                            no_properties = True
+                            for output in outputs:
+                                if output.get('properties'):
+                                    no_properties = False
+                                    conn_properties = output['properties']
+                                    if conn_properties.get('int_property'):
+                                        passed = False
+                                        break
+                                    else:
+                                        passed = True
+                            if no_properties:
+                                passed = True
+                        except Exception as e:
+                            passed = False
+
+        # The test has passed since we were allowed to delete a connection
+        # because we have the policy permission to do so.
+        self.assertTrue(passed)
 
 
 class Entity(object):
