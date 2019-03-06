@@ -31,7 +31,7 @@ struct qd_immediate_t {
 };
 
 /* Array rather than list for fast access and cache-coherence */
-static qd_immediate_t immediates[256] = {0};
+static qd_immediate_t immediates[256] = {{0}};
 static size_t count = 0;
 static sys_mutex_t *lock = NULL;
 
