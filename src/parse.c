@@ -654,12 +654,18 @@ int is_tag_a_map(uint8_t tag)
 
 int qd_parse_is_map(qd_parsed_field_t *field)
 {
+    if (!field)
+        return 0;
+
     return is_tag_a_map(field->tag);
 }
 
 
 int qd_parse_is_list(qd_parsed_field_t *field)
 {
+    if (!field)
+        return 0;
+
     return field->tag == QD_AMQP_LIST8 || field->tag == QD_AMQP_LIST32;
 }
 

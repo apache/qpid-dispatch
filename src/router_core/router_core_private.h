@@ -636,6 +636,18 @@ ALLOC_DECLARE(qdr_connection_info_t);
 
 DEQ_DECLARE(qdr_link_route_t, qdr_link_route_list_t);
 
+
+typedef enum {
+    QDR_CONN_OPER_UP,
+} qdr_conn_oper_status_t;
+
+
+typedef enum {
+    QDR_CONN_ADMIN_ENABLED,
+    QDR_CONN_ADMIN_DELETED
+} qdr_conn_admin_status_t;
+
+
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
@@ -649,6 +661,7 @@ struct qdr_connection_t {
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
     bool                        policy_allow_dynamic_link_routes;
+    bool                        policy_allow_admin_status_update;
     int                         link_capacity;
     int                         mask_bit;
     qdr_connection_work_list_t  work_list;
@@ -660,6 +673,10 @@ struct qdr_connection_t {
     qdr_connection_info_t      *connection_info;
     void                       *user_context; /* Updated from IO thread, use work_lock */
     qdr_link_route_list_t       conn_link_routes;  // connection scoped link routes
+    qdr_conn_oper_status_t      oper_status;
+    qdr_conn_admin_status_t     admin_status;
+    qdr_error_t                *error;
+    bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -801,17 +818,18 @@ struct qdr_core_t {
     //
     // Connection section
     //
-    void                      *user_context;
-    qdr_link_first_attach_t    first_attach_handler;
-    qdr_link_second_attach_t   second_attach_handler;
-    qdr_link_detach_t          detach_handler;
-    qdr_link_flow_t            flow_handler;
-    qdr_link_offer_t           offer_handler;
-    qdr_link_drained_t         drained_handler;
-    qdr_link_drain_t           drain_handler;
-    qdr_link_push_t            push_handler;
-    qdr_link_deliver_t         deliver_handler;
-    qdr_delivery_update_t      delivery_update_handler;
+    void                     *user_context;
+    qdr_link_first_attach_t   first_attach_handler;
+    qdr_link_second_attach_t  second_attach_handler;
+    qdr_link_detach_t         detach_handler;
+    qdr_link_flow_t           flow_handler;
+    qdr_link_offer_t          offer_handler;
+    qdr_link_drained_t        drained_handler;
+    qdr_link_drain_t          drain_handler;
+    qdr_link_push_t           push_handler;
+    qdr_link_deliver_t        deliver_handler;
+    qdr_delivery_update_t     delivery_update_handler;
+    qdr_connection_close_t    conn_close_handler;
 
     //
     // Events section

@@ -29,8 +29,13 @@ void qdra_connection_get_CT(qdr_core_t          *core,
                             qdr_query_t         *query,
                             const char          *qdr_connection_columns[]);
 
+void qdra_connection_update_CT(qdr_core_t      *core,
+                             qd_iterator_t     *name,
+                             qd_iterator_t     *identity,
+                             qdr_query_t       *query,
+                             qd_parsed_field_t *in_body);
 
-#define QDR_CONNECTION_COLUMN_COUNT 19
+#define QDR_CONNECTION_COLUMN_COUNT 21
 const char *qdr_connection_columns[QDR_CONNECTION_COLUMN_COUNT + 1];
 
 #endif
