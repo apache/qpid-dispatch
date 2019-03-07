@@ -609,7 +609,8 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
         }
 
         if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
-            link->ingress_histogram[delivery->ingress_index]++;    }
+            link->ingress_histogram[delivery->ingress_index]++;
+    }
 
     //
     // Free all the peer qdr_delivery_ref_t references

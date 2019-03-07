@@ -295,7 +295,7 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
                 qd_log(container->log_source, QD_LOG_DEBUG,
                        "Aborting link '%s' due to parent connection end",
                        pn_link_name(pn_link));
-            node->ntype->link_detach_handler(node->context, qd_link, QD_LOST);
+            node->ntype->link_detach_handler(node->context, qd_link, QD_CONNECTION_LOST);
         }
         pn_link = pn_link_next(pn_link, 0);
     }
@@ -305,7 +305,7 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
 static int close_handler(qd_container_t *container, pn_connection_t *conn, qd_connection_t* qd_conn)
 {
     //
-    // Close all links, passing QD_LOST as the reason.  These links are not
+    // Close all links, passing QD_CONNECTION_LOST as the reason.  These links are not
     // being properly 'detached'.  They are being orphaned.
     //
     close_links(container, conn, true);
@@ -524,7 +524,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
                                    "Aborting link '%s' due to parent session end",
                                    pn_link_name(pn_link));
                             qd_link->node->ntype->link_detach_handler(qd_link->node->context,
-                                                                      qd_link, QD_LOST);
+                                                                      qd_link, QD_SESSION_LOST);
                         }
                     }
                     pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);

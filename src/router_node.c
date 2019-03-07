@@ -83,6 +83,7 @@ static void qdr_node_disconnect_deliveries(qdr_core_t *core, qd_link_t *link, qd
 
         pn_delivery_set_context(pdlv, 0);
         qdr_delivery_set_context(qdlv, 0);
+
         qdr_delivery_decref(core, qdlv, "removed reference from pn_delivery");
     }
 }
@@ -816,7 +817,10 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         // object is already gone, finish disconnecting the linkage and free the qd_link
         // because the core will silently free its own resources.
         //
-        if (dt == QD_LOST || qdr_link_get_context(rlink) == 0) {
+        if (dt == QD_CONNECTION_LOST || dt == QD_SESSION_LOST || qdr_link_get_context(rlink) == 0) {
+            if (dt == QD_CONNECTION_LOST) {
+                qdr_link_set_connection_closed(rlink);
+            }
             qdr_link_set_context(rlink, 0);
             qdr_node_reap_abandoned_deliveries(router->router_core, link);
             qd_link_free(link);
@@ -1394,6 +1398,9 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
 
 static void CORE_link_flow(void *context, qdr_link_t *link, int credit)
 {
+    if (qdr_link_is_connection_closed(link))
+        return;
+
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
         return;
@@ -1453,6 +1460,10 @@ static int CORE_link_push(void *context, qdr_link_t *link, int limit)
     if (!qlink)
         return 0;
 
+    if (qdr_link_is_connection_closed(link))
+        return 0;
+
+
     pn_link_t *plink = qd_link_pn(qlink);
 
     if (plink) {
@@ -1477,6 +1488,10 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 
     if (!qlink)
         return 0;
+
+    if (qdr_link_is_connection_closed(link))
+        return 0;
+
 
     pn_link_t *plink = qd_link_pn(qlink);
     if (!plink)
