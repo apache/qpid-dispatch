@@ -132,6 +132,7 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
                                               qdr_error_t *error)
 {
     qdr_addr_endpoint_state_t *endpoint_state  = (qdr_addr_endpoint_state_t *)link_context;
+
     qdrc_endpoint_detach_CT(endpoint_state->mc->core, endpoint_state->endpoint, 0);
     qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
     DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
@@ -143,6 +144,30 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
     }
     free_qdr_addr_endpoint_state_t(endpoint_state);
     qdr_error_free(error);
+}
+
+static void qdrc_address_endpoint_cleanup(void *link_context)
+{
+    qdr_addr_endpoint_state_t *endpoint_state  = (qdr_addr_endpoint_state_t *)link_context;
+    if (endpoint_state) {
+        qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
+        if (mc && endpoint_state->conn) {
+            DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
+
+            //
+            // Clean out all the states held by the link_context (endpoint_state)
+            //
+            endpoint_state->conn = 0;
+            endpoint_state->endpoint = 0;
+            if (endpoint_state->link) {
+                //Setting the link->edge_context to zero prevents the crash seen in DISPATCH-1276
+                endpoint_state->link->edge_context = 0;
+                endpoint_state->link = 0;
+            }
+            free_qdr_addr_endpoint_state_t(endpoint_state);
+        }
+    }
+
 }
 
 
@@ -328,8 +353,6 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
         case QDRC_EVENT_LINK_EDGE_DATA_DETACHED :
         {
             if (link->edge_context) {
-                qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)link->edge_context;
-                endpoint_state->link = 0;
                 link->edge_context = 0;
             }
 
@@ -361,6 +384,7 @@ static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_c
     context->addr_tracking_endpoint.label = "qdrc_edge_address_tracking_module_init_CT";
     context->addr_tracking_endpoint.on_first_attach  = qdrc_address_endpoint_first_attach;
     context->addr_tracking_endpoint.on_first_detach  = qdrc_address_endpoint_on_first_detach;
+    context->addr_tracking_endpoint.on_cleanup  = qdrc_address_endpoint_cleanup;
     qdrc_endpoint_bind_mobile_address_CT(core, QD_TERMINUS_EDGE_ADDRESS_TRACKING, '0', &context->addr_tracking_endpoint, context);
 
     //
