@@ -414,6 +414,7 @@ void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char 
         //
         qdr_action_t *action = qdr_action(qdr_delete_delivery_CT, "delete_delivery");
         action->args.delivery.delivery = delivery;
+        action->label = label;
         qdr_action_enqueue(core, action);
     }
 }
@@ -559,28 +560,9 @@ static void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *wo
 }
 
 
-static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+void qdr_increment_delivery_counters_CT(qdr_core_t *core, qdr_delivery_t *delivery)
 {
-    assert(sys_atomic_get(&delivery->ref_count) == 0);
     qdr_link_t *link = delivery->link;
-
-    if (delivery->msg || delivery->to_addr) {
-        qdr_general_work_t *work = qdr_general_work(qdr_do_message_to_addr_free);
-        work->msg                = delivery->msg;
-        work->on_message_context = delivery->to_addr;
-        qdr_post_general_work_CT(core, work);
-    }
-
-    if (delivery->tracking_addr) {
-        delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
-        delivery->tracking_addr->tracked_deliveries--;
-
-        if (delivery->tracking_addr->tracked_deliveries == 0)
-            qdr_check_addr_CT(core, delivery->tracking_addr);
-
-        delivery->tracking_addr = 0;
-    }
-
     if (link) {
         if (delivery->presettled) {
             link->presettled_deliveries++;
@@ -609,7 +591,36 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
         }
 
         if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
-            link->ingress_histogram[delivery->ingress_index]++;    }
+            link->ingress_histogram[delivery->ingress_index]++;
+    }
+}
+
+
+static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery)
+{
+    assert(sys_atomic_get(&delivery->ref_count) == 0);
+
+    if (delivery->msg || delivery->to_addr) {
+        qdr_general_work_t *work = qdr_general_work(qdr_do_message_to_addr_free);
+        work->msg                = delivery->msg;
+        work->on_message_context = delivery->to_addr;
+        qdr_post_general_work_CT(core, work);
+    }
+
+    if (delivery->tracking_addr) {
+        delivery->tracking_addr->outstanding_deliveries[delivery->tracking_addr_bit]--;
+        delivery->tracking_addr->tracked_deliveries--;
+
+        if (delivery->tracking_addr->tracked_deliveries == 0)
+            qdr_check_addr_CT(core, delivery->tracking_addr);
+
+        delivery->tracking_addr = 0;
+    }
+
+    //
+    // Increment applicable global link counters like rejected_deliveries, presettled_deliveries, modified_deliveries etc.
+    //
+    qdr_increment_delivery_counters_CT(core, delivery);
 
     //
     // Free all the peer qdr_delivery_ref_t references

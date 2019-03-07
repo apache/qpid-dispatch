@@ -31,7 +31,6 @@ struct qdr_addr_endpoint_state_t {
     qdrc_endpoint_t                    *endpoint;
     qdr_connection_t                   *conn;    // The connection associated with the endpoint.
     qdr_addr_tracking_module_context_t *mc;
-    qdr_link_t                         *link;
 };
 
 DEQ_DECLARE(qdr_addr_endpoint_state_t, qdr_addr_endpoint_state_list_t);
@@ -104,9 +103,7 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
     endpoint_state->endpoint = endpoint;
     endpoint_state->mc       = bc;
     endpoint_state->conn     = qdrc_endpoint_get_connection_CT(endpoint);
-
     DEQ_INSERT_TAIL(bc->endpoint_state_list, endpoint_state);
-
 
     //
     // The link to hard coded address QD_TERMINUS_EDGE_ADDRESS_TRACKING should be created only if this is a receiver link
@@ -133,16 +130,25 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
 {
     qdr_addr_endpoint_state_t *endpoint_state  = (qdr_addr_endpoint_state_t *)link_context;
     qdrc_endpoint_detach_CT(endpoint_state->mc->core, endpoint_state->endpoint, 0);
-    qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
-    DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
-    endpoint_state->conn = 0;
-    endpoint_state->endpoint = 0;
-    if (endpoint_state->link) {
-        endpoint_state->link->edge_context = 0;
-        endpoint_state->link = 0;
+}
+
+static void qdrc_address_endpoint_cleanup(void *link_context)
+{
+    qdr_addr_endpoint_state_t *endpoint_state  = (qdr_addr_endpoint_state_t *)link_context;
+    if (endpoint_state) {
+        qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
+        assert (endpoint_state->conn);
+        if (mc) {
+            DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
+        }
+        //
+        // Clean out all the states held by the link_context (endpoint_state)
+        //
+        endpoint_state->conn = 0;
+        endpoint_state->endpoint = 0;
+        free_qdr_addr_endpoint_state_t(endpoint_state);
     }
-    free_qdr_addr_endpoint_state_t(endpoint_state);
-    qdr_error_free(error);
+
 }
 
 
@@ -199,7 +205,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
                 // Every inlink that has an edge context must be informed of the appearence of this address.
                 //
                 while (inlink) {
-                    if(inlink->link->edge_context != 0) {
+                    if(!qdr_link_is_connection_closed(inlink->link) && inlink->link->edge_context != 0) {
                         qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                         if (qdrc_can_send_address(addr, endpoint_state->conn) ) {
                             qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
@@ -220,7 +226,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
             // Every inlink that has an edge context must be informed of the appearence of this address.
             //
             while (inlink) {
-                if(inlink->link->edge_context != 0) {
+                if(!qdr_link_is_connection_closed(inlink->link) && inlink->link->edge_context != 0) {
                     qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                     if (qdrc_can_send_address(addr, endpoint_state->conn) ) {
                         qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
@@ -242,7 +248,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
                 // Every inlink that has an edge context must be informed of the disappearence of this address.
                 //
                 while (inlink) {
-                    if(inlink->link->edge_context != 0) {
+                    if(!qdr_link_is_connection_closed(inlink->link) && inlink->link->edge_context != 0) {
                         qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                         qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
                         if (endpoint)
@@ -268,7 +274,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
             qdr_link_ref_t *inlink = DEQ_HEAD(addr->inlinks);
             while (inlink) {
-                if(inlink->link->edge_context != 0) {
+                if(!qdr_link_is_connection_closed(inlink->link) && inlink->link->edge_context != 0) {
                     qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                     qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
                     if (endpoint_state->conn == link->conn) {
@@ -289,7 +295,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
             qdr_link_ref_t *inlink = DEQ_HEAD(addr->inlinks);
             while (inlink) {
-                if(inlink->link->edge_context != 0) {
+                if(!qdr_link_is_connection_closed(inlink->link) && inlink->link->edge_context != 0) {
                     qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)inlink->link->edge_context;
                     qdrc_endpoint_t *endpoint = endpoint_state->endpoint;
                     if (link->conn == endpoint_state->conn) {
@@ -314,10 +320,12 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
         {
             qdr_addr_tracking_module_context_t *mc = (qdr_addr_tracking_module_context_t *) context;
             qdr_address_t *addr = link->owning_addr;
-            if (addr && qdr_address_is_mobile_CT(addr)) {
+            if (addr && qdr_address_is_mobile_CT(addr) && DEQ_SIZE(addr->subscriptions) == 0 && link->link_direction == QD_INCOMING) {
                 qdr_addr_endpoint_state_t *endpoint_state = qdrc_get_endpoint_state_for_connection(mc->endpoint_state_list, link->conn, link);
+
+                assert(link->edge_context == 0);
+
                 link->edge_context = endpoint_state;
-                endpoint_state->link = link;
 
                 if (qdrc_can_send_address(addr, link->conn) && endpoint_state) {
                     qdrc_send_message(mc->core, addr, endpoint_state->endpoint, true);
@@ -328,11 +336,8 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
         case QDRC_EVENT_LINK_EDGE_DATA_DETACHED :
         {
             if (link->edge_context) {
-                qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)link->edge_context;
-                endpoint_state->link = 0;
                 link->edge_context = 0;
             }
-
             break;
         }
 
@@ -361,6 +366,7 @@ static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_c
     context->addr_tracking_endpoint.label = "qdrc_edge_address_tracking_module_init_CT";
     context->addr_tracking_endpoint.on_first_attach  = qdrc_address_endpoint_first_attach;
     context->addr_tracking_endpoint.on_first_detach  = qdrc_address_endpoint_on_first_detach;
+    context->addr_tracking_endpoint.on_cleanup  = qdrc_address_endpoint_cleanup;
     qdrc_endpoint_bind_mobile_address_CT(core, QD_TERMINUS_EDGE_ADDRESS_TRACKING, '0', &context->addr_tracking_endpoint, context);
 
     //

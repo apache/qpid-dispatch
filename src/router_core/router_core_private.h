@@ -627,6 +627,7 @@ struct qdr_connection_t {
     qdr_connection_info_t      *connection_info;
     void                       *user_context; /* Updated from IO thread, use work_lock */
     qdr_link_route_list_t       conn_link_routes;  // connection scoped link routes
+    bool                        closed;
 };
 
 ALLOC_DECLARE(qdr_connection_t);
@@ -902,6 +903,12 @@ qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv);
  * Returns the next peer of the passed in delivery.
  */
 qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv);
+
+
+/**
+ * Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc.
+ */
+void qdr_increment_delivery_counters_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);

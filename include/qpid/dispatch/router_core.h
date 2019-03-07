@@ -461,11 +461,27 @@ pn_data_t *qdr_error_info(const qdr_error_t *err);
 void qdr_link_set_context(qdr_link_t *link, void *context);
 
 /**
+ * qdr_link_set_connection_closed
+ *
+ * Set the closed flag to true on the stored connection pointer from the link object.
+ */
+void qdr_link_set_connection_closed(const qdr_link_t *link);
+
+/**
+ * qdr_link_is_connection_closed
+ *
+ *  Get the closed flag to true on the stored connection pointer from the link object.
+ */
+bool qdr_link_is_connection_closed(const qdr_link_t *link);
+
+
+/**
  * qdr_link_get_context
  *
  * Retrieve the stored void pointer from the link object.
  */
 void *qdr_link_get_context(const qdr_link_t *link);
+
 
 /**
  * qdr_link_type

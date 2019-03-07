@@ -222,6 +222,9 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     int event_count = 0;
 
+    if (conn->closed)
+        return 0;
+
     sys_mutex_lock(conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
     for (int priority = 0; priority <= QDR_MAX_PRIORITY; ++ priority) {
@@ -365,6 +368,16 @@ void qdr_link_set_context(qdr_link_t *link, void *context)
 {
     if (link)
         link->user_context = context;
+}
+
+void qdr_link_set_connection_closed(const qdr_link_t *link)
+{
+    link->conn->closed = true;
+}
+
+bool qdr_link_is_connection_closed(const qdr_link_t *link)
+{
+    return link->conn->closed;
 }
 
 
@@ -666,9 +679,16 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, ref->dlv);
+        ref->dlv->link = 0;
+
+        //
         // Now our reference
         //
         qdr_delivery_decref_CT(core, ref->dlv, "qdr_link_cleanup_deliveries_CT - remove from updated list");
+
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
     }
@@ -706,8 +726,15 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         }
 
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
+
+        //
         // Now the undelivered-list reference
         //
+
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from undelivered list");
 
         dlv = DEQ_HEAD(undelivered);
@@ -744,6 +771,12 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         }
 
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
+
+        //
         // Now the unsettled-list reference
         //
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from unsettled list");
@@ -768,6 +801,12 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
         }
+
+        //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
 
         // This decref is for the removing the delivery from the settled list
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from settled list");
@@ -1582,7 +1621,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             if (link->connected_link->link_direction == QD_OUTGOING)
                 qdr_link_abort_undelivered_CT(core, link->connected_link);
 
-            if (dt != QD_LOST)
+            if (dt != QD_CONNECTION_LOST && dt != QD_SESSION_LOST)
                 qdr_link_outbound_detach_CT(core, link->connected_link, error, QDR_CONDITION_NONE, dt == QD_CLOSED);
             else {
                 qdr_link_outbound_detach_CT(core, link->connected_link, 0, QDR_CONDITION_ROUTED_LINK_LOST, !link->terminus_survives_disconnect);
@@ -1682,7 +1721,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         //
         // If the detach occurred via protocol, send a detach back.
         //
-        if (dt != QD_LOST) {
+        if (dt != QD_CONNECTION_LOST && dt != QD_SESSION_LOST) {
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE, dt == QD_CLOSED);
         } else {
             // no detach can be sent out because the connection was lost

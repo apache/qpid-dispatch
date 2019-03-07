@@ -62,9 +62,10 @@ typedef enum {
 
 
 typedef enum {
-    QD_DETACHED,  // Protocol detach
-    QD_CLOSED,    // Protocol close
-    QD_LOST       // Connection or session closed
+    QD_DETACHED,        // Protocol detach
+    QD_CLOSED,          // Protocol close
+    QD_CONNECTION_LOST, // Connection closed
+    QD_SESSION_LOST     // Session closed
 } qd_detach_type_t;
 
 

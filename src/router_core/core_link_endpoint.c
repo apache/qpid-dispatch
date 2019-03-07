@@ -206,7 +206,7 @@ void qdrc_endpoint_do_flow_CT(qdr_core_t *core, qdrc_endpoint_t *ep, int credit,
 
 void qdrc_endpoint_do_detach_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_error_t *error, qd_detach_type_t dt)
 {
-    if (dt == QD_LOST) {
+    if (dt == QD_CONNECTION_LOST || dt == QD_SESSION_LOST) {
         qdrc_endpoint_do_cleanup_CT(core, ep);
         qdr_error_free(error);
 
