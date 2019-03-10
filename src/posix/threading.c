@@ -163,10 +163,6 @@ long sys_thread_id(sys_thread_t *thread) {
     return (long) thread->thread;
 }
 
-long sys_thread_self() {
-    return pthread_self();
-}
-
 void sys_thread_free(sys_thread_t *thread)
 {
     free(thread);

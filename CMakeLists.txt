@@ -22,6 +22,7 @@ project(qpid-dispatch C)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(CMAKE_MACOSX_RPATH TRUE)
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Set default build type. Must use FORCE because project() sets default to ""
@@ -46,7 +47,11 @@ include(CheckIncludeFiles)
 ##
 ## Find dependencies
 ##
-find_library(rt_lib rt)
+if (NOT APPLE)
+  find_library(rt_lib rt)
+else (NOT APPLE)
+  set(rt "")
+endif (NOT APPLE)
 
 find_package(PythonInterp REQUIRED)
 find_package(PythonLibs REQUIRED)
@@ -186,7 +191,7 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wno-gnu-statement-expression)
 endif()
 
-if (NOT (USE_SANITIZERS OR USE_TSAN))
+if (NOT (APPLE OR USE_SANITIZERS OR USE_TSAN))
   set(CATCH_UNDEFINED "-Wl,-z,defs")
 endif ()
 
