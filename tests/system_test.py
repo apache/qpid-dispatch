@@ -192,14 +192,20 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
         """Only retry on connection refused"""
         if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
             raise
-    s, host = get_local_host_socket(protocol_family)
+
+    def connect():
+        # macOS gives EINVAL for all connection attempts after a ECONNREFUSED
+        # man 3 connect: "If connect() fails, the state of the socket is unspecified. [...]"
+        s, host = get_local_host_socket(protocol_family)
+        try:
+            s.connect((host, port))
+        finally:
+            s.close()
+
     try:
-        retry_exception(lambda: s.connect((host, port)), exception_test=check,
-                        **retry_kwargs)
+        retry_exception(connect, exception_test=check, **retry_kwargs)
     except Exception as e:
         raise Exception("wait_port timeout on host %s port %s: %s"%(host, port, e))
-
-    finally: s.close()
 
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
