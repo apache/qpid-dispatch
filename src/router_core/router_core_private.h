@@ -182,6 +182,20 @@ ALLOC_DECLARE(qdr_action_t);
 DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
 
 //
+//
+//
+typedef struct qdr_delivery_cleanup_t qdr_delivery_cleanup_t;
+
+struct qdr_delivery_cleanup_t {
+    DEQ_LINKS(qdr_delivery_cleanup_t);
+    qd_message_t  *msg;
+    qd_iterator_t *iter;
+};
+
+ALLOC_DECLARE(qdr_delivery_cleanup_t);
+DEQ_DECLARE(qdr_delivery_cleanup_t, qdr_delivery_cleanup_list_t);
+
+//
 // General Work
 //
 // The following types are used to post work to the IO threads for
@@ -194,15 +208,16 @@ typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t
 
 struct qdr_general_work_t {
     DEQ_LINKS(qdr_general_work_t);
-    qdr_general_work_handler_t  handler;
-    qdr_field_t                *field;
-    int                         maskbit;
-    int                         inter_router_cost;
-    qdr_receive_t               on_message;
-    void                       *on_message_context;
-    qd_message_t               *msg;
-    uint64_t                    in_conn_id;
-    int                         treatment;
+    qdr_general_work_handler_t   handler;
+    qdr_field_t                 *field;
+    int                          maskbit;
+    int                          inter_router_cost;
+    qd_message_t                *msg;
+    qdr_receive_t                on_message;
+    void                        *on_message_context;
+    uint64_t                     in_conn_id;
+    int                          treatment;
+    qdr_delivery_cleanup_list_t  delivery_cleanup_list;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -819,6 +834,7 @@ struct qdr_core_t {
     qdr_exchange_list_t   exchanges;
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];
 
+    qdr_delivery_cleanup_list_t  delivery_cleanup_list;  ///< List of delivery cleanup items to be processed in an IO thread
 
     // Overall delivery counters
     uint64_t           presettled_deliveries;

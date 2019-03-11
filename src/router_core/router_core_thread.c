@@ -68,6 +68,22 @@ static void qdr_activate_connections_CT(qdr_core_t *core)
 }
 
 
+static void qdr_do_message_to_addr_free(qdr_core_t *core, qdr_general_work_t *work)
+{
+    qdr_delivery_cleanup_t *cleanup = DEQ_HEAD(work->delivery_cleanup_list);
+
+    while (cleanup) {
+        DEQ_REMOVE_HEAD(work->delivery_cleanup_list);
+        if (cleanup->msg)
+            qd_message_free(cleanup->msg);
+        if (cleanup->iter)
+            qd_iterator_free(cleanup->iter);
+        free_qdr_delivery_cleanup_t(cleanup);
+        cleanup = DEQ_HEAD(work->delivery_cleanup_list);
+    }
+}
+
+
 void qdr_modules_init(qdr_core_t *core)
 {
     //
@@ -84,7 +100,6 @@ void qdr_modules_init(qdr_core_t *core)
 
         module = DEQ_NEXT(module);
     }
-
 }
 
 
@@ -154,6 +169,15 @@ void *router_core_thread(void *arg)
         // Activate all connections that were flagged for activation during the above processing
         //
         qdr_activate_connections_CT(core);
+
+        //
+        // Schedule the cleanup of deliveries freed during this core-thread pass
+        //
+        if (DEQ_SIZE(core->delivery_cleanup_list) > 0) {
+            qdr_general_work_t *work = qdr_general_work(qdr_do_message_to_addr_free);
+            DEQ_MOVE(core->delivery_cleanup_list, work->delivery_cleanup_list);
+            qdr_post_general_work_CT(core, work);
+        }
     }
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");

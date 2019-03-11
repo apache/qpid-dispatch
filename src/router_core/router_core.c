@@ -32,6 +32,7 @@ ALLOC_DEFINE(qdr_delivery_ref_t);
 ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);
 ALLOC_DEFINE(qdr_link_ref_t);
+ALLOC_DEFINE(qdr_delivery_cleanup_t);
 ALLOC_DEFINE(qdr_general_work_t);
 ALLOC_DEFINE(qdr_link_work_t);
 ALLOC_DEFINE(qdr_connection_ref_t);
