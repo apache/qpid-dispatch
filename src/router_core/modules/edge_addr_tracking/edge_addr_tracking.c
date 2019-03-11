@@ -130,6 +130,7 @@ static void qdrc_address_endpoint_on_first_detach(void *link_context,
 {
     qdr_addr_endpoint_state_t *endpoint_state  = (qdr_addr_endpoint_state_t *)link_context;
     qdrc_endpoint_detach_CT(endpoint_state->mc->core, endpoint_state->endpoint, 0);
+    qdr_error_free(error);
 }
 
 static void qdrc_address_endpoint_cleanup(void *link_context)
