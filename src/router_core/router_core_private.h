@@ -903,6 +903,11 @@ qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv);
  */
 qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv);
 
+/**
+ * Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc.
+ */
+void qdr_increment_delivery_counters_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
