@@ -18,72 +18,72 @@ under the License.
 -->
 
 <style>
-@media (min-width: 768px) {
-  .overview-grid {
-    padding-left: 300px;
-  }
-}
-@media (max-width: 768px) {
-  .overview-grid {
-      padding-left: 0;
-  }
-
-}
-
-span.fancytree-icon {
-    margin-left: 0;
-}
-
-.treeContainer {
-    width: 300px;
-    padding-right: 10px;
-}
-
-  .gridDetails .aChart {
-    margin-left: -1em;
-    margin-right: 2em;
-    width: 400px;
-  }
-
-@media (max-width: 768px) {
-  .gridDetails .aChart {
-    margin-right: 1em;
-    width: 380px;
-  }
-}
-
-.page-menu {
-    top: 0;
-}
-
-.overview-grid {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: calc(100% - 40px);
-    margin-left: 20px;
-}
-
-@media (min-width: 768px) {
-    .navbar-collapse.page-menu {
-        padding-right: 0;
-        min-height: calc(100vh - 71px) !important;
+    @media (min-width: 768px) {
+        .overview-grid {
+            padding-left: 300px;
+        }
     }
-}
 
-div.chartContainer {
-    clear: both;
-    width: 100%;
-}
+    @media (max-width: 768px) {
+        .overview-grid {
+            padding-left: 0;
+        }
 
-.line-chart-pf .c3-zoom-rect {
-    opacity: 0 !important;
-}
+    }
 
-.trend-header-compact-pf {
-    width: 11em;
-}
+    span.fancytree-icon {
+        margin-left: 0;
+    }
 
+    .treeContainer {
+        width: 300px;
+        padding-right: 10px;
+    }
+
+    .gridDetails .aChart {
+        margin-left: -1em;
+        margin-right: 2em;
+        width: 400px;
+    }
+
+    @media (max-width: 768px) {
+        .gridDetails .aChart {
+            margin-right: 1em;
+            width: 380px;
+        }
+    }
+
+    .page-menu {
+        top: 0;
+    }
+
+    .overview-grid {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: calc(100% - 40px);
+        margin-left: 20px;
+    }
+
+    @media (min-width: 768px) {
+        .navbar-collapse.page-menu {
+            padding-right: 0;
+            min-height: calc(100vh - 84px) !important;
+        }
+    }
+
+    div.chartContainer {
+        clear: both;
+        width: 100%;
+    }
+
+    .line-chart-pf .c3-zoom-rect {
+        opacity: 0 !important;
+    }
+
+    .trend-header-compact-pf {
+        width: 11em;
+    }
 </style>
 
 <div id="overview-controller" ng-controller="QDR.OverviewController">
@@ -312,4 +312,3 @@ div.chartContainer {
         <button class="btn btn-primary" type="button" ng-click="ok()">Close</button>
     </div>
 </script>
-

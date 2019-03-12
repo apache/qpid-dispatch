@@ -461,7 +461,7 @@ ul.qdrTopoModes {
 }
 
 .overview-tree, .qdr-attributes {
-  min-height: calc(100vh - 90px)
+  min-height: calc(100vh - 100px)
 }
 /*
 .treeContainer {
@@ -1660,13 +1660,11 @@ svg {
   }
 
 /* The following are for matching Patternfly styles */
-span.logo {
-    letter-spacing: 3px;
+  span.logo {
+    letter-spacing: 2px;
+    font-weight: bold;
   }
   
-  .navbar-pf .navbar-brand {
-    padding: 2px 0 2px;
-  }
   /* using fancytree instead of treeview */
   
   #overtree ul.fancytree-container,
@@ -1874,7 +1872,7 @@ span.logo {
   
   .pane-bar {
     float: right;
-    height: calc(100vh - 75px);
+    height: calc(100vh - 89px);
     width: 6px;
     background-color: white;
     border: 1px solid #e0e0e0;
@@ -2023,7 +2021,7 @@ span.logo {
   }
   
   .navbar-fixed-top + .container-fluid {
-    padding-top: 71px;
+    padding-top: 83px;
   }
   
   @media (max-width: 768px) {
@@ -2039,7 +2037,7 @@ span.logo {
   @media (min-width: 768px) {
     .navbar-collapse.page-menu {
       padding-right: 0;
-      /* height: calc(100vh - 74px) !important; */
+      /* height: calc(100vh - 84px) !important; */
     }
   }
   @media (max-width: 768px) {
@@ -2102,4 +2100,42 @@ span.logo {
     z-index: 3;
     color: white;
     background-color: #444444;
+  }
+
+  .masthead-icons {
+    position: absolute;
+    right: 1em;
+    color: white;
+    padding-top: 5px;
+    font-size: large;
+    cursor: pointer;
+  }
+
+  .masthead-icons div.about {
+    display: inline-block;
+    margin-right: 1em;
+  }
+
+  .masthead-icons div.dropdown {
+    display: inline-block;
+  }
+
+  .masthead-icons div.dropdown button {
+    border: 0px;
+    background: transparent;
+    color: #F8F8F8;
+    font-weight: bold;
+  }
+
+  .masthead-icons .dropdown-menu {
+    right: 0;
+    left: auto;
+  }
+
+  .masthead-icons span.caret {
+    font-weight: bold;
+  }
+
+  .masthead-icons span.user-name {
+    font-size: 12px;
   }

@@ -20,15 +20,15 @@ under the License.
 <html xmlns:ng="https://angularjs.org">
 
 <head>
-    <meta charset="utf-8"/>
+    <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Apache Qpid Dispatch Console</title>
 
     <link rel="shortcut icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
 
-    <link rel="stylesheet" href="css/vendor.min.css" type="text/css"/>
-    <link rel="stylesheet" href="css/dispatch.min.css" type="text/css"/>
+    <link rel="stylesheet" href="css/vendor.min.css" type="text/css" />
+    <link rel="stylesheet" href="css/dispatch.min.css" type="text/css" />
 
     <style>
         #installError {
@@ -36,67 +36,97 @@ under the License.
         }
     </style>
 </head>
+
 <body ng-app="QDR" ng-controller="QDR.Core">
 
 
-<nav class="navbar navbar-default navbar-pf navbar-fixed-top" role="navigation">
-    <div class="navbar-header">
-        <button type='button' class='navbar-toggle left page-menu-button' ng-click="pageMenuClicked()" data-toggle="collapse" data-target=".page-menu">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-        </button>
-        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse-1">
-            <span class="sr-only">Toggle navigation</span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-        </button>
-        <a class="navbar-brand" href="/">
-            <span class="logo">Apache Qpid Dispatch Console</span>
-        </a>
-    </div>
-    
-    <div class="collapse navbar-collapse navbar-collapse-1">
-        <ul class="nav navbar-nav navbar-primary" ng-controller="QDR.NavBarController">
-            <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)" ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
-                <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.content"></a>
-            </li>
-        </ul>
-    </div>
-</nav>
+    <nav class="navbar navbar-default navbar-pf navbar-fixed-top" role="navigation">
+        <div class="navbar-header">
+            <button type='button' class='navbar-toggle left page-menu-button' ng-click="pageMenuClicked()"
+                data-toggle="collapse" data-target=".page-menu">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse-1">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand" href="/">
+                <span class="logo">Apache Qpid Dispatch Console</span>
+            </a>
+            <div class="masthead-icons">
+                <div class="about" ng-controller="QDR.AboutController" title="About this console">
+                    <span class="fa fa-question-circle-o" ng-click="open()"></span>
+                    <pf-about-modal is-open="isOpen" on-close="onClose()" additional-info="additionalInfo"
+                        product-info="productInfo" title="title" copyright="copyright" img-alt="imgAlt"
+                        img-src="imgSrc">
+                    </pf-about-modal>
+                </div>
+                <span class="pf pficon-user"></span>
+                <span class="user-name">{{user}}</span>
+                <div class="dropdown">
+                    <button class="btn btn-default dropdown-toggle" type="button" id="dropdownMenu1"
+                        data-toggle="dropdown">
+                        <span class="caret"></span>
+                    </button>
+                    <ul class="dropdown-menu" role="menu" aria-labelledby="dropdownMenu1">
+                        <!-- logout is method of QDR.Core -->
+                        <li role="presentation" ng-click="logout()">
+                            <a role="menuitem" tabindex="-1">Log out</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
 
-<div class="container-fluid">
-    <div class="row">
-        <div id="main_container" class="col-md-12">
-            <div ng-view><div id="installError">There was an error when installing the console. Please run make install for the router and check for errors.</div></div>
+        <div class="collapse navbar-collapse navbar-collapse-1">
+            <ul class="nav navbar-nav navbar-primary" ng-controller="QDR.NavBarController">
+                <li ng-repeat="link in breadcrumbs" title="{{link.title}}" ng-show="isValid(link)"
+                    ng-class='{active : isActive(link.href), "pull-right" : isRight(link), haschart: hasChart(link)}'>
+                    <a ng-href="{{link.href}}{{hash}}" ng-bind-html="link.content"></a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div id="main_container" class="col-md-12">
+                <div ng-view>
+                    <div id="installError">There was an error when installing the console. Please run make install for
+                        the router and check for errors.</div>
+                </div>
+            </div>
         </div>
     </div>
-</div>
 
-<script type="module" src="main.js"></script>
-<script type="text/javascript" src="js/vendor.min.js"></script>
-<script defer nomodule>
-    var installError = document.getElementById('installError');
-    if (installError) {
-        installError.innerHTML = 'This browser is not supported because it does not support es-2015 modules. <a href="https://www.ecma-international.org/ecma-262/6.0/">https://www.ecma-international.org/ecma-262/6.0/</a><br/>Please use a different browser.';
-    }
-</script>
-
-<script>
-    // If angular hasn't loaded a page after 1 second, display the error message
-    setTimeout(function () {
+    <script type="module" src="main.js"></script>
+    <script type="text/javascript" src="js/vendor.min.js"></script>
+    <script defer nomodule>
         var installError = document.getElementById('installError');
-        if (installError)
-            installError.style.display = "block";
-    }, 1000);
-    $(function(){
-        $('.nav a').on('click', function(){
-            $('.navbar-collapse').collapse('hide');
-        });
-    })
-</script>
+        if (installError) {
+            installError.innerHTML = 'This browser is not supported because it does not support es-2015 modules. <a href="https://www.ecma-international.org/ecma-262/6.0/">https://www.ecma-international.org/ecma-262/6.0/</a><br/>Please use a different browser.';
+        }
+    </script>
+
+    <script>
+        // If angular hasn't loaded a page after 1 second, display the error message
+        setTimeout(function () {
+            var installError = document.getElementById('installError');
+            if (installError)
+                installError.style.display = "block";
+        }, 1000);
+        $(function () {
+            $('.nav a').on('click', function () {
+                $('.navbar-collapse').collapse('hide');
+            });
+        })
+    </script>
 
 </body>
+
 </html>

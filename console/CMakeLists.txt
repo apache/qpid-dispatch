@@ -80,6 +80,11 @@ if(CONSOLE_INSTALL)
             ${CONSOLE_SOURCE_DIR}/main.js
             ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
           )
+          ## Files copied to the img/ dir
+          set(IMAGES
+            ${CONSOLE_SOURCE_DIR}/plugin/img/bg-modal-about-pf.png
+            ${CONSOLE_SOURCE_DIR}/plugin/img/logo-alt.svg
+          )
           ## Files copied to the css/ dir
           set(CSS_FONTS
             ${CONSOLE_SOURCE_DIR}/plugin/css/brokers.ttf
@@ -127,6 +132,9 @@ if(CONSOLE_INSTALL)
           )
           install(FILES ${VENDOR_FONTS}
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/fonts/
+          )
+          install(FILES ${IMAGES}
+            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/img/
           )
           install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/data/
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/data

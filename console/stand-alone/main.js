@@ -43,19 +43,20 @@ import { DetailDialogController, SubTable } from './plugin/js/dlgDetailControlle
 import { SettingsController } from './plugin/js/qdrSettings.js';
 import { SchemaController } from './plugin/js/qdrSchema.js';
 import { ChartsController } from './plugin/js/qdrCharts.js';
+import { AboutController } from './plugin/js/qdrAbout.js';
 import { posint } from './plugin/js/posintDirective.js';
 
-(function(QDR) {
+(function (QDR) {
 
   /**
    * This plugin's angularjs module instance
    */
   QDR.module = angular.module('QDR', ['ngRoute', 'ngSanitize', 'ngResource', 'ui.bootstrap',
     'ui.grid', 'ui.grid.selection', 'ui.grid.autoResize', 'ui.grid.resizeColumns', 'ui.grid.saveState',
-    'ui.slider', 'ui.checkbox', 'patternfly.charts', 'patternfly.card']);
+    'ui.slider', 'ui.checkbox', 'patternfly.charts', 'patternfly.card', 'patternfly.modals']);
 
   // set up the routing for this plugin
-  QDR.module.config(function($routeProvider) {
+  QDR.module.config(function ($routeProvider) {
     $routeProvider
       .when('/', {
         templateUrl: QDRTemplatePath + 'qdrOverview.html'
@@ -88,9 +89,9 @@ import { posint } from './plugin/js/posintDirective.js';
     $compileProvider.imgSrcSanitizationWhitelist(/^\s*(https?|ftp|mailto|chrome-extension):/);
   });
 
-  QDR.module.filter('to_trusted', ['$sce', function($sce){
-    return function(text) {
-      return $sce.trustAsHtml(text+'');
+  QDR.module.filter('to_trusted', ['$sce', function ($sce) {
+    return function (text) {
+      return $sce.trustAsHtml(text + '');
     };
   }]);
 
@@ -105,19 +106,19 @@ import { posint } from './plugin/js/posintDirective.js';
       if (!str)
         return '';
       return str.replace(/(\w)(\w*)/g,
-        function(g0,g1,g2){return g1.toUpperCase() + g2.toLowerCase();});
+        function (g0, g1, g2) { return g1.toUpperCase() + g2.toLowerCase(); });
     };
   });
 
   QDR.module.filter('safePlural', function () {
     return function (str) {
       var es = ['x', 'ch', 'ss', 'sh'];
-      for (var i=0; i<es.length; ++i) {
+      for (var i = 0; i < es.length; ++i) {
         if (str.endsWith(es[i]))
           return str + 'es';
       }
       if (str.endsWith('y'))
-        return str.substr(0, str.length-2) + 'ies';
+        return str.substr(0, str.length - 2) + 'ies';
       if (str.endsWith('s'))
         return str;
       return str + 's';
@@ -142,7 +143,7 @@ import { posint } from './plugin/js/posintDirective.js';
   });
   // one-time initialization happens in the run function
   // of our module
-  QDR.module.run( ['$rootScope', '$route', '$timeout', '$location', '$log', 'QDRService', 'QDRChartService',  function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {
+  QDR.module.run(['$rootScope', '$route', '$timeout', '$location', '$log', 'QDRService', 'QDRChartService', function ($rootScope, $route, $timeout, $location, $log, QDRService, QDRChartService) {
     let QDRLog = new QDRLogger($log, 'main');
     QDRLog.info('************* creating Dispatch Console ************');
 
@@ -164,10 +165,10 @@ import { posint } from './plugin/js/posintDirective.js';
         if (search.org === 'connect')
           $location.search('org', 'overview');
       }
-      var connectOptions = {address: host, port: port};
-      QDRLog.info('Attempting AMQP over websockets connection using address:port of browser ('+host+':'+port+')');
+      var connectOptions = { address: host, port: port };
+      QDRLog.info('Attempting AMQP over websockets connection using address:port of browser (' + host + ':' + port + ')');
       QDRService.management.connection.testConnect(connectOptions)
-        .then( function () {
+        .then(function () {
           // We didn't connect with reconnect: true flag.
           // The reason being that if we used reconnect:true and the connection failed, rhea would keep trying. There
           // doesn't appear to be a way to tell it to stop trying to reconnect.
@@ -176,9 +177,9 @@ import { posint } from './plugin/js/posintDirective.js';
           connectOptions.reconnect = true;
           // complete the connection (create the sender/receiver)
           QDRService.connect(connectOptions)
-            .then( function () {
-            // register a callback for when the node list is available (needed for loading saved charts)
-              QDRService.management.topology.addUpdatedAction('initChartService', function() {
+            .then(function () {
+              // register a callback for when the node list is available (needed for loading saved charts)
+              QDRService.management.topology.addUpdatedAction('initChartService', function () {
                 QDRService.management.topology.delUpdatedAction('initChartService');
                 QDRChartService.init(); // initialize charting service after we are connected
               });
@@ -196,7 +197,7 @@ import { posint } from './plugin/js/posintDirective.js';
         });
     }
 
-    $rootScope.$on('$routeChangeSuccess', function() {
+    $rootScope.$on('$routeChangeSuccess', function () {
       var path = $location.path();
       if (path !== '/connect') {
         localStorage[QDR_LAST_LOCATION] = path;
@@ -204,7 +205,7 @@ import { posint } from './plugin/js/posintDirective.js';
     });
   }]);
 
-  QDR.module.controller ('QDR.MainController', ['$scope', '$log', '$location', function ($scope, $log, $location) {
+  QDR.module.controller('QDR.MainController', ['$scope', '$log', '$location', function ($scope, $log, $location) {
     let QDRLog = new QDRLogger($log, 'MainController');
     QDRLog.debug('started QDR.MainController with location.url: ' + $location.url());
     QDRLog.debug('started QDR.MainController with window.location.pathname : ' + window.location.pathname);
@@ -213,22 +214,22 @@ import { posint } from './plugin/js/posintDirective.js';
       id: 'qdr',
       content: 'Qpid Dispatch Router Console',
       title: 'Dispatch Router Console',
-      isValid: function() { return true; },
-      href: function() { return '#connect'; },
-      isActive: function() { return true; }
+      isValid: function () { return true; },
+      href: function () { return '#connect'; },
+      isActive: function () { return true; }
     });
   }]);
 
-  QDR.module.controller ('QDR.Core', function ($scope, $rootScope) {
+  QDR.module.controller('QDR.Core', function ($scope, $rootScope, $timeout, QDRService) {
     $scope.alerts = [];
     $scope.breadcrumb = {};
-    $scope.closeAlert = function(index) {
+    $scope.closeAlert = function (index) {
       $scope.alerts.splice(index, 1);
     };
-    $scope.$on('setCrumb', function(event, data) {
+    $scope.$on('setCrumb', function (event, data) {
       $scope.breadcrumb = data;
     });
-    $scope.$on('newAlert', function(event, data) {
+    $scope.$on('newAlert', function (event, data) {
       $scope.alerts.push(data);
       $scope.$apply();
     });
@@ -239,6 +240,41 @@ import { posint } from './plugin/js/posintDirective.js';
     $scope.pageMenuClicked = function () {
       $rootScope.$broadcast('pageMenuClicked');
     };
+    $scope.logout = function () {
+      QDRService.management.connection.disconnect();
+      location.href = "#/connect";
+    };
+    $scope.user = '';
+    let onConnected = function () {
+      if (!QDRService.management.connection.is_connected()) {
+        setTimeout(onConnected, 1000);
+        return;
+      }
+      QDRService.management.connection.addDisconnectAction(onDisconnect);
+      let parts = QDRService.management.connection.getReceiverAddress().split("/");
+      parts[parts.length - 1] = "$management";
+      let router = parts.join('/');
+      QDRService.management.topology.fetchEntity(router, "connection", [], function (nodeId, entity, response) {
+        $timeout(function () {
+          response.results.some(result => {
+            let c = QDRService.utilities.flatten(response.attributeNames, result);
+            if (QDRService.utilities.isConsole(c)) {
+              $scope.user = c.user;
+              return true;
+            }
+            return false;
+          });
+        });
+      });
+    };
+
+    let onDisconnect = function () {
+      QDRService.management.connection.addConnectAction(onConnected);
+      $timeout(() => {
+        $scope.user = '';
+      });
+    };
+    onDisconnect();
   });
 
   QDR.module.controller('QDR.NavBarController', NavBarController);
@@ -254,7 +290,8 @@ import { posint } from './plugin/js/posintDirective.js';
   QDR.module.controller('QDR.ListController', ListController);
   QDR.module.controller('QDR.SchemaController', SchemaController);
   QDR.module.controller('QDR.ChartsController', ChartsController);
-  
+  QDR.module.controller('QDR.AboutController', AboutController);
+
   QDR.module.service('QDRService', QDRService);
   QDR.module.service('QDRChartService', QDRChartService);
   QDR.module.directive('posint', posint);
