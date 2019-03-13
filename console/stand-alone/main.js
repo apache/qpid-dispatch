@@ -241,7 +241,7 @@ import { posint } from './plugin/js/posintDirective.js';
       $rootScope.$broadcast('pageMenuClicked');
     };
     $scope.logout = function () {
-      QDRService.management.connection.disconnect();
+      QDRService.disconnect();
       location.href = "#/connect";
     };
     $scope.user = '';
