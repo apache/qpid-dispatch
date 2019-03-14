@@ -103,7 +103,6 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
 
     ZERO(endpoint_state);
     endpoint_state->endpoint  = endpoint;
-    endpoint_state->ref_count = 1;
     endpoint_state->mc        = bc;
     endpoint_state->conn      = qdrc_endpoint_get_connection_CT(endpoint);
     DEQ_INSERT_TAIL(bc->endpoint_state_list, endpoint_state);
@@ -143,7 +142,7 @@ static void qdrc_address_endpoint_cleanup(void *link_context)
         qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
         assert (endpoint_state->conn);
         endpoint_state->closed = true;
-        if (endpoint_state->ref_count == 1) {
+        if (endpoint_state->ref_count == 0) {
             //
             // Clean out all the states held by the link_context (endpoint_state)
             //
@@ -344,9 +343,9 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
         {
             if (link->edge_context) {
                 qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)link->edge_context;
-                endpoint_state->ref_count++;
+                endpoint_state->ref_count--;
                 link->edge_context = 0;
-                if (endpoint_state->ref_count == 1) {
+                if (endpoint_state->ref_count == 0) {
                     qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
                     if (mc) {
                         DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
