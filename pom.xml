@@ -97,6 +97,7 @@
                       <exclude>**/valgrind.supp</exclude>
                       <exclude>**/*.json.in</exclude>
                       <exclude>**/*.json</exclude>
+                      <exclude>**/*.svg</exclude>
                       <exclude>**/rhea-min.js</exclude>
                       <exclude>**/VERSION.txt</exclude>
                       <exclude>**/v3_ca.ext</exclude>
