@@ -614,7 +614,6 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     //
     // Pattern matched and tag is expected.  Mark the beginning of the section.
     //
-    location->parsed     = 1;
     location->buffer     = *buffer;
     location->offset     = *cursor - qd_buffer_base(*buffer);
     location->length     = 0;
@@ -663,6 +662,30 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     location->length = pre_consume + consume;
     if (consume)
         advance(&test_cursor, &test_buffer, consume);
+
+    //
+    // increment the reference count of the parsed section as location now
+    // references it. Note that the cursor has advanced to the octet after the
+    // parsed section, so be careful not to include an extra buffer past the
+    // end
+    //
+    qd_buffer_t *start = *buffer;
+    qd_buffer_t *last = test_buffer;
+    if (last != start && last != 0) {
+        if (test_cursor == qd_buffer_base(last)) {
+            // last does not include octets for the current section
+            last = DEQ_PREV(last);
+        }
+    }
+
+    while (start) {
+        qd_buffer_inc_fanout(start);
+        if (start == last)
+            break;
+        start = DEQ_NEXT(start);
+    }
+
+    location->parsed     = 1;
 
     *cursor = test_cursor;
     *buffer = test_buffer;
@@ -874,6 +897,7 @@ qd_message_t *qd_message()
     msg->cursor.cursor = 0;
     msg->send_complete = false;
     msg->tag_sent      = false;
+    msg->is_fanout     = false;
 
     msg->content = new_qd_message_content_t();
 
@@ -917,20 +941,35 @@ void qd_message_free(qd_message_t *in_msg)
         if (content->ma_pf_trace)
             qd_parse_free(content->ma_pf_trace);
 
-        qd_buffer_t *buf = DEQ_HEAD(content->buffers);
-        while (buf) {
-            DEQ_REMOVE_HEAD(content->buffers);
-            qd_buffer_free(buf);
-            buf = DEQ_HEAD(content->buffers);
-        }
+        qd_buffer_list_free_buffers(&content->buffers);
 
         if (content->pending)
             qd_buffer_free(content->pending);
 
         sys_mutex_free(content->lock);
         free_qd_message_content_t(content);
-    }
 
+    } else if (msg->is_fanout) {
+        //
+        // Adjust the content's fanout count and decrement all buffer fanout
+        // counts starting with the msg cursor.  If the buffer count drops to
+        // zero we can free it.
+        //
+        LOCK(content->lock);
+
+        qd_buffer_t *buf = msg->cursor.buffer;
+        while (buf) {
+            qd_buffer_t *next_buf = DEQ_NEXT(buf);
+            if (qd_buffer_dec_fanout(buf) == 1) {
+                DEQ_REMOVE(content->buffers, buf);
+                qd_buffer_free(buf);
+            }
+            buf = next_buf;
+        }
+        --content->fanout;
+
+        UNLOCK(content->lock);
+    }
     free_qd_message_t((qd_message_t*) msg);
 }
 
@@ -958,6 +997,7 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     copy->cursor.cursor = 0;
     copy->send_complete = false;
     copy->tag_sent      = false;
+    copy->is_fanout     = false;
 
     qd_message_message_annotations((qd_message_t*) copy);
 
@@ -1062,26 +1102,29 @@ void qd_message_set_discard(qd_message_t *msg, bool discard)
     pvt_msg->content->discard = discard;
 }
 
-size_t qd_message_fanout(qd_message_t *in_msg)
-{
-    if (!in_msg)
-        return 0;
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    return msg->content->fanout;
-}
 
-void qd_message_add_fanout(qd_message_t *in_msg)
+void qd_message_add_fanout(qd_message_t *in_msg,
+                           qd_message_t *out_msg)
 {
-    assert(in_msg);
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    sys_atomic_inc(&msg->content->fanout);
-}
 
-void qd_message_add_num_closed_receivers(qd_message_t *in_msg)
-{
+    // out_msg will be 0 if we are forwarding to an internal subscriber (like
+    // $management).  If so we treat in_msg like an out_msg
     assert(in_msg);
-    qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    msg->content->num_closed_receivers++;
+    qd_message_pvt_t *msg = (qd_message_pvt_t *)((out_msg) ? out_msg : in_msg);
+    msg->is_fanout = true;
+
+    qd_message_content_t *content = msg->content;
+
+    LOCK(content->lock);
+    ++content->fanout;
+
+    // do not free the buffers until all fanout consumers are done with them
+    qd_buffer_t *buf = DEQ_HEAD(content->buffers);
+    while (buf) {
+        qd_buffer_inc_fanout(buf);
+        buf = DEQ_NEXT(buf);
+    }
+    UNLOCK(content->lock);
 }
 
 
@@ -1236,6 +1279,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     }
 
     // Loop until msg is complete, error seen, or incoming bytes are consumed
+    qd_message_content_t *content = msg->content;
     bool recv_error = false;
     while (1) {
         //
@@ -1247,56 +1291,58 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
         if (at_eos || recv_error) {
             // Message is complete
-            LOCK(msg->content->lock);
+            LOCK(content->lock);
             {
                 // Append last buffer if any with data
-                if (msg->content->pending) {
-                    if (qd_buffer_size(msg->content->pending) > 0) {
-                        // pending buffer has bytes that are port of message
-                        DEQ_INSERT_TAIL(msg->content->buffers,
-                                        msg->content->pending);
+                if (content->pending) {
+                    if (qd_buffer_size(content->pending) > 0) {
+                        // pending buffer has bytes that are part of message
+                        qd_buffer_set_fanout(content->pending, content->fanout);
+                        DEQ_INSERT_TAIL(content->buffers,
+                                        content->pending);
                     } else {
                         // pending buffer is empty
-                        qd_buffer_free(msg->content->pending);
+                        qd_buffer_free(content->pending);
                     }
-                    msg->content->pending = 0;
+                    content->pending = 0;
                 } else {
                     // pending buffer is absent
                 }
 
-                msg->content->receive_complete = true;
-                msg->content->aborted = pn_delivery_aborted(delivery);
-                msg->content->input_link = 0;
+                content->receive_complete = true;
+                content->aborted = pn_delivery_aborted(delivery);
+                content->input_link = 0;
 
                 // unlink message and delivery
                 pn_record_set(record, PN_DELIVERY_CTX, 0);
             }
-            UNLOCK(msg->content->lock);
+            UNLOCK(content->lock);
             break;
         }
 
         //
         // Handle a missing or full pending buffer
         //
-        if (!msg->content->pending) {
+        if (!content->pending) {
             // Pending buffer is absent: get a new one
-            msg->content->pending = qd_buffer();
+            content->pending = qd_buffer();
         } else {
             // Pending buffer exists
-            if (qd_buffer_capacity(msg->content->pending) == 0) {
+            if (qd_buffer_capacity(content->pending) == 0) {
                 // Pending buffer is full
-                LOCK(msg->content->lock);
-                DEQ_INSERT_TAIL(msg->content->buffers, msg->content->pending);
-                msg->content->pending = 0;
+                LOCK(content->lock);
+                qd_buffer_set_fanout(content->pending, content->fanout);
+                DEQ_INSERT_TAIL(content->buffers, content->pending);
+                content->pending = 0;
                 if (qd_message_Q2_holdoff_should_block((qd_message_t *)msg)) {
                     if (!qd_link_is_q2_limit_unbounded(qdl)) {
-                        msg->content->q2_input_holdoff = true;
-                        UNLOCK(msg->content->lock);
+                        content->q2_input_holdoff = true;
+                        UNLOCK(content->lock);
                         break;
                     }
                 }
-                UNLOCK(msg->content->lock);
-                msg->content->pending = qd_buffer();
+                UNLOCK(content->lock);
+                content->pending = qd_buffer();
             } else {
                 // Pending buffer still has capacity
             }
@@ -1306,8 +1352,8 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         // Try to fill the remaining space in the pending buffer.
         //
         rc = pn_link_recv(link,
-                          (char*) qd_buffer_cursor(msg->content->pending),
-                          qd_buffer_capacity(msg->content->pending));
+                          (char*) qd_buffer_cursor(content->pending),
+                          qd_buffer_capacity(content->pending));
 
         if (rc < 0) {
             // error or eos seen. next pass breaks out of loop
@@ -1317,7 +1363,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             // We have received a positive number of bytes for the message.  Advance
             // the cursor in the buffer.
             //
-            qd_buffer_insert(msg->content->pending, rc);
+            qd_buffer_insert(content->pending, rc);
         } else {
             //
             // We received zero bytes, and no PN_EOS.  This means that we've received
@@ -1479,7 +1525,7 @@ void qd_message_send(qd_message_t *in_msg,
 
     if (msg->sent_depth < QD_DEPTH_MESSAGE_ANNOTATIONS) {
 
-        if (msg->content->aborted) {
+        if (content->aborted) {
             // Message is aborted before any part of it has been sent.
             // Declare the message to be sent,
             msg->send_complete = true;
@@ -1585,98 +1631,108 @@ void qd_message_send(qd_message_t *in_msg,
 
     pn_session_t     *pns  = pn_link_session(pnl);
 
-    while (msg->content->aborted ||
-           (buf &&
-            (msg->cursor.cursor < qd_buffer_cursor(buf) || buf->next != 0) &&
-            pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER)) {
+    while (!content->aborted
+           && buf
+           && pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER) {
 
-        if (msg->content->aborted) {
-            if (pn_link_current(pnl)) {
-                msg->send_complete = true;
-                if (!pn_delivery_aborted(pn_link_current(pnl))) {
-                    pn_delivery_abort(pn_link_current(pnl));
-                }
-            }
-            break;
-        }
-
+        // This will send the remaining data in the buffer if any. There may be
+        // zero bytes left to send if we stopped here last time and there was
+        // no next buf
+        //
         size_t buf_size = qd_buffer_size(buf);
-
-        // This will send the remaining data in the buffer if any.
         int num_bytes_to_send = buf_size - (msg->cursor.cursor - qd_buffer_base(buf));
+        ssize_t bytes_sent = 0;
         if (num_bytes_to_send > 0) {
-            // We are deliberately avoiding the return value of pn_link_send because we can't do anything nice with it.
-            (void) pn_link_send(pnl, (const char*)msg->cursor.cursor, num_bytes_to_send);
+            bytes_sent = pn_link_send(pnl, (const char*)msg->cursor.cursor, num_bytes_to_send);
         }
 
-        // If the entire message has already been received,  taking out this lock is not that expensive
-        // because there is no contention for this lock.
-        LOCK(msg->content->lock);
+        LOCK(content->lock);
 
-        qd_buffer_t *next_buf = DEQ_NEXT(buf);
-        if (next_buf) {
-            // There is a next buffer, the previous buffer has been fully sent by now.
-            qd_buffer_add_fanout(buf);
+        if (bytes_sent < 0) {
+            //
+            // send error - likely the link has failed and we will eventually
+            // get a link detach event for this link
+            //
+            content->aborted = true;
+            msg->send_complete = true;
+            if (!pn_delivery_aborted(pn_link_current(pnl))) {
+                pn_delivery_abort(pn_link_current(pnl));
+            }
 
-            if (qd_message_fanout(in_msg) - msg->content->num_closed_receivers == qd_buffer_fanout(buf)) {
-                qd_buffer_t *local_buf = DEQ_HEAD(content->buffers);
-                while (local_buf && local_buf != next_buf) {
-                    DEQ_REMOVE_HEAD(content->buffers);
-                    qd_buffer_free(local_buf);
-                    if (!msg->content->buffers_freed)
-                        msg->content->buffers_freed = true;
+            qd_log(qd_message_log_source(),
+                   QD_LOG_WARNING,
+                   "Sending data on link %s has failed (code=%zi)",
+                   pn_link_name(pnl), bytes_sent);
 
-                    local_buf = DEQ_HEAD(content->buffers);
+        } else {
 
-                    // by freeing a buffer there now may be room to restart a
-                    // stalled message receiver
-                    if (msg->content->q2_input_holdoff) {
-                        if (qd_message_Q2_holdoff_should_unblock((qd_message_t *)msg)) {
-                            // wake up receive side
-                            // Note: clearing holdoff here is easy compared to
-                            // clearing it in the deferred callback. Tracing
-                            // shows that rx_handler may run and subsequently
-                            // set input holdoff before the deferred handler
-                            // runs.
-                            msg->content->q2_input_holdoff = false;
-                            *restart_rx = true;
+            msg->cursor.cursor += bytes_sent;
+
+            if (bytes_sent == num_bytes_to_send) {
+                //
+                // sent the whole buffer.
+                // Can we move to the next buffer?  Only if there is a next buffer
+                // or we are at the end and done sending this message
+                //
+                qd_buffer_t *next_buf = DEQ_NEXT(buf);
+                bool complete = qd_message_receive_complete(in_msg);
+
+                if (next_buf || complete) {
+                    //
+                    // this buffer may be freed if there are no more references to it
+                    //
+                    uint32_t ref_count = (msg->is_fanout) ? qd_buffer_dec_fanout(buf) : 1;
+                    if (ref_count == 1) {
+
+                        DEQ_REMOVE(content->buffers, buf);
+                        qd_buffer_free(buf);
+                        ++content->buffers_freed;
+
+                        // by freeing a buffer there now may be room to restart a
+                        // stalled message receiver
+                        if (content->q2_input_holdoff) {
+                            if (qd_message_Q2_holdoff_should_unblock((qd_message_t *)msg)) {
+                                // wake up receive side
+                                // Note: clearing holdoff here is easy compared to
+                                // clearing it in the deferred callback. Tracing
+                                // shows that rx_handler may run and subsequently
+                                // set input holdoff before the deferred handler
+                                // runs.
+                                content->q2_input_holdoff = false;
+                                *restart_rx = true;
+                            }
                         }
-                    }
-                }
-            }
-            msg->cursor.buffer = next_buf;
-            msg->cursor.cursor = qd_buffer_base(next_buf);
-        }
-        else {
-            // There is no next_buf
-            if (qd_message_receive_complete(in_msg)) {
-                //
-                // There is no more of the message coming, this means
-                // that we have completely sent out the message.
-                //
-                msg->send_complete = true;
-                msg->cursor.buffer = 0;
-                msg->cursor.cursor = 0;
+                    }   // end free buffer
 
-                if (msg->content->aborted) {
-                    if (!pn_delivery_aborted(pn_link_current(pnl))) {
-                        pn_delivery_abort(pn_link_current(pnl));
-                    }
+                    msg->cursor.buffer = next_buf;
+                    msg->cursor.cursor = (next_buf) ? qd_buffer_base(next_buf) : 0;
+
+                    msg->send_complete = (complete && !next_buf);
                 }
-            }
-            else {
+
+                buf = next_buf;
+
+            } else if (num_bytes_to_send && bytes_sent == 0) {
                 //
-                // There is more of the message to come, update your cursor pointers
-                // you will come back into this function to deliver more as bytes arrive
+                // the proton link cannot take anymore data,
+                // retry later...
                 //
-                msg->cursor.buffer = buf;
-                msg->cursor.cursor = qd_buffer_at(buf, buf_size);
+                buf = 0;
+                qd_log(qd_message_log_source(), QD_LOG_DEBUG,
+                       "Link %s output limit reached", pn_link_name(pnl));
             }
         }
 
-        UNLOCK(msg->content->lock);
+        UNLOCK(content->lock);
+    }
 
-        buf = next_buf;
+    if (content->aborted) {
+        if (pn_link_current(pnl)) {
+            msg->send_complete = true;
+            if (!pn_delivery_aborted(pn_link_current(pnl))) {
+                pn_delivery_abort(pn_link_current(pnl));
+            }
+        }
     }
 
     *q3_stalled = (pn_session_outgoing_bytes(pns) > QD_QLIMIT_Q3_UPPER);
@@ -1710,7 +1766,7 @@ static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_
     qd_error_clear();
 
     //
-    // In the case of a streaming or multi buffer message, there is a change that some buffers might be freed before the entire
+    // In the case of a streaming or multi buffer message, there is a chance that some buffers might be freed before the entire
     // message has arrived in which case we cannot reliably check the message using the depth.
     //
     if (content->buffers_freed)

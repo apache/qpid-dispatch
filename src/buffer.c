@@ -53,6 +53,7 @@ qd_buffer_t *qd_buffer(void)
 void qd_buffer_free(qd_buffer_t *buf)
 {
     if (!buf) return;
+    sys_atomic_destroy(&buf->bfanout);
     free_qd_buffer_t(buf);
 }
 
@@ -87,14 +88,22 @@ void qd_buffer_insert(qd_buffer_t *buf, size_t len)
     assert(buf->size <= BUFFER_SIZE);
 }
 
-void qd_buffer_add_fanout(qd_buffer_t *buf)
+
+uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value)
 {
-    sys_atomic_inc(&buf->bfanout);
+    return sys_atomic_set(&buf->bfanout, value);
 }
 
-size_t qd_buffer_fanout(qd_buffer_t *buf)
+
+uint32_t qd_buffer_inc_fanout(qd_buffer_t *buf)
 {
-    return buf->bfanout;
+    return sys_atomic_inc(&buf->bfanout);
+}
+
+
+uint32_t qd_buffer_dec_fanout(qd_buffer_t *buf)
+{
+    return sys_atomic_dec(&buf->bfanout);
 }
 
 

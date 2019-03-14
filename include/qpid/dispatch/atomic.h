@@ -53,6 +53,12 @@ static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
     return atomic_load(ref);
 }
 
+static inline int32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
+{
+    return atomic_exchange(ref, value);
+}
+
+
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
 
 
@@ -82,6 +88,15 @@ static inline uint32_t sys_atomic_sub(sys_atomic_t *ref, uint32_t value)
 static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
 {
     return *ref;
+}
+
+static inline uint32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
+{
+    uint32_t old = *ref;
+    while (!__sync_bool_compare_and_swap(ref, old, value)) {
+        old = *ref;
+    }
+    return old;
 }
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
@@ -118,6 +133,11 @@ static inline uint32_t sys_atomic_sub(sys_atomic_t *ref, uint32_t value)
 static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
 {
     return *ref;
+}
+
+static inline void sys_atomic_set(sys_atomic_t *ref, uint32_t value)
+{
+    return atomic_swap_32(ref, value);
 }
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
@@ -165,6 +185,16 @@ static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
     uint32_t value = ref->value;
     sys_mutex_unlock(ref->lock);
     return value;
+}
+
+static inline uint32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
+{
+    uint32_t old;
+    sys_mutex_lock(ref->lock);
+    old = ref->value;
+    ref->value = value;
+    sys_mutex_unlock(ref->lock);
+    return old;
 }
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref)

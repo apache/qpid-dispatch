@@ -394,12 +394,6 @@ bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
     return qd_message_aborted(delivery->msg);
 }
 
-void qdr_delivery_add_num_closed_receivers(qdr_delivery_t *delivery)
-{
-    assert(delivery);
-    qd_message_add_num_closed_receivers(delivery->msg);
-}
-
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {
