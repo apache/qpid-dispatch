@@ -1531,7 +1531,10 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         qd_link_t *qdl_in = qd_message_get_receiving_link(msg_out);
         if (qdl_in) {
             qd_connection_t *qdc_in = qd_link_connection(qdl_in);
-            if (qdc_in) {
+            if (qdc_in && !qdc_in->closed) {
+                //
+                // Dont try receiving if the connection on the other side has closed.
+                //
                 qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
             }
         }
@@ -1655,7 +1658,12 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 qdr_delivery_set_disposition(dlv, disp);
                 qd_message_set_discard(msg, true);
                 qd_message_Q2_holdoff_disable(msg);
-                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, link);
+
+                //
+                // Dont try receiving if the connection on the other side has closed.
+                //
+                if (!qd_conn->closed)
+                    qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, link);
             }
         }
     }
