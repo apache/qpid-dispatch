@@ -708,10 +708,6 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             peer = qdr_delivery_next_peer_CT(dlv);
         }
 
-        if (dlv->link->link_direction == QD_OUTGOING) {
-            qdr_delivery_add_num_closed_receivers(dlv);
-        }
-
         //
         // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
         //

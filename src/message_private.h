@@ -69,6 +69,8 @@ typedef struct {
     sys_atomic_t         ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
     qd_buffer_t         *pending;                         // Buffer owned by and filled by qd_message_receive
+    uint64_t             buffers_freed;                   // count of large msg buffers freed on send
+
     qd_field_location_t  section_message_header;          // The message header list
     qd_field_location_t  section_delivery_annotation;     // The delivery annotation map
     qd_field_location_t  section_message_annotation;      // The message annotation map
@@ -107,8 +109,7 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
-    sys_atomic_t         fanout;                         // The number of receivers for this message. This number does not include in-process subscribers.
-    int                  num_closed_receivers;
+    uint32_t             fanout;                         // The number of receivers for this message, including in-process subscribers.
     qd_link_t           *input_link;                     // message received on this link
 
     bool                 ma_parsed;                      // have parsed annotations in incoming message
@@ -117,7 +118,6 @@ typedef struct {
     bool                 q2_input_holdoff;               // hold off calling pn_link_recv
     bool                 aborted;                        // receive completed with abort flag set
     bool                 disable_q2_holdoff;             // Disable the Q2 flow control
-    bool                 buffers_freed;                  // Has at least one buffer been freed ?
     bool                 priority_parsed;
     bool                 priority_present;
     uint8_t              priority;                       // The priority of this message
@@ -136,6 +136,7 @@ typedef struct {
     bool                  strip_annotations_in;
     bool                  send_complete;   // Has the message been completely received and completely sent?
     bool                  tag_sent;        // Tags are sent
+    bool                  is_fanout;       // If msg is an outgoing fanout
 } qd_message_pvt_t;
 
 ALLOC_DECLARE(qd_message_t);

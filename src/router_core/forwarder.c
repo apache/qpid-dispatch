@@ -131,7 +131,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     //
     // Add one to the message fanout. This will later be used in the qd_message_send function that sends out messages.
     //
-    qd_message_add_fanout(msg);
+    qd_message_add_fanout(msg, out_dlv->msg);
 
     //
     // Create peer linkage if the outgoing delivery is unsettled. This peer linkage is necessary to deal with dispositions that show up in the future.
@@ -302,6 +302,32 @@ static inline bool qdr_forward_edge_echo_CT(qdr_delivery_t *in_dlv, qdr_link_t *
 }
 
 
+/**
+ * Handle forwarding to a subscription
+ */
+static void qdr_forward_to_subscriber(qdr_core_t *core, qdr_subscription_t *sub, qdr_delivery_t *in_dlv, qd_message_t *in_msg, bool receive_complete)
+{
+    qd_message_add_fanout(in_msg, 0);
+
+    //
+    // Only if the message has been completely received, forward it to the subscription
+    // Subscriptions, at the moment, dont have the ability to deal with partial messages
+    //
+    if (receive_complete)
+        qdr_forward_on_message_CT(core, sub, in_dlv ? in_dlv->link : 0, in_msg);
+    else {
+        //
+        // Receive is not complete, we will store the sub in
+        // in_dlv->subscriptions so we can send the message to the subscription
+        // after the message fully arrives
+        //
+        assert(in_dlv);
+        DEQ_INSERT_TAIL(in_dlv->subscriptions, sub);
+        qd_message_Q2_holdoff_disable(in_msg);
+    }
+}
+
+
 int qdr_forward_multicast_CT(qdr_core_t      *core,
                              qdr_address_t   *addr,
                              qd_message_t    *msg,
@@ -450,21 +476,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         //
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         while (sub) {
-            //
-            // Only if the message has been completely received, forward it to the subscription
-            // Subscriptions, at the moment, dont have the ability to deal with partial messages
-            //
-            if (receive_complete)
-                qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
-            else {
-                //
-                // Receive is not complete, we will store the sub in in_delivery->subscriptions so we can send the message to the subscription
-                // after the message fully arrives
-                //
-                DEQ_INSERT_TAIL(in_delivery->subscriptions, sub);
-                qd_message_Q2_holdoff_disable(msg);
-            }
-
+            qdr_forward_to_subscriber(core, sub, in_delivery, msg, receive_complete);
             fanout++;
             addr->deliveries_to_container++;
             sub = DEQ_NEXT(sub);
@@ -520,21 +532,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
         bool receive_complete = qd_message_receive_complete(msg);
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         if (sub) {
-
-            //
-            // Only if the message has been completely received, forward it.
-            // Subscriptions, at the moment, dont have the ability to deal with partial messages
-            //
-            if (receive_complete)
-                qdr_forward_on_message_CT(core, sub, in_delivery ? in_delivery->link : 0, msg);
-            else {
-                //
-                // Receive is not complete, we will store the sub in in_delivery->subscriptions so we can send the message to the subscription
-                // after the message fully arrives
-                //
-                DEQ_INSERT_TAIL(in_delivery->subscriptions, sub);
-                qd_message_Q2_holdoff_disable(msg);
-            }
+            qdr_forward_to_subscriber(core, sub, in_delivery, msg, receive_complete);
 
             //
             // If the incoming delivery is not settled, it should be accepted and settled here.

@@ -121,15 +121,23 @@ void qd_buffer_list_free_buffers(qd_buffer_list_t *list);
  */
 unsigned int qd_buffer_list_length(const qd_buffer_list_t *list);
 
-/*
- * Increase the fanout by 1. How many receivers should this buffer be sent to.
+/**
+ * Set the fanout value on the buffer.
+ * @return the _old_ count before updating
  */
-void qd_buffer_add_fanout(qd_buffer_t *buf);
+uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value);
 
 /**
- * Return the buffer's fanout.
+ * Increase the fanout by 1. How many receivers should this buffer be sent to.
+ * @return the _old_ count (pre increment)
  */
-size_t qd_buffer_fanout(qd_buffer_t *buf);
+uint32_t qd_buffer_inc_fanout(qd_buffer_t *buf);
+
+/**
+ * Decrease the fanout by one
+ * @return the _old_ count (pre decrement)
+ */
+uint32_t qd_buffer_dec_fanout(qd_buffer_t *buf);
 
 /**
  * Advance the buffer by len. Does not manipulate the contents of the buffer

@@ -1393,8 +1393,8 @@ class MobileAddressMulticastTest(MessagingHandler):
             self.check_addr_host = self.sender_host
 
         if self.large_msg:
-            for i in range(10000):
-                self.body += "0123456789101112131415"
+            self.body = "0123456789101112131415" * 10000
+            self.properties = {'big field': 'X' * 32000}
 
     def timeout(self):
         if self.dup_msg:
@@ -1468,7 +1468,7 @@ class MobileAddressMulticastTest(MessagingHandler):
         while self.n_sent < self.count:
             msg = None
             if self.large_msg:
-                msg = Message(body=self.body)
+                msg = Message(body=self.body, properties=self.properties)
             else:
                 msg = Message(body="Message %d" % self.n_sent)
             msg.correlation_id = self.n_sent
