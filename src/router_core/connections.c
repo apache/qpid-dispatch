@@ -706,6 +706,12 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         }
 
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
+
+        //
         // Now the undelivered-list reference
         //
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from undelivered list");
@@ -744,6 +750,12 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         }
 
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
+
+        //
         // Now the unsettled-list reference
         //
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from unsettled list");
@@ -768,6 +780,12 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             qdr_delivery_unlink_peers_CT(core, dlv, peer);
             peer = next_peer;
         }
+
+        //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, dlv);
+        dlv->link = 0;
 
         // This decref is for the removing the delivery from the settled list
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from settled list");
