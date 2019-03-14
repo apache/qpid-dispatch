@@ -666,6 +666,11 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
         //
+        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
+        //
+        qdr_increment_delivery_counters_CT(core, ref->dlv);
+        ref->dlv->link = 0;
+        //
         // Now our reference
         //
         qdr_delivery_decref_CT(core, ref->dlv, "qdr_link_cleanup_deliveries_CT - remove from updated list");
