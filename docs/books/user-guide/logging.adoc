@@ -60,18 +60,6 @@ Tue Jun  7 13:28:26 2016 ROUTER (trace) Node Router.A cost: 1
 Tue Jun  7 13:28:27 2016 ROUTER (trace) Node Router.C valid origins: ['Router.A']
 ----
 
-=== The `ROUTER_CORE` Logging Module
-
-This module provides information about the local router's operations on active connections and links. This includes operations related to opened and closed connections, messages sent, deliveries, and flow control.
-
-[options="nowrap"]
-----
-Tue Jun  7 13:42:07 2016 ROUTER_CORE (trace) Core action 'link_flow'
-Tue Jun  7 13:42:08 2016 ROUTER_CORE (trace) Core action 'link_deliver'
-Tue Jun  7 13:42:08 2016 ROUTER_CORE (trace) Core action 'send_to'
-Tue Jun  7 13:42:08 2016 ROUTER_CORE (trace) Core action 'link_flow'
-----
-
 === The `ROUTER_HELLO` Logging Module
 
 This module provides information about the _Hello_ protocol used by interior routers to exchange Hello messages, which include information about the router's ID and a list of its reachable neighbors (the other routers with which this router has bidirectional connectivity).
@@ -339,8 +327,8 @@ This example displays the last three log entries for `Router.A`:
 [options="nowrap",subs="+quotes"]
 ----
 $ qdstat --log --limit=3 -r ROUTER.A
-Wed Jun  7 17:49:32 2017 ROUTER_CORE (none) Core action 'link_deliver'
-Wed Jun  7 17:49:32 2017 ROUTER_CORE (none) Core action 'send_to'
+Wed Jun  7 17:49:32 2017 ROUTER (none) Core action 'link_deliver'
+Wed Jun  7 17:49:32 2017 ROUTER (none) Core action 'send_to'
 Wed Jun  7 17:49:32 2017 SERVER (none) [2]:0 -> @flow(19) [next-incoming-id=1, incoming-window=61, next-outgoing-id=0, outgoing-window=2147483647, handle=0, delivery-count=1, link-credit=250, drain=false]
 ----
 --

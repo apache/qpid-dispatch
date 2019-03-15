@@ -47,13 +47,13 @@ This example shows that the router was correctly installed, is running, and is r
 $ qdstat --log
 Fri May 20 09:38:03 2017 SERVER (info) Container Name: Router.A
 Fri May 20 09:38:03 2017 ROUTER (info) Router started in Standalone mode
-Fri May 20 09:38:03 2017 ROUTER_CORE (info) Router Core thread running. 0/Router.A
-Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription M/$management
+Fri May 20 09:38:03 2017 ROUTER (info) Router Core thread running. 0/Router.A
+Fri May 20 09:38:03 2017 ROUTER (info) In-process subscription M/$management
 Fri May 20 09:38:03 2017 AGENT (info) Activating management agent on $_management_internal
-Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$management
-Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$_management_internal
+Fri May 20 09:38:03 2017 ROUTER (info) In-process subscription L/$management
+Fri May 20 09:38:03 2017 ROUTER (info) In-process subscription L/$_management_internal
 Fri May 20 09:38:03 2017 DISPLAYNAME (info) Activating DisplayNameService on $displayname
-Fri May 20 09:38:03 2017 ROUTER_CORE (info) In-process subscription L/$displayname
+Fri May 20 09:38:03 2017 ROUTER (info) In-process subscription L/$displayname
 Fri May 20 09:38:03 2017 CONN_MGR (info) Configured Listener: 0.0.0.0:amqp proto=any role=normal
 Fri May 20 09:38:03 2017 POLICY (info) Policy configured maximumConnections: 0, policyFolder: '', access rules enabled: 'false'
 Fri May 20 09:38:03 2017 POLICY (info) Policy fallback defaultApplication is disabled

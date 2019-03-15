@@ -152,7 +152,7 @@ Establishes an outgoing connection from the router.
 
 Configure logging for a particular module which is part of the router. You can use the UPDATE operation to change log settings while the router is running.
 
-* *_module_* (One of [`ROUTER`, `ROUTER_CORE`, `ROUTER_HELLO`, `ROUTER_LS`, `ROUTER_MA`, `MESSAGE`, `SERVER`, `AGENT`, `CONTAINER`, `ERROR`, `POLICY`, `DEFAULT`], required) : Module to configure. The special module `DEFAULT` specifies defaults for all modules.
+* *_module_* (One of [`ROUTER`, `ROUTER_HELLO`, `ROUTER_LS`, `ROUTER_MA`, `MESSAGE`, `SERVER`, `AGENT`, `CONTAINER`, `ERROR`, `POLICY`, `DEFAULT`], required) : Module to configure. The special module `DEFAULT` specifies defaults for all modules.
 * *_enable_* (string, default=`default`, required) Levels are: `trace`, `debug`, `info`, `notice`, `warning`, `error`, `critical`. The enable string is a comma-separated list of levels. A level may have a trailing `+` to enable that level and above. For example `trace,debug,warning+` means enable trace, debug, warning, error and critical. The value ‘none’ means disable logging for the module. The value `default` means use the value from the `DEFAULT` module.
 * *_includeTimestamp_* (boolean) : Include timestamp in log messages.
 * *_includeSource_* (boolean) : Include source file and line number in log messages.
