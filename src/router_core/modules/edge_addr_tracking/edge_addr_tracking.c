@@ -108,6 +108,8 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
     // When all those incoming links get terminated, this endpoint state must *not* be freed. There might be more links coming that could
     // use this endpoint state. The endpoint state is freed only when the endpoint cleanup function is called where we
     // do the final decref and free the endpoint state.
+    // If the endpoint ends up getting closed before the other incoming links, the endpoint state will only be freed when the last of
+    // the referencing links detaches.
     //
     endpoint_state->ref_count = 1;
     endpoint_state->mc        = bc;
