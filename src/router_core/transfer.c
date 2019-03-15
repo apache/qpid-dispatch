@@ -832,6 +832,10 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
                 activate = true;
             }
             sys_mutex_unlock(link->conn->work_lock);
+        } else if (link->link_direction == QD_INCOMING) {
+            if (drain) {
+                link->credit_pending = link->capacity;
+            }
         }
     }
 
