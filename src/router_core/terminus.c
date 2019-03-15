@@ -111,7 +111,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_DELIVERIES:    text = " dur:deliveries"; break;
         }
 
-        len     = snprintf(output, *size, text);
+        len     = snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
@@ -122,7 +122,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_EXPIRE_NEVER:           text = "";              break;
         }
 
-        len     = snprintf(output, *size, text);
+        len     = snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
@@ -132,7 +132,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_DIST_MODE_MOVE:        text = " dist:move";   break;
         }
 
-        len     = snprintf(output, *size, text);
+        len     = snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
