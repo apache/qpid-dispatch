@@ -1408,6 +1408,23 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         return;
     }
 
+    char   source_str[1000];
+    char   target_str[1000];
+    size_t source_len = 1000;
+    size_t target_len = 1000;
+
+    source_str[0] = '\0';
+    target_str[0] = '\0';
+
+    //
+    // Grab the formatted terminus strings before we schedule any IO-thread processing that
+    // might get ahead of us and free the terminus objects before we issue the log.
+    //
+    if (qd_log_enabled(core->log, QD_LOG_INFO)) {
+        qdr_terminus_format(source, source_str, &source_len);
+        qdr_terminus_format(target, target_str, &target_len);
+    }
+
     if (dir == QD_INCOMING) {
         //
         // Handle incoming link cases
@@ -1479,14 +1496,6 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             break;
         }
     }
-
-    char   source_str[1000];
-    char   target_str[1000];
-    size_t source_len = 1000;
-    size_t target_len = 1000;
-
-    qdr_terminus_format(source, source_str, &source_len);
-    qdr_terminus_format(target, target_str, &target_len);
 
     qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Link attached: dir=%s source=%s target=%s",
            conn->identity, link->identity, dir == QD_INCOMING ? "in" : "out", source_str, target_str);
