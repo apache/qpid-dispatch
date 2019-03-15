@@ -133,9 +133,19 @@ typedef struct qd_server_config_t {
     char *protocol_family;
 
     /**
+     * Expose simple liveness check.
+     */
+    bool healthz;
+
+    /**
      * Export metrics.
      */
     bool metrics;
+
+    /**
+     * Websockets enabled.
+     */
+    bool websockets;
 
     /**
      * Accept HTTP connections, allow WebSocket "amqp" protocol upgrades.

@@ -117,6 +117,8 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
                            void *user, void *in, size_t len);
 static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
                                void *user, void *in, size_t len);
+static int callback_healthz(struct lws *wsi, enum lws_callback_reasons reason,
+                               void *user, void *in, size_t len);
 
 static struct lws_protocols protocols[] = {
     /* HTTP only protocol comes first */
@@ -142,6 +144,11 @@ static struct lws_protocols protocols[] = {
     {
         "http",
         callback_metrics,
+        sizeof(stats_t),
+    },
+    {
+        "healthz",
+        callback_healthz,
         sizeof(stats_t),
     },
     { NULL, NULL, 0, 0 } /* terminator */
@@ -248,6 +255,7 @@ struct qd_http_listener_t {
     struct lws_vhost *vhost;
     struct lws_http_mount mount;
     struct lws_http_mount metrics;
+    struct lws_http_mount healthz;
 };
 
 void qd_http_listener_free(qd_http_listener_t *hl) {
@@ -301,13 +309,23 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
     m->def = "index.html";  /* Default file name */
     m->origin_protocol = LWSMPRO_FILE; /* mount type is a directory in a filesystem */
     m->extra_mimetypes = mime_types;
+    struct lws_http_mount *tail = m;
     if (config->metrics) {
         struct lws_http_mount *metrics = &hl->metrics;
-        m->mount_next = metrics;
+        tail->mount_next = metrics;
+        tail = metrics;
         metrics->mountpoint = "/metrics";
         metrics->mountpoint_len = strlen(metrics->mountpoint);
         metrics->origin_protocol = LWSMPRO_CALLBACK;
         metrics->protocol = "http";
+    }
+    if (config->healthz) {
+        struct lws_http_mount *healthz = &hl->healthz;
+        tail->mount_next = healthz;
+        healthz->mountpoint = "/healthz";
+        healthz->mountpoint_len = strlen(healthz->mountpoint);
+        healthz->origin_protocol = LWSMPRO_CALLBACK;
+        healthz->protocol = "healthz";
     }
 
     struct lws_context_creation_info info = {0};
@@ -524,6 +542,54 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
     }
 }
 
+static int callback_healthz(struct lws *wsi, enum lws_callback_reasons reason,
+                               void *user, void *in, size_t len)
+{
+    qd_http_server_t *hs = wsi_server(wsi);
+    stats_t *stats = (stats_t*) user;
+    uint8_t buffer[LWS_PRE + 2048];
+    uint8_t *start = &buffer[LWS_PRE], *position = start, *end = &buffer[sizeof(buffer) - LWS_PRE - 1];
+
+    switch (reason) {
+
+    case LWS_CALLBACK_HTTP: {
+        stats->wsi = wsi;
+        stats->server = hs;
+        //make dummy request for stats (pass in null ptr); this still excercises the
+        //path through core thread and back through callback on io thread which is
+        //a resonable initial liveness check
+        qdr_request_global_stats(hs->core, 0, handle_stats_results, (void*) stats);
+        return 0;
+    }
+
+    case LWS_CALLBACK_HTTP_WRITEABLE: {
+        //encode stats into buffer
+        if (!stats->headers_sent) {
+            if (lws_add_http_header_status(wsi, HTTP_STATUS_OK, &position, end)
+                || add_header_by_name(wsi, "content-type:", "text/plain", &position, end)
+                || lws_add_http_header_content_length(wsi, 3, &position, end))
+                return 1;
+            if (lws_finalize_http_header(wsi, &position, end))
+                return 1;
+            stats->headers_sent = true;
+        }
+        position += lws_snprintf((char*) position, end - position, "OK\n");
+
+        int n = LWS_WRITE_HTTP_FINAL;
+        //write buffer
+        size_t available = position - start;
+	if (lws_write(wsi, (unsigned char*) start, available, n) != available)
+            return 1;
+        else if (lws_http_transaction_completed(wsi))
+            return -1;
+        else return 0;
+    }
+
+    default:
+        return 0;
+    }
+}
+
 /* Callbacks for promoted AMQP over WS connections. */
 static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
                            void *user, void *in, size_t len)
@@ -538,7 +604,7 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
         memset(c, 0, sizeof(*c));
         c->wsi = wsi;
         qd_http_listener_t *hl = wsi_listener(wsi);
-        if (hl == NULL) {
+        if (hl == NULL || !hl->listener->config.websockets) {
             return unexpected_close(c->wsi, "cannot-upgrade");
         }
         c->qd_conn = qd_server_connection(hs->server, &hl->listener->config);
