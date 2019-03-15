@@ -103,15 +103,6 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
 
     ZERO(endpoint_state);
     endpoint_state->endpoint  = endpoint;
-    //
-    // Initialize the ref count to 1. Many links might reference this endpoint state via the edge context pointer (We incref when this happens).
-    // When all those incoming links get terminated, this endpoint state must *not* be freed. There might be more links coming that could
-    // use this endpoint state. The endpoint state is freed only when the endpoint cleanup function is called where we
-    // do the final decref and free the endpoint state.
-    // If the endpoint ends up getting closed before the other incoming links, the endpoint state will only be freed when the last of
-    // the referencing links detaches.
-    //
-    endpoint_state->ref_count = 1;
     endpoint_state->mc        = bc;
     endpoint_state->conn      = qdrc_endpoint_get_connection_CT(endpoint);
 
@@ -153,9 +144,10 @@ static void qdrc_address_endpoint_cleanup(void *link_context)
         qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
         assert (endpoint_state->conn);
         endpoint_state->closed = true;
-        endpoint_state->ref_count --;
         if (endpoint_state->ref_count == 0) {
+
             //
+            // The endpoint has been closed and no other links are referencing this endpoint. Time to free it.
             // Clean out all the states held by the link_context (endpoint_state)
             //
             if (mc) {
@@ -358,7 +350,10 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
                 qdr_addr_endpoint_state_t *endpoint_state = (qdr_addr_endpoint_state_t *)link->edge_context;
                 endpoint_state->ref_count--;
                 link->edge_context = 0;
-                if (endpoint_state->ref_count == 0) {
+                //
+                // The endpoint has been closed and no other links are referencing this endpoint. Time to free it.
+                //
+                if (endpoint_state->ref_count == 0 && endpoint_state->closed) {
                     qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
                     if (mc) {
                         DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
