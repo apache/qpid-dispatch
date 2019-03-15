@@ -838,10 +838,22 @@
                     "deprecationName": "failoverList",
                     "description": "A comma-separated list of failover urls to be supplied to connected clients.  Form: [(amqp|amqps|ws|wss)://]host_or_ip[:port]"
                 },
+                "healthz": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Provide a simple HTTP based liveness test (using path /healthz). Assumes listener is enabled for http.",
+                    "create": true
+                },
                 "metrics": {
                     "type": "boolean",
                     "default": true,
-                    "description": "Export metrics in prometheus text format for the router (using path /metrics).",
+                    "description": "Export metrics in prometheus text format for the router (using path /metrics). Assumes listener is enabled for http.",
+                    "create": true
+                },
+                "websockets": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "For an http enabled listener, determines whether websockets access is enabled (true by default).",
                     "create": true
                 },
                 "http": {

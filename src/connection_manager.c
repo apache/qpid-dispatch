@@ -312,7 +312,9 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->role                 = qd_entity_get_string(entity, "role");              CHECK();
     config->inter_router_cost    = qd_entity_opt_long(entity, "cost", 1);             CHECK();
     config->protocol_family      = qd_entity_opt_string(entity, "protocolFamily", 0); CHECK();
+    config->healthz              = qd_entity_opt_bool(entity, "healthz", true);       CHECK();
     config->metrics              = qd_entity_opt_bool(entity, "metrics", true);       CHECK();
+    config->websockets           = qd_entity_opt_bool(entity, "websockets", true);    CHECK();
     config->http                 = qd_entity_opt_bool(entity, "http", false);         CHECK();
     config->http_root_dir        = qd_entity_opt_string(entity, "httpRootDir", false);   CHECK();
 
@@ -323,9 +325,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->http = config->http || config->http_root_dir;
     if (config->http && ! config->http_root_dir) {
         qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "HTTP service is requested but no httpRootDir specified. The router will serve AMQP-over-websockets but no static content.");
-    }
-    if (config->metrics && !config->http) {
-        qd_log(qd->connection_manager->log_source, QD_LOG_INFO, "Metrics can only be exported on listener with http enabled.");
     }
 
     config->max_frame_size       = qd_entity_get_long(entity, "maxFrameSize");        CHECK();

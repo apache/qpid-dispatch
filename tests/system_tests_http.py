@@ -181,6 +181,39 @@ class RouterTestHttp(TestCase):
         for t in threads:
             if t.ex: raise t.ex
 
+    def test_http_healthz(self):
+
+        if not sys.version_info >= (2, 7):
+            return
+
+        config = Qdrouterd.Config([
+            ('router', {'id': 'QDR.HEALTHZ'}),
+            ('listener', {'port': self.get_port(), 'http': 'yes'}),
+            ('listener', {'port': self.get_port(), 'httpRootDir': os.path.dirname(__file__)}),
+        ])
+        r = self.qdrouterd('metrics-test-router', config)
+
+        def test(port):
+            result = urlopen("http://localhost:%d/healthz" % port, cafile=self.ssl_file('ca-certificate.pem'))
+            self.assertEqual(200, result.getcode())
+
+        # Sequential calls on multiple ports
+        for port in r.ports: test(port)
+
+        # Concurrent calls on multiple ports
+        class TestThread(threading.Thread):
+            def __init__(self, port):
+                threading.Thread.__init__(self)
+                self.port, self.ex = port, None
+                self.start()
+            def run(self):
+                try: test(self.port)
+                except Exception as e: self.ex = e
+        threads = [TestThread(p) for p in r.ports + r.ports]
+        for t in threads: t.join()
+        for t in threads:
+            if t.ex: raise t.ex
+
     def test_https_get(self):
         def listener(**kwargs):
             args = dict(kwargs)
