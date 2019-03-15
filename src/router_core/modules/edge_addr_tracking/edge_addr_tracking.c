@@ -103,8 +103,17 @@ static void qdrc_address_endpoint_first_attach(void              *bind_context,
 
     ZERO(endpoint_state);
     endpoint_state->endpoint  = endpoint;
+    //
+    // Initialize the ref count to 1. Many links might reference this endpoint state via the edge context pointer (We incref when this happens).
+    // When all those incoming links get terminated, this endpoint state must *not* be freed. There might be more links coming that could
+    // use this endpoint state. The endpoint state is freed only when the endpoint cleanup function is called where we
+    // do the final decref and free the endpoint state.
+    //
+    endpoint_state->ref_count = 1;
     endpoint_state->mc        = bc;
     endpoint_state->conn      = qdrc_endpoint_get_connection_CT(endpoint);
+
+
     DEQ_INSERT_TAIL(bc->endpoint_state_list, endpoint_state);
 
     //
@@ -142,6 +151,7 @@ static void qdrc_address_endpoint_cleanup(void *link_context)
         qdr_addr_tracking_module_context_t *mc = endpoint_state->mc;
         assert (endpoint_state->conn);
         endpoint_state->closed = true;
+        endpoint_state->ref_count --;
         if (endpoint_state->ref_count == 0) {
             //
             // Clean out all the states held by the link_context (endpoint_state)
@@ -149,6 +159,7 @@ static void qdrc_address_endpoint_cleanup(void *link_context)
             if (mc) {
                 DEQ_REMOVE(mc->endpoint_state_list, endpoint_state);
             }
+
             endpoint_state->conn = 0;
             endpoint_state->endpoint = 0;
             free_qdr_addr_endpoint_state_t(endpoint_state);
