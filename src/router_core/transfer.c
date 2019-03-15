@@ -554,17 +554,22 @@ void qdr_increment_delivery_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
 {
     qdr_link_t *link = delivery->link;
     if (link) {
+        bool do_rate = false;
+
         if (delivery->presettled) {
+            do_rate = delivery->disposition != PN_RELEASED;
             link->presettled_deliveries++;
             if (link->link_direction ==  QD_INCOMING && link->link_type == QD_LINK_ENDPOINT)
                 core->presettled_deliveries++;
         }
         else if (delivery->disposition == PN_ACCEPTED) {
+            do_rate = true;
             link->accepted_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->accepted_deliveries++;
         }
         else if (delivery->disposition == PN_REJECTED) {
+            do_rate = true;
             link->rejected_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->rejected_deliveries++;
@@ -580,8 +585,36 @@ void qdr_increment_delivery_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
                 core->modified_deliveries++;
         }
 
+        uint32_t delay = core->uptime_ticks - delivery->ingress_time;
+        if (delay > 10) {
+            link->deliveries_delayed_10sec++;
+            if (link->link_direction ==  QD_INCOMING)
+                core->deliveries_delayed_10sec++;
+        } else if (delay > 1) {
+            link->deliveries_delayed_1sec++;
+            if (link->link_direction ==  QD_INCOMING)
+                core->deliveries_delayed_1sec++;
+        }
+
         if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
             link->ingress_histogram[delivery->ingress_index]++;
+
+        //
+        // Compute the settlement rate
+        //
+        if (do_rate) {
+            uint32_t delta_time = core->uptime_ticks - link->core_ticks;
+            if (delta_time > 0) {
+                if (delta_time > QDR_LINK_RATE_DEPTH)
+                    delta_time = QDR_LINK_RATE_DEPTH;
+                for (uint8_t delta_slots = 0; delta_slots < delta_time; delta_slots++) {
+                    link->rate_cursor = (link->rate_cursor + 1) % QDR_LINK_RATE_DEPTH;
+                    link->settled_deliveries[link->rate_cursor] = 0;
+                }
+                link->core_ticks = core->uptime_ticks;
+            }
+            link->settled_deliveries[link->rate_cursor]++;
+        }
     }
 }
 
@@ -1017,6 +1050,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     qdr_delivery_t *dlv  = action->args.connection.delivery;
     bool            more = action->args.connection.more;
     qdr_link_t     *link = dlv->link;
+
+    //
+    // Record the ingress time so we can track the age of this delivery.
+    //
+    dlv->ingress_time = core->uptime_ticks;
 
     //
     // If the link is an edge link, mark this delivery as via-edge

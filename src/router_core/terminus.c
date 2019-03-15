@@ -20,6 +20,7 @@
 #include "router_core_private.h"
 #include <strings.h>
 #include <stdio.h>
+#include <inttypes.h>
 
 ALLOC_DEFINE(qdr_terminus_t);
 
@@ -72,6 +73,127 @@ void qdr_terminus_free(qdr_terminus_t *term)
     pn_data_free(term->capabilities);
 
     free_qdr_terminus_t(term);
+}
+
+
+void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
+{
+    size_t len = snprintf(output, *size, "{");
+
+    output += len;
+    *size  -= len;
+    len     = 0;
+    
+    do {
+        if (term == 0)
+            break;
+
+        if (term->coordinator) {
+            len = snprintf(output, *size, "<coordinator>");
+            break;
+        }
+
+        if (term->dynamic)
+            len = snprintf(output, *size, "<dynamic>");
+        else if (term->address && term->address->iterator) {
+            qd_iterator_reset_view(term->address->iterator, ITER_VIEW_ALL);
+            len = qd_iterator_ncopy(term->address->iterator, (unsigned char*) output, *size);
+        } else if (term->address == 0)
+            len = snprintf(output, *size, "<none>");
+
+        output += len;
+        *size  -= len;
+
+        char *text = "";
+        switch (term->durability) {
+        case PN_NONDURABLE:                              break;
+        case PN_CONFIGURATION: text = " dur:config";     break;
+        case PN_DELIVERIES:    text = " dur:deliveries"; break;
+        }
+
+        len     = snprintf(output, *size, text);
+        output += len;
+        *size  -= len;
+
+        switch (term->expiry_policy) {
+        case PN_EXPIRE_WITH_LINK:       text = " expire:link";  break;
+        case PN_EXPIRE_WITH_SESSION:    text = " expire:sess";  break;
+        case PN_EXPIRE_WITH_CONNECTION: text = " expire:conn";  break;
+        case PN_EXPIRE_NEVER:           text = "";              break;
+        }
+
+        len     = snprintf(output, *size, text);
+        output += len;
+        *size  -= len;
+
+        switch (term->distribution_mode) {
+        case PN_DIST_MODE_UNSPECIFIED: text = "";             break;
+        case PN_DIST_MODE_COPY:        text = " dist:copy";   break;
+        case PN_DIST_MODE_MOVE:        text = " dist:move";   break;
+        }
+
+        len     = snprintf(output, *size, text);
+        output += len;
+        *size  -= len;
+
+        if (term->timeout > 0) {
+            len     = snprintf(output, *size, " timeout:%"PRIu32, term->timeout);
+            output += len;
+            *size  -= len;
+        }
+
+        if (term->capabilities && pn_data_size(term->capabilities) > 0) {
+            len     = snprintf(output, *size, " caps:");
+            output += len;
+            *size  -= len;
+
+            len = *size;
+            pn_data_format(term->capabilities, output, &len);
+            output += len;
+            *size  -= len;
+        }
+
+        if (term->filter && pn_data_size(term->filter) > 0) {
+            len     = snprintf(output, *size, " flt:");
+            output += len;
+            *size  -= len;
+
+            len = *size;
+            pn_data_format(term->filter, output, &len);
+            output += len;
+            *size  -= len;
+        }
+
+        if (term->outcomes && pn_data_size(term->outcomes) > 0) {
+            len     = snprintf(output, *size, " outcomes:");
+            output += len;
+            *size  -= len;
+
+            len = *size;
+            pn_data_format(term->outcomes, output, &len);
+            output += len;
+            *size  -= len;
+        }
+
+        if (term->properties && pn_data_size(term->properties) > 0) {
+            len     = snprintf(output, *size, " props:");
+            output += len;
+            *size  -= len;
+
+            len = *size;
+            pn_data_format(term->properties, output, &len);
+            output += len;
+            *size  -= len;
+        }
+
+        len = 0;
+    } while (false);
+
+    output += len;
+    *size  -= len;
+    
+    len = snprintf(output, *size, "}");
+    *size -= len;
 }
 
 

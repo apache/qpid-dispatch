@@ -55,7 +55,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     // Set up the logging sources for the router core
     //
-    core->log       = qd_log_source("ROUTER_CORE");
+    core->log       = qd->router->log_source;
     core->agent_log = qd_log_source("AGENT");
 
     //

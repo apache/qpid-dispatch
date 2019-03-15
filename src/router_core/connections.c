@@ -23,6 +23,7 @@
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
 #include <strings.h>
+#include <inttypes.h>
 #include "router_core_private.h"
 #include "core_link_endpoint.h"
 
@@ -475,6 +476,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->credit_pending = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
+    link->core_ticks     = conn->core->uptime_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
 
     link->strip_annotations_in  = conn->strip_annotations_in;
@@ -816,7 +818,7 @@ static void qdr_link_abort_undelivered_CT(qdr_core_t *core, qdr_link_t *link)
 }
 
 
-static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
+static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, const char *log_text)
 {
     //
     // Remove the link from the master list of links
@@ -900,6 +902,17 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     free(link->ingress_histogram);
     free(link->insert_prefix);
     free(link->strip_prefix);
+
+    //
+    // Log the link closure
+    //
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] %s: del=%"PRIu64" presett=%"PRIu64" psdrop=%"PRIu64
+           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64,
+           conn->identity, link->identity, log_text, link->total_deliveries, link->presettled_deliveries,
+           link->dropped_presettled_deliveries, link->accepted_deliveries, link->rejected_deliveries,
+           link->released_deliveries, link->modified_deliveries, link->deliveries_delayed_1sec,
+           link->deliveries_delayed_10sec);
+
     free_qdr_link_t(link);
 }
 
@@ -931,9 +944,10 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     qdr_generate_link_name("qdlink", link->name, QD_DISCRIMINATOR_SIZE + 8);
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
-    link->insert_prefix = 0;
-    link->strip_prefix = 0;
-    link->attach_count = 1;
+    link->insert_prefix  = 0;
+    link->strip_prefix   = 0;
+    link->attach_count   = 1;
+    link->core_ticks     = core->uptime_ticks;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -1196,7 +1210,6 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
 
     qdr_connection_t *conn = action->args.connection.conn;
 
-
     //
     // Deactivate routes associated with this connection
     //
@@ -1236,7 +1249,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
         //
         // Clean up the link and all its associated state.
         //
-        qdr_link_cleanup_CT(core, conn, link); // link_cleanup disconnects and frees the ref.
+        qdr_link_cleanup_CT(core, conn, link, "Link closed due to connection loss"); // link_cleanup disconnects and frees the ref.
         link_ref = DEQ_HEAD(conn->links);
     }
 
@@ -1259,6 +1272,8 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     }
 
     qdrc_event_conn_raise(core, QDRC_EVENT_CONN_CLOSED, conn);
+
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection Closed", conn->identity);
 
     DEQ_REMOVE(core->open_connections, conn);
     qdr_connection_free(conn);
@@ -1375,6 +1390,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_FORBIDDEN, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
+        qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Router attach forbidden on non-inter-router connection", conn->identity);
         return;
     }
 
@@ -1388,6 +1404,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_WRONG_ROLE, true);
         qdr_terminus_free(source);
         qdr_terminus_free(target);
+        qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach forbidden on inter-router connection", conn->identity);
         return;
     }
 
@@ -1412,6 +1429,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                     qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                     qdr_terminus_free(source);
                     qdr_terminus_free(target);
+                    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach failed - no address lookup handler", conn->identity);
                     return;
                 }
             }
@@ -1439,6 +1457,7 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
                 qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
                 qdr_terminus_free(source);
                 qdr_terminus_free(target);
+                    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Endpoint attach failed - no address lookup handler", conn->identity);
                 return;
             }
             break;
@@ -1460,6 +1479,17 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
             break;
         }
     }
+
+    char   source_str[1000];
+    char   target_str[1000];
+    size_t source_len = 1000;
+    size_t target_len = 1000;
+
+    qdr_terminus_format(source, source_str, &source_len);
+    qdr_terminus_format(target, target_str, &target_len);
+
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Link attached: dir=%s source=%s target=%s",
+           conn->identity, link->identity, dir == QD_INCOMING ? "in" : "out", source_str, target_str);
 }
 
 
@@ -1615,9 +1645,8 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             //
             // If the link is completely detached, release its resources
             //
-            if (link->detach_send_done) {
-                qdr_link_cleanup_CT(core, conn, link);
-            }
+            if (link->detach_send_done)
+                qdr_link_cleanup_CT(core, conn, link, "Link detached");
 
             return;
         }
@@ -1709,11 +1738,11 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE, dt == QD_CLOSED);
         } else {
             // no detach can be sent out because the connection was lost
-            qdr_link_cleanup_CT(core, conn, link);
+            qdr_link_cleanup_CT(core, conn, link, "Link lost");
         }
     } else if (link->detach_send_done) {  // detach count indicates detach has been scheduled
         // I/O thread is finished sending detach, ok to free link now
-        qdr_link_cleanup_CT(core, conn, link);
+        qdr_link_cleanup_CT(core, conn, link, "Link detached");
     }
 
     //
@@ -1741,7 +1770,7 @@ static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool
         link->detach_send_done = true;
         if (link->conn && link->detach_received) {
             // link is fully detached
-            qdr_link_cleanup_CT(core, link->conn, link);
+            qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
         }
     }
 }

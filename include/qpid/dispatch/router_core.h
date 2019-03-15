@@ -286,6 +286,19 @@ qdr_terminus_t *qdr_terminus(pn_terminus_t *pn);
 void qdr_terminus_free(qdr_terminus_t *terminus);
 
 /**
+ * qdr_terminus_format
+ *
+ * Write a human-readable representation of the terminus content to the string
+ * in 'output'.
+ *
+ * @param terminus The pointer returned by qdr_terminus()
+ * @param output The string buffer where the result shall be written
+ * @param size Input: the number of bytes availabie in output for writing.  Output: the
+ *             number of bytes remaining after the operation.
+ */
+void qdr_terminus_format(qdr_terminus_t *terminus, char *output, size_t *size);
+
+/**
  * qdr_terminus_copy
  *
  * Copy the contents of the qdr_terminus into a proton terminus

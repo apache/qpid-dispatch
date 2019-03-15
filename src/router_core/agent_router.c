@@ -43,11 +43,13 @@
 #define QDR_ROUTER_REJECTED_DELIVERIES                 16
 #define QDR_ROUTER_RELEASED_DELIVERIES                 17
 #define QDR_ROUTER_MODIFIED_DELIVERIES                 18
-#define QDR_ROUTER_DELIVERIES_INGRESS                  19
-#define QDR_ROUTER_DELIVERIES_EGRESS                   20
-#define QDR_ROUTER_DELIVERIES_TRANSIT                  21
-#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  22
-#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   23
+#define QDR_ROUTER_DELAYED_1SEC                        19
+#define QDR_ROUTER_DELAYED_10SEC                       20
+#define QDR_ROUTER_DELIVERIES_INGRESS                  21
+#define QDR_ROUTER_DELIVERIES_EGRESS                   22
+#define QDR_ROUTER_DELIVERIES_TRANSIT                  23
+#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  24
+#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   25
 
 
 const char *qdr_router_columns[] =
@@ -70,6 +72,8 @@ const char *qdr_router_columns[] =
      "rejectedDeliveries",
      "releasedDeliveries",
      "modifiedDeliveries",
+     "deliveriesDelayed1Sec",
+     "deliveriesDelayed10Sec",
      "deliveriesIngress",
      "deliveriesEgress",
      "deliveriesTransit",
@@ -172,6 +176,14 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_MODIFIED_DELIVERIES:
         qd_compose_insert_ulong(body, core->modified_deliveries);
+        break;
+
+    case QDR_ROUTER_DELAYED_1SEC:
+        qd_compose_insert_ulong(body, core->deliveries_delayed_1sec);
+        break;
+
+    case QDR_ROUTER_DELAYED_10SEC:
+        qd_compose_insert_ulong(body, core->deliveries_delayed_10sec);
         break;
 
     case QDR_ROUTER_DELIVERIES_INGRESS:

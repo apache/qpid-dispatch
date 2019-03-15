@@ -42,8 +42,11 @@
 #define QDR_LINK_REJECTED_COUNT           18
 #define QDR_LINK_RELEASED_COUNT           19
 #define QDR_LINK_MODIFIED_COUNT           20
-#define QDR_LINK_INGRESS_HISTOGRAM        21
-#define QDR_LINK_PRIORITY                 22
+#define QDR_LINK_DELAYED_1SEC             21
+#define QDR_LINK_DELAYED_10SEC            22
+#define QDR_LINK_INGRESS_HISTOGRAM        23
+#define QDR_LINK_PRIORITY                 24
+#define QDR_LINK_SETTLE_RATE              25
 
 const char *qdr_link_columns[] =
     {"name",
@@ -67,8 +70,11 @@ const char *qdr_link_columns[] =
      "rejectedCount",
      "releasedCount",
      "modifiedCount",
+     "deliveriesDelayed1Sec",
+     "deliveriesDelayed10Sec",
      "ingressHistogram",
      "priority",
+     "settleRate",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -89,7 +95,7 @@ static const char *address_key(qdr_address_t *addr)
     return addr && addr->hash_handle ? (const char*) qd_hash_key_by_handle(addr->hash_handle) : NULL;
 }
 
-static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_link_t *link)
+static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *body, int col, qdr_link_t *link)
 {
     char *text = 0;
 
@@ -213,6 +219,14 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
         qd_compose_insert_ulong(body, link->modified_deliveries);
         break;
 
+    case QDR_LINK_DELAYED_1SEC:
+        qd_compose_insert_ulong(body, link->deliveries_delayed_1sec);
+        break;
+
+    case QDR_LINK_DELAYED_10SEC:
+        qd_compose_insert_ulong(body, link->deliveries_delayed_10sec);
+        break;
+
     case QDR_LINK_INGRESS_HISTOGRAM:
         if (link->ingress_histogram) {
             qd_compose_start_list(body);
@@ -227,20 +241,39 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_li
         qd_compose_insert_uint(body, link->priority);
         break;
 
+    case QDR_LINK_SETTLE_RATE: {
+        uint32_t delta_time = core->uptime_ticks - link->core_ticks;
+        if (delta_time > 0) {
+            if (delta_time > QDR_LINK_RATE_DEPTH)
+                delta_time = QDR_LINK_RATE_DEPTH;
+            for (uint8_t delta_slots = 0; delta_slots < delta_time; delta_slots++) {
+                link->rate_cursor = (link->rate_cursor + 1) % QDR_LINK_RATE_DEPTH;
+                link->settled_deliveries[link->rate_cursor] = 0;
+            }
+            link->core_ticks = core->uptime_ticks;
+        }
+
+        uint64_t total = 0;
+        for (uint8_t i = 0; i < QDR_LINK_RATE_DEPTH; i++)
+            total += link->settled_deliveries[i];
+        qd_compose_insert_uint(body, total / QDR_LINK_RATE_DEPTH);
+    }
+        break;
+
     default:
         qd_compose_insert_null(body);
         break;
     }
 }
 
-static void qdr_agent_write_link_CT(qdr_query_t *query,  qdr_link_t *link)
+static void qdr_agent_write_link_CT(qdr_core_t *core, qdr_query_t *query,  qdr_link_t *link)
 {
     qd_composed_field_t *body = query->body;
 
     qd_compose_start_list(body);
     int i = 0;
     while (query->columns[i] >= 0) {
-        qdr_agent_write_column_CT(body, query->columns[i], link);
+        qdr_agent_write_column_CT(core, body, query->columns[i], link);
         i++;
     }
     qd_compose_end_list(body);
@@ -285,7 +318,7 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
     //
     // Write the columns of the link into the response body.
     //
-    qdr_agent_write_link_CT(query, link);
+    qdr_agent_write_link_CT(core, query, link);
 
     //
     // Advance to the next address
@@ -314,7 +347,7 @@ void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
         //
         // Write the columns of the link entity into the response body.
         //
-        qdr_agent_write_link_CT(query, link);
+        qdr_agent_write_link_CT(core, query, link);
 
         //
         // Advance to the next link
@@ -330,13 +363,13 @@ void qdra_link_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 }
 
 
-static void qdr_manage_write_response_map_CT(qd_composed_field_t *body, qdr_link_t *link)
+static void qdr_manage_write_response_map_CT(qdr_core_t *core, qd_composed_field_t *body, qdr_link_t *link)
 {
     qd_compose_start_map(body);
 
     for(int i = 0; i < QDR_LINK_COLUMN_COUNT; i++) {
         qd_compose_insert_string(body, qdr_link_columns[i]);
-        qdr_agent_write_column_CT(body, i, link);
+        qdr_agent_write_column_CT(core, body, i, link);
     }
 
     qd_compose_end_map(body);
@@ -386,7 +419,7 @@ static void qdra_link_update_set_status(qdr_core_t *core, qdr_query_t *query, qd
 {
     if (link) {
         //link->admin_state = qd_iterator_copy(adm_state);
-        qdr_manage_write_response_map_CT(query->body, link);
+        qdr_manage_write_response_map_CT(core, query->body, link);
         query->status = QD_AMQP_OK;
     }
     else {

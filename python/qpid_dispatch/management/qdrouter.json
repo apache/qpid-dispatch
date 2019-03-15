@@ -554,6 +554,16 @@
                     "description":"Number of deliveries whose delivery state was set to MODIFIED by the router. These deliveries were modified but not processed.",
                     "graph": true
                 },
+                "deliveriesDelayed1Sec": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of settled deliveries that were held in the router for 1 to 10 seconds."
+                },
+                "deliveriesDelayed10Sec": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
+                },
                 "deliveriesIngress": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to it by a sender that is directly attached to the router.",
@@ -1441,6 +1451,21 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The total number of modified deliveries."
+                },
+                "deliveriesDelayed1Sec": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of settled deliveries that were held in the router for 1 to 10 seconds."
+                },
+                "deliveriesDelayed10Sec": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
+                },
+                "settleRate": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The average rate (over five seconds) of settlement in deliveries-per-second.  This is included for egress links only."
                 },
                 "ingressHistogram": {
                     "type": "list",

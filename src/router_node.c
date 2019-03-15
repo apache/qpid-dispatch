@@ -292,7 +292,7 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
         const char *src = pn_terminus_get_address(pn_link_source(pn_link));
         const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
         qd_log(qd_message_log_source(), QD_LOG_TRACE,
-               "[%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
+               "[C%"PRIu64"]: %s %s on link '%s' (%s -> %s)",
                qd_connection_connection_id(conn),
                pn_link_is_sender(pn_link) ? "Sent" : "Received",
                msg_str,
@@ -1145,15 +1145,18 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     }
 
 
-    qdr_connection_info_t *connection_info = qdr_connection_info(tport && pn_transport_is_encrypted(tport),
-                                                                 tport && pn_transport_is_authenticated(tport),
+    bool encrypted     = tport && pn_transport_is_encrypted(tport);
+    bool authenticated = tport && pn_transport_is_authenticated(tport);
+
+    qdr_connection_info_t *connection_info = qdr_connection_info(encrypted,
+                                                                 authenticated,
                                                                  conn->opened,
-                                                                 (char *)mech,
+                                                                 (char*) mech,
                                                                  conn->connector ? QD_OUTGOING : QD_INCOMING,
                                                                  host,
                                                                  proto,
                                                                  cipher,
-                                                                 (char *)user,
+                                                                 (char*) user,
                                                                  container,
                                                                  props,
                                                                  ssl_ssf,
@@ -1168,6 +1171,16 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                           vhost,
                           connection_info,
                           bind_connection_context, conn);
+
+    char   props_str[1000];
+    size_t props_len = 1000;
+
+    pn_data_format(props, props_str, &props_len);
+
+    qd_log(router->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+           " auth=%s user=%s container_id=%s props=%s",
+           connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
+           authenticated ? mech : "no", (char*) user, container, props_str);
 }
 
 static int AMQP_inbound_opened_handler(void *type_context, qd_connection_t *conn, void *context)

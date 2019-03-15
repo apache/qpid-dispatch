@@ -321,6 +321,11 @@ class BusManager(Node):
             rows.append(('Rejected Count', router.rejectedDeliveries))
             rows.append(('Released Count', router.releasedDeliveries))
             rows.append(('Modified Count', router.modifiedDeliveries))
+            try:
+                rows.append(('Deliveries Delayed > 1sec', router.deliveriesDelayed1Sec))
+                rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
+            except:
+                pass
             rows.append(('Ingress Count', router.deliveriesIngress))
             rows.append(('Egress Count', router.deliveriesEgress))
             rows.append(('Transit Count', router.deliveriesTransit))
@@ -351,12 +356,14 @@ class BusManager(Node):
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'adminStatus', 'operStatus', 'linkName', 'priority')
+                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'adminStatus', 'operStatus',
+                'linkName', 'priority', 'settleRate')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         has_dropped_presettled_count = False
         has_priority = False
+        has_delayed  = False
 
         if objects:
             first_row = objects[0]
@@ -365,14 +372,15 @@ class BusManager(Node):
                     has_dropped_presettled_count = True
                 if hasattr(first_row, 'priority'):
                     has_priority = True
+                if hasattr(first_row, 'deliveriesDelayed1Sec'):
+                    has_delayed = True
 
         if has_priority:
             heads.append(Header("pri"))
         heads.append(Header("undel"))
         heads.append(Header("unsett"))
-        heads.append(Header("del"))
+        heads.append(Header("deliv"))
         heads.append(Header("presett"))
-
 
         if has_dropped_presettled_count:
             heads.append(Header("psdrop"))
@@ -381,9 +389,12 @@ class BusManager(Node):
         heads.append(Header("rej"))
         heads.append(Header("rel"))
         heads.append(Header("mod"))
-        heads.append(Header("admin"))
-        heads.append(Header("oper"))
+        if has_delayed:
+            heads.append(Header("delay"))
+            heads.append(Header("rate"))
         if self.opts.verbose:
+            heads.append(Header("admin"))
+            heads.append(Header("oper"))
             heads.append(Header("name"))
 
         for link in objects:
@@ -409,9 +420,12 @@ class BusManager(Node):
             row.append(link.rejectedCount)
             row.append(link.releasedCount)
             row.append(link.modifiedCount)
-            row.append(link.adminStatus)
-            row.append(link.operStatus)
+            if has_delayed:
+                row.append(link.deliveriesDelayed1Sec + link.deliveriesDelayed10Sec)
+                row.append(link.settleRate)
             if self.opts.verbose:
+                row.append(link.adminStatus)
+                row.append(link.operStatus)
                 row.append(link.linkName)
             rows.append(row)
         title = "Router Links"
@@ -491,15 +505,16 @@ class BusManager(Node):
 
         if has_priority:
             heads.append(Header("pri"))
-        heads.append(Header("in-proc", Header.COMMAS))
+        if self.opts.verbose:
+            heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
-        heads.append(Header("cntnr", Header.COMMAS))
         heads.append(Header("in", Header.COMMAS))
         heads.append(Header("out", Header.COMMAS))
         heads.append(Header("thru", Header.COMMAS))
-        heads.append(Header("to-proc", Header.COMMAS))
-        heads.append(Header("from-proc", Header.COMMAS))
+        if self.opts.verbose:
+            heads.append(Header("to-proc", Header.COMMAS))
+            heads.append(Header("from-proc", Header.COMMAS))
 
         for addr in objects:
             row = []
@@ -509,15 +524,16 @@ class BusManager(Node):
             row.append(addr.distribution)
             if has_priority:
                 row.append(addr.priority if addr.priority >= 0 else "")
-            row.append(addr.inProcess)
-            row.append(addr.subscriberCount)
+            if self.opts.verbose:
+                row.append(addr.inProcess)
+            row.append(addr.containerCount if addr.name[0] in 'CDEF' else addr.subscriberCount)
             row.append(addr.remoteCount)
-            row.append(addr.containerCount)
             row.append(addr.deliveriesIngress)
             row.append(addr.deliveriesEgress)
             row.append(addr.deliveriesTransit)
-            row.append(addr.deliveriesToContainer)
-            row.append(addr.deliveriesFromContainer)
+            if self.opts.verbose:
+                row.append(addr.deliveriesToContainer)
+                row.append(addr.deliveriesFromContainer)
             rows.append(row)
         title = "Router Addresses"
         sorter = Sorter(heads, rows, 'addr', 0, True)

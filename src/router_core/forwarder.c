@@ -125,6 +125,7 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     out_dlv->tag_length = 8;
     out_dlv->error      = 0;
 
+    out_dlv->ingress_time  = in_dlv ? in_dlv->ingress_time  : core->uptime_ticks;
     out_dlv->ingress_index = in_dlv ? in_dlv->ingress_index : -1;
 
     //
@@ -185,6 +186,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
                 free_qdr_link_work_t(dlv->link_work);
                 dlv->link_work = 0;
             }
+            dlv->disposition = PN_RELEASED;
             qdr_delivery_decref_CT(core, dlv, "qdr_forward_drop_presettled_CT_LH - remove from link-work list");
 
             // Increment the presettled_dropped_deliveries on the out_link

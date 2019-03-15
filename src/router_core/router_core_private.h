@@ -393,6 +393,7 @@ struct qdr_delivery_t {
     qd_iterator_t          *to_addr;
     qd_iterator_t          *origin;
     uint64_t                disposition;
+    uint32_t                ingress_time;
     pn_data_t              *extension_state;
     qdr_error_t            *error;
     bool                    settled;
@@ -430,6 +431,8 @@ typedef enum {
     QDR_LINK_OPER_QUIESCING,
     QDR_LINK_OPER_IDLE
 } qdr_link_oper_status_t;
+
+#define QDR_LINK_RATE_DEPTH 5
 
 struct qdr_link_t {
     DEQ_LINKS(qdr_link_t);
@@ -480,8 +483,13 @@ struct qdr_link_t {
     uint64_t  rejected_deliveries;
     uint64_t  released_deliveries;
     uint64_t  modified_deliveries;
+    uint64_t  deliveries_delayed_1sec;
+    uint64_t  deliveries_delayed_10sec;
+    uint64_t  settled_deliveries[QDR_LINK_RATE_DEPTH];
     uint64_t *ingress_histogram;
     uint8_t   priority;
+    uint8_t   rate_cursor;
+    uint32_t  core_ticks;
 };
 
 ALLOC_DECLARE(qdr_link_t);
@@ -762,6 +770,7 @@ struct qdr_core_t {
     qdr_core_timer_list_t    scheduled_timers;
     qdr_general_work_list_t  work_list;
     qd_timer_t              *work_timer;
+    uint32_t                 uptime_ticks;
 
     qdr_connection_list_t open_connections;
     qdr_connection_t     *active_edge_connection;
@@ -847,19 +856,19 @@ struct qdr_core_t {
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;  ///< List of delivery cleanup items to be processed in an IO thread
 
     // Overall delivery counters
-    uint64_t           presettled_deliveries;
-    uint64_t           dropped_presettled_deliveries;
-    uint64_t           accepted_deliveries;
-    uint64_t           rejected_deliveries;
-    uint64_t           released_deliveries;
-    uint64_t           modified_deliveries;
-    uint64_t           deliveries_ingress;
-    uint64_t           deliveries_egress;
-    uint64_t           deliveries_transit;
-    uint64_t           deliveries_egress_route_container;
-    uint64_t           deliveries_ingress_route_container;
-
-
+    uint64_t  presettled_deliveries;
+    uint64_t  dropped_presettled_deliveries;
+    uint64_t  accepted_deliveries;
+    uint64_t  rejected_deliveries;
+    uint64_t  released_deliveries;
+    uint64_t  modified_deliveries;
+    uint64_t  deliveries_ingress;
+    uint64_t  deliveries_egress;
+    uint64_t  deliveries_transit;
+    uint64_t  deliveries_egress_route_container;
+    uint64_t  deliveries_ingress_route_container;
+    uint64_t  deliveries_delayed_1sec;
+    uint64_t  deliveries_delayed_10sec;
 };
 
 struct qdr_terminus_t {
