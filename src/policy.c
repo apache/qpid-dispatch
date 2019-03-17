@@ -346,22 +346,23 @@ qd_parse_tree_t * qd_policy_parse_tree(const char *config_spec)
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
-// Evaluate the connection auth and the Open fields to
-// allow or deny the Open. Denied Open attempts are
-// effected by returning Open and then Close_with_condition.
+// * Evaluate the connection auth and the Open fields to allow or deny the Open. 
+// * If allowed then return the settings from the python vhost database.
 //
-/** Look up user/host/vhost in python vhost and give the AMQP Open
- *  a go-no_go decision. Return false if the mechanics of calling python
- *  fails. A policy lookup will deny the connection by returning a blank
- *  usergroup name in the name buffer.
+
+/** Look up user/host/vhost in python vhost database and give the AMQP Open
+ *  a go-no_go decision. 
+ *  * Return false if the mechanics of calling python fails or if name buf is blank. 
+ *  * Deny the connection by returning a blank usergroup name in the name buffer.
  *  Connection and connection denial counting is done in the python code.
- * @param[in] policy pointer to policy
- * @param[in] username authenticated user name
- * @param[in] hostip numeric host ip address
- * @param[in] vhost application name received in remote AMQP Open.hostname
- * @param[in] conn_name connection name for tracking
+ * @param[in]  policy pointer to policy
+ * @param[in]  username authenticated user name
+ * @param[in]  hostip numeric host ip address
+ * @param[in]  vhost application name received in remote AMQP Open.hostname
+ * @param[in]  conn_name connection name for tracking
  * @param[out] name_buf pointer to settings name buffer
- * @param[in] name_buf_size size of settings_buf
+ * @param[in]  name_buf_size size of settings_buf
+ * @param[in]  conn_id connection id for log tracking
  **/
 bool qd_policy_open_lookup_user(
     qd_policy_t *policy,
@@ -371,10 +372,8 @@ bool qd_policy_open_lookup_user(
     const char *conn_name,
     char       *name_buf,
     int         name_buf_size,
-    uint64_t    conn_id,
-    qd_policy_settings_t *settings)
+    uint64_t    conn_id)
 {
-    // Lookup the user/host/vhost for allow/deny and to get settings name
     bool res = false;
     name_buf[0] = 0;
     qd_python_lock_state_t lock_state = qd_python_lock();
@@ -404,18 +403,47 @@ bool qd_policy_open_lookup_user(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: lookup_user");
         }
+        Py_XDECREF(module);
     }
-    if (!res) {
-        if (module) {
-            Py_XDECREF(module);
-        }
-        qd_python_unlock(lock_state);
-        return false;
-    }
+    qd_python_unlock(lock_state);
 
-    // 
     if (name_buf[0]) {
-        // Go get the named settings
+        qd_log(policy->log_source,
+           QD_LOG_TRACE,
+           "[%"PRIu64"]: ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
+           conn_id, username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
+    }
+    return res;
+}
+
+
+/** Fetch policy settings for a vhost/group
+ * A vhost database user group name has been returned by qd_policy_open_lookup_user
+ * or by some configuration value. Access the vhost database for that group and
+ * extract the run-time settings.
+ * @param[in] policy pointer to policy
+ * @param[in] username authenticated user name (for logging)
+ * @param[in] hostip numeric host ip address (for logging)
+ * @param[in] vhost vhost name
+ * @param[in] conn_name connection name for tracking (for logging)
+ * @param[in] name_buf group name that holds the settings of interest
+ * @param[in] conn_id connection id for log tracking (for logging)
+ * @param[out] settings pointer to settings object to be filled with policy values
+ **/
+bool qd_policy_open_fetch_settings(
+    qd_policy_t *policy,
+    const char *username,
+    const char *hostip,
+    const char *vhost,
+    const char *conn_name,
+    const char *name_buf,
+    uint64_t    conn_id,
+    qd_policy_settings_t *settings)
+{
+    bool res = false;
+    qd_python_lock_state_t lock_state = qd_python_lock();
+    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
+    if (module) {
         res = false;
         PyObject *upolicy = PyDict_New();
         if (upolicy) {
@@ -464,18 +492,9 @@ bool qd_policy_open_lookup_user(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: upolicy");
         }
+        Py_XDECREF(module);
     }
-    Py_XDECREF(module);
     qd_python_unlock(lock_state);
-
-    if (name_buf[0]) {
-        qd_log(policy->log_source,
-           QD_LOG_TRACE,
-           "[%"PRIu64"]: ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
-           conn_id, username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
-    } else {
-        // Denials are logged in python code
-    }
 
     return res;
 }
@@ -1083,15 +1102,21 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
         }
 
         if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,
-                                       settings_name, SETTINGS_NAME_SIZE, conn_id,
-                                       qd_conn->policy_settings) &&
+                                       settings_name, SETTINGS_NAME_SIZE, conn_id) &&
             settings_name[0]) {
             // This connection is allowed by policy.
             // Apply transport policy settings
-            if (qd_conn->policy_settings->maxFrameSize > 0)
-                pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-            if (qd_conn->policy_settings->maxSessions > 0)
-                pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+            if (qd_policy_open_fetch_settings(policy, qd_conn->user_id, hostip, vhost, conn_name,
+                                        settings_name, conn_id,
+                                        qd_conn->policy_settings)) {
+                if (qd_conn->policy_settings->maxFrameSize > 0)
+                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
+                if (qd_conn->policy_settings->maxSessions > 0)
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+            } else {
+                // failed to fetch settings
+                connection_allowed = false;
+            }
         } else {
             // This connection is denied by policy.
             connection_allowed = false;
