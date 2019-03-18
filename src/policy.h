@@ -162,6 +162,16 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
  **/
 void qd_policy_amqp_open(qd_connection_t *conn);
 
+
+/** Allow or deny an outgoing connector connection.
+ * An Open performative was received over a new connection.
+ * Consult local policy to determine if this host/user is
+ *  allowed to make this connection.
+ * Denied pn_connections are closed with a condition.
+ **/
+void qd_policy_amqp_open_connector(qd_connection_t *conn);
+
+
 /** Dispose of policy settings
  * 
  * @param settings the settings to be destroyed
