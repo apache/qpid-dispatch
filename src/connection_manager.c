@@ -783,6 +783,10 @@ qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *
 {
     qd_connection_manager_t *cm = qd->connection_manager;
     qd_connector_t *ct = qd_server_connector(qd->server);
+
+    qd_error_clear();
+    ct->policy_vhost = qd_entity_opt_string(entity, "policyVhost", 0); CHECK();
+
     if (ct && load_server_config(qd, &ct->config, entity, false) == QD_ERROR_NONE) {
         DEQ_ITEM_INIT(ct);
         DEQ_INSERT_TAIL(cm->connectors, ct);
@@ -810,6 +814,8 @@ qd_connector_t *qd_dispatch_configure_connector(qd_dispatch_t *qd, qd_entity_t *
 
         return ct;
     }
+
+  error:
     qd_log(cm->log_source, QD_LOG_ERROR, "Unable to create connector: %s", qd_error_message());
     qd_connector_decref(ct);
     return 0;
