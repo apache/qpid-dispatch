@@ -432,6 +432,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
 
     case PN_CONNECTION_REMOTE_OPEN :
         qd_connection_set_user(qd_conn);
+        qd_conn->open_container = (void *)container;
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT) {
             // This Open is an externally initiated connection
             // Let policy engine decide
@@ -445,11 +446,10 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
              * connection since by stalling the current connection it will never be
              * run, so we need some other thread context to run it in.
              */
-            qd_conn->open_container = (void *)container;
             qd_policy_amqp_open(qd_conn);
         } else {
             // This Open is in response to an internally initiated connection
-            notify_opened(container, qd_conn, qd_connection_get_context(qd_conn));
+            qd_policy_amqp_open_connector(qd_conn);
         }
         break;
 
