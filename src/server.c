@@ -367,12 +367,6 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
         pn_ssl_domain_free(domain);
         return qd_error(QD_ERROR_RUNTIME, "Cannot set SSL credentials");
     }
-    if (!config->ssl_required) {
-        if (pn_ssl_domain_allow_unsecured_client(domain)) {
-            pn_ssl_domain_free(domain);
-            return qd_error(QD_ERROR_RUNTIME, "Cannot allow unsecured client");
-        }
-    }
 
     // for peer authentication:
     if (config->ssl_trusted_certificate_db) {
@@ -412,6 +406,11 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
     if (!ctx->ssl || pn_ssl_init(ctx->ssl, domain, 0)) {
         pn_ssl_domain_free(domain);
         return qd_error(QD_ERROR_RUNTIME, "Cannot initialize SSL");
+    }
+
+    // By default adding ssl to a transport forces encryption to be required, so if it's not set that here
+    if (!config->ssl_required) {
+        pn_transport_require_encryption(tport, false);
     }
 
     pn_ssl_domain_free(domain);
