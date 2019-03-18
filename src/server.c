@@ -1467,6 +1467,12 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
 }
 
 
+const char *qd_connector_policy_vhost(qd_connector_t* ct)
+{
+    return ct->policy_vhost;
+}
+
+
 bool qd_connector_connect(qd_connector_t *ct)
 {
     sys_mutex_lock(ct->lock);
