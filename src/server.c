@@ -1509,6 +1509,7 @@ bool qd_connector_decref(qd_connector_t* ct)
             item = DEQ_HEAD(ct->conn_info_list);
         }
         sys_mutex_free(ct->lock);
+        if (ct->policyVhost) free(ct->policyVhost);
         free_qd_connector_t(ct);
         return true;
     }
