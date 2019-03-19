@@ -63,29 +63,29 @@ export class OverviewController {
     $scope.linkFields = [];
     $scope.link = null;
     $scope.modes = [
-      {title: 'Overview', name: 'Overview', right: false}
+      { title: 'Overview', name: 'Overview', right: false }
     ];
 
     $scope.tmplOverviewTree = QDRTemplatePath + 'tmplOverviewTree.html';
     $scope.templates = [
-      { name: 'Charts', url: 'overviewCharts.html'},
-      { name: 'Routers', url: 'routers.html'},
-      { name: 'Router', url: 'router.html'},
-      { name: 'Addresses', url: 'addresses.html'},
-      { name: 'Address', url: 'address.html'},
-      { name: 'Links', url: 'links.html'},
-      { name: 'Link', url: 'link.html'},
-      { name: 'Connections', url: 'connections.html'},
-      { name: 'Connection', url: 'connection.html'},
-      { name: 'Logs', url: 'logs.html'},
-      { name: 'Log', url: 'logModule.html'}
+      { name: 'Charts', url: 'overviewCharts.html' },
+      { name: 'Routers', url: 'routers.html' },
+      { name: 'Router', url: 'router.html' },
+      { name: 'Addresses', url: 'addresses.html' },
+      { name: 'Address', url: 'address.html' },
+      { name: 'Links', url: 'links.html' },
+      { name: 'Link', url: 'link.html' },
+      { name: 'Connections', url: 'connections.html' },
+      { name: 'Connection', url: 'connection.html' },
+      { name: 'Logs', url: 'logs.html' },
+      { name: 'Log', url: 'logModule.html' }
     ];
     let topLevelChildren = [];
 
     var selectRow = function (gridApi) {
       if (!gridApi.selection)
         return;
-      gridApi.selection.on.rowSelectionChanged($scope,function(row){
+      gridApi.selection.on.rowSelectionChanged($scope, function (row) {
         let treeKey = row.grid.options.treeKey;
         if (treeKey && row.entity[treeKey]) {
           let key = row.entity[treeKey];
@@ -171,30 +171,30 @@ export class OverviewController {
       };
       // send the requests for all connection and router info for all routers
       QDRService.management.topology.fetchAllEntities([
-        {entity: 'connection', attrs: ['role']},
-        {entity: 'router'}], function () {
-        // we have all the data now in the nodes object
-        let allRouterFields = [];
-        for (let node in nodes) {
-          let connections = 0;
-          for (let i=0; i<nodes[node]['connection'].results.length; ++i) {
-            // we only requested "role" so it will be at [0]
-            if (nodes[node]['connection'].results[i][0] === 'inter-router')
-              ++connections;
+        { entity: 'connection', attrs: ['role'] },
+        { entity: 'router' }], function () {
+          // we have all the data now in the nodes object
+          let allRouterFields = [];
+          for (let node in nodes) {
+            let connections = 0;
+            for (let i = 0; i < nodes[node]['connection'].results.length; ++i) {
+              // we only requested "role" so it will be at [0]
+              if (nodes[node]['connection'].results[i][0] === 'inter-router')
+                ++connections;
+            }
+            let routerRow = { connections: connections, nodeId: node, id: QDRService.utilities.nameFromId(node) };
+            nodes[node]['router'].attributeNames.forEach(function (routerAttr, i) {
+              if (routerAttr !== 'routerId' && routerAttr !== 'id')
+                routerRow[routerAttr] = nodes[node]['router'].results[0][i];
+            });
+            allRouterFields.push(routerRow);
           }
-          let routerRow = {connections: connections, nodeId: node, id: QDRService.utilities.nameFromId(node)};
-          nodes[node]['router'].attributeNames.forEach( function (routerAttr, i) {
-            if (routerAttr !== 'routerId' && routerAttr !== 'id')
-              routerRow[routerAttr] = nodes[node]['router'].results[0][i];
-          });
-          allRouterFields.push(routerRow);
-        }
-        $scope.allRouterFields = allRouterFields;
-        expandGridToContent('Routers', $scope.allRouterFields.length);
-        getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
-        updateRouterTree(nodeIds);
-        callback(null);
-      }, gotNode);
+          $scope.allRouterFields = allRouterFields;
+          expandGridToContent('Routers', $scope.allRouterFields.length);
+          getPagedData($scope.routerPagingOptions.pageSize, $scope.routerPagingOptions.currentPage);
+          updateRouterTree(nodeIds);
+          callback(null);
+        }, gotNode);
     };
 
     $scope.routerFields = [];
@@ -226,11 +226,11 @@ export class OverviewController {
       $scope.router = node;
 
       let routerFields = [];
-      $scope.allRouterFields.some( function (field) {
+      $scope.allRouterFields.some(function (field) {
         if (field.id === node.title) {
-          Object.keys(field).forEach ( function (key) {
+          Object.keys(field).forEach(function (key) {
             let attr = (key === 'connections') ? 'External connections' : key;
-            routerFields.push({attribute: attr, value: field[key]});
+            routerFields.push({ attribute: attr, value: field[key] });
           });
           return true;
         }
@@ -341,10 +341,10 @@ export class OverviewController {
       let addressFields = [];
       let addressObjs = {};
       // send the requests for all connection and router info for all routers
-      QDRService.management.topology.fetchAllEntities({entity: 'router.address'}, function () {
+      QDRService.management.topology.fetchAllEntities({ entity: 'router.address' }, function () {
         for (let node in nodes) {
           let response = nodes[node]['router.address'];
-          response.results.forEach( function (result) {
+          response.results.forEach(function (result) {
             let address = QDRService.utilities.flatten(response.attributeNames, result);
 
             var addNull = function (oldVal, newVal) {
@@ -358,23 +358,23 @@ export class OverviewController {
             let uid = address.identity;
             let identity = QDRService.utilities.identity_clean(uid);
 
-            if (!addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)])
-              addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)] = {
+            if (!addressObjs[QDRService.utilities.addr_text(identity) + QDRService.utilities.addr_class(identity)])
+              addressObjs[QDRService.utilities.addr_text(identity) + QDRService.utilities.addr_class(identity)] = {
                 address: QDRService.utilities.addr_text(identity),
                 'class': QDRService.utilities.addr_class(identity),
-                phase:   addr_phase(identity),
-                inproc:  address.inProcess,
-                local:   address.subscriberCount,
-                remote:  address.remoteCount,
-                'in':    address.deliveriesIngress,
-                out:     address.deliveriesEgress,
-                thru:    address.deliveriesTransit,
-                toproc:  address.deliveriesToContainer,
-                fromproc:address.deliveriesFromContainer,
-                uid:     uid
+                phase: addr_phase(identity),
+                inproc: address.inProcess,
+                local: address.subscriberCount,
+                remote: address.remoteCount,
+                'in': address.deliveriesIngress,
+                out: address.deliveriesEgress,
+                thru: address.deliveriesTransit,
+                toproc: address.deliveriesToContainer,
+                fromproc: address.deliveriesFromContainer,
+                uid: uid
               };
             else {
-              let sumObj = addressObjs[QDRService.utilities.addr_text(identity)+QDRService.utilities.addr_class(identity)];
+              let sumObj = addressObjs[QDRService.utilities.addr_text(identity) + QDRService.utilities.addr_class(identity)];
               sumObj.inproc = addNull(sumObj.inproc, address.inProcess);
               sumObj.local = addNull(sumObj.local, address.subscriberCount);
               sumObj.remote = addNull(sumObj.remote, address.remoteCount);
@@ -400,14 +400,15 @@ export class OverviewController {
         if (addressFields.length === 0)
           return;
         // update the grid's data
-        addressFields.sort ( function (a,b) {
-          return a.address + a['class'] < b.address + b['class'] ? -1 : a.address + a['class'] > b.address + b['class'] ? 1 : 0;}
+        addressFields.sort(function (a, b) {
+          return a.address + a['class'] < b.address + b['class'] ? -1 : a.address + a['class'] > b.address + b['class'] ? 1 : 0;
+        }
         );
         addressFields[0].title = addressFields[0].address;
-        for (let i=1; i<addressFields.length; ++i) {
+        for (let i = 1; i < addressFields.length; ++i) {
           // if this address is the same as the previous address, add a class to the display titles
-          if (addressFields[i].address === addressFields[i-1].address) {
-            addressFields[i-1].title = addressFields[i-1].address + ' (' + addressFields[i-1]['class'] + ')';
+          if (addressFields[i].address === addressFields[i - 1].address) {
+            addressFields[i - 1].title = addressFields[i - 1].address + ' (' + addressFields[i - 1]['class'] + ')';
             addressFields[i].title = addressFields[i].address + ' (' + addressFields[i]['class'] + ')';
           } else
             addressFields[i].title = addressFields[i].address;
@@ -421,9 +422,9 @@ export class OverviewController {
       }, gotNode);
     };
 
-    var updateLinkGrid = function ( linkFields ) {
+    var updateLinkGrid = function (linkFields) {
       // apply the filter
-      let filteredLinks = linkFields.filter( function (link) {
+      let filteredLinks = linkFields.filter(function (link) {
         let include = true;
         if ($scope.filter.endpointsOnly === 'true') {
           if (link.linkType !== 'endpoint')
@@ -448,7 +449,7 @@ export class OverviewController {
         if (links.length > 0) {
           // linkInfo() is the function that is called by fancytree when a link is selected
           // It is passed a fancytree node. We need to simulate that node type to update the link grid
-          linkInfo({data: {title: links[0].title, fields: links[0]}}, function () {$timeout(function (){});});
+          linkInfo({ data: { title: links[0].title, fields: links[0] } }, function () { $timeout(function () { }); });
         }
       }
     };
@@ -482,61 +483,76 @@ export class OverviewController {
         {
           field: 'link',
           displayName: 'Link',
-          groupable:  false,
+          groupable: false,
           saveKey: 'linksGrid',
-          width: '11%'
+          width: '12%'
         },
         {
           field: 'linkType',
           displayName: 'Link type',
-          groupable:  false,
-          width: '9%'
+          groupable: false,
+          width: '8%'
         },
         {
           field: 'linkDir',
           displayName: 'Link dir',
-          groupable:  false,
-          width: '8%'
+          groupable: false,
+          width: '7%'
         },
         {
           field: 'adminStatus',
           displayName: 'Admin status',
-          groupable:  false,
-          width: '9%'
+          groupable: false,
+          width: '8%'
         },
         {
           field: 'operStatus',
           displayName: 'Oper status',
-          groupable:  false,
-          width: '9%'
+          groupable: false,
+          width: '8%'
         },
         {
           field: 'deliveryCount',
           displayName: 'Delivery Count',
-          groupable:  false,
+          groupable: false,
           cellClass: 'grid-align-value',
-          width: '11%'
+          width: '10%'
         },
         {
           field: 'rate',
           displayName: 'Rate',
-          groupable:  false,
+          groupable: false,
+          cellClass: 'grid-align-value',
+          width: '8%'
+        },
+        {
+          field: 'deliveriesDelayed10Sec',
+          displayName: 'Delayed 10 sec',
+          groupable: false,
+          cellClass: 'grid-align-value',
+          width: '8%'
+        },
+        {
+          field: 'deliveriesDelayed1Sec',
+          displayName: 'Delayed 1 sec',
+          groupable: false,
           cellClass: 'grid-align-value',
           width: '8%'
         },
         {
           field: 'uncounts',
           displayName: 'Outstanding',
-          groupable:  false,
+          groupable: false,
           cellClass: 'grid-align-value',
-          width: '9%'
+          width: '8%'
         },
         {
           field: 'owningAddr',
           displayName: 'Address',
-          groupable:  false,
+          groupable: false,
           width: '15%'
-        }/*,
+        }
+        /*,
         {
           displayName: 'Quiesce',
                     cellClass: 'gridCellButton',
@@ -564,17 +580,17 @@ export class OverviewController {
     };
 
     $scope.$on('ngGridEventColumns', function (e, columns) {
-      let saveInfo = columns.map( function (col) {
+      let saveInfo = columns.map(function (col) {
         return [col.width, col.visible];
       });
       let saveKey = columns[0].colDef.saveKey;
       if (saveKey)
-        localStorage.setItem(COLUMNSTATEKEY+saveKey, JSON.stringify(saveInfo));
+        localStorage.setItem(COLUMNSTATEKEY + saveKey, JSON.stringify(saveInfo));
     });
 
     var allLinkInfo = function (node, callback) {
       var gridCallback = function (linkFields) {
-        QDRService.management.topology.ensureAllEntities({entity: 'connection', force: true}, function () {
+        QDRService.management.topology.ensureAllEntities({ entity: 'connection', force: true }, function () {
           // only update the grid with these fields if the List tree node is selected
           // this is becuase we are using the link grid in other places and we don't want to overwrite it
           if ($scope.template.name === 'Links')
@@ -606,7 +622,7 @@ export class OverviewController {
             return 0;
           let delivered = QDRService.utilities.valFor(response.attributeNames, result, 'deliveryCount') - oldname[0].rawDeliveryCount;
           //QDRLog.debug("elapsed " + elapsed + " delivered " + delivered)
-          return elapsed > 0 ? parseFloat(Math.round((delivered/elapsed) * 100) / 100).toFixed(2) : 0;
+          return elapsed > 0 ? parseFloat(Math.round((delivered / elapsed) * 100) / 100).toFixed(2) : 0;
         } else {
           //QDRLog.debug("unable to find old linkName")
           return 0;
@@ -616,7 +632,7 @@ export class OverviewController {
       let received = 0;
       var gotLinkInfo = function (nodeName, entity, response) {
         if (response.results)
-          response.results.forEach( function (result) {
+          response.results.forEach(function (result) {
             var prettyVal = function (field) {
               let fieldIndex = response.attributeNames.indexOf(field);
               if (fieldIndex < 0) {
@@ -645,7 +661,7 @@ export class OverviewController {
                  - "MX*" =>  "* (phase X)"
             */
               let address = undefined;
-              let starts = {'L': '(local)', 'M0': '(direct)', 'M1': '(dequeue)'};
+              let starts = { 'L': '(local)', 'M0': '(direct)', 'M1': '(dequeue)' };
               for (let start in starts) {
                 if (owningAddr.startsWith(start)) {
                   let ends = owningAddr.substr(start.length);
@@ -655,7 +671,7 @@ export class OverviewController {
                 }
               }
               if (!address) {
-              // check for MX*
+                // check for MX*
                 if (owningAddr.length > 3) {
                   if (owningAddr[0] === 'M') {
                     let phase = parseInt(owningAddr.substr(1));
@@ -678,12 +694,14 @@ export class OverviewController {
               let linkType = QDRService.utilities.valFor(response.attributeNames, result, 'linkType');
               let addresses = fixAddress();
               let link = QDRService.utilities.flatten(response.attributeNames, result);
+
+              // rate: QDRService.utilities.pretty(rate(linkName, response, result)),
               linkFields.push({
-                link:       linkName,
-                title:      linkName,
-                uncounts:   uncounts(),
+                link: linkName,
+                title: linkName,
+                uncounts: uncounts(),
                 operStatus: operStatus,
-                adminStatus:adminStatus,
+                adminStatus: adminStatus,
                 owningAddr: addresses[0],
 
                 acceptedCount: prettyVal('acceptedCount'),
@@ -691,9 +709,11 @@ export class OverviewController {
                 presettledCount: prettyVal('presettledCount'),
                 rejectedCount: prettyVal('rejectedCount'),
                 releasedCount: prettyVal('releasedCount'),
-                deliveryCount:prettyVal('deliveryCount') + ' ',
+                deliveryCount: prettyVal('deliveryCount') + ' ',
 
-                rate: QDRService.utilities.pretty(rate(linkName, response, result)),
+                rate: prettyVal('settleRate'),
+                deliveriesDelayed10Sec: prettyVal('deliveriesDelayed10Sec'),
+                deliveriesDelayed1Sec: prettyVal('deliveriesDelayed1Sec'),
                 capacity: link.capacity,
                 undeliveredCount: link.undeliveredCount,
                 unsettledCount: link.unsettledCount,
@@ -708,21 +728,23 @@ export class OverviewController {
                 peer: link.peer,
                 type: link.type,
 
-                uid:     linkName,
+                uid: linkName,
                 timestamp: now,
                 nodeId: nodeName,
                 identity: link.identity,
               });
             }
           });
+        console.log('linkFields:');
+        console.log(linkFields);
         if (expected === ++received) {
-          linkFields.sort ( function (a,b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0;});
-          completionCallbacks.forEach( function (cb) {
+          linkFields.sort(function (a, b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0; });
+          completionCallbacks.forEach(function (cb) {
             cb(linkFields);
           });
         }
       };
-      nodeIds.forEach( function (nodeId) {
+      nodeIds.forEach(function (nodeId) {
         QDRService.management.topology.fetchEntity(nodeId, 'router.link', [], gotLinkInfo);
       });
     };
@@ -794,7 +816,7 @@ export class OverviewController {
     };
     // get info for a all connections
     var allConnectionInfo = function (connection, callback) {
-      getAllConnectionFields([updateConnectionGrid, updateConnectionTree, function () {callback(null);}]);
+      getAllConnectionFields([updateConnectionGrid, updateConnectionTree, function () { callback(null); }]);
     };
     // called after conection data is available
     var updateConnectionGrid = function (connectionFields) {
@@ -812,7 +834,7 @@ export class OverviewController {
       let expected = nodeIds.length;
       let received = 0;
       let gotConnectionInfo = function (nodeName, entity, response) {
-        response.results.forEach( function (result) {
+        response.results.forEach(function (result) {
 
           let auth = 'no_auth';
           let connection = QDRService.utilities.flatten(response.attributeNames, result);
@@ -846,20 +868,22 @@ export class OverviewController {
             routerId: nodeName,
             uid: host + connection.container + connection.identity
           };
-          response.attributeNames.forEach( function (attribute, i) {
+          response.attributeNames.forEach(function (attribute, i) {
             connField[attribute] = result[i];
           });
           connectionFields.push(connField);
         });
         if (expected === ++received) {
-          connectionFields.sort ( function (a,b) { return a.host+a.container+a.identity < b.host+b.container+b.identity ?
-            -1 : a.host+a.container+a.identity > b.host+b.container+b.identity ? 1 : 0;});
-          callbacks.forEach( function (cb) {
+          connectionFields.sort(function (a, b) {
+            return a.host + a.container + a.identity < b.host + b.container + b.identity ?
+              -1 : a.host + a.container + a.identity > b.host + b.container + b.identity ? 1 : 0;
+          });
+          callbacks.forEach(function (cb) {
             cb(connectionFields);
           });
         }
       };
-      nodeIds.forEach( function (nodeId) {
+      nodeIds.forEach(function (nodeId) {
         QDRService.management.topology.fetchEntity(nodeId, 'connection', [], gotConnectionInfo);
       });
     };
@@ -902,9 +926,9 @@ export class OverviewController {
 
       $scope.addressFields = [];
       let fields = Object.keys(address.data.fields);
-      fields.forEach( function (field) {
+      fields.forEach(function (field) {
         if (field != 'title' && field != 'uid')
-          $scope.addressFields.push({attribute: field, value: address.data.fields[field]});
+          $scope.addressFields.push({ attribute: field, value: address.data.fields[field] });
       });
       expandGridToContent('Address', $scope.addressFields.length);
       callback(null);
@@ -945,9 +969,9 @@ export class OverviewController {
       $scope.singleLinkFields = [];
       let fields = Object.keys(link.data.fields);
       let excludeFields = ['title', 'uid', 'uncounts', 'rawDeliveryCount', 'timestamp', 'rawAddress'];
-      fields.forEach( function (field) {
+      fields.forEach(function (field) {
         if (excludeFields.indexOf(field) == -1)
-          $scope.singleLinkFields.push({attribute: field, value: link.data.fields[field]});
+          $scope.singleLinkFields.push({ attribute: field, value: link.data.fields[field] });
       });
       expandGridToContent('Link', $scope.singleLinkFields.length);
       callback(null);
@@ -966,12 +990,12 @@ export class OverviewController {
     }
     ];
     var saveModeIds = function () {
-      let modeIds = {Address: entityModes.Address.currentModeId, Connection: entityModes.Connection.currentModeId};
+      let modeIds = { Address: entityModes.Address.currentModeId, Connection: entityModes.Connection.currentModeId };
       localStorage[OVERVIEWMODEIDS] = JSON.stringify(modeIds);
     };
     var loadModeIds = function () {
       return angular.fromJson(localStorage[OVERVIEWMODEIDS]) ||
-        {Address: 'attributes', Connection: 'attributes'};
+        { Address: 'attributes', Connection: 'attributes' };
     };
     var savedModeIds = loadModeIds();
     let entityModes = {
@@ -1041,7 +1065,7 @@ export class OverviewController {
     $scope.quiesceLink = function (row, $event) {
       $event.stopPropagation();
       QDRService.management.topology.quiesceLink(row.entity.nodeId, row.entity.name)
-        .then( function (results, context) {
+        .then(function (results, context) {
           let statusCode = context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
             QDRCore.notification('error', context.message.statusDescription);
@@ -1058,12 +1082,12 @@ export class OverviewController {
     };
 
     $scope.expandAll = function () {
-      $('#overtree').fancytree('getRoot').visit(function(node){
+      $('#overtree').fancytree('getRoot').visit(function (node) {
         node.expand(true);
       });
     };
     $scope.contractAll = function () {
-      $('#overtree').fancytree('getRoot').visit(function(node){
+      $('#overtree').fancytree('getRoot').visit(function (node) {
         node.expand(false);
       });
     };
@@ -1110,7 +1134,7 @@ export class OverviewController {
       $scope.connectionFields = [];
       for (let field in connection.data.fields) {
         if (field != 'title' && field != 'uid')
-          $scope.connectionFields.push({attribute: field, value: connection.data.fields[field]});
+          $scope.connectionFields.push({ attribute: field, value: connection.data.fields[field] });
       }
       expandGridToContent('Connection', $scope.connectionFields.length);
       callback(null);
@@ -1298,7 +1322,7 @@ export class OverviewController {
 
       var gotLogStats = function (node, entity, response) {
         logDetails[node] = [];
-        response.results.forEach( function (result) {
+        response.results.forEach(function (result) {
           let oresult = QDRService.utilities.flatten(response.attributeNames, result);
           // make a copy for the details grid since logResults has the same object reference
           logDetails[node].push(angular.copy(oresult));
@@ -1306,8 +1330,8 @@ export class OverviewController {
             logResults[oresult.name] = oresult;
           }
           else {
-            response.attributeNames.forEach( function (attr, i) {
-              if (attr.substr(attr.length-5) === 'Count') {
+            response.attributeNames.forEach(function (attr, i) {
+              if (attr.substr(attr.length - 5) === 'Count') {
                 logResults[oresult.name][attr] += result[i];
               }
             });
@@ -1316,9 +1340,9 @@ export class OverviewController {
       };
       var gotAllLogStats = function () {
         let sortedModules = Object.keys(logResults);
-        sortedModules.sort(function (a,b) {return a<b?-1:a>b?1:0;});
+        sortedModules.sort(function (a, b) { return a < b ? -1 : a > b ? 1 : 0; });
         $scope.allLogFields = [];
-        sortedModules.forEach( function (module) {
+        sortedModules.forEach(function (module) {
           $scope.allLogFields.push(logResults[module]);
         });
         expandGridToContent('Logs', $scope.allLogFields.length);
@@ -1326,7 +1350,7 @@ export class OverviewController {
         updateLogTree($scope.allLogFields);
         callback(null);
       };
-      QDRService.management.topology.fetchAllEntities({entity: 'logStats'}, gotAllLogStats, gotLogStats);
+      QDRService.management.topology.fetchAllEntities({ entity: 'logStats' }, gotAllLogStats, gotLogStats);
     };
 
     var expandGridToContent = function (type, rows) {
@@ -1336,7 +1360,7 @@ export class OverviewController {
         node = tree.getActiveNode();
       if (node) {
         if (node.type === type || node.data.type === type) {
-          let height = (rows+1) * 30 + 46; // header is 40px
+          let height = (rows + 1) * 30 + 46; // header is 40px
           let gridDetails = $('#overview-controller .grid');
           gridDetails.css('height', height + 'px');
         }
@@ -1352,12 +1376,12 @@ export class OverviewController {
         $scope.logModule.module = node.key;
         for (let n in responses) {
           let moduleIndex = responses[n]['log'].attributeNames.indexOf('module');
-          let result = responses[n]['log'].results.filter( function (r) {
+          let result = responses[n]['log'].results.filter(function (r) {
             return r[moduleIndex] === node.key;
           })[0];
           let logInfo = QDRService.utilities.flatten(responses[n]['log'].attributeNames, result);
           let entry = allLogEntries[n];
-          entry.forEach( function (module) {
+          entry.forEach(function (module) {
             if (module.name === node.key) {
               module.nodeName = QDRService.utilities.nameFromId(n);
               module.nodeId = n;
@@ -1366,11 +1390,11 @@ export class OverviewController {
             }
           });
         }
-        $scope.logModuleData.sort ( function (a,b) { return a.nodeName < b.nodeName? -1 : a.nodeName> b.nodeName? 1 : 0;});
+        $scope.logModuleData.sort(function (a, b) { return a.nodeName < b.nodeName ? -1 : a.nodeName > b.nodeName ? 1 : 0; });
         expandGridToContent('Log', $scope.logModuleData.length);
         callback(null);
       };
-      QDRService.management.topology.fetchAllEntities({entity: 'log', attrs: ['module', 'enable']}, gotLogInfo);
+      QDRService.management.topology.fetchAllEntities({ entity: 'log', attrs: ['module', 'enable'] }, gotLogInfo);
     };
 
     var getExpandedList = function () {
@@ -1378,7 +1402,7 @@ export class OverviewController {
         return;
       let list = [];
       if (treeRoot.visit) {
-        treeRoot.visit(function(node){
+        treeRoot.visit(function (node) {
           if (node.isExpanded()) {
             list.push(node.data.parentKey);
           }
@@ -1409,10 +1433,10 @@ export class OverviewController {
 
     var setTemplate = function (node) {
       let type = node.type;
-      let template = $scope.templates.filter( function (tpl) {
+      let template = $scope.templates.filter(function (tpl) {
         return tpl.name == type;
       });
-      $timeout( function () {
+      $timeout(function () {
         $scope.template = template[0];
       });
     };
@@ -1468,22 +1492,22 @@ export class OverviewController {
       let activeChildKey = getActiveChild(node);
       node.removeChildren();
       let children = [];
-      leaves.forEach( function (leaf) {
+      leaves.forEach(function (leaf) {
         children.push(worker(leaf));
       });
       node.addNode(children);
       // top level node was expanded
       if (wasExpanded)
-        node.setExpanded(true, {noAnimation: true, noEvents: true});
+        node.setExpanded(true, { noAnimation: true, noEvents: true });
       if (wasActive) {
-        node.setActive(true, {noAnimation: true, noEvents: true});
+        node.setActive(true, { noAnimation: true, noEvents: true });
       } else {
         // re-active the previously active child node
         if (activeChildKey) {
           let newNode = tree.getNodeByKey(activeChildKey);
           // the node may not be there after the update
           if (newNode)
-            newNode.setActive(true, {noAnimation: true, noEvents: true}); // fires the onTreeNodeActivated event for this node
+            newNode.setActive(true, { noAnimation: true, noEvents: true }); // fires the onTreeNodeActivated event for this node
         }
       }
       resizer();
@@ -1498,7 +1522,7 @@ export class OverviewController {
       //viewport.height( window.innerHeight - viewport.offset().top);
 
       // don't allow HTML in the tree titles
-      $('.fancytree-title').each( function () {
+      $('.fancytree-title').each(function () {
         let unsafe = $(this).html();
         $(this).html(unsafe.replace(/</g, '&lt;').replace(/>/g, '&gt;'));
       });
@@ -1507,11 +1531,11 @@ export class OverviewController {
 
       let gridDetails = $('#overview-controller .grid');
       if (gridDetails.offset())
-        gridDetails.height( window.innerHeight - gridDetails.offset().top);
+        gridDetails.height(window.innerHeight - gridDetails.offset().top);
 
       let gridViewport = $('#overview-controller .ui-grid-viewport');
       if (gridViewport.offset())
-        gridViewport.height( window.innerHeight - gridViewport.offset().top );
+        gridViewport.height(window.innerHeight - gridViewport.offset().top);
       //gridViewport.
 
     };
@@ -1525,7 +1549,7 @@ export class OverviewController {
 
     };
     let charts = new QDRFolder('Charts');
-    charts.info = {fn: showCharts};
+    charts.info = { fn: showCharts };
     charts.type = 'Charts';  // for the charts template
     charts.key = 'Charts';
     charts.extraClasses = 'charts';
@@ -1534,10 +1558,10 @@ export class OverviewController {
     // create a routers tree branch
     let routers = new QDRFolder('Routers');
     routers.type = 'Routers';
-    routers.info = {fn: allRouterInfo};
+    routers.info = { fn: allRouterInfo };
     routers.expanded = (expandedNodeList.indexOf('Routers') > -1);
     routers.key = 'Routers';
-    routers.parentKey= 'Routers';
+    routers.parentKey = 'Routers';
     routers.extraClasses = 'routers';
     topLevelChildren.push(routers);
     // called when the list of routers changes
@@ -1546,7 +1570,7 @@ export class OverviewController {
         let name = QDRService.utilities.nameFromId(node);
         let router = new QDRLeaf(name);
         router.type = 'Router';
-        router.info = {fn: routerInfo};
+        router.info = { fn: routerInfo };
         router.nodeId = node;
         router.key = node;
         router.extraClasses = 'router';
@@ -1559,7 +1583,7 @@ export class OverviewController {
     // create an addresses tree branch
     let addresses = new QDRFolder('Addresses');
     addresses.type = 'Addresses';
-    addresses.info = {fn: allAddressInfo};
+    addresses.info = { fn: allAddressInfo };
     addresses.expanded = (expandedNodeList.indexOf('Addresses') > -1);
     addresses.key = 'Addresses';
     addresses.parentKey = 'Addresses';
@@ -1568,7 +1592,7 @@ export class OverviewController {
     var updateAddressTree = function (addressFields) {
       var worker = function (address) {
         let a = new QDRLeaf(address.title);
-        a.info = {fn: addressInfo};
+        a.info = { fn: addressInfo };
         a.key = address.uid;
         a.fields = address;
         a.type = 'Address';
@@ -1584,7 +1608,7 @@ export class OverviewController {
 
     $scope.$watch('filter', function (newValue, oldValue) {
       if (newValue !== oldValue) {
-        allLinkInfo(null, function () {$timeout(function (){});});
+        allLinkInfo(null, function () { $timeout(function () { }); });
         localStorage[FILTERKEY] = JSON.stringify($scope.filter);
       }
     }, true);
@@ -1594,10 +1618,10 @@ export class OverviewController {
       filter.toggle();
     };
 
-    $scope.filter = angular.fromJson(localStorage[FILTERKEY]) || {endpointsOnly: 'true', hideConsoles: true};
+    $scope.filter = angular.fromJson(localStorage[FILTERKEY]) || { endpointsOnly: 'true', hideConsoles: true };
     let links = new QDRFolder('Links');
     links.type = 'Links';
-    links.info = {fn: allLinkInfo};
+    links.info = { fn: allLinkInfo };
     links.expanded = (expandedNodeList.indexOf('Links') > -1);
     links.key = 'Links';
     links.parentKey = 'Links';
@@ -1609,7 +1633,7 @@ export class OverviewController {
       var worker = function (link) {
         let l = new QDRLeaf(link.title);
         let isConsole = QDRService.utilities.isConsole(QDRService.management.topology.getConnForLink(link));
-        l.info = {fn: linkInfo};
+        l.info = { fn: linkInfo };
         l.key = link.uid;
         l.fields = link;
         l.type = 'Link';
@@ -1617,7 +1641,7 @@ export class OverviewController {
         if (isConsole)
           l.tooltip = 'console link';
         else
-          l.tooltip = link.linkType  + ' link';
+          l.tooltip = link.linkType + ' link';
         l.extraClasses = l.tooltip;
         return l;
       };
@@ -1626,7 +1650,7 @@ export class OverviewController {
 
     let connections = new QDRFolder('Connections');
     connections.type = 'Connections';
-    connections.info = {fn: allConnectionInfo};
+    connections.info = { fn: allConnectionInfo };
     connections.expanded = (expandedNodeList.indexOf('Connections') > -1);
     connections.key = 'Connections';
     connections.parentKey = 'Connections';
@@ -1640,9 +1664,9 @@ export class OverviewController {
           host = connection.container + ':' + connection.identity;
 
         let c = new QDRLeaf(host);
-        let isConsole = QDRService.utilities.isAConsole (connection.properties, connection.identity, connection.role, connection.routerId);
+        let isConsole = QDRService.utilities.isAConsole(connection.properties, connection.identity, connection.role, connection.routerId);
         c.type = 'Connection';
-        c.info = {fn: connectionInfo};
+        c.info = { fn: connectionInfo };
         c.key = connection.uid;
         c.fields = connection;
         if (isConsole)
@@ -1660,7 +1684,7 @@ export class OverviewController {
       var worker = function (log) {
         let l = new QDRLeaf(log.name);
         l.type = 'Log';
-        l.info = {fn: logInfo};
+        l.info = { fn: logInfo };
         l.key = log.name;
         l.parentKey = 'Logs';
         l.extraClasses = 'log';
@@ -1674,7 +1698,7 @@ export class OverviewController {
     $scope.largeNetwork = QDRService.management.topology.isLargeNetwork();
     let logs = new QDRFolder('Logs');
     logs.type = 'Logs';
-    logs.info = {fn: allLogInfo};
+    logs.info = { fn: allLogInfo };
     logs.expanded = (expandedNodeList.indexOf('Logs') > -1);
     logs.key = 'Logs';
     logs.parentKey = 'Logs';
@@ -1697,14 +1721,14 @@ export class OverviewController {
         return;
       }
       $('#overtree').fancytree({
-        activate:       onTreeNodeActivated,
-        expand:         onTreeNodeExpanded,
-        collapse:       onTreeNodeCollapsed,
-        init:           onTreeInitialized,
-        autoCollapse:   $scope.largeNetwork,
-        activeVisible:! $scope.largeNetwork,
+        activate: onTreeNodeActivated,
+        expand: onTreeNodeExpanded,
+        collapse: onTreeNodeCollapsed,
+        init: onTreeInitialized,
+        autoCollapse: $scope.largeNetwork,
+        activeVisible: !$scope.largeNetwork,
         clickFolderMode: 1,
-        source:         topLevelChildren
+        source: topLevelChildren
       });
     };
 
@@ -1716,7 +1740,7 @@ export class OverviewController {
     let nodeIds = QDRService.management.topology.nodeIdList();
     // add placeholders for the top level tree nodes
     let topLevelTreeNodes = [routers, addresses, links, connections, logs];
-    topLevelTreeNodes.forEach( function (parent) {
+    topLevelTreeNodes.forEach(function (parent) {
       let placeHolder = new QDRLeaf('loading...');
       placeHolder.extraClasses = 'loading';
       parent.children = [placeHolder];
@@ -1729,12 +1753,12 @@ export class OverviewController {
       let tree = $('#overtree').fancytree('getTree');
       if (tree && tree.visit) {
         let q = d3.queue(10);
-        tree.visit( function (node) {
+        tree.visit(function (node) {
           if (node.isActive() || node.isExpanded()) {
             q.defer(node.data.info.fn, node);
           }
         });
-        q.await( function (error) {
+        q.await(function (error) {
           if (error)
             QDRLog.error(error.message);
 
@@ -1761,7 +1785,7 @@ export class OverviewController {
 
     dataReady = true;
     initTreeAndGrid();
-    $scope.$on('$destroy', function() {
+    $scope.$on('$destroy', function () {
       clearTimeout(updateIntervalHandle);
       $(window).off('resize', resizer);
     });
