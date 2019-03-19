@@ -83,10 +83,17 @@ static char* test_send_to_messenger(void *context)
     pn_message_t *pn_msg = pn_message();
     size_t len = flatten_bufs(content);
     int result = pn_message_decode(pn_msg, buffer, len);
-    if (result != 0) return "Error in pn_message_decode";
+    if (result != 0) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
+        return "Error in pn_message_decode";
+    }
 
-    if (strcmp(pn_message_get_address(pn_msg), "test_addr_0") != 0)
+    if (strcmp(pn_message_get_address(pn_msg), "test_addr_0") != 0) {
+        pn_message_free(pn_msg);
+        qd_message_free(msg);
         return "Address mismatch in received message";
+    }
 
     pn_message_free(pn_msg);
     qd_message_free(msg);
@@ -317,12 +324,18 @@ static char* test_send_message_annotations(void *context)
 
     qd_message_compose_1(msg, "test_addr_0", 0);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
-    if (buf == 0) return "Expected a buffer in the test message";
+    if (buf == 0) {
+        qd_message_free(msg);
+        return "Expected a buffer in the test message";
+    }
 
     pn_message_t *pn_msg = pn_message();
     size_t len = flatten_bufs(content);
     int result = pn_message_decode(pn_msg, buffer, len);
-    if (result != 0) return "Error in pn_message_decode";
+    if (result != 0) {
+        qd_message_free(msg);
+        return "Error in pn_message_decode";
+    }
 
     pn_data_t *ma = pn_message_annotations(pn_msg);
     if (!ma) return "Missing message annotations";

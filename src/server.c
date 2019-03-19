@@ -916,6 +916,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
             /* Check for immediate tasks */
             qd_immediate_visit();
         }
+        break;
 
     case PN_PROACTOR_TIMEOUT:
         qd_timer_visit();

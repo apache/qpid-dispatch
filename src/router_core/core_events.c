@@ -48,7 +48,7 @@ qdrc_event_subscription_t *qdrc_event_subscribe_CT(qdr_core_t             *core,
     sub->on_link_event = on_link_event;
     sub->on_addr_event = on_addr_event;
 
-    assert((events & !(_QDRC_EVENT_CONN_RANGE | _QDRC_EVENT_LINK_RANGE | _QDRC_EVENT_ADDR_RANGE)) == 0);
+    assert((events & ~(_QDRC_EVENT_CONN_RANGE | _QDRC_EVENT_LINK_RANGE | _QDRC_EVENT_ADDR_RANGE)) == 0);
     assert(!(events & _QDRC_EVENT_CONN_RANGE) || on_conn_event);
     assert(!(events & _QDRC_EVENT_LINK_RANGE) || on_link_event);
     assert(!(events & _QDRC_EVENT_ADDR_RANGE) || on_addr_event);

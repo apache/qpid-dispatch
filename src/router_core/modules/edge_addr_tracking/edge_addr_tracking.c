@@ -338,7 +338,7 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
                 assert(link->edge_context == 0);
                 link->edge_context = endpoint_state;
                 endpoint_state->ref_count++;
-                if (qdrc_can_send_address(addr, link->conn) && endpoint_state) {
+                if (qdrc_can_send_address(addr, link->conn)) {
                     qdrc_send_message(mc->core, addr, endpoint_state->endpoint, true);
                 }
             }

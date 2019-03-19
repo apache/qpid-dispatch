@@ -564,6 +564,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 pn_delivery_settle(pnd);
                 qd_message_free(msg);
                 qd_iterator_free(addr_iter);
+                qd_bitmask_free(link_exclusions);
                 return next_delivery;
             }
         }

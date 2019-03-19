@@ -115,7 +115,8 @@ static void set_waypoint_capability(qdr_terminus_t *term, char phase_char, qd_di
     char cap[16];
     char suffix[3];
 
-    strcpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT);
+    strncpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT, 12);
+    //strcpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT);
     suffix[0] = '.';
     suffix[1] = '0' + ordinal;
     suffix[2] = '\0';

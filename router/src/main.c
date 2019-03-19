@@ -188,8 +188,9 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, b
                 size_t path_size = 256;
                 int getcwd_error = 0;
                 cur_path = (char *) calloc(path_size, sizeof(char));
+                errno = 0;
 
-                while ((cur_path = getcwd(cur_path, path_size)) == NULL) {
+                while (getcwd(cur_path, path_size) == NULL) {
                     free(cur_path);
                     if ( errno != ERANGE ) {
                         // If unable to get current directory
@@ -199,6 +200,7 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, b
                     // If current path does not fit, allocate more memory
                     path_size += 256;
                     cur_path = (char *) calloc(path_size, sizeof(char));
+                    errno = 0;
                 }
 
                 // Populating fully qualified config file name

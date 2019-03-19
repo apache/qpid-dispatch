@@ -356,7 +356,12 @@ static char *test_compose_subfields(void *context)
     qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_MESSAGE_ANNOTATIONS, 0);
     qd_compose_start_map(field);
     qd_compose_insert_buffers(field, &sub1->buffers);
-    if (!DEQ_IS_EMPTY(sub1->buffers)) return "Buffer chain ownership not transferred!";
+    if (!DEQ_IS_EMPTY(sub1->buffers)) {
+        qd_compose_free(sub1);
+        qd_compose_free(sub2);
+        qd_compose_free(sub3);
+        return "Buffer chain ownership not transferred!";
+    }
     qd_compose_free(sub1);
     qd_compose_insert_buffers(field, &sub2->buffers);
     qd_compose_free(sub2);
