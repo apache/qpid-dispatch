@@ -20,7 +20,7 @@ under the License.
 /* global angular Promise */
 import { MIN_CHORD_THRESHOLD } from './matrix.js';
 
-const SAMPLES = 3; // number of snapshots to use for rate calculations
+const SAMPLES = 5; // number of snapshots to use for rate calculations
 
 class ChordData { // eslint-disable-line no-unused-vars
   constructor(QDRService, isRate, converter) {
@@ -114,11 +114,11 @@ class ChordData { // eslint-disable-line no-unused-vars
           for (let i = 0; routerLinks && (i < routerLinks.results.length); i++) {
             let link = self.QDRService.utilities.flatten(routerLinks.attributeNames, routerLinks.results[i]);
             // if the link is an outbound/enpoint/non console
-            if (link.linkType === 'endpoint' && 
-                link.linkDir === 'out' && 
-                (link.owningAddr && 
-                 !link.owningAddr.startsWith('Ltemp.') &&
-                 !link.owningAddr.startsWith('M0$'))) {
+            if (link.linkType === 'endpoint' &&
+              link.linkDir === 'out' &&
+              (link.owningAddr &&
+                !link.owningAddr.startsWith('Ltemp.') &&
+                !link.owningAddr.startsWith('M0$'))) {
               // keep track of the raw egress values as well as their ingress and egress routers and the address
               for (let j = 0; j < ingressRouters.length; j++) {
                 let messages = link.ingressHistogram ? link.ingressHistogram[j] : 0;
@@ -163,10 +163,10 @@ let calcRate = function (values, last_values, snapshots) {
 
   // ensure the snapshots are initialized
   if (snapshots.length < SAMPLES) {
-    for (let i=0; i<SAMPLES; i++) {
-      if (snapshots.length < i+1) {
+    for (let i = 0; i < SAMPLES; i++) {
+      if (snapshots.length < i + 1) {
         snapshots[i] = angular.copy(last_values);
-        snapshots[i].timestamp = now - (1000 * (SAMPLES-i));
+        snapshots[i].timestamp = now - (1000 * (SAMPLES - i));
       }
     }
   }
@@ -176,24 +176,25 @@ let calcRate = function (values, last_values, snapshots) {
   snapshots.push(angular.copy(last_values));
 
   let oldest = snapshots[0];
-  let newest = snapshots[snapshots.length-1];
+  let newest = snapshots[snapshots.length - 1];
   let rateValues = [];
   let elapsed = (newest.timestamp - oldest.timestamp) / 1000;
   let getValueFor = function (snap, value) {
-    for (let i=0; i<snap.values.length; i++) {
+    for (let i = 0; i < snap.values.length; i++) {
       if (snap.values[i].ingress === value.ingress &&
         snap.values[i].egress === value.egress &&
         snap.values[i].address === value.address)
         return snap.values[i].messages;
     }
   };
-  values.forEach( function (value) {
+  values.forEach(function (value) {
     let first = getValueFor(oldest, value);
     let last = getValueFor(newest, value);
     let rate = (last - first) / elapsed;
 
-    rateValues.push({ingress: value.ingress, 
-      egress: value.egress, 
+    rateValues.push({
+      ingress: value.ingress,
+      egress: value.egress,
       address: value.address,
       messages: Math.max(rate, MIN_CHORD_THRESHOLD)
     });
@@ -202,12 +203,12 @@ let calcRate = function (values, last_values, snapshots) {
 };
 
 let genKeys = function (values) {
-  values.forEach( function (value) {
+  values.forEach(function (value) {
     value.key = value.egress + value.ingress + value.address;
   });
 };
 let sortByKeys = function (values) {
-  return values.sort( function (a, b) {
+  return values.sort(function (a, b) {
     return a.key > b.key ? 1 : a.key < b.key ? -1 : 0;
   });
 };
