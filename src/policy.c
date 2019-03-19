@@ -665,6 +665,9 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
         return false;
     }
 
+    if (!username)
+        username = "";
+
     size_t username_len = strlen(username);
 
     // make a writable, disposable copy of the csv string
@@ -781,6 +784,9 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
         // no names in 'allowed'.
         return false;
     }
+
+    if (!username)
+        username = "";
 
     size_t username_len = strlen(username);
     size_t usersubst_len = strlen(user_subst_key);
@@ -1155,7 +1161,6 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
     if (policy->enableVhostPolicy &&
         (!qd_conn->role || !strcmp(qd_conn->role, "normal") || !strcmp(qd_conn->role, "route-container"))) {
         // Open connection or not based on policy.
-        pn_transport_t *pn_trans = pn_connection_transport(conn);
         const char *hostip = qd_connection_remote_ip(qd_conn);
         const char *conn_name = qd_connection_name(qd_conn);
         uint32_t conn_id = qd_conn->connection_id;
@@ -1173,11 +1178,10 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
             if (qd_policy_open_fetch_settings(policy, qd_conn->user_id, hostip, policy_vhost, conn_name,
                                         POLICY_VHOST_GROUP, conn_id,
                                         qd_conn->policy_settings)) {
-                // Apply transport policy settings
-                if (qd_conn->policy_settings->maxFrameSize > 0)
-                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-                if (qd_conn->policy_settings->maxSessions > 0)
-                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+                // It's too late to apply transport policy settings as the local
+                // AMQP Open has already been sent.
+                // TODO: Apply transport max_frame and channel_max to outgoing
+                //       connector Open if policy is enabled.
             } else {
                 // Failed to fetch settings
                 qd_log(policy->log_source,

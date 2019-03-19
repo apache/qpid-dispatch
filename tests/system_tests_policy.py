@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import unittest as unittest
 import os, json, re, signal
+import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
@@ -33,6 +34,7 @@ from proton.reactor import Container
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
+from test_broker import FakeBroker
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -355,7 +357,7 @@ class InterrouterLinksAllowed(TestCase):
         cls.routers[1].teardown()
 
     def test_01_router_links_allowed(self):
-        with  open('../setUpClass/A-2.out', 'r') as router_log:
+        with  open(self.routers[0].outfile + '.out', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             disallow_lines = [s for s in log_lines if "link disallowed" in s]
             self.assertTrue(len(disallow_lines) == 0, msg='Inter-router links should be allowed but some were blocked by policy.')
@@ -1097,6 +1099,294 @@ class SenderAddressValidator(ClientAddressValidator):
         :return:
         """
         event.container.create_sender(self.url)
+
+
+#
+# Connector policy tests
+#
+
+class ConnectorPolicyMisconfiguredClient(FakeBroker):
+    '''
+    This client is targeted by a misconfigured connector whose policy
+    causes an immediate connection close.
+    '''
+    def __init__(self, url, container_id=None):
+        super(ConnectorPolicyMisconfiguredClient, self).__init__(url, container_id)
+        self.connection_opening = 0
+        self.connection_opened = 0
+        self.connection_error = 0
+        self.main_exited = False
+
+    def _main(self):
+        self._container.timeout = 1.0
+        self._container.start()
+
+        keep_running = True
+        while keep_running:
+            try:
+                self._container.process()
+            except:
+                self._stop_thread = True
+                keep_running = False
+            if self._stop_thread:
+                keep_running = False
+        self.main_exited = True
+
+    def join(self):
+        if not self._stop_thread:
+            self._stop_thread = True
+            self._container.wakeup()
+        if not self.main_exited:
+            self._thread.join(timeout=5)
+
+    def on_start(self, event):
+        self.timer          = event.reactor.schedule(10.0, Timeout(self))        
+        self.acceptor = event.container.listen(self.url)
+
+    def timeout(self):
+        self._error = "Timeout Expired"
+
+    def on_connection_opening(self, event):
+        self.connection_opening += 1
+        super(ConnectorPolicyMisconfiguredClient, self).on_connection_opening(event)
+        
+    def on_connection_opened(self, event):
+        self.connection_opened += 1
+        super(ConnectorPolicyMisconfiguredClient, self).on_connection_opened(event)
+
+    def on_connection_error(self, event):
+        self.connection_error += 1
+
+
+class ConnectorPolicyMisconfigured(TestCase):
+    """
+    Verify that a connector that has a vhostPolicy is not allowed
+    to open the connection if the policy is not defined
+    """
+    remoteListenerPort = None
+    
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(ConnectorPolicyMisconfigured, cls).setUpClass()
+        cls.remoteListenerPort = cls.tester.get_port();
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+                           'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
+                           'host': '127.0.0.1', 'role': 'normal',
+                           'port': cls.remoteListenerPort, 'policyVhost': 'nosuch'
+                            }),
+
+            ('vhost', {
+                'hostname': '0.0.0.0', 'maxConnections': 2,
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true'
+                    }
+                ), (
+                    'anonymous', {
+                        'users': 'anonymous', 'remoteHosts': '*',
+                        'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
+                        'targets': 'addr/*, simpleaddress, queue.${user}',
+                        'allowDynamicSource': 'true',
+                        'allowAnonymousSender': 'true'
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('connectorPolicyMisconfigured', config, wait=False)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_30_connector_policy_misconfigured(self):
+        url = "127.0.0.1:%d" % self.remoteListenerPort
+        tc = ConnectorPolicyMisconfiguredClient(url, "tc")
+        while tc.connection_error == 0 and tc._error == None:
+            time.sleep(0.1)
+        tc.join()
+        self.assertTrue(tc.connection_error == 1)
+        
+#
+
+class ConnectorPolicyClient(FakeBroker):
+    '''
+    This client is targeted by a configured connector whose policy
+    allows certain sources and targets.
+    '''
+    def __init__(self, url, container_id=None):
+        super(ConnectorPolicyClient, self).__init__(url, container_id)
+        self.connection_opening = 0
+        self.connection_opened = 0
+        self.connection_error = 0
+        self.main_exited = False
+        self.senders = []
+        self.receivers = []
+        self.link_error = False
+        self.sender_request = ""
+        self.receiver_request = ""
+        self.request_in_flight = False
+
+    def _main(self):
+        self._container.timeout = 1.0
+        self._container.start()
+
+        keep_running = True
+        while keep_running:
+            try:
+                self._container.process()
+                if not self.request_in_flight:
+                    if self.sender_request != "":
+                        self._container.create_sender(self._connections[0], self.sender_request)
+                        self.request_in_flight = True
+                        self.sender_request = ""
+                    else:
+                        if self.receiver_request != "":
+                            self._container.create_receiver(self._connections[0], self.receiver_request)
+                            self.request_in_flight = True
+                            self.receiver_request = ""
+            except:
+                self._stop_thread = True
+                keep_running = False
+            if self._stop_thread:
+                keep_running = False
+        self.main_exited = True
+
+    def join(self):
+        if not self._stop_thread:
+            self._stop_thread = True
+            self._container.wakeup()
+        if not self.main_exited:
+            self._thread.join(timeout=5)
+
+    def on_start(self, event):
+        self.timer    = event.reactor.schedule(60, Timeout(self))        
+        self.acceptor = event.container.listen(self.url)
+
+    def timeout(self):
+        self._error = "Timeout Expired"
+
+    def on_connection_opening(self, event):
+        self.connection_opening += 1
+        super(ConnectorPolicyClient, self).on_connection_opening(event)
+
+    def on_connection_opened(self, event):
+        self.connection_opened += 1
+        super(ConnectorPolicyClient, self).on_connection_opened(event)
+
+    def on_connection_error(self, event):
+        self.connection_error += 1
+
+    def on_link_opened(self, event):
+        self.request_in_flight = False
+
+    def on_link_error(self, event):
+        self.link_error = True
+        self.request_in_flight = False
+
+    def try_sender(self, addr):
+        self.link_error = False
+        self.sender_request = addr
+        while (self.sender_request == addr or self.request_in_flight) \
+            and self.link_error == False and self._error is None:
+            time.sleep(0.10)
+        time.sleep(0.10)
+        return self.link_error == False
+            
+    def try_receiver(self, addr):
+        self.link_error = False
+        self.receiver_request = addr
+        while (self.receiver_request == addr or self.request_in_flight) \
+            and self.link_error == False and self._error is None:
+            time.sleep(0.10)
+        time.sleep(0.10)
+        return self.link_error == False
+
+
+class ZConnectorPolicy(TestCase):
+    """
+    Verify that a connector that has a vhostPolicy is not allowed
+    to open the connection if the policy is not defined
+    """
+    remoteListenerPort = None
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(ZConnectorPolicy, cls).setUpClass()
+        cls.remoteListenerPort = cls.tester.get_port();
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+                           'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
+                           'host': '127.0.0.1', 'role': 'normal',
+                           'port': cls.remoteListenerPort, 'policyVhost': 'test'
+                            }),
+            ('vhost', {
+                'hostname': 'test',
+                'groups': [(
+                    '$connector', {
+                        'sources': 'test,examples,work*',
+                        'targets': 'examples,$management,play*',
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('connectorPolicyMisconfigured', config, wait=False)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_31_connector_policy(self):
+        url = "127.0.0.1:%d" % self.remoteListenerPort
+        cpc = ConnectorPolicyClient(url, "cpc")
+        while cpc.connection_opened == 0 and cpc._error == None:
+            time.sleep(0.1)
+        time.sleep(0.05)
+        self.assertTrue(cpc.connection_error == 0) # expect connection to stay up
+        self.assertTrue(cpc._error is None)
+
+        # senders that should work
+        for addr in ["examples", "$management", "playtime"]: # allowed targets
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # senders that should fail
+        for addr in ["test", "a/bad/addr"]: # denied targets
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertFalse(res)
+
+        # receivers that should work
+        for addr in ["examples", "test", "workaholic"]: # allowed sources
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # receivers that should fail
+        for addr in ["$management", "a/bad/addr"]: # denied sources
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertFalse(res)
 
 
 if __name__ == '__main__':
