@@ -437,7 +437,35 @@ class Topology {
       }
     };
   }
+  getSingelRouterNode(nodeName, attrs) {
+    let node = {
+      id: utils.nameFromId(nodeName),
+      protocolVersion: 1,
+      instance: 0,
+      linkState: [],
+      nextHop: '(self)',
+      validOrigins: [],
+      address: nodeName,
+      routerLink: '',
+      cost: 0,
+      lastTopoChange: 0,
+      index: 0,
+      name: nodeName,
+      identity: nodeName,
+      type: 'org.apache.qpid.dispatch.router.node'
+    };
+    let result = [];
+    if (attrs.length === 0) {
+      attrs = Object.keys(node);
+    }
+    attrs.forEach(attr => {
+      result.push(node[attr]);
+    });
+    return result;
+  }
+
   getNodeInfo(nodeName, entity, attrs, q, callback) {
+    const self = this;
     var timedOut = function (q) {
       q.abort();
     };
@@ -445,6 +473,11 @@ class Topology {
     this.connection.sendQuery(nodeName, entity, attrs).then(
       function (response) {
         clearTimeout(atimer);
+        if (entity === 'router.node' &&
+          response.response.results.length === 0 &&
+          Object.keys(self._nodeInfo).length === 1) {
+          response.response.results = [self.getSingelRouterNode(nodeName, attrs)];
+        }
         callback(nodeName, entity, response.response);
       },
       function () {
