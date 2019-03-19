@@ -735,8 +735,6 @@ export class OverviewController {
               });
             }
           });
-        console.log('linkFields:');
-        console.log(linkFields);
         if (expected === ++received) {
           linkFields.sort(function (a, b) { return a.link < b.link ? -1 : a.link > b.link ? 1 : 0; });
           completionCallbacks.forEach(function (cb) {
