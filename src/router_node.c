@@ -42,6 +42,7 @@ static char *direct_prefix;
 static char *node_id;
 
 static void deferred_AMQP_rx_handler(void *context, bool discard);
+static void synchronous_AMQP_rx_handler(void *context, bool discard);
 
 //==============================================================================
 // Functions to handle the linkage between proton deliveries and qdr deliveries
@@ -631,11 +632,11 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     return next_delivery;
 }
 
-
 /**
- * Deferred callback for inbound delivery handler
+ * For anybody that wants to synchronously call the AMQP_rx_handler, call this function.
  */
-static void deferred_AMQP_rx_handler(void *context, bool discard) {
+static void synchronous_AMQP_rx_handler(void *context, bool discard)
+{
     if (!discard) {
         qd_link_t     *qdl = (qd_link_t*)context;
         qd_router_t   *qdr = (qd_router_t *)qd_link_get_node_context(qdl);
@@ -643,6 +644,25 @@ static void deferred_AMQP_rx_handler(void *context, bool discard) {
         while (true) {
             if (! AMQP_rx_handler(qdr, qdl))
                 break;
+        }
+    }
+}
+
+
+/**
+ * Invoke this function only via a deferred callback. Deferred callback for inbound delivery handler.
+ */
+static void deferred_AMQP_rx_handler(void *context, bool discard)
+{
+    if (!discard) {
+        qd_link_t     *qdl = (qd_link_t*)context;
+        qd_link_decrement_num_deferred_calls(qdl);
+
+        if (qd_link_get_num_deferred_calls(qdl) == 0 && qd_link_is_detach_received(qdl)) {
+            qd_link_free(qdl);
+        }
+        else if (qd_link_pn(qdl) && qd_link_get_context(qdl) != 0){
+            synchronous_AMQP_rx_handler(context, discard);
         }
     }
 }
@@ -782,6 +802,8 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     if (!link)
         return 0;
 
+    qd_link_set_detach_received(link);
+
     pn_link_t      *pn_link      = qd_link_pn(link);
 
     if (!pn_link)
@@ -795,7 +817,7 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
             if (!qd_message_receive_complete(msg)) {
                 qd_link_set_q2_limit_unbounded(link, true);
                 qd_message_Q2_holdoff_disable(msg);
-                deferred_AMQP_rx_handler((void *)link, false);
+                synchronous_AMQP_rx_handler((void *)link, false);
             }
         }
 
@@ -820,7 +842,8 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         if (dt == QD_LOST || qdr_link_get_context(rlink) == 0) {
             qdr_link_set_context(rlink, 0);
             qdr_node_reap_abandoned_deliveries(router->router_core, link);
-            qd_link_free(link);
+            qd_link_increment_num_deferred_calls(link);
+            qd_connection_invoke_deferred(qd_link_connection(link), deferred_AMQP_rx_handler, link);
         }
 
         qdr_error_t *error = qdr_error_from_pn(cond);
@@ -1401,7 +1424,8 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
     //
     if (!first) {
         qdr_node_reap_abandoned_deliveries(router->router_core, qlink);
-        qd_link_free(qlink);
+        qd_link_increment_num_deferred_calls(qlink);
+        qd_connection_invoke_deferred(qd_link_connection(qlink), deferred_AMQP_rx_handler, qlink);
     }
 }
 
@@ -1546,6 +1570,7 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         if (qdl_in) {
             qd_connection_t *qdc_in = qd_link_connection(qdl_in);
             if (qdc_in) {
+                qd_link_increment_num_deferred_calls(qdl_in);
                 qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
             }
         }
@@ -1669,6 +1694,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 qdr_delivery_set_disposition(dlv, disp);
                 qd_message_set_discard(msg, true);
                 qd_message_Q2_holdoff_disable(msg);
+                qd_link_increment_num_deferred_calls(link);
                 qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, link);
             }
         }

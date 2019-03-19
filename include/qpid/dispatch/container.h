@@ -195,6 +195,10 @@ void qd_link_detach(qd_link_t *link);
 bool qd_link_drain_changed(qd_link_t *link, bool *mode);
 void qd_link_free(qd_link_t *link);
 void *qd_link_get_node_context(const qd_link_t *link);
-
+int qd_link_get_num_deferred_calls(qd_link_t *link);
+bool qd_link_is_detach_received(qd_link_t *link);
+void qd_link_increment_num_deferred_calls(qd_link_t *link);
+void qd_link_decrement_num_deferred_calls(qd_link_t *link);
+void qd_link_set_detach_received(qd_link_t *link);
 ///@}
 #endif

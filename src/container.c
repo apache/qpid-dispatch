@@ -62,6 +62,8 @@ struct qd_link_t {
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
     bool                        q2_limit_unbounded;
+    int                         num_deferred_calls;
+    bool                        detach_received;
 };
 
 DEQ_DECLARE(qd_link_t, qd_link_list_t);
@@ -1045,6 +1047,33 @@ bool qd_link_drain_changed(qd_link_t *link, bool *mode)
     if (changed)
         link->drain_mode = pn_mode;
     return changed;
+}
+
+void qd_link_increment_num_deferred_calls(qd_link_t *link)
+{
+    link->num_deferred_calls ++;
+}
+
+
+void qd_link_decrement_num_deferred_calls(qd_link_t *link)
+{
+    link->num_deferred_calls --;
+}
+
+
+int qd_link_get_num_deferred_calls(qd_link_t *link)
+{
+    return link->num_deferred_calls;
+}
+
+bool qd_link_is_detach_received(qd_link_t *link)
+{
+    return link->detach_received;
+}
+
+void qd_link_set_detach_received(qd_link_t *link)
+{
+    link->detach_received = true;
 }
 
 
