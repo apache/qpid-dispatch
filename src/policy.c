@@ -1182,6 +1182,9 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
                 // AMQP Open has already been sent.
                 // TODO: Apply transport max_frame and channel_max to outgoing
                 //       connector Open if policy is enabled.
+
+                // Count senders and receivers for this connection
+                qd_conn->policy_counted = true;
             } else {
                 // Failed to fetch settings
                 qd_log(policy->log_source,

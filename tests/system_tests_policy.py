@@ -1233,6 +1233,8 @@ class ConnectorPolicyClient(FakeBroker):
         self.sender_request = ""
         self.receiver_request = ""
         self.request_in_flight = False
+        self.req_close_sender = False
+        self.req_close_receiver = False
 
     def _main(self):
         self._container.timeout = 1.0
@@ -1244,14 +1246,23 @@ class ConnectorPolicyClient(FakeBroker):
                 self._container.process()
                 if not self.request_in_flight:
                     if self.sender_request != "":
-                        self._container.create_sender(self._connections[0], self.sender_request)
+                        sndr = self._container.create_sender(
+                                self._connections[0], self.sender_request)
+                        self.senders.append(sndr)
                         self.request_in_flight = True
                         self.sender_request = ""
-                    else:
-                        if self.receiver_request != "":
-                            self._container.create_receiver(self._connections[0], self.receiver_request)
-                            self.request_in_flight = True
-                            self.receiver_request = ""
+                    elif self.receiver_request != "":
+                        rcvr = self._container.create_receiver(
+                                self._connections[0], self.receiver_request)
+                        self.receivers.append(rcvr)
+                        self.request_in_flight = True
+                        self.receiver_request = ""
+                    elif self.req_close_sender:
+                        self.senders[0].close()
+                        self.req_close_sender = False
+                    elif self.req_close_receiver:
+                        self.receivers[0].close()
+                        self.req_close_receiver = False
             except:
                 self._stop_thread = True
                 keep_running = False
@@ -1309,18 +1320,30 @@ class ConnectorPolicyClient(FakeBroker):
         time.sleep(0.10)
         return self.link_error == False
 
+    def close_sender(self):
+        self.req_close_sender = True
+        while self.req_close_sender:
+            time.sleep(0.05)
 
-class ZConnectorPolicy(TestCase):
+    def close_receiver(self):
+        self.req_close_receiver = True
+        while self.req_close_receiver:
+            time.sleep(0.05)
+
+
+class ConnectorPolicySrcTgt(TestCase):
     """
-    Verify that a connector that has a vhostPolicy is not allowed
-    to open the connection if the policy is not defined
+    Verify that a connector that has a vhostPolicy
+     * may open the connection
+     * may access allowed sources and targets
+     * may not access disallowed sources and targets
     """
     remoteListenerPort = None
 
     @classmethod
     def setUpClass(cls):
         """Start the router"""
-        super(ZConnectorPolicy, cls).setUpClass()
+        super(ConnectorPolicySrcTgt, cls).setUpClass()
         cls.remoteListenerPort = cls.tester.get_port();
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
@@ -1342,7 +1365,7 @@ class ZConnectorPolicy(TestCase):
             })
         ])
 
-        cls.router = cls.tester.qdrouterd('connectorPolicyMisconfigured', config, wait=False)
+        cls.router = cls.tester.qdrouterd('ConnectorPolicySrcTgt', config, wait=False)
 
     def address(self):
         return self.router.addresses[0]
@@ -1382,6 +1405,128 @@ class ZConnectorPolicy(TestCase):
 
         # receivers that should fail
         for addr in ["$management", "a/bad/addr"]: # denied sources
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertFalse(res)
+
+
+class ConnectorPolicyNSndrRcvr(TestCase):
+    """
+    Verify that a connector that has a vhostPolicy is allowed
+     * to open the connection
+     * is limited to the number of senders and receivers specified in the policy
+    """
+    remoteListenerPort = None
+    MAX_SENDERS = 2
+    MAX_RECEIVERS = 4
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(ConnectorPolicyNSndrRcvr, cls).setUpClass()
+        cls.remoteListenerPort = cls.tester.get_port();
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+                           'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
+                           'host': '127.0.0.1', 'role': 'normal',
+                           'port': cls.remoteListenerPort, 'policyVhost': 'test'
+                            }),
+            ('vhost', {
+                'hostname': 'test',
+                'groups': [(
+                    '$connector', {
+                        'sources': '*',
+                        'targets': '*',
+                        'maxSenders': cls.MAX_SENDERS,
+                        'maxReceivers': cls.MAX_RECEIVERS
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('ConnectorPolicyNSndrRcvr', config, wait=False)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_32_connector_policy_max_sndr_rcvr(self):
+        url = "127.0.0.1:%d" % self.remoteListenerPort
+        cpc = ConnectorPolicyClient(url, "cpc")
+        while cpc.connection_opened == 0 and cpc._error == None:
+            time.sleep(0.1)
+        time.sleep(0.05)
+        self.assertTrue(cpc.connection_error == 0) # expect connection to stay up
+        self.assertTrue(cpc._error is None)
+
+        # senders that should work
+        addr = "vermillion"
+        for i in range(self.MAX_SENDERS):
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # senders that should fail
+        for i in range(2):
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertFalse(res)
+
+        # receivers that should work
+        for i in range(self.MAX_RECEIVERS):
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # receivers that should fail
+        for i in range(2):
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertFalse(res)
+
+        # close a sender and verify that another one only may open
+        addr="skyblue"
+        cpc.close_sender()
+
+        for i in range(1):
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # senders that should fail
+        for i in range(1):
+            try:
+                res = cpc.try_sender(addr)
+            except:
+                res = False
+            self.assertFalse(res)
+
+        # close a receiver and verify that another one only may open
+        cpc.close_receiver()
+
+        for i in range(1):
+            try:
+                res = cpc.try_receiver(addr)
+            except:
+                res = False
+            self.assertTrue(res)
+
+        # senders that should fail
+        for i in range(1):
             try:
                 res = cpc.try_receiver(addr)
             except:
