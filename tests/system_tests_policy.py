@@ -1235,6 +1235,7 @@ class ConnectorPolicyClient(FakeBroker):
         self.request_in_flight = False
         self.req_close_sender = False
         self.req_close_receiver = False
+        self.req_anonymous_sender = False
 
     def _main(self):
         self._container.timeout = 1.0
@@ -1263,6 +1264,13 @@ class ConnectorPolicyClient(FakeBroker):
                     elif self.req_close_receiver:
                         self.receivers[0].close()
                         self.req_close_receiver = False
+                    elif self.req_anonymous_sender:
+                        sndr = self._container.create_sender(
+                                self._connections[0], name="anon")
+                        self.senders.append(sndr)
+                        self.request_in_flight = True
+                        self.req_anonymous_sender = False
+
             except:
                 self._stop_thread = True
                 keep_running = False
@@ -1310,7 +1318,7 @@ class ConnectorPolicyClient(FakeBroker):
             time.sleep(0.10)
         time.sleep(0.10)
         return self.link_error == False
-            
+
     def try_receiver(self, addr):
         self.link_error = False
         self.receiver_request = addr
@@ -1329,6 +1337,15 @@ class ConnectorPolicyClient(FakeBroker):
         self.req_close_receiver = True
         while self.req_close_receiver:
             time.sleep(0.05)
+
+    def try_anonymous_sender(self):
+        self.link_error = False
+        self.req_anonymous_sender = True
+        while (self.req_anonymous_sender or self.request_in_flight) \
+            and self.link_error == False and self._error is None:
+            time.sleep(0.10)
+        time.sleep(0.10)
+        return self.link_error == False
 
 
 class ConnectorPolicySrcTgt(TestCase):
@@ -1411,6 +1428,10 @@ class ConnectorPolicySrcTgt(TestCase):
                 res = False
             self.assertFalse(res)
 
+        # anonomyous sender should be disallowed
+        res = cpc.try_anonymous_sender()
+        self.assertFalse(res)
+
 
 class ConnectorPolicyNSndrRcvr(TestCase):
     """
@@ -1443,7 +1464,8 @@ class ConnectorPolicyNSndrRcvr(TestCase):
                         'sources': '*',
                         'targets': '*',
                         'maxSenders': cls.MAX_SENDERS,
-                        'maxReceivers': cls.MAX_RECEIVERS
+                        'maxReceivers': cls.MAX_RECEIVERS,
+                        'allowAnonymousSender': 'true'
                     }
                 )]
             })
@@ -1464,8 +1486,12 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         self.assertTrue(cpc._error is None)
 
         # senders that should work
+        # anonomyous sender should be allowed
+        res = cpc.try_anonymous_sender()
+        self.assertTrue(res)
+
         addr = "vermillion"
-        for i in range(self.MAX_SENDERS):
+        for i in range(self.MAX_SENDERS - 1):
             try:
                 res = cpc.try_sender(addr)
             except:
