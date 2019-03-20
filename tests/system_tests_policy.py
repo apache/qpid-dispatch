@@ -1371,6 +1371,11 @@ class ConnectorPolicySrcTgt(TestCase):
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'
                             }),
+            # Set up the prefix 'node' as a prefix for waypoint addresses
+            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
+            # Create a pair of default auto-links for 'node.1'
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
                 'groups': [(
@@ -1432,6 +1437,12 @@ class ConnectorPolicySrcTgt(TestCase):
         res = cpc.try_anonymous_sender()
         self.assertFalse(res)
 
+        # waypoint links should be disallowed
+        res = cpc.try_sender("node.1")
+        self.assertFalse(res)
+        res = cpc.try_receiver("node.1")
+        self.assertFalse(res)
+
 
 class ConnectorPolicyNSndrRcvr(TestCase):
     """
@@ -1440,8 +1451,8 @@ class ConnectorPolicyNSndrRcvr(TestCase):
      * is limited to the number of senders and receivers specified in the policy
     """
     remoteListenerPort = None
-    MAX_SENDERS = 2
-    MAX_RECEIVERS = 4
+    MAX_SENDERS = 4
+    MAX_RECEIVERS = 3
 
     @classmethod
     def setUpClass(cls):
@@ -1457,6 +1468,11 @@ class ConnectorPolicyNSndrRcvr(TestCase):
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'
                             }),
+            # Set up the prefix 'node' as a prefix for waypoint addresses
+            ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
+            # Create a pair of default auto-links for 'node.1'
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
                 'groups': [(
@@ -1465,7 +1481,8 @@ class ConnectorPolicyNSndrRcvr(TestCase):
                         'targets': '*',
                         'maxSenders': cls.MAX_SENDERS,
                         'maxReceivers': cls.MAX_RECEIVERS,
-                        'allowAnonymousSender': 'true'
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true'
                     }
                 )]
             })
@@ -1487,11 +1504,17 @@ class ConnectorPolicyNSndrRcvr(TestCase):
 
         # senders that should work
         # anonomyous sender should be allowed
-        res = cpc.try_anonymous_sender()
+        res = cpc.try_anonymous_sender()     # sender 1
+        self.assertTrue(res)
+
+        # waypoint links should be allowed
+        res = cpc.try_sender("node.1")       # semder 2
+        self.assertTrue(res)
+        res = cpc.try_receiver("node.1")     # receiver 1
         self.assertTrue(res)
 
         addr = "vermillion"
-        for i in range(self.MAX_SENDERS - 1):
+        for i in range(self.MAX_SENDERS - 2):
             try:
                 res = cpc.try_sender(addr)
             except:
@@ -1507,7 +1530,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             self.assertFalse(res)
 
         # receivers that should work
-        for i in range(self.MAX_RECEIVERS):
+        for i in range(self.MAX_RECEIVERS - 1):
             try:
                 res = cpc.try_receiver(addr)
             except:
