@@ -21,7 +21,6 @@
 #include <qpid/dispatch/ctools.h>
 #include "router_core_private.h"
 
-ALLOC_DECLARE(qdr_core_timer_t);
 ALLOC_DEFINE(qdr_core_timer_t);
 
 void qdr_process_tick_CT(qdr_core_t *core, qdr_action_t *action, bool discard);

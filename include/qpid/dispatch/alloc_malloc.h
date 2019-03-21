@@ -21,6 +21,7 @@
 
 #include <stdint.h>
 #include <string.h>
+#include <qpid/dispatch/ctools.h>
 
 /**
  *@file
@@ -29,9 +30,17 @@
  * Useful for debugging with tools like valgrind.
  */
 
-#define ALLOC_DECLARE(T)                        \
-    T *new_##T(void);                           \
-    void free_##T(T *p)
+typedef struct {
+    void     *ptr;
+    uint32_t  seq;
+} qd_alloc_safe_ptr_t;
+
+#define ALLOC_DECLARE(T)                \
+    T *new_##T(void);                   \
+    void free_##T(T *p);                \
+    typedef qd_alloc_safe_ptr_t T##_sp; \
+    void set_safe_ptr_##T(T *p, T##_sp *sp); \
+    T *safe_deref_##T(T##_sp sp)
 
 #define ALLOC_DEFINE_CONFIG(T,S,A,C)                \
     T *new_##T(void) { size_t *a = (A);             \
@@ -41,6 +50,8 @@
     void free_##T(T *p) { size_t *a = (A);          \
         QD_MEMORY_FILL(p, QD_MEMORY_FREE, (S) + (a ? *a : 0)); \
         free(p); }                                  \
+    void set_safe_ptr_##T(T *p, T##_sp *sp) { sp->ptr = (void*) p; sp->seq = qd_alloc_sequence((void*) p); } \
+    T *safe_deref_##T(T##_sp sp) { return sp.seq == qd_alloc_sequence((void*) sp.ptr) ? (T*) sp.ptr : (T*) 0; } \
     void *unused##T
 
 #define ALLOC_DEFINE(T) ALLOC_DEFINE_CONFIG(T, sizeof(T), 0, 0)

@@ -72,12 +72,35 @@ static char* test_alloc_basic(void *context)
     return 0;
 }
 
+
+static char *test_safe_references(void *context)
+{
+    object_t    *obj = new_object_t();
+    object_t_sp  safe_obj;
+
+    set_safe_ptr_object_t(obj, &safe_obj);
+    object_t *alias = safe_deref_object_t(safe_obj);
+
+    if (obj != alias)
+        return "Safe alias was not equal to the original pointer";
+
+    free_object_t(obj);
+    alias = safe_deref_object_t(safe_obj);
+
+    if (alias != 0)
+        return "Safe dereference of a freed object was not null";
+
+    return 0;
+}
+
+
 int alloc_tests(void)
 {
     int result = 0;
     char *test_group = "alloc_tests";
 
     TEST_CASE(test_alloc_basic, 0);
+    TEST_CASE(test_safe_references, 0);
 
     return result;
 }

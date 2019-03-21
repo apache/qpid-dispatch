@@ -84,6 +84,7 @@ struct qcm_edge_mgmt_request_t {
     qcm_edge_mgmt_reply_CT_t  reply_callback;
     qcm_edge_mgmt_error_CT_t  error_callback;
 };
+ALLOC_DECLARE(qcm_edge_mgmt_request_t);
 ALLOC_DEFINE(qcm_edge_mgmt_request_t);
 
 

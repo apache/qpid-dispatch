@@ -46,6 +46,7 @@ struct link_route_proxy_t {
     link_route_proxy_state_t  proxy_state;
     qd_direction_t            direction;
 };
+ALLOC_DECLARE(link_route_proxy_t);
 ALLOC_DEFINE(link_route_proxy_t);
 DEQ_DECLARE(link_route_proxy_t, link_route_proxy_list_t);
 

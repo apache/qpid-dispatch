@@ -55,6 +55,7 @@ struct qdrc_client_request_t {
     qdrc_client_request_done_CT_t    done_cb;
 };
 DEQ_DECLARE(qdrc_client_request_t, qdrc_client_request_list_t);
+ALLOC_DECLARE(qdrc_client_request_t);
 ALLOC_DEFINE(qdrc_client_request_t);
 
 
@@ -83,6 +84,7 @@ struct qdrc_client_t {
     qdrc_client_on_flow_CT_t    on_flow_cb;
 
 };
+ALLOC_DECLARE(qdrc_client_t);
 ALLOC_DEFINE(qdrc_client_t);
 
 

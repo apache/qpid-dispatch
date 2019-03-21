@@ -31,6 +31,7 @@ typedef struct _endpoint_ref {
     const char *container_id;
 } _endpoint_ref_t;
 DEQ_DECLARE(_endpoint_ref_t, _endpoint_ref_list_t);
+ALLOC_DECLARE(_endpoint_ref_t);
 ALLOC_DEFINE(_endpoint_ref_t);
 
 

@@ -66,7 +66,6 @@ struct qd_link_t {
 
 DEQ_DECLARE(qd_link_t, qd_link_list_t);
 
-ALLOC_DECLARE(qd_link_t);
 ALLOC_DEFINE(qd_link_t);
 ALLOC_DEFINE(qd_link_ref_t);
 

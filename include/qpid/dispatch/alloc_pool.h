@@ -69,6 +69,11 @@ typedef struct {
     uint32_t              trailer;
 } qd_alloc_type_desc_t;
 
+typedef struct {
+    void     *ptr;
+    uint32_t  seq;
+} qd_alloc_safe_ptr_t;
+
 /** Allocate in a thread pool. Use via ALLOC_DECLARE */
 void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
 /** De-allocate from a thread pool. Use via ALLOC_DECLARE */
@@ -81,7 +86,10 @@ uint32_t qd_alloc_sequence(void *p);
 #define ALLOC_DECLARE(T) \
     extern __thread qd_alloc_pool_t *__local_pool_##T; \
     T *new_##T(void);    \
-    void free_##T(T *p)
+    void free_##T(T *p); \
+    typedef qd_alloc_safe_ptr_t T##_sp; \
+    void set_safe_ptr_##T(T *p, T##_sp *sp); \
+    T *safe_deref_##T(T##_sp sp)
 
 /**
  * Define allocator configuration.
@@ -92,6 +100,8 @@ uint32_t qd_alloc_sequence(void *p);
     __thread qd_alloc_pool_t *__local_pool_##T = 0;                     \
     T *new_##T(void) { return (T*) qd_alloc(&__desc_##T, &__local_pool_##T); }  \
     void free_##T(T *p) { qd_dealloc(&__desc_##T, &__local_pool_##T, (char*) p); } \
+    void set_safe_ptr_##T(T *p, T##_sp *sp) { sp->ptr = (void*) p; sp->seq = qd_alloc_sequence((void*) p); } \
+    T *safe_deref_##T(T##_sp sp) { return sp.seq == qd_alloc_sequence((void*) sp.ptr) ? (T*) sp.ptr : (T*) 0; } \
     qd_alloc_stats_t *alloc_stats_##T(void) { return __desc_##T.stats; } \
     void *unused##T
 
