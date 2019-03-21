@@ -42,28 +42,32 @@ run.py --sh                                # Print a shell script to set the run
 import os, sys, runpy
 from subprocess import Popen, PIPE
 
+extra_paths = [
+    "${CMAKE_SOURCE_DIR}/python",
+    "${CMAKE_BINARY_DIR}/python",
+    "${CMAKE_SOURCE_DIR}/tests"
+]
+
 def dedup(l):
     """Remove duplicates from list l, keep first instance. Keep order of l."""
     s = set()
     return [i for i in l if i not in s and (s.add(i) or True)]
 
-sys.path = dedup([
-    "${CMAKE_SOURCE_DIR}/python",
-    "${CMAKE_BINARY_DIR}/python",
-    "${CMAKE_SOURCE_DIR}/tests"
-] + sys.path)
-
 def getpath(env):
+    """Return a path environment variable split into a list"""
     path = os.environ.get(env)
     if path:
         return path.split(os.pathsep)
     return []
 
+sys.path = dedup(extra_paths + sys.path)
+python_path = dedup(extra_paths + getpath("PYTHONPATH"))
+
 # runner program (e.g. valgrind) and args used to run qdrouterd
 qdrouterd_runner = "${QDROUTERD_RUNNER}"
 
 env_vars = {
-    'PYTHONPATH': os.pathsep.join(sys.path),
+    'PYTHONPATH': os.pathsep.join(python_path),
     'PATH': os.pathsep.join(dedup(["${CMAKE_BINARY_DIR}",
                                    os.path.join("${CMAKE_BINARY_DIR}", 'tests'),
                                    os.path.join("${CMAKE_BINARY_DIR}", 'router'),
