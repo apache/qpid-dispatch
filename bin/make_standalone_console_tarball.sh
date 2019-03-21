@@ -89,13 +89,11 @@ echo Working Directory=${WORKDIR}
     pushd $BUILD_DIR
     cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Release ../$PREFIX
     make install
-    pushd $INSTALL_DIR/share/qpid-dispatch/console
-    ln -s stand-alone console
+    pushd $INSTALL_DIR/share/qpid-dispatch/
     tar -c -h -z \
         --owner=root --group=root --numeric-owner \
         --mtime="${MTIME}" \
         -f ${ARCHIVE} console
-    rm console
     popd
     popd
     echo Created "${ARCHIVE}"
