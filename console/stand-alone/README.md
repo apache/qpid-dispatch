@@ -30,8 +30,8 @@ The stand-alone qpid dispatch console is an html web site that monitors and cont
 Note: An internet connection is required during the npm install to retrieve the 3rd party javascript / css files.
 
 ## To run the web console:
-- Ensure one of the routers in your network is configured with a normal listener with `http: true` and that
-the `httpRootDir` is set to the directory containing installed stand-alone console files
+- Ensure one of the routers in your network is configured with a normal listener with `http: true`
+
 ```
 listener {
     role: normal
@@ -39,7 +39,6 @@ listener {
     port: 5673
     http: true
     saslMechanisms: ANONYMOUS
-    httpRootDir: /usr/share/qpid-dispatch/console/stand-alone
 }
 ```
 - start the router
