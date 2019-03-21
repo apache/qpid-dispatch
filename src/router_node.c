@@ -635,16 +635,23 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
 /**
  * Deferred callback for inbound delivery handler
  */
-static void deferred_AMQP_rx_handler(void *context, bool discard) {
+static void deferred_AMQP_rx_handler(void *context, bool discard)
+{
+    qd_link_t_sp *safe_qdl = (qd_link_t_sp*) context;
+
     if (!discard) {
-        qd_link_t     *qdl = (qd_link_t*)context;
-        qd_router_t   *qdr = (qd_router_t *)qd_link_get_node_context(qdl);
-        assert(qdr != 0);
-        while (true) {
-            if (! AMQP_rx_handler(qdr, qdl))
-                break;
+        qd_link_t *qdl = safe_deref_qd_link_t(*safe_qdl);
+        if (!!qdl) {
+            qd_router_t *qdr = (qd_router_t*) qd_link_get_node_context(qdl);
+            assert(qdr != 0);
+            while (true) {
+                if (!AMQP_rx_handler(qdr, qdl))
+                    break;
+            }
         }
     }
+
+    free(safe_qdl);
 }
 
 
@@ -782,20 +789,20 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     if (!link)
         return 0;
 
-    pn_link_t      *pn_link      = qd_link_pn(link);
-
+    pn_link_t *pn_link = qd_link_pn(link);
     if (!pn_link)
         return 0;
 
-    pn_delivery_t  *pnd          = pn_link_current(pn_link);
-
+    pn_delivery_t *pnd = pn_link_current(pn_link);
     if (pnd) {
         qd_message_t *msg = qd_get_message_context(pnd);
         if (msg) {
             if (!qd_message_receive_complete(msg)) {
                 qd_link_set_q2_limit_unbounded(link, true);
                 qd_message_Q2_holdoff_disable(msg);
-                deferred_AMQP_rx_handler((void *)link, false);
+                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+                set_safe_ptr_qd_link_t(link, safe_ptr);
+                deferred_AMQP_rx_handler(safe_ptr, false);
             }
         }
 
@@ -1546,7 +1553,9 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         if (qdl_in) {
             qd_connection_t *qdc_in = qd_link_connection(qdl_in);
             if (qdc_in) {
-                qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, qdl_in);
+                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+                set_safe_ptr_qd_link_t(qdl_in, safe_ptr);
+                qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, safe_ptr);
             }
         }
     }
@@ -1669,7 +1678,9 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 qdr_delivery_set_disposition(dlv, disp);
                 qd_message_set_discard(msg, true);
                 qd_message_Q2_holdoff_disable(msg);
-                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, link);
+                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+                set_safe_ptr_qd_link_t(link, safe_ptr);
+                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, safe_ptr);
             }
         }
     }
