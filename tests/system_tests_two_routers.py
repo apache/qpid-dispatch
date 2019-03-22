@@ -300,7 +300,7 @@ class TwoRouterTest(TestCase):
                     try:
                         json.loads(self.run_qdmanage(update_command))
                     except Exception as e:
-                        if "Forbidden" in e.message:
+                        if "Forbidden" in str(e):
                             passed = True
 
         # The test has passed since we were forbidden from deleting

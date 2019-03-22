@@ -486,7 +486,7 @@ class OneRouterTest(TestCase):
                             outputs = json.loads(self.run_qdmanage(update_command))
                         except Exception as e:
                             print (e)
-                            if "Forbidden" in e.message:
+                            if "Forbidden" in str(e):
                                 passed = True
 
         # The test has passed since we were not allowed to delete a connection

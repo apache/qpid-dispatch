@@ -458,7 +458,7 @@ class QdmanageTest(TestCase):
                         try:
                             outs = json.loads(self.run_qdmanage(delete_command))
                         except Exception as e:
-                            if "Forbidden" in e.message:
+                            if "Forbidden" in str(e):
                                 passed = True
 
         # The test has passed since we were forbidden from deleting a connection
