@@ -948,6 +948,22 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
 }
 
 
+static void qdr_link_cleanup_protected_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link, const char *label)
+{
+    bool do_cleanup = false;
+
+    sys_mutex_lock(conn->work_lock);
+    if (link->processing)
+        link->ready_to_free = true;
+    else
+        do_cleanup = true;
+    sys_mutex_unlock(conn->work_lock);
+
+    if (do_cleanup)
+        qdr_link_cleanup_CT(core, conn, link, label);
+}
+
+
 qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
                                qdr_connection_t *conn,
                                qd_link_type_t    link_type,
@@ -1687,7 +1703,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             // If the link is completely detached, release its resources
             //
             if (link->detach_send_done)
-                qdr_link_cleanup_CT(core, conn, link, "Link detached");
+                qdr_link_cleanup_protected_CT(core, conn, link, "Link detached");
 
             return;
         }
@@ -1779,22 +1795,12 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NONE, dt == QD_CLOSED);
         } else {
             // no detach can be sent out because the connection was lost
-            qdr_link_cleanup_CT(core, conn, link, "Link lost");
+            qdr_link_cleanup_protected_CT(core, conn, link, "Link lost");
         }
     } else if (link->detach_send_done) {  // detach count indicates detach has been scheduled
         // I/O thread is finished sending detach, ok to free link now
 
-        bool do_cleanup = false;
-        
-        sys_mutex_lock(conn->work_lock);
-        if (link->processing)
-            link->ready_to_free = true;
-        else
-            do_cleanup = true;
-        sys_mutex_unlock(conn->work_lock);
-
-        if (do_cleanup)
-            qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
+        qdr_link_cleanup_protected_CT(core, conn, link, "Link detached");
     }
 
     //
@@ -1820,19 +1826,8 @@ static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool
 
     if (link) {
         link->detach_send_done = true;
-        if (link->conn && link->detach_received) {
-            bool do_cleanup = false;
-
-            sys_mutex_lock(link->conn->work_lock);
-            if (link->processing)
-                link->ready_to_free = true;
-            else
-                do_cleanup = true;
-            sys_mutex_unlock(link->conn->work_lock);
-
-            if (do_cleanup)
-                qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
-        }
+        if (link->conn && link->detach_received)
+            qdr_link_cleanup_protected_CT(core, link->conn, link, "Link detached");
     }
 }
 
