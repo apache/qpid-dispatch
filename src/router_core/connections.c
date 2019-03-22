@@ -34,7 +34,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_link_processing_complete_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_link_detach_sent(qdr_link_t *link);
+static void qdr_link_processing_complete(qdr_core_t *core, qdr_link_t *link);
 
 ALLOC_DEFINE(qdr_connection_t);
 ALLOC_DEFINE(qdr_connection_work_t);
@@ -244,6 +246,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         ref = DEQ_HEAD(links_with_work[priority]);
         while (ref) {
             move_link_ref(ref->link, QDR_LINK_LIST_CLASS_WORK, QDR_LINK_LIST_CLASS_LOCAL);
+            ref->link->processing = true;
             ref = DEQ_NEXT(ref);
         }
     }
@@ -270,102 +273,113 @@ int qdr_connection_process(qdr_connection_t *conn)
 
     // Process the links_with_work array from highest to lowest priority.
     for (int priority = QDR_MAX_PRIORITY; priority >= 0; -- priority) {
-        do {
+        ref = DEQ_HEAD(links_with_work[priority]);
+        while (ref) {
             qdr_link_work_t *link_work;
             detach_sent = false;
+            link = ref->link;
 
-            ref = DEQ_HEAD(links_with_work[priority]);
-            if (ref) {
-                link = ref->link;
-                qdr_del_link_ref(links_with_work + priority, ref->link, QDR_LINK_LIST_CLASS_LOCAL);
-
-                //
-                // The work lock must be used to protect accesses to the link's work_list and
-                // link_work->processing.
-                //
-                sys_mutex_lock(conn->work_lock);
-                link_work = DEQ_HEAD(link->work_list);
-                if (link_work) {
-                    DEQ_REMOVE_HEAD(link->work_list);
-                    link_work->processing = true;
-                }
-                sys_mutex_unlock(conn->work_lock);
-            } else
-                link = 0;
-
-            if (link) {
-                //
-                // Handle disposition/settlement updates
-                //
-                qdr_delivery_ref_list_t updated_deliveries;
-                sys_mutex_lock(conn->work_lock);
-                DEQ_MOVE(link->updated_deliveries, updated_deliveries);
-                sys_mutex_unlock(conn->work_lock);
-
-                qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
-                while (dref) {
-                    core->delivery_update_handler(core->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
-                    qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
-                    qdr_del_delivery_ref(&updated_deliveries, dref);
-                    dref = DEQ_HEAD(updated_deliveries);
-                    event_count++;
-                }
-
-                while (link_work) {
-                    switch (link_work->work_type) {
-                    case QDR_LINK_WORK_DELIVERY :
-                        {
-                            int count = core->push_handler(core->user_context, link, link_work->value);
-                            assert(count <= link_work->value);
-                            link_work->value -= count;
-                            break;
-                        }
-
-                    case QDR_LINK_WORK_FLOW :
-                        if (link_work->value > 0)
-                            core->flow_handler(core->user_context, link, link_work->value);
-                        if      (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_SET)
-                            core->drain_handler(core->user_context, link, true);
-                        else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_CLEAR)
-                            core->drain_handler(core->user_context, link, false);
-                        else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_DRAINED)
-                            core->drained_handler(core->user_context, link);
-                        break;
-
-                    case QDR_LINK_WORK_FIRST_DETACH :
-                    case QDR_LINK_WORK_SECOND_DETACH :
-                        core->detach_handler(core->user_context, link, link_work->error,
-                                             link_work->work_type == QDR_LINK_WORK_FIRST_DETACH,
-                                             link_work->close_link);
-                        detach_sent = true;
-                        break;
-                    }
-
-                    sys_mutex_lock(conn->work_lock);
-                    if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0 && !link->detach_received) {
-                        DEQ_INSERT_HEAD(link->work_list, link_work);
-                        link_work->processing = false;
-                        link_work = 0; // Halt work processing
-                    } else {
-                        qdr_error_free(link_work->error);
-                        free_qdr_link_work_t(link_work);
-                        link_work = DEQ_HEAD(link->work_list);
-                        if (link_work) {
-                            DEQ_REMOVE_HEAD(link->work_list);
-                            link_work->processing = true;
-                        }
-                    }
-                    sys_mutex_unlock(conn->work_lock);
-                    event_count++;
-                }
-
-                if (detach_sent) {
-                    // let the core thread know so it can clean up
-                    qdr_link_detach_sent(link);
-                }
+            //
+            // The work lock must be used to protect accesses to the link's work_list and
+            // link_work->processing.
+            //
+            sys_mutex_lock(conn->work_lock);
+            link_work = DEQ_HEAD(link->work_list);
+            if (link_work) {
+                DEQ_REMOVE_HEAD(link->work_list);
+                link_work->processing = true;
             }
-        } while (detach_sent || link);
+            sys_mutex_unlock(conn->work_lock);
+
+            //
+            // Handle disposition/settlement updates
+            //
+            qdr_delivery_ref_list_t updated_deliveries;
+            sys_mutex_lock(conn->work_lock);
+            DEQ_MOVE(link->updated_deliveries, updated_deliveries);
+            sys_mutex_unlock(conn->work_lock);
+
+            qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
+            while (dref) {
+                core->delivery_update_handler(core->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
+                qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
+                qdr_del_delivery_ref(&updated_deliveries, dref);
+                dref = DEQ_HEAD(updated_deliveries);
+                event_count++;
+            }
+
+            while (link_work) {
+                switch (link_work->work_type) {
+                case QDR_LINK_WORK_DELIVERY :
+                    {
+                        int count = core->push_handler(core->user_context, link, link_work->value);
+                        assert(count <= link_work->value);
+                        link_work->value -= count;
+                        break;
+                    }
+
+                case QDR_LINK_WORK_FLOW :
+                    if (link_work->value > 0)
+                        core->flow_handler(core->user_context, link, link_work->value);
+                    if      (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_SET)
+                        core->drain_handler(core->user_context, link, true);
+                    else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_CLEAR)
+                        core->drain_handler(core->user_context, link, false);
+                    else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_DRAINED)
+                        core->drained_handler(core->user_context, link);
+                    break;
+
+                case QDR_LINK_WORK_FIRST_DETACH :
+                case QDR_LINK_WORK_SECOND_DETACH :
+                    core->detach_handler(core->user_context, link, link_work->error,
+                                         link_work->work_type == QDR_LINK_WORK_FIRST_DETACH,
+                                         link_work->close_link);
+                    detach_sent = true;
+                    break;
+                }
+
+                sys_mutex_lock(conn->work_lock);
+                if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0 && !link->detach_received) {
+                    DEQ_INSERT_HEAD(link->work_list, link_work);
+                    link_work->processing = false;
+                    link_work = 0; // Halt work processing
+                } else {
+                    qdr_error_free(link_work->error);
+                    free_qdr_link_work_t(link_work);
+                    link_work = DEQ_HEAD(link->work_list);
+                    if (link_work) {
+                        DEQ_REMOVE_HEAD(link->work_list);
+                        link_work->processing = true;
+                    }
+                }
+                sys_mutex_unlock(conn->work_lock);
+                event_count++;
+            }
+
+            if (detach_sent) {
+                // let the core thread know so it can clean up
+                qdr_link_detach_sent(link);
+            }
+
+            ref = DEQ_NEXT(ref);
+        }
     }
+
+    sys_mutex_lock(conn->work_lock);
+    for (int priority = QDR_MAX_PRIORITY; priority >= 0; -- priority) {
+        ref = DEQ_HEAD(links_with_work[priority]);
+        while (ref) {
+            qdr_link_t *link = ref->link;
+
+            link->processing = false;
+            if (link->ready_to_free)
+                qdr_link_processing_complete(core, link);
+
+            qdr_del_link_ref(links_with_work + priority, ref->link, QDR_LINK_LIST_CLASS_LOCAL);
+            ref = DEQ_HEAD(links_with_work[priority]);
+        }
+    }
+    sys_mutex_unlock(conn->work_lock);
 
     return event_count;
 }
@@ -547,6 +561,16 @@ static void qdr_link_detach_sent(qdr_link_t *link)
     action->args.connection.link = link;
     qdr_action_enqueue(link->core, action);
 }
+
+
+static void qdr_link_processing_complete(qdr_core_t *core, qdr_link_t *link)
+{
+    qdr_action_t *action = qdr_action(qdr_link_processing_complete_CT, "link_processing_complete");
+
+    action->args.connection.link = link;
+    qdr_action_enqueue(core, action);
+}
+
 
 
 void qdr_connection_handlers(qdr_core_t                *core,
@@ -1759,7 +1783,18 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
     } else if (link->detach_send_done) {  // detach count indicates detach has been scheduled
         // I/O thread is finished sending detach, ok to free link now
-        qdr_link_cleanup_CT(core, conn, link, "Link detached");
+
+        bool do_cleanup = false;
+        
+        sys_mutex_lock(conn->work_lock);
+        if (link->processing)
+            link->ready_to_free = true;
+        else
+            do_cleanup = true;
+        sys_mutex_unlock(conn->work_lock);
+
+        if (do_cleanup)
+            qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
     }
 
     //
@@ -1786,9 +1821,29 @@ static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool
     if (link) {
         link->detach_send_done = true;
         if (link->conn && link->detach_received) {
-            // link is fully detached
-            qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
+            bool do_cleanup = false;
+
+            sys_mutex_lock(link->conn->work_lock);
+            if (link->processing)
+                link->ready_to_free = true;
+            else
+                do_cleanup = true;
+            sys_mutex_unlock(link->conn->work_lock);
+
+            if (do_cleanup)
+                qdr_link_cleanup_CT(core, link->conn, link, "Link detached");
         }
+    }
+}
+
+
+static void qdr_link_processing_complete_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    if (!discard) {
+        qdr_link_t *link = action->args.connection.link;
+
+        if (link)
+            qdr_link_cleanup_CT(core, link->conn, link, "Link cleanup deferred after IO processing");
     }
 }
 

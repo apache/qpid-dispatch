@@ -472,6 +472,8 @@ struct qdr_link_t {
     bool                     detach_received;   ///< True on core receipt of inbound attach
     bool                     detach_send_done;  ///< True once the detach has been sent by the I/O thread
     bool                     edge;              ///< True if this link is in an edge-connection
+    bool                     processing;        ///< True if an IO thread is currently handling this link
+    bool                     ready_to_free;     ///< True if the core thread wanted to clean up the link but it was processing
     char                    *strip_prefix;
     char                    *insert_prefix;
     bool                     terminus_survives_disconnect;
