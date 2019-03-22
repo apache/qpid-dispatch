@@ -428,22 +428,14 @@ bool qd_policy_open_lookup_user(
  * or by some configuration value. Access the vhost database for that group and
  * extract the run-time settings.
  * @param[in] policy pointer to policy
- * @param[in] username authenticated user name (for logging)
- * @param[in] hostip numeric host ip address (for logging)
  * @param[in] vhost vhost name
- * @param[in] conn_name connection name for tracking (for logging)
- * @param[in] name_buf group name that holds the settings of interest
- * @param[in] conn_id connection id for log tracking (for logging)
+ * @param[in] group_name usergroup that holds the settings
  * @param[out] settings pointer to settings object to be filled with policy values
  **/
 bool qd_policy_open_fetch_settings(
     qd_policy_t *policy,
-    const char *username,
-    const char *hostip,
     const char *vhost,
-    const char *conn_name,
-    const char *name_buf,
-    uint64_t    conn_id,
+    const char *group_name,
     qd_policy_settings_t *settings)
 {
     bool res = false;
@@ -457,7 +449,7 @@ bool qd_policy_open_fetch_settings(
             if (lookup_settings) {
                 PyObject *result2 = PyObject_CallFunction(lookup_settings, "(OssO)",
                                                         (PyObject *)policy->py_policy_manager,
-                                                        vhost, name_buf, upolicy);
+                                                        vhost, group_name, upolicy);
                 if (result2) {
                     int truthy = PyObject_IsTrue(result2);
                     if (truthy) {
@@ -489,7 +481,7 @@ bool qd_policy_open_fetch_settings(
                                                         qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
                         res = true; // named settings content returned
                     } else {
-                        res = false;
+                        // lookup failed: object did not exist in python database
                     }
                     Py_XDECREF(result2);
                 } else {
@@ -575,7 +567,8 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     size_t capacity;
-    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
+    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow
+        && !qd_conn->policy_settings->outgoingConnection) {
         capacity = qd_conn->policy_settings->maxSessionWindow;
     } else {
         const qd_server_config_t * cf = qd_connection_config(qd_conn);
@@ -1123,9 +1116,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
             settings_name[0]) {
             // This connection is allowed by policy.
             // Apply transport policy settings
-            if (qd_policy_open_fetch_settings(policy, qd_conn->user_id, hostip, vhost, conn_name,
-                                        settings_name, conn_id,
-                                        qd_conn->policy_settings)) {
+            if (qd_policy_open_fetch_settings(policy, vhost, settings_name, qd_conn->policy_settings)) {
                 if (qd_conn->policy_settings->maxFrameSize > 0)
                     pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
                 if (qd_conn->policy_settings->maxSessions > 0)
@@ -1161,37 +1152,28 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
     if (policy->enableVhostPolicy &&
         (!qd_conn->role || !strcmp(qd_conn->role, "normal") || !strcmp(qd_conn->role, "route-container"))) {
         // Open connection or not based on policy.
-        const char *hostip = qd_connection_remote_ip(qd_conn);
-        const char *conn_name = qd_connection_name(qd_conn);
         uint32_t conn_id = qd_conn->connection_id;
 
         qd_connector_t *connector = qd_connection_connector(qd_conn);
         const char *policy_vhost = qd_connector_policy_vhost(connector);
 
-        if (!qd_conn->policy_settings) {
-            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
-            ZERO(qd_conn->policy_settings);
-        }
+        if (policy_vhost && strlen(policy_vhost) > 0) {
+            qd_conn->policy_settings = NEW(qd_policy_settings_t);
+            if (qd_conn->policy_settings) {
+                ZERO(qd_conn->policy_settings);
 
-        if (strlen(policy_vhost) > 0) {
-            // This connector connection is controlled by policy.
-            if (qd_policy_open_fetch_settings(policy, qd_conn->user_id, hostip, policy_vhost, conn_name,
-                                        POLICY_VHOST_GROUP, conn_id,
-                                        qd_conn->policy_settings)) {
-                // It's too late to apply transport policy settings as the local
-                // AMQP Open has already been sent.
-                // TODO: Apply transport max_frame and channel_max to outgoing
-                //       connector Open if policy is enabled.
-
-                // Count senders and receivers for this connection
-                qd_conn->policy_counted = true;
+                if (qd_policy_open_fetch_settings(policy, policy_vhost, POLICY_VHOST_GROUP, qd_conn->policy_settings)) {
+                    qd_conn->policy_settings->outgoingConnection = true;
+                    qd_conn->policy_counted = true; // Count senders and receivers for this connection
+                } else {
+                    qd_log(policy->log_source,
+                        QD_LOG_ERROR,
+                        "Failed to find policyVhost settings for connection '%d', policyVhost: '%s'",
+                        conn_id, policy_vhost);
+                    connection_allowed = false;
+                }
             } else {
-                // Failed to fetch settings
-                qd_log(policy->log_source,
-                    QD_LOG_ERROR,
-                    "Failed to find policyVhost settings for connection '%d', policyVhost: '%s'",
-                    conn_id, policy_vhost);
-                connection_allowed = false;
+                connection_allowed = false; // failed to allocate settings
             }
         } else {
             // This connection is allowed since no policy is specified for the connector
