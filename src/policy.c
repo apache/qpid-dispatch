@@ -66,6 +66,12 @@ static const char * const user_subst_i_embed    = "e";
 static const char * const user_subst_i_suffix   = "s";
 static const char * const user_subst_i_wildcard = "*";
 
+//
+// Fixed vhost policy usergroup used when storing connector policy.
+// The connector attribute 'policyVhost' defines a vhost and within
+// that vhost the connector policy values are in '$connector'.
+static const char * const POLICY_VHOST_GROUP = "$connector";
+
 static void hostname_tree_free(qd_parse_tree_t *hostname_tree);
 
 //
@@ -346,22 +352,23 @@ qd_parse_tree_t * qd_policy_parse_tree(const char *config_spec)
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
-// Evaluate the connection auth and the Open fields to
-// allow or deny the Open. Denied Open attempts are
-// effected by returning Open and then Close_with_condition.
+// * Evaluate the connection auth and the Open fields to allow or deny the Open. 
+// * If allowed then return the settings from the python vhost database.
 //
-/** Look up user/host/vhost in python vhost and give the AMQP Open
- *  a go-no_go decision. Return false if the mechanics of calling python
- *  fails. A policy lookup will deny the connection by returning a blank
- *  usergroup name in the name buffer.
+
+/** Look up user/host/vhost in python vhost database and give the AMQP Open
+ *  a go-no_go decision. 
+ *  * Return false if the mechanics of calling python fails or if name buf is blank. 
+ *  * Deny the connection by returning a blank usergroup name in the name buffer.
  *  Connection and connection denial counting is done in the python code.
- * @param[in] policy pointer to policy
- * @param[in] username authenticated user name
- * @param[in] hostip numeric host ip address
- * @param[in] vhost application name received in remote AMQP Open.hostname
- * @param[in] conn_name connection name for tracking
+ * @param[in]  policy pointer to policy
+ * @param[in]  username authenticated user name
+ * @param[in]  hostip numeric host ip address
+ * @param[in]  vhost application name received in remote AMQP Open.hostname
+ * @param[in]  conn_name connection name for tracking
  * @param[out] name_buf pointer to settings name buffer
- * @param[in] name_buf_size size of settings_buf
+ * @param[in]  name_buf_size size of settings_buf
+ * @param[in]  conn_id connection id for log tracking
  **/
 bool qd_policy_open_lookup_user(
     qd_policy_t *policy,
@@ -371,10 +378,8 @@ bool qd_policy_open_lookup_user(
     const char *conn_name,
     char       *name_buf,
     int         name_buf_size,
-    uint64_t    conn_id,
-    qd_policy_settings_t *settings)
+    uint64_t    conn_id)
 {
-    // Lookup the user/host/vhost for allow/deny and to get settings name
     bool res = false;
     name_buf[0] = 0;
     qd_python_lock_state_t lock_state = qd_python_lock();
@@ -404,18 +409,39 @@ bool qd_policy_open_lookup_user(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: lookup_user");
         }
+        Py_XDECREF(module);
     }
-    if (!res) {
-        if (module) {
-            Py_XDECREF(module);
-        }
-        qd_python_unlock(lock_state);
-        return false;
-    }
+    qd_python_unlock(lock_state);
 
-    // 
     if (name_buf[0]) {
-        // Go get the named settings
+        qd_log(policy->log_source,
+           QD_LOG_TRACE,
+           "[%"PRIu64"]: ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
+           conn_id, username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
+    }
+    return res;
+}
+
+
+/** Fetch policy settings for a vhost/group
+ * A vhost database user group name has been returned by qd_policy_open_lookup_user
+ * or by some configuration value. Access the vhost database for that group and
+ * extract the run-time settings.
+ * @param[in] policy pointer to policy
+ * @param[in] vhost vhost name
+ * @param[in] group_name usergroup that holds the settings
+ * @param[out] settings pointer to settings object to be filled with policy values
+ **/
+bool qd_policy_open_fetch_settings(
+    qd_policy_t *policy,
+    const char *vhost,
+    const char *group_name,
+    qd_policy_settings_t *settings)
+{
+    bool res = false;
+    qd_python_lock_state_t lock_state = qd_python_lock();
+    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
+    if (module) {
         res = false;
         PyObject *upolicy = PyDict_New();
         if (upolicy) {
@@ -423,41 +449,46 @@ bool qd_policy_open_lookup_user(
             if (lookup_settings) {
                 PyObject *result2 = PyObject_CallFunction(lookup_settings, "(OssO)",
                                                         (PyObject *)policy->py_policy_manager,
-                                                        vhost, name_buf, upolicy);
+                                                        vhost, group_name, upolicy);
                 if (result2) {
-                    settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
-                    settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
-                    settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
-                    settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
-                    settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
-                    if (!settings->allowAnonymousSender) { //don't override if enabled by authz plugin
-                        settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
-                    }
-                    if (!settings->allowDynamicSource) { //don't override if enabled by authz plugin
-                        settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
-                    }
-                    settings->allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                    settings->allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
-                    settings->allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
+                    int truthy = PyObject_IsTrue(result2);
+                    if (truthy) {
+                        settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
+                        settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
+                        settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
+                        settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
+                        settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
+                        if (!settings->allowAnonymousSender) { //don't override if enabled by authz plugin
+                            settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
+                        }
+                        if (!settings->allowDynamicSource) { //don't override if enabled by authz plugin
+                            settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
+                        }
+                        settings->allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
+                        settings->allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
+                        settings->allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
 
-                    //
-                    // By default, deleting connections are enabled. To disable, set the allowAdminStatusUpdate to false in a policy.
-                    //
-                    settings->allowAdminStatusUpdate = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAdminStatusUpdate", true);
-                    if (settings->sources == 0) { //don't override if configured by authz plugin
-                        settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                        //
+                        // By default, deleting connections are enabled. To disable, set the allowAdminStatusUpdate to false in a policy.
+                        //
+                        settings->allowAdminStatusUpdate = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAdminStatusUpdate", true);
+                        if (settings->sources == 0) { //don't override if configured by authz plugin
+                            settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
+                        }
+                        if (settings->targets == 0) { //don't override if configured by authz plugin
+                            settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
+                        }
+                        settings->sourcePattern        = qd_entity_get_string((qd_entity_t*)upolicy, "sourcePattern");
+                        settings->targetPattern        = qd_entity_get_string((qd_entity_t*)upolicy, "targetPattern");
+                        settings->sourceParseTree      = qd_policy_parse_tree(settings->sourcePattern);
+                        settings->targetParseTree      = qd_policy_parse_tree(settings->targetPattern);
+                        settings->denialCounts         = (qd_policy_denial_counts_t*)
+                                                        qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
+                        res = true; // named settings content returned
+                    } else {
+                        // lookup failed: object did not exist in python database
                     }
-                    if (settings->targets == 0) { //don't override if configured by authz plugin
-                        settings->targets              = qd_entity_get_string((qd_entity_t*)upolicy, "targets");
-                    }
-                    settings->sourcePattern        = qd_entity_get_string((qd_entity_t*)upolicy, "sourcePattern");
-                    settings->targetPattern        = qd_entity_get_string((qd_entity_t*)upolicy, "targetPattern");
-                    settings->sourceParseTree      = qd_policy_parse_tree(settings->sourcePattern);
-                    settings->targetParseTree      = qd_policy_parse_tree(settings->targetPattern);
-                    settings->denialCounts         = (qd_policy_denial_counts_t*)
-                                                    qd_entity_get_long((qd_entity_t*)upolicy, "denialCounts");
                     Py_XDECREF(result2);
-                    res = true; // named settings content returned
                 } else {
                     qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: result2");
                 }
@@ -469,18 +500,9 @@ bool qd_policy_open_lookup_user(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: upolicy");
         }
+        Py_XDECREF(module);
     }
-    Py_XDECREF(module);
     qd_python_unlock(lock_state);
-
-    if (name_buf[0]) {
-        qd_log(policy->log_source,
-           QD_LOG_TRACE,
-           "[%"PRIu64"]: ALLOW AMQP Open lookup_user: %s, rhost: %s, vhost: %s, connection: %s. Usergroup: '%s'%s",
-           conn_id, username, hostip, vhost, conn_name, name_buf, (res ? "" : " Internal error."));
-    } else {
-        // Denials are logged in python code
-    }
 
     return res;
 }
@@ -550,7 +572,8 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     size_t capacity;
-    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow) {
+    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow
+        && !qd_conn->policy_settings->outgoingConnection) {
         capacity = qd_conn->policy_settings->maxSessionWindow;
     } else {
         const qd_server_config_t * cf = qd_connection_config(qd_conn);
@@ -640,6 +663,9 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
         // no names in 'allowed'.
         return false;
     }
+
+    if (!username)
+        username = "";
 
     size_t username_len = strlen(username);
 
@@ -758,6 +784,9 @@ bool _qd_policy_approve_link_name_tree(const char *username, const char *allowed
         // no names in 'allowed'.
         return false;
     }
+
+    if (!username)
+        username = "";
 
     size_t username_len = strlen(username);
     size_t usersubst_len = strlen(user_subst_key);
@@ -1090,15 +1119,19 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
         }
 
         if (qd_policy_open_lookup_user(policy, qd_conn->user_id, hostip, vhost, conn_name,
-                                       settings_name, SETTINGS_NAME_SIZE, conn_id,
-                                       qd_conn->policy_settings) &&
+                                       settings_name, SETTINGS_NAME_SIZE, conn_id) &&
             settings_name[0]) {
             // This connection is allowed by policy.
             // Apply transport policy settings
-            if (qd_conn->policy_settings->maxFrameSize > 0)
-                pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-            if (qd_conn->policy_settings->maxSessions > 0)
-                pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+            if (qd_policy_open_fetch_settings(policy, vhost, settings_name, qd_conn->policy_settings)) {
+                if (qd_conn->policy_settings->maxFrameSize > 0)
+                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
+                if (qd_conn->policy_settings->maxSessions > 0)
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+            } else {
+                // failed to fetch settings
+                connection_allowed = false;
+            }
         } else {
             // This connection is denied by policy.
             connection_allowed = false;
@@ -1110,6 +1143,53 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
     if (connection_allowed) {
         if (pn_connection_state(conn) & PN_LOCAL_UNINIT)
             pn_connection_open(conn);
+        policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
+    } else {
+        qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);
+    }
+}
+
+
+void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
+    pn_connection_t *conn = qd_connection_pn(qd_conn);
+    qd_dispatch_t *qd = qd_server_dispatch(qd_conn->server);
+    qd_policy_t *policy = qd->policy;
+    bool connection_allowed = true;
+
+    if (policy->enableVhostPolicy &&
+        (!qd_conn->role || !strcmp(qd_conn->role, "normal") || !strcmp(qd_conn->role, "route-container"))) {
+        // Open connection or not based on policy.
+        uint32_t conn_id = qd_conn->connection_id;
+
+        qd_connector_t *connector = qd_connection_connector(qd_conn);
+        const char *policy_vhost = qd_connector_policy_vhost(connector);
+
+        if (policy_vhost && strlen(policy_vhost) > 0) {
+            qd_conn->policy_settings = NEW(qd_policy_settings_t);
+            if (qd_conn->policy_settings) {
+                ZERO(qd_conn->policy_settings);
+
+                if (qd_policy_open_fetch_settings(policy, policy_vhost, POLICY_VHOST_GROUP, qd_conn->policy_settings)) {
+                    qd_conn->policy_settings->outgoingConnection = true;
+                    qd_conn->policy_counted = true; // Count senders and receivers for this connection
+                } else {
+                    qd_log(policy->log_source,
+                        QD_LOG_ERROR,
+                        "Failed to find policyVhost settings for connection '%d', policyVhost: '%s'",
+                        conn_id, policy_vhost);
+                    connection_allowed = false;
+                }
+            } else {
+                connection_allowed = false; // failed to allocate settings
+            }
+        } else {
+            // This connection is allowed since no policy is specified for the connector
+        }
+    } else {
+        // No policy implies automatic policy allow
+        // Note that connections not governed by policy have no policy_settings.
+    }
+    if (connection_allowed) {
         policy_notify_opened(qd_conn->open_container, qd_conn, qd_conn->context);
     } else {
         qd_policy_private_deny_amqp_connection(conn, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED, CONNECTION_DISALLOWED);

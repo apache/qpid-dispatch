@@ -124,11 +124,16 @@ struct qd_connector_t {
     /* This conn_list contains all the connection information needed to make a connection. It also includes failover connection information */
     qd_failover_item_list_t   conn_info_list;
     int                       conn_index; // Which connection in the connection list to connect to next.
+    
+    /* Optional policy vhost name */
+    char                     *policy_vhost;
+
     DEQ_LINKS(qd_connector_t);
 };
 
 DEQ_DECLARE(qd_connector_t, qd_connector_list_t);
 
+const char *qd_connector_policy_vhost(qd_connector_t* ct);
 
 /**
  * Connection objects wrap Proton connection objects.
