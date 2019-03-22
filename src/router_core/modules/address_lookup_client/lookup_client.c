@@ -43,13 +43,11 @@ static void on_request_done(qdr_core_t    *core,
 
 typedef struct qcm_addr_lookup_request_t {
     DEQ_LINKS(struct qcm_addr_lookup_request_t);
-    qdr_connection_t  *conn;
-    qdr_link_t        *link;
-    uint32_t           conn_sequence;
-    uint32_t           link_sequence;
-    qd_direction_t     dir;
-    qdr_terminus_t    *source;
-    qdr_terminus_t    *target;
+    qdr_connection_t_sp  conn_sp;
+    qdr_link_t_sp        link_sp;
+    qd_direction_t       dir;
+    qdr_terminus_t      *source;
+    qdr_terminus_t      *target;
 } qcm_addr_lookup_request_t;
 
 DEQ_DECLARE(qcm_addr_lookup_request_t, qcm_addr_lookup_request_list_t);
@@ -404,13 +402,19 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
 
 static void qcm_addr_lookup_local_search(qcm_lookup_client_t *client, qcm_addr_lookup_request_t *request)
 {
-    bool            link_route;
-    bool            unavailable;
-    bool            core_endpoint;
+    bool              link_route;
+    bool              unavailable;
+    bool              core_endpoint;
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(request->conn_sp);
+    qdr_link_t       *link = safe_deref_qdr_link_t(request->link_sp);
+
+    if (conn == 0 || link == 0)
+        return;
+    
     qdr_terminus_t *term = request->dir == QD_INCOMING ? request->target : request->source;
     qdr_address_t  *addr = qdr_lookup_terminus_address_CT(client->core,
                                                           request->dir,
-                                                          request->conn,
+                                                          conn,
                                                           term,
                                                           true,
                                                           true,
@@ -418,9 +422,9 @@ static void qcm_addr_lookup_local_search(qcm_lookup_client_t *client, qcm_addr_l
                                                           &unavailable,
                                                           &core_endpoint);
     qdr_link_react_to_first_attach_CT(client->core,
-                                      request->conn,
+                                      conn,
                                       addr,
-                                      request->link,
+                                      link,
                                       request->dir,
                                       request->source,
                                       request->target,
@@ -516,14 +520,11 @@ static void qcm_addr_lookup_CT(void             *context,
         //
         qcm_addr_lookup_request_t *request = new_qcm_addr_lookup_request_t();
         DEQ_ITEM_INIT(request);
-        request->conn   = conn;
-        request->link   = link;
+        set_safe_ptr_qdr_connection_t(conn, &request->conn_sp);
+        set_safe_ptr_qdr_link_t(link, &request->link_sp);
         request->dir    = dir;
         request->source = source;
         request->target = target;
-
-        request->conn_sequence = qd_alloc_sequence(conn);
-        request->link_sequence = qd_alloc_sequence(link);
 
         DEQ_INSERT_TAIL(client->pending_requests, request);
         qcm_addr_lookup_process_pending_requests_CT(client);
@@ -606,13 +607,15 @@ static uint64_t on_reply(qdr_core_t    *core,
     bool                         is_link_route;
     bool                         has_destinations;
 
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(request->conn_sp);
+    qdr_link_t       *link = safe_deref_qdr_link_t(request->link_sp);
+
     //
-    // If the pointer sequences mismatch for either the connection or link,
-    // exit without processing because either the connection or link has
-    // been freed while the request was in-flight.
+    // If the connection or link pointers are NULL, exit without processing
+    // because either the connection or link has been freed while the
+    // request was in-flight.
     //
-    if (request->conn_sequence != qd_alloc_sequence(request->conn) ||
-        request->link_sequence != qd_alloc_sequence(request->link)) {
+    if (conn == 0 || link == 0) {
         qdr_terminus_free(request->source);
         qdr_terminus_free(request->target);
         return 0;
@@ -633,13 +636,13 @@ static uint64_t on_reply(qdr_core_t    *core,
             //
             // The address is for a link route, but there are no destinations upstream.  Fail with no-route.
             //
-            qdr_link_outbound_detach_CT(core, request->link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
+            qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
 
         else
             //
             // The address is for a link route and there are destinations upstream.  Directly forward the attach.
             //
-            qdr_forward_link_direct_CT(core, client->edge_conn, request->link, request->source, request->target, 0, 0);
+            qdr_forward_link_direct_CT(core, client->edge_conn, link, request->source, request->target, 0, 0);
 
     } else {
         //
