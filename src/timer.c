@@ -28,9 +28,19 @@
 #include <stdio.h>
 #include <time.h>
 
+/* Protects data structures.  Held for short time. */
 static sys_mutex_t     *lock = NULL;
+/* Held longer, only used to serialize "next" timeout value. Always acquired after main lock. */
+static sys_mutex_t     *set_timeout_lock = NULL;
+/*
+ * Proactor timeouts and interrupts are serialized in the same
+ * proactor context.  Consequently calls to qd_timer_visit() and
+ * qd_immediate_visit() are also serialized.
+*/
+
 static qd_timer_list_t  idle_timers = {0};
 static qd_timer_list_t  scheduled_timers = {0};
+static bool visiting = false;
 /* Timers have relative delta_time measured from the previous timer.
  * The delta_time of the first timer on the queue is measured from timer_base.
  */
@@ -129,10 +139,19 @@ void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
 {
     sys_mutex_lock(lock);
     if (duration == 0) {
-        qd_immediate_arm(timer->immediate);
+        if (timer->scheduled)
+            timer_cancel_LH(timer);
+        qd_immediate_set_armed(timer->immediate);
         sys_mutex_unlock(lock);
+        if (timer->server)
+            qd_immediate_schedule_visit(timer->server);
         return;
     }
+
+    // Note whether a timeout is pending before any updating.
+    qd_timer_t *ptr = DEQ_HEAD(scheduled_timers);
+    qd_timestamp_t next_visit = ptr ? time_base + ptr->delta_time : 0;
+
     timer_cancel_LH(timer);  // Timer is now on the idle list
     DEQ_REMOVE(idle_timers, timer);
 
@@ -142,7 +161,7 @@ void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
     timer_adjust_now_LH();   /* Adjust the timers for current time */
 
     /* Invariant: time_before == total time up to but not including ptr */
-    qd_timer_t *ptr = DEQ_HEAD(scheduled_timers);
+    ptr = DEQ_HEAD(scheduled_timers);
     qd_duration_t time_before = 0;
     while (ptr && time_before + ptr->delta_time < duration) {
         time_before += ptr->delta_time;
@@ -163,9 +182,22 @@ void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
     }
     timer->scheduled = true;
 
+    if (visiting) {
+        sys_mutex_unlock(lock);
+        return;                 /* Visiting thread in charge of setting timeout. */
+    }
+
     qd_timer_t *first = DEQ_HEAD(scheduled_timers);
-    qd_server_timeout(first->server, first->delta_time);
+    if (next_visit && (time_base + first->delta_time) == next_visit) {
+        sys_mutex_unlock(lock);
+        return;                 /* Already set. */
+    }
+
+    // Trade locks for "slow" system call.
+    sys_mutex_lock(set_timeout_lock);
     sys_mutex_unlock(lock);
+    qd_server_timeout(first->server, first->delta_time);
+    sys_mutex_unlock(set_timeout_lock);
 }
 
 
@@ -186,6 +218,7 @@ void qd_timer_initialize()
 {
     qd_immediate_initialize();
     lock = sys_mutex();
+    set_timeout_lock = sys_mutex();
     DEQ_INIT(idle_timers);
     DEQ_INIT(scheduled_timers);
     time_base = 0;
@@ -196,6 +229,8 @@ void qd_timer_finalize(void)
 {
     sys_mutex_free(lock);
     lock = 0;
+    sys_mutex_free(set_timeout_lock);
+    set_timeout_lock = 0;
     qd_immediate_finalize();
 }
 
@@ -204,11 +239,11 @@ void qd_timer_finalize(void)
 void qd_timer_visit()
 {
     sys_mutex_lock(lock);
+    visiting = true;
     timer_adjust_now_LH();
     qd_timer_t *timer = DEQ_HEAD(scheduled_timers);
     while (timer && timer->delta_time == 0) {
         timer_cancel_LH(timer); /* Removes timer from scheduled_timers */
-        qd_immediate_disarm(timer->immediate);
         sys_mutex_unlock(lock);
         timer->handler(timer->context); /* Call the handler outside the lock, may re-schedule */
         sys_mutex_lock(lock);
@@ -216,8 +251,13 @@ void qd_timer_visit()
     }
     qd_timer_t *first = DEQ_HEAD(scheduled_timers);
     if (first) {
-        qd_server_timeout(first->server, first->delta_time);
+        sys_mutex_lock(set_timeout_lock);
     }
+    visiting = false;
     sys_mutex_unlock(lock);
+    if (first) {
+        qd_server_timeout(first->server, first->delta_time);
+        sys_mutex_unlock(set_timeout_lock);
+    }
     qd_immediate_visit();
 }

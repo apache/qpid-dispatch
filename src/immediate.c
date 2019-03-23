@@ -17,6 +17,7 @@
  * under the License.
  */
 
+#include "dispatch_private.h"
 #include "immediate_private.h"
 #include "server_private.h"
 
@@ -34,6 +35,9 @@ struct qd_immediate_t {
 static qd_immediate_t immediates[256] = {{0}};
 static size_t count = 0;
 static sys_mutex_t *lock = NULL;
+static bool visit_pending = false;
+static size_t armed_count = 0;
+static qd_server_t *qd_server;
 
 void qd_immediate_initialize(void) {
     lock = sys_mutex();
@@ -55,6 +59,8 @@ qd_immediate_t *qd_immediate(qd_dispatch_t *qd, void (*handler)(void*), void* co
     i->handler = handler;
     i->context = context;
     i->armed = false;
+    if (!qd_server && i->server)
+        qd_server = i->server;  // Remember server.
     sys_mutex_unlock(lock);
     return i;
 }
@@ -63,7 +69,12 @@ void qd_immediate_arm(qd_immediate_t *i) {
     bool interrupt = false;
     sys_mutex_lock(lock);
     if (!i->armed) {
-        interrupt = i->armed = true;
+        i->armed = true;
+        armed_count++;
+    }
+    if (!visit_pending) {
+        visit_pending = true;
+        interrupt = true;
     }
     sys_mutex_unlock(lock);
     if (interrupt && i->server) {
@@ -71,9 +82,34 @@ void qd_immediate_arm(qd_immediate_t *i) {
     }
 }
 
+void qd_immediate_schedule_visit(qd_server_t *s) {
+    bool interrupt = false;
+    sys_mutex_lock(lock);
+    if (armed_count && !visit_pending) {
+        visit_pending = true;
+        interrupt = true;
+    }
+    sys_mutex_unlock(lock);
+    if (interrupt) {
+        qd_server_interrupt(s);
+    }
+}
+
 void qd_immediate_disarm(qd_immediate_t *i) {
     sys_mutex_lock(lock);
-    i->armed = false;
+    if (i->armed) {
+      i->armed = false;
+      armed_count--;
+    }
+    sys_mutex_unlock(lock);
+}
+
+void qd_immediate_set_armed(qd_immediate_t *i) {
+    sys_mutex_lock(lock);
+    if (!i->armed) {
+      i->armed = true;
+      armed_count++;
+    }
     sys_mutex_unlock(lock);
 }
 
@@ -83,14 +119,23 @@ void qd_immediate_free(qd_immediate_t *i) {
 }
 
 void qd_immediate_visit() {
+    bool interrupt = false;
     sys_mutex_lock(lock);
-    for (qd_immediate_t *i = immediates; i < immediates + count; ++i) {
+    for (qd_immediate_t *i = immediates; armed_count && i < immediates + count; ++i) {
         if (i->armed) {
             i->armed = false;
+            armed_count--;
             sys_mutex_unlock(lock);
             i->handler(i->context);
             sys_mutex_lock(lock);
         }
     }
+    if (armed_count > 0)
+        interrupt = true;  /* A new arming while calling handlers.  Schedule a new visit. */
+    else
+        visit_pending = false;
     sys_mutex_unlock(lock);
+    if (interrupt && qd_server) {
+        qd_server_interrupt(qd_server);
+    }
 }

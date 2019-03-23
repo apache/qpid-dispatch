@@ -24,10 +24,17 @@
 #include <qpid/dispatch/server.h>
 #include <stdint.h>
 
-/* Immediate actions - used by timer to optimize schedule(0) */
+/*
+ * Immediate actions - used by timer to optimize schedule(0)
+ * disarm() and set_armed() are fast.
+ * arm() and schedule_visit() are not.
+*/
+
 
 void qd_immediate_initialize(void);
 void qd_immediate_finalize(void);
+
+/* Call each armed action in the calling thread. */
 void qd_immediate_visit(void);
 
 typedef struct qd_immediate_t qd_immediate_t;
@@ -39,6 +46,12 @@ void qd_immediate_arm(qd_immediate_t *);
 
 /* After disarm() returns, there will be no handler() call unless re-armed. */
 void qd_immediate_disarm(qd_immediate_t *);
+
+/* Mark action as armed, handler will be called at earlist qd_immediate_visit() */
+void qd_immediate_set_armed(qd_immediate_t *);
+
+/* At least one call to qd_immediate_visit will be made. */
+void qd_immediate_schedule_visit(qd_server_t*);
 
 void qd_immediate_free(qd_immediate_t *);
 
