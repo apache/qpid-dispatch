@@ -717,6 +717,18 @@ class SemanticsMulticast(MessagingHandler):
         Container(self).run()
 
 
+class CheckAddressTimer(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        if self.parent.receiver.remote_source.address:
+            self.parent.cancel_custom()
+            self.parent.request.reply_to = self.parent.receiver.remote_source.address
+            self.parent.sender.send(self.parent.request)
+        else:
+            self.parent.cancel_custom()
+
 class ManagementNotImplemented(MessagingHandler):
     def __init__(self, address):
         super(ManagementNotImplemented, self).__init__()
@@ -728,6 +740,8 @@ class ManagementNotImplemented(MessagingHandler):
         self.sent_count = 0
         self.error = None
         self.num_messages = 0
+        self.request = None
+        self.sender = None
 
     def timeout(self):
         self.error = "No response received for management request"
@@ -746,16 +760,23 @@ class ManagementNotImplemented(MessagingHandler):
 
     def on_sendable(self, event):
         if self.num_messages < 1:
-            request = Message()
-            request.address = "amqp:/_local/$management"
-            request.reply_to = self.receiver.remote_source.address
-            request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
-
-            event.sender.send(request)
-            self.num_messages += 1
+            self.request = Message()
+            self.request.address = "amqp:/_local/$management"
+            self.request.reply_to = self.receiver.remote_source.address
+            self.request.properties = {u'type': u'org.amqp.management',
+                                       u'name': u'self',
+                                       u'operation': u'NOT-IMPL'}
+            if self.request.reply_to is None:
+                self.custom_timer = event.reactor.schedule(2, CheckAddressTimer(self))
+            else:
+                event.sender.send(self.request)
+                self.num_messages += 1
 
     def run(self):
         Container(self).run()
+
+    def cancel_custom(self):
+        self.custom_timer.cancel()
 
     def on_message(self, event):
         if event.receiver == self.receiver:
