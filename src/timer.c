@@ -18,9 +18,8 @@
  */
 
 #include "dispatch_private.h"
-#include "immediate_private.h"
-#include "server_private.h"
 #include "timer_private.h"
+#include "server_private.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/alloc.h>
@@ -55,7 +54,6 @@ static void timer_cancel_LH(qd_timer_t *timer)
         DEQ_INSERT_TAIL(idle_timers, timer);
         timer->scheduled = false;
     }
-    qd_immediate_disarm(timer->immediate);
 }
 
 /* Adjust timer's time_base and delays for the current time. */
@@ -97,7 +95,6 @@ qd_timer_t *qd_timer(qd_dispatch_t *qd, qd_timer_cb_t cb, void* context)
     timer->context    = context;
     timer->delta_time = 0;
     timer->scheduled  = false;
-    timer->immediate  = qd_immediate(qd, cb, context);
     sys_mutex_lock(lock);
     DEQ_INSERT_TAIL(idle_timers, timer);
     sys_mutex_unlock(lock);
@@ -112,7 +109,6 @@ void qd_timer_free(qd_timer_t *timer)
     sys_mutex_lock(lock);
     timer_cancel_LH(timer);
     DEQ_REMOVE(idle_timers, timer);
-    qd_immediate_free(timer->immediate);
     sys_mutex_unlock(lock);
     free_qd_timer_t(timer);
 }
@@ -128,11 +124,6 @@ qd_timestamp_t qd_timer_now() {
 void qd_timer_schedule(qd_timer_t *timer, qd_duration_t duration)
 {
     sys_mutex_lock(lock);
-    if (duration == 0) {
-        qd_immediate_arm(timer->immediate);
-        sys_mutex_unlock(lock);
-        return;
-    }
     timer_cancel_LH(timer);  // Timer is now on the idle list
     DEQ_REMOVE(idle_timers, timer);
 
@@ -182,10 +173,9 @@ void qd_timer_cancel(qd_timer_t *timer)
 //=========================================================================
 
 
-void qd_timer_initialize()
+void qd_timer_initialize(sys_mutex_t *server_lock)
 {
-    qd_immediate_initialize();
-    lock = sys_mutex();
+    lock = server_lock;
     DEQ_INIT(idle_timers);
     DEQ_INIT(scheduled_timers);
     time_base = 0;
@@ -194,9 +184,7 @@ void qd_timer_initialize()
 
 void qd_timer_finalize(void)
 {
-    sys_mutex_free(lock);
     lock = 0;
-    qd_immediate_finalize();
 }
 
 
@@ -208,7 +196,6 @@ void qd_timer_visit()
     qd_timer_t *timer = DEQ_HEAD(scheduled_timers);
     while (timer && timer->delta_time == 0) {
         timer_cancel_LH(timer); /* Removes timer from scheduled_timers */
-        qd_immediate_disarm(timer->immediate);
         sys_mutex_unlock(lock);
         timer->handler(timer->context); /* Call the handler outside the lock, may re-schedule */
         sys_mutex_lock(lock);
@@ -219,5 +206,4 @@ void qd_timer_visit()
         qd_server_timeout(first->server, first->delta_time);
     }
     sys_mutex_unlock(lock);
-    qd_immediate_visit();
 }

@@ -19,7 +19,6 @@
  * under the License.
  */
 
-#include "immediate_private.h"
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/timer.h>
 #include <qpid/dispatch/threading.h>
@@ -30,13 +29,12 @@ struct qd_timer_t {
     qd_timer_cb_t     handler;
     void             *context;
     qd_timestamp_t    delta_time;
-    qd_immediate_t   *immediate; /* Optimized path for schedule(0) */
     bool              scheduled; /* true means on scheduled list, false on idle list */
 };
 
 DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
 
-void qd_timer_initialize(void);
+void qd_timer_initialize(sys_mutex_t *server_lock);
 void qd_timer_finalize(void);
 void qd_timer_visit();
 

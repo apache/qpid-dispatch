@@ -38,7 +38,6 @@
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
-#include "immediate_private.h"
 #include "policy.h"
 #include "server_private.h"
 #include "timer_private.h"
@@ -69,7 +68,6 @@ struct qd_server_t {
     uint64_t                  next_connection_id;
     void                     *py_displayname_obj;
     qd_http_server_t         *http;
-    bool                      stopping;
 };
 
 #define HEARTBEAT_INTERVAL 1000
@@ -906,16 +904,10 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     switch (pn_event_type(e)) {
 
     case PN_PROACTOR_INTERRUPT:
-        if (qd_server->stopping) {
-            /* Interrupt the next thread */
-            pn_proactor_interrupt(qd_server->proactor);
-            /* Stop the current thread */
-            return false;
-        } else {
-            /* Check for immediate tasks */
-            qd_immediate_visit();
-        }
-        break;
+        /* Interrupt the next thread */
+        pn_proactor_interrupt(qd_server->proactor);
+        /* Stop the current thread */
+        return false;
 
     case PN_PROACTOR_TIMEOUT:
         qd_timer_visit();
@@ -1227,7 +1219,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->cond             = sys_cond();
     DEQ_INIT(qd_server->conn_list);
 
-    qd_timer_initialize();
+    qd_timer_initialize(qd_server->lock);
 
     qd_server->pause_requests         = 0;
     qd_server->threads_paused         = 0;
@@ -1303,7 +1295,6 @@ void qd_server_run(qd_dispatch_t *qd)
 
 void qd_server_stop(qd_dispatch_t *qd)
 {
-    qd->server->stopping = true;
     /* Interrupt the proactor, async-signal-safe */
     pn_proactor_interrupt(qd->server->proactor);
 }
@@ -1518,10 +1509,6 @@ bool qd_connector_decref(qd_connector_t* ct)
 
 void qd_server_timeout(qd_server_t *server, qd_duration_t duration) {
     pn_proactor_set_timeout(server->proactor, duration);
-}
-
-void qd_server_interrupt(qd_server_t *server) {
-    pn_proactor_interrupt(server->proactor);
 }
 
 qd_dispatch_t* qd_server_dispatch(qd_server_t *server) { return server->qd; }

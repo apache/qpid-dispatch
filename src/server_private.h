@@ -38,7 +38,6 @@
 
 qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 void qd_server_timeout(qd_server_t *server, qd_duration_t delay);
-void qd_server_interrupt(qd_server_t *server);
 
 qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* config);
 
