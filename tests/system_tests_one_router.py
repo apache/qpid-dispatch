@@ -479,13 +479,11 @@ class OneRouterTest(TestCase):
                 # if the connection is gone.
                 if conn_properties.get('int_property'):
                     identity = output.get("identity")
-                    print (identity)
                     if identity:
                         update_command = 'UPDATE --type=connection adminStatus=deleted --id=' + identity
                         try:
                             outputs = json.loads(self.run_qdmanage(update_command))
                         except Exception as e:
-                            print (e)
                             if "Forbidden" in str(e):
                                 passed = True
 
@@ -727,7 +725,6 @@ class ManagementNotImplemented(MessagingHandler):
         self.receiver = None
         self.sent_count = 0
         self.error = None
-        self.num_messages = 0
 
     def timeout(self):
         self.error = "No response received for management request"
@@ -744,15 +741,15 @@ class ManagementNotImplemented(MessagingHandler):
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
 
-    def on_sendable(self, event):
-        if self.num_messages < 1:
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
             request = Message()
             request.address = "amqp:/_local/$management"
-            request.reply_to = self.receiver.remote_source.address
-            request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'NOT-IMPL'}
-
-            event.sender.send(request)
-            self.num_messages += 1
+            request.reply_to = event.receiver.remote_source.address
+            request.properties = {u'type': u'org.amqp.management',
+                                  u'name': u'self',
+                                  u'operation': u'NOT-IMPL'}
+            self.sender.send(request)
 
     def run(self):
         Container(self).run()
@@ -775,7 +772,6 @@ class ManagementGetOperationsTest(MessagingHandler):
         self.receiver = None
         self.sent_count = 0
         self.error = None
-        self.num_messages = 0
 
     def timeout(self):
         self.error = "No response received for management request"
@@ -792,15 +788,13 @@ class ManagementGetOperationsTest(MessagingHandler):
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
 
-    def on_sendable(self, event):
-        if self.num_messages < 1:
+    def on_link_opened(self, event):
+        if self.receiver == event.receiver:
             request = Message()
             request.address = "amqp:/_local/$management"
             request.reply_to = self.receiver.remote_source.address
             request.properties = {u'type':u'org.amqp.management', u'name':u'self', u'operation':u'GET-OPERATIONS'}
-
-            event.sender.send(request)
-            self.num_messages += 1
+            self.sender.send(request)
 
     def run(self):
         Container(self).run()
@@ -830,7 +824,6 @@ class ManagementTest(MessagingHandler):
         self.sent_count = 0
         self.msg_not_sent = True
         self.error = None
-        self.num_messages = 0
         self.response1 = False
         self.response2 = False
 
@@ -847,24 +840,21 @@ class ManagementTest(MessagingHandler):
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
 
-    def on_sendable(self, event):
-        if self.num_messages < 2:
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
             request = Message()
             request.address = "amqp:/$management"
             request.reply_to = self.receiver.remote_source.address
             request.correlation_id = "C1"
             request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
-
-            event.sender.send(request)
-            self.num_messages += 1
+            self.sender.send(request)
 
             request = Message()
             request.address = "amqp:/_topo/0/QDR.B/$management"
             request.correlation_id = "C2"
             request.reply_to = self.receiver.remote_source.address
             request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
-            event.sender.send(request)
-            self.num_messages += 1
+            self.sender.send(request)
 
     def on_message(self, event):
         if event.receiver == self.receiver:
