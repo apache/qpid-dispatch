@@ -367,7 +367,6 @@ class DeleteConnectionWithReceiver(MessagingHandler):
     def __init__(self, address):
         super(DeleteConnectionWithReceiver, self).__init__()
         self.address = address
-        self.num_messages = 0
         self.mgmt_receiver = None
         self.mgmt_receiver_1 = None
         self.mgmt_receiver_2 = None
@@ -404,16 +403,15 @@ class DeleteConnectionWithReceiver(MessagingHandler):
         self.mgmt_conn.close()
         self.conn_to_kill.close()
 
-    def on_sendable(self, event):
-        if event.sender == self.mgmt_sender:
-            if self.num_messages < 1:
-                request = Message()
-                request.address = "amqp:/_local/$management"
-                request.properties = {u'type': u'org.apache.qpid.dispatch.connection',
-                                      u'operation': u'QUERY'}
-                request.reply_to = self.mgmt_receiver.remote_source.address
-                event.sender.send(request)
-                self.num_messages += 1
+    def on_link_opened(self, event):
+        if event.receiver == self.mgmt_receiver:
+            request = Message()
+            request.address = "amqp:/_local/$management"
+            request.properties = {
+                u'type': u'org.apache.qpid.dispatch.connection',
+                u'operation': u'QUERY'}
+            request.reply_to = self.mgmt_receiver.remote_source.address
+            self.mgmt_sender.send(request)
 
     def on_message(self, event):
         if event.receiver == self.mgmt_receiver:
@@ -426,7 +424,6 @@ class DeleteConnectionWithReceiver(MessagingHandler):
                     properties = result[property_index]
                     if properties.get('int_property'):
                         identity = result[identity_index]
-                        print (identity)
                         if identity:
                             request = Message()
                             request.address = "amqp:/_local/$management"
@@ -806,7 +803,6 @@ class ManagementTest(MessagingHandler):
         self.sent_count = 0
         self.msg_not_sent = True
         self.error = None
-        self.num_messages = 0
         self.response1 = False
         self.response2 = False
 
@@ -822,23 +818,21 @@ class ManagementTest(MessagingHandler):
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
 
-    def on_sendable(self, event):
-        if self.num_messages < 2:
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
             request = Message()
             request.correlation_id = "C1"
             request.address = "amqp:/_local/$management"
             request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
             request.reply_to = self.receiver.remote_source.address
-            event.sender.send(request)
-            self.num_messages += 1
+            self.sender.send(request)
 
             request = Message()
             request.address = "amqp:/_topo/0/QDR.B/$management"
             request.correlation_id = "C2"
             request.reply_to = self.receiver.remote_source.address
             request.properties = {u'type': u'org.amqp.management', u'name': u'self', u'operation': u'GET-MGMT-NODES'}
-            event.sender.send(request)
-            self.num_messages += 1
+            self.sender.send(request)
 
     def on_message(self, event):
         if event.receiver == self.receiver:
