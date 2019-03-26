@@ -81,5 +81,7 @@ def sigterm_handler(_signo, _stack_frame):
 
 signal.signal(signal.SIGTERM, sigterm_handler)
 
-Container(handler).run()
-
+try:
+    Container(handler).run()
+except:
+    pass
