@@ -844,6 +844,8 @@ class ParsedLogLine(object):
             print("Failed to parse line ", _lineno, " : ", _line)
             raise ValueError("'%s' not found in line %s" % ("]", self.line))
         self.data.conn_num = self.line[:ste]
+        if self.data.conn_num.startswith("C"):
+            self.data.conn_num = self.data.conn_num[1:]
         self.line = self.line[ste + 1:]
 
         # create decorated connection id
