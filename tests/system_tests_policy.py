@@ -1314,7 +1314,7 @@ class ConnectorPolicyClient(FakeBroker):
         self.link_error = False
         self.sender_request = addr
         while (self.sender_request == addr or self.request_in_flight) \
-            and self.link_error == False and self._error is None:
+                and self.link_error == False and self._error is None:
             time.sleep(0.10)
         time.sleep(0.10)
         return self.link_error == False
@@ -1323,7 +1323,7 @@ class ConnectorPolicyClient(FakeBroker):
         self.link_error = False
         self.receiver_request = addr
         while (self.receiver_request == addr or self.request_in_flight) \
-            and self.link_error == False and self._error is None:
+                and self.link_error == False and self._error is None:
             time.sleep(0.10)
         time.sleep(0.10)
         return self.link_error == False
@@ -1342,7 +1342,7 @@ class ConnectorPolicyClient(FakeBroker):
         self.link_error = False
         self.req_anonymous_sender = True
         while (self.req_anonymous_sender or self.request_in_flight) \
-            and self.link_error == False and self._error is None:
+                and self.link_error == False and self._error is None:
             time.sleep(0.10)
         time.sleep(0.10)
         return self.link_error == False
