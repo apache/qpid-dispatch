@@ -37,6 +37,8 @@ class AuthService(MessagingHandler):
         self.allow('admin', '*', ['send', 'recv'])
         self.allow('guest', 'foo', ['send', 'recv'])
         self.listener = None
+        self.tmo = 0.1 # seconds
+        self.stop_req = False
 
     def allow(self, user, address, permissions):
         if not self.permissions.get(user):
@@ -45,10 +47,10 @@ class AuthService(MessagingHandler):
 
     def on_start(self, event):
         self.listener = event.container.listen(self.address)
+        event.container.schedule(self.tmo, self)
 
     def stop(self):
-        if self.listener:
-            self.listener.close()
+        self.stop_req = True
 
     def on_connection_opening(self, event):
         if self.permissions.get(event.transport.user):
@@ -61,6 +63,15 @@ class AuthService(MessagingHandler):
                 symbol('authenticated-identity'): "%s" % event.transport.user,
                 symbol('address-authz'): {}
             }
+
+    def on_timer_task(self, event):
+        if self.stop_req:
+            if self.listener:
+                self.listener.close()
+            else:
+                sys.exit(0)
+        else:
+            event.reactor.schedule(self.tmo, self)
 
 parser = optparse.OptionParser(usage="usage: %prog [options]",
                                description="test authentication and authorization service")
@@ -75,13 +86,10 @@ if opts.config:
     print('set sasl config path to %s' % opts.config)
 
 handler = AuthService(opts.address)
+
 def sigterm_handler(_signo, _stack_frame):
-    #sys.exit(0)
     handler.stop()
 
 signal.signal(signal.SIGTERM, sigterm_handler)
 
-try:
-    Container(handler).run()
-except:
-    pass
+Container(handler).run()
