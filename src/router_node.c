@@ -376,14 +376,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             //
             if (!qd_message_is_discard(msg)) {
                 qdr_deliver_continue(delivery);
-
-                //
-                // Settle the proton delivery only if all the data has been received.
-                //
-                if (pn_delivery_settled(pnd) && receive_complete) {
-                    qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
-                    pn_delivery_settle(pnd);
-                }
             }
         }
         else {
@@ -461,12 +453,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         //
         if (!qd_message_is_discard(msg)) {
             qdr_deliver_continue(delivery);
-            if (receive_complete) {
-                if (pn_delivery_settled(pnd)) {
-                    qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
-                    pn_delivery_settle(pnd);
-                }
-            }
         }
 
         return next_delivery;
@@ -603,17 +589,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     if (delivery) {
-        //
-        // Settle the proton delivery only if all the data has arrived
-        //
-        if (pn_delivery_settled(pnd)) {
-            if (receive_complete) {
-                pn_delivery_settle(pnd);
-                qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
-                return next_delivery;
-            }
-        }
-
         qdr_node_connect_deliveries(link, delivery, pnd);
         qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
     } else {
@@ -1589,9 +1564,8 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
             // Aborted messages must be settled locally
             // Settling does not produce any disposition to message sender.
             if (pdlv) {
-                if (qdr_delivery_get_context(dlv) != 0)
-                    qdr_node_disconnect_deliveries(router->router_core, qlink, dlv, pdlv);
                 pn_link_advance(plink);
+                qdr_node_disconnect_deliveries(router->router_core, qlink, dlv, pdlv);
                 pn_delivery_settle(pdlv);
             }
         } else {
@@ -1605,8 +1579,10 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
             pn_link_advance(plink);
 
             if (settled || remote_snd_settled) {
-                if (pdlv)
+                if (pdlv) {
+                    qdr_node_disconnect_deliveries(router->router_core, qlink, dlv, pdlv);
                     pn_delivery_settle(pdlv);
+                }
             }
         }
         log_link_message(qconn, plink, msg_out);
