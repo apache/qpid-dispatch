@@ -648,7 +648,10 @@ def main_except(log_fn):
         lf.summarize_connections() # prints web page to console
         lf.write_subfiles()        # generates split files one-per-connection
         lf.aggregate_addresses()   # print address table html to console
-    pass
+
+    # close the doc
+    print("</body>")
+
 
 def main(argv):
     try:
