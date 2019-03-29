@@ -214,6 +214,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_handle_failover.py
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 
 if (NOT UNITTEST2_MISSING)
+  file(GLOB SCRAPER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/tools/scraper/*.py)
+  file(COPY ${SCRAPER_SRC} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/scraper/)
   add_subdirectory(tests)
 endif(NOT UNITTEST2_MISSING)
 add_subdirectory(python)

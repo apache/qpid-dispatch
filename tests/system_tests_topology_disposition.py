@@ -108,7 +108,6 @@ class ManagementMessageHelper ( object ) :
         return Message ( body=msg_body, properties=props, reply_to=self.reply_addr )
 
 
-
 #================================================
 # END Helper classes for all tests.
 #================================================
@@ -371,7 +370,8 @@ class TopologyDispositionTests ( TestCase ):
         # 1 means skip that test.
         cls.skip = { 'test_01' : 0,
                      'test_02' : 0,
-                     'test_03' : 0
+                     'test_03' : 0,
+                     'test_04' : 0
                    }
 
 
@@ -433,6 +433,44 @@ class TopologyDispositionTests ( TestCase ):
                         error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
                 self.assertEqual(None, error)
             self.assertEqual ( None, error )
+
+
+    def test_04_scraper_tool ( self ):
+        name = 'test_04'
+        error = None
+        if self.skip [ name ] :
+            self.skipTest ( "Test skipped during development." )
+
+        scraper_path = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
+
+        # aggregate all the log files
+        files = []
+        for letter in ['A', 'B', 'C', 'D']:
+            files.append('../setUpClass/%s.log' % letter)
+        p = self.popen(['/usr/bin/env', 'python', scraper_path, '-f'] + files,
+                       stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                       universal_newlines=True)
+        out = p.communicate(None)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            error = str(e)
+
+        self.assertEqual ( None, error )
+        self.assertTrue( '</body>' in out )
+
+        # split A.log
+        p = self.popen(['/usr/bin/env', 'python', scraper_path, '--split', '-f', '../setUpClass/A.log'],
+                       stdin=PIPE, stdout=PIPE, stderr=STDOUT,
+                       universal_newlines=True)
+        out = p.communicate(None)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            error = str(e)
+
+        self.assertEqual ( None, error )
+        self.assertTrue( '</body>' in out )
 
 
 #################################################################
