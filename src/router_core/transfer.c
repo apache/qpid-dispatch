@@ -163,11 +163,21 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         while (credit > 0) {
             sys_mutex_lock(conn->work_lock);
             dlv = DEQ_HEAD(link->undelivered);
-            sys_mutex_unlock(conn->work_lock);
             if (dlv) {
-                settled = dlv->settled;
-                uint64_t new_disp = core->deliver_handler(core->user_context, link, dlv, settled);
-                sys_mutex_lock(conn->work_lock);
+                uint64_t new_disp = 0;
+                // DISPATCH-1302 race hack fix: There is a race between the CORE thread
+                // and the outbound (this) thread over settlement. It occurs when the CORE
+                // thread is trying to propagate settlement to a peer (this delivery)
+                // while this thread is in core->deliver_handler.  This can result in the
+                // CORE thread NOT pushing the peer delivery change since it is not yet off of
+                // the undelivered list, while this thread does not settle because it missed
+                // the settled flag update.
+                do {
+                    settled = dlv->settled;
+                    sys_mutex_unlock(conn->work_lock);
+                    new_disp = core->deliver_handler(core->user_context, link, dlv, settled);
+                    sys_mutex_lock(conn->work_lock);
+                } while (settled != dlv->settled);  // oops missed the settlement
                 send_complete = qdr_delivery_send_complete(dlv);
                 if (send_complete) {
                     //
@@ -179,13 +189,16 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     credit--;
                     link->credit_to_core--;
                     link->total_deliveries++;
-                    offer = DEQ_SIZE(link->undelivered);
 
+                    // DISPATCH-1153:
+                    // If the undelivered list is cleared the link may have detached.  Stop processing.
+                    offer = DEQ_SIZE(link->undelivered);
                     if (offer == 0) {
                         sys_mutex_unlock(conn->work_lock);
                         return num_deliveries_completed;
                     }
 
+                    assert(dlv == DEQ_HEAD(link->undelivered));
                     DEQ_REMOVE_HEAD(link->undelivered);
                     dlv->link_work = 0;
 
@@ -223,8 +236,10 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 if (new_disp)
                     qdr_delivery_update_disposition(((qd_router_t *)core->user_context)->router_core,
                                                     dlv, new_disp, true, 0, 0, false);
-            } else
+            } else {
+                sys_mutex_unlock(conn->work_lock);
                 break;
+            }
         }
 
         if (offer != -1)

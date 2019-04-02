@@ -1523,17 +1523,16 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
         //
-        if (!settled && !remote_snd_settled) {
-            if (qdr_delivery_get_context(dlv) == 0)
-                qdr_node_connect_deliveries(qlink, dlv, pdlv);
-        }
+        if (qdr_delivery_get_context(dlv) == 0)
+            qdr_node_connect_deliveries(qlink, dlv, pdlv);
 
         qdr_delivery_set_tag_sent(dlv, true);
+    } else {
+        pdlv = qdr_node_delivery_pn_from_qdr(dlv);
     }
 
-    if (!pdlv) {
-        pdlv = pn_link_current(plink);
-    }
+    if (!pdlv)
+        return 0;
 
     bool restart_rx = false;
     bool q3_stalled = false;
