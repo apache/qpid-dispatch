@@ -26,6 +26,7 @@
 #include <inttypes.h>
 #include "router_core_private.h"
 #include "core_link_endpoint.h"
+#include "delivery.h"
 
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -705,7 +706,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         //
         // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
         //
-        qdr_increment_delivery_counters_CT(core, ref->dlv);
+        qdr_delivery_increment_counters_CT(core, ref->dlv);
         ref->dlv->link = 0;
         //
         // Now our reference
@@ -746,7 +747,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         //
         // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
         //
-        qdr_increment_delivery_counters_CT(core, dlv);
+        qdr_delivery_increment_counters_CT(core, dlv);
         dlv->link = 0;
 
         //
@@ -790,7 +791,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         //
         // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
         //
-        qdr_increment_delivery_counters_CT(core, dlv);
+        qdr_delivery_increment_counters_CT(core, dlv);
         dlv->link = 0;
 
         //
@@ -822,7 +823,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         //
         // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
         //
-        qdr_increment_delivery_counters_CT(core, dlv);
+        qdr_delivery_increment_counters_CT(core, dlv);
         dlv->link = 0;
 
         // This decref is for the removing the delivery from the settled list

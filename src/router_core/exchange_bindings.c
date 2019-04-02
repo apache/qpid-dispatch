@@ -22,6 +22,7 @@
 #include "router_core_private.h"
 #include "forwarder.h"
 #include "exchange_bindings.h"
+#include "delivery.h"
 
 
 // next_hop_t

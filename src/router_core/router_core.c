@@ -21,13 +21,13 @@
 #include "route_control.h"
 #include "exchange_bindings.h"
 #include "core_events.h"
+#include "delivery.h"
 #include <stdio.h>
 #include <strings.h>
 
 ALLOC_DEFINE(qdr_address_t);
 ALLOC_DEFINE(qdr_address_config_t);
 ALLOC_DEFINE(qdr_node_t);
-ALLOC_DEFINE(qdr_delivery_t);
 ALLOC_DEFINE(qdr_delivery_ref_t);
 ALLOC_DEFINE(qdr_link_t);
 ALLOC_DEFINE(qdr_router_ref_t);

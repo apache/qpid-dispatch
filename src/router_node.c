@@ -26,6 +26,7 @@
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
+#include "delivery.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>

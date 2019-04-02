@@ -22,6 +22,7 @@
 #include <stdio.h>
 #include <strings.h>
 #include "forwarder.h"
+#include "delivery.h"
 
 typedef struct qdr_forward_deliver_info_t {
     DEQ_LINKS(struct qdr_forward_deliver_info_t);
