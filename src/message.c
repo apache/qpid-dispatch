@@ -1627,7 +1627,6 @@ void qd_message_send(qd_message_t *in_msg,
     }
 
     buf = msg->cursor.buffer;
-    assert (buf);
 
     pn_session_t     *pns  = pn_link_session(pnl);
 
