@@ -57,7 +57,7 @@ static char *test_link_name_lookup(void *context)
 
     // Deeeper match - triggers malloc/free internal handler
 #define BIG_N 512
-    char * bufp = (char *)malloc(BIG_N * 8 + 6);
+    char * bufp = (char *)malloc(BIG_N * 8 + 6 + 1);
     if (!bufp)
         return "failed to allocate buffer for large link name test";
     char * wp = bufp;
