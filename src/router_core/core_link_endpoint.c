@@ -19,6 +19,7 @@
 
 #include "core_link_endpoint.h"
 #include "qpid/dispatch/alloc.h"
+#include "delivery.h"
 #include <stdio.h>
 
 struct qdrc_endpoint_t {

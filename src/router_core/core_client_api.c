@@ -19,6 +19,7 @@
 
 #include "core_client_api.h"
 #include "core_link_endpoint.h"
+#include "delivery.h"
 
 #include <inttypes.h>
 #include <errno.h>
