@@ -18,13 +18,13 @@
 #
 
 os: linux
-dist: trusty
 sudo: true
 language: c
 cache: ccache
 env:
-  - PROTON_VERSION=master BUILD_TYPE=Coverage
-  - PROTON_VERSION=0.26.0 BUILD_TYPE=RelWithDebInfo
+  - PROTON_VERSION=master BUILD_TYPE=Debug
+  - PROTON_VERSION=0.27.0 BUILD_TYPE=Coverage
+  - PROTON_VERSION=0.27.0 BUILD_TYPE=RelWithDebInfo
 
 addons:
   apt:
