@@ -1103,12 +1103,16 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
     qd_policy_t *policy = qd->policy;
     bool connection_allowed = true;
 
+    const char *policy_vhost = 0;
+    if (!!qd_conn->listener)
+        policy_vhost = qd_conn->listener->config.policy_vhost;
+
     if (policy->enableVhostPolicy && (!qd_conn->role || strcmp(qd_conn->role, "inter-router"))) {
         // Open connection or not based on policy.
         pn_transport_t *pn_trans = pn_connection_transport(conn);
         const char *hostip = qd_connection_remote_ip(qd_conn);
         const char *pcrh = pn_connection_remote_hostname(conn);
-        const char *vhost = (pcrh ? pcrh : "");
+        const char *vhost = (policy_vhost ? policy_vhost : (pcrh ? pcrh : ""));
         const char *conn_name = qd_connection_name(qd_conn);
 #define SETTINGS_NAME_SIZE 256
         char settings_name[SETTINGS_NAME_SIZE];
