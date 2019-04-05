@@ -874,6 +874,12 @@
                     "description": "A comma separated list that indicates which components of the message should be logged. Defaults to 'none' (log nothing). If you want all properties and application properties of the message logged use 'all'. Specific components of the message can be logged by indicating the components via a comma separated list. The components are message-id, user-id, to, subject, reply-to, correlation-id, content-type, content-encoding, absolute-expiry-time, creation-time, group-id, group-sequence, reply-to-group-id, app-properties. The application-data part of the bare message will not be logged. No spaces are allowed",
                     "deprecationName": "logMessage",
                     "create": true
+                },
+                "policyVhost": {
+                    "type": "string",
+                    "required": false,
+                    "description": "A listener may optionally define a virtual host to index to a specific policy to restrict the remote container to access only specific resources. This attribute defines the name of the policy vhost for this listener.  If multi-tenancy is enabled for the listener, this vhost will override the peer-supplied vhost for the purposes of identifying the desired policy settings for the connections.",
+                    "create": true
                 }
             }
         },

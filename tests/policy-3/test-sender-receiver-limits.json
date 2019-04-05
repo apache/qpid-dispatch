@@ -69,5 +69,28 @@
         }
       }
     }
+  ],
+  ["vhost", {
+      "hostname": "override.host.com",
+      "maxConnections": 50,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "remoteHosts": "*",
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":            3,
+          "maxReceivers":          5,
+          "allowDynamicSource":   true,
+          "allowAnonymousSender": true,
+          "sources": "*",
+          "targets": "*"
+        }
+      }
+    }
   ]
 ]

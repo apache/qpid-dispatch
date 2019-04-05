@@ -352,6 +352,12 @@ typedef struct qd_server_config_t {
     bool multi_tenant;
 
     /**
+     * Optional vhost to use for policy lookup.  If non-null, this overrides the vhost supplied
+     * in the OPEN from the peer only for the purpose of identifying the policy to enforce.
+     */
+    char *policy_vhost;
+
+    /**
      * The specified role of the connection.  This can be used to control the behavior and
      * capabilities of the connections.
      */

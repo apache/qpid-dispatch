@@ -304,7 +304,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
     bool requireSsl         = qd_entity_opt_bool(entity, "requireSsl",        false);    CHECK();
 
-    memset(config, 0, sizeof(*config));
+    ZERO(config);
     config->log_message          = qd_entity_opt_string(entity, "messageLoggingComponents", 0);     CHECK();
     config->log_bits             = populate_log_message(config);
     config->port                 = qd_entity_get_string(entity, "port");              CHECK();
@@ -332,6 +332,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_plugin          = qd_entity_opt_string(entity, "saslPlugin", 0);   CHECK();
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->multi_tenant         = qd_entity_opt_bool(entity, "multiTenant", false);  CHECK();
+    config->policy_vhost         = qd_entity_opt_string(entity, "policyVhost", 0);    CHECK();
     set_config_host(config, entity);
 
     //

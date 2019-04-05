@@ -313,6 +313,60 @@ class SenderReceiverLimits(TestCase):
         bs1.close()
 
 
+class PolicyVhostOverride(TestCase):
+    """
+    Verify that specifying a policy folder from the router conf file
+    effects loading the policies in that folder.
+    This test relies on qdmanage utility.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyVhostOverride, cls).setUpClass()
+        policy_config_path = os.path.join(DIR, 'policy-3')
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port(), 'policyVhost': 'override.host.com'}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('PolicyVhostOverride', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_n_receivers(self):
+        n = 4
+        addr = self.address()
+        br1 = BlockingConnection(addr)
+
+        # n receivers OK
+        br1.create_receiver(address="****YES_1of5***")
+        br1.create_receiver(address="****YES_20f5****")
+        br1.create_receiver(address="****YES_3of5****")
+        br1.create_receiver(address="****YES_4of5****")
+        br1.create_receiver(address="****YES_5of5****")
+
+        # receiver n+1 should be denied
+        self.assertRaises(LinkDetached, br1.create_receiver, "****NO****")
+
+        br1.close()
+
+    def test_verify_n_senders(self):
+        n = 2
+        addr = self.address()
+        bs1 = BlockingConnection(addr)
+
+        # n senders OK
+        bs1.create_sender(address="****YES_1of3****")
+        bs1.create_sender(address="****YES_2of3****")
+        bs1.create_sender(address="****YES_3of3****")
+        # sender n+1 should be denied
+        self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
+
+        bs1.close()
+
+
 class InterrouterLinksAllowed(TestCase):
 
     inter_router_port = None
