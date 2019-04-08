@@ -37,6 +37,7 @@
 #include "config.h"
 
 static const char *CIPHER_LIST = "ALL:aNULL:!eNULL:@STRENGTH"; /* Default */
+static const char *IGNORED = "ignore-this-log-message";
 
 /* Log for LWS messages. For dispatch server messages use qd_http_server_t::log */
 static qd_log_source_t* http_log;
@@ -52,6 +53,7 @@ static qd_log_level_t qd_level(int lll) {
 }
 
 static void logger(int lll, const char *line)  {
+    if (strstr(line, IGNORED)) return;
     size_t  len = strlen(line);
     while (len > 1 && isspace(line[len-1])) { /* Strip trailing newline */
         --len;
@@ -318,6 +320,7 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
         metrics->mountpoint_len = strlen(metrics->mountpoint);
         metrics->origin_protocol = LWSMPRO_CALLBACK;
         metrics->protocol = "http";
+        metrics->origin = IGNORED;
     }
     if (config->healthz) {
         struct lws_http_mount *healthz = &hl->healthz;
@@ -326,6 +329,7 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
         healthz->mountpoint_len = strlen(healthz->mountpoint);
         healthz->origin_protocol = LWSMPRO_CALLBACK;
         healthz->protocol = "healthz";
+        healthz->origin = IGNORED;
     }
 
     struct lws_context_creation_info info = {0};
