@@ -98,12 +98,18 @@ typedef struct connection_t {
     struct lws *wsi;
 } connection_t;
 
-typedef struct stats_t {
-    size_t current;
-    bool headers_sent;
+typedef struct stats_request_state_t {
+    bool callback_completed;
+    bool wsi_deleted;
     qdr_global_stats_t stats;
     qd_http_server_t *server;
     struct lws *wsi;
+} stats_request_state_t;
+
+typedef struct stats_t {
+    size_t current;
+    bool headers_sent;
+    stats_request_state_t *context;
 } stats_t;
 
 /* Navigating from WSI pointer to qd objects */
@@ -409,13 +415,33 @@ static void connection_wake(qd_connection_t *qd_conn)
     }
 }
 
+/**
+ * Called on router worker thread
+ */
 static void handle_stats_results(void *context)
 {
-    stats_t* stats = (stats_t*) context;
-    qd_http_server_t *hs = stats->server;
-    if (hs) {
-        work_t w = { W_HANDLE_STATS, stats->wsi };
-        work_push(hs, w);
+    stats_request_state_t* state = (stats_request_state_t*) context;
+    if (state->wsi_deleted) {
+        free(state);
+    } else {
+        qd_http_server_t *hs = state->server;
+        if (hs) {
+            work_t w = { W_HANDLE_STATS, state };
+            work_push(hs, w);
+        }
+    }
+}
+
+/**
+ * Called on http thread
+ */
+static void handle_stats_result_HT(stats_request_state_t* state)
+{
+    if (state->wsi_deleted) {
+        free(state);
+    } else {
+        state->callback_completed = true;
+        lws_callback_on_writable(state->wsi);
     }
 }
 
@@ -499,10 +525,12 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
     switch (reason) {
 
     case LWS_CALLBACK_HTTP: {
-        stats->wsi = wsi;
-        stats->server = hs;
+        stats->context = NEW(stats_request_state_t);
+        ZERO(stats->context);
+        stats->context->wsi = wsi;
+        stats->context->server = hs;
         //request stats from core thread
-        qdr_request_global_stats(hs->core, &stats->stats, handle_stats_results, (void*) stats);
+        qdr_request_global_stats(hs->core, &stats->context->stats, handle_stats_results, (void*) stats->context);
         return 0;
     }
 
@@ -519,7 +547,7 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
         }
 
         while (stats->current < metrics_length) {
-            if (write_metric(&position, end, &metrics[stats->current], &stats->stats)) {
+            if (write_metric(&position, end, &metrics[stats->current], &stats->context->stats)) {
                 stats->current++;
                 qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %i of %i", stats->current, metrics_length);
             } else {
@@ -541,6 +569,13 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
         return 0;
     }
 
+    case LWS_CALLBACK_CLOSED: {
+        stats->context->wsi_deleted = true;
+        if (stats->context->callback_completed) {
+            free(stats->context);
+        }
+    }
+
     default:
         return 0;
     }
@@ -557,12 +592,14 @@ static int callback_healthz(struct lws *wsi, enum lws_callback_reasons reason,
     switch (reason) {
 
     case LWS_CALLBACK_HTTP: {
-        stats->wsi = wsi;
-        stats->server = hs;
+        stats->context = NEW(stats_request_state_t);
+        ZERO(stats->context);
+        stats->context->wsi = wsi;
+        stats->context->server = hs;
         //make dummy request for stats (pass in null ptr); this still excercises the
         //path through core thread and back through callback on io thread which is
         //a resonable initial liveness check
-        qdr_request_global_stats(hs->core, 0, handle_stats_results, (void*) stats);
+        qdr_request_global_stats(hs->core, 0, handle_stats_results, (void*) stats->context);
         return 0;
     }
 
@@ -587,6 +624,13 @@ static int callback_healthz(struct lws *wsi, enum lws_callback_reasons reason,
         else if (lws_http_transaction_completed(wsi))
             return -1;
         else return 0;
+    }
+
+    case LWS_CALLBACK_CLOSED: {
+        stats->context->wsi_deleted = true;
+        if (stats->context->callback_completed) {
+            free(stats->context);
+        }
     }
 
     default:
@@ -728,7 +772,7 @@ static void* http_thread_run(void* v) {
                 listener_close((qd_http_listener_t*)w.value, hs);
                 break;
             case W_HANDLE_STATS:
-                lws_callback_on_writable((struct lws*) w.value);
+                handle_stats_result_HT((stats_request_state_t*) w.value);
                 break;
             case W_WAKE: {
                 connection_t *c = w.value;
