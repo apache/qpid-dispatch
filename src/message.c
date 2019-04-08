@@ -927,29 +927,7 @@ void qd_message_free(qd_message_t *in_msg)
 
     qd_message_content_t *content = msg->content;
 
-    rc = sys_atomic_dec(&content->ref_count) - 1;
-
-    if (rc == 0) {
-        if (content->ma_field_iter_in)
-            qd_iterator_free(content->ma_field_iter_in);
-        if (content->ma_pf_ingress)
-            qd_parse_free(content->ma_pf_ingress);
-        if (content->ma_pf_phase)
-            qd_parse_free(content->ma_pf_phase);
-        if (content->ma_pf_to_override)
-            qd_parse_free(content->ma_pf_to_override);
-        if (content->ma_pf_trace)
-            qd_parse_free(content->ma_pf_trace);
-
-        qd_buffer_list_free_buffers(&content->buffers);
-
-        if (content->pending)
-            qd_buffer_free(content->pending);
-
-        sys_mutex_free(content->lock);
-        free_qd_message_content_t(content);
-
-    } else if (msg->is_fanout) {
+    if (msg->is_fanout) {
         //
         // Adjust the content's fanout count and decrement all buffer fanout
         // counts starting with the msg cursor.  If the buffer count drops to
@@ -970,6 +948,29 @@ void qd_message_free(qd_message_t *in_msg)
 
         UNLOCK(content->lock);
     }
+
+    rc = sys_atomic_dec(&content->ref_count) - 1;
+    if (rc == 0) {
+        if (content->ma_field_iter_in)
+            qd_iterator_free(content->ma_field_iter_in);
+        if (content->ma_pf_ingress)
+            qd_parse_free(content->ma_pf_ingress);
+        if (content->ma_pf_phase)
+            qd_parse_free(content->ma_pf_phase);
+        if (content->ma_pf_to_override)
+            qd_parse_free(content->ma_pf_to_override);
+        if (content->ma_pf_trace)
+            qd_parse_free(content->ma_pf_trace);
+
+        qd_buffer_list_free_buffers(&content->buffers);
+
+        if (content->pending)
+            qd_buffer_free(content->pending);
+
+        sys_mutex_free(content->lock);
+        free_qd_message_content_t(content);
+    }
+
     free_qd_message_t((qd_message_t*) msg);
 }
 
