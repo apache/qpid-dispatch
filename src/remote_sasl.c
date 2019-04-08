@@ -46,7 +46,6 @@ const int8_t DOWNSTREAM_MECHANISMS_RECEIVED = 3;
 const int8_t DOWNSTREAM_CHALLENGE_RECEIVED = 4;
 const int8_t DOWNSTREAM_OUTCOME_RECEIVED = 5;
 const int8_t DOWNSTREAM_CLOSED = 6;
-const int8_t UPSTREAM_CLOSED = 7;
 
 typedef struct {
     size_t used;
@@ -110,6 +109,8 @@ typedef struct
     char* username;
     permissions_t permissions;
     pn_sasl_outcome_t outcome;
+
+    sys_mutex_t *lock;
 } qdr_sasl_relay_t;
 
 static void copy_bytes(const pn_bytes_t* from, qdr_owned_bytes_t* to)
@@ -132,6 +133,7 @@ static qdr_sasl_relay_t* new_qdr_sasl_relay_t(const char* address, const char* s
     }
     instance->proactor = proactor;
     init_permissions(&instance->permissions);
+    instance->lock = sys_mutex();
     return instance;
 }
 
@@ -147,6 +149,7 @@ static void delete_qdr_sasl_relay_t(qdr_sasl_relay_t* instance)
     if (instance->username) free(instance->username);
     free_buffer(&(instance->permissions.targets));
     free_buffer(&(instance->permissions.sources));
+    sys_mutex_free(instance->lock);
     free(instance);
 }
 
@@ -266,23 +269,40 @@ static bool notify_downstream(qdr_sasl_relay_t* impl, uint8_t state)
     }
 }
 
+static bool delete_on_downstream_freed(qdr_sasl_relay_t* impl)
+{
+    bool result;
+    sys_mutex_lock(impl->lock);
+    impl->downstream_released = true;
+    result = impl->upstream_released;
+    sys_mutex_unlock(impl->lock);
+    return result;
+}
+
+static bool delete_on_upstream_freed(qdr_sasl_relay_t* impl)
+{
+    bool result;
+    sys_mutex_lock(impl->lock);
+    impl->upstream_released = true;
+    result = impl->downstream_released || impl->downstream == 0;
+    sys_mutex_unlock(impl->lock);
+    return result;
+}
+
+static bool can_delete(pn_transport_t *transport, qdr_sasl_relay_t* impl)
+{
+    if (pnx_sasl_is_client(transport)) {
+        return delete_on_downstream_freed(impl);
+    } else {
+        return delete_on_upstream_freed(impl);
+    }
+}
+
 static void remote_sasl_free(pn_transport_t *transport)
 {
     qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
-    if (impl) {
-        if (pnx_sasl_is_client(transport)) {
-            impl->downstream_released = true;
-            if (impl->upstream_released) {
-                delete_qdr_sasl_relay_t(impl);
-            }
-        } else {
-            impl->upstream_released = true;
-            if (impl->downstream_released || impl->downstream == 0) {
-                delete_qdr_sasl_relay_t(impl);
-            } else {
-                notify_downstream(impl, UPSTREAM_CLOSED);
-            }
-        }
+    if (impl && can_delete(transport, impl)) {
+        delete_qdr_sasl_relay_t(impl);
     }
 }
 
@@ -317,9 +337,6 @@ static void remote_sasl_prepare(pn_transport_t *transport)
         } else if (impl->downstream_state == UPSTREAM_RESPONSE_RECEIVED) {
             pnx_sasl_set_bytes_out(transport, pn_bytes(impl->response.size, impl->response.start));
             pnx_sasl_set_desired_state(transport, SASL_POSTED_RESPONSE);
-        } else if (impl->downstream_state == UPSTREAM_CLOSED) {
-            impl->downstream_state = 0;
-            pn_transport_close_head(transport);
         }
         impl->downstream_state = 0;
     } else {
