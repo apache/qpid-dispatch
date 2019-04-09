@@ -35,7 +35,7 @@ except ImportError:
     from urllib.request import urlopen, build_opener, HTTPSHandler
     from urllib.error import HTTPError, URLError
 
-from system_test import TIMEOUT, Process
+from system_test import TIMEOUT, Process, SkipIfNeeded
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR
 
@@ -112,6 +112,7 @@ class RouterTestHttp(TestCase):
 
         self.assertTrue(exception_occurred)
 
+    @SkipIfNeeded(not sys.version_info >= (2, 7), "Unable to use cafile with urlopen on python < 2.7")
     def test_http_get(self):
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTP'}),
@@ -145,6 +146,7 @@ class RouterTestHttp(TestCase):
         # https not configured
         self.assertRaises(URLError, urlopen, "https://localhost:%d/nosuch" % r.ports[0])
 
+    @SkipIfNeeded(not sys.version_info >= (2, 7), "Unable to use cafile with urlopen on python < 2.7")
     def test_http_metrics(self):
 
         if not sys.version_info >= (2, 7):
@@ -214,6 +216,7 @@ class RouterTestHttp(TestCase):
         for t in threads:
             if t.ex: raise t.ex
 
+    @SkipIfNeeded(not sys.version_info >= (2, 7), "Unable to use cafile with urlopen on python < 2.7")
     def test_https_get(self):
         def listener(**kwargs):
             args = dict(kwargs)
