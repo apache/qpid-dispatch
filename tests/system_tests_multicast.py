@@ -206,7 +206,7 @@ class MulticastLinearTest(TestCase):
         atype = 'org.apache.qpid.dispatch.allocator'
         q = mgmt.query(type=atype).get_dicts()
         for name in stats:
-            d[name] = filter(lambda a: a['typeName'] == name, q)[0]
+            d[name] = list(filter(lambda a: a['typeName'] == name, q))[0]
         return d
 
     def test_51_maybe_presettled_large_msg(self):
