@@ -95,7 +95,10 @@ class RouterTestSslClient(RouterTestSslBase):
     TIMEOUT = 3
 
     # If using OpenSSL 1.1 or greater, TLSv1.2 is always being allowed
-    OPENSSL_VER_1_1_GT = ssl.OPENSSL_VERSION_INFO[:2] >= (1, 1)
+    try:
+        OPENSSL_VER_1_1_GT = ssl.OPENSSL_VERSION_INFO[:2] >= (1, 1)
+    except AttributeError:
+        OPENSSL_VER_1_1_GT = False
 
     # Following variables define TLS versions allowed by openssl
     OPENSSL_MIN_VER = 0
@@ -369,7 +372,7 @@ class RouterTestSslClient(RouterTestSslBase):
         (tlsv1, tlsv1_1, tlsv1_2) = expected_results
         return [self.OPENSSL_ALLOW_TLSV1 and tlsv1,
                 self.OPENSSL_ALLOW_TLSV1_1 and tlsv1_1,
-                self.OPENSSL_VER_1_1_GT or (self.OPENSSL_ALLOW_TLSV1_2 and tlsv1_2)]
+                self.OPENSSL_ALLOW_TLSV1_2 and tlsv1_2]
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
     def test_tls1_only(self):
@@ -434,7 +437,8 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         self.assertEqual(False, self.is_proto_allowed(self.PORT_SSL3, 'SSLv3'))
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                  "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_valid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -444,10 +448,12 @@ class RouterTestSslClient(RouterTestSslBase):
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
-        self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1"))
-        self.assertTrue(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.2"))
+        exp_tls_results = self.get_expected_tls_result([True, False, True])
+        self.assertEqual(exp_tls_results[0], self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1"))
+        self.assertEqual(exp_tls_results[2], self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.2"))
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                  "Cyrus library not available. skipping test")
     def test_ssl_sasl_client_invalid(self):
         """
         Attempts to connect a Proton client using a valid SASL authentication info
@@ -457,7 +463,8 @@ class RouterTestSslClient(RouterTestSslBase):
         if not SASL.extended():
             self.skipTest("Cyrus library not available. skipping test")
 
-        self.assertFalse(self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.1"))
+        exp_tls_results = self.get_expected_tls_result([True, False, True])
+        self.assertEqual(exp_tls_results[1], self.is_ssl_sasl_client_accepted(self.PORT_TLS_SASL, "TLSv1.1"))
 
 
 class RouterTestSslInterRouter(RouterTestSslBase):
@@ -657,7 +664,8 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         node.close()
         return router_nodes
 
-    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING or not SASL.extended(),
+                  "Cyrus library not available. skipping test")
     def test_connected_tls_sasl_routers(self):
         """
         Validates if all expected routers are connected in the network
@@ -670,7 +678,19 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         for node in router_nodes:
             self.assertTrue(node in self.connected_tls_sasl_routers,
                             "%s should not be connected" % node)
-        self.assertEqual(len(router_nodes), 4)
+
+        # Router A and B are always expected (no tls version restriction)
+        expected_nodes = len(self.connected_tls_sasl_routers)
+
+        # Router C only if TLSv1.2 is allowed
+        if not RouterTestSslClient.OPENSSL_ALLOW_TLSV1_2:
+            expected_nodes -= 1
+
+        # Router D only if TLSv1.1 is allowed
+        if not RouterTestSslClient.OPENSSL_ALLOW_TLSV1_1:
+            expected_nodes -= 1
+
+        self.assertEqual(len(router_nodes), expected_nodes)
 
 
 if __name__ == '__main__':
