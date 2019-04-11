@@ -40,6 +40,19 @@ typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 typedef struct qdr_exchange          qdr_exchange_t;
 typedef struct qdr_edge_t            qdr_edge_t;
 
+ALLOC_DECLARE(qdr_address_t);
+ALLOC_DECLARE(qdr_address_config_t);
+ALLOC_DECLARE(qdr_node_t);
+ALLOC_DECLARE(qdr_router_ref_t);
+ALLOC_DECLARE(qdr_link_ref_t);
+ALLOC_DECLARE(qdr_link_route_t);
+ALLOC_DECLARE(qdr_auto_link_t);
+ALLOC_DECLARE(qdr_conn_identifier_t);
+ALLOC_DECLARE(qdr_connection_ref_t);
+
+ALLOC_DECLARE(qdr_connection_t);
+ALLOC_DECLARE(qdr_link_t);
+
 
 #include "core_link_endpoint.h"
 #include "core_events.h"
@@ -338,7 +351,6 @@ struct qdr_node_t {
     int               cost;
 };
 
-ALLOC_DECLARE(qdr_node_t);
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
 void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode);
 
@@ -352,7 +364,6 @@ struct qdr_router_ref_t {
     qdr_node_t *router;
 };
 
-ALLOC_DECLARE(qdr_router_ref_t);
 DEQ_DECLARE(qdr_router_ref_t, qdr_router_ref_list_t);
 
 typedef enum {
@@ -386,7 +397,7 @@ struct qdr_delivery_t {
     void                   *context;
     sys_atomic_t            ref_count;
     bool                    ref_counted;   /// Used to protect against ref count going 1 -> 0 -> 1
-    qdr_link_t             *link;
+    qdr_link_t_sp           link_sp;       /// Safe pointer to the link
     qdr_delivery_t         *peer;          /// Use this peer if the delivery has one and only one peer.
     qdr_delivery_ref_t     *next_peer_ref;
     qd_message_t           *msg;
@@ -494,7 +505,6 @@ struct qdr_link_t {
     uint32_t  core_ticks;
 };
 
-ALLOC_DECLARE(qdr_link_t);
 DEQ_DECLARE(qdr_link_t, qdr_link_list_t);
 
 struct qdr_link_ref_t {
@@ -502,7 +512,6 @@ struct qdr_link_ref_t {
     qdr_link_t *link;
 };
 
-ALLOC_DECLARE(qdr_link_ref_t);
 DEQ_DECLARE(qdr_link_ref_t, qdr_link_ref_list_t);
 
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
@@ -515,7 +524,6 @@ struct qdr_connection_ref_t {
     qdr_connection_t *conn;
 };
 
-ALLOC_DECLARE(qdr_connection_ref_t);
 DEQ_DECLARE(qdr_connection_ref_t, qdr_connection_ref_list_t);
 
 void qdr_add_connection_ref(qdr_connection_ref_list_t *ref_list, qdr_connection_t *conn);
@@ -580,7 +588,6 @@ struct qdr_address_t {
     int priority;
 };
 
-ALLOC_DECLARE(qdr_address_t);
 DEQ_DECLARE(qdr_address_t, qdr_address_list_t);
 
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment, qdr_address_config_t *config);
@@ -605,7 +612,6 @@ struct qdr_address_config_t {
     int                     priority;
 };
 
-ALLOC_DECLARE(qdr_address_config_t);
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
 void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr);
 bool qdr_is_addr_treatment_multicast(qdr_address_t *addr);
@@ -681,7 +687,6 @@ struct qdr_connection_t {
     bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
 };
 
-ALLOC_DECLARE(qdr_connection_t);
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
 
 #define QDR_IS_LINK_ROUTE_PREFIX(p) ((p) == QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_IN || (p) == QD_ITER_HASH_PREFIX_LINKROUTE_ADDR_OUT)
@@ -709,7 +714,6 @@ struct qdr_link_route_t {
     qdr_connection_t       *parent_conn;
 };
 
-ALLOC_DECLARE(qdr_link_route_t);
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
 void qdr_core_delete_auto_link (qdr_core_t *core,  qdr_auto_link_t *al);
 
@@ -755,7 +759,6 @@ struct qdr_auto_link_t {
     char                  *last_error;
 };
 
-ALLOC_DECLARE(qdr_auto_link_t);
 DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);
 
 
@@ -767,7 +770,6 @@ struct qdr_conn_identifier_t {
     qdr_auto_link_list_t       auto_link_refs;
 };
 
-ALLOC_DECLARE(qdr_conn_identifier_t);
 DEQ_DECLARE(qdr_exchange_t, qdr_exchange_list_t);
 
 typedef struct qdr_priority_sheaf_t {

@@ -79,6 +79,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool);
 /** De-allocate from a thread pool. Use via ALLOC_DECLARE */
 void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p);
 uint32_t qd_alloc_sequence(void *p);
+static inline void qd_nullify_safe_ptr(qd_alloc_safe_ptr_t *sp) { sp->ptr = 0; }
 
 /**
  * Declare functions new_T and alloc_T

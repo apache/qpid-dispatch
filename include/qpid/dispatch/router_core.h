@@ -660,7 +660,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_state);
-qdr_delivery_t *qdr_deliver_continue(qdr_delivery_t *delivery);
+qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery);
 
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 

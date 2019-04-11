@@ -115,7 +115,7 @@ void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t
 {
     uint64_t *tag = (uint64_t*) dlv->tag;
 
-    dlv->link          = ep->link;
+    set_safe_ptr_qdr_link_t(ep->link, &dlv->link_sp);
     dlv->settled       = presettled;
     dlv->presettled    = presettled;
     *tag               = core->next_tag++;
@@ -133,7 +133,7 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
     uint64_t       *tag = (uint64_t*) dlv->tag;
 
     ZERO(dlv);
-    dlv->link           = endpoint->link;
+    set_safe_ptr_qdr_link_t(endpoint->link, &dlv->link_sp);
     dlv->msg            = message;
     *tag                = core->next_tag++;
     dlv->tag_length = 8;

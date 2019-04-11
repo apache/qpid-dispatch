@@ -375,7 +375,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             // We should not continue processing the message after it has been discarded
             //
             if (!qd_message_is_discard(msg)) {
-                qdr_deliver_continue(delivery);
+                qdr_deliver_continue(router->router_core, delivery);
             }
         }
         else {
@@ -452,7 +452,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         // We should not continue processing the message after it has been discarded
         //
         if (!qd_message_is_discard(msg)) {
-            qdr_deliver_continue(delivery);
+            qdr_deliver_continue(router->router_core, delivery);
         }
 
         return next_delivery;
