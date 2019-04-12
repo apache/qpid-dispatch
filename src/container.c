@@ -310,7 +310,8 @@ static int close_handler(qd_container_t *container, pn_connection_t *conn, qd_co
     if (qd_conn)
         qd_conn->closed = true;
     close_links(container, conn, true);
-    notify_closed(container, qd_conn, qd_connection_get_context(qd_conn));
+    if (qd_conn)
+        notify_closed(container, qd_conn, qd_connection_get_context(qd_conn));
     return 0;
 }
 
