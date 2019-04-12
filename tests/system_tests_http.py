@@ -30,10 +30,12 @@ import ssl
 try:
     from urllib2 import urlopen, build_opener, HTTPSHandler
     from urllib2 import HTTPError, URLError
+    import urllib2 as urllib
 except ImportError:
     # python3
     from urllib.request import urlopen, build_opener, HTTPSHandler
     from urllib.error import HTTPError, URLError
+    import urllib
 
 from system_test import TIMEOUT, Process
 from subprocess import PIPE, STDOUT
@@ -48,7 +50,12 @@ class RouterTestHttp(TestCase):
 
     @classmethod
     def get(cls, url):
-        return urlopen(url, cafile=cls.ssl_file('ca-certificate.pem')).read().decode('utf-8')
+        if sys.version_info >= (2, 7):
+            http_data = urlopen(url, cafile=cls.ssl_file('ca-certificate.pem'))
+        else:
+            req = urllib.Request(url=url)
+            http_data = urlopen(req)
+        return http_data.read().decode('utf-8')
 
     @classmethod
     def get_cert(cls, url):
@@ -246,9 +253,12 @@ class RouterTestHttp(TestCase):
         self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[1])
 
         # authenticatePeer=True requires a client cert
-        self.assertRaises(URLError, self.assert_get, "https://localhost:%s" % r.ports[2])
-        # Provide client cert
-        self.assert_get_cert("https://localhost:%d" % r.ports[2])
+        self.assertRaises((URLError, ssl.SSLError), self.assert_get, "https://localhost:%s" % r.ports[2])
+
+        # could not provide key password on python 2.6
+        if sys.version_info >= (2, 7):
+            # Provide client cert
+            self.assert_get_cert("https://localhost:%d" % r.ports[2])
 
 
 if __name__ == '__main__':
