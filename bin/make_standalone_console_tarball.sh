@@ -90,6 +90,7 @@ echo Working Directory=${WORKDIR}
     cmake -DCMAKE_INSTALL_PREFIX=$INSTALL_DIR -DCMAKE_BUILD_TYPE=Release ../$PREFIX
     make install
     pushd $INSTALL_DIR/share/qpid-dispatch/
+    cp console/img/downstream_console_logo.png console/img/console_logo.png
     tar -c -h -z \
         --owner=root --group=root --numeric-owner \
         --mtime="${MTIME}" \

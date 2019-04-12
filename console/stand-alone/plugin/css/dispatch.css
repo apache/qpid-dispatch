@@ -2105,6 +2105,7 @@ svg {
   .masthead-icons {
     position: absolute;
     right: 1em;
+    top: 0;
     color: white;
     padding-top: 5px;
     font-size: large;

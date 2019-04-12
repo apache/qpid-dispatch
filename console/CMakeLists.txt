@@ -84,6 +84,8 @@ if(CONSOLE_INSTALL)
           set(IMAGES
             ${CONSOLE_SOURCE_DIR}/plugin/img/bg-modal-about-pf.png
             ${CONSOLE_SOURCE_DIR}/plugin/img/logo-alt.svg
+            ${CONSOLE_SOURCE_DIR}/plugin/img/console_logo.png
+            ${CONSOLE_SOURCE_DIR}/plugin/img/downstream_console_logo.png
           )
           ## Files copied to the css/ dir
           set(CSS_FONTS
