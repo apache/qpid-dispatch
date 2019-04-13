@@ -50,7 +50,7 @@
   },
   "devDependencies": {
     "@babel/core": "^7.3.4",
-    "@babel/preset-env": "^7.3.4",
+    "@babel/preset-env": "^7.4.3",
     "@types/mocha": "^5.2.2",
     "@types/node": "^10.3.3",
     "acorn": "^6.1.1",

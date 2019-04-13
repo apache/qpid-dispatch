@@ -757,13 +757,11 @@ export class TopologyController {
           if (!mouseup_node) return;
           // clicked on a circle
           clearPopups();
-          if (!d.normals) {
-            // circle was a router or a broker
-            if (utils.isArtemis(d)) {
-              const artemisPath = "/jmx/attributes?tab=artemis&con=Artemis";
-              window.location =
-                $location.protocol() + "://localhost:8161/hawtio" + artemisPath;
-            }
+          // circle was a broker
+          if (utils.isArtemis(d)) {
+            const host = d.container === '0.0.0.0' ? 'localhost' : d.container;
+            const artemis = `${$location.protocol()}://${host}:8161/console`;
+            window.open(artemis, 'artemis', 'fullscreen=yes, toolbar=yes,location = yes, directories = yes, status = yes, menubar = yes, scrollbars = yes, copyhistory = yes, resizable = yes');
             return;
           }
           d3.event.stopPropagation();
