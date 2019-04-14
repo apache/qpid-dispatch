@@ -22,6 +22,7 @@ project(qpid-dispatch C)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
+set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Set default build type. Must use FORCE because project() sets default to ""
 if (NOT CMAKE_BUILD_TYPE)
