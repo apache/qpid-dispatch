@@ -29,6 +29,5 @@ export INSTALL_DIR=$SOURCE_DIR/${2:-install}
 PYTHON_BIN=`type -P python || type -P python3`
 PYTHON_LIB=$(${PYTHON_BIN} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib(prefix='$INSTALL_DIR'))")
 
-export LD_LIBRARY_PATH=$INSTALL_DIR/lib64:$INSTALL_DIR/lib:$LD_LIBRARY_PATH
 export PYTHONPATH=$PYTHON_LIB:$PYTHONPATH
 export PATH=$INSTALL_DIR/sbin:$INSTALL_DIR/bin:$SOURCE_DIR/bin:$PATH
