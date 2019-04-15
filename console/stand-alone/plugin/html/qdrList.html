@@ -83,7 +83,8 @@ under the License.
                 <li ng-repeat="mode in modes" ng-show="isValid(mode)" ng-click="selectMode(mode)"
                     ng-class="{active : isModeSelected(mode)}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
             </ul>
-            <h4>{{selectedRecordName | to_trusted}}</h4>
+            <h4>{{selectedRecordName | to_trusted}} <span ng-if="isConnection(selectedEntity)"><button
+                        ng-click="killAConnection(selectedRecordName)" class="btn btn-danger">Kill</button></span></h4>
             <div ng-show="currentMode.id === 'attributes'" class="selectedItems">
                 <div ng-show="selectedRecordName === selectedEntity" class="no-content">There are no
                     {{selectedEntity | safePlural | to_trusted}}</div>
