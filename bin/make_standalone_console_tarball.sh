@@ -48,7 +48,6 @@ DIR=$PWD
 
 # This will get the latest created tag
 TAG=$(git describe --tags --always)
-echo Using tag ${TAG} to create archive
 
 ##
 ## Allow overrides to be passed on the cmdline
@@ -61,6 +60,13 @@ elif [ $# -ge 1 ]; then
         TAG=$2
     fi
 fi
+
+if [ "$DIR" = "." ]; then 
+    DIR=$PWD
+fi
+
+echo Using tag ${TAG} to create archive
+echo File will be output to ${DIR}
 
 # verify the tag exists
 git rev-list -1 tags/${TAG} -- >/dev/null || usage
