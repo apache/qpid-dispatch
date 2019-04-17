@@ -22,6 +22,7 @@
 
 #include "router_core_private.h"
 
+#define QDR_DELIVERY_TAG_MAX 32
 
 typedef enum {
     QDR_DELIVERY_NOWHERE = 0,
@@ -49,7 +50,7 @@ struct qdr_delivery_t {
     bool                    settled;
     bool                    presettled;
     qdr_delivery_where_t    where;
-    uint8_t                 tag[32];
+    uint8_t                 tag[QDR_DELIVERY_TAG_MAX];
     int                     tag_length;
     qd_bitmask_t           *link_exclusion;
     qdr_address_t          *tracking_addr;

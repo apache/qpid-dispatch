@@ -34,6 +34,7 @@ from system_test import QdManager
 from system_test import MgmtMsgProxy
 from test_broker import FakeBroker
 
+from proton import Delivery
 from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption, AtLeastOnce
@@ -663,6 +664,11 @@ class LinkRouteTest(TestCase):
         sender_address = self.routers[2].addresses[0]
         qdstat_address = self.routers[2].addresses[0]
         test = DeliveryTagsTest(sender_address, listening_address, qdstat_address)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_yyy_invalid_delivery_tag(self):
+        test = InvalidTagTest(self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
@@ -1988,6 +1994,63 @@ class ConnLinkRouteMgmtProxy(object):
             self._sender.send(f(*args, **kwargs))
             return self._proxy.response(self._receiver.receive())
         return _func
+
+
+class InvalidTagTest(MessagingHandler):
+    """Verify that a message with an invalid tag length is rejected
+    """
+    def __init__(self, router_addr):
+        super(InvalidTagTest, self).__init__(auto_accept=False, auto_settle=False)
+        self.test_conn = None
+        self.test_address = router_addr
+        self.tx_ct = 0;
+        self.accept_ct = 0;
+        self.reject_ct = 0;
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout expired: sent=%d rcvd=%d" % (self.tx_ct,
+                                                           self.accept_ct
+                                                           + self.reject_ct)
+        if self.test_conn:
+            self.test_conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.test_conn = event.container.connect(self.test_address)
+        rx = event.container.create_receiver(self.test_conn, "org.apache.foo")
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            event.receiver.flow(100)
+            event.container.create_sender(event.connection, "org.apache.foo")
+
+    def on_sendable(self, event):
+        if self.tx_ct < 10:
+            self.tx_ct += 1
+            if self.tx_ct == 5:
+                event.sender.send(Message(body="YO"), tag=str("X" * 64))
+            else:
+                event.sender.send(Message(body="YO"), tag=str("BLAH%d" %
+                                                              self.tx_ct))
+
+    def on_accepted(self, event):
+        self.accept_ct += 1
+        event.delivery.settle()
+        if self.accept_ct == 9 and self.reject_ct == 1:
+            event.connection.close()
+            self.timer.cancel()
+
+    def on_rejected(self, event):
+        self.reject_ct += 1
+        event.delivery.settle()
+
+    def on_message(self, event):
+        event.delivery.update(Delivery.ACCEPTED)
+        event.delivery.settle()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':

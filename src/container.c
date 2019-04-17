@@ -177,9 +177,8 @@ static void handle_link_open(qd_container_t *container, pn_link_t *pn_link)
 }
 
 
-static void do_receive(pn_delivery_t *pnd)
+static void do_receive(pn_link_t *pn_link, pn_delivery_t *pnd)
 {
-    pn_link_t     *pn_link  = pn_delivery_link(pnd);
     qd_link_t     *link     = (qd_link_t*) pn_link_get_context(pn_link);
 
     if (link) {
@@ -642,8 +641,8 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
         delivery = pn_event_delivery(event);
         pn_link  = pn_event_link(event);
 
-        if (pn_link_is_receiver(pn_link))
-            do_receive(delivery);
+        if (pn_delivery_readable(delivery))
+            do_receive(pn_link, delivery);
 
         if (pn_delivery_updated(delivery) || pn_delivery_settled(delivery)) {
             do_updated(delivery);

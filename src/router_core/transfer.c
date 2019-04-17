@@ -99,9 +99,6 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_data)
 {
-    if (tag_length > 32)
-        return 0;
-    
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
 
@@ -120,6 +117,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     action->args.connection.delivery = dlv;
     action->args.connection.more = !qd_message_receive_complete(msg);
     action->args.connection.tag_length = tag_length;
+    assert(tag_length <= QDR_DELIVERY_TAG_MAX);
     memcpy(action->args.connection.tag, tag, tag_length);
     qdr_action_enqueue(link->core, action);
     return dlv;
