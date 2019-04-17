@@ -699,18 +699,10 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     sys_mutex_unlock(conn->work_lock);
 
     //
-    // Free all the 'updated' references
+    // Free all the delivery references on the 'updated' list
     //
     qdr_delivery_ref_t *ref = DEQ_HEAD(updated_deliveries);
     while (ref) {
-        //
-        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
-        //
-        qdr_delivery_increment_counters_CT(core, ref->dlv);
-        qd_nullify_safe_ptr(&ref->dlv->link_sp);
-        //
-        // Now our reference
-        //
         qdr_delivery_decref_CT(core, ref->dlv, "qdr_link_cleanup_deliveries_CT - remove from updated list");
         qdr_del_delivery_ref(&updated_deliveries, ref);
         ref = DEQ_HEAD(updated_deliveries);
@@ -722,37 +714,10 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     // undelivereds' peer deliveries need to be released.
     //
     qdr_delivery_t *dlv = DEQ_HEAD(undelivered);
-    qdr_delivery_t *peer;
     while (dlv) {
         DEQ_REMOVE_HEAD(undelivered);
-        peer = qdr_delivery_first_peer_CT(dlv);
-        while (peer) {
-            if (peer->multicast) {
-                //
-                // If the address of the delivery is a multicast address and if there are no receivers for this address, the peer delivery must be released.
-                //
-                // If the address of the delivery is a multicast address and there is at least one other receiver for the address, dont do anything
-                //
-                if (DEQ_SIZE(peer->peers) == 1 || peer->peer)  {
-                    qdr_delivery_release_CT(core, peer);
-                }
-            }
-            else {
-                qdr_delivery_release_CT(core, peer);
-            }
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
-            peer = qdr_delivery_next_peer_CT(dlv);
-        }
 
-        //
-        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
-        //
-        qdr_delivery_increment_counters_CT(core, dlv);
-        qd_nullify_safe_ptr(&dlv->link_sp);
-
-        //
-        // Now the undelivered-list reference
-        //
+        qdr_delivery_link_dropped_CT(core, dlv, true);
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from undelivered list");
 
         dlv = DEQ_HEAD(undelivered);
@@ -775,28 +740,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
             dlv->tracking_addr = 0;
         }
 
-        if (!qdr_delivery_receive_complete(dlv)) {
-            qdr_delivery_set_aborted(dlv, true);
-            qdr_deliver_continue_peers_CT(core, dlv);
-        }
-
-        peer = qdr_delivery_first_peer_CT(dlv);
-        while (peer) {
-            if (link->link_direction == QD_OUTGOING)
-                qdr_delivery_failed_CT(core, peer);
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
-            peer = qdr_delivery_next_peer_CT(dlv);
-        }
-
-        //
-        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
-        //
-        qdr_delivery_increment_counters_CT(core, dlv);
-        qd_nullify_safe_ptr(&dlv->link_sp);
-
-        //
-        // Now the unsettled-list reference
-        //
+        qdr_delivery_link_dropped_CT(core, dlv, false);
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from unsettled list");
 
         dlv = DEQ_HEAD(unsettled);
@@ -807,26 +751,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     while (dlv) {
         DEQ_REMOVE_HEAD(settled);
 
-        if (!qdr_delivery_receive_complete(dlv)) {
-            qdr_delivery_set_aborted(dlv, true);
-            qdr_deliver_continue_peers_CT(core, dlv);
-        }
-
-        peer = qdr_delivery_first_peer_CT(dlv);
-        qdr_delivery_t *next_peer = 0;
-        while (peer) {
-            next_peer = qdr_delivery_next_peer_CT(dlv);
-            qdr_delivery_unlink_peers_CT(core, dlv, peer);
-            peer = next_peer;
-        }
-
-        //
-        // Updates global and link level delivery counters like presettled_deliveries, accepted_deliveries, released_deliveries etc
-        //
-        qdr_delivery_increment_counters_CT(core, dlv);
-        qd_nullify_safe_ptr(&dlv->link_sp);
-
-        // This decref is for the removing the delivery from the settled list
+        qdr_delivery_link_dropped_CT(core, dlv, false);
         qdr_delivery_decref_CT(core, dlv, "qdr_link_cleanup_deliveries_CT - remove from settled list");
         dlv = DEQ_HEAD(settled);
     }

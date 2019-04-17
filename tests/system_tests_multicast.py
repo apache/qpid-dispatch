@@ -57,7 +57,8 @@ W_THREADS=2
 # check for leaks of the following entities
 ALLOC_STATS=["qd_message_t",
              "qd_buffer_t",
-             "qdr_delivery_t"]
+             "qdr_delivery_in_t",
+             "qdr_delivery_out_t"]
 
 class MulticastLinearTest(TestCase):
     """

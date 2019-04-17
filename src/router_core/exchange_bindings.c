@@ -325,8 +325,20 @@ static int send_message(qdr_core_t     *core,
     qd_message_set_to_override_annotation(copy, to_field);  // frees to_field
     qd_message_set_phase_annotation(copy, next_hop->phase);
 
+    // ensure the multicast flag is set for in_delivery if we are forwarding to
+    // a multicast address otherwise the multicast forwarder will blow chunks.
+    bool orig_mcast = !!in_delivery ? in_delivery->multicast : false;
+    bool nh_multicast = qdr_is_addr_treatment_multicast(next_hop->qdr_addr);
+
+    if (in_delivery && in_delivery->multicast != nh_multicast) {
+        in_delivery->multicast = nh_multicast;
+    }
+
     count = qdr_forward_message_CT(core, next_hop->qdr_addr, copy, in_delivery, exclude_inprocess, control);
     qd_message_free(copy);
+
+    if (in_delivery)
+        in_delivery->multicast = orig_mcast;
 
     return count;
 }
