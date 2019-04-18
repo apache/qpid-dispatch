@@ -23,11 +23,13 @@ Provides tests related with allowed TLS protocol version restrictions.
 import os
 import ssl
 import sys
+import re
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
 from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
-from proton import SASL, Url, SSLDomain
+from proton import SASL, Url, SSLDomain, SSLUnavailable
 from proton.utils import BlockingConnection
+from distutils.version import StrictVersion
 import proton
 import cproton
 import unittest2 as unittest
@@ -39,6 +41,7 @@ class RouterTestSslBase(TestCase):
     """
     # If unable to determine which protocol versions are allowed system wide
     DISABLE_SSL_TESTING = False
+    DISABLE_REASON = "Unable to determine MinProtocol"
 
     @staticmethod
     def ssl_file(name):
@@ -96,10 +99,26 @@ class RouterTestSslClient(RouterTestSslBase):
     TIMEOUT = 3
 
     # If using OpenSSL 1.1 or greater, TLSv1.2 is always being allowed
+    OPENSSL_OUT_VER = None
     try:
         OPENSSL_VER_1_1_GT = ssl.OPENSSL_VERSION_INFO[:2] >= (1, 1)
     except AttributeError:
         OPENSSL_VER_1_1_GT = False
+
+    # If still False, try getting it from "openssl version" (command output)
+    # The version from ssl.OPENSSL_VERSION_INFO reflects OpenSSL version in which
+    # Python was compiled with, not the one installed in the system.
+    if not OPENSSL_VER_1_1_GT:
+        print("Python libraries SSL Version < 1.1")
+        try:
+            p = Popen(['openssl', 'version'], stdout=PIPE, universal_newlines=True)
+            openssl_out = p.communicate()[0]
+            m = re.search('[0-9]+\.[0-9]+\.[0-9]+', openssl_out)
+            OPENSSL_OUT_VER = m.group(0)
+            OPENSSL_VER_1_1_GT = StrictVersion(OPENSSL_OUT_VER) >= StrictVersion('1.1')
+            print("OpenSSL Version found = %s" % OPENSSL_OUT_VER)
+        except:
+            pass
 
     # Following variables define TLS versions allowed by openssl
     OPENSSL_MIN_VER = 0
@@ -119,9 +138,12 @@ class RouterTestSslClient(RouterTestSslBase):
             pass
 
     # Test if Proton supports TLSv1_3
-    dummydomain = SSLDomain(SSLDomain.MODE_CLIENT)
-    PROTON_HAS_TLSV1_3 = cproton.PN_OK == cproton.pn_ssl_domain_set_protocols(dummydomain._domain, "TLSv1.3")
-    print("TLSV1_3? Proton has: %s, OpenSSL has: %s" % (PROTON_HAS_TLSV1_3, OPENSSL_HAS_TLSV1_3))
+    try:
+        dummydomain = SSLDomain(SSLDomain.MODE_CLIENT)
+        PROTON_HAS_TLSV1_3 = cproton.PN_OK == cproton.pn_ssl_domain_set_protocols(dummydomain._domain, "TLSv1.3")
+        print("TLSV1_3? Proton has: %s, OpenSSL has: %s" % (PROTON_HAS_TLSV1_3, OPENSSL_HAS_TLSV1_3))
+    except SSLUnavailable:
+        PROTON_HAS_TLSV1_3 = False
 
     # When using OpenSSL >= 1.1 and python >= 3.7, we can retrieve OpenSSL min and max protocols
     if OPENSSL_VER_1_1_GT:
@@ -130,6 +152,7 @@ class RouterTestSslClient(RouterTestSslBase):
                 # If OpenSSL has 1.3 but proton won't let us turn it on and off then
                 # this test fails because v1.3 runs unexpectedly.
                 RouterTestSslBase.DISABLE_SSL_TESTING = True
+                RouterTestSslBase.DISABLE_REASON = "Proton version does not support TLSv1.3 but OpenSSL does"
             else:
                 OPENSSL_CTX = ssl.create_default_context()
                 OPENSSL_MIN_VER = OPENSSL_CTX.minimum_version
@@ -143,11 +166,13 @@ class RouterTestSslClient(RouterTestSslBase):
             # At this point we are not able to precisely determine what are the minimum and maximum
             # TLS versions allowed in the system, so tests will be disabled
             RouterTestSslBase.DISABLE_SSL_TESTING = True
+            RouterTestSslBase.DISABLE_REASON = "OpenSSL >= 1.1 but Python < 3.7 - Unable to determine MinProtocol"
     else:
         if OPENSSL_HAS_TLSV1_3 and not PROTON_HAS_TLSV1_3:
             # If OpenSSL has 1.3 but proton won't let us turn it on and off then
             # this test fails because v1.3 runs unexpectedly.
             RouterTestSslBase.DISABLE_SSL_TESTING = True
+            RouterTestSslBase.DISABLE_REASON = "Proton version does not support TLSv1.3 but OpenSSL does"
 
     @classmethod
     def setUpClass(cls):
@@ -426,7 +451,7 @@ class RouterTestSslClient(RouterTestSslBase):
                 self.OPENSSL_ALLOW_TLSV1_2 and tlsv1_2,
                 self.OPENSSL_ALLOW_TLSV1_3 and tlsv1_3]
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_only(self):
         """
         Expects TLSv1 only is allowed
@@ -434,7 +459,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([True, False, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS1))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_only(self):
         """
         Expects TLSv1.1 only is allowed
@@ -442,7 +467,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([False, True, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS11))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls12_only(self):
         """
         Expects TLSv1.2 only is allowed
@@ -450,7 +475,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([False, False, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls13_only(self):
         """
         Expects TLSv1.3 only is allowed
@@ -458,7 +483,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([False, False, False, True]),
                           self.get_allowed_protocols(self.PORT_TLS13))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls11_only(self):
         """
         Expects TLSv1 and TLSv1.1 only are allowed
@@ -466,7 +491,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([True, True, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_tls12_only(self):
         """
         Expects TLSv1 and TLSv1.2 only are allowed
@@ -474,7 +499,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([True, False, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls11_tls12_only(self):
         """
         Expects TLSv1.1 and TLSv1.2 only are allowed
@@ -482,7 +507,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([False, True, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls_all(self):
         """
         Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
@@ -490,7 +515,7 @@ class RouterTestSslClient(RouterTestSslBase):
         self.assertEquals(self.get_expected_tls_result([True, True, True, True]),
                           self.get_allowed_protocols(self.PORT_TLS_ALL))
 
-    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, "Unable to determine MinProtocol")
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_ssl_invalid(self):
         """
         Expects connection is rejected as SSL is no longer supported
