@@ -38,6 +38,7 @@
 #define QDR_CONFIG_AUTO_LINK_LINK_REF      12
 #define QDR_CONFIG_AUTO_LINK_OPER_STATUS   13
 #define QDR_CONFIG_AUTO_LINK_LAST_ERROR    14
+#define QDR_CONFIG_AUTO_LINK_ALTERNATE     15
 
 const char *qdr_config_auto_link_columns[] =
     {"name",
@@ -55,6 +56,7 @@ const char *qdr_config_auto_link_columns[] =
      "linkRef",
      "operStatus",
      "lastError",
+     "alternate",
      0};
 
 const char *CONFIG_AUTOLINK_TYPE = "org.apache.qpid.dispatch.router.config.autoLink";
@@ -160,6 +162,10 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
             qd_compose_insert_string(body, al->last_error);
         else
             qd_compose_insert_null(body);
+        break;
+
+    case QDR_CONFIG_AUTO_LINK_ALTERNATE:
+        qd_compose_insert_bool(body, al->alternate);
         break;
     }
 }
@@ -391,7 +397,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         qd_parsed_field_t *phase_field      = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_PHASE]);
         qd_parsed_field_t *connection_field = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONNECTION]);
         qd_parsed_field_t *container_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_CONTAINER_ID]);
-
+        qd_parsed_field_t *alternate_field  = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_ALTERNATE]);
 
         qd_parsed_field_t *external_addr    = qd_parse_value_by_key(in_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_EXT_ADDRESS]);
         if (!external_addr) {
@@ -408,6 +414,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
             break;
         }
 
+        bool alternate = !!alternate_field ? qd_parse_as_bool(alternate_field) : false;
 
         //
         // Addr and direction fields are mandatory.  Fail if they're not both here.
@@ -432,7 +439,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         // Use the specified phase if present.  Otherwise default based on the direction:
         // Phase 0 for outgoing links and phase 1 for incoming links.
         //
-        long phase = phase_field ? qd_parse_as_long(phase_field) : (dir == QD_OUTGOING ? 0 : 1);
+        long phase = phase_field ? qd_parse_as_long(phase_field) : ((dir == QD_OUTGOING || !!alternate) ? 0 : 1);
 
         //
         // Validate the phase
@@ -447,7 +454,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         //
         // The request is good.  Create the entity.
         //
-        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, container_field, connection_field, external_addr);
+        al = qdr_route_add_auto_link_CT(core, name, addr_field, dir, phase, container_field, connection_field, external_addr, alternate);
 
         //
         // Compose the result map for the response.

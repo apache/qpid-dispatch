@@ -444,6 +444,7 @@ struct qdr_link_t {
     bool                     edge;              ///< True if this link is in an edge-connection
     bool                     processing;        ///< True if an IO thread is currently handling this link
     bool                     ready_to_free;     ///< True if the core thread wanted to clean up the link but it was processing
+    bool                     alternate;         ///< True if this link is attached to an alternate destination for an address
     char                    *strip_prefix;
     char                    *insert_prefix;
     bool                     terminus_survives_disconnect;
@@ -511,6 +512,12 @@ struct qdr_address_t {
     uint64_t                   cost_epoch;
 
     //
+    // State for tracking alternate destinations for undeliverable deliveries
+    //
+    qdr_address_t *alternate;     ///< Pointer to this address's alternate destination
+    qdr_address_t *alternate_for; ///< Pointer to the address that this is an alternate for
+
+    //
     // State for "closest" treatment
     //
     qd_bitmask_t *closest_remotes;
@@ -557,6 +564,7 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
 void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
 void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
+void qdr_setup_alternate_address_CT(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
@@ -564,6 +572,7 @@ struct qdr_address_config_t {
     uint64_t                identity;
     uint32_t                ref_count;
     char                   *pattern;
+    bool                    alternate;
     bool                    is_prefix;
     qd_address_treatment_t  treatment;
     int                     in_phase;
@@ -717,6 +726,7 @@ struct qdr_auto_link_t {
     qdr_auto_link_state_t  state;
     qdr_core_timer_t      *retry_timer; // If the auto link attach fails or gets disconnected, this timer retries the attach.
     char                  *last_error;
+    bool                   alternate;   // True iff this auto-link attaches to an alternate destination for an address.
 };
 
 DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);

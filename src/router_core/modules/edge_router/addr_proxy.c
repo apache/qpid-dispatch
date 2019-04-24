@@ -89,9 +89,24 @@ static qdr_terminus_t *qdr_terminus_normal(const char *addr)
 }
 
 
+static void set_alternate_capability(qdr_terminus_t *term)
+{
+    qdr_terminus_add_capability(term, QD_CAPABILITY_ALTERNATE);
+}
+
+
 static void set_waypoint_capability(qdr_terminus_t *term, char phase_char, qd_direction_t dir, int in_phase, int out_phase)
 {
-    int phase = (int) (phase_char - '0');
+    int phase      = (int) (phase_char - '0');
+    bool alternate = phase_char == QD_ITER_HASH_PHASE_ALTERNATE;
+    char cap[16];
+    char suffix[3];
+
+    if (alternate) {
+        strncpy(cap, QD_CAPABILITY_ALTERNATE, 15);
+        qdr_terminus_add_capability(term, cap);
+        return;
+    }
 
     //
     // For links that are outgoing on the in_phase or incoming on the out_phase, don't set the
@@ -112,11 +127,8 @@ static void set_waypoint_capability(qdr_terminus_t *term, char phase_char, qd_di
     // In all remaining cases, the new links are acting as waypoints.
     //
     int ordinal = phase + (dir == QD_OUTGOING ? 0 : 1);
-    char cap[16];
-    char suffix[3];
 
-    strncpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT, 12);
-    //strcpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT);
+    strncpy(cap, QD_CAPABILITY_WAYPOINT_DEFAULT, 15);
     suffix[0] = '.';
     suffix[1] = '0' + ordinal;
     suffix[2] = '\0';
@@ -129,13 +141,16 @@ static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t
 {
     if (addr->edge_inlink == 0) {
         qdr_terminus_t *term = qdr_terminus_normal(key + 2);
+        const char     *key  = (char*) qd_hash_key_by_handle(addr->hash_handle);
 
-        if (addr->config && addr->config->out_phase > 0) {
+        if (key[1] == QD_ITER_HASH_PHASE_ALTERNATE) {
+            set_alternate_capability(term);
+
+        } else if (addr->config && addr->config->out_phase > 0) {
             //
             // If this address is configured as multi-phase, we may need to
             // add waypoint capabilities to the terminus.
             //
-            const char *key = (char*) qd_hash_key_by_handle(addr->hash_handle);
             if (key[0] == QD_ITER_HASH_PREFIX_MOBILE)
                 set_waypoint_capability(term, key[1], QD_INCOMING, addr->config->in_phase, addr->config->out_phase);
         }
@@ -168,8 +183,12 @@ static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_
         // for the address (see on_transfer below).
         //
         qdr_terminus_t *term = qdr_terminus_normal(key + 2);
+        const char     *key  = (char*) qd_hash_key_by_handle(addr->hash_handle);
 
-        if (addr->config && addr->config->out_phase > 0) {
+        if (key[1] == QD_ITER_HASH_PHASE_ALTERNATE) {
+            set_alternate_capability(term);
+
+        } else if (addr->config && addr->config->out_phase > 0) {
             //
             // If this address is configured as multi-phase, we may need to
             // add waypoint capabilities to the terminus.
@@ -259,6 +278,9 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 //
                 if (DEQ_SIZE(addr->rlinks) > 0) {
                     if (DEQ_SIZE(addr->rlinks) == 1) {
+                        //
+                        // If there's only one link and it's on the edge connection, ignore the address.
+                        //
                         qdr_link_ref_t *ref = DEQ_HEAD(addr->rlinks);
                         if (ref->link->conn != ap->edge_conn)
                             add_inlink(ap, key, addr);
@@ -270,13 +292,27 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 // If the address has more than zero attached sources, create an outgoing link
                 // to the interior to signal the presence of local producers.
                 //
+                bool add = false;
                 if (DEQ_SIZE(addr->inlinks) > 0) {
                     if (DEQ_SIZE(addr->inlinks) == 1) {
+                        //
+                        // If there's only one link and it's on the edge connection, ignore the address.
+                        //
                         qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
                         if (ref->link->conn != ap->edge_conn)
-                            add_outlink(ap, key, addr);
+                            add = true;
                     } else
+                        add = true;
+
+                    if (add) {
                         add_outlink(ap, key, addr);
+
+                        //
+                        // If the address has an alternate address, add an outlink for that as well
+                        //
+                        if (!!addr->alternate)
+                            add_outlink(ap, key, addr->alternate);
+                    }
                 }
             }
             addr = DEQ_NEXT(addr);
@@ -345,7 +381,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     case QDRC_EVENT_ADDR_BECAME_SOURCE :
         link_ref = DEQ_HEAD(addr->inlinks);
-        if (link_ref->link->conn != ap->edge_conn)
+        if (!link_ref || link_ref->link->conn != ap->edge_conn)
             add_outlink(ap, key, addr);
         break;
 
@@ -359,7 +395,7 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
 
     case QDRC_EVENT_ADDR_ONE_SOURCE :
         link_ref = DEQ_HEAD(addr->inlinks);
-        if (link_ref->link->conn == ap->edge_conn)
+        if (!link_ref || link_ref->link->conn == ap->edge_conn)
             del_outlink(ap, addr);
         break;
 

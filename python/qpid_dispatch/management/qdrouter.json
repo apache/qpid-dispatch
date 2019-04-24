@@ -1167,6 +1167,13 @@
                     "description": "All messages sent to this address which lack an intrinsic priority will be assigned this priority.",
                     "create": true,
                     "required": false
+                },
+                "alternate": {
+                    "type": "boolean",
+                    "description": "If false, undeliverable messages are released.  If true, undeliverable messages shall be re-delivered to an alternate destination.  The alternate destination uses the same address, but is attached using an autoLink with 'alternate' enabled or a link with the qd.alternate capability.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 }
             }
         },
@@ -1277,6 +1284,14 @@
                     "deprecationName": "externalAddr",
                     "create": true,
                     "required": false
+                },
+                "alternate":
+                {
+                    "type": "boolean",
+                    "description": "If true, this auto-link is attached to an alternate destination for an address.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 },
                 "linkRef": {
                     "type": "string",

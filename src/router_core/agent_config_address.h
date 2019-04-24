@@ -35,7 +35,7 @@ void qdra_config_address_get_CT(qdr_core_t    *core,
 char *qdra_config_address_validate_pattern_CT(qd_parsed_field_t *pattern_field,
                                               bool is_prefix,
                                               const char **error);
-#define QDR_CONFIG_ADDRESS_COLUMN_COUNT 10
+#define QDR_CONFIG_ADDRESS_COLUMN_COUNT 11
 
 const char *qdr_config_address_columns[QDR_CONFIG_ADDRESS_COLUMN_COUNT + 1];
 
