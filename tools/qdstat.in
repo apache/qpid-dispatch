@@ -326,6 +326,7 @@ class BusManager(Node):
             try:
                 rows.append(('Deliveries Delayed > 1sec', router.deliveriesDelayed1Sec))
                 rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
+                rows.append(('Deliveries to Fallback', router.deliveriesRedirectedToFallback))
             except:
                 pass
             rows.append(('Ingress Count', router.deliveriesIngress))
@@ -492,7 +493,7 @@ class BusManager(Node):
 
         rows = []
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
-                'containerCount', 'deliveriesIngress', 'deliveriesEgress',
+                'containerCount', 'deliveriesIngress', 'deliveriesEgress', 'deliveriesRedirectedToFallback',
                 'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name', 'priority')
 
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
@@ -514,6 +515,7 @@ class BusManager(Node):
         heads.append(Header("in", Header.COMMAS))
         heads.append(Header("out", Header.COMMAS))
         heads.append(Header("thru", Header.COMMAS))
+        heads.append(Header("fallback", Header.COMMAS))
         if self.opts.verbose:
             heads.append(Header("to-proc", Header.COMMAS))
             heads.append(Header("from-proc", Header.COMMAS))
@@ -533,6 +535,10 @@ class BusManager(Node):
             row.append(addr.deliveriesIngress)
             row.append(addr.deliveriesEgress)
             row.append(addr.deliveriesTransit)
+            try:
+                row.append(addr.deliveriesRedirectedToFallback)
+            except:
+                row.append("-")
             if self.opts.verbose:
                 row.append(addr.deliveriesToContainer)
                 row.append(addr.deliveriesFromContainer)

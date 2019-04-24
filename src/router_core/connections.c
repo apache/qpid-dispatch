@@ -1171,7 +1171,8 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
         && addr->ref_count == 0
         && !addr->block_deletion
         && addr->tracked_deliveries == 0
-        && addr->core_endpoint == 0) {
+        && addr->core_endpoint == 0
+        && addr->fallback_for == 0) {
         qdr_core_remove_address(core, addr);
     }
 }
@@ -1616,7 +1617,10 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
             // Issue credit if this is an anonymous link or if its address has at least one reachable destination.
             //
             qdr_address_t *addr = link->owning_addr;
-            if (!addr || (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes)))
+            if (!addr || (DEQ_SIZE(addr->subscriptions) || DEQ_SIZE(addr->rlinks) || qd_bitmask_cardinality(addr->rnodes)
+                          || (!!addr->fallback && (DEQ_SIZE(addr->fallback->subscriptions)
+                                                    || DEQ_SIZE(addr->fallback->rlinks)
+                                                    || qd_bitmask_cardinality(addr->fallback->rnodes)))))
                 qdr_link_issue_credit_CT(core, link, link->capacity, false);
             break;
 

@@ -32,6 +32,7 @@
 #define QDR_CONFIG_ADDRESS_OUT_PHASE     7
 #define QDR_CONFIG_ADDRESS_PATTERN       8
 #define QDR_CONFIG_ADDRESS_PRIORITY      9
+#define QDR_CONFIG_ADDRESS_FALLBACK      10
 
 const char *qdr_config_address_columns[] =
     {"name",
@@ -44,6 +45,7 @@ const char *qdr_config_address_columns[] =
      "egressPhase",
      "pattern",
      "priority",
+     "fallback",
      0};
 
 const char *CONFIG_ADDRESS_TYPE = "org.apache.qpid.dispatch.router.config.address";
@@ -124,6 +126,10 @@ static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int 
 
     case QDR_CONFIG_ADDRESS_PRIORITY:
         qd_compose_insert_int(body, addr->priority);
+        break;
+
+    case QDR_CONFIG_ADDRESS_FALLBACK:
+        qd_compose_insert_bool(body, addr->fallback);
         break;
     }
 }
@@ -347,6 +353,13 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         qd_parsed_field_t *in_phase_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_IN_PHASE]);
         qd_parsed_field_t *out_phase_field = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_OUT_PHASE]);
         qd_parsed_field_t *priority_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_PRIORITY]);
+        qd_parsed_field_t *fallback_field  = qd_parse_value_by_key(in_body, qdr_config_address_columns[QDR_CONFIG_ADDRESS_FALLBACK]);
+
+        bool waypoint  = waypoint_field  ? qd_parse_as_bool(waypoint_field)  : false;
+        long in_phase  = in_phase_field  ? qd_parse_as_long(in_phase_field)  : -1;
+        long out_phase = out_phase_field ? qd_parse_as_long(out_phase_field) : -1;
+        long priority  = priority_field  ? qd_parse_as_long(priority_field)  : -1;
+        bool fallback  = fallback_field  ? qd_parse_as_bool(fallback_field)  : false;
 
         //
         // Either a prefix or a pattern field is mandatory.  Prefix and pattern
@@ -358,6 +371,11 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         } else if (prefix_field && pattern_field) {
             msg = "Cannot specify both a 'prefix' and a 'pattern' attribute";
         }
+
+        if (fallback && (waypoint || in_phase > 0 || out_phase > 0)) {
+            msg = "Fallback cannot be specified with waypoint or non-zero ingress and egress phases";
+        }
+            
         if (msg) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = msg;
@@ -388,12 +406,6 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
             break;
         }
-
-
-        bool waypoint  = waypoint_field  ? qd_parse_as_bool(waypoint_field) : false;
-        long in_phase  = in_phase_field  ? qd_parse_as_long(in_phase_field)  : -1;
-        long out_phase = out_phase_field ? qd_parse_as_long(out_phase_field) : -1;
-        long priority  = priority_field  ? qd_parse_as_long(priority_field)  : -1;
 
         //
         // Handle the address-phasing logic.  If the phases are provided, use them.  Otherwise
@@ -429,7 +441,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         //
 
         addr = new_qdr_address_config_t();
-        DEQ_ITEM_INIT(addr);
+        ZERO(addr);
         addr->ref_count = 1; // Represents the reference from the addr_config list
         addr->name      = name ? (char*) qd_iterator_copy(name) : 0;
         addr->identity  = qdr_identifier(core);
@@ -439,6 +451,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         addr->is_prefix = !!prefix_field;
         addr->pattern   = pattern;
         addr->priority  = priority;
+        addr->fallback  = fallback;
         pattern = 0;
 
         qd_iterator_reset_view(iter, ITER_VIEW_ALL);

@@ -71,6 +71,7 @@ class PolicyKeys(object):
     KW_ALLOW_ANONYMOUS_SENDER    = "allowAnonymousSender"
     KW_ALLOW_USERID_PROXY        = "allowUserIdProxy"
     KW_ALLOW_WAYPOINT_LINKS      = "allowWaypointLinks"
+    KW_ALLOW_FALLBACK_LINKS      = "allowFallbackLinks"
     KW_ALLOW_DYNAMIC_LINK_ROUTES = "allowDynamicLinkRoutes"
     KW_ALLOW_ADMIN_STATUS_UPDATE = "allowAdminStatusUpdate"
     KW_SOURCES                   = "sources"
@@ -147,6 +148,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER,
         PolicyKeys.KW_ALLOW_USERID_PROXY,
         PolicyKeys.KW_ALLOW_WAYPOINT_LINKS,
+        PolicyKeys.KW_ALLOW_FALLBACK_LINKS,
         PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES,
         PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE,
         PolicyKeys.KW_SOURCES,
@@ -251,6 +253,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_ALLOW_ANONYMOUS_SENDER] = False
         policy_out[PolicyKeys.KW_ALLOW_USERID_PROXY] = False
         policy_out[PolicyKeys.KW_ALLOW_WAYPOINT_LINKS] = True
+        policy_out[PolicyKeys.KW_ALLOW_FALLBACK_LINKS] = True
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES] = True
         policy_out[PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE] = True
         policy_out[PolicyKeys.KW_SOURCES] = ''
@@ -290,6 +293,7 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_ALLOW_DYNAMIC_SRC,
                          PolicyKeys.KW_ALLOW_USERID_PROXY,
                          PolicyKeys.KW_ALLOW_WAYPOINT_LINKS,
+                         PolicyKeys.KW_ALLOW_FALLBACK_LINKS,
                          PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES,
                          PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE
                          ]:

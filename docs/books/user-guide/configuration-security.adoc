@@ -630,6 +630,9 @@ If true, connections from users in this group are permitted to attach links usin
 `allowDynamicLinkRoutes`::
 If true, connections from users in this group may dynamically create connection-scoped link route destinations.  This allows endpoints to act as link route destinations (i.e. brokers) without the need for configuring link-routes.  If false, creation of dynamic link route destintations is forbidden.
 
+`allowFallbackLinks`::
+If true, connections from users in this group are permitted to attach links using fallback-link capabilities.  This allows endpoints to act as fallback destinations (and sources) for addresses that have fallback enabled.  If false, use of fallback-link capabilities is forbidden.
+
 `sources` | `sourcePattern`::
 A list of AMQP source addresses from which users in this group may receive messages.
 +

@@ -92,5 +92,51 @@
         }
       }
     }
+  ],
+  ["vhost", {
+      "hostname": "capabilities1.host.com",
+      "maxConnections": 50,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "remoteHosts": "*",
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":            3,
+          "maxReceivers":          5,
+          "allowWaypointLinks": true,
+          "allowFallbackLinks": false,
+          "sources": "*",
+          "targets": "*"
+        }
+      }
+    }
+  ],
+  ["vhost", {
+      "hostname": "capabilities2.host.com",
+      "maxConnections": 50,
+      "maxConnectionsPerUser": 2,
+      "maxConnectionsPerHost": 4,
+      "allowUnknownUser": true,
+      "groups": {
+        "$default" : {
+          "remoteHosts": "*",
+          "maxFrameSize":     222222,
+          "maxMessageSize":   222222,
+          "maxSessionWindow": 222222,
+          "maxSessions":           2,
+          "maxSenders":            3,
+          "maxReceivers":          5,
+          "allowWaypointLinks": false,
+          "allowFallbackLinks": true,
+          "sources": "*",
+          "targets": "*"
+        }
+      }
+    }
   ]
 ]

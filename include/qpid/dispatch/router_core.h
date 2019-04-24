@@ -174,6 +174,7 @@ typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* 
  * @param strip_annotations_in True if configured to remove annotations on inbound messages.
  * @param strip_annotations_out True if configured to remove annotations on outbound messages.
  * @param policy_allow_dynamic_link_routes True if this connection is allowed by policy to create link route destinations.
+ * @param policy_allow_admin_status_update True if this connection is allowed to modify admin_status on other connections.
  * @param link_capacity The capacity, in deliveries, for links in this connection.
  * @param vhost If non-null, this is the vhost of the connection to be used for multi-tenancy.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
@@ -853,6 +854,7 @@ typedef struct {
     size_t deliveries_egress_route_container;
     size_t deliveries_delayed_1sec;
     size_t deliveries_delayed_10sec;
+    size_t deliveries_redirected_to_fallback;
 }  qdr_global_stats_t;
 ALLOC_DECLARE(qdr_global_stats_t);
 typedef void (*qdr_global_stats_handler_t) (void *context);
