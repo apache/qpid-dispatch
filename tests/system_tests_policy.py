@@ -28,9 +28,9 @@ import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout, Url
+from proton import ConnectionException, Timeout, Url, symbol
 from proton.handlers import MessagingHandler
-from proton.reactor import Container
+from proton.reactor import Container, ReceiverOption
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
@@ -365,6 +365,45 @@ class PolicyVhostOverride(TestCase):
         self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
 
         bs1.close()
+
+
+class Capabilities(ReceiverOption):
+    def __init__(self, value):
+        self.value = value
+
+    def apply(self, receiver):
+        receiver.source.capabilities.put_object(symbol(self.value))
+
+
+class PolicyTerminusCapabilities(TestCase):
+    """
+    Verify that specifying a policy folder from the router conf file
+    effects loading the policies in that folder.
+    This test relies on qdmanage utility.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyTerminusCapabilities, cls).setUpClass()
+        policy_config_path = os.path.join(DIR, 'policy-3')
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('policy', {'maxConnections': 2, 'policyDir': policy_config_path, 'enableVhostPolicy': 'true'}),
+            ('listener', {'port': cls.tester.get_port(), 'policyVhost': 'capabilities1.host.com'}),
+            ('listener', {'port': cls.tester.get_port(), 'policyVhost': 'capabilities2.host.com'})
+        ])
+
+        cls.router = cls.tester.qdrouterd('PolicyTerminusCapabilities', config, wait=True)
+
+    def test_forbid_waypoint(self):
+        br1 = BlockingConnection(self.router.addresses[1])
+        self.assertRaises(LinkDetached, br1.create_receiver, address="ok1", options=Capabilities('qd.waypoint_1'))
+        br1.close()
+
+    def test_forbid_fallback(self):
+        br1 = BlockingConnection(self.router.addresses[0])
+        self.assertRaises(LinkDetached, br1.create_receiver, address="ok2", options=Capabilities('qd.fallback'))
+        br1.close()
 
 
 class InterrouterLinksAllowed(TestCase):

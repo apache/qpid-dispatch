@@ -333,12 +333,13 @@ qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment
 {
     if (treatment == QD_TREATMENT_UNAVAILABLE)
         return 0;
+
     qdr_address_t *addr = new_qdr_address_t();
     ZERO(addr);
-    addr->config    = config;
-    addr->treatment = treatment;
-    addr->forwarder = qdr_forwarder_CT(core, treatment);
-    addr->rnodes    = qd_bitmask(0);
+    addr->config     = config;
+    addr->treatment  = treatment;
+    addr->forwarder  = qdr_forwarder_CT(core, treatment);
+    addr->rnodes     = qd_bitmask(0);
     addr->add_prefix = 0;
     addr->del_prefix = 0;
     addr->priority   = -1;
@@ -518,6 +519,11 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
         cr = DEQ_HEAD(addr->conns);
     }
 
+    if (!!addr->fallback) {
+        addr->fallback->fallback_for = 0;
+        qdr_check_addr_CT(core, addr->fallback);
+    }
+
     free(addr->add_prefix);
     free(addr->del_prefix);
     free_qdr_address_t(addr);
@@ -542,10 +548,15 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
     } else {  // link->link_direction == QD_INCOMING
         qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        if (DEQ_SIZE(addr->inlinks) == 1)
+        if (DEQ_SIZE(addr->inlinks) == 1) {
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr);
-        else if (DEQ_SIZE(addr->inlinks) == 2)
+            if (!!addr->fallback && !link->fallback)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr->fallback);
+        } else if (DEQ_SIZE(addr->inlinks) == 2) {
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr);
+            if (!!addr->fallback && !link->fallback)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr->fallback);
+        }
     }
 }
 
@@ -566,10 +577,15 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
     } else {
         bool removed = qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (removed) {
-            if (DEQ_SIZE(addr->inlinks) == 0)
+            if (DEQ_SIZE(addr->inlinks) == 0) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr);
-            else if (DEQ_SIZE(addr->inlinks) == 1)
+                if (!!addr->fallback && !link->fallback)
+                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr->fallback);
+            } else if (DEQ_SIZE(addr->inlinks) == 1) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr);
+                if (!!addr->fallback && !link->fallback)
+                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
+            }
         }
     }
 }
@@ -594,6 +610,57 @@ void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
         qdr_post_mobile_removed_CT(core, key);
         qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
     }
+}
+
+
+/**
+ * Search for, and possibly create, the fallback address based on the
+ * fallback flag in the address's configuration.  This will be used in
+ * the forwarding paths to handle undeliverable messages with fallback destinations.
+ */
+void qdr_setup_fallback_address_CT(qdr_core_t *core, qdr_address_t *addr)
+{
+#define QDR_SETUP_FALLBACK_BUFFER_SIZE 256
+    char  buffer[QDR_SETUP_FALLBACK_BUFFER_SIZE];
+    char *alt_text       = buffer;
+    bool  buffer_on_heap = false;
+
+    char   *address_text = (char*) qd_hash_key_by_handle(addr->hash_handle);
+    size_t  alt_length   = strlen(address_text) + 1;
+
+    //
+    // If this is a fallback address for a primary address that hasn't been seen
+    // yet, simply exit without doing anything.
+    //
+    if (address_text[1] == QD_ITER_HASH_PHASE_FALLBACK)
+        return;
+
+    if (alt_length > QDR_SETUP_FALLBACK_BUFFER_SIZE) {
+        alt_text       = (char*) malloc(alt_length);
+        buffer_on_heap = true;
+    }
+
+    strcpy(alt_text, address_text);
+    alt_text[1] = QD_ITER_HASH_PHASE_FALLBACK;
+
+    qd_iterator_t *alt_iter = qd_iterator_string(alt_text, ITER_VIEW_ALL);
+    qdr_address_t *alt_addr = 0;
+
+    qd_hash_retrieve(core->addr_hash, alt_iter, (void**) &alt_addr);
+    if (!alt_addr) {
+        alt_addr = qdr_address_CT(core, QD_TREATMENT_ANYCAST_BALANCED, 0);
+        qd_hash_insert(core->addr_hash, alt_iter, alt_addr, &alt_addr->hash_handle);
+        DEQ_INSERT_TAIL(core->addrs, alt_addr);
+    }
+
+    assert(alt_addr != addr);
+    assert(alt_addr->fallback_for == 0);
+    addr->fallback         = alt_addr;
+    alt_addr->fallback_for = addr;
+
+    qd_iterator_free(alt_iter);
+    if (buffer_on_heap)
+        free(alt_text);
 }
 
 
@@ -778,6 +845,7 @@ static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, 
         stats->deliveries_egress_route_container = core->deliveries_egress_route_container;
         stats->deliveries_delayed_1sec = core->deliveries_delayed_1sec;
         stats->deliveries_delayed_1sec = core->deliveries_delayed_10sec;
+        stats->deliveries_redirected_to_fallback = core->deliveries_redirected;
     }
     qdr_general_work_t *work = qdr_general_work(qdr_post_global_stats_response);
     work->stats_handler = action->args.stats_request.handler;

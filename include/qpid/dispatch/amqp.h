@@ -137,6 +137,7 @@ extern const char * const QD_CAPABILITY_WAYPOINT6;
 extern const char * const QD_CAPABILITY_WAYPOINT7;
 extern const char * const QD_CAPABILITY_WAYPOINT8;
 extern const char * const QD_CAPABILITY_WAYPOINT9;
+extern const char * const QD_CAPABILITY_FALLBACK;
 /// @}
 
 /** @name Dynamic Node Properties */

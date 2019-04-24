@@ -256,6 +256,7 @@ static void qdr_auto_link_activate_CT(qdr_core_t *core, qdr_auto_link_t *al, qdr
             al->link = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, al->dir, source, target);
             al->link->auto_link = al;
             al->link->phase     = al->phase;
+            al->link->fallback  = al->fallback;
             al->state = QDR_AUTO_LINK_STATE_ATTACHING;
         }
         else {
@@ -456,7 +457,8 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
                                             int                  phase,
                                             qd_parsed_field_t   *container_field,
                                             qd_parsed_field_t   *connection_field,
-                                            qd_parsed_field_t   *external_addr)
+                                            qd_parsed_field_t   *external_addr,
+                                            bool                 fallback)
 {
     qdr_auto_link_t *al = new_qdr_auto_link_t();
 
@@ -470,13 +472,15 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     al->phase         = phase;
     al->state         = QDR_AUTO_LINK_STATE_INACTIVE;
     al->external_addr = external_addr ? (char*) qd_iterator_copy(qd_parse_raw(external_addr)) : 0;
+    al->fallback      = fallback;
 
     //
     // Find or create an address for the auto_link destination
     //
+    char phase_char = dir == QD_OUTGOING ? (fallback ? QD_ITER_HASH_PHASE_FALLBACK : phase + '0') : phase + '0';
     qd_iterator_t *iter = qd_parse_raw(addr_field);
     qd_iterator_reset_view(iter, ITER_VIEW_ADDRESS_HASH);
-    qd_iterator_annotate_phase(iter, (char) phase + '0');
+    qd_iterator_annotate_phase(iter, phase_char);
 
     qd_hash_retrieve(core->addr_hash, iter, (void*) &al->addr);
     if (!al->addr) {
@@ -490,6 +494,12 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
         al->addr = qdr_address_CT(core, treatment, addr_config);
         DEQ_INSERT_TAIL(core->addrs, al->addr);
         qd_hash_insert(core->addr_hash, iter, al->addr, &al->addr->hash_handle);
+
+        //
+        // If we just created an address that needs a fallback, set up the fallback now.
+        //
+        if (!!addr_config && addr_config->fallback && dir == QD_INCOMING)
+            qdr_setup_fallback_address_CT(core, al->addr);
     }
 
     al->addr->ref_count++;

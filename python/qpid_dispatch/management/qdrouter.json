@@ -588,7 +588,12 @@
                     "type": "integer",
                     "description":"Number of deliveries that were sent to route container connections.",
                     "graph": true
-                }                
+                },
+                "deliveriesRedirectedToFallback": {
+                    "type": "integer",
+                    "description": "Number of deliveries that were sent to the fallback destination due to the primary destination being unreachable.",
+                    "graph": true
+                }
             }
         },       
         "sslProfile": {
@@ -1167,6 +1172,13 @@
                     "description": "All messages sent to this address which lack an intrinsic priority will be assigned this priority.",
                     "create": true,
                     "required": false
+                },
+                "enableFallback": {
+                    "type": "boolean",
+                    "description": "If false, undeliverable messages are released.  If true, undeliverable messages shall be re-delivered to a fallback destination.  The fallback destination uses the same address, but is attached using an autoLink with 'fallback' enabled or a link with the qd.fallback capability.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 }
             }
         },
@@ -1277,6 +1289,14 @@
                     "deprecationName": "externalAddr",
                     "create": true,
                     "required": false
+                },
+                "fallback":
+                {
+                    "type": "boolean",
+                    "description": "If true, this auto-link is attached to a fallback destination for an address.",
+                    "create": true,
+                    "required": false,
+                    "default": false
                 },
                 "linkRef": {
                     "type": "string",
@@ -1564,6 +1584,11 @@
                 "deliveriesEgressRouteContainer": {
                     "type": "integer",
                     "description": "Number of deliveries that were sent to a route-container address.",
+                    "graph": true
+                },
+                "deliveriesRedirectedToFallback": {
+                    "type": "integer",
+                    "description": "Number of deliveries that were sent to the fallback destination due to the primary destination being unreachable.",
                     "graph": true
                 },
                 "key": {
@@ -1951,6 +1976,13 @@
                 "allowAdminStatusUpdate": {
                     "type": "boolean",
                     "description": "Whether this connection is allowed to update the admin status of other connections. Note: Inter-router connections cannot be deleted at any time.",
+                    "default": true,
+                    "required": false,
+                    "create": true
+                },                
+                "allowFallbackLinks": {
+                    "type": "boolean",
+                    "description": "Whether this connection is allowed to claim 'qd.fallback' capability for attached links.  This allows endpoints to act as fallback destinations for addresses that have fallback capability enabled.",
                     "default": true,
                     "required": false,
                     "create": true
