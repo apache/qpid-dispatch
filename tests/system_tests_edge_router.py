@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+from datetime import datetime
 from time import sleep
 from threading import Event
 from threading import Timer
@@ -357,6 +358,8 @@ class RouterTest(TestCase):
                                  self.routers[2].addresses[0],
                                  "test_12")
         test.run()
+        if test.error is not None:
+            print(str(test.logger))
         self.assertEqual(None, test.error)
 
     def test_13_mobile_address_edge_to_edge_one_interior(self):
@@ -1178,8 +1181,35 @@ class DynamicAddressTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class Logger(object):
+    """
+    Keep an in-memory list of timestamped messages.
+    Print only on request successful tests are not encumbered
+    with print detail.
+    """
+    PRINT_TO_CONSOLE = False
+    def __init__(self):
+        self.msgs = []
+
+    def log(self, msg):
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
+        m = "%s %s" % (ts, msg)
+        self.msgs.append(m)
+        if Logger.PRINT_TO_CONSOLE:
+            print(m)
+
+    def __str__(self):
+        return '\n'.join(self.msgs)
+
 
 class MobileAddressTest(MessagingHandler):
+    """
+    From a single container create a sender and a receiver connection.
+    Send a batch of normal messages that should be accepted by the receiver.
+    Close the receiver but not the receiver connection and then
+      send an extra batch of messages that should be released or modified.
+    Success is when message disposition counts add up correctly.
+    """
     def __init__(self, receiver_host, sender_host, address):
         super(MobileAddressTest, self).__init__()
         self.receiver_host = receiver_host
@@ -1192,50 +1222,115 @@ class MobileAddressTest(MessagingHandler):
         self.receiver      = None
         self.sender        = None
 
-        self.count         = 300
-        self.rel_count     = 50
+        self.logger        = Logger()
+
+        self.normal_count  = 300
+        self.extra_count   = 50
         self.n_rcvd        = 0
         self.n_sent        = 0
-        self.n_settled     = 0
-        self.n_released    = 0
+        self.n_accepted    = 0
+        self.n_rel_or_mod  = 0
         self.error         = None
+        self.warning       = False
 
-    def timeout(self):
-        self.error = "Timeout Expired - n_sent=%d n_rcvd=%d n_settled=%d n_released=%d addr=%s" % \
-                     (self.n_sent, self.n_rcvd, self.n_settled, self.n_released, self.address)
+    def fail_exit(self, title):
+        self.error = title
+        self.logger.log("MobileAddressTest result:ERROR: %s" % title)
+        self.logger.log("address %s     " % self.address)
+        self.logger.log("n_sent       = %d. Expected total:%d normal=%d, extra=%d" % \
+            (self.n_sent, (self.normal_count + self.extra_count), self.normal_count, self.extra_count))
+        self.logger.log("n_rcvd       = %d. Expected %d" % (self.n_rcvd,       self.normal_count))
+        self.logger.log("n_accepted   = %d. Expected %d" % (self.n_accepted,   self.normal_count))
+        self.logger.log("n_rel_or_mod = %d. Expected %d" % (self.n_rel_or_mod, self.extra_count))
+        self.timer.cancel()
         self.receiver_conn.close()
         self.sender_conn.close()
 
+    def on_timer_task(self, event):
+        self.fail_exit("Timeout Expired")
+
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(5.0, Timeout(self))
+        self.logger.log("on_start address=%s" % self.address)
+        self.timer         = event.reactor.schedule(5.0, self)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
         self.sender        = event.container.create_sender(self.sender_conn, self.address)
 
     def on_sendable(self, event):
-        while self.n_sent < self.count:
-            message = Message(body="Message %d" % self.n_sent)
-            self.sender.send(message)
-            self.n_sent += 1
+        self.logger.log("on_sendable")
+        if event.sender == self.sender:
+            self.logger.log("on_sendable sender")
+            while self.n_sent < self.normal_count:
+                # send the normal messages
+                message = Message(body="Message %d" % self.n_sent)
+                self.sender.send(message)
+                self.logger.log("on_sendable sender: send message %d: %s" % (self.n_sent, message))
+                self.n_sent += 1
+        elif event.receiver == self.receiver:
+            self.logger.log("on_sendable receiver: WARNING unexpected callback for receiver")
+            self.warning = True
+        else:
+            self.fail_exit("on_sendable not for sender nor for receiver")
 
     def on_message(self, event):
-        self.n_rcvd += 1
+        self.logger.log("on_message")
+        if event.receiver == self.receiver:
+            self.n_rcvd += 1
+            self.logger.log("on_message receiver: receiver message %d" % (self.n_rcvd))
+        else:
+            self.logger.log("on_message: WARNING callback not for test receiver.")
 
     def on_settled(self, event):
-        self.n_settled += 1
-        if self.n_settled == self.count:
-            self.receiver.close()
-            for i in range(self.rel_count):
-                self.sender.send(Message(body="Message %d" % self.n_sent))
-                self.n_sent += 1
+        # Expect all settlement events at sender as remote state
+        self.logger.log("on_settled")
+        rdisp = str(event.delivery.remote_state)
+        ldisp = str(event.delivery.local_state)
+        if event.sender == self.sender:
+            if rdisp is None:
+                self.logger.log("on_settled: WARNING: sender remote delivery state is None. Local state = %s." % ldisp)
+            elif rdisp == "ACCEPTED":
+                self.n_accepted += 1
+                self.logger.log("on_settled sender: ACCEPTED %d (of %d)" %
+                                (self.n_accepted, self.normal_count))
+            elif rdisp == "RELEASED" or rdisp == "MODIFIED":
+                self.n_rel_or_mod += 1
+                self.logger.log("on_settled sender: %s %d (of %d)" % 
+                                (rdisp, self.n_rel_or_mod, self.extra_count))
+            else:
+                self.logger.log("on_settled sender: WARNING unexpected settlement: %s, n_accepted: %d, n_rel_or_mod: %d" %
+                    (disp, self.n_accepted, self.n_rel_or_mod))
+                self.warning = true
 
-    def on_released(self, event):
-        self.n_released += 1
-        if self.n_released == self.rel_count:
-            self.receiver_conn.close()
-            self.sender_conn.close()
-            self.timer.cancel()
+            if self.n_sent == self.normal_count and self.n_accepted == self.normal_count:
+                # All normal messages are accounted.
+                # Close receiver and launch extra messages into the router network.
+                self.logger.log("on_settled sender: normal messages all accounted. receiver.close() then send extra messages")
+                self.receiver.close()
+                for i in range(self.extra_count):
+                    message = Message(body="Message %d" % self.n_sent)
+                    self.sender.send(message)
+                    # Messages must be blasted to get them into the network before news
+                    # of the receiver closure is propagated back to EA1.
+                    # self.logger.log("on_settled sender: send extra message %d: %s" % (self.n_sent, message))
+                    self.n_sent += 1
+
+            if self.n_accepted > self.normal_count:
+                self.fail_exit("Too many messages were accepted")
+            if self.n_rel_or_mod > self.extra_count:
+                self.fail_exit("Too many messages were released or modified")
+
+            if self.n_rel_or_mod == self.extra_count:
+                # All extra messages are accounted. Exit with success.
+                result = "SUCCESS" if not self.warning else "WARNING"
+                self.logger.log("MobileAddressTest result:%s" % result)
+                self.timer.cancel()
+                self.receiver_conn.close()
+                self.sender_conn.close()
+
+        elif event.receiver == self.receiver:
+            self.logger.log("on_settled receiver: WARNING unexpected on_settled. remote: %s, local: %s" % (rdisp, ldisp))
+            self.warning = True
 
     def run(self):
         Container(self).run()
