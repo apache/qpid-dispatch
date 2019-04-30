@@ -35,8 +35,8 @@ from __future__ import print_function
 
 import argparse
 import ast
-import cgi
 import os
+import six
 import sys
 import traceback
 
@@ -47,6 +47,11 @@ from log_splitter import main_except as splitter_main
 import parser
 import router
 import text
+
+if six.PY2:
+    from cgi import escape as html_escape
+else:
+    from html import escape as html_escape
 
 
 def time_offset(ttest, t0):
@@ -658,7 +663,7 @@ def main_except(argv):
               detailname)
         for key in sorted(common.dict_iterkeys(l_dict)):
             val = l_dict[key]
-            print("%s : %s <br>" % (key, cgi.escape(str(val))))
+            print("%s : %s <br>" % (key, html_escape(str(val))))
         if plf.data.name == "transfer":
             print("Header and annotations : %s <br>" % plf.data.transfer_hdr_annos)
         print("</div>")
