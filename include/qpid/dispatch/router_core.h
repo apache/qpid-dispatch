@@ -842,6 +842,8 @@ typedef struct {
     size_t deliveries_transit;
     size_t deliveries_ingress_route_container;
     size_t deliveries_egress_route_container;
+    size_t deliveries_delayed_1sec;
+    size_t deliveries_delayed_10sec;
 }  qdr_global_stats_t;
 ALLOC_DECLARE(qdr_global_stats_t);
 typedef void (*qdr_global_stats_handler_t) (void *context);
