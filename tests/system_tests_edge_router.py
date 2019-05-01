@@ -1299,8 +1299,8 @@ class MobileAddressTest(MessagingHandler):
                                 (rdisp, self.n_rel_or_mod, self.extra_count))
             else:
                 self.logger.log("on_settled sender: WARNING unexpected settlement: %s, n_accepted: %d, n_rel_or_mod: %d" %
-                    (disp, self.n_accepted, self.n_rel_or_mod))
-                self.warning = true
+                    (rdisp, self.n_accepted, self.n_rel_or_mod))
+                self.warning = True
 
             if self.n_sent == self.normal_count and self.n_accepted == self.normal_count:
                 # All normal messages are accounted.
