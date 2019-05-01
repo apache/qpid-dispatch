@@ -1319,6 +1319,12 @@ static void CORE_link_first_attach(void             *context,
     // Open (attach) the link
     //
     pn_link_open(qd_link_pn(qlink));
+
+    //
+    // Mark the link as stalled and waiting for initial credit.
+    //
+    if (qdr_link_direction(link) == QD_OUTGOING)
+        qdr_link_stalled_outbound(link);
 }
 
 
@@ -1335,6 +1341,12 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     // Open (attach) the link
     //
     pn_link_open(qd_link_pn(qlink));
+
+    //
+    // Mark the link as stalled and waiting for initial credit.
+    //
+    if (qdr_link_direction(link) == QD_OUTGOING)
+        qdr_link_stalled_outbound(link);
 }
 
 static void CORE_close_connection(void *context, qdr_connection_t *qdr_conn, qdr_error_t *error)
