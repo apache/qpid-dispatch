@@ -25,26 +25,26 @@
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/router.h>
 
-
 /**
  * All callbacks in this module shall be invoked on a connection thread from the server thread pool.
  * If the callback needs to perform work on a connection, it will be invoked on a thread that has
  * exclusive access to that connection.
  */
 
-typedef struct qdr_subscription_t    qdr_subscription_t;
-typedef struct qdr_connection_t      qdr_connection_t;
-typedef struct qdr_link_t            qdr_link_t;
-typedef struct qdr_delivery_t        qdr_delivery_t;
-typedef struct qdr_terminus_t        qdr_terminus_t;
-typedef struct qdr_error_t           qdr_error_t;
+typedef struct qdr_subscription_t qdr_subscription_t;
+typedef struct qdr_connection_t qdr_connection_t;
+typedef struct qdr_link_t qdr_link_t;
+typedef struct qdr_delivery_t qdr_delivery_t;
+typedef struct qdr_terminus_t qdr_terminus_t;
+typedef struct qdr_error_t qdr_error_t;
 typedef struct qdr_connection_info_t qdr_connection_info_t;
 
-typedef enum {
-    QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
-    QD_ROUTER_MODE_INTERIOR,    ///< Interior router.  Full participation in routing protocol.
-    QD_ROUTER_MODE_EDGE,        ///< Edge router.  No transit-router capability.
-    QD_ROUTER_MODE_ENDPOINT     ///< No routing except for internal modules (agent, etc.).
+typedef enum
+{
+    QD_ROUTER_MODE_STANDALONE, ///< Standalone router.  No routing protocol participation
+    QD_ROUTER_MODE_INTERIOR,   ///< Interior router.  Full participation in routing protocol.
+    QD_ROUTER_MODE_EDGE,       ///< Edge router.  No transit-router capability.
+    QD_ROUTER_MODE_ENDPOINT    ///< No routing except for internal modules (agent, etc.).
 } qd_router_mode_t;
 ENUM_DECLARE(qd_router_mode);
 
@@ -71,7 +71,6 @@ void qdr_core_free(qdr_core_t *core);
  */
 void qdr_process_tick(qdr_core_t *core);
 
-
 /**
  ******************************************************************************
  * Route table maintenance functions (Router Control)
@@ -88,31 +87,31 @@ void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask
 void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address_hash, int treatment_hint);
 void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address_hash);
 
-typedef void (*qdr_mobile_added_t)   (void *context, const char *address_hash, qd_address_treatment_t treatment);
-typedef void (*qdr_mobile_removed_t) (void *context, const char *address_hash);
-typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
+typedef void (*qdr_mobile_added_t)(void *context, const char *address_hash, qd_address_treatment_t treatment);
+typedef void (*qdr_mobile_removed_t)(void *context, const char *address_hash);
+typedef void (*qdr_link_lost_t)(void *context, int link_maskbit);
 
-void qdr_core_route_table_handlers(qdr_core_t           *core, 
-                                   void                 *context,
-                                   qdr_mobile_added_t    mobile_added,
-                                   qdr_mobile_removed_t  mobile_removed,
-                                   qdr_link_lost_t       link_lost);
+void qdr_core_route_table_handlers(qdr_core_t *core,
+                                   void *context,
+                                   qdr_mobile_added_t mobile_added,
+                                   qdr_mobile_removed_t mobile_removed,
+                                   qdr_link_lost_t link_lost);
 
 /**
  ******************************************************************************
  * In-process messaging functions
  ******************************************************************************
  */
-typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
-                               uint64_t conn_id);
+typedef void (*qdr_receive_t)(void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
+                              uint64_t conn_id);
 
-qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
-                                       const char             *address,
-                                       char                    aclass,
-                                       char                    phase,
-                                       qd_address_treatment_t  treatment,
-                                       qdr_receive_t           on_message,
-                                       void                   *context);
+qdr_subscription_t *qdr_core_subscribe(qdr_core_t *core,
+                                       const char *address,
+                                       char aclass,
+                                       char phase,
+                                       qd_address_treatment_t treatment,
+                                       qdr_receive_t on_message,
+                                       void *context);
 
 void qdr_core_unsubscribe(qdr_subscription_t *sub);
 
@@ -135,28 +134,29 @@ void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr,
 void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
                   bool exclude_inprocess, bool control);
 
-
 /**
  ******************************************************************************
  * Connection functions
  ******************************************************************************
  */
 
-typedef enum {
-    QD_LINK_ENDPOINT,      ///< A link to a connected endpoint
-    QD_LINK_CONTROL,       ///< A link to a peer router for control messages
-    QD_LINK_ROUTER,        ///< A link to a peer router for routed messages
-    QD_LINK_EDGE_DOWNLINK  ///< Default link from an interior router to an edge router
+typedef enum
+{
+    QD_LINK_ENDPOINT,     ///< A link to a connected endpoint
+    QD_LINK_CONTROL,      ///< A link to a peer router for control messages
+    QD_LINK_ROUTER,       ///< A link to a peer router for routed messages
+    QD_LINK_EDGE_DOWNLINK ///< Default link from an interior router to an edge router
 } qd_link_type_t;
 
-typedef enum {
+typedef enum
+{
     QDR_ROLE_NORMAL,
     QDR_ROLE_INTER_ROUTER,
     QDR_ROLE_ROUTE_CONTAINER,
     QDR_ROLE_EDGE_CONNECTION
 } qdr_connection_role_t;
 
-typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* token);
+typedef void (*qdr_connection_bind_context_t)(qdr_connection_t *context, void *token);
 
 /**
  * qdr_connection_opened
@@ -178,22 +178,22 @@ typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* 
  * @param vhost If non-null, this is the vhost of the connection to be used for multi-tenancy.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
-qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
-                                        bool                   incoming,
-                                        qdr_connection_role_t  role,
-                                        int                    cost,
-                                        uint64_t               management_id,
-                                        const char            *label,
-                                        const char            *remote_container_id,
-                                        bool                   strip_annotations_in,
-                                        bool                   strip_annotations_out,
-                                        bool                   policy_allow_dynamic_link_routes,
-                                        bool                   policy_allow_admin_status_update,
-                                        int                    link_capacity,
-                                        const char            *vhost,
+qdr_connection_t *qdr_connection_opened(qdr_core_t *core,
+                                        bool incoming,
+                                        qdr_connection_role_t role,
+                                        int cost,
+                                        uint64_t management_id,
+                                        const char *label,
+                                        const char *remote_container_id,
+                                        bool strip_annotations_in,
+                                        bool strip_annotations_out,
+                                        bool policy_allow_dynamic_link_routes,
+                                        bool policy_allow_admin_status_update,
+                                        int link_capacity,
+                                        const char *vhost,
                                         qdr_connection_info_t *connection_info,
                                         qdr_connection_bind_context_t context_binder,
-                                        void* bind_token);
+                                        void *bind_token);
 
 /**
  * qdr_connection_closed
@@ -255,7 +255,7 @@ int qdr_connection_process(qdr_connection_t *conn);
  * @param context The context supplied when the callback was registered
  * @param conn The connection object to be activated
  */
-typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
+typedef void (*qdr_connection_activate_t)(void *context, qdr_connection_t *conn);
 
 /**
  ******************************************************************************
@@ -446,7 +446,6 @@ qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
  */
 void qdr_terminus_set_dnp_address_iterator(qdr_terminus_t *term, qd_iterator_t *iter);
 
-
 /**
  ******************************************************************************
  * Error functions
@@ -594,11 +593,11 @@ const char *qdr_link_name(const qdr_link_t *link);
  * @return A pointer to a new qdr_link_t object to track the link
  */
 qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
-                                  qd_direction_t    dir,
-                                  qdr_terminus_t   *source,
-                                  qdr_terminus_t   *target,
-                                  const char       *name,
-                                  const char       *terminus_addr);
+                                  qd_direction_t dir,
+                                  qdr_terminus_t *source,
+                                  qdr_terminus_t *target,
+                                  const char *name,
+                                  const char *terminus_addr);
 
 /**
  * qdr_link_second_attach
@@ -659,46 +658,47 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     bool settled, qd_bitmask_t *link_exclusion, int ingress_index);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
-                                                uint64_t disposition, pn_data_t* disposition_state);
+                                                uint64_t disposition, pn_data_t *disposition_state);
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
 
-typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
-                                          qdr_terminus_t *source, qdr_terminus_t *target);
-typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
-                                          qdr_terminus_t *source, qdr_terminus_t *target);
-typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
-typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int credit);
-typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
-typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
-typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool mode);
-typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int limit);
-typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
-typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
-typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
+typedef void (*qdr_link_first_attach_t)(void *context, qdr_connection_t *conn, qdr_link_t *link,
+                                        qdr_terminus_t *source, qdr_terminus_t *target);
+typedef void (*qdr_link_second_attach_t)(void *context, qdr_link_t *link,
+                                         qdr_terminus_t *source, qdr_terminus_t *target);
+typedef void (*qdr_link_detach_t)(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
+typedef void (*qdr_link_flow_t)(void *context, qdr_link_t *link, int credit);
+typedef void (*qdr_link_offer_t)(void *context, qdr_link_t *link, int delivery_count);
+typedef void (*qdr_link_drained_t)(void *context, qdr_link_t *link);
+typedef void (*qdr_link_drain_t)(void *context, qdr_link_t *link, bool mode);
+typedef int (*qdr_link_push_t)(void *context, qdr_link_t *link, int limit);
+typedef uint64_t (*qdr_link_deliver_t)(void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
+typedef void (*qdr_delivery_update_t)(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
+typedef void (*qdr_connection_close_t)(void *context, qdr_connection_t *conn, qdr_error_t *error);
 
-void qdr_connection_handlers(qdr_core_t             *core,
-                             void                      *context,
-                             qdr_connection_activate_t  activate,
-                             qdr_link_first_attach_t    first_attach,
-                             qdr_link_second_attach_t   second_attach,
-                             qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow,
-                             qdr_link_offer_t           offer,
-                             qdr_link_drained_t         drained,
-                             qdr_link_drain_t           drain,
-                             qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver,
-                             qdr_delivery_update_t      delivery_update,
-                             qdr_connection_close_t     conn_close);
+void qdr_connection_handlers(qdr_core_t *core,
+                             void *context,
+                             qdr_connection_activate_t activate,
+                             qdr_link_first_attach_t first_attach,
+                             qdr_link_second_attach_t second_attach,
+                             qdr_link_detach_t detach,
+                             qdr_link_flow_t flow,
+                             qdr_link_offer_t offer,
+                             qdr_link_drained_t drained,
+                             qdr_link_drain_t drain,
+                             qdr_link_push_t push,
+                             qdr_link_deliver_t deliver,
+                             qdr_delivery_update_t delivery_update,
+                             qdr_connection_close_t conn_close);
 
 /**
  ******************************************************************************
  * Management functions
  ******************************************************************************
  */
-typedef enum {
+typedef enum
+{
     QD_ROUTER_CONFIG_ADDRESS,
     QD_ROUTER_CONFIG_LINK_ROUTE,
     QD_ROUTER_CONFIG_AUTO_LINK,
@@ -763,7 +763,6 @@ void qdr_manage_read(qdr_core_t *core, void *context, qd_router_entity_type_t ty
                      qd_iterator_t *name, qd_iterator_t *identity, qd_composed_field_t *body,
                      uint64_t in_conn);
 
-
 /**
  * qdr_manage_update
  *
@@ -806,25 +805,25 @@ void qdr_query_get_first(qdr_query_t *query, int offset);
 void qdr_query_get_next(qdr_query_t *query);
 void qdr_query_free(qdr_query_t *query);
 
-typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
+typedef void (*qdr_manage_response_t)(void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
 
-qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
-                                           bool             is_authenticated,
-                                           bool             opened,
-                                           char            *sasl_mechanisms,
-                                           qd_direction_t   dir,
-                                           const char      *host,
-                                           const char      *ssl_proto,
-                                           const char      *ssl_cipher,
-                                           const char      *user,
-                                           const char      *container,
-                                           pn_data_t       *connection_properties,
-                                           int              ssl_ssf,
-                                           bool             ssl);
+qdr_connection_info_t *qdr_connection_info(bool is_encrypted,
+                                           bool is_authenticated,
+                                           bool opened,
+                                           char *sasl_mechanisms,
+                                           qd_direction_t dir,
+                                           const char *host,
+                                           const char *ssl_proto,
+                                           const char *ssl_cipher,
+                                           const char *user,
+                                           const char *container,
+                                           pn_data_t *connection_properties,
+                                           int ssl_ssf,
+                                           bool ssl);
 
-
-typedef struct {
+typedef struct
+{
     size_t connections;
     size_t links;
     size_t addrs;
@@ -842,9 +841,11 @@ typedef struct {
     size_t deliveries_transit;
     size_t deliveries_ingress_route_container;
     size_t deliveries_egress_route_container;
-}  qdr_global_stats_t;
+    size_t deliveries_delayed_1sec;
+    size_t deliveries_delayed_10sec;
+} qdr_global_stats_t;
 ALLOC_DECLARE(qdr_global_stats_t);
-typedef void (*qdr_global_stats_handler_t) (void *context);
+typedef void (*qdr_global_stats_handler_t)(void *context);
 void qdr_request_global_stats(qdr_core_t *core, qdr_global_stats_t *stats, qdr_global_stats_handler_t callback, void *context);
 
 #endif
