@@ -1104,14 +1104,15 @@ void qd_message_set_discard(qd_message_t *msg, bool discard)
 }
 
 
+// update the buffer reference counts for a new outgoing message
+//
 void qd_message_add_fanout(qd_message_t *in_msg,
                            qd_message_t *out_msg)
 {
+    if (!out_msg)
+        return;
 
-    // out_msg will be 0 if we are forwarding to an internal subscriber (like
-    // $management).  If so we treat in_msg like an out_msg
-    assert(in_msg);
-    qd_message_pvt_t *msg = (qd_message_pvt_t *)((out_msg) ? out_msg : in_msg);
+    qd_message_pvt_t *msg = (qd_message_pvt_t *)out_msg;
     msg->is_fanout = true;
 
     qd_message_content_t *content = msg->content;
@@ -1119,11 +1120,19 @@ void qd_message_add_fanout(qd_message_t *in_msg,
     LOCK(content->lock);
     ++content->fanout;
 
-    // do not free the buffers until all fanout consumers are done with them
+    // do not free the buffers until all fanout senders are done with them
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
-    while (buf) {
-        qd_buffer_inc_fanout(buf);
-        buf = DEQ_NEXT(buf);
+    if (buf) {
+        // DISPATCH-1330: since we're incrementing the refcount be sure to set
+        // the cursor to the head buf in case msg is discarded before all data
+        // is sent (we'll decref any unsent buffers at that time)
+        //
+        msg->cursor.buffer = buf;
+
+        while (buf) {
+            qd_buffer_inc_fanout(buf);
+            buf = DEQ_NEXT(buf);
+        }
     }
     UNLOCK(content->lock);
 }
@@ -1180,12 +1189,6 @@ void qd_message_set_tag_sent(qd_message_t *in_msg, bool tag_sent)
 
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     msg->tag_sent = tag_sent;
-}
-
-qd_iterator_pointer_t qd_message_cursor(qd_message_pvt_t *in_msg)
-{
-    qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
-    return msg->cursor;
 }
 
 
