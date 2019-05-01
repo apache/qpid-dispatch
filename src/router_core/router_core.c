@@ -776,6 +776,8 @@ static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, 
         stats->deliveries_transit = core->deliveries_transit;
         stats->deliveries_ingress_route_container = core->deliveries_ingress_route_container;
         stats->deliveries_egress_route_container = core->deliveries_egress_route_container;
+        stats->deliveries_delayed_1sec = core->deliveries_delayed_1sec;
+        stats->deliveries_delayed_1sec = core->deliveries_delayed_10sec;
     }
     qdr_general_work_t *work = qdr_general_work(qdr_post_global_stats_response);
     work->stats_handler = action->args.stats_request.handler;
