@@ -170,6 +170,8 @@ class RouterTestHttp(TestCase):
             data = result.read().decode('utf-8')
             assert('connections' in data)
             assert('deliveries_ingress' in data)
+            assert('deliveries_delayed_1sec' in data)
+            assert('deliveries_delayed_10sec' in data)
 
         # Sequential calls on multiple ports
         for port in r.ports: test(port)
