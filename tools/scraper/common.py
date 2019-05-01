@@ -21,12 +21,13 @@
 
 # Common data storage and utilities
 
-import six
 import sys
 
 import nicknamer
 
-if six.PY2:
+IS_PY2 = sys.version_info[0] == 2
+
+if IS_PY2:
     def dict_iteritems(d):
         return d.iteritems()
     def dict_iterkeys(d):
