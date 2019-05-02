@@ -31,6 +31,7 @@ from proton.utils import BlockingConnection, SyncRequestResponse
 from qpid_dispatch.management.client import Node
 import os, json
 from subprocess import PIPE, STDOUT
+from time import sleep
 
 CONNECTION_PROPERTIES_UNICODE_STRING = {u'connection': u'properties', u'int_property': 6451}
 CONNECTION_PROPERTIES_SYMBOL = dict()
@@ -490,6 +491,16 @@ class OneRouterTest(TestCase):
         # The test has passed since we were not allowed to delete a connection
         # because we do not have the policy permission to do so.
         self.assertTrue(passed)
+
+    def test_45_q2_holdoff_drop_stalled_rx(self):
+        """
+        Verify that dropping a slow consumer while in Q2 flow control does
+        not hang the router
+        """
+        test = Q2HoldoffDropTest(self.router)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 
 class Entity(object):
@@ -3099,6 +3110,134 @@ class UnsettledLargeMessageTest(MessagingHandler):
             # Receiver bails after receiving max_receive messages.
             self.receiver.close()
             self.recv_conn.close()
+
+
+class Q2HoldoffDropTest(MessagingHandler):
+    """
+    Create 3 multicast receivers, two which grant 2 credits and one that grants
+    only one.  Send enough data to force Q2 holdoff (since one rx is blocked)
+    Close the stalled rx connection, verify the remaining receivers get the
+    message (Q2 holdoff disabled)
+    """
+    def __init__(self, router):
+        super(Q2HoldoffDropTest, self).__init__(prefetch=0,
+                                                auto_accept=False,
+                                                auto_settle=False)
+        self.router = router
+        self.rx_fast1_conn = None
+        self.rx_fast1 = None
+        self.rx_fast2_conn = None
+        self.rx_fast2 = None
+        self.rx_slow_conn = None
+        self.rx_slow = None
+        self.tx_conn = None
+        self.tx = None
+        self.timer = None
+        self.reactor = None
+        self.error = None
+        self.n_attached = 0
+        self.n_rx = 0
+        self.n_tx = 0
+        self.close_timer = 0
+
+        # currently the router buffer size is 512 bytes and the Q2 holdoff
+        # buffer chain high watermark is 256 buffers.  We need to send a
+        # message that will be big enough to trigger Q2 holdoff
+        self.big_msg = Message(body=["DISPATCH-1330" * (512 * 256 * 4)])
+
+    def done(self):
+        if self.timer:
+            self.timer.cancel()
+        if self.close_timer:
+            self.close_timer.cancel()
+        if self.tx_conn:
+            self.tx_conn.close()
+        if self.rx_fast1_conn:
+            self.rx_fast1_conn.close()
+        if self.rx_fast2_conn:
+            self.rx_fast2_conn.close()
+        if self.rx_slow_conn:
+            self.rx_slow_conn.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.done()
+
+    def on_start(self, event):
+        self.reactor = event.reactor
+        self.timer = self.reactor.schedule(TIMEOUT, Timeout(self))
+
+        self.rx_slow_conn = event.container.connect(self.router.addresses[0])
+        self.rx_fast1_conn = event.container.connect(self.router.addresses[0])
+        self.rx_fast2_conn = event.container.connect(self.router.addresses[0])
+
+        self.rx_slow = event.container.create_receiver(self.rx_slow_conn,
+                                                       source="multicast.dispatch-1330",
+                                                       name="rx_slow")
+        self.rx_fast1 = event.container.create_receiver(self.rx_fast1_conn,
+                                                        source="multicast.dispatch-1330",
+                                                        name="rx_fast1")
+        self.rx_fast2 = event.container.create_receiver(self.rx_fast2_conn,
+                                                        source="multicast.dispatch-1330",
+                                                        name="rx_fast2")
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.n_attached += 1
+            if self.n_attached == 3:
+                self.rx_fast1.flow(2)
+                self.rx_fast2.flow(2)
+                self.rx_slow.flow(1)   # stall on 2nd msg
+
+                self.tx_conn = event.container.connect(self.router.addresses[0])
+                self.tx = event.container.create_sender(self.tx_conn,
+                                                        target="multicast.dispatch-1330",
+                                                        name="tx")
+
+    def on_sendable(self, event):
+        if self.n_tx == 0:
+            # wait until all subscribers present
+            self.router.wait_address("multicast.dispatch-1330", subscribers=3)
+            for i in range(2):
+                dlv = self.tx.send(self.big_msg)
+                dlv.settle()
+                self.n_tx += 1
+
+    def close_rx_slow(self, event):
+        if self.rx_slow_conn:
+            self.rx_slow_conn.close()
+            self.rx_slow_conn = None
+            self.rx_slow = None
+
+    def on_message(self, event):
+        self.n_rx += 1
+        if self.n_rx == 3: # first will arrive, second is blocked
+
+            class CloseTimer(Timeout):
+                def on_timer_task(self, event):
+                    self.parent.close_rx_slow(event)
+
+            # 2 second wait for Q2 to fill up
+            self.close_timer = self.reactor.schedule(2.0, CloseTimer(self))
+
+        if self.n_rx == 5:
+            # succesfully received on last two receivers
+            self.done()
+
+    def run(self):
+        Container(self).run()
+
+        # wait until the router has cleaned up the route table
+        clean = False
+        while not clean:
+            clean = True
+            atype = 'org.apache.qpid.dispatch.router.address'
+            addrs = self.router.management.query(type=atype).get_dicts()
+            if list(filter(lambda a: a['name'].find("dispatch-1330") != -1, addrs)):
+                clean = False
+                break
+            if not clean:
+                sleep(0.1)
 
 
 if __name__ == '__main__':
