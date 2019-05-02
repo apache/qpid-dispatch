@@ -769,19 +769,25 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
     if (!pn_link)
         return 0;
 
-    pn_delivery_t *pnd = pn_link_current(pn_link);
-    if (pnd) {
-        qd_message_t *msg = qd_get_message_context(pnd);
-        if (msg) {
-            if (!qd_message_receive_complete(msg)) {
-                qd_link_set_q2_limit_unbounded(link, true);
-                qd_message_Q2_holdoff_disable(msg);
-                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-                set_safe_ptr_qd_link_t(link, safe_ptr);
-                deferred_AMQP_rx_handler(safe_ptr, false);
+    // DISPATCH-1085: If link is in the middle of receiving a message it is
+    // possible that the message is actually complete but the remaining message
+    // data is still in proton's buffers.  (e.g. a large message is sent then
+    // the sender immediately detaches) Force a call to the rx_handler for the
+    // link in order to pull the buffered data into the message.
+    if (pn_link_is_receiver(pn_link)) {
+        pn_delivery_t *pnd = pn_link_current(pn_link);
+        if (pnd) {
+            qd_message_t *msg = qd_get_message_context(pnd);
+            if (msg) {
+                if (!qd_message_receive_complete(msg)) {
+                    qd_link_set_q2_limit_unbounded(link, true);
+                    qd_message_Q2_holdoff_disable(msg);
+                    qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+                    set_safe_ptr_qd_link_t(link, safe_ptr);
+                    deferred_AMQP_rx_handler(safe_ptr, false);
+                }
             }
         }
-
     }
 
     qd_router_t    *router = (qd_router_t*) context;
