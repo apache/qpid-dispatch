@@ -935,6 +935,7 @@ void qd_message_free(qd_message_t *in_msg)
         //
         LOCK(content->lock);
 
+        const bool was_blocked = !qd_message_Q2_holdoff_should_unblock(in_msg);
         qd_buffer_t *buf = msg->cursor.buffer;
         while (buf) {
             qd_buffer_t *next_buf = DEQ_NEXT(buf);
@@ -945,6 +946,17 @@ void qd_message_free(qd_message_t *in_msg)
             buf = next_buf;
         }
         --content->fanout;
+
+        //
+        // it is possible that we've freed enough buffers to clear Q2 holdoff
+        //
+        if (content->q2_input_holdoff
+            && was_blocked
+            && qd_message_Q2_holdoff_should_unblock(in_msg)) {
+
+            content->q2_input_holdoff = false;
+            qd_link_restart_rx(qd_message_get_receiving_link(in_msg));
+        }
 
         UNLOCK(content->lock);
     }
@@ -1215,7 +1227,7 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
             // end of message or error. Call the message complete
             msg->content->receive_complete = true;
             msg->content->aborted = pn_delivery_aborted(delivery);
-            msg->content->input_link = 0;
+            qd_nullify_safe_ptr(&msg->content->input_link_sp);
 
             pn_record_t *record = pn_delivery_attachments(delivery);
             pn_record_set(record, PN_DELIVERY_CTX, 0);
@@ -1256,7 +1268,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg = (qd_message_pvt_t*) qd_message();
         qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
-        msg->content->input_link = pn_link_get_context(link);
+        set_safe_ptr_qd_link_t(pn_link_get_context(link), &msg->content->input_link_sp);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1315,7 +1327,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
                 content->receive_complete = true;
                 content->aborted = pn_delivery_aborted(delivery);
-                content->input_link = 0;
+                qd_nullify_safe_ptr(&content->input_link_sp);
 
                 // unlink message and delivery
                 pn_record_set(record, PN_DELIVERY_CTX, 0);
@@ -2115,7 +2127,7 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
 
 qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg)
 {
-    return ((qd_message_pvt_t *)msg)->content->input_link;
+    return safe_deref_qd_link_t(((qd_message_pvt_t *)msg)->content->input_link_sp);
 }
 
 

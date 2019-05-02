@@ -1564,15 +1564,7 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         qdr_link_stalled_outbound(link);
 
     if (restart_rx) {
-        qd_link_t *qdl_in = qd_message_get_receiving_link(msg_out);
-        if (qdl_in) {
-            qd_connection_t *qdc_in = qd_link_connection(qdl_in);
-            if (qdc_in) {
-                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-                set_safe_ptr_qd_link_t(qdl_in, safe_ptr);
-                qd_connection_invoke_deferred(qdc_in, deferred_AMQP_rx_handler, safe_ptr);
-            }
-        }
+        qd_link_restart_rx(qd_message_get_receiving_link(msg_out));
     }
 
     bool send_complete = qdr_delivery_send_complete(dlv);
@@ -1694,9 +1686,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
                 qdr_delivery_set_disposition(dlv, disp);
                 qd_message_set_discard(msg, true);
                 qd_message_Q2_holdoff_disable(msg);
-                qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
-                set_safe_ptr_qd_link_t(link, safe_ptr);
-                qd_connection_invoke_deferred(qd_conn, deferred_AMQP_rx_handler, safe_ptr);
+                qd_link_restart_rx(link);
             }
         }
     }
@@ -1756,3 +1746,20 @@ qdr_core_t *qd_router_core(qd_dispatch_t *qd)
     return qd->router->router_core;
 }
 
+
+// called when Q2 holdoff is deactivated so we can receive more message buffers
+//
+void qd_link_restart_rx(qd_link_t *in_link)
+{
+    if (!in_link)
+        return;
+
+    assert(qd_link_direction(in_link) == QD_INCOMING);
+
+    qd_connection_t *in_conn = qd_link_connection(in_link);
+    if (in_conn) {
+        qd_link_t_sp *safe_ptr = NEW(qd_link_t_sp);
+        set_safe_ptr_qd_link_t(in_link, safe_ptr);
+        qd_connection_invoke_deferred(in_conn, deferred_AMQP_rx_handler, safe_ptr);
+    }
+}
