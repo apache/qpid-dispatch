@@ -21,7 +21,6 @@
 
 from collections import defaultdict
 import common
-import cgi
 
 class ShortNames():
     '''
@@ -63,7 +62,7 @@ class ShortNames():
         if customer is not None:
             self.customer_dict[sname].append(customer)
         if show_popup:
-            return "<span title=\"" + cgi.escape(lname) + "\">" + sname + "</span>"
+            return "<span title=\"" + common.html_escape(lname) + "\">" + sname + "</span>"
         else:
             return sname
 
@@ -89,21 +88,21 @@ class ShortNames():
             lname = self.longnames[ int(sname[ (len(self.prefix) + 1): ])]
         except:
             raise ValueError("Short name '%s' did not translate to a long name" % (sname))
-        return "<span title=\"" + cgi.escape(lname) + sname + "</span>"
+        return "<span title=\"" + common.html_escape(lname) + sname + "</span>"
 
-    def longname(self, idx, cgi_escape=False):
+    def longname(self, idx, html_escape=False):
         '''
-        Get the cgi.escape'd long name
+        Get the common.html_escape'd long name
         :param idx:
-        :param cgi_escape: true if caller wants the string for html display
+        :param html_escape: true if caller wants the string for html display
         :return:
         '''
-        return cgi.escape(self.longnames[idx]) if cgi_escape else self.longnames[idx]
+        return common.html_escape(self.longnames[idx]) if html_escape else self.longnames[idx]
 
     def htmlDump(self, with_link=False):
         '''
         Print the name table as an unnumbered list to stdout
-        long names are cgi.escape'd
+        long names are common.html_escape'd
         :param with_link: true if link name link name is hyperlinked targeting itself
         :return: null
         '''
@@ -115,7 +114,7 @@ class ShortNames():
                 dump_anchor = "<a name=\"%s_dump\"></a>" % (name)
                 if with_link:
                     name = "<a href=\"#%s\">%s</a>" % (name, name)
-                print ("<li> " + dump_anchor + name + " - " + cgi.escape(self.longnames[i]) + "</li>")
+                print ("<li> " + dump_anchor + name + " - " + common.html_escape(self.longnames[i]) + "</li>")
             print ("</ul>")
 
     def sort_customers(self):

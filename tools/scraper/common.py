@@ -160,3 +160,12 @@ global_colors = {
 
 def color_of(obj_type):
     return global_colors.get(obj_type, "pink")
+
+html_escape_table = {
+    "&": "&amp;",
+    ">": "&gt;",
+    "<": "&lt;",
+}
+
+def html_escape(text):
+    return "".join(html_escape_table.get(c,c) for c in text)

@@ -29,7 +29,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import cgi
 from datetime import *
 import os
 import sys
@@ -412,7 +411,7 @@ function show_node(node)
         for rc in self.router_connections:
             print("<tr><td><a href=\"%s/%s\">%s</a></td><td>%d</td><td>%d</td><td>%s</td></tr>" %
                   (rc.logfile.odir(), rc.path_name, rc.disp_name(), rc.transfers, len(rc.lines),
-                   cgi.escape(rc.peer_open)))
+                   common.html_escape(rc.peer_open)))
         print("</table>")
         print("<hr>")
 
@@ -424,7 +423,7 @@ function show_node(node)
         for rc in self.broker_connections:
             print("<tr><td><a href=\"%s/%s\">%s</a></td><td>%d</td><td>%d</td><td>%s</td></tr>" %
                   (rc.logfile.odir(), rc.path_name, rc.disp_name(), rc.transfers, len(rc.lines),
-                   cgi.escape(rc.peer_open)))
+                   common.html_escape(rc.peer_open)))
         print("</table>")
         print("<hr>")
 
@@ -443,7 +442,7 @@ function show_node(node)
         print("<table>")
         print("<tr><th>N</th> <th>AMQP error</th></tr>")
         for i in range(len(self.errors)):
-            print("<tr><td>%d</td> <td>%s</td></tr>" % (i, cgi.escape(self.errors[i].strip())))
+            print("<tr><td>%d</td> <td>%s</td></tr>" % (i, common.html_escape(self.errors[i].strip())))
         print("</table>")
         print("<hr>")
 
@@ -482,7 +481,7 @@ function show_node(node)
             if rc.transfers > 0:
                 print("<tr><td>%d</td><td><a href=\"%s/%s\">%s</a></td> <td>%d</td> <td>%d</td> <td>%s</td> <td>%s</td></tr>" %
                       (n, rc.logfile.odir(), rc.path_name, rc.disp_name(), rc.transfers, len(rc.lines),
-                       rc.peer_type, cgi.escape(rc.peer_open)))
+                       rc.peer_type, common.html_escape(rc.peer_open)))
                 n += 1
         print("</table>")
         print("<hr>")
@@ -496,7 +495,7 @@ function show_node(node)
             if rc.transfers == 0:
                 print("<tr><td>%d</td><td><a href=\"%s/%s\">%s</a></td> <td>%d</td> <td>%d</td> <td>%s</td> <td>%s</td></tr>" %
                       (n, rc.logfile.odir(), rc.path_name, rc.disp_name(), rc.transfers, len(rc.lines),
-                       rc.peer_type, cgi.escape(rc.peer_open)))
+                       rc.peer_type, common.html_escape(rc.peer_open)))
                 n += 1
         print("</table>")
         print("<hr>")
@@ -509,7 +508,7 @@ function show_node(node)
         for rc in self.conns_by_size_loglines:
             print("<tr><td>%d</td><td><a href=\"%s/%s\">%s</a></td> <td>%d</td> <td>%d</td> <td>%s</td> <td>%s</td></tr>" %
                   (n, rc.logfile.odir(), rc.path_name, rc.disp_name(), rc.transfers, len(rc.lines),
-                   rc.peer_type, cgi.escape(rc.peer_open)))
+                   rc.peer_type, common.html_escape(rc.peer_open)))
             n += 1
         print("</table>")
         print("<hr>")

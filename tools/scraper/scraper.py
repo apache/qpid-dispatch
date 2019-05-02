@@ -35,7 +35,6 @@ from __future__ import print_function
 
 import argparse
 import ast
-import cgi
 import os
 import sys
 import traceback
@@ -658,7 +657,7 @@ def main_except(argv):
               detailname)
         for key in sorted(common.dict_iterkeys(l_dict)):
             val = l_dict[key]
-            print("%s : %s <br>" % (key, cgi.escape(str(val))))
+            print("%s : %s <br>" % (key, common.html_escape(str(val))))
         if plf.data.name == "transfer":
             print("Header and annotations : %s <br>" % plf.data.transfer_hdr_annos)
         print("</div>")
