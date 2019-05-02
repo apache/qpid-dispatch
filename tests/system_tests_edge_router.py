@@ -103,6 +103,10 @@ class EdgeRouterTest(TestCase):
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
 
+        # 1 means skip that test.
+        cls.skip = { 'test_01' : 0
+                   }
+
     def __init__(self, test_method):
         TestCase.__init__(self, test_method)
         self.success = False
@@ -171,6 +175,9 @@ class EdgeRouterTest(TestCase):
         Then we kill the router with the active connection and make sure
         that the other connection is now the active one
         """
+        if self.skip [ 'test_01' ] :
+            self.skipTest ( "Test skipped during development." )
+
         success = False
         outs = self.run_qdstat(['--edge'],
                                address=self.routers[0].addresses[0])
@@ -281,7 +288,53 @@ class RouterTest(TestCase):
         cls.routers[1].wait_router_connected('INT.A')
 
 
+        cls.skip = { 'test_01' : 0,
+                     'test_02' : 0,
+                     'test_03' : 0,
+                     'test_04' : 0,
+                     'test_05' : 0,
+                     'test_06' : 0,
+                     'test_07' : 0,
+                     'test_08' : 0,
+                     'test_09' : 0,
+                     'test_10' : 0,
+                     'test_11' : 0,
+                     'test_12' : 0,
+                     'test_13' : 0,
+                     'test_14' : 0,
+                     'test_15' : 0,
+                     'test_16' : 0,
+                     'test_17' : 0,
+                     'test_18' : 0,
+                     'test_19' : 0,
+                     'test_20' : 0,
+                     'test_21' : 0,
+                     'test_22' : 0,
+                     'test_23' : 0,
+                     'test_24' : 0,
+                     'test_25' : 0,
+                     'test_26' : 0,
+                     'test_27' : 0,
+                     'test_28' : 0,
+                     'test_29' : 0,
+                     'test_30' : 0,
+                     'test_31' : 0,
+                     'test_32' : 0,
+                     'test_33' : 0,
+                     'test_34' : 0,
+                     'test_35' : 0,
+                     'test_36' : 0,
+                     'test_37' : 0,
+                     'test_38' : 0,
+                     'test_39' : 0,
+                     'test_40' : 0,
+                     'test_41' : 0
+                   }
+
     def test_01_connectivity_INTA_EA1(self):
+        if self.skip [ 'test_01' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = ConnectivityTest(self.routers[0].addresses[0],
                                 self.routers[2].addresses[0],
                                 'EA1')
@@ -289,6 +342,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_02_connectivity_INTA_EA2(self):
+        if self.skip [ 'test_02' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = ConnectivityTest(self.routers[0].addresses[0],
                                 self.routers[3].addresses[0],
                                 'EA2')
@@ -296,6 +352,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_03_connectivity_INTB_EB1(self):
+        if self.skip [ 'test_03' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = ConnectivityTest(self.routers[1].addresses[0],
                                 self.routers[4].addresses[0],
                                 'EB1')
@@ -303,6 +362,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_04_connectivity_INTB_EB2(self):
+        if self.skip [ 'test_04' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = ConnectivityTest(self.routers[1].addresses[0],
                                 self.routers[5].addresses[0],
                                 'EB2')
@@ -310,36 +372,54 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_05_dynamic_address_same_edge(self):
+        if self.skip [ 'test_05' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_06_dynamic_address_interior_to_edge(self):
+        if self.skip [ 'test_06' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[0].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_07_dynamic_address_edge_to_interior(self):
+        if self.skip [ 'test_07' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = DynamicAddressTest(self.routers[0].addresses[0],
                                   self.routers[2].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_08_dynamic_address_edge_to_edge_one_interior(self):
+        if self.skip [ 'test_08' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[3].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_09_dynamic_address_edge_to_edge_two_interior(self):
+        if self.skip [ 'test_09' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = DynamicAddressTest(self.routers[2].addresses[0],
                                   self.routers[4].addresses[0])
         test.run()
         self.assertEqual(None, test.error)
 
     def test_10_mobile_address_same_edge(self):
+        if self.skip [ 'test_10' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressTest(self.routers[2].addresses[0],
                                  self.routers[2].addresses[0],
                                  "test_10")
@@ -347,6 +427,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_11_mobile_address_interior_to_edge(self):
+        if self.skip [ 'test_11' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressTest(self.routers[2].addresses[0],
                                  self.routers[0].addresses[0],
                                  "test_11")
@@ -354,6 +437,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_12_mobile_address_edge_to_interior(self):
+        if self.skip [ 'test_12' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressTest(self.routers[0].addresses[0],
                                  self.routers[2].addresses[0],
                                  "test_12")
@@ -363,6 +449,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_13_mobile_address_edge_to_edge_one_interior(self):
+        if self.skip [ 'test_13' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressTest(self.routers[2].addresses[0],
                                  self.routers[3].addresses[0],
                                  "test_13")
@@ -370,6 +459,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_14_mobile_address_edge_to_edge_two_interior(self):
+        if self.skip [ 'test_14' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressTest(self.routers[2].addresses[0],
                                  self.routers[4].addresses[0],
                                  "test_14")
@@ -379,6 +471,9 @@ class RouterTest(TestCase):
     # One sender two receiver tests.
     # One sender and two receivers on the same edge
     def test_15_mobile_address_same_edge(self):
+        if self.skip [ 'test_15' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
@@ -389,6 +484,9 @@ class RouterTest(TestCase):
     # One sender and two receivers on the different edges. The edges are
     #  hanging off the  same interior router.
     def test_16_mobile_address_edge_to_another_edge_same_interior(self):
+        if self.skip [ 'test_16' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
                                                       self.routers[3].addresses[0],
@@ -398,6 +496,9 @@ class RouterTest(TestCase):
 
     # Two receivers on the interior and sender on the edge
     def test_17_mobile_address_edge_to_interior(self):
+        if self.skip [ 'test_17' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[0].addresses[0],
                                                       self.routers[0].addresses[0],
                                                       self.routers[2].addresses[0],
@@ -407,6 +508,9 @@ class RouterTest(TestCase):
 
     # Two receivers on the edge and the sender on the interior
     def test_18_mobile_address_interior_to_edge(self):
+        if self.skip [ 'test_18' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
                                                       self.routers[0].addresses[0],
@@ -416,6 +520,9 @@ class RouterTest(TestCase):
 
     # Two receivers on the edge and the sender on the 'other' interior
     def test_19_mobile_address_other_interior_to_edge(self):
+        if self.skip [ 'test_19' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
                                                       self.routers[1].addresses[0],
@@ -426,6 +533,9 @@ class RouterTest(TestCase):
     # Two receivers on the edge and the sender on the edge of
     # the 'other' interior
     def test_20_mobile_address_edge_to_edge_two_interiors(self):
+        if self.skip [ 'test_20' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[2].addresses[0],
                                                       self.routers[2].addresses[0],
                                                       self.routers[5].addresses[0],
@@ -436,6 +546,9 @@ class RouterTest(TestCase):
     # One receiver in an edge, another one in interior and the sender
     # is on the edge of another interior
     def test_21_mobile_address_edge_interior_receivers(self):
+        if self.skip [ 'test_21' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[4].addresses[0],
                                                       self.routers[1].addresses[0],
                                                       self.routers[2].addresses[0],
@@ -446,6 +559,9 @@ class RouterTest(TestCase):
     # Two receivers one on each interior router and and an edge sender
     # connectoed to the first interior
     def test_22_mobile_address_edge_sender_two_interior_receivers(self):
+        if self.skip [ 'test_22' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[0].addresses[0],
                                                       self.routers[1].addresses[0],
                                                       self.routers[3].addresses[0],
@@ -454,6 +570,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_23_mobile_address_edge_sender_two_edge_receivers(self):
+        if self.skip [ 'test_23' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressOneSenderTwoReceiversTest(self.routers[4].addresses[0],
                                                       self.routers[5].addresses[0],
                                                       self.routers[2].addresses[0],
@@ -463,6 +582,9 @@ class RouterTest(TestCase):
 
     # 1 Sender and 3 receivers all on the same edge
     def test_24_multicast_mobile_address_same_edge(self):
+        if self.skip [ 'test_24' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
@@ -474,6 +596,9 @@ class RouterTest(TestCase):
     # 1 Sender and receiver on one edge and 2 receivers on another edge
     # all in the same  interior
     def test_25_multicast_mobile_address_different_edges_same_interior(self):
+        if self.skip [ 'test_25' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -486,6 +611,9 @@ class RouterTest(TestCase):
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
     def test_26_multicast_mobile_address_edge_to_interior(self):
+        if self.skip [ 'test_26' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
@@ -497,6 +625,9 @@ class RouterTest(TestCase):
 
     # Receivers on the edge and sender on the interior
     def test_27_multicast_mobile_address_interior_to_edge(self):
+        if self.skip [ 'test_27' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -509,6 +640,9 @@ class RouterTest(TestCase):
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
     def test_28_multicast_mobile_address_other_interior_to_edge(self):
+        if self.skip [ 'test_28' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -519,6 +653,9 @@ class RouterTest(TestCase):
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_29_multicast_mobile_address_edge_to_edge_two_interiors(self):
+        if self.skip [ 'test_29' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
@@ -528,6 +665,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_30_multicast_mobile_address_all_edges(self):
+        if self.skip [ 'test_30' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
@@ -543,6 +683,9 @@ class RouterTest(TestCase):
 
     # 1 Sender and 3 receivers all on the same edge
     def test_31_multicast_mobile_address_same_edge(self):
+        if self.skip [ 'test_31' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
@@ -554,6 +697,9 @@ class RouterTest(TestCase):
     # 1 Sender on one edge and 3 receivers on another edge all in the same
     # interior
     def test_32_multicast_mobile_address_different_edges_same_interior(self):
+        if self.skip [ 'test_32' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -567,6 +713,9 @@ class RouterTest(TestCase):
     # Two receivers on each edge, one receiver on interior and sender
     # on the edge
     def test_33_multicast_mobile_address_edge_to_interior(self):
+        if self.skip [ 'test_33' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[0].addresses[0],
@@ -577,6 +726,9 @@ class RouterTest(TestCase):
 
     # Receivers on the edge and sender on the interior
     def test_34_multicast_mobile_address_interior_to_edge(self):
+        if self.skip [ 'test_34' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -588,6 +740,9 @@ class RouterTest(TestCase):
     # Receivers on the edge and sender on an interior that is not connected
     # to the edges.
     def test_35_multicast_mobile_address_other_interior_to_edge(self):
+        if self.skip [ 'test_35' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
@@ -600,6 +755,9 @@ class RouterTest(TestCase):
 
     # Sender on an interior and 3 receivers connected to three different edges
     def test_36_multicast_mobile_address_edge_to_edge_two_interiors(self):
+        if self.skip [ 'test_36' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
@@ -609,6 +767,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_37_multicast_mobile_address_all_edges(self):
+        if self.skip [ 'test_37' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressMulticastTest(self.routers[2].addresses[0],
                                           self.routers[3].addresses[0],
                                           self.routers[4].addresses[0],
@@ -620,6 +781,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_38_mobile_addr_event_three_receivers_same_interior(self):
+        if self.skip [ 'test_38' ] :
+            self.skipTest ( "Test skipped during development." )
+
         test = MobileAddressEventTest(self.routers[2].addresses[0],
                                       self.routers[3].addresses[0],
                                       self.routers[3].addresses[0],
@@ -631,6 +795,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_39_mobile_addr_event_three_receivers_diff_interior(self):
+        if self.skip [ 'test_39' ] :
+            self.skipTest ( "Test skipped during development." )
+
         # This will test the QDRC_EVENT_ADDR_TWO_DEST event
         test = MobileAddressEventTest(self.routers[2].addresses[0],
                                       self.routers[4].addresses[0],
@@ -643,6 +810,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_40_drop_rx_client_multicast_large_message(self):
+        if self.skip [ 'test_40' ] :
+            self.skipTest ( "Test skipped during development." )
+
         # test what happens if some multicast receivers close in the middle of
         # a multiframe transfer
         test = MobileAddrMcastDroppedRxTest(self.routers[2].addresses[0],
@@ -654,6 +824,9 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def test_41_drop_rx_client_multicast_small_message(self):
+        if self.skip [ 'test_41' ] :
+            self.skipTest ( "Test skipped during development." )
+
         # test what happens if some multicast receivers close in the middle of
         # a multiframe transfer
         test = MobileAddrMcastDroppedRxTest(self.routers[2].addresses[0],
@@ -745,6 +918,14 @@ class LinkRouteProxyTest(TestCase):
         cls.CONN_LINK_ROUTE_TYPE = 'org.apache.qpid.dispatch.router.connection.linkRoute'
         cls.CONNECTOR_TYPE = 'org.apache.qpid.dispatch.connector'
 
+        cls.skip = { 'test_01' : 0,
+                     'test_02' : 0,
+                     'test_03' : 0,
+                     'test_50' : 0,
+                     'test_51' : 0,
+                     'test_52' : 0
+                   }
+
     def _get_address(self, router, address):
         """Lookup address in route table"""
         a_type = 'org.apache.qpid.dispatch.router.address'
@@ -767,6 +948,9 @@ class LinkRouteProxyTest(TestCase):
         tr.stop()
 
     def test_01_immedate_detach_reattach(self):
+        if self.skip [ 'test_01' ] :
+            self.skipTest ( "Test skipped during development." )
+
         """
         Have a service for a link routed address abruptly detach
         in response to an incoming link attach
@@ -825,6 +1009,9 @@ class LinkRouteProxyTest(TestCase):
         """
         Rapidly add and delete link routes at the edge
         """
+        if self.skip [ 'test_02' ] :
+            self.skipTest ( "Test skipped during development." )
+
 
         # activate the pre-configured link routes
         ea1_mgmt = self.EA1.management
@@ -880,6 +1067,9 @@ class LinkRouteProxyTest(TestCase):
         """
         What happens when the interior connection bounces?
         """
+        if self.skip [ 'test_03' ] :
+            self.skipTest ( "Test skipped during development." )
+
         config = Qdrouterd.Config([('router', {'mode': 'edge',
                                                'id': 'Edge1'}),
                                    ('listener', {'role': 'normal',
@@ -933,6 +1123,9 @@ class LinkRouteProxyTest(TestCase):
         Verify that the link topology that results from activating a link route
         and sending traffic is correct
         """
+        if self.skip [ 'test_50' ] :
+            self.skipTest ( "Test skipped during development." )
+
         fs = FakeService(self.EA1.route_container)
         self.INT_B.wait_address("CfgLinkRoute1")
 
@@ -993,6 +1186,9 @@ class LinkRouteProxyTest(TestCase):
         Activate the configured link routes via a FakeService, verify proxies
         created by passing traffic from/to and interior router
         """
+        if self.skip [ 'test_51' ] :
+            self.skipTest ( "Test skipped during development." )
+
         a_type = 'org.apache.qpid.dispatch.router.address'
 
         fs = FakeService(self.EA1.route_container)
@@ -1034,6 +1230,9 @@ class LinkRouteProxyTest(TestCase):
         configured some link routes.  Then have clients on the interior
         exchange messages via the fake service.
         """
+        if self.skip [ 'test_52' ] :
+            self.skipTest ( "Test skipped during development." )
+
         fs = ConnLinkRouteService(self.EA1.route_container,
                                   container_id="FakeService",
                                   config = [("ConnLinkRoute1",
