@@ -57,9 +57,7 @@ int main(int argc, char** argv)
     result += timer_tests(qd);
     result += tool_tests();
     result += compose_tests();
-#if USE_MEMORY_POOL
     result += alloc_tests();
-#endif
     result += policy_tests();
     result += failoverlist_tests();
     result += parse_tree_tests();

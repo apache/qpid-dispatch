@@ -22,7 +22,7 @@
 # a tool for post-processing Valgrind output from the unit tests
 # Use:
 #    1) configure the build to use valgrind and output xml
-#       $ cmake .. -DUSE_VALGRIND=Yes -DVALGRIND_XML=Yes -DUSE_MEMORY_POOL=No
+#       $ cmake .. -DUSE_VALGRIND=Yes -DVALGRIND_XML=Yes
 #    2) build and run the unit tests
 #       $ make && make test
 #    3) run grinder from your build directory.  It will look for valgrind xml

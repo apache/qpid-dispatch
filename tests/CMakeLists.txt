@@ -35,10 +35,8 @@ set(unit_test_SOURCES
     core_timer_test.c
     parse_tree_tests.c
     proton_utils_tests.c
+    alloc_test.c
     )
-if (USE_MEMORY_POOL)
-  list(APPEND unit_test_SOURCES alloc_test.c)
-endif()
 
 add_executable(unit_tests ${unit_test_SOURCES})
 target_link_libraries(unit_tests qpid-dispatch)

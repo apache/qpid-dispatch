@@ -38,6 +38,7 @@ add_custom_command (
 
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
+  alloc_pool.c
   amqp.c
   bitmask.c
   buffer.c
@@ -130,10 +131,6 @@ if(USE_LIBWEBSOCKETS)
 else(USE_LIBWEBSOCKETS)
   list(APPEND qpid_dispatch_SOURCES http-none.c)
 endif(USE_LIBWEBSOCKETS)
-
-if(USE_MEMORY_POOL)
-  list(APPEND qpid_dispatch_SOURCES alloc_pool.c)
-endif()
 
 # DISPATCH-654 There are, in fact, no strict-aliasing violations and newer compilers don't complain.
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")

@@ -34,10 +34,6 @@
 #define QD_MEMORY_FILL(P,C,S)
 #endif
 
-#if USE_MEMORY_POOL
 #include "alloc_pool.h"
-#else
-#include "alloc_malloc.h"
-#endif
 
 #endif // ALLOC_H
