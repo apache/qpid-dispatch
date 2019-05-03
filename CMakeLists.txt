@@ -26,7 +26,7 @@ set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
 # Set default build type. Must use FORCE because project() sets default to ""
 if (NOT CMAKE_BUILD_TYPE)
-  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE string
+  set (CMAKE_BUILD_TYPE RelWithDebInfo CACHE STRING
     "Build type: Debug, Release, RelWithDebInfo, MinSizeRel or Coverage (default RelWithDebInfo)" FORCE)
 endif(NOT CMAKE_BUILD_TYPE)
 if (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
