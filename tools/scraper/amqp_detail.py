@@ -890,6 +890,9 @@ class AllDetails():
                                 if tod_of_shutdown is None:
                                     # Hmmm, no shutdown. Use last link frame
                                     tod_of_shutdown = link.frame_list[-1].datetime
+                        if tod_of_second_attach is None:
+                            # Hmmm, no second attach. Use first link frame time
+                            tod_of_second_attach = link.frame_list[0].datetime
                         if init_stall:
                             dur = tod_of_shutdown - tod_of_second_attach
                             link.counts.initial_no_credit_duration = dur
