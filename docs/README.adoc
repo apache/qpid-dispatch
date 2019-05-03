@@ -29,7 +29,7 @@ This directory contains the documentation for Qpid Dispatch Router. The document
   └── notes  # Developer notes: project information, design notes, or anything else that's primarily of developer interest; these are not installed.
 ----
 
-== Contributing to the Documentation
+== Contributing to the documentation
 
 Apache Qpid welcomes contributions from the community. To contribute to the documentation, see the link:notes/contrib-guide.adoc[Contributor's Guide].
 
