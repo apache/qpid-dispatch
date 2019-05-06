@@ -27,7 +27,6 @@
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
-typedef struct qdr_address_t         qdr_address_t;
 typedef struct qdr_address_config_t  qdr_address_config_t;
 typedef struct qdr_node_t            qdr_node_t;
 typedef struct qdr_router_ref_t      qdr_router_ref_t;
@@ -850,6 +849,9 @@ struct qdr_core_t {
     uint64_t  deliveries_ingress_route_container;
     uint64_t  deliveries_delayed_1sec;
     uint64_t  deliveries_delayed_10sec;
+
+    qdr_edge_conn_addr_t          edge_conn_addr;
+    void                         *edge_context;
 };
 
 struct qdr_terminus_t {
