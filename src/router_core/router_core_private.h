@@ -678,6 +678,7 @@ void qdr_core_delete_auto_link (qdr_core_t *core,  qdr_auto_link_t *al);
 
 // Core timer related field/data structures
 typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+typedef qdr_address_t * (*qdr_edge_conn_addr_t) (void *context);
 
 typedef struct qdr_core_timer_t {
     DEQ_LINKS(struct qdr_core_timer_t);
@@ -850,6 +851,9 @@ struct qdr_core_t {
     uint64_t  deliveries_ingress_route_container;
     uint64_t  deliveries_delayed_1sec;
     uint64_t  deliveries_delayed_10sec;
+
+    qdr_edge_conn_addr_t          edge_conn_addr;
+    void                         *edge_context;
 };
 
 struct qdr_terminus_t {

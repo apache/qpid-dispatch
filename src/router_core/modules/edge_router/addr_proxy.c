@@ -432,6 +432,14 @@ static void on_transfer(void           *link_context,
     qdrc_endpoint_flow_CT(ap->core, ap->tracking_endpoint, 1, false);
 }
 
+qdr_address_t *qcm_edge_conn_addr(void *link_context)
+{
+    qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
+    if (!ap)
+        return 0;
+    return ap->edge_conn_addr;
+}
+
 
 static void on_cleanup(void *link_context)
 {
@@ -477,8 +485,12 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
                                             on_addr_event,
                                             ap);
 
+    core->edge_conn_addr = qcm_edge_conn_addr;
+    core->edge_context = ap;
+
     return ap;
 }
+
 
 
 void qcm_edge_addr_proxy_final(qcm_edge_addr_proxy_t *ap)

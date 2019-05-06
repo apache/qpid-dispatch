@@ -1383,6 +1383,16 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     //
     pn_link_open(qd_link_pn(qlink));
 
+    qd_connection_t  *conn     = qd_link_connection(qlink);
+    qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
+    //
+    // All links on the inter router or edge connection have unbounded q2 limit
+    //
+    if (qdr_conn->role == QDR_ROLE_EDGE_CONNECTION || qdr_conn->role == QDR_ROLE_INTER_ROUTER) {
+        qd_link_set_q2_limit_unbounded(qlink, true);
+    }
+
+
     //
     // Mark the link as stalled and waiting for initial credit.
     //

@@ -480,6 +480,18 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         return;
     }
 
+    //
+    // If the anonymous delivery could not be sent anywhere (fanout = 0) and it is not multicasted, try sending it over
+    // the anonymous link.
+    //
+    if (fanout == 0 && !dlv->multicast && link->owning_addr == 0 && dlv->to_addr != 0) {
+        if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION) {
+            qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
+            if (sender_address && sender_address != addr) {
+                fanout += qdr_forward_message_CT(core, sender_address, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
+            }
+        }
+    }
 
     if (fanout == 0) {
         //
@@ -616,12 +628,48 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     //
 
     if (DEQ_IS_EMPTY(link->undelivered)) {
+        qdr_link_ref_t *temp_rlink = 0;
         qdr_address_t *addr = link->owning_addr;
         if (!addr && dlv->to_addr) {
             qdr_connection_t *conn = link->conn;
             if (conn && conn->tenant_space)
                 qd_iterator_annotate_space(dlv->to_addr, conn->tenant_space, conn->tenant_space_len);
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
+
+            if (!addr) {
+                //
+                // This is an anonymous delivery but the address that it wants sent to is
+                // not in this router's address table. We will send this delivery up the
+                // anonymous link to the interior router (if this is an edge router).
+                // Only edge routers have a non null core->edge_conn_addr
+                //
+                if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION) {
+                    qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
+                    if (sender_address) {
+                        addr = sender_address;
+                    }
+                }
+            }
+            else {
+                //
+                // (core->edge_conn_addr is non-zero ONLY on edge routers. So there is no need to check if the
+                // core->router_mode is edge.
+                //
+                // The connection on which the delivery arrived should not be QDR_ROLE_EDGE_CONNECTION because
+                // we do not want to send it back over the same connections
+                //
+                if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION && qdr_is_addr_treatment_multicast(addr)) {
+                    qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
+                    if (sender_address && sender_address != addr) {
+                        qdr_link_ref_t *sender_rlink = DEQ_HEAD(sender_address->rlinks);
+                        if (sender_rlink) {
+                            temp_rlink = new_qdr_link_ref_t();
+                            temp_rlink->link = sender_rlink->link;
+                            DEQ_INSERT_TAIL(addr->rlinks, temp_rlink);
+                        }
+                    }
+                }
+            }
         }
 
         //
@@ -636,6 +684,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             // Give the action reference to the qdr_link_forward function. Don't decref/incref.
             //
             qdr_link_forward_CT(core, link, dlv, addr, more);
+        }
+
+        if (addr && temp_rlink) {
+            DEQ_REMOVE(addr->rlinks, temp_rlink);
+            free_qdr_link_ref_t(temp_rlink);
         }
     } else {
         //
