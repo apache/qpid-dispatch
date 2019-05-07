@@ -60,10 +60,12 @@ def parse_args(argv):
     parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
     parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
 
-    # This limit can be used to limit the number of output rows and can be used in conjunction with options
+    # This limit can be used to limit the number of output rows and
+    # can be used in conjunction with options
     # like -c, -l, -a, --autolinks, --linkroutes and --log.
-    # By default, the limit is set to 100 rows.
-    parser.add_option("--limit", help="Limit number of output rows", type="int", default=100)
+    # By default, the limit is not set, which means the limit is unlimited.
+
+    parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
 
     opts, args = parser.parse_args(args=argv)
 

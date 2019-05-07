@@ -452,7 +452,6 @@ class QdmanageTest(TestCase):
                 conn_properties = output['properties']
                 if conn_properties.get('int_property'):
                     identity = output.get("identity")
-                    print (identity)
                     if identity:
                         delete_command = 'DELETE --type=connection --id=' + identity
                         try:
@@ -514,6 +513,67 @@ class QdmanageTest(TestCase):
             if pattern is not None:
                 for p in config:
                     self.assertNotEqual(p[0], pattern)
+
+    def test_yy_query_many_links(self):
+        # This test will fail without the fix for DISPATCH-974
+        c = BlockingConnection(self.address())
+        count = 0
+        links = []
+        COUNT = 5000
+
+        print ("Creating 10,000 links, please wait")
+
+        ADDRESS_SENDER = "examples-sender"
+        ADDRESS_RECEIVER = "examples-receiver"
+
+        # This loop creates 5000 consumer and 5000 producer links with
+        # different addresses
+        while True:
+            count += 1
+            if count % 500 == 0:
+                print ("working....")
+            r = c.create_receiver(ADDRESS_RECEIVER + str(count))
+            links.append(r)
+            s = c.create_sender(ADDRESS_SENDER + str(count))
+            links.append(c)
+            if count == COUNT:
+                break
+
+        # Try fetching all 10,000 addresses
+        # This qdmanage query command would fail without the fix
+        # for DISPATCH-974
+        query_command = 'QUERY --type=org.apache.qpid.dispatch.router.address'
+        outs = json.loads(self.run_qdmanage(query_command))
+
+        sender_addresses = 0
+        receiver_addresses = 0
+
+        for out in outs:
+            if ADDRESS_SENDER in out['name']:
+                sender_addresses += 1
+            if ADDRESS_RECEIVER in out['name']:
+                receiver_addresses += 1
+
+        self.assertEqual(sender_addresses, COUNT)
+        self.assertEqual(receiver_addresses, COUNT)
+
+        query_command = 'QUERY --type=link'
+        outs = json.loads(self.run_qdmanage(query_command))
+
+        out_links = 0
+        in_links = 0
+
+        for out in outs:
+            if out.get('owningAddr'):
+                if ADDRESS_SENDER in out['owningAddr']:
+                    in_links += 1
+                if ADDRESS_RECEIVER in out['owningAddr']:
+                    out_links += 1
+
+        self.assertEqual(out_links, COUNT)
+        self.assertEqual(in_links, COUNT)
+
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
