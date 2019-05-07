@@ -1386,11 +1386,9 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     qd_connection_t  *conn     = qd_link_connection(qlink);
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
     //
-    // Anonymous sender links coming in on edge connections must not have an q2 limit set. This will ensure
-    // that several senders connected to the edge and sending large messages dont choke that link.
-    // Regular sending links on the edge router connection will still be subjected to q2 back pressure.
+    // All links on the inter router or edge connection have unbounded q2 limit
     //
-    if (link->link_direction == QD_INCOMING && qdr_conn->core->router_mode == QD_ROUTER_MODE_INTERIOR && qdr_conn->role == QDR_ROLE_EDGE_CONNECTION && link->owning_addr == 0) {
+    if (qdr_conn->role == QDR_ROLE_EDGE_CONNECTION || qdr_conn->role == QDR_ROLE_INTER_ROUTER) {
         qd_link_set_q2_limit_unbounded(qlink, true);
     }
 

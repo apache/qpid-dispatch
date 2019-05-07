@@ -27,6 +27,7 @@
 #include <qpid/dispatch/log.h>
 #include <memory.h>
 
+typedef struct qdr_address_t         qdr_address_t;
 typedef struct qdr_address_config_t  qdr_address_config_t;
 typedef struct qdr_node_t            qdr_node_t;
 typedef struct qdr_router_ref_t      qdr_router_ref_t;
@@ -677,6 +678,7 @@ void qdr_core_delete_auto_link (qdr_core_t *core,  qdr_auto_link_t *al);
 
 // Core timer related field/data structures
 typedef void (*qdr_timer_cb_t)(qdr_core_t *core, void* context);
+typedef qdr_address_t * (*qdr_edge_conn_addr_t) (void *context);
 
 typedef struct qdr_core_timer_t {
     DEQ_LINKS(struct qdr_core_timer_t);

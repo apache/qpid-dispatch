@@ -35,7 +35,6 @@
 typedef struct qdr_subscription_t    qdr_subscription_t;
 typedef struct qdr_connection_t      qdr_connection_t;
 typedef struct qdr_link_t            qdr_link_t;
-typedef struct qdr_address_t         qdr_address_t;
 typedef struct qdr_delivery_t        qdr_delivery_t;
 typedef struct qdr_terminus_t        qdr_terminus_t;
 typedef struct qdr_error_t           qdr_error_t;
@@ -680,7 +679,6 @@ typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_d
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
 
-typedef qdr_address_t * (*qdr_edge_conn_addr_t) (void *context);
 
 void qdr_connection_handlers(qdr_core_t             *core,
                              void                      *context,

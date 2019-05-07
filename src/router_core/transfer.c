@@ -637,7 +637,6 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
 
             if (!addr) {
-                qd_log(core->log, QD_LOG_INFO, "yoyoma Addr not in address table %s - %p\n", qd_iterator_copy(dlv->to_addr), (void *)core->addr_hash);
                 //
                 // This is an anonymous delivery but the address that it wants sent to is
                 // not in this router's address table. We will send this delivery up the
@@ -662,9 +661,12 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
                 if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION && qdr_is_addr_treatment_multicast(addr)) {
                     qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
                     if (sender_address && sender_address != addr) {
-                        temp_rlink = DEQ_HEAD(sender_address->rlinks);
-                        if (temp_rlink)
+                        qdr_link_ref_t *sender_rlink = DEQ_HEAD(sender_address->rlinks);
+                        if (sender_rlink) {
+                            temp_rlink = new_qdr_link_ref_t();
+                            temp_rlink->link = sender_rlink->link;
                             DEQ_INSERT_TAIL(addr->rlinks, temp_rlink);
+                        }
                     }
                 }
             }
@@ -686,6 +688,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
         if (addr && temp_rlink) {
             DEQ_REMOVE(addr->rlinks, temp_rlink);
+            free_qdr_link_ref_t(temp_rlink);
         }
     } else {
         //
