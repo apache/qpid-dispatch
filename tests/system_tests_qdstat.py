@@ -29,6 +29,7 @@ import unittest
 from subprocess import PIPE
 from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module, SkipIfNeeded
+from proton.utils import BlockingConnection
 
 class QdstatTest(system_test.TestCase):
     """Test qdstat tool output"""
@@ -124,6 +125,115 @@ class QdstatTest(system_test.TestCase):
 
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
+
+    def test_yy_query_many_links(self):
+        # This test will fail without the fix for DISPATCH-974
+        c = BlockingConnection(self.router.addresses[0])
+        count = 0
+        links = []
+        COUNT = 5000
+
+        ADDRESS_SENDER = "examples-sender"
+        ADDRESS_RECEIVER = "examples-receiver"
+
+        # This loop creates 5000 consumer and 5000 producer links
+        while True:
+            count += 1
+            r = c.create_receiver(ADDRESS_RECEIVER + str(count))
+            links.append(r)
+            s = c.create_sender(ADDRESS_SENDER + str(count))
+            links.append(c)
+            if count == COUNT:
+                break
+
+        # Now we run qdstat command and check if we got back details
+        # about all the 10000 links
+        # We do not specify the limit which means unlimited
+        # which means get everything that is there.
+        outs = self.run_qdstat(['--links'])
+        out_list = outs.split("\n")
+
+        out_links = 0
+        in_links = 0
+        for out in out_list:
+            if "endpoint  in" in out and ADDRESS_SENDER in out:
+                in_links += 1
+            if "endpoint  out" in out and ADDRESS_RECEIVER in out:
+                out_links += 1
+
+        self.assertEqual(in_links, COUNT)
+        self.assertEqual(out_links, COUNT)
+
+        # Run qdstat with a limit more than 10,000
+        outs = self.run_qdstat(['--links', '--limit=15000'])
+        out_list = outs.split("\n")
+
+        out_links = 0
+        in_links = 0
+        for out in out_list:
+            if "endpoint  in" in out and ADDRESS_SENDER in out:
+                in_links += 1
+            if "endpoint  out" in out and ADDRESS_RECEIVER in out:
+                out_links += 1
+
+        self.assertEqual(in_links, COUNT)
+        self.assertEqual(out_links, COUNT)
+
+
+        # Run qdstat with a limit less than 10,000
+        outs = self.run_qdstat(['--links', '--limit=2000'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 2000)
+
+        # Run qdstat with a limit of 700 because 700
+        # is the maximum number of rows we get per request
+        outs = self.run_qdstat(['--links', '--limit=700'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 700)
+
+        # Run qdstat with a limit of 500 because 700
+        # is the maximum number of rows we get per request
+        # and we want to try something less than 700
+        outs = self.run_qdstat(['--links', '--limit=500'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 500)
+
+
+        # This test would fail without the fix for DISPATCH-974
+        outs = self.run_qdstat(['--address'])
+        out_list = outs.split("\n")
+
+        sender_addresses = 0
+        receiver_addresses = 0
+        for out in out_list:
+            if ADDRESS_SENDER in out:
+                sender_addresses += 1
+            if ADDRESS_RECEIVER in out:
+                receiver_addresses += 1
+
+        self.assertEqual(sender_addresses, COUNT)
+        self.assertEqual(receiver_addresses, COUNT)
+
+        c.close()
+
 
 class QdstatLinkPriorityTest(system_test.TestCase):
     """Need 2 routers to get inter-router links for the link priority test"""

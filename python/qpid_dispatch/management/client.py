@@ -225,12 +225,57 @@ class Node(object):
         @keyword count: A count of the maximum number of results to return.
         @return: A L{QueryResponse}
         """
-        request = self.node_request(
-            {u'attributeNames': attribute_names or []},
-            operation=u'QUERY', entityType=type, offset=offset, count=count)
 
-        response = self.call(request)
-        return Node.QueryResponse(self, response.body[u'attributeNames'], response.body[u'results'])
+        # There is a bug in proton (PROTON-1846) wherein we cannot ask for
+        # too many rows. So, as a safety we are going to ask only for
+        # MAX_ALLOWED_COUNT_PER_REQUEST. Since this is used by both qdstat
+        # and qdmanage, we have determined that the optimal value for
+        # MAX_ALLOWED_COUNT_PER_REQUEST is 700
+        MAX_ALLOWED_COUNT_PER_REQUEST = 700
+
+        response_results = []
+        response_attr_names = []
+        if offset is None:
+            offset = 0
+
+        if count is None:
+            # count has not been specified. For each request the
+            # maximum number of rows we can get without proton
+            # failing is MAX_ALLOWED_COUNT_PER_REQUEST
+            request_count = MAX_ALLOWED_COUNT_PER_REQUEST
+        else:
+            request_count = min(MAX_ALLOWED_COUNT_PER_REQUEST, count)
+
+        while True:
+            request = self.node_request(
+                {u'attributeNames': attribute_names or []},
+                operation=u'QUERY', entityType=type, offset=offset,
+                count=request_count)
+
+            response = self.call(request)
+
+            if not response_attr_names:
+                response_attr_names += response.body[u'attributeNames']
+
+            response_results += response.body[u'results']
+
+            if len(response.body[u'results']) < request_count:
+                break
+
+            if count:
+                len_response_results = len(response_results)
+                if count == len_response_results:
+                    break
+
+                if count - len_response_results < request_count:
+                    request_count = count - len_response_results
+
+            offset += request_count
+
+        query_reponse = Node.QueryResponse(self,
+                                           response_attr_names,
+                                           response_results)
+        return query_reponse
 
     def create(self, attributes=None, type=None, name=None):
         """
