@@ -666,7 +666,6 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
 
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
-
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
@@ -678,7 +677,6 @@ typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int l
 typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
-
 
 void qdr_connection_handlers(qdr_core_t             *core,
                              void                      *context,
