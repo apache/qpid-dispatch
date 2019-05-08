@@ -664,6 +664,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
                         qdr_link_ref_t *sender_rlink = DEQ_HEAD(sender_address->rlinks);
                         if (sender_rlink) {
                             temp_rlink = new_qdr_link_ref_t();
+                            DEQ_ITEM_INIT(temp_rlink);
                             temp_rlink->link = sender_rlink->link;
                             DEQ_INSERT_TAIL(addr->rlinks, temp_rlink);
                         }
