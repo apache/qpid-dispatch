@@ -192,8 +192,8 @@ Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAddressEntity(dis
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAddressEntity(distribution=balanced, identity=router.config.address/1, name=router.config.address/1, prefix=my_queue_wp, type=org.apache.qpid.dispatch.router.config.address, waypoint=True)
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigLinkrouteEntity(connection=BROKER, direction=in, distribution=linkBalanced, identity=router.config.linkRoute/0, name=router.config.linkRoute/0, prefix=my_queue, type=org.apache.qpid.dispatch.router.config.linkRoute)
 Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigLinkrouteEntity(connection=BROKER, direction=out, distribution=linkBalanced, identity=router.config.linkRoute/1, name=router.config.linkRoute/1, prefix=my_queue, type=org.apache.qpid.dispatch.router.config.linkRoute)
-Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAutolinkEntity(addr=my_queue_wp, connection=BROKER, direction=in, identity=router.config.autoLink/0, name=router.config.autoLink/0, type=org.apache.qpid.dispatch.router.config.autoLink)
-Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAutolinkEntity(addr=my_queue_wp, connection=BROKER, direction=out, identity=router.config.autoLink/1, name=router.config.autoLink/1, type=org.apache.qpid.dispatch.router.config.autoLink)
+Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAutolinkEntity(address=my_queue_wp, connection=BROKER, direction=in, identity=router.config.autoLink/0, name=router.config.autoLink/0, type=org.apache.qpid.dispatch.router.config.autoLink)
+Tue Jun  7 15:07:32 2016 AGENT (debug) Add entity: RouterConfigAutolinkEntity(address=my_queue_wp, connection=BROKER, direction=out, identity=router.config.autoLink/1, name=router.config.autoLink/1, type=org.apache.qpid.dispatch.router.config.autoLink)
 ----
 
 === The `CONTAINER` Logging Module

@@ -69,15 +69,19 @@ class RouterTestDeprecatedLAutoLink(TestCase):
 
         name = "test-autolink"
 
+
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.B'}),
             # We are trying to declare a link route with both 'dir' and 'direction' attributes.
             # The router must not start in this case.
+            ('autoLink', {'externalAddr': 'node.100', 'addr': 'node.10',
+                          'containerId': 'container.1',
+                          'direction': 'out'}),
             ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'dir': 'in',  'direction': 'in'}),
             ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
+
             ('listener', {'port': cls.tester.get_port()}),
         ])
-
         cls.router = cls.tester.qdrouterd(name, config, wait=False, perform_teardown=False)
 
         # Try connecting for 4 seconds. If unable to connect, just move on.
@@ -92,6 +96,11 @@ class RouterTestDeprecatedLAutoLink(TestCase):
             search_lines = [s for s in log_lines if
                             "org.apache.qpid.dispatch.router.config.autoLink: Both 'dir' and 'direction' cannot be specified for entity 'autoLink'" in s]
             self.assertTrue(len(search_lines) > 0)
+
+            external_addr_search_lines = [s for s in log_lines if
+                            "Attribute 'externalAddr' of entity 'autoLink' has been deprecated. Use 'externalAddress' instead" in s]
+            self.assertTrue(len(external_addr_search_lines) > 0)
+
 
 
 

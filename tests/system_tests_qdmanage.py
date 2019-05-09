@@ -61,7 +61,7 @@ class QdmanageTest(TestCase):
             ('connector', {'role': 'inter-router', 'port': cls.inter_router_port}),
             ('address', {'name': 'test-address', 'prefix': 'abcd', 'distribution': 'multicast'}),
             ('linkRoute', {'name': 'test-link-route', 'prefix': 'xyz', 'direction': 'in'}),
-            ('autoLink', {'name': 'test-auto-link', 'addr': 'mnop', 'direction': 'out'}),
+            ('autoLink', {'name': 'test-auto-link', 'address': 'mnop', 'direction': 'out'}),
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl'}),
             ('address', {'name': 'pattern-address', 'pattern': 'a/*/b/#/c', 'distribution': 'closest'})
         ])

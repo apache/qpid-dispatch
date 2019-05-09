@@ -249,7 +249,7 @@ class LinkRouteTest(TestCase):
 
         self.assertTrue(exception_occurred)
 
-        cmd = 'CREATE --type=autoLink addr=127.0.0.1 direction=in connection=routerC'
+        cmd = 'CREATE --type=autoLink address=127.0.0.1 direction=in connection=routerC'
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
 
         identity = out[out.find("identity") + 12: out.find("identity") + 14]

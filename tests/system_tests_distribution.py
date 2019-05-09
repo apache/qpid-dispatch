@@ -187,13 +187,13 @@ class DistributionTests ( TestCase ):
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_1 + '.waypoint',
+              { 'address': cls.waypoint_prefix_1 + '.waypoint',
                 'containerId': cls.container_ids[1],
                 'direction': 'in'
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_1 + '.waypoint',
+              { 'address': cls.waypoint_prefix_1 + '.waypoint',
                 'containerId': cls.container_ids[1],
                 'direction': 'out'
               }
@@ -231,14 +231,14 @@ class DistributionTests ( TestCase ):
 
             # Waypoint 1 configuration --------------------------
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+              { 'address': cls.waypoint_prefix_2 + '.waypoint',
                 'phase' : 0,
                 'containerId': cls.container_ids[2],
                 'direction': 'out'    # out-of-router
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+              { 'address': cls.waypoint_prefix_2 + '.waypoint',
                 'phase' : 1,
                 'containerId': cls.container_ids[2],
                 'direction': 'in'    # into-router
@@ -247,14 +247,14 @@ class DistributionTests ( TestCase ):
 
             # Waypoint 2 configuration --------------------------
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+              { 'address': cls.waypoint_prefix_2 + '.waypoint',
                 'phase' : 1,   # out-of-router
                 'containerId': cls.container_ids[2],
                 'direction': 'out'
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_2 + '.waypoint',
+              { 'address': cls.waypoint_prefix_2 + '.waypoint',
                 'phase' : 2,   # into-router
                 'containerId': cls.container_ids[2],
                 'direction': 'in'
@@ -282,13 +282,13 @@ class DistributionTests ( TestCase ):
 
             #  Waypoint 1 configuration ----------------------
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_3 + '.waypoint',
+              { 'address': cls.waypoint_prefix_3 + '.waypoint',
                 'containerId': cls.container_ids[3],
                 'direction': 'in'
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_3 + '.waypoint',
+              { 'address': cls.waypoint_prefix_3 + '.waypoint',
                 'containerId': cls.container_ids[3],
                 'direction': 'out'
               }
@@ -296,13 +296,13 @@ class DistributionTests ( TestCase ):
 
             #  Waypoint 2 configuration ----------------------
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_3 + '.waypoint',
+              { 'address': cls.waypoint_prefix_3 + '.waypoint',
                 'containerId': cls.container_ids[3],
                 'direction': 'in'
               }
             ),
             ( 'autoLink',
-              { 'addr': cls.waypoint_prefix_3 + '.waypoint',
+              { 'address': cls.waypoint_prefix_3 + '.waypoint',
                 'containerId': cls.container_ids[3],
                 'direction': 'out'
               }

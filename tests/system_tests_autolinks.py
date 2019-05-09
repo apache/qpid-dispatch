@@ -108,9 +108,9 @@ class DetachAfterAttachTest(TestCase):
             ('listener', {'role': 'route-container', 'name': 'myListener',
                           'port': cls.tester.get_port()}),
 
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener',
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener',
                           'direction': 'in'}),
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener',
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener',
                           'direction': 'out'}),
         ])
 
@@ -167,9 +167,9 @@ class AutoLinkRetryTest(TestCase):
                            'port': cls.inter_router_port}),
 
                         ('autoLink', {'connection': 'connectorToB',
-                                      'addr': 'examples', 'direction': 'in'}),
+                                      'address': 'examples', 'direction': 'in'}),
                         ('autoLink', {'connection': 'connectorToB',
-                                      'addr': 'examples', 'direction': 'out'}),
+                                      'address': 'examples', 'direction': 'out'}),
         ])
 
     def __init__(self, test_method):
@@ -270,8 +270,8 @@ class WaypointReceiverPhaseTest(TestCase):
                         ('router', {'mode': 'interior', 'id': 'A'}),
                         ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.inter_router_port}),
-                        ('autoLink', {'addr': '0.0.0.0/queue.ext', 'direction': 'in', 'externalAddr': 'EXT'}),
-                        ('autoLink', {'addr': '0.0.0.0/queue.ext', 'direction': 'out', 'externalAddr': 'EXT'}),
+                        ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'in', 'externalAddress': 'EXT'}),
+                        ('autoLink', {'address': '0.0.0.0/queue.ext', 'direction': 'out', 'externalAddress': 'EXT'}),
                         ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
 
             ])
@@ -392,27 +392,27 @@ class AutolinkTest(TestCase):
             #
             # Create a pair of default auto-links for 'node.1'
             #
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
 
             #
             # Create a pair of auto-links on non-default phases for container-to-container transfers
             #
-            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.2', 'direction': 'in',  'phase': '4'}),
-            ('autoLink', {'addr': 'xfer.2', 'containerId': 'container.3', 'direction': 'out', 'phase': '4'}),
+            ('autoLink', {'address': 'xfer.2', 'containerId': 'container.2', 'direction': 'in',  'phase': '4'}),
+            ('autoLink', {'address': 'xfer.2', 'containerId': 'container.3', 'direction': 'out', 'phase': '4'}),
 
             #
             # Create a pair of auto-links with a different external address
             # Leave the direction as dir to test backward compatibility.
             #
-            ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
-            ('autoLink', {'addr': 'node.2', 'externalAddr': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
+            ('autoLink', {'address': 'node.2', 'externalAddress': 'ext.2', 'containerId': 'container.4', 'dir': 'in'}),
+            ('autoLink', {'address': 'node.2', 'externalAddress': 'ext.2', 'containerId': 'container.4', 'dir': 'out'}),
 
             #
             # Note here that the connection is set to a previously declared 'myListener'
             #
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
 
         ])
 
@@ -1078,7 +1078,7 @@ class ManageAutolinksTest(MessagingHandler):
                          'name': 'AL.%d' % self.n_created }
                 body  = {'direction': 'out',
                          'containerId': 'container.new',
-                         'addr': 'node.%d' % self.n_created }
+                         'address': 'node.%d' % self.n_created }
                 msg = Message(properties=props, body=body, reply_to=self.reply_to)
                 self.agent.send(msg)
                 self.n_created += 1

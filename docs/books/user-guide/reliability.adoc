@@ -282,13 +282,13 @@ address {
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER
     direction: in
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER
     direction: out
 }
@@ -411,8 +411,8 @@ $ sudo qdmanage -b localhost:6002 create --stdin
 [
 { "type":"connector", "name":"BROKER", "port":5672, "role":"route-container" },
 { "type":"address", "prefix":"my_queue", "waypoint":"yes" },
-{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "direction":"in" },
-{ "type":"autoLink", "addr":"my_queue", "connection":"BROKER", "direction":"out" }
+{ "type":"autoLink", "address":"my_queue", "connection":"BROKER", "direction":"in" },
+{ "type":"autoLink", "address":"my_queue", "connection":"BROKER", "direction":"out" }
 ]
 [
   {
@@ -442,7 +442,7 @@ $ sudo qdmanage -b localhost:6002 create --stdin
     "egressPhase": 0
   },
   {
-    "addr": "my_queue",
+    "address": "my_queue",
     "name": null,
     "linkRef": null,
     "type": "org.apache.qpid.dispatch.router.config.autoLink",
@@ -451,12 +451,12 @@ $ sudo qdmanage -b localhost:6002 create --stdin
     "direction": "in",
     "phase": 1,
     "lastError": null,
-    "externalAddr": null,
+    "externalAddress": null,
     "identity": "8",
     "containerId": null
   },
   {
-    "addr": "my_queue",
+    "address": "my_queue",
     "name": null,
     "linkRef": null,
     "type": "org.apache.qpid.dispatch.router.config.autoLink",
@@ -465,7 +465,7 @@ $ sudo qdmanage -b localhost:6002 create --stdin
     "direction": "out",
     "phase": 0,
     "lastError": null,
-    "externalAddr": null,
+    "externalAddress": null,
     "identity": "9",
     "containerId": null
   }
@@ -611,25 +611,25 @@ address {
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER1
     direction: in
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER1
     direction: out
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER2
     direction: in
 }
 
 autoLink {
-    addr: my_queue
+    address: my_queue
     connection: BROKER2
     direction: out
 }

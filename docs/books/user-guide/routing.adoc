@@ -481,15 +481,15 @@ For information about additional attributes, see link:{qdrouterdConfManPageUrl}#
 [options="nowrap",subs="+quotes"]
 ----
 autoLink {
-    addr: _ADDRESS_
+    address: _ADDRESS_
     connection: _CONNECTOR_NAME_
     direction: out
     ...
 }
 ----
 
-`addr`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
-`externalAddr`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the sender uses. In this scenario, senders send messages to the `addr` address, and then the router routes them to the broker queue represented by the `externalAddr` address.
+`address`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
+`externalAddress`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the sender uses. In this scenario, senders send messages to the `addr` address, and then the router routes them to the broker queue represented by the `externalAddress` address.
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `out` to specify that this autolink can send messages from the router to the broker.
 
@@ -502,15 +502,15 @@ For information about additional attributes, see link:{qdrouterdConfManPageUrl}#
 [options="nowrap",subs="+quotes"]
 ----
 autoLink {
-    addr: _ADDRESS_
+    address: _ADDRESS_
     connection: _CONNECTOR_NAME_
     direction: in
     ...
 }
 ----
 
-`addr`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
-`externalAddr`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the receiver uses. In this scenario, receivers receive messages from the `addr` address, and the router retrieves them from the broker queue represented by the `externalAddr` address.
+`address`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
+`externalAddress`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the receiver uses. In this scenario, receivers receive messages from the `addr` address, and the router retrieves them from the broker queue represented by the `externalAddress` address.
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 `direction`:: Set this attribute to `in` to specify that this autolink can receive messages from the broker to the router.
 
@@ -539,25 +539,25 @@ address {  // <2>
 }
 
 autoLink {  // <3>
-    addr: queue.first
+    address: queue.first
     direction: in
     connection: broker
 }
 
 autoLink {  // <4>
-    addr: queue.first
+    address: queue.first
     direction: out
     connection: broker
 }
 
 autoLink {  // <5>
-    addr: queue.second
+    address: queue.second
     direction: in
     connection: broker
 }
 
 autoLink {  // <6>
-    addr: queue.second
+    address: queue.second
     direction: out
     connection: broker
 }
