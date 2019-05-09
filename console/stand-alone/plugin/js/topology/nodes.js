@@ -71,13 +71,13 @@ export class Node {
       return "";
     }
   }
-  toolTip(topology) {
+  toolTip(topology, verbose) {
     return new Promise(
       function (resolve) {
         if (this.nodeType === "normal" || this.nodeType === "edge") {
           resolve(this.clientTooltip());
         } else
-          this.routerTooltip(topology).then(function (toolTip) {
+          this.routerTooltip(topology, verbose).then(function (toolTip) {
             resolve(toolTip);
           });
       }.bind(this)
@@ -99,7 +99,7 @@ export class Node {
     return title;
   }
 
-  routerTooltip(topology) {
+  routerTooltip(topology, verbose) {
     return new Promise(
       function (resolve) {
         topology.ensureEntities(
@@ -109,8 +109,7 @@ export class Node {
             attrs: ["role", "port", "http"]
           },
           {
-            entity: "router",
-            attrs: ["name", "version", "hostName"]
+            entity: "router"
           }
           ],
           function (foo, nodes) {
@@ -147,6 +146,19 @@ export class Node {
             if (ports.length > 0) {
               title +=
                 "<tr><td>Ports</td><td>" + ports.join(", ") + "</td></tr>";
+            }
+            // add verbose rows
+            if (verbose) {
+              title +=
+                "<tr><td>Addresses</td><td>" + r.addrCount + "</td></tr>";
+              title +=
+                "<tr><td>Connections</td><td>" + r.connectionCount + "</td></tr>";
+              title +=
+                "<tr><td>Links</td><td>" + r.linkCount + "</td></tr>";
+              title +=
+                "<tr><td>Auto links</td><td>" + r.autoLinkCount + "</td></tr>";
+              title +=
+                "<tr><td>Link routes</td><td>" + r.linkRouteCount + "</td></tr>";
             }
             title += "</table>";
             resolve(title);

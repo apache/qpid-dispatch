@@ -305,6 +305,8 @@ td.more-info {
             <ul>
                 <li class="na" ng-class="{'force-display': !isFixed()}" ng-click="setFixed(true)">Freeze in place</li>
                 <li class="na" ng-class="{'force-display': isFixed()}" ng-click="setFixed(false)">Unfreeze</li>
+                <li class="na" ng-class="{'force-display': isSelected()}" ng-if="isSelectable()" ng-click="setSelected(false)">Unselect</li>
+                <li class="na" ng-class="{'force-display': !isSelected()}" ng-if="isSelectable()" ng-click="setSelected(true)">Select</li>
             </ul>
         </div>
     </div>

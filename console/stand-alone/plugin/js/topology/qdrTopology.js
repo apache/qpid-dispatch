@@ -164,17 +164,34 @@ export class TopologyController {
     };
 
     // show the details dialog for a client or group of clients
-    function doDialog(d) {
+    function doDialog(d, type, toolTip) {
+      const dlgs = {
+        router: {
+          templateUrl: "tmplRouterDetail.html",
+          controller: "QDR.RouterDialogController",
+          size: "sm"
+        },
+        client: {
+          templateUrl: "tmplClientDetail.html",
+          controller: "QDR.DetailDialogController",
+          size: "md"
+        }
+      };
+      const which = dlgs[type];
       $uibModal
         .open({
+          size: which.size,
           backdrop: true,
           keyboard: true,
           backdropClick: true,
-          templateUrl: QDRTemplatePath + "tmplClientDetail.html",
-          controller: "QDR.DetailDialogController",
+          templateUrl: QDRTemplatePath + which.templateUrl,
+          controller: which.controller,
           resolve: {
             d: function () {
               return d;
+            },
+            tip: function () {
+              return toolTip;
             }
           }
         })
@@ -195,6 +212,22 @@ export class TopologyController {
       if (!$scope.contextNode) return false;
       return $scope.contextNode.fixed;
     };
+    $scope.isSelectable = function () {
+      if (!$scope.contextNode) return false;
+      const d = $scope.contextNode;
+      return d.nodeType !== "normal" &&
+        d.nodeType !== "on-demand" &&
+        d.nodeType !== "edge" &&
+        d.nodeTYpe !== "_edge";
+    };
+    $scope.isSelected = function () {
+      return $scope.isSelectable() && $scope.contextNode === selected_node;
+    };
+    $scope.setSelected = function (b) {
+      selected_node = b ? $scope.contextNode : null;
+      restart();
+    };
+
     $scope.addressStyle = function (address) {
       return {
         "background-color": $scope.addressColors[address]
@@ -707,27 +740,18 @@ export class TopologyController {
             return;
           }
 
-          // if this node was selected, unselect it
-          if ($scope.mousedown_node === selected_node) {
-            selected_node = null;
-          } else {
-            if (
-              d.nodeType !== "normal" &&
-              d.nodeType !== "on-demand" &&
-              d.nodeType !== "edge" &&
-              d.nodeTYpe !== "_edge"
-            )
-              selected_node = $scope.mousedown_node;
-          }
           clearAllHighlights();
           $scope.mousedown_node = null;
-          if (!$scope.$$phase) $scope.$apply();
           // handle clicking on nodes that represent multiple sub-nodes
           if (d.normals && !d.isArtemis && !d.isQpid) {
-            doDialog(d);
+            doDialog(d, 'client');
+          } else if (d.nodeType === '_topo') {
+            d.toolTip(QDRService.management.topology, true).then(function (toolTip) {
+              doDialog(d, 'router', toolTip);
+            });
           }
           // apply any data changes to the interface
-          restart();
+          $timeout(restart);
         })
         .on("dblclick", function (d) {
           // circle

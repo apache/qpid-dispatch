@@ -136,6 +136,10 @@ export class Links {
           onode.connection.results[c]
         );
 
+        // we need a unique connection.container
+        if (connection.container === '') {
+          connection.container = utils.uuidv4();
+        }
         // this is a connection to another interior router
         if (connection.role === "inter-router") {
           const target = getContainerIndex(connection.container, nodeInfo);
