@@ -1239,9 +1239,10 @@
             "extends": "configurationEntity",
             "operations": ["CREATE", "DELETE"],
             "attributes": {
-                "addr": {
+                "address": {
                     "type": "string",
                     "description": "The address of the provisioned object",
+                    "deprecationName": "addr",
                     "create": true,
                     "required": true
                 },
@@ -1270,9 +1271,10 @@
                     "create": true,
                     "required": false
                 },
-                "externalAddr": {
+                "externalAddress": {
                     "type": "string",
                     "description": "If present, an alternate address of the node on the remote container.  This is used if the node has a different address than the address used internally by the router to route deliveries.",
+                    "deprecationName": "externalAddr",
                     "create": true,
                     "required": false
                 },

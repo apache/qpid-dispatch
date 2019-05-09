@@ -64,26 +64,26 @@ address {
 }
 
 autoLink {
-    addr: queue.first
-    dir: in
+    address: queue.first
+    direction: in
     connection: broker
 }
 
 autoLink {
-    addr: queue.first
-    dir: out
+    address: queue.first
+    direction: out
     connection: broker
 }
 
 autoLink {
-    addr: queue.second
-    dir: in
+    address: queue.second
+    direction: in
     connection: broker
 }
 
 autoLink {
-    addr: queue.second
-    dir: out
+    address: queue.second
+    direction: out
     connection: broker
 }
 ----
@@ -212,26 +212,26 @@ address {
 }
 
 autoLink {
-    addr: queue.first
-    dir: in
+    address: queue.first
+    direction: in
     connection: broker1
 }
 
 autoLink {
-    addr: queue.first
-    dir: out
+    address: queue.first
+    direction: out
     connection: broker1
 }
 
 autoLink {
-    addr: queue.first
-    dir: in
+    address: queue.first
+    direction: in
     connection: broker2
 }
 
 autoLink {
-    addr: queue.first
-    dir: out
+    address: queue.first
+    direction: out
     connection: broker2
 }
 ----
@@ -252,8 +252,8 @@ using `qdmanage`:
 
 ----
 qdmanage create --type org.apache.qpid.dispatch.connector host=<host> port=<port> name=broker3
-qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=in connection=broker3
-qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink addr=queue.first dir=out connection=broker3
+qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink address=queue.first direction=in connection=broker3
+qdmanage create --type org.apache.qpid.dispatch.router.config.autoLink address=queue.first direction=out connection=broker3
 ----
 
 [[address-renaming]]
@@ -263,7 +263,7 @@ Using a Different External Address on an Auto-Link
 Sometimes, greater flexibility is needed with regard to the addressing
 of a waypoint.  For example, the above sharded-queue example requires
 that the two instances of the queue have the same name/address.
-Auto-links can be configured with an independent +externalAddr+ that
+Auto-links can be configured with an independent +externalAddress+ that
 allows the waypoint to have a different address than that which is
 used by the senders and receivers.
 
@@ -284,16 +284,16 @@ address {
 }
 
 autoLink {
-    addr: queue.first
-    externalAddr: broker_queue
-    dir: in
+    address: queue.first
+    externalAddress: broker_queue
+    direction: in
     connection: broker
 }
 
 autoLink {
-    addr: queue.first
-    externalAddr: broker_queue
-    dir: out
+    address: queue.first
+    externalAddress: broker_queue
+    direction: out
     connection: broker
 }
 

@@ -404,8 +404,8 @@ class RouteContainerEgressCount(TestCase):
             #
             # Note here that the connection is set to a previously declared 'myListener'
             #
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
         ])
 
         cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)
@@ -445,8 +445,8 @@ class RouteContainerIngressCount(TestCase):
             #
             # Note here that the connection is set to a previously declared 'myListener'
             #
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
-            ('autoLink', {'addr': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'in'}),
+            ('autoLink', {'address': 'myListener.1', 'connection': 'myListener', 'direction': 'out'}),
         ])
 
         cls.router = cls.tester.qdrouterd(name="A", config=config, wait=True)

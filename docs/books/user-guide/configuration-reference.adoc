@@ -185,11 +185,12 @@ Entity type for link-route configuration. This is used to identify remote contai
 
 Entity type for configuring auto-links. Auto-links are links whose lifecycle is managed by the router. These are typically used to attach to waypoints on remote containers (brokers, and so on.).
 
-* *_addr_* (string, required) : The address of the provisioned object.
+* *_address_* (string, required) : The address of the provisioned object.
 * *_direction_* (One of [`in`, `out`], required) : The direction of the link to be created. In means into the router, out means out of the router.
 * *_phase_* (integer) : The address phase for this link. Defaults to `0` for `out` links and `1` for `in` links.
 * *_containerId_* (string) : ContainerID for the target container.
 * *_connection_* (string) : The name from a connector or listener.
+* *_externalAddress_* (string) : An alternate address of the node on the remote container.  This is used if the node has a different address than the address used internally by the router to route deliveries.
 
 ==== console
 

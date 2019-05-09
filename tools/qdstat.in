@@ -553,16 +553,16 @@ class BusManager(Node):
         heads.append(Header("status"))
         heads.append(Header("lastErr"))
         rows = []
-        cols = ('addr', 'direction', 'phase', 'externalAddr', 'linkRef', 'operStatus', 'lastError')
+        cols = ('address', 'direction', 'phase', 'externalAddress', 'linkRef', 'operStatus', 'lastError')
 
         objects = self.query('org.apache.qpid.dispatch.router.config.autoLink', cols, limit=self.opts.limit)
 
         for al in objects:
             row = []
-            row.append(al.addr)
+            row.append(al.address)
             row.append(al.direction)
             row.append(al.phase)
-            row.append(al.externalAddr)
+            row.append(al.externalAddress)
             row.append(al.linkRef)
             row.append(al.operStatus)
             row.append(al.lastError)

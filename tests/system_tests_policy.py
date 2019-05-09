@@ -1428,8 +1428,8 @@ class ConnectorPolicySrcTgt(TestCase):
             # Set up the prefix 'node' as a prefix for waypoint addresses
             ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
             # Create a pair of default auto-links for 'node.1'
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
                 'groups': [(
@@ -1525,8 +1525,8 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             # Set up the prefix 'node' as a prefix for waypoint addresses
             ('address',  {'prefix': 'node', 'waypoint': 'yes'}),
             # Create a pair of default auto-links for 'node.1'
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
-            ('autoLink', {'addr': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'in'}),
+            ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
                 'groups': [(
