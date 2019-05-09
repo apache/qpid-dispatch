@@ -113,7 +113,7 @@ class ConsoleTest(system_test.TestCase):
         with open('run_console_test.out', 'w') as popenfile:
             popenfile.write('returncode was %s\n' % p.returncode)
             popenfile.write('out was:\n')
-            popenfile.writelines(out)
+            popenfile.writelines(str(out))
 
         # if we created the node_modules dir, remove it
         if not node_modules:
