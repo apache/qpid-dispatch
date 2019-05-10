@@ -205,6 +205,11 @@ static void qdr_connection_info_free(qdr_connection_info_t *ci)
 }
 
 
+qdr_connection_role_t qdr_connection_role(const qdr_connection_t *conn)
+{
+    return conn->role;
+}
+
 void *qdr_connection_get_context(const qdr_connection_t *conn)
 {
     return conn ? conn->user_context : NULL;

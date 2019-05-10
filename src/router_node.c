@@ -1388,7 +1388,7 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     //
     // All links on the inter router or edge connection have unbounded q2 limit
     //
-    if (qdr_conn->role == QDR_ROLE_EDGE_CONNECTION || qdr_conn->role == QDR_ROLE_INTER_ROUTER) {
+    if (qdr_connection_role(qdr_conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(qdr_conn) == QDR_ROLE_INTER_ROUTER) {
         qd_link_set_q2_limit_unbounded(qlink, true);
     }
 

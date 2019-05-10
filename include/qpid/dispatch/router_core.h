@@ -222,6 +222,15 @@ void qdr_connection_set_context(qdr_connection_t *conn, void *context);
  */
 void *qdr_connection_get_context(const qdr_connection_t *conn);
 
+
+/**
+ * qdr_connection_role
+ *
+ * Retrieve the role of the connection object.
+ */
+qdr_connection_role_t qdr_connection_role(const qdr_connection_t *conn);
+
+
 /**
  * qdr_connection_get_tenant_space
  *
