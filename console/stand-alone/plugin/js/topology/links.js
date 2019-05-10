@@ -110,6 +110,12 @@ export class Links {
         nodes.get(source).y + 40 + Math.cos(client / (Math.PI * 2.0))
       );
     }
+    if (position.x === null || position.y === null) {
+      position.x = Math.round(
+        nodes.get(source).x + 40 * Math.sin(client / (Math.PI * 2.0)));
+      position.y = Math.round(
+        nodes.get(source).y + 40 * Math.cos(client / (Math.PI * 2.0)));
+    }
     position.fixed = position.fixed ? true : false;
     return position;
   }
@@ -138,7 +144,8 @@ export class Links {
 
         // we need a unique connection.container
         if (connection.container === '') {
-          connection.container = utils.uuidv4();
+          connection.container = connection.name.replace('/', '').replace(':', '-');
+          //utils.uuidv4();
         }
         // this is a connection to another interior router
         if (connection.role === "inter-router") {
@@ -189,7 +196,6 @@ export class Links {
           height,
           localStorage
         );
-
         let node = nodes.getOrCreateNode(
           nodeIds[container.source],
           name,

@@ -364,6 +364,10 @@ export class TopologyController {
           forceData.nodes.saveLonLat(backgroundMap);
         })
         .start();
+      for (let i = 0; i < forceData.nodes.nodes.length; i++) {
+        forceData.nodes.nodes[i].sx = forceData.nodes.nodes[i].x;
+        forceData.nodes.nodes[i].sy = forceData.nodes.nodes[i].y;
+      }
 
       // app starts here
       if (unknowns.length === 0)
@@ -462,6 +466,10 @@ export class TopologyController {
     function tick() {
       // move the circles
       circle.attr("transform", function (d) {
+        if (isNaN(d.x) || isNaN(d.px)) {
+          d.x = d.px = d.sx;
+          d.y = d.py = d.sy;
+        }
         // don't let the edges of the circle go beyond the edges of the svg
         let r = Nodes.radius(d.nodeType);
         d.x = Math.max(Math.min(d.x, width - r), r);
