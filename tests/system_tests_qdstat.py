@@ -133,16 +133,12 @@ class QdstatTest(system_test.TestCase):
         links = []
         COUNT = 5000
 
-        print ("Creating 10,000 links, please wait")
-
         ADDRESS_SENDER = "examples-sender"
         ADDRESS_RECEIVER = "examples-receiver"
 
         # This loop creates 5000 consumer and 5000 producer links
         while True:
             count += 1
-            if count % 500 == 0:
-                print ("working....")
             r = c.create_receiver(ADDRESS_RECEIVER + str(count))
             links.append(r)
             s = c.create_sender(ADDRESS_SENDER + str(count))

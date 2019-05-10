@@ -244,13 +244,9 @@ class Node(object):
             # failing is MAX_ALLOWED_COUNT_PER_REQUEST
             request_count = MAX_ALLOWED_COUNT_PER_REQUEST
         else:
-            if count > MAX_ALLOWED_COUNT_PER_REQUEST:
-                request_count = MAX_ALLOWED_COUNT_PER_REQUEST
-            else:
-                request_count = count
+            request_count = min(MAX_ALLOWED_COUNT_PER_REQUEST, count)
 
         while True:
-
             request = self.node_request(
                 {u'attributeNames': attribute_names or []},
                 operation=u'QUERY', entityType=type, offset=offset,
