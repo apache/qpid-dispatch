@@ -516,6 +516,12 @@ class QdmanageTest(TestCase):
 
     def test_yy_query_many_links(self):
         # This test will fail without the fix for DISPATCH-974
+        if os.getenv('USE_MAX_ALLOWED_COUNT_PER_REQUEST'):
+                if os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "false" \
+                or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "0" \
+                or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "no":
+                    self.skipTest("Test skipped since env variable USE_MAX_ALLOWED_COUNT_PER_REQUEST is set ")
+
         c = BlockingConnection(self.address())
         count = 0
         links = []

@@ -64,8 +64,18 @@ def parse_args(argv):
     # can be used in conjunction with options
     # like -c, -l, -a, --autolinks, --linkroutes and --log.
     # By default, the limit is not set, which means the limit is unlimited.
+    # If USE_MAX_ALLOWED_COUNT_PER_REQUEST is set to 0 or false or no, the
+    # limit defaults to 100 as it used to before
 
-    parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
+    if os.getenv('USE_MAX_ALLOWED_COUNT_PER_REQUEST'):
+        if os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "false" \
+        or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "0" \
+        or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "no":
+            parser.add_option("--limit", help="Limit number of output rows", type="int", default=100)
+        else:
+            parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
+    else:
+        parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
 
     opts, args = parser.parse_args(args=argv)
 
