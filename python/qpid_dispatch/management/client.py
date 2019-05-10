@@ -26,6 +26,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
+
 import qpid_dispatch_site
 import proton
 from proton import Url
@@ -231,7 +233,26 @@ class Node(object):
         # MAX_ALLOWED_COUNT_PER_REQUEST. Since this is used by both qdstat
         # and qdmanage, we have determined that the optimal value for
         # MAX_ALLOWED_COUNT_PER_REQUEST is 700
+
+        # If USE_MAX_ALLOWED_COUNT_PER_REQUEST environment variable
+        # is set to false or 0 or no,
+        # we will use the same code as we did before which means we will not
+        # use MAX_ALLOWED_COUNT_PER_REQUEST
         MAX_ALLOWED_COUNT_PER_REQUEST = 700
+        if os.getenv('USE_MAX_ALLOWED_COUNT_PER_REQUEST'):
+                if os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "false" \
+                or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "0" \
+                or os.environ['USE_MAX_ALLOWED_COUNT_PER_REQUEST'] == "no":
+                    MAX_ALLOWED_COUNT_PER_REQUEST = 0
+
+        if MAX_ALLOWED_COUNT_PER_REQUEST == 0:
+            request = self.node_request({u'attributeNames': attribute_names or []},
+                                        operation = u'QUERY',
+                                        entityType = type,
+                                        offset = offset, count = count)
+            response = self.call(request)
+            return Node.QueryResponse(self, response.body[u'attributeNames'],
+                                      response.body[u'results'])
 
         response_results = []
         response_attr_names = []
