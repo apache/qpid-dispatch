@@ -69,12 +69,12 @@ export class QDRService {
 
           self.management.getSchema()
             .then(function () {
-              self.QDRLog.info('got schema after connection');
+              //self.QDRLog.info('got schema after connection');
               self.management.topology.setUpdateEntities([]);
-              self.QDRLog.info('requesting a topology');
+              //self.QDRLog.info('requesting a topology');
               self.management.topology.get() // gets the list of routers
                 .then(function () {
-                  self.QDRLog.info('got initial topology');
+                  //self.QDRLog.info('got initial topology');
                   let curPath = self.$location.path();
                   let parts = curPath.split('/');
                   let org = parts[parts.length - 1];

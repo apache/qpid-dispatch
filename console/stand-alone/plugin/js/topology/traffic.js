@@ -292,6 +292,11 @@ class Congestion extends TrafficAnimation {
         v,
         (link.undeliveredCount + link.unsettledCount) / link.capacity
       );
+      if (link.deliveriesDelayed1Sec)
+        v += (link.deliveriesDelayed1Sec * .5);
+      if (link.deliveriesDelayed10Sec)
+        v = 3;
+      v = Math.min(3, v);
     }
     return this.fillColor(v);
   }

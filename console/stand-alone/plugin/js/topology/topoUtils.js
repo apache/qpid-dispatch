@@ -278,7 +278,7 @@ export function getSizes(QDRLog) {
   let width = $("#topology").width() - gap - legendWidth;
   let top = $("#topology").offset().top;
   let height = window.innerHeight - top - gap;
-  if (width < 10) {
+  if (width < 10 || height < 10) {
     QDRLog.info(
       `page width and height are abnormal w: ${width} h: ${height}`
     );

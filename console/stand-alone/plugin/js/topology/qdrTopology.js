@@ -281,12 +281,6 @@ export class TopologyController {
       $timeout(updateLegend);
     });
 
-    window.addEventListener("resize", resize);
-    let sizes = getSizes(QDRLog);
-    width = sizes[0];
-    height = sizes[1];
-    if (width <= 0 || height <= 0) return;
-
     // initialize the nodes and links array from the QDRService.topology._nodeInfo object
     var initForceGraph = function () {
       if (width < 768) {
@@ -300,7 +294,9 @@ export class TopologyController {
       mouseover_node = null;
       selected_node = null;
 
-      d3.select("#SVG_ID").remove();
+      d3.select("#SVG_ID .links").remove();
+      d3.select("#SVG_ID .nodes").remove();
+      d3.select("#SVG_ID circle.flow").remove();
       if (d3.select("#SVG_ID").empty()) {
         svg = d3
           .select("#topology")
@@ -318,10 +314,18 @@ export class TopologyController {
         });
         addDefs(svg);
         addGradient(svg);
-        // handles to link and node element groups
-        path = svg.append("svg:g").attr("class", "links").selectAll("g");
-        circle = svg.append("svg:g").attr("class", "nodes").selectAll("g");
       }
+      // handles to link and node element groups
+      path = svg.append("svg:g").attr("class", "links").selectAll("g");
+      circle = svg.append("svg:g").attr("class", "nodes").selectAll("g");
+      traffic.remove();
+      if ($scope.legendOptions.traffic.open) {
+        if ($scope.legendOptions.traffic.dots)
+          traffic.addAnimationType('dots', separateAddresses, Nodes.radius("inter-router"));
+        if ($scope.legendOptions.traffic.congestion)
+          traffic.addAnimationType('dots', separateAddresses, Nodes.radius("inter-router"));
+      }
+
       // mouse event vars
       $scope.mousedown_node = null;
       mouseup_node = null;
@@ -922,6 +926,11 @@ export class TopologyController {
       // we only need to update connections during steady-state
       QDRService.management.topology.setUpdateEntities(["connection"]);
       // we currently have all entities available on all routers
+      window.addEventListener("resize", resize);
+      let sizes = getSizes(QDRLog);
+      width = sizes[0];
+      height = sizes[1];
+      if (width <= 0 || height <= 0) return;
       initForceGraph();
       saveChanged();
       // after the graph is displayed fetch all .router.node info. This is done so highlighting between nodes

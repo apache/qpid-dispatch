@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-/* global d3 */
+/* global d3 Uint8Array */
 var ddd = typeof window === 'undefined' ? require('d3') : d3;
 
 var utils = {
@@ -218,7 +218,13 @@ var utils = {
     }
     if (conn.tenant.length > 1)
       return conn.tenant.replace(/\/$/, '');
+  },
+  uuidv4: function () {
+    return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
+      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+    );
   }
+
 
 };
 export {
