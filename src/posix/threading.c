@@ -64,6 +64,36 @@ void sys_mutex_unlock(sys_mutex_t *mutex)
     assert(result == 0);
 }
 
+inline void sys_spin_destroy(sys_spinlock_t *const lock)
+{
+    int ret = pthread_spin_destroy(lock);
+    assert(ret == 0);
+}
+
+inline void sys_spin_init(sys_spinlock_t *const lock)
+{
+    int ret = pthread_spin_init(lock, 0);
+    assert(ret == 0);
+}
+
+inline bool sys_spin_trylock(sys_spinlock_t *const lock)
+{
+    const int ret = pthread_spin_trylock(lock);
+    const bool success = ret == 0 ? true : false;
+    return success;
+}
+
+inline void sys_spin_lock(sys_spinlock_t *const lock)
+{
+    const int ret = pthread_spin_lock(lock);
+    assert(ret == 0);
+}
+
+inline void sys_spin_unlock(sys_spinlock_t *const lock)
+{
+    const int ret = pthread_spin_unlock(lock);
+    assert(ret == 0);
+}
 
 struct sys_cond_t {
     pthread_cond_t cond;
