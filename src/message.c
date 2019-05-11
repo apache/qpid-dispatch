@@ -37,8 +37,8 @@
 #include <inttypes.h>
 #include <assert.h>
 
-#define LOCK   sys_mutex_lock
-#define UNLOCK sys_mutex_unlock
+#define LOCK(l)   sys_spin_lock(&l)
+#define UNLOCK(l) sys_spin_unlock(&l)
 
 const char *STR_AMQP_NULL = "null";
 const char *STR_AMQP_TRUE = "T";
@@ -905,7 +905,7 @@ qd_message_t *qd_message()
     }
 
     ZERO(msg->content);
-    msg->content->lock = sys_mutex();
+    sys_spin_init(&msg->content->lock);
     sys_atomic_init(&msg->content->ref_count, 1);
     msg->content->parse_depth = QD_DEPTH_NONE;
 
@@ -977,10 +977,9 @@ void qd_message_free(qd_message_t *in_msg)
         if (content->pending)
             qd_buffer_free(content->pending);
 
-        sys_mutex_free(content->lock);
+        sys_spin_destroy(&content->lock);
         free_qd_message_content_t(content);
     }
-
     free_qd_message_t((qd_message_t*) msg);
 }
 

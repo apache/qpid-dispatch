@@ -65,7 +65,7 @@ typedef struct {
 //
 
 typedef struct {
-    sys_mutex_t         *lock;
+    sys_spinlock_t       lock;
     sys_atomic_t         ref_count;                       // The number of messages referencing this
     qd_buffer_list_t     buffers;                         // The buffer chain containing the message
     qd_buffer_t         *pending;                         // Buffer owned by and filled by qd_message_receive

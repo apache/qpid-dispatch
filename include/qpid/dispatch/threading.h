@@ -19,6 +19,8 @@
  * under the License.
  */
 
+#include <stdbool.h>
+
 /**@file
  * Portable threading and locking API.
  */
@@ -47,6 +49,14 @@ void          sys_rwlock_free(sys_rwlock_t *lock);
 void          sys_rwlock_wrlock(sys_rwlock_t *lock);
 void          sys_rwlock_rdlock(sys_rwlock_t *lock);
 void          sys_rwlock_unlock(sys_rwlock_t *lock);
+
+typedef volatile int sys_spinlock_t;
+
+void          sys_spin_destroy(sys_spinlock_t *const lock);
+void          sys_spin_init(sys_spinlock_t *const lock);
+bool          sys_spin_trylock(sys_spinlock_t *const lock);
+void          sys_spin_lock(sys_spinlock_t *const lock);
+void          sys_spin_unlock(sys_spinlock_t *const lock);
 
 
 typedef struct sys_thread_t sys_thread_t;
