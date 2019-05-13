@@ -802,7 +802,7 @@ export class OverviewController {
         {
           field: 'Kill',
           width: '4%',
-          cellTemplate: '<div><button class="btn btn-danger" ng-click="grid.appScope.killConnection(row, $event)">Kill</button></div>'
+          cellTemplate: '<div ng-if="row.entity.role === \'normal\'"><button class="btn btn-danger" ng-click="grid.appScope.killConnection(row, $event)">Kill</button></div>'
         }
       ],
       enablePaging: true,
@@ -818,6 +818,9 @@ export class OverviewController {
       enableSelectionBatchEvent: false,
       enableRowHeaderSelection: false,
       noUnselect: true
+    };
+    $scope.isNormalConnection = function (connection) {
+      return connection.data.fields.role === 'normal';
     };
     $scope.killConnection = function (row, event) {
       row.cancelEvent = true;

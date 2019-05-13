@@ -560,7 +560,7 @@ export class ListController {
       }
     });
     $scope.isConnection = function (selectedEntity) {
-      return selectedEntity === 'connection';
+      return selectedEntity === 'connection' && $scope.detailsObject && $scope.detailsObject.role === 'normal';
     };
     $scope.killAConnection = function (selectedRecordName) {
       const identityField = $scope.detailFields.filter(field => field.name === 'identity');

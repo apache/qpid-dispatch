@@ -203,7 +203,7 @@ under the License.
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Connection','attributes')" class="selectedItems">
-            <h3>Connection {{connection.title}} <button ng-click="killAConnection(connection)" class="btn btn-danger">Kill</button></h3>
+            <h3>Connection {{connection.title}} <span ng-if="isNormalConnection(connection)" <button ng-click="killAConnection(connection)" class="btn btn-danger">Kill</button></h3>
             <div class="grid noHighlight" ui-grid="connectionGrid" ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state></div>
         </div>
         <div ng-if="isModeVisible('Connection','links')" class="selectedItems">
