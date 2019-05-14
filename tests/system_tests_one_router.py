@@ -108,7 +108,6 @@ class OneRouterTest(TestCase):
             raise Exception(out if out else str(e))
         return out
 
-
     def test_01_listen_error(self):
         # Make sure a router exits if a initial listener fails, doesn't hang.
         config = Qdrouterd.Config([
@@ -501,6 +500,23 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_46_early_update_in_q2_holdoff(self):
+        """
+        Set disposition early in the transfer of a large multipart frame while
+        Q2 holdoff is active
+        """
+        test = EarlyUpdateTest(self.router)
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_47_early_settle_in_q2_holdoff(self):
+        """
+        Settle a multipart delivery before receive completes while Q2 holdoff
+        is active
+        """
+        test = EarlySettleTest(self.router)
+        test.run()
+        self.assertEqual(None, test.error)
 
 
 class Entity(object):
@@ -3276,6 +3292,127 @@ class Q2HoldoffDropTest(MessagingHandler):
                 break
             if not clean:
                 sleep(0.1)
+
+
+import weakref
+from proton.handlers import IncomingMessageHandler
+from proton.handlers import OutgoingMessageHandler
+from proton.handlers import EndpointStateHandler
+from proton.handlers import FlowController
+
+class EarlyUpdateTest(MessagingHandler):
+    """
+    It is legal for a receiver to set the terminal state before a message is
+    completely received.  Ensure this behavior does not cause the router to
+    curl up in a ball in the corner and cry uncontrollably.
+    """
+
+    class MyIncomingMessageHandler(IncomingMessageHandler):
+
+        def on_delivery(self, event):
+            dlv = event.delivery
+            if dlv.readable:
+                if not dlv.partial:
+                    self.delegate.on_message(event)
+                else:
+                    if not dlv.local_state:
+                        dlv.update(dlv.RELEASED)
+
+    def __init__(self, router):
+        super(EarlyUpdateTest, self).__init__()
+        # this test will probably break at some point when proton
+        # restructures its handler interface. Que Sera Sera...
+        self.handlers = []
+        self.handlers.append(EndpointStateHandler(False, weakref.proxy(self)))
+        self.handlers.append(self.MyIncomingMessageHandler(False, weakref.proxy(self)))
+        self.handlers.append(OutgoingMessageHandler(False, weakref.proxy(self)))
+
+        self.router = router
+        self.rx_conn = None
+        self.tx_conn = None
+        self.rx = None
+        self.tx = None
+        self.sent = 0
+        self.received = 0
+        self.released = 0
+        self.error = None
+
+    def timeout(self):
+        self.error = "Timeout Expired: send=%d rcvd=%d" % (self.sent, self.received)
+        if self.rx_conn:
+            self.rx_conn.close()
+        if self.tx_conn:
+            self.tx_conn.close()
+
+    def on_start(self, event):
+        self.reactor = event.reactor
+        self.timer = self.reactor.schedule(TIMEOUT, Timeout(self))
+
+        self.rx_conn = event.container.connect(self.router.addresses[0])
+        self.tx_conn = event.container.connect(self.router.addresses[0])
+        self.tx = event.container.create_sender(self.tx_conn,
+                                                target="closest.early-dispo",
+                                                name="tx_client")
+        self.rx = event.container.create_receiver(self.rx_conn,
+                                                       source="closest.early-dispo",
+                                                       name="rx_client")
+        self.rx.flow(1)
+
+    def on_sendable(self, event):
+        if self.sent < 2:
+            yuuge_msg = Message(body="Z" * 1024 * 1024)
+            self.tx.send(yuuge_msg)
+            self.sent += 1
+
+    def on_message(self, event):
+        self.received += 1
+        event.delivery.settle()
+        sleep(0.5)  # wait for flow control to kick in
+        self.rx.flow(1)
+
+    def run(self):
+        Container(self).run()
+
+    def done(self):
+        self.tx_conn.close()
+        self.rx_conn.close()
+        self.timer.cancel()
+
+    def on_released(self, event):
+        self.released += 1
+        event.delivery.settle()
+        if self.released == self.sent:
+            self.done()
+
+
+class EarlySettleTest(EarlyUpdateTest):
+    """
+    Have the receiver settle a multi-part message before the router
+    completes sending the entire message.  This is risky behavior for the
+    receiver since there will be additional buffers in flight after the
+    settlement occurs locally.  This will result in a sequence error for the
+    client and it will drop the connection.  This test ensures the router does
+    not blow chunks when this happens
+    """
+
+    class MyIncomingMessageHandler(IncomingMessageHandler):
+        first_done = False
+        def on_delivery(self, event):
+            dlv = event.delivery
+            if dlv.readable:
+                if not dlv.partial:
+                    self.first_done = True
+                    self.delegate.on_message(event)
+                elif self.first_done:
+                    if not dlv.local_state:
+                        # settle on first delivery of second message
+                        dlv.update(dlv.RELEASED)
+                        dlv.settle()
+
+    def on_transport_error(self, event):
+        # expect this after receiving the first message
+        if self.received == 1:
+            self.done()
 
 
 if __name__ == '__main__':
