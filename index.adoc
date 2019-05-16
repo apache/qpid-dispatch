@@ -1,0 +1,3 @@
+= Using Apache Qpid Dispatch Router
+
+This is just a demo, see the link:https://github.com/apache/qpid-dispatch[Apache Qpid Dispatch Router repo].

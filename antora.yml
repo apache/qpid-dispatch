@@ -1,0 +1,6 @@
+name: qpid
+title: Using Apache Qpid Dispatch Router
+version: 'latest'
+start_ROOT: ROOT:index.adoc
+nav:
+- modules/ROOT/nav.adoc

@@ -23,3 +23,6 @@ console/stand-alone/dist/
 console/stand-alone/package-lock.json
 tools/qdmanage
 tools/qdstat
+target/
+build/
+node_modules/
