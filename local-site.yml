@@ -1,6 +1,6 @@
 site:
   title: Apache Qpid Dispatch Router
-  url: https://tpd
+  url: https://qpid.netlify.com
   start_page: qpid::index 
 content:
   sources:
