@@ -63,9 +63,9 @@ class RouterTest(TestCase):
                 ('router', {'mode': mode, 'id': name}),
                 ('listener', {'port': cls.tester.get_port(), 'stripAnnotations': 'no'}),
                 ('listener', {'port': cls.tester.get_port(), 'role': 'route-container', 'name': 'WP'}),
-                ('address',  {'prefix': 'dest', 'alternate': 'yes'}),
-                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'out', 'alternate': 'yes'}),
-                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'in',  'alternate': 'yes'}),
+                ('address',  {'prefix': 'dest', 'enableFallback': 'yes'}),
+                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'out', 'fallback': 'yes'}),
+                ('autoLink', {'connection': 'WP', 'address': 'dest.al', 'dir': 'in',  'fallback': 'yes'}),
                 connection
             ]
 
@@ -100,7 +100,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_02_sender_first_alternate_same_interior(self):
+    def test_02_sender_first_fallback_same_interior(self):
         test = SenderFirstTest(self.routers[0].addresses[0],
                                self.routers[0].addresses[0],
                                'dest.02', True)
@@ -114,7 +114,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_04_sender_first_alternate_same_edge(self):
+    def test_04_sender_first_fallback_same_edge(self):
         test = SenderFirstTest(self.routers[2].addresses[0],
                                self.routers[2].addresses[0],
                                'dest.04', True)
@@ -128,7 +128,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_06_sender_first_alternate_interior_interior(self):
+    def test_06_sender_first_fallback_interior_interior(self):
         test = SenderFirstTest(self.routers[0].addresses[0],
                                self.routers[1].addresses[0],
                                'dest.06', True)
@@ -142,7 +142,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_08_sender_first_alternate_edge_interior(self):
+    def test_08_sender_first_fallback_edge_interior(self):
         test = SenderFirstTest(self.routers[2].addresses[0],
                                self.routers[1].addresses[0],
                                'dest.08', True)
@@ -156,7 +156,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_10_sender_first_alternate_interior_edge(self):
+    def test_10_sender_first_fallback_interior_edge(self):
         test = SenderFirstTest(self.routers[1].addresses[0],
                                self.routers[2].addresses[0],
                                'dest.10', True)
@@ -170,7 +170,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_12_sender_first_alternate_edge_edge(self):
+    def test_12_sender_first_fallback_edge_edge(self):
         test = SenderFirstTest(self.routers[2].addresses[0],
                                self.routers[4].addresses[0],
                                'dest.12', True)
@@ -184,7 +184,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_14_receiver_first_alternate_same_interior(self):
+    def test_14_receiver_first_fallback_same_interior(self):
         test = ReceiverFirstTest(self.routers[0].addresses[0],
                                  self.routers[0].addresses[0],
                                  'dest.14', True)
@@ -198,7 +198,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_16_receiver_first_alternate_same_edge(self):
+    def test_16_receiver_first_fallback_same_edge(self):
         test = ReceiverFirstTest(self.routers[2].addresses[0],
                                  self.routers[2].addresses[0],
                                  'dest.16', True)
@@ -212,7 +212,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_18_receiver_first_alternate_interior_interior(self):
+    def test_18_receiver_first_fallback_interior_interior(self):
         test = ReceiverFirstTest(self.routers[0].addresses[0],
                                  self.routers[1].addresses[0],
                                  'dest.18', True)
@@ -226,7 +226,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_20_receiver_first_alternate_edge_interior(self):
+    def test_20_receiver_first_fallback_edge_interior(self):
         test = ReceiverFirstTest(self.routers[2].addresses[0],
                                  self.routers[1].addresses[0],
                                  'dest.20', True)
@@ -240,7 +240,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_22_receiver_first_alternate_interior_edge(self):
+    def test_22_receiver_first_fallback_interior_edge(self):
         test = ReceiverFirstTest(self.routers[1].addresses[0],
                                  self.routers[2].addresses[0],
                                  'dest.22', True)
@@ -254,7 +254,7 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_24_receiver_first_alternate_edge_edge(self):
+    def test_24_receiver_first_fallback_edge_edge(self):
         test = ReceiverFirstTest(self.routers[2].addresses[0],
                                  self.routers[4].addresses[0],
                                  'dest.24', True)
@@ -373,73 +373,73 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_39_auto_link_sender_first_alternate_same_interior(self):
+    def test_39_auto_link_sender_first_fallback_same_interior(self):
         test = SenderFirstAutoLinkTest(self.routers[0].addresses[0],
                                        self.routers[0].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_40_auto_link_sender_first_alternate_same_edge(self):
+    def test_40_auto_link_sender_first_fallback_same_edge(self):
         test = SenderFirstAutoLinkTest(self.routers[2].addresses[0],
                                        self.routers[2].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_41_auto_link_sender_first_alternate_interior_interior(self):
+    def test_41_auto_link_sender_first_fallback_interior_interior(self):
         test = SenderFirstAutoLinkTest(self.routers[0].addresses[0],
                                        self.routers[1].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_42_auto_link_sender_first_alternate_edge_interior(self):
+    def test_42_auto_link_sender_first_fallback_edge_interior(self):
         test = SenderFirstAutoLinkTest(self.routers[2].addresses[0],
                                        self.routers[0].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_43_auto_link_sender_first_alternate_interior_edge(self):
+    def test_43_auto_link_sender_first_fallback_interior_edge(self):
         test = SenderFirstAutoLinkTest(self.routers[1].addresses[0],
                                        self.routers[2].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_44_auto_link_sender_first_alternate_edge_edge(self):
+    def test_44_auto_link_sender_first_fallback_edge_edge(self):
         test = SenderFirstAutoLinkTest(self.routers[2].addresses[0],
                                        self.routers[4].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_45_auto_link_receiver_first_alternate_same_interior(self):
+    def test_45_auto_link_receiver_first_fallback_same_interior(self):
         test = ReceiverFirstAutoLinkTest(self.routers[0].addresses[0],
                                          self.routers[0].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_46_auto_link_receiver_first_alternate_same_edge(self):
+    def test_46_auto_link_receiver_first_fallback_same_edge(self):
         test = ReceiverFirstAutoLinkTest(self.routers[2].addresses[0],
                                          self.routers[2].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_47_auto_link_receiver_first_alternate_interior_interior(self):
+    def test_47_auto_link_receiver_first_fallback_interior_interior(self):
         test = ReceiverFirstAutoLinkTest(self.routers[0].addresses[0],
                                          self.routers[1].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_48_auto_link_receiver_first_alternate_edge_interior(self):
+    def test_48_auto_link_receiver_first_fallback_edge_interior(self):
         test = ReceiverFirstAutoLinkTest(self.routers[2].addresses[0],
                                          self.routers[1].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_49_auto_link_receiver_first_alternate_interior_edge(self):
+    def test_49_auto_link_receiver_first_fallback_interior_edge(self):
         test = ReceiverFirstAutoLinkTest(self.routers[1].addresses[0],
                                          self.routers[2].addresses[1])
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_50_auto_link_receiver_first_alternate_edge_edge(self):
+    def test_50_auto_link_receiver_first_fallback_edge_edge(self):
         test = ReceiverFirstAutoLinkTest(self.routers[2].addresses[0],
                                          self.routers[4].addresses[1])
         test.run()
@@ -455,12 +455,12 @@ class Timeout(object):
 
 
 class SenderFirstTest(MessagingHandler):
-    def __init__(self, sender_host, receiver_host, addr, rx_alternate):
+    def __init__(self, sender_host, receiver_host, addr, rx_fallback):
         super(SenderFirstTest, self).__init__()
         self.sender_host   = sender_host
         self.receiver_host = receiver_host
         self.addr          = addr
-        self.rx_alternate  = rx_alternate
+        self.rx_fallback   = rx_fallback
         self.count         = 300
 
         self.sender_conn   = None
@@ -490,8 +490,8 @@ class SenderFirstTest(MessagingHandler):
     def on_link_opened(self, event):
         if event.sender == self.sender:
             self.receiver = event.container.create_receiver(self.receiver_conn, self.addr)
-            if self.rx_alternate:
-                self.receiver.source.capabilities.put_symbol("qd.alternate")
+            if self.rx_fallback:
+                self.receiver.source.capabilities.put_symbol("qd.fallback")
 
     def on_sendable(self, event):
         if event.sender == self.sender:
@@ -513,12 +513,12 @@ class SenderFirstTest(MessagingHandler):
 
 
 class ReceiverFirstTest(MessagingHandler):
-    def __init__(self, sender_host, receiver_host, addr, rx_alternate):
+    def __init__(self, sender_host, receiver_host, addr, rx_fallback):
         super(ReceiverFirstTest, self).__init__()
         self.sender_host   = sender_host
         self.receiver_host = receiver_host
         self.addr          = addr
-        self.rx_alternate  = rx_alternate
+        self.rx_fallback   = rx_fallback
         self.count         = 300
 
         self.sender_conn   = None
@@ -544,8 +544,8 @@ class ReceiverFirstTest(MessagingHandler):
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.addr)
-        if self.rx_alternate:
-            self.receiver.source.capabilities.put_symbol("qd.alternate")
+        if self.rx_fallback:
+            self.receiver.source.capabilities.put_symbol("qd.fallback")
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
@@ -571,17 +571,17 @@ class ReceiverFirstTest(MessagingHandler):
 
 
 class SwitchoverTest(MessagingHandler):
-    def __init__(self, sender_host, primary_host, alternate_host, addr):
+    def __init__(self, sender_host, primary_host, fallback_host, addr):
         super(SwitchoverTest, self).__init__()
         self.sender_host    = sender_host
         self.primary_host   = primary_host
-        self.alternate_host = alternate_host
+        self.fallback_host  = fallback_host
         self.addr           = addr
         self.count          = 300
 
         self.sender_conn    = None
         self.primary_conn   = None
-        self.alternate_conn = None
+        self.fallback_conn  = None
         self.error          = None
         self.n_tx           = 0
         self.n_rx           = 0
@@ -592,23 +592,23 @@ class SwitchoverTest(MessagingHandler):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d, phase=%d" % (self.n_tx, self.n_rx, self.n_rel, self.phase)
         self.sender_conn.close()
         self.primary_conn.close()
-        self.alternate_conn.close()
+        self.fallback_conn.close()
 
     def fail(self, error):
         self.error = error
         self.sender_conn.close()
         self.primary_conn.close()
-        self.alternate_conn.close()
+        self.fallback_conn.close()
         self.timer.cancel()
 
     def on_start(self, event):
         self.timer              = event.reactor.schedule(10.0, Timeout(self))
         self.sender_conn        = event.container.connect(self.sender_host)
         self.primary_conn       = event.container.connect(self.primary_host)
-        self.alternate_conn     = event.container.connect(self.alternate_host)
+        self.fallback_conn     = event.container.connect(self.fallback_host)
         self.primary_receiver   = event.container.create_receiver(self.primary_conn, self.addr)
-        self.alternate_receiver = event.container.create_receiver(self.primary_conn, self.addr, name=self.addr)
-        self.alternate_receiver.source.capabilities.put_object(symbol("qd.alternate"))
+        self.fallback_receiver = event.container.create_receiver(self.primary_conn, self.addr, name=self.addr)
+        self.fallback_receiver.source.capabilities.put_object(symbol("qd.fallback"))
 
     def on_link_opened(self, event):
         if event.receiver == self.primary_receiver:

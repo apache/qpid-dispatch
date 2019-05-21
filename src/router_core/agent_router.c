@@ -50,6 +50,7 @@
 #define QDR_ROUTER_DELIVERIES_TRANSIT                  23
 #define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  24
 #define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   25
+#define QDR_ROUTER_DELIVERIES_REDIRECTED               26
 
 
 const char *qdr_router_columns[] =
@@ -79,6 +80,7 @@ const char *qdr_router_columns[] =
      "deliveriesTransit",
      "deliveriesIngressRouteContainer",
      "deliveriesEgressRouteContainer",
+     "deliveriesRedirectedToFallback",
      0};
 
 
@@ -204,6 +206,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER:
         qd_compose_insert_ulong(body, core->deliveries_egress_route_container);
+        break;
+
+    case QDR_ROUTER_DELIVERIES_REDIRECTED:
+        qd_compose_insert_ulong(body, core->deliveries_redirected);
         break;
 
     default:

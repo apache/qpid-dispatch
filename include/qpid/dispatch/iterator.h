@@ -59,7 +59,7 @@ typedef struct qd_iterator_t qd_iterator_t;
 #define QD_ITER_HASH_PREFIX_GLOBAL_PLACEHOLDER    'G'
 #define QD_ITER_HASH_PREFIX_EDGE_SUMMARY          'H'
 
-#define QD_ITER_HASH_PHASE_ALTERNATE 'A'
+#define QD_ITER_HASH_PHASE_FALLBACK 'F'
 
 
 /**

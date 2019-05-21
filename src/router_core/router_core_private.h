@@ -444,7 +444,7 @@ struct qdr_link_t {
     bool                     edge;              ///< True if this link is in an edge-connection
     bool                     processing;        ///< True if an IO thread is currently handling this link
     bool                     ready_to_free;     ///< True if the core thread wanted to clean up the link but it was processing
-    bool                     alternate;         ///< True if this link is attached to an alternate destination for an address
+    bool                     fallback;          ///< True if this link is attached to a fallback destination for an address
     char                    *strip_prefix;
     char                    *insert_prefix;
     bool                     terminus_survives_disconnect;
@@ -512,10 +512,10 @@ struct qdr_address_t {
     uint64_t                   cost_epoch;
 
     //
-    // State for tracking alternate destinations for undeliverable deliveries
+    // State for tracking fallback destinations for undeliverable deliveries
     //
-    qdr_address_t *alternate;     ///< Pointer to this address's alternate destination
-    qdr_address_t *alternate_for; ///< Pointer to the address that this is an alternate for
+    qdr_address_t *fallback;     ///< Pointer to this address's fallback destination
+    qdr_address_t *fallback_for; ///< Pointer to the address that this is a fallback for
 
     //
     // State for "closest" treatment
@@ -548,6 +548,7 @@ struct qdr_address_t {
     uint64_t deliveries_from_container;
     uint64_t deliveries_egress_route_container;
     uint64_t deliveries_ingress_route_container;
+    uint64_t deliveries_redirected;
 
     ///@}
 
@@ -564,7 +565,7 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
 void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
 void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
-void qdr_setup_alternate_address_CT(qdr_core_t *core, qdr_address_t *addr);
+void qdr_setup_fallback_address_CT(qdr_core_t *core, qdr_address_t *addr);
 
 struct qdr_address_config_t {
     DEQ_LINKS(qdr_address_config_t);
@@ -572,7 +573,7 @@ struct qdr_address_config_t {
     uint64_t                identity;
     uint32_t                ref_count;
     char                   *pattern;
-    bool                    alternate;
+    bool                    fallback;
     bool                    is_prefix;
     qd_address_treatment_t  treatment;
     int                     in_phase;
@@ -726,7 +727,7 @@ struct qdr_auto_link_t {
     qdr_auto_link_state_t  state;
     qdr_core_timer_t      *retry_timer; // If the auto link attach fails or gets disconnected, this timer retries the attach.
     char                  *last_error;
-    bool                   alternate;   // True iff this auto-link attaches to an alternate destination for an address.
+    bool                   fallback;   // True iff this auto-link attaches to a fallback destination for an address.
 };
 
 DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);
@@ -848,19 +849,20 @@ struct qdr_core_t {
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;  ///< List of delivery cleanup items to be processed in an IO thread
 
     // Overall delivery counters
-    uint64_t  presettled_deliveries;
-    uint64_t  dropped_presettled_deliveries;
-    uint64_t  accepted_deliveries;
-    uint64_t  rejected_deliveries;
-    uint64_t  released_deliveries;
-    uint64_t  modified_deliveries;
-    uint64_t  deliveries_ingress;
-    uint64_t  deliveries_egress;
-    uint64_t  deliveries_transit;
-    uint64_t  deliveries_egress_route_container;
-    uint64_t  deliveries_ingress_route_container;
-    uint64_t  deliveries_delayed_1sec;
-    uint64_t  deliveries_delayed_10sec;
+    uint64_t presettled_deliveries;
+    uint64_t dropped_presettled_deliveries;
+    uint64_t accepted_deliveries;
+    uint64_t rejected_deliveries;
+    uint64_t released_deliveries;
+    uint64_t modified_deliveries;
+    uint64_t deliveries_ingress;
+    uint64_t deliveries_egress;
+    uint64_t deliveries_transit;
+    uint64_t deliveries_egress_route_container;
+    uint64_t deliveries_ingress_route_container;
+    uint64_t deliveries_delayed_1sec;
+    uint64_t deliveries_delayed_10sec;
+    uint64_t deliveries_redirected;
 
     qdr_edge_conn_addr_t          edge_conn_addr;
     void                         *edge_context;

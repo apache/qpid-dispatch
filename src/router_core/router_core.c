@@ -519,9 +519,9 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
         cr = DEQ_HEAD(addr->conns);
     }
 
-    if (!!addr->alternate) {
-        addr->alternate->alternate_for = 0;
-        qdr_check_addr_CT(core, addr->alternate);
+    if (!!addr->fallback) {
+        addr->fallback->fallback_for = 0;
+        qdr_check_addr_CT(core, addr->fallback);
     }
 
     free(addr->add_prefix);
@@ -550,12 +550,12 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
         qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->inlinks) == 1) {
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr);
-            if (!!addr->alternate && !link->alternate)
-                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr->alternate);
+            if (!!addr->fallback && !link->fallback)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr->fallback);
         } else if (DEQ_SIZE(addr->inlinks) == 2) {
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr);
-            if (!!addr->alternate && !link->alternate)
-                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr->alternate);
+            if (!!addr->fallback && !link->fallback)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr->fallback);
         }
     }
 }
@@ -579,12 +579,12 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
         if (removed) {
             if (DEQ_SIZE(addr->inlinks) == 0) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr);
-                if (!!addr->alternate && !link->alternate)
-                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr->alternate);
+                if (!!addr->fallback && !link->fallback)
+                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr->fallback);
             } else if (DEQ_SIZE(addr->inlinks) == 1) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr);
-                if (!!addr->alternate && !link->alternate)
-                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->alternate);
+                if (!!addr->fallback && !link->fallback)
+                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
             }
         }
     }
@@ -614,14 +614,14 @@ void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
 
 
 /**
- * Search for, and possibly create, the alternate address based on the
- * alternate flag in the address's configuration.  This will be used in
- * the forwarding paths to handle undeliverable messages with alternate destinations.
+ * Search for, and possibly create, the fallback address based on the
+ * fallback flag in the address's configuration.  This will be used in
+ * the forwarding paths to handle undeliverable messages with fallback destinations.
  */
-void qdr_setup_alternate_address_CT(qdr_core_t *core, qdr_address_t *addr)
+void qdr_setup_fallback_address_CT(qdr_core_t *core, qdr_address_t *addr)
 {
-#define QDR_SETUP_ALTERNATE_BUFFER_SIZE 256
-    char  buffer[QDR_SETUP_ALTERNATE_BUFFER_SIZE];
+#define QDR_SETUP_FALLBACK_BUFFER_SIZE 256
+    char  buffer[QDR_SETUP_FALLBACK_BUFFER_SIZE];
     char *alt_text       = buffer;
     bool  buffer_on_heap = false;
 
@@ -629,19 +629,19 @@ void qdr_setup_alternate_address_CT(qdr_core_t *core, qdr_address_t *addr)
     size_t  alt_length   = strlen(address_text) + 1;
 
     //
-    // If this is an alternate address for a primary address that hasn't been seen
+    // If this is a fallback address for a primary address that hasn't been seen
     // yet, simply exit without doing anything.
     //
-    if (address_text[1] == QD_ITER_HASH_PHASE_ALTERNATE)
+    if (address_text[1] == QD_ITER_HASH_PHASE_FALLBACK)
         return;
 
-    if (alt_length > QDR_SETUP_ALTERNATE_BUFFER_SIZE) {
+    if (alt_length > QDR_SETUP_FALLBACK_BUFFER_SIZE) {
         alt_text       = (char*) malloc(alt_length);
         buffer_on_heap = true;
     }
 
     strcpy(alt_text, address_text);
-    alt_text[1] = QD_ITER_HASH_PHASE_ALTERNATE;
+    alt_text[1] = QD_ITER_HASH_PHASE_FALLBACK;
 
     qd_iterator_t *alt_iter = qd_iterator_string(alt_text, ITER_VIEW_ALL);
     qdr_address_t *alt_addr = 0;
@@ -654,9 +654,9 @@ void qdr_setup_alternate_address_CT(qdr_core_t *core, qdr_address_t *addr)
     }
 
     assert(alt_addr != addr);
-    assert(alt_addr->alternate_for == 0);
-    addr->alternate         = alt_addr;
-    alt_addr->alternate_for = addr;
+    assert(alt_addr->fallback_for == 0);
+    addr->fallback         = alt_addr;
+    alt_addr->fallback_for = addr;
 
     qd_iterator_free(alt_iter);
     if (buffer_on_heap)

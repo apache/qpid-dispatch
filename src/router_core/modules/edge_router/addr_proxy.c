@@ -89,21 +89,21 @@ static qdr_terminus_t *qdr_terminus_normal(const char *addr)
 }
 
 
-static void set_alternate_capability(qdr_terminus_t *term)
+static void set_fallback_capability(qdr_terminus_t *term)
 {
-    qdr_terminus_add_capability(term, QD_CAPABILITY_ALTERNATE);
+    qdr_terminus_add_capability(term, QD_CAPABILITY_FALLBACK);
 }
 
 
 static void set_waypoint_capability(qdr_terminus_t *term, char phase_char, qd_direction_t dir, int in_phase, int out_phase)
 {
-    int phase      = (int) (phase_char - '0');
-    bool alternate = phase_char == QD_ITER_HASH_PHASE_ALTERNATE;
+    int  phase    = (int) (phase_char - '0');
+    bool fallback = phase_char == QD_ITER_HASH_PHASE_FALLBACK;
     char cap[16];
     char suffix[3];
 
-    if (alternate) {
-        strncpy(cap, QD_CAPABILITY_ALTERNATE, 15);
+    if (fallback) {
+        strncpy(cap, QD_CAPABILITY_FALLBACK, 15);
         qdr_terminus_add_capability(term, cap);
         return;
     }
@@ -143,8 +143,8 @@ static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t
         qdr_terminus_t *term = qdr_terminus_normal(key + 2);
         const char     *key  = (char*) qd_hash_key_by_handle(addr->hash_handle);
 
-        if (key[1] == QD_ITER_HASH_PHASE_ALTERNATE) {
-            set_alternate_capability(term);
+        if (key[1] == QD_ITER_HASH_PHASE_FALLBACK) {
+            set_fallback_capability(term);
 
         } else if (addr->config && addr->config->out_phase > 0) {
             //
@@ -185,8 +185,8 @@ static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_
         qdr_terminus_t *term = qdr_terminus_normal(key + 2);
         const char     *key  = (char*) qd_hash_key_by_handle(addr->hash_handle);
 
-        if (key[1] == QD_ITER_HASH_PHASE_ALTERNATE) {
-            set_alternate_capability(term);
+        if (key[1] == QD_ITER_HASH_PHASE_FALLBACK) {
+            set_fallback_capability(term);
 
         } else if (addr->config && addr->config->out_phase > 0) {
             //
@@ -308,10 +308,10 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                         add_outlink(ap, key, addr);
 
                         //
-                        // If the address has an alternate address, add an outlink for that as well
+                        // If the address has a fallback address, add an outlink for that as well
                         //
-                        if (!!addr->alternate)
-                            add_outlink(ap, key, addr->alternate);
+                        if (!!addr->fallback)
+                            add_outlink(ap, key, addr->fallback);
                     }
                 }
             }
