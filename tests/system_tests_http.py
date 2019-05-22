@@ -172,6 +172,7 @@ class RouterTestHttp(TestCase):
             assert('deliveries_ingress' in data)
             assert('deliveries_delayed_1sec' in data)
             assert('deliveries_delayed_10sec' in data)
+            assert('deliveries_redirected_to_fallback' in data)
 
         # Sequential calls on multiple ports
         for port in r.ports: test(port)
