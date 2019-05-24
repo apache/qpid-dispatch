@@ -58,6 +58,10 @@ static inline int32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
     return atomic_exchange(ref, value);
 }
 
+static inline void sys_atomic_release_fence()
+{
+    atomic_thread_fence(memory_order_release);
+}
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
 
@@ -99,6 +103,17 @@ static inline uint32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
     return old;
 }
 
+static inline void sys_atomic_release_fence()
+{
+    //smart trick to avoid issuing a full memory barrier on x86:
+    //the only downside is that it increases the stack size.
+    //it is being declared as volatile, because to prevent
+    //the compiler dropping the release barrier while
+    //marking the store to dummy as dead code.
+    uint32_t volatile dummy = 0;
+    __sync_lock_release(&dummy);
+}
+
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
 
 
@@ -138,6 +153,11 @@ static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
 static inline void sys_atomic_set(sys_atomic_t *ref, uint32_t value)
 {
     return atomic_swap_32(ref, value);
+}
+
+static inline void sys_atomic_release_fence()
+{
+    membar_producer();
 }
 
 static inline void sys_atomic_destroy(sys_atomic_t *ref) {}
@@ -201,6 +221,14 @@ static inline void sys_atomic_destroy(sys_atomic_t *ref)
 {
     sys_mutex_lock(ref->lock);
     sys_mutex_free(ref->lock);
+}
+
+static inline void sys_atomic_release_fence()
+{
+    //it shoudn't leak any OS resources, because (unshared) spin locks
+    //are just user space atomic ints
+    sys_spinlock_t lock;
+    sys_spin_init(&lock);
 }
 
 #endif

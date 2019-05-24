@@ -908,9 +908,10 @@ qd_message_t *qd_message()
 
     ZERO(msg->content);
     sys_spin_init(&msg->content->lock);
-    sys_atomic_init(&msg->content->ref_count, 1);
+    msg->content->ref_count = 1;
     msg->content->parse_depth = QD_DEPTH_NONE;
-
+    //ensure ref count to be safely published along with the other fields
+    sys_atomic_release_fence();
     return (qd_message_t*) msg;
 }
 
