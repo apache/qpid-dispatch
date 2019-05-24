@@ -17,10 +17,20 @@ specific language governing permissions and limitations
 under the License
 ////
 
-= Managing the router network
+// This assembly is included in the following assemblies:
+//
+// creating-router-networks.adoc
 
-// Managing Using qdmanage
-include::managing-using-qdmanage.adoc[leveloffset=+1]
+[id='planning-router-network-{context}']
+= Planning a router network
 
-// Management Entities
-include::management-entities.adoc[leveloffset=+1]
+To plan your router network and design the network topology, you must first understand the different router modes and how you can use them to create different types of networks.
+
+// Router operating modes
+include::modules/router-operating-modes.adoc[leveloffset=+1]
+
+// Security considerations
+include::modules/router-network-security-considerations.adoc[leveloffset=+1]
+
+// Example router network topologies
+// include::modules/example-router-network-topologies.adoc[leveloffset=+1]

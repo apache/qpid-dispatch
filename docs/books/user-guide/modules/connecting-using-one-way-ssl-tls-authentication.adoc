@@ -1,0 +1,65 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// securing-outgoing-connections.adoc
+
+[id='connecting-using-one-way-ssl-tls-authentication-{context}']
+= Connecting using one-way SSL/TLS authentication
+
+You can connect to an external AMQP container (such as a broker) using one-way SSL/TLS. With this method, the router validates the external AMQP container's server certificate to verify its identity.
+
+.Procedure
+
+include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+
+. If the router does not contain an `sslProfile` that defines a certificate that can be used to validate the external AMQP container's identity, then add one.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+sslProfile {
+    name: broker-tls
+    caCertFile: /etc/qpid-dispatch-certs/ca.crt
+    ...
+}
+----
+`name`:: A unique name that you can use to refer to this `sslProfile`.
+
+`caCertFile`:: The absolute path to the CA certificate used to verify the external AMQP container's identity.
+--
+
+. Configure the `connector` for this connection to use SSL/TLS to validate the server certificate received by the broker during the SSL handshake.
++
+--
+This example configures a `connector` to a broker. When the router connects to the broker, it will use the CA certificate defined in the `broker-tls` `sslProfile` to validate the server certificate received from the broker.
+
+[options="nowrap",subs="+quotes"]
+----
+connector {
+    host: 192.0.2.1
+    port: 5672
+    role: route-container
+    sslProfile: broker-tls
+    ...
+}
+----
+`sslProfile`:: The name of the `sslProfile` that defines the certificate to use to validate the external AMQP container's identity.
+--

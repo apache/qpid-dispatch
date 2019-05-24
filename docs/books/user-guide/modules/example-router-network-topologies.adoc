@@ -17,10 +17,18 @@ specific language governing permissions and limitations
 under the License
 ////
 
-= Managing the router network
+// Module included in the following assemblies:
+//
+// creating-router-networks.adoc
 
-// Managing Using qdmanage
-include::managing-using-qdmanage.adoc[leveloffset=+1]
+[id='example-router-network-topologies-{context}']
+= Example router network topologies
 
-// Management Entities
-include::management-entities.adoc[leveloffset=+1]
+With {RouterName} you can deploy a router network of any arbitrary topology. Use the following examples to help design a topology that best fits your requirements.
+
+[discrete]
+== Small mesh in a single site
+
+
+[discrete]
+== Multi-site mesh

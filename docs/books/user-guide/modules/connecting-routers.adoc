@@ -1,0 +1,89 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// configuring-network-connections.adoc
+
+[id='connecting-routers-{context}']
+= Connecting routers
+
+To connect a router to another router in the router network, you configure a `connector` on one router to create the outbound connection, and a `listener` on the other router to accept the connection.
+
+Because connections are bidirectional, there should only be one connection between any pair of routers. Once the connection is established, message traffic flows in both directions.
+
+This procedure describes how to connect a router to another router in the router network.
+
+.Procedure
+
+. Determine the direction of the connection.
++
+--
+Decide which router should be the "connector", and which should be the "listener". The direction of the connection establishment is sometimes arbitrary, but consider the following factors:
+
+IP network boundaries and firewalls::
+Generally, inter-router connections should always be established from more private to more public. For example, to connect a router in a private IP network to another router in a public location (such as a public cloud provider), the router in the private network must be the "connector" and the router in the public location must be the "listener". This is because the public location cannot reach the private location by TCP/IP without the use of VPNs or other firewall features designed to allow public-to-private access.
+
+Network topology::
+The topology of the router network may affect the direction in which connections should be established between the routers. For example, a star-topology that has a series of routers connected to one or two central "hub" routers should have "listeners" on the hub and "connectors" on the spokes. That way, new spoke routers may be added without changing the configuration of the hub.
+--
+
+. On the router that should create the connection, open the `{RouterConfigFile}` configuration file and add a `connector`.
++
+--
+This example creates a `connector` for an inter-router connection between two interior routers:
+
+[options="nowrap",subs="+quotes"]
+----
+connector {
+    host: 192.0.2.1
+    port: 5001
+    role: inter-router
+    ...
+}
+----
+
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will connect.
+`port`:: The port number or symbolic service name on which the router will connect.
+`role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
+--
+
+. On the router that should accept the connection establishment, open the `{RouterConfigFile}` configuration file and verify that an inter-router `listener` is configured.
++
+--
+This example creates a `listener` to accept the connection establishment configured in the previous step:
+
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: 0.0.0.0
+    port: 5001
+    role: inter-router
+    ...
+}
+----
+
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
+`port`:: The port number or symbolic service name on which the router will listen.
+`role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
+--
+
+. If the router should connect to any other routers, repeat this procedure.
++
+Edge routers can only connect to interior routers. They cannot connect to other edge routers.

@@ -1,0 +1,61 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// configuring-router.adoc
+
+[id='listening-client-connections-{context}']
+= Listening for client connections
+
+To enable a router to listen for and accept connections from AMQP clients, you configure a `listener`.
+
+Once the connection is enabled on the router, clients can connect to it using the same methods they use to connect to a broker. From the client's perspective, the router connection and link establishment are identical to a broker connection and link establishment.
+
+[NOTE]
+====
+Instead of configuring a `listener` to listen for connections from the client, you can configure a `connector` to initiate connections to the client. In this case, the router will use the `connector` to initiate the connection, but it will not create any links. Links are only created by the peer that accepts the connection.
+====
+
+.Procedure
+
+include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+
+. Configure a `listener` with the `normal` role.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: primary.example.com
+    port: 5672
+    role: normal
+    failoverUrls: secondary.example.com:20000, tertiary.example.com
+    ...
+}
+----
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
+`port`:: The port number or symbolic service name on which the router will listen.
+`role`:: The role of the connection. Specify `normal` to indicate that this connection is used for message delivery for AMQP clients.
+`failoverUrls` (optional):: A comma-separated list of backup URLs the client can use to reconnect if the established connection is lost. Each URL must use the following form:
++
+`[(amqp|amqps|ws|wss)://](__HOST__|__IP ADDRESS__)[:port]`
++
+For more information, see xref:connection-failover-router[].
+--

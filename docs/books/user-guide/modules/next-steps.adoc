@@ -17,26 +17,25 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// This assembly is included in the following assemblies:
+// This module is included in the following assemblies:
 //
 // getting-started.adoc
 
 [id='next-steps-{context}']
 = Next steps
 
-After you successfully install a standalone router and use it to distribute messages between two clients, you can configure the router to make it production-ready, and add additional routers to form a router network.
+After you successfully install a standalone router and use it to distribute messages between two clients, you can configure a router network topology and route messages.
 
-Configure the router::
-You can configure the router to meet the requirements of your production environment. 
+Configure a router network topology::
+After configuring a single router, you can deploy additional routers and connect them together to form a router network. Router networks can be any arbitrary topology.
+
+Route messages through the router network::
+Regardless of the underlying router network topology, you can configure how you want messages to be routed through the router network.
 +
 --
-* Secure the router:
-** Add authentication to control which users can connect to the router
-** Add authorization to control what messaging resources those users can access
 * Configure addresses to specify routing patterns for direct-routed (brokerless) messaging
 * Connect the router to a message broker to enable clients to exchange messages with a broker queue.
 * Create link routes to define private messaging paths between endpoints.
 --
-
-Deploy a router network::
-After deploying a single router, you can deploy additional routers and connect them together to form a router network. Router networks can be any arbitrary topology.
++
+For more information, see xref:routing[].

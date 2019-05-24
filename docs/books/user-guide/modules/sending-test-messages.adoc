@@ -27,7 +27,7 @@ under the License
 After starting the router, send some test messages to see how the router can connect two endpoints by distributing messages between them.
 
 This procedure demonstrates a simple configuration consisting of a single router with two clients connected to it: a sender and a receiver. The receiver wants to receive messages on a specific address, and the sender sends
-messages to that address. 
+messages to that address.
 
 A broker is not used in this procedure, so there is no _"store and forward"_ mechanism in the middle. Instead, the messages flow from the sender, through the router, to the receiver only if the receiver is online, and the sender can confirm that the messages have arrived at their destination.
 
@@ -37,7 +37,7 @@ A broker is not used in this procedure, so there is no _"store and forward"_ mec
 
 .Procedure
 
-. Navigate to the {ClientAmqpPythonName} Python examples directory.
+. Navigate to the {ClientAmqpPythonName} examples directory.
 +
 --
 [source,bash,options="nowrap",subs="+quotes"]

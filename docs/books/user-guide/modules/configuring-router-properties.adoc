@@ -1,0 +1,64 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// adding-routers-router-network.adoc
+
+[id='configuring-router-properties-{context}']
+= Configuring router properties
+
+By default, {RouterName} operates in `standalone` mode with a randomly-generated ID. If you want to use this router in a router network, you must change these properties.
+
+.Procedure
+
+include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+
+. In the `router` section, specify the mode and ID.
++
+--
+This example shows a router configured to operate in `interior` mode:
+
+[options="nowrap",subs="+quotes"]
+----
+router {
+    mode: interior
+    id: Router.A
+}
+----
+
+`mode`:: Specify one of the following modes:
++
+* `standalone` - Use this mode if the router does not communicate with
+other routers and is not part of a router network. When operating in
+this mode, the router only routes messages between directly connected
+endpoints.
+* `interior` - Use this mode if the router is part of a router network
+and needs to collaborate with other routers.
+* `edge` - Use this mode if the router is an edge router that will
+connect to a network of interior routers.
+
+`id`:: The unique
+identifier for the router. This ID will also be the container name at
+the AMQP protocol level.
+--
+
+. If necessary, configure any additional properties for the router.
++
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_router[router] in the `qdrouterd.conf` man page.

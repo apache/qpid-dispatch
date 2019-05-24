@@ -18,7 +18,7 @@ under the License
 ////
 
 [id='routing']
-= Routing
+= Routing messages through the router network
 
 Routing is the process by which messages are delivered to their destinations. To accomplish this, {RouterName} provides two routing mechanisms: _message routing_ and _link routing_.
 
@@ -103,7 +103,7 @@ Link routing supports local transactions to a single broker. Distributed transac
 With a link route, consumers can provide server-side selectors for broker subscriptions.
 
 [id='configuring-message-routing']
-== Configuring Message Routing 
+== Configuring Message Routing
 
 With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message's _address_ and _routing pattern_.
 
@@ -111,7 +111,7 @@ With message routing, you can do the following:
 
 * Route messages between clients (direct-routed, or brokerless messaging)
 +
-This involves configuring an address with a routing pattern. All messages sent to the address will be routed based on the routing pattern. 
+This involves configuring an address with a routing pattern. All messages sent to the address will be routed based on the routing pattern.
 * Route messages through a broker queue (brokered messaging)
 +
 This involves configuring a waypoint address to identify the broker queue and then connecting the router to the broker. All messages sent to the waypoint address will be routed to the broker queue.
@@ -298,7 +298,7 @@ The following table describes the levels of reliability provided by each routing
 | Routing pattern | Reliable?
 
 | Anycast (Balanced or Closest)
-a| Yes, when the message deliveries are unsettled. 
+a| Yes, when the message deliveries are unsettled.
 
 There is a reliability contract that the router network abides by when delivering unsettled messages to anycast addresses. For every such delivery sent by a producer, the router network guarantees that one of the following outcomes will occur:
 
@@ -311,7 +311,7 @@ There is a reliability contract that the router network abides by when deliverin
 * The connection to the producer shall be dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and later re-sent.
 
 | Multicast
-a| No. 
+a| No.
 
 If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RELEASED.
 
@@ -386,7 +386,7 @@ You can route messages to a queue hosted on a single broker, or route messages t
 .Brokered Messaging
 image::brokered-messaging.png[Brokered Messaging, align="center"]
 
-In this diagram, the sender connects to the router and sends messages to my_queue. The router attaches an outgoing link to the broker, and then sends the messages to my_queue. Later, the receiver connects to the router and requests messages from my_queue. The router attaches an incoming link to the broker to receive the messages from my_queue, and then delivers them to the receiver. 
+In this diagram, the sender connects to the router and sends messages to my_queue. The router attaches an outgoing link to the broker, and then sends the messages to my_queue. Later, the receiver connects to the router and requests messages from my_queue. The router attaches an incoming link to the broker to receive the messages from my_queue, and then delivers them to the receiver.
 
 You can also route messages to a _sharded queue_, which is a single, logical queue comprised of multiple, underlying physical queues. Using queue sharding, it is possible to distribute a single queue over multiple brokers. Clients can connect to any of the brokers that hold a shard to send and receive messages.
 
@@ -413,7 +413,7 @@ A waypoint address identifies a queue on a broker to which you want to route mes
 
 .Prerequisites
 
-An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:adding-incoming-connections[Adding Incoming Connections].
+An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:listening-client-connections-{context}[].
 
 // Does the broker queue have to exist before you create the waypoint address? If it doesn't exist, will you get an error?
 
@@ -567,7 +567,7 @@ autoLink {  // <6>
 <3> The incoming autolink from `queue.first` on the broker to the router.
 <4> The outgoing autolink from the router to `queue.first` on the broker.
 <5> The incoming autolink from `queue.second` on the broker to the router.
-<6> The outgoing autolink from the router to `queue.second` on the broker. 
+<6> The outgoing autolink from the router to `queue.second` on the broker.
 
 ==== How the Messages are Routed
 
@@ -677,7 +677,7 @@ Unlike message routing, with link routing, the sender and receiver handle flow c
 
 [id='creating-link-route']
 === Creating a Link Route
- 
+
 Link routes establish a link between a sender and a receiver that travels through a router. You can configure inward and outward link routes to enable the router to receive link-attaches from clients and to send them to a particular destination.
 
 With link routing, client traffic is handled on the broker, not the router. Clients have a direct link through the router to a broker's queue. Therefore, each client is a separate producer or consumer.
@@ -728,7 +728,7 @@ linkRoute {
 
 {RouterName} does not support routing transactions to multiple brokers. If you have multiple brokers in your environment, choose a single broker and route all transactions to it.
 --
- 
+
 . If you want clients to send messages on this link route, create an incoming link route:
 +
 --
@@ -828,13 +828,13 @@ The relevant part of the configuration file for router `Ra` shows the following:
 
 --
 [options="nowrap"]
----- 
+----
 connector {  // <1>
     name: broker
     role: route-container
     host: 198.51.100.1
     port: 61617
-    saslMechanisms: ANONYMOUS 
+    saslMechanisms: ANONYMOUS
 }
 
 linkRoute {  // <2>
@@ -844,7 +844,7 @@ linkRoute {  // <2>
 }
 
 linkRoute {  // <3>
-    prefix: b2   
+    prefix: b2
     direction: out
     connection: broker
 }
@@ -858,8 +858,8 @@ This configuration enables router `Ra` to advertise itself as a valid destinatio
 
 [NOTE]
 ====
-While not required, routers `Rp` and `Rb` should also have the same configuration. 
-==== 
+While not required, routers `Rp` and `Rb` should also have the same configuration.
+====
 
 ==== How the Client Receives Messages
 
@@ -873,3 +873,71 @@ To receive messages from the `b2.event-queue` on broker `B2`, client `C1` attach
 ====
 If broker `B2` is unavailable for any reason, router `Ra` will not advertise itself as a destination for `b2` addresses. In this case, routers `Rb` and `Rp` will reject link attaches that should be routed to broker `B2` with an error message indicating that there is no route available to the destination.
 ====
+
+[id='router-address-pattern-matching']
+=== Pattern Matching for Addresses
+
+In some router configuration scenarios, you might need to use pattern matching to match a range of addresses rather than a single, literal address. Address patterns match any address that corresponds to the pattern.
+
+An address pattern is a sequence of tokens (typically words) that are delimited by either `.` or `/` characters. They also can contain special wildcard characters that represent words:
+
+* `*` represents exactly one word
+* `#` represents zero or more words
+
+.Address Pattern
+====
+This address contains two tokens, separated by the `/` delimiter:
+
+`my/address`
+====
+
+.Address Pattern with Wildcard
+====
+This address contains three tokens. The `*` is a wildcard, representing any single word that might be between `my` and `address`:
+
+`my/*/address`
+====
+
+The following table shows some address patterns and examples of the addresses that would match them:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `news/*`
+a| `news/europe`
+
+`news/usa`
+a| `news`
+
+`news/usa/sports`
+
+a| `news/#`
+a| `news`
+
+`news/europe`
+
+`news/usa/sports`
+a| `europe`
+
+`usa`
+
+a| `news/europe/#`
+a| `news/europe`
+
+`news/europe/sports`
+
+`news/europe/politics/fr`
+a| `news/usa`
+
+`europe`
+
+a| `news/*/sports`
+a| `news/europe/sports`
+
+`news/usa/sports`
+a| `news`
+
+`news/europe/fr/sports`
+
+|===
