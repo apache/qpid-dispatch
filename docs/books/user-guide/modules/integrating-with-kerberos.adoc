@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// securing-incoming-client-connections.adoc
+
+[id='integrating-with-kerberos-{context}']
+= Integrating with Kerberos
+
+If you have implemented Kerberos in your environment, you can use it with the `GSSAPI` SASL mechanism to authenticate incoming connections.
+
+.Prerequisites
+
+* A Kerberos infrastructure must be deployed in your environment.
+
+* In the Kerberos environment, a service principal of `amqp/<hostname>@<realm>` must be configured.
++
+This is the service principal that {RouterName} uses.
+
+* The `cyrus-sasl-gssapi` package must be installed on each client and the router host machine.
+
+.Procedure
+
+. On the router's host machine, open the `/etc/sasl2/qdrouterd.conf` configuration file.
++
+--
+.An `/etc/sasl2/qdrouterd.conf` Configuration File
+====
+[options="nowrap"]
+----
+pwcheck_method: auxprop
+auxprop_plugin: sasldb
+sasldb_path: qdrouterd.sasldb
+keytab: /etc/krb5.keytab
+mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
+----
+====
+--
+
+. Verify the following:
+** The `mech_list` attribute contains the `GSSAPI` mechanism.
+** The `keytab` attribute points to the location of the keytab file.
+
+include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+
+. In the `router` section, specify the path to the SASL configuration file.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+router {
+    mode: interior
+    id: Router.A
+    saslConfigDir: /etc/sasl2/
+}
+----
+`saslConfigDir`:: The absolute path to the SASL configuration file that contains the path to the SASL database.
+--
+
+. For each incoming connection that should use Kerberos for authentication, set the `listener` to use the `GSSAPI` mechanism.
++
+--
+----
+listener {
+    host: 0.0.0.0
+    port: 5672
+    authenticatePeer: yes
+    saslMechanisms: GSSAPI
+    }
+----
+--

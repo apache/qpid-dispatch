@@ -1,0 +1,45 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module included in the following assemblies:
+//
+// planning-router-network.adoc
+
+[id='router-connection-considerations-{context}']
+= Router connection considerations
+
+Before creating a router network, you should understand how routers connect to each other, and the factors that affect the direction in which an inter-router connection should be established.
+
+[discrete]
+== Inter-router connections are bidirectional
+
+When a connection is established between routers, message traffic flows in both directions across that connection. Each connection has a client side (a _connector_) and a server side (a _listener_) for the purposes of connection establishment. Once the connection is established, the two sides become equal participants in a bidirectional connection. For the purposes of routing AMQP traffic across the network, the direction of connection establishment is not relevant.
+
+[discrete]
+== Factors that affect the direction of connection establishment
+
+When establishing inter-router connections, you must choose which router will be the "listener" and which will be the "connector". There should be only one connection between any pair of routers.
+
+When determining the direction of inter-router connections in the network topology, consider the following factors:
+
+IP network boundaries and firewalls::
+Generally, inter-router connections should always be established from more private to more public. For example, to connect a router in a private IP network to another router in a public location (such as a public cloud provider), the router in the private network must have the connector and the router in the public location must have the listener. This is because the public location cannot reach the private location by TCP/IP without the use of VPNs or other firewall features designed to allow public-to-private access.
+
+Network topology::
+The topology of the router network may affect the direction in which connections should be established between the routers. For example, a star-topology that has a series of routers connected to one or two central "hub" routers should have listeners on the hub and connectors on the spokes. That way, new spoke routers may be added without changing the configuration of the hub.

@@ -42,7 +42,8 @@ under the License
 :FragmentDir: _common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
-:DispatchRouterVersion: 1.0.1
+:RouterConfigFile: /etc/qpid-dispatch/qdrouterd.conf
+:DispatchRouterVersion: 1.7.0
 
 // Book names
 
@@ -59,7 +60,7 @@ under the License
 :DispatchRouterPackagesLink: link:{DispatchRouterPackagesUrl}[Packages page^]
 
 :ManagementEntitiesUrl: {DispatchRouterUrlBase}/man/managementschema.html
-:ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^] 
+:ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^]
 
 :RouterBookUrl: {DispatchRouterUrlBase}/book/book.html
 :RouterBookLink: link:{RouterBookUrl}[{RouterBook}]

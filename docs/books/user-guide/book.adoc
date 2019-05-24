@@ -26,44 +26,23 @@ include::_common/attributes.adoc[]
 // Overview
 include::assemblies/overview.adoc[leveloffset=+1]
 
-// Introduction
-// include::introduction.adoc[leveloffset=+1]
-
-// Theory of Operation
-// include::theory_of_operation.adoc[leveloffset=+1]
-
 // Getting started
 include::assemblies/getting-started.adoc[leveloffset=+1]
 
-// Configuration
-include::understand-router-configuration.adoc[leveloffset=+1]
+// Configuring a router network topology
+include::assemblies/configuring-router-network-topology.adoc[leveloffset=+1]
 
-// Network Connections
-include::configuration-connections.adoc[leveloffset=+1]
-
-// Security
-include::configuration-security.adoc[leveloffset=+1]
-
-// Routing
+// Routing messages through the router network
 include::routing.adoc[leveloffset=+1]
 
-// Network Topologies
-include::modules/network-topologies.adoc[leveloffset=+1]
-
-// Logging
-include::logging.adoc[leveloffset=+1]
-
-// Management
-include::management.adoc[leveloffset=+1]
-
-// Reliability
-include::reliability.adoc[leveloffset=+1]
+== Monitoring and managing the router network
+include::logging.adoc[leveloffset=+2]
+include::using-console.adoc[leveloffset=+2]
+include::monitoring-using-qdstat.adoc[leveloffset=+2]
+include::managing-using-qdmanage.adoc[leveloffset=+2]
 
 // Technical Details and Specifications
 include::technical-details-specifications.adoc[leveloffset=+1]
-
-[appendix]
-include::cyrus-sasl.adoc[leveloffset=+1]
 
 // Revision information
 include::revision-info.adoc[]

@@ -18,48 +18,21 @@ under the License
 ////
 
 // Module included in the following assemblies:
-//
+// configuring-network-connections.adoc
 
 [id='connection-failover-{context}']
-= Connection Failover
+= Connection failover
 
-In {RouterName}, a connector attempts to maintain an open network transport
-connection to the configured remote host and port.  If the connection cannot be
-established, the connector will continually retry until the connection is
-established.  If an established connection is lost, the connector shall
-immediately attempt to re-establish the connection.
+If a connection between a router and a remote host fails, connection failover enables the connection to be reestablished automatically on an alternate URL.
 
-Connection Failover is a mechanism by which the remote host can provide
-alternate connection information for the connector to use in the event the
-established connection is lost.  In this case, rather than attempting to
-re-establish the connection to the same host, the connector shall try the
-alternate hosts as well.  This is useful in the case where the remote host is
-formed by a cluster or array of servers providing the same service.
+A router can use connection failover for both incoming and outgoing connections.
 
-{RouterName} can participate in Connection Failover as both a client (initiator
-of transport connections) and a server (recipient of transport connections).  In
-the client role, connectors shall always honor the failover lists provided by
-connected servers.  As a server, a listener may be configured to provide a
-failover list to the clients that connect to it.
+Connection failover for outgoing connections::
+By default, when you configure a `connector` on a router, the router attempts to maintain an open network transport connection to the configured remote host and port. If the connection cannot be established, the router continually retries until the connection is established. If the connection is established and then fails, the router immediately attempts to reestablish the connection.
++
+When the router establishes a connection to a remote host, the client may provide the router with alternate connection information (sometimes called failover lists) that it can use if the connection is lost. In these cases, rather than attempting to reestablish the connection on the same host, the router will also try the alternate hosts.
++
+Connection failover is particularly useful when the router establishes outgoing connections to a cluster of servers providing the same service.
 
-Listener attribute failoverUrls is an optional component that contains a
-comma-separated list of URLs to be used as backups for this listener.  Each URL
-is of the form:
-
-    [(amqp|amqps|ws|wss)://]host_or_ip[:port]
-
-When a client establishes a connection to this listener, it will be provided
-with this list of backup URLs to be used in the event that this connection is
-lost.
-
-As an example, a listener may be configured like this:
-
-    listener {
-        host: primary.domain.com
-        port: amqp
-        failoverUrls: secondary.domain.com:20000, tertiary.domain.com
-        .
-        .
-        .
-    }
-
+Connection failover for incoming connections::
+You can configure a `listener` on a router to provide a list of failover URLs to be used as backups. If the connection is lost, the client can use these failover URLs to reestablish the connection to the router.

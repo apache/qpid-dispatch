@@ -1,0 +1,45 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// adding-routers-router-network.adoc
+
+[id='securing-network-connections-{context}']
+= Securing network connections
+
+You can configure {RouterName} to communicate with clients, routers, and brokers in a secure way by authenticating and encrypting the router’s connections. {RouterName} supports the following security protocols:
+
+* SSL/TLS for certificate-based encryption and mutual authentication
+* SASL for authentication with mechanisms
+
+To secure the router network, you configure SSL/TLS, SASL (or a combination of both) to secure each of the following types of connections:
+
+* xref:securing-connections-between-routers-router[Connections between routers]
+* xref:securing-incoming-client-connections-router[Incoming client connections]
+* xref:securing-outgoing-connections-router[Outgoing connections]
+
+// Securing connections between routers
+include::modules/securing-connections-between-routers.adoc[leveloffset=+1]
+
+// Securing incoming client connections
+include::securing-incoming-client-connections.adoc[leveloffset=+1]
+
+// Securing outgoing connections
+include::securing-outgoing-connections.adoc[leveloffset=+1]
