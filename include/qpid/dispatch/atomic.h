@@ -35,7 +35,7 @@ typedef atomic_uint sys_atomic_t;
 
 static inline void sys_atomic_init(sys_atomic_t *ref, uint32_t value)
 {
-    atomic_store(ref, value);
+    atomic_store_explicit(ref, value, memory_order_relaxed);
 }
 
 static inline uint32_t sys_atomic_add(sys_atomic_t *ref, uint32_t value)
@@ -50,7 +50,7 @@ static inline uint32_t sys_atomic_sub(sys_atomic_t *ref, uint32_t value)
 
 static inline uint32_t sys_atomic_get(sys_atomic_t *ref)
 {
-    return atomic_load(ref);
+    return atomic_load_explicit(ref, memory_order_relaxed);
 }
 
 static inline int32_t sys_atomic_set(sys_atomic_t *ref, uint32_t value)
