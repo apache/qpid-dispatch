@@ -1,3 +1,2 @@
 
-* xref:user-guide/book.adoc[User Guide]
-** xref:user-guide/book.adoc#overview-router[Overview]
+* xref:books/user-guide/book.adoc[User Guide]

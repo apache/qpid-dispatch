@@ -29,9 +29,7 @@ under the License
 :sectnums:
 :source-highlighter: highlightjs
 :highlightjs-theme: solarized_dark
-:toc: left
 :linkattrs:
-:toclevels: 3
 
 // Component attributes
 
