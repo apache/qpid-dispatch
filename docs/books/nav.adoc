@@ -1,2 +1,2 @@
 
-* xref:books/user-guide/book.adoc[User Guide]
+* xref:user-guide/book.adoc[User Guide]
