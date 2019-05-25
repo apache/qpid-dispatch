@@ -1,6 +1,6 @@
 name: qpid
 title: Using Apache Qpid Dispatch Router
 version: 'latest'
-start_ROOT: ROOT:books/user-guide/book.adoc
+start_ROOT: ROOT:user-guide/book.adoc
 nav:
 - modules/ROOT/nav.adoc
