@@ -321,6 +321,22 @@ If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RE
 
 |===
 
+[id='prioritized-message-delivery']
+=== Prioritized Message Delivery
+
+Within the scope of a connection, {RouterName} attempts to process messages based on their priority. For a connection with a large volume of messages in flight, this lowers the latency for higher-priority messages.
+
+In AMQP, you can prioritize a message by setting the priority level in the message header. If you send a message with a high-priority level, {RouterName} detects the priority level and, within the scope of the connection, attempts to process it before lower-priority ones. This does not mean that higher-priority messages are always delivered before lower-priority messages, but it does enable any high-priority messages to travel more quickly through the network than they otherwise would.
+
+[NOTE]
+====
+If a message arrives without a priority level, {RouterName} automatically assigns the message a default priority level of `4`. You can change the default priority level for an address by configuring the `priority` attribute.
+====
+
+.Additional resources
+
+* For more information about setting the priority level in a message, see the {AmqpSpecLink}.
+
 [id='routing-messages-between-clients']
 === Routing Messages Between Clients
 
