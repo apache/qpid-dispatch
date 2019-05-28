@@ -784,16 +784,32 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
     if (!drain_changed && credit == 0)
         return;
 
-    qdr_link_work_t *work = new_qdr_link_work_t();
-    ZERO(work);
-
-    work->work_type = QDR_LINK_WORK_FLOW;
-    work->value     = credit;
-
+    qdr_link_work_drain_action_t drain_action = QDR_LINK_WORK_DRAIN_ACTION_NONE;
     if (drain_changed)
-        work->drain_action = drain ? QDR_LINK_WORK_DRAIN_ACTION_SET : QDR_LINK_WORK_DRAIN_ACTION_CLEAR;
+        drain_action = drain ? QDR_LINK_WORK_DRAIN_ACTION_SET : QDR_LINK_WORK_DRAIN_ACTION_CLEAR;
 
-    qdr_link_enqueue_work_CT(core, link, work);
+    qdr_connection_t *conn = link->conn;
+    sys_mutex_lock(conn->work_lock);
+    qdr_link_work_t *work = DEQ_TAIL(link->work_list);
+    // can we avoid adding a new work flow item?
+    if (work && work->work_type == QDR_LINK_WORK_FLOW
+        && (!drain_changed || work->drain_action == drain_action)) {
+        work->value += credit;
+        sys_mutex_unlock(conn->work_lock);
+        qdr_connection_activate_CT(core, conn);
+
+    } else {
+        sys_mutex_unlock(conn->work_lock);
+
+        // need a new work flow item
+        work = new_qdr_link_work_t();
+        ZERO(work);
+        work->work_type = QDR_LINK_WORK_FLOW;
+        work->value     = credit;
+        if (drain_changed)
+            work->drain_action = drain_action;
+        qdr_link_enqueue_work_CT(core, link, work);
+    }
 }
 
 
