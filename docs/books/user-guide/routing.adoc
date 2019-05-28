@@ -413,7 +413,7 @@ A waypoint address identifies a queue on a broker to which you want to route mes
 
 .Prerequisites
 
-An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:adding-incoming-connections[Adding Incoming Connections].
+An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:connecting-routers-clients-{context}[].
 
 // Does the broker queue have to exist before you create the waypoint address? If it doesn't exist, will you get an error?
 
@@ -873,3 +873,71 @@ To receive messages from the `b2.event-queue` on broker `B2`, client `C1` attach
 ====
 If broker `B2` is unavailable for any reason, router `Ra` will not advertise itself as a destination for `b2` addresses. In this case, routers `Rb` and `Rp` will reject link attaches that should be routed to broker `B2` with an error message indicating that there is no route available to the destination.
 ====
+
+[id='router-address-pattern-matching']
+=== Pattern Matching for Addresses
+
+In some router configuration scenarios, you might need to use pattern matching to match a range of addresses rather than a single, literal address. Address patterns match any address that corresponds to the pattern.
+
+An address pattern is a sequence of tokens (typically words) that are delimited by either `.` or `/` characters. They also can contain special wildcard characters that represent words:
+
+* `*` represents exactly one word
+* `#` represents zero or more words
+
+.Address Pattern
+====
+This address contains two tokens, separated by the `/` delimiter:
+
+`my/address`
+====
+
+.Address Pattern with Wildcard
+====
+This address contains three tokens. The `*` is a wildcard, representing any single word that might be between `my` and `address`:
+
+`my/*/address`
+====
+
+The following table shows some address patterns and examples of the addresses that would match them:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `news/*`
+a| `news/europe`
+
+`news/usa`
+a| `news`
+
+`news/usa/sports`
+
+a| `news/#`
+a| `news`
+
+`news/europe`
+
+`news/usa/sports`
+a| `europe`
+
+`usa`
+
+a| `news/europe/#`
+a| `news/europe`
+
+`news/europe/sports`
+
+`news/europe/politics/fr`
+a| `news/usa`
+
+`europe`
+
+a| `news/*/sports`
+a| `news/europe/sports`
+
+`news/usa/sports`
+a| `news`
+
+`news/europe/fr/sports`
+
+|===

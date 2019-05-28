@@ -31,7 +31,7 @@ After installing {RouterName}, you start the router by using the `qdrouterd` com
 // Step 1 for starting the router.
 include::{FragmentDir}/fragment-starting-router-step.adoc[]
 +
-The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`. 
+The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`.
 
 . View the log to verify the router status:
 +

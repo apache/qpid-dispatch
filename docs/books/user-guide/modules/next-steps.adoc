@@ -28,8 +28,6 @@ After you successfully install a standalone router and use it to distribute mess
 
 Configure a router network topology::
 After configuring a single router, you can deploy additional routers and connect them together to form a router network. Router networks can be any arbitrary topology.
-+
-For more information, see xref:configuring-router-network-topology-router[].
 
 Route messages through the router network::
 Regardless of the underlying router network topology, you can configure how you want messages to be routed through the router network.

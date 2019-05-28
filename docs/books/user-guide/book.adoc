@@ -35,6 +35,7 @@ include::assemblies/configuring-router-network-topology.adoc[leveloffset=+1]
 // Routing messages through the router network
 include::routing.adoc[leveloffset=+1]
 
+[id="monitoring-managing-router-network"]
 == Monitoring and managing the router network
 include::logging.adoc[leveloffset=+2]
 include::using-console.adoc[leveloffset=+2]

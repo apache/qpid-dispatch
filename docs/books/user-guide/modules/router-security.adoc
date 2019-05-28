@@ -38,6 +38,6 @@ Authorization::
 
 .Additional resources
 
-* xref:authenticating-remote-peers[]
+* xref:securing-network-connections-{context}[]
 
 * xref:authorizing-access-to-messaging-resources[]

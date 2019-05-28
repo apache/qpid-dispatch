@@ -50,6 +50,6 @@ Repeat this step for each additional router to which you want to connect this ro
 
 . xref:securing-network-connections-router[Secure each of the connections that you configured in the previous step].
 
-. (Optional) xref:authorization[Authorize access to messaging resources].
+. (Optional) xref:authorizing-access-to-messaging-resources[Authorize access to messaging resources].
 +
 If you configured the router to accept or make client connections, you should configure policies to control what messaging resources they can access in the router network.

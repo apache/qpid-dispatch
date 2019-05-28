@@ -294,6 +294,60 @@ For more information about these attributes, see xref:configuring-vhost-policies
 ====
 --
 
+[id='pattern-matching-vhost-policy-hostnames']
+=== Pattern Matching for Vhost Policy Hostnames
+
+In a vhost policy, vhost hostnames can be either literal hostnames or patterns that cover a range of hostnames.
+
+A hostname pattern is a sequence of words with one or more of the following wildcard characters:
+
+* `*` represents exactly one word
+* `#` represents zero or more words
+
+The following table shows some examples of hostname patterns:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `*.example.com`
+a| `www.example.com`
+a| `example.com`
+`srv2.www.example.com`
+
+a| `#.example.com`
+a| `example.com`
+`www.example.com`
+`a.b.c.d.example.com`
+a| `myhost.com`
+
+a| `www.*.test.example.com`
+a| `www.a.test.example.com`
+a| `www.test.example.com`
+`www.a.b.c.test.example.com`
+
+a| `www.#.test.example.com`
+a| `www.test.example.com`
+`www.a.test.example.com`
+`www.a.b.c.test.example.com`
+a| `test.example.com`
+|===
+
+Vhost hostname pattern matching applies the following precedence rules:
+
+[options="header"]
+|===
+| Policy pattern | Precedence
+| Exact match | High
+| *           | Medium
+| #           | Low
+|===
+
+[NOTE]
+====
+{RouterName} does not permit you to create vhost hostname patterns that conflict with existing patterns. This includes patterns that can be reduced to be the same as an existing pattern. For example, you would not be able to create the `\#.#.\#.#.com` pattern if `#.com` already exists.
+====
+
 [id='methods-for-specifying-vhost-policy-source-target-addresses']
 === Methods for Specifying Vhost Policy Source and Target Addresses
 
