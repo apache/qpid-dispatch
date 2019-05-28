@@ -321,6 +321,40 @@ If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RE
 
 |===
 
+[id='prioritized-message-delivery']
+=== Configuring Addresses for Prioritized Message Delivery
+
+You can set the priority level of an address to control how {RouterName} processes messages sent to that address. Within the scope of a connection, {RouterName} attempts to process messages based on their priority. For a connection with a large volume of messages in flight, this lowers the latency for higher-priority messages.
+
+Assigning a high priority level to an address does not guarantee that messages sent to the address will be delivered before messages sent to lower-priority addresses. However, higher-priority messages will travel more quickly through the router network than they otherwise would.
+
+[NOTE]
+====
+You can also control the priority level of individual messages by setting the priority level in the message header. However, the address priority takes precedence: if you send a prioritized message to an address with a different priority level, the router will use the address priority level.
+====
+
+.Procedure
+
+* In the router's configuration file, add or edit an address and assign a priority level.
++
+--
+This example adds an address with the highest priority level. The router will attempt to deliver messages sent to this address before messages with lower priority levels.
+
+[options="nowrap",subs="+quotes"]
+----
+address {
+    prefix: my-high-priority-address
+    priority: 9
+    ...
+}
+----
+`priority`:: The priority level to assign to all messages sent to this address. The range of valid priority levels is 0-9, in which the higher the number, the higher the priority. The default is 4.
+--
+
+.Additional resources
+
+* For more information about setting the priority level in a message, see the {AmqpSpecLink}.
+
 [id='routing-messages-between-clients']
 === Routing Messages Between Clients
 
