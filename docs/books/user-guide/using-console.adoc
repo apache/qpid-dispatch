@@ -17,110 +17,100 @@ specific language governing permissions and limitations
 under the License
 ////
 
+[id='using-router-console']
 = Using {ConsoleName}
 
-[[console-overview]]
-== Console Overview
+{ConsoleName} is a web console for monitoring the status and performance of {RouterName} router networks.
 
-The console is an HTML based web site that displays information about a qpid dispatch router network.
+== Setting up access to the web console
 
-The console requires an HTML web server that can serve static html, javascript, style sheets, and images.
+Before you can access the web console, you must configure a `listener` to accept HTTP connections for the web console and serve the console files.
 
-The console only provides limited information about the clients that are attached to the router network and is therfore more appropriate for administrators needing to know the layout and health of the router network.
+.Procedure
 
-[[console-installation]]
-== Console Installation
+. On the router from which you want to access the web console, open the {RouterConfigFile} configuration file.
 
-[discrete]
-=== Prerequisites
+. Add a `listener` to serve the console.
++
+--
+This example creates a `listener` that clients can use to access the web console:
 
-The following need to be installed before running a console:
-
-* One or more dispatch routers. See the documentation for the dispatch
-router for help in starting a router network.
-* A websockets to tcp proxy.
-* A web server. This can be any server capable of serving static
-html/js/css/image files.
-
-[discrete]
-=== Procedure
-
-To install a websockets to tcp proxy:
-
-----
-sudo dnf install python-websockify
-websockify localhost:5673 localhost:5672
-----
-
-This will start the proxy listening to ws traffic on port 5673 and
-translating it to tcp on port 5672. One of the routers in the network
-needs to have a listener configured on port 5672. That listener's role
-should be 'normal'. For example:
-
+[options="nowrap",subs="+quotes"]
 ----
 listener {
-   host: 0.0.0.0
-   role: normal
-   port: amqp
-   saslMechanisms: ANONYMOUS
+    host: 0.0.0.0
+    port: 8672
+    role: normal
+    http: true
+    httpRootDir: /usr/share/qpid-dispatch/console
 }
 ----
+`http`:: Set this attribute to `true` to specify that this `listener` should accept HTTP connections instead of plain AMQP connections.
 
-[[the-console-files]]
-=== The Console Files
+`httpRootDir`:: Specify the absolute path to the directory that contains the web console HTML files. The default directory is `/usr/share/qpid-dispatch/console`.
+--
 
-The files for the console are located under the console/stand-alone
-directory in the source tree
-*  'index.html'
-*  'plugin/'
+. If you want to secure access to the console, secure the `listener`.
++
+--
+For more information, see xref:securing-incoming-client-connections-{context}[]. This example adds basic user name and password authentication using SASL PLAIN.
 
-Copy these files to a directory under the the html or webapps directory
-of your web server. For example, for apache tomcat the files should be
-under webapps/dispatch. Then the console is available as 'http://localhost:8080/dispatch'
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: 0.0.0.0
+    port: 8672
+    role: normal
+    http: true
+    httpRootDir: /usr/share/qpid-dispatch/console
+    authenticatePeer: yes
+    saslMechanisms: PLAIN
+}
+----
+--
 
-[[console-operation]]
-== Console Operation
+. If you want to set up access to the web console from any other router in the router network, repeat this procedure for each router.
 
-[[logging-in-to-a-router-network]]
-=== Logging into a Router Network
+== Accessing the web console
 
-image:console_login.png[image]
+You can access the web console from a web browser.
 
-Enter the address of the websockets to tcp proxy that is connected to a router in the network.
+.Procedure
 
-The Autostart checkbox, when checked, will automatically log in with the previous host:port the next time you start the console.
+. In a web browser, navigate to the web console URL.
++
+--
+The web console URL is the <host>:<port> from the `listener` that you created to serve the web console. For example: `localhost:8672`.
 
-[[overview-page]]
-=== Overview Page
+The {ConsoleName} opens. If you set up user name and password authentication, the *Connect* tab is displayed.
+--
 
-image:console_overview.png[image]
+. If necessary, log in to the web console.
++
+--
+If you set up user name and password authentication, enter your user name and password to access the web console.
 
-On the overview page, aggregate information about routers, addresses, and connections is displayed.
+The syntax for the user name is <user>@<domain>. For example: `admin@my-domain`.
+--
 
-[[topology-page]]
-=== Topology Page
+== Monitoring the router network using the web console
 
-image:console_topology.png[image]
+In the web console, you use the tabs to monitor the router network.
 
-This page displays the router network in a graphical form showing how the routers are connected and information about the individual routers and links.
+[cols="30,70"]
+|===
+| This tab... | Provides...
 
-[[list-page]]
-=== List Page
+| `Overview` | Aggregate information about routers, addresses, links, connections, and logs.
 
-image:console_entity.png[image]
+| `Entities` | Detailed information about each AMQP management entity for each router in the router network.
 
-Displays detailed information about entities such as routers, links, addresses, memory.
+| `Topology` | A graphical view of the router network. The topology shows how the routers are connected, and how messages are flowing through the network.
 
-[[charts-page]]
-=== Charts Page
+| `Charts` | Graphs of the information that is displayed on the `Entities` tab.
 
-image:console_charts.png[image]
+| `Message Flow` | A chord diagram showing the real-time message flow by address.
 
-This page displays graphs of numeric values that are on the list page.
+| `Schema` | The management schema that controls each of the routers in the router network.
 
-[[schema-page]]
-=== Schema Page
-
-image:console_schema.png[image]
-
-This page displays the json schema that is used to manage the router network.
+|===
