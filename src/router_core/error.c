@@ -50,9 +50,11 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
     if ((name && *name) || (desc && *desc) || is_byt_size_gt_zero) {
         error = new_qdr_error_t();
         ZERO(error);
+
         if (name && *name)
             error->name = qdr_field(name);
-        if(desc && *desc)
+
+        if (desc && *desc)
             error->description = qdr_field(desc);
 
         if (is_byt_size_gt_zero) {
