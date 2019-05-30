@@ -95,6 +95,9 @@ void qdr_error_free(qdr_error_t *error)
 
 void qdr_error_copy(qdr_error_t *from, pn_condition_t *to)
 {
+    if (from == 0)
+        return;
+
     if (from->name) {
         unsigned char *name = qd_iterator_copy(from->name->iterator);
         pn_condition_set_name(to, (char*) name);
@@ -137,6 +140,9 @@ char *qdr_error_name(const qdr_error_t *err)
 
 pn_data_t *qdr_error_info(const qdr_error_t *err)
 {
+    if (err == 0)
+        return 0;
+
     return err->info;
 }
 
