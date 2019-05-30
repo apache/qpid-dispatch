@@ -19,7 +19,7 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// configuring-router-network-topology.adoc
+// creating-router-network-topology.adoc
 
 [id='adding-routers-router-network-{context}']
 = Adding routers to the router network
@@ -30,7 +30,7 @@ This procedure describes the workflow required to add a router to the router net
 
 .Prerequisites
 
-* {RouterName} should be installed on the host.
+* {RouterName} is installed on the host.
 
 .Procedure
 
@@ -50,6 +50,20 @@ Repeat this step for each additional router to which you want to connect this ro
 
 . xref:securing-network-connections-router[Secure each of the connections that you configured in the previous step].
 
-. (Optional) xref:authorizing-access-to-messaging-resources[Authorize access to messaging resources].
+. (Optional) Configure any additional properties.
 +
-If you configured the router to accept or make client connections, you should configure policies to control what messaging resources they can access in the router network.
+These properties should be configured the same way on each router. Therefore, you should only configure each one once, and then copy the configuration to each additional router in the router network.
+
+** xref:authorizing-access-to-messaging-resources[Authorization]
++
+If necessary, configure policies to control which messaging resources clients are able to access on the router network.
+
+** xref:routing[Routing]
++
+{RouterName} automatically routes messages without any configuration: clients can send messages to the router network, and the router automatically routes them to their destinations. However, you can configure the routing to meet your exact requirements. You can configure the routing patterns to be used for certain addresses, create waypoints and autolinks to route messages through broker queues, and create link routes to connect clients to brokers.
+
+** xref:logging[Logging]
++
+You can set the default logging configuration to ensure that events are logged at the correct level for your environment.
+
+. Start the router.

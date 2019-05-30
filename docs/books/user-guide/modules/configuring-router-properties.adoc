@@ -24,7 +24,7 @@ under the License
 [id='configuring-router-properties-{context}']
 = Configuring router properties
 
-You must configure the router with a unique ID and specify its operating mode.
+By default, {RouterName} operates in `standalone` mode with a randomly-generated ID. If you want to use this router in a router network, you must change these properties.
 
 .Procedure
 

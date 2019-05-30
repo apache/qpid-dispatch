@@ -413,7 +413,7 @@ A waypoint address identifies a queue on a broker to which you want to route mes
 
 .Prerequisites
 
-An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:connecting-routers-clients-{context}[].
+An incoming connection (`listener`) to which the clients can connect should be configured. This connection defines how the producers and consumers connect to the router to send and receive messages. For more information, see xref:listening-client-connections-{context}[].
 
 // Does the broker queue have to exist before you create the waypoint address? If it doesn't exist, will you get an error?
 

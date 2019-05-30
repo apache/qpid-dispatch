@@ -30,7 +30,10 @@ include::assemblies/overview.adoc[leveloffset=+1]
 include::assemblies/getting-started.adoc[leveloffset=+1]
 
 // Configuring a router network topology
-include::assemblies/configuring-router-network-topology.adoc[leveloffset=+1]
+include::assemblies/creating-router-network-topology.adoc[leveloffset=+1]
+
+// Configuring a router
+include::assemblies/configuring-router.adoc[leveloffset=+1]
 
 // Routing messages through the router network
 include::routing.adoc[leveloffset=+1]

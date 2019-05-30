@@ -43,7 +43,7 @@ sslProfile {
 ----
 `name`:: A unique name that you can use to refer to this `sslProfile`.
 
-`caCertFile`:: The absolute path to the CA certificate that can be used to verify the external AMQP container's identity.
+`caCertFile`:: The absolute path to the CA certificate used to verify the external AMQP container's identity.
 --
 
 . Configure the `connector` for this connection to use SSL/TLS to validate the server certificate received by the broker during the SSL handshake.

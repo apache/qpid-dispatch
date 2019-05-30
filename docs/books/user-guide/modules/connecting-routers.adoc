@@ -59,12 +59,12 @@ connector {
 }
 ----
 
-`host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should connect.
-`port`:: The port number or symbolic service name on which the router should connect.
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will connect.
+`port`:: The port number or symbolic service name on which the router will connect.
 `role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
 --
 
-. On the router that should accept the connection establishment, open the `{RouterConfigFile}` configuration file and add a `listener`.
+. On the router that should accept the connection establishment, open the `{RouterConfigFile}` configuration file and verify that an inter-router `listener` is configured.
 +
 --
 This example creates a `listener` to accept the connection establishment configured in the previous step:
@@ -79,8 +79,8 @@ listener {
 }
 ----
 
-`host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should listen.
-`port`:: The port number or symbolic service name on which the router should listen.
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
+`port`:: The port number or symbolic service name on which the router will listen.
 `role`:: The role of the connection. If the connection is between two interior routers, specify `inter-router`. If the connection is between an interior router and an edge router, specify `edge`.
 --
 

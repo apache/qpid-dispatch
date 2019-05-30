@@ -24,7 +24,7 @@ under the License
 [id='enabling-ssl-tls-client-authentication-{context}']
 = Enabling SSL/TLS client authentication
 
-You can use SSL/TLS to authenticate an incoming connection from a client.
+In additional to SSL/TLS encryption, you can also use SSL/TLS to authenticate an incoming connection from a client. With this method, a clients must present its own X.509 certificate to the router, which the router uses to verify the client's identity.
 
 .Prerequisites
 

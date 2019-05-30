@@ -21,40 +21,21 @@ under the License
 //
 // configuring-network-connections.adoc
 
-[id='connecting-routers-external-amqp-containers-{context}']
-= Connecting routers and external AMQP containers
+[id='connecting-to-external-amqp-containers-{context}']
+= Connecting to external AMQP containers
 
-You can connect a router to an external AMQP container (such as a message broker). You can configure the router to either listen for connections from the AMQP container, or to initiate connections to it.
+To enable a router to establish a connection to an external AMQP container (such as a message broker), you configure a `connector`.
+
+[NOTE]
+====
+Instead of configuring a `connector` to initiate connections to the AMQP container, you can configure a `listener` to listen for connections from the AMQP container. However, in this case, the addresses on the AMQP container are available for routing only after the AMQP container has created a connection.
+====
 
 .Procedure
 
 include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
 
-. Do one of the following:
-
-** If the router should listen for connections from the AMQP container, add a `listener`.
-+
---
-This example creates a `listener` that accepts connections from a broker. The addresses on the broker will be available for routing only after the broker has created the connection.
-
-[options="nowrap",subs="+quotes"]
-----
-listener {
-    name: my-broker
-    host: 0.0.0.0
-    port: 5672
-    role: route-container
-    ...
-}
-----
-
-`name`:: The name of the `listener`. Specify a name that describes the entity to which the router will connect.
-`host`:: Either an IP address (IPv4 or IPv6) or hostname on which the router should listen.
-`port`:: The port number or symbolic service name on which the router should listen.
-`role`:: The role of the connection. Specify `route-container` to indicate that this connection is for an AMQP container that holds known addresses.
---
-
-** If the router should initiate a connection to the broker, add a `connector`.
+. Configure a `connector` with the `route-container` role.
 +
 --
 This example creates a `connector` that initiates connections to a broker. The addresses on the broker will be available for routing once the router creates the connection and it is accepted by the broker.
@@ -70,7 +51,7 @@ connector {
 }
 ----
 `name`:: The name of the `connector`. Specify a name that describes the entity to which the router will connect.
-`host`:: Either an IP address (IPv4 or IPv6) or hostname to which the router should connect.
-`port`:: The port number or symbolic service name to which the router should connect.
+`host`:: The IP address (IPv4 or IPv6) or hostname to which the router will connect.
+`port`:: The port number or symbolic service name to which the router will connect.
 `role`:: The role of the connection. Specify `route-container` to indicate that this connection is for an AMQP container that holds known addresses.
 --

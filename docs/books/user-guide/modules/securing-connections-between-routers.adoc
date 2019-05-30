@@ -28,7 +28,7 @@ Connections between interior routers should be secured with SSL/TLS encryption a
 
 SSL/TLS mutual authentication requires an X.509 Certificate Authority (CA) with individual certificates generated for each interior router. Connections between the interior routers are encrypted, and the CA authenticates each incoming inter-router connection.
 
-This procedure describes how to secure a connection between two interior routers using SSL/TLS mutual authentication. You can also use this method to secure connections between edge routers and interior routers, but it is not required.
+This procedure describes how to secure a connection between two interior routers using SSL/TLS mutual authentication.
 
 .Prerequisites
 
@@ -44,12 +44,12 @@ For more information, see xref:connecting-routers-router[].
 
 . On the router that establishes the connection, do the following:
 
-.. Open the {RouterConfigFile}.
+.. Open the `{RouterConfigFile}`.
 
 .. If the router does not contain an `sslProfile` that defines the private keys and certificates for the inter-router network, then add one.
 +
 --
-This `sslProfile` contains the locations of the private key and certificates that the router should use to authenticate with its peer.
+This `sslProfile` contains the locations of the private key and certificates that the router uses to authenticate with its peer.
 
 [options="nowrap",subs="+quotes"]
 ----
@@ -88,7 +88,7 @@ connector {
 
 . On the router that listens for the connection, do the following:
 
-.. Open the {RouterConfigFile}.
+.. Open the `{RouterConfigFile}`.
 
 .. If the router does not contain an `sslProfile` that defines the private keys and certificates for the inter-router network, then add one.
 

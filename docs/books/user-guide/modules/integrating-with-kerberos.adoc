@@ -41,8 +41,8 @@ This is the service principal that {RouterName} uses.
 . On the router's host machine, open the `/etc/sasl2/qdrouterd.conf` configuration file.
 +
 --
-.An `/etc/sasl2/qdrouterd.conf` Configuration File
-====
+This example shows a `/etc/sasl2/qdrouterd.conf` configuration file:
+
 [options="nowrap"]
 ----
 pwcheck_method: auxprop
@@ -51,7 +51,6 @@ sasldb_path: qdrouterd.sasldb
 keytab: /etc/krb5.keytab
 mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
 ----
-====
 --
 
 . Verify the following:
@@ -74,7 +73,7 @@ router {
 `saslConfigDir`:: The absolute path to the SASL configuration file that contains the path to the SASL database.
 --
 
-. For each incoming connection that should use Kerberos for authentication, set the `listener` to use the `GSSAPI` mechanism.
+. For each incoming connection using Kerberos for authentication, set the `listener` to use the `GSSAPI` mechanism.
 +
 --
 ----
