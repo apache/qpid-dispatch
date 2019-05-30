@@ -120,23 +120,40 @@ unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t 
     uint32_t len = 0;
     DEQ_INIT(*dst);
     qd_buffer_t *buf = DEQ_HEAD(*src);
+    qd_buffer_t *newbuf = NULL;
     while (buf) {
         size_t to_copy = qd_buffer_size(buf);
         unsigned char *src = qd_buffer_base(buf);
+        qd_buffer_t *const next_buf = DEQ_NEXT(buf);
         len += to_copy;
         while (to_copy) {
-            qd_buffer_t *newbuf = qd_buffer();
-            size_t count = qd_buffer_capacity(newbuf);
-            // default buffer capacity may have changed,
-            // so don't assume it will fit:
-            if (count > to_copy) count = to_copy;
+            size_t available;
+            if (newbuf == NULL) {
+                newbuf = qd_buffer();
+                assert(qd_buffer_size(newbuf) == 0);
+                available = qd_buffer_capacity(newbuf);
+            } else {
+                available = qd_buffer_capacity(newbuf) - qd_buffer_size(newbuf);
+            }
+            size_t count = available;
+            if (available > to_copy) {
+                count = to_copy;
+            }
+            assert(count > 0);
             memcpy(qd_buffer_cursor(newbuf), src, count);
             qd_buffer_insert(newbuf, count);
-            DEQ_INSERT_TAIL(*dst, newbuf);
+            available = qd_buffer_capacity(newbuf) - qd_buffer_size(newbuf);
+            if (available == 0) {
+                DEQ_INSERT_TAIL(*dst, newbuf);
+                newbuf = NULL;
+            }
             src += count;
             to_copy -= count;
         }
-        buf = DEQ_NEXT(buf);
+        buf = next_buf;
+    }
+    if (newbuf != NULL) {
+        DEQ_INSERT_TAIL(*dst, newbuf);
     }
     return len;
 }
