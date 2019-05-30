@@ -34,19 +34,34 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
     if (!pn)
         return 0;
 
-    qdr_error_t *error = new_qdr_error_t();
-    ZERO(error);
+    qdr_error_t *error = 0;
 
     const char *name = pn_condition_get_name(pn);
-    if (name && *name)
-        error->name = qdr_field(name);
-
     const char *desc = pn_condition_get_description(pn);
-    if (desc && *desc)
-        error->description = qdr_field(desc);
+    pn_data_t *info = pn_condition_info(pn);
+    bool is_byt_size_gt_zero = false;
 
-    error->info = pn_data(0);
-    pn_data_copy(error->info, pn_condition_info(pn));
+    if (info) {
+        pn_bytes_t byt = pn_data_get_bytes(info);
+        if (byt.size > 0)
+            is_byt_size_gt_zero = true;
+    }
+
+    if ((name && *name) || (desc && *desc) || is_byt_size_gt_zero) {
+        error = new_qdr_error_t();
+        ZERO(error);
+
+        if (name && *name)
+            error->name = qdr_field(name);
+
+        if (desc && *desc)
+            error->description = qdr_field(desc);
+
+        if (is_byt_size_gt_zero) {
+            error->info = pn_data(0);
+            pn_data_copy(error->info, info);
+        }
+    }
 
     return error;
 }
@@ -80,6 +95,9 @@ void qdr_error_free(qdr_error_t *error)
 
 void qdr_error_copy(qdr_error_t *from, pn_condition_t *to)
 {
+    if (from == 0)
+        return;
+
     if (from->name) {
         unsigned char *name = qd_iterator_copy(from->name->iterator);
         pn_condition_set_name(to, (char*) name);
@@ -122,6 +140,9 @@ char *qdr_error_name(const qdr_error_t *err)
 
 pn_data_t *qdr_error_info(const qdr_error_t *err)
 {
+    if (err == 0)
+        return 0;
+
     return err->info;
 }
 
