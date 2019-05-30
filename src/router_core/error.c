@@ -37,35 +37,25 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
     qdr_error_t *error = 0;
 
     const char *name = pn_condition_get_name(pn);
-
-    if (name && *name) {
-        if (!error) {
-            error = new_qdr_error_t();
-            ZERO(error);
-        }
-        error->name = qdr_field(name);
-    }
-
     const char *desc = pn_condition_get_description(pn);
-
-    if (desc && *desc) {
-        if (!error) {
-            error = new_qdr_error_t();
-            ZERO(error);
-        }
-        error->description = qdr_field(desc);
-    }
-
-
     pn_data_t *info = pn_condition_info(pn);
+    bool is_byt_size_gt_zero = false;
 
     if (info) {
         pn_bytes_t byt = pn_data_get_bytes(info);
-        if (byt.size > 0) {
-            if (!error) {
-                error = new_qdr_error_t();
-                ZERO(error);
-            }
+        if (byt.size > 0)
+            is_byt_size_gt_zero = true;
+    }
+
+    if ((name && *name) || (desc && *desc) || is_byt_size_gt_zero) {
+        error = new_qdr_error_t();
+        ZERO(error);
+        if (name && *name)
+            error->name = qdr_field(name);
+        if(desc && *desc)
+            error->description = qdr_field(desc);
+
+        if (is_byt_size_gt_zero) {
             error->info = pn_data(0);
             pn_data_copy(error->info, info);
         }
