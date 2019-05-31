@@ -53,29 +53,61 @@ For example, the following command executes a query operation on a router, and t
 $ qdmanage query --type listener
 [
   {
-    "stripAnnotations": "both", 
-    "addr": "127.0.0.1", 
-    "multiTenant": false, 
-    "requireSsl": false, 
-    "idleTimeoutSeconds": 16, 
-    "saslMechanisms": "ANONYMOUS", 
-    "maxFrameSize": 16384, 
-    "requireEncryption": false, 
-    "host": "0.0.0.0", 
-    "cost": 1, 
-    "role": "normal", 
-    "http": false, 
-    "maxSessions": 32768, 
-    "authenticatePeer": false, 
-    "type": "org.apache.qpid.dispatch.listener", 
-    "port": "amqp", 
-    "identity": "listener/0.0.0.0:amqp", 
+    "stripAnnotations": "both",
+    "addr": "127.0.0.1",
+    "multiTenant": false,
+    "requireSsl": false,
+    "idleTimeoutSeconds": 16,
+    "saslMechanisms": "ANONYMOUS",
+    "maxFrameSize": 16384,
+    "requireEncryption": false,
+    "host": "0.0.0.0",
+    "cost": 1,
+    "role": "normal",
+    "http": false,
+    "maxSessions": 32768,
+    "authenticatePeer": false,
+    "type": "org.apache.qpid.dispatch.listener",
+    "port": "amqp",
+    "identity": "listener/0.0.0.0:amqp",
     "name": "listener/0.0.0.0:amqp"
   }
 ]
 ----
 
 For more information about `qdmanage`, see the {qdmanageManPageLink}.
+
+== Closing a connection
+
+If a consumer is processing messages too slowly, or has stopped processing messages without settling its deliveries, you can close the connection. When you close the connection, the "stuck" deliveries are released.
+
+.Procedure
+
+. Find the ID of the connection with the slow consumer.
++
+--
+This command lists the connections for a router in the router network:
+
+[options="nowrap"]
+----
+$ qdstat -c -r Router.A
+Connections
+id    host                        container                              role             dir  security     authentication  tenant
+==================================================================================================================================
+  2   127.0.0.1:5672                                                     route-container  out  no-security  anonymous-user
+  10  127.0.0.1:5001               Router.B                              inter-router     out  no-security  anonymous-user
+  12  localhost.localdomain:42972  161211fe-ba9e-4726-9996-52d6962d1276  normal           in   no-security  anonymous-user
+  14  localhost.localdomain:42980  a35fcc78-63d9-4bed-b57c-053969c38fda  normal           in   no-security  anonymous-user
+  15  localhost.localdomain:42982  0a03aa5b-7c45-4500-8b38-db81d01ce651  normal           in   no-security  anonymous-user
+----
+--
+
+. Close the connection by setting its `adminStatus` to `deleted`.
++
+[options="nowrap"]
+----
+$ qdmanage update --type=connection --id=12 adminStatus=deleted
+----
 
 == Managing Network Connections
 
@@ -132,7 +164,7 @@ a|
 +
 [options="nowrap"]
 ----
-qdmanage create --stdin 
+qdmanage create --stdin
 ----
 . Configure the listeners using a JSON map:
 +
@@ -156,7 +188,7 @@ a|
 +
 [options="nowrap"]
 ----
-qdmanage update --stdin 
+qdmanage update --stdin
 ----
 . Configure the listeners using a JSON map:
 +
@@ -238,7 +270,7 @@ a|
 +
 [options="nowrap"]
 ----
-qdmanage create --stdin 
+qdmanage create --stdin
 ----
 . Configure the connectors using a JSON map:
 +
@@ -262,7 +294,7 @@ a|
 +
 [options="nowrap"]
 ----
-qdmanage update --stdin 
+qdmanage update --stdin
 ----
 . Configure the connectors using a JSON map:
 +
