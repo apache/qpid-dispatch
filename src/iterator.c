@@ -20,6 +20,7 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/alloc.h>
+#include <qpid/dispatch/amqp.h>
 #include "message_private.h"
 #include <stdio.h>
 #include <string.h>
@@ -719,9 +720,20 @@ bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, con
     if (!ptr)
         return false;
 
+    // if ptr->remaining holds enough bytes for the comparison then 
+    // don't fiddle with the iterator motions. Just do the comparison directly.
+    if (ptr->remaining >= skip + QD_MA_PREFIX_LEN) {
+        // there's enough in current buffer to do straight compare
+        const void * blk1 = ptr->cursor + skip;
+        const void * blk2 = prefix;
+        return memcmp(blk1, blk2, QD_MA_PREFIX_LEN) == 0;
+    }
+
+    // otherwise compare across buffer boundaries
+    // this, too, could be optimized a bit
     qd_iterator_pointer_t lptr;
     *&lptr = *ptr;
-
+    
     iterator_pointer_move_cursor(&lptr, skip);
 
     unsigned char *c = (unsigned char*) prefix;

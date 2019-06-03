@@ -301,6 +301,17 @@ void qd_parse_annotations(
     qd_iterator_pointer_t *blob_pointer,
     uint32_t              *blob_item_count);
 
+/**
+ * Identify which annotation is being parsed
+ */
+typedef enum {
+    QD_MAE_INGRESS,
+    QD_MAE_TRACE,
+    QD_MAE_TO,
+    QD_MAE_PHASE,
+    QD_MAE_NONE
+} qd_ma_enum_t;
+
 ///@}
 
 #endif
