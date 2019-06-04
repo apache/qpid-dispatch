@@ -230,18 +230,24 @@ typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t
 
 struct qdr_general_work_t {
     DEQ_LINKS(qdr_general_work_t);
-    qdr_general_work_handler_t   handler;
-    qdr_field_t                 *field;
-    int                          maskbit;
-    int                          inter_router_cost;
-    qd_message_t                *msg;
-    qdr_receive_t                on_message;
-    void                        *on_message_context;
-    uint64_t                     in_conn_id;
-    int                          treatment;
-    qdr_delivery_cleanup_list_t  delivery_cleanup_list;
-    qdr_global_stats_handler_t  stats_handler;
-    void                       *context;
+    qdr_general_work_handler_t handler;
+    union {
+        struct {
+            qdr_field_t *field;
+            int maskbit;
+            int inter_router_cost;
+            qd_message_t *msg;
+            qdr_receive_t on_message;
+            void *on_message_context;
+            uint64_t in_conn_id;
+            int treatment;
+            qdr_global_stats_handler_t stats_handler;
+        };
+        struct {
+            qdr_delivery_cleanup_list_t delivery_cleanup_list;
+        };
+    };
+    void *context;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
