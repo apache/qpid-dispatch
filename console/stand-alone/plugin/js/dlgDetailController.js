@@ -72,7 +72,7 @@ export class DetailDialogController {
           "settleRate",
           "delayed1",
           "delayed10",
-          "capacity"
+          "usage"
         ],
         calc: {
           addr: function(link) {
@@ -84,7 +84,7 @@ export class DetailDialogController {
           delayed10: function(link) {
             return link.deliveriesDelayed10Sec;
           },
-          capacity: function(link) {
+          usage: function(link) {
             return link.unsettledCount / link.capacity;
           }
         }
@@ -378,7 +378,7 @@ export class SubTable {
   link(scope) {
     scope.fieldWidth = function(val, sizes) {
       if (!sizes) return "10%";
-      return `${Math.round((sizes[val] * 100) / sizes.total)}%`;
+      return `${Math.floor((sizes[val] * 100) / sizes.total)}%`;
     };
   }
   static create() {

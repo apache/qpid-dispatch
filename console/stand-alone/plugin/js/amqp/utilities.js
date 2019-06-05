@@ -15,10 +15,10 @@
  */
 
 /* global d3 Uint8Array */
-var ddd = typeof window === 'undefined' ? require('d3') : d3;
+var ddd = typeof window === "undefined" ? require("d3") : d3;
 
 var utils = {
-  isAConsole: function (properties, connectionId, nodeType, key) {
+  isAConsole: function(properties, connectionId, nodeType, key) {
     return this.isConsole({
       properties: properties,
       connectionId: connectionId,
@@ -26,144 +26,151 @@ var utils = {
       key: key
     });
   },
-  isConsole: function (d) {
-    return (d && d.properties && d.properties.console_identifier === 'Dispatch console');
+  isConsole: function(d) {
+    return (
+      d &&
+      d.properties &&
+      d.properties.console_identifier === "Dispatch console"
+    );
   },
-  isArtemis: function (d) {
-    return (d.nodeType === 'route-container' || d.nodeType === 'on-demand') && (d.properties && d.properties.product === 'apache-activemq-artemis');
+  isArtemis: function(d) {
+    return (
+      (d.nodeType === "route-container" || d.nodeType === "on-demand") &&
+      (d.properties && d.properties.product === "apache-activemq-artemis")
+    );
   },
 
-  isQpid: function (d) {
-    return (d.nodeType === 'route-container' || d.nodeType === 'on-demand') && (d.properties && d.properties.product === 'qpid-cpp');
+  isQpid: function(d) {
+    return (
+      (d.nodeType === "route-container" || d.nodeType === "on-demand") &&
+      (d.properties && d.properties.product === "qpid-cpp")
+    );
   },
-  flatten: function (attributes, result) {
-    if (!attributes || !result)
-      return {};
+
+  clientName: function(d) {
+    let name = "client";
+    if (d.container) name = d.container;
+    if (d.properties) {
+      if (d.properties.product) name = d.properties.product;
+      else if (d.properties.console_identifier)
+        name = d.properties.console_identifier;
+      else if (d.properties.name) name = d.properties.name;
+    }
+    return name;
+  },
+  flatten: function(attributes, result) {
+    if (!attributes || !result) return {};
     var flat = {};
-    attributes.forEach(function (attr, i) {
-      if (result && result.length > i)
-        flat[attr] = result[i];
+    attributes.forEach(function(attr, i) {
+      if (result && result.length > i) flat[attr] = result[i];
     });
     return flat;
   },
-  flattenAll: function (entity, filter) {
+  flattenAll: function(entity, filter) {
     if (!filter)
-      filter = function (e) {
+      filter = function(e) {
         return e;
       };
     let results = [];
     for (let i = 0; i < entity.results.length; i++) {
       let f = filter(this.flatten(entity.attributeNames, entity.results[i]));
-      if (f)
-        results.push(f);
+      if (f) results.push(f);
     }
     return results;
   },
-  copy: function (obj) {
-    if (obj)
-      return JSON.parse(JSON.stringify(obj));
+  copy: function(obj) {
+    if (obj) return JSON.parse(JSON.stringify(obj));
   },
-  identity_clean: function (identity) {
-    if (!identity)
-      return '-';
-    var pos = identity.indexOf('/');
-    if (pos >= 0)
-      return identity.substring(pos + 1);
+  identity_clean: function(identity) {
+    if (!identity) return "-";
+    var pos = identity.indexOf("/");
+    if (pos >= 0) return identity.substring(pos + 1);
     return identity;
   },
-  addr_text: function (addr) {
-    if (!addr)
-      return '-';
-    if (addr[0] === addr[0].toLowerCase())
-      return addr;
-    if (addr[0] == 'M')
-      return addr.substring(2);
-    else
-      return addr.substring(1);
+  addr_text: function(addr) {
+    if (!addr) return "-";
+    if (addr[0] === addr[0].toLowerCase()) return addr;
+    if (addr[0] == "M") return addr.substring(2);
+    else return addr.substring(1);
   },
-  addr_class: function (addr) {
-    if (!addr) return '-';
-    if (addr[0] == 'M') return 'mobile';
-    if (addr[0] == 'R') return 'router';
-    if (addr[0] == 'A') return 'area';
-    if (addr[0] == 'L') return 'local';
-    if (addr[0] == 'H') return 'edge';
-    if (addr[0] == 'C') return 'link-incoming';
-    if (addr[0] == 'E') return 'link-incoming';
-    if (addr[0] == 'D') return 'link-outgoing';
-    if (addr[0] == 'F') return 'link-outgoing';
-    if (addr[0] == 'T') return 'topo';
-    if (addr === 'queue.waypoint') return 'mobile';
-    if (addr === 'link') return 'link';
-    return 'unknown: ' + addr[0];
+  addr_class: function(addr) {
+    if (!addr) return "-";
+    if (addr[0] == "M") return "mobile";
+    if (addr[0] == "R") return "router";
+    if (addr[0] == "A") return "area";
+    if (addr[0] == "L") return "local";
+    if (addr[0] == "H") return "edge";
+    if (addr[0] == "C") return "link-incoming";
+    if (addr[0] == "E") return "link-incoming";
+    if (addr[0] == "D") return "link-outgoing";
+    if (addr[0] == "F") return "link-outgoing";
+    if (addr[0] == "T") return "topo";
+    if (addr === "queue.waypoint") return "mobile";
+    if (addr === "link") return "link";
+    return "unknown: " + addr[0];
   },
-  humanify: function (s) {
-    if (!s || s.length === 0)
-      return s;
-    var t = s.charAt(0).toUpperCase() + s.substr(1).replace(/[A-Z]/g, ' $&');
-    return t.replace('.', ' ');
+  humanify: function(s) {
+    if (!s || s.length === 0) return s;
+    var t = s.charAt(0).toUpperCase() + s.substr(1).replace(/[A-Z]/g, " $&");
+    return t.replace(".", " ");
   },
-  pretty: function (v, format = ',') {
+  pretty: function(v, format = ",") {
     var formatComma = ddd.format(format);
-    if (!isNaN(parseFloat(v)) && isFinite(v))
-      return formatComma(v);
+    if (!isNaN(parseFloat(v)) && isFinite(v)) return formatComma(v);
     return v;
   },
-  isMSIE: function () {
-    return (document.documentMode || /Edge/.test(navigator.userAgent));
+  isMSIE: function() {
+    return document.documentMode || /Edge/.test(navigator.userAgent);
   },
   // return the value for a field
-  valFor: function (aAr, vAr, key) {
+  valFor: function(aAr, vAr, key) {
     var idx = aAr.indexOf(key);
-    if ((idx > -1) && (idx < vAr.length)) {
+    if (idx > -1 && idx < vAr.length) {
       return vAr[idx];
     }
     return null;
   },
   // return a map with unique values and their counts for a field
-  countsFor: function (aAr, vAr, key) {
+  countsFor: function(aAr, vAr, key) {
     let counts = {};
     let idx = aAr.indexOf(key);
     for (let i = 0; i < vAr.length; i++) {
-      if (!counts[vAr[i][idx]])
-        counts[vAr[i][idx]] = 0;
+      if (!counts[vAr[i][idx]]) counts[vAr[i][idx]] = 0;
       counts[vAr[i][idx]]++;
     }
     return counts;
   },
   // extract the name of the router from the router id
-  nameFromId: function (id) {
+  nameFromId: function(id) {
     // the router id looks like
     //  amqp:/_topo/0/routerName/$management'
     //  amqp:/_topo/0/router/Name/$management'
     //  amqp:/_edge/routerName/$management'
     //  amqp:/_edge/router/Name/$management'
 
-    var parts = id.split('/');
+    var parts = id.split("/");
     // remove $management
     parts.pop();
 
     // remove the area if present
-    if (parts[2] === '0')
-      parts.splice(2, 1);
+    if (parts[2] === "0") parts.splice(2, 1);
 
     // remove amqp/(_topo or _edge)
     parts.splice(0, 2);
-    return parts.join('/');
+    return parts.join("/");
   },
 
   // construct a router id given a router name and type (_topo or _edge)
-  idFromName: function (name, type) {
-    let parts = ['amqp:', type, name, '$management'];
-    if (type === '_topo')
-      parts.splice(2, 0, '0');
-    return parts.join('/');
+  idFromName: function(name, type) {
+    let parts = ["amqp:", type, name, "$management"];
+    if (type === "_topo") parts.splice(2, 0, "0");
+    return parts.join("/");
   },
 
   // calculate the average rate of change per second for a list of fields on the given obj
   // store the historical raw values in storage[key] for future rate calcs
   // keep 'history' number of historical values
-  rates: function (obj, fields, storage, key, history = 1) {
+  rates: function(obj, fields, storage, key, history = 1) {
     let list = storage[key];
     if (!list) {
       list = storage[key] = [];
@@ -184,49 +191,39 @@ var utils = {
       for (let j = 0; j < list.length - 1; j++) {
         let elapsed = list[j + 1].date - list[j].date;
         let diff = list[j + 1].val[field] - list[j].val[field];
-        if (elapsed > 100)
-          cumulative += diff / (elapsed / 1000);
+        if (elapsed > 100) cumulative += diff / (elapsed / 1000);
       }
       rates[field] = list.length > 1 ? cumulative / (list.length - 1) : 0;
     }
     return rates;
   },
-  connSecurity: function (conn) {
-    if (!conn.isEncrypted)
-      return 'no-security';
-    if (conn.sasl === 'GSSAPI')
-      return 'Kerberos';
-    return conn.sslProto + '(' + conn.sslCipher + ')';
+  connSecurity: function(conn) {
+    if (!conn.isEncrypted) return "no-security";
+    if (conn.sasl === "GSSAPI") return "Kerberos";
+    return conn.sslProto + "(" + conn.sslCipher + ")";
   },
-  connAuth: function (conn) {
-    if (!conn.isAuthenticated)
-      return 'no-auth';
+  connAuth: function(conn) {
+    if (!conn.isAuthenticated) return "no-auth";
     let sasl = conn.sasl;
-    if (sasl === 'GSSAPI')
-      sasl = 'Kerberos';
-    else if (sasl === 'EXTERNAL')
-      sasl = 'x.509';
-    else if (sasl === 'ANONYMOUS')
-      return 'anonymous-user';
-    if (!conn.user)
-      return sasl;
-    return conn.user + '(' + sasl + ')';
+    if (sasl === "GSSAPI") sasl = "Kerberos";
+    else if (sasl === "EXTERNAL") sasl = "x.509";
+    else if (sasl === "ANONYMOUS") return "anonymous-user";
+    if (!conn.user) return sasl;
+    return conn.user + "(" + sasl + ")";
   },
-  connTenant: function (conn) {
+  connTenant: function(conn) {
     if (!conn.tenant) {
-      return '';
+      return "";
     }
-    if (conn.tenant.length > 1)
-      return conn.tenant.replace(/\/$/, '');
+    if (conn.tenant.length > 1) return conn.tenant.replace(/\/$/, "");
   },
-  uuidv4: function () {
+  uuidv4: function() {
     return ([1e7] + -1e3 + -4e3 + -8e3 + -1e11).replace(/[018]/g, c =>
-      (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+      (
+        c ^
+        (crypto.getRandomValues(new Uint8Array(1))[0] & (15 >> (c / 4)))
+      ).toString(16)
     );
   }
-
-
 };
-export {
-  utils
-};
+export { utils };
