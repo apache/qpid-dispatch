@@ -1082,7 +1082,7 @@ svg {
   }
   
   circle.node.fixed {
-      stroke-dasharray: 10,2;
+      /* stroke-dasharray: 10,2; */
   }
   text {
     /*font: 12px sans-serif;*/
