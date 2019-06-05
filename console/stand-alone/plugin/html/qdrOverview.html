@@ -125,6 +125,11 @@ under the License.
         <div ng-if="anyAddresses()" id="topAddresses" class="grid" ui-grid="topAddressesGrid"  ui-grid-selection ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state></div>
         <div ng-if="!anyAddresses()">There are no addresses to which messages are being delivered.</div>
     </div>
+    <div ng-controller="QDR.DelayedDeliveriesController">
+        <h1>Links with delayed deliveries</h1>
+        <div ng-if="anyLinks()" id="delayedDeliveries" class="grid" ui-grid="delayedDeliverisGrid"  ui-grid-selection ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state></div>
+        <div ng-if="!anyLinks()">There are no endpoint links that have delayed deliveries.</div>
+    </div>
 </script>
 
 <!-- the following scripts are content that gets loaded into the above div that has the temple.url -->
@@ -203,7 +208,7 @@ under the License.
             <li ng-repeat="mode in gridModes" ng-click="selectMode(mode,'Connection')" ng-class="{active : isModeSelected(mode,'Connection')}" title="{{mode.title}}" ng-bind-html="mode.content"> </li>
         </ul>
         <div ng-if="isModeVisible('Connection','attributes')" class="selectedItems">
-            <h3>Connection {{connection.title}} <span ng-if="isNormalConnection(connection)" <button ng-click="killAConnection(connection)" class="btn btn-danger">Kill</button></h3>
+            <h3>Connection {{connection.title}} <span ng-if="isNormalConnection(connection)" <button ng-click="killAConnection(connection)" class="btn btn-danger">Close</button></h3>
             <div class="grid noHighlight" ui-grid="connectionGrid" ui-grid-auto-resize ui-grid-resize-columns ui-grid-save-state></div>
         </div>
         <div ng-if="isModeVisible('Connection','links')" class="selectedItems">

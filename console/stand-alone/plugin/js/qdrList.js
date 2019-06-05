@@ -595,10 +595,10 @@ export class ListController {
             let statusCode = results.context.message.application_properties.statusCode;
             if (statusCode < 200 || statusCode >= 300) {
               QDRCore.notification('error', results.context.message.application_properties.statusDescription);
-              QDRLog.error(`Error when killing ${row.entity.name}: ${results.context.message.application_properties.statusDescription}`);
+              QDRLog.error(`Error when closing ${row.entity.name}: ${results.context.message.application_properties.statusDescription}`);
             } else {
-              QDRCore.notification('success', `Manually killed ${row.entity.name}`);
-              QDRLog.info(`Manually killed ${row.entity.name}`);
+              QDRCore.notification('success', `Manually closed ${row.entity.name}`);
+              QDRLog.info(`Manually closed ${row.entity.name}`);
             }
           });
           updateExpandedEntities();

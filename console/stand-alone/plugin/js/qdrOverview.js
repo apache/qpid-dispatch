@@ -800,9 +800,9 @@ export class OverviewController {
           displayName: 'authentication'
         },
         {
-          field: 'Kill',
+          field: 'Close',
           width: '4%',
-          cellTemplate: '<div ng-if="row.entity.role === \'normal\'"><button class="btn btn-danger" ng-click="grid.appScope.killConnection(row, $event)">Kill</button></div>'
+          cellTemplate: '<div ng-if="row.entity.role === \'normal\'"><button class="btn btn-danger" ng-click="grid.appScope.killConnection(row, $event)">Close</button></div>'
         }
       ],
       enablePaging: true,
@@ -843,7 +843,7 @@ export class OverviewController {
       d.result.then(function (confirmed) {
         row.cancelEvent = false;
         if (confirmed) {
-          console.log(`confirmed kill of ${row.entity.name}`);
+          console.log(`confirmed close of ${row.entity.name}`);
           QDRService.management.connection.sendMethod(
             row.entity.routerId,
             "connection",
@@ -854,18 +854,18 @@ export class OverviewController {
             let statusCode = results.context.message.application_properties.statusCode;
             if (statusCode < 200 || statusCode >= 300) {
               QDRCore.notification('error', results.context.message.application_properties.statusDescription);
-              QDRLog.error(`Error when killing ${row.entity.name}: ${results.context.message.application_properties.statusDescription}`);
+              QDRLog.error(`Error when closing ${row.entity.name}: ${results.context.message.application_properties.statusDescription}`);
             } else {
-              QDRCore.notification('success', `Manually killed ${row.entity.name}`);
-              QDRLog.info(`Manually killed ${row.entity.name}`);
+              QDRCore.notification('success', `Manually closed ${row.entity.name}`);
+              QDRLog.info(`Manually closed ${row.entity.name}`);
             }
             updateExpanded();
           });
         }
         else
-          console.log(`cancelled kill order for ${row.entity.name}`);
+          console.log(`cancelled close order for ${row.entity.name}`);
       }, function () {
-        QDRLog.debug(`cancelled kill of ${row.entity.name}`);
+        QDRLog.debug(`cancelled close of ${row.entity.name}`);
       });
     }
     // get info for a all connections
