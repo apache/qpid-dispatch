@@ -725,8 +725,6 @@ const char *qd_parse_annotations_v1(
     // define a shorthand name for the qd message annotation key prefix length
 #define QMPL QD_MA_PREFIX_LEN
 
-#define MIN(a,b) (((a)<(b))?(a):(b))
-
     // trace, phase, and class keys are all the same length
     assert(QD_MA_TRACE_LEN == QD_MA_PHASE_LEN);
     assert(QD_MA_TRACE_LEN == QD_MA_CLASS_LEN);

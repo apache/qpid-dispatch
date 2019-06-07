@@ -214,4 +214,7 @@ do {                                    \
 } while (0)
 #define DEQ_APPEND(d1,d2) DEQ_APPEND_N(,d1,d2)
 
+#define MIN(a,b) (((a)<(b))?(a):(b))
+#define MAX(a,b) (((a)>(b))?(a):(b))
+
 #endif
