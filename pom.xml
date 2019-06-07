@@ -26,7 +26,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>org.apache.qpid</groupId>
     <artifactId>qpid-dispatch</artifactId>
-    <version>1.8.0-SNAPSHOT</version>
+    <version>1.8.0</version>
     <name>QpidDispatch</name>
     <inceptionYear>2018</inceptionYear>
     <url>https://qpid.apache.org</url>   
@@ -85,6 +85,8 @@
                       <exclude>**/font-awesome.min.css</exclude>
                       <exclude>**/jquery-ui.css</exclude>
                       <exclude>**/jquery.tipsy.css</exclude>
+    	              <exclude>**/vendor.min.js</exclude>
+		      <exclude>**/vendor.min.css</exclude>
                       <exclude>**/jquery.dynatree.min.js</exclude>
                       <exclude>**/slider.js</exclude>
                       <exclude>**/ui-grid.js</exclude>
