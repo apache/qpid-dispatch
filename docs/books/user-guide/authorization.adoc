@@ -227,6 +227,60 @@ A list of AMQP target addresses from which users in this group may send messages
 +
 The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhost[vhost^] in the `qdrouterd.conf` man page.
 
+[id='']
+=== Configuring Resource Limits for Outgoing Connections
+
+If the router establishes an outgoing connection to an external AMQP container (such as a client or broker), you can restrict the resources that the external container can access on the router by configuring a connector vhost policy.
+
+The resource limits defined in a connector vhost policy are applied to links initiated by the external AMQP container. The connector vhost policy does not restrict links created by the router.
+
+A connector vhost policy can only be applied to a connector with a `normal` or `route-container` role. You can not apply connector vhost policies to connectors with `inter-router` or `edge` roles.
+
+.Prerequisites
+
+Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies[].
+
+.Procedure
+
+. In the router's configuration file, add a `vhost` section with a `$connector` user group.
++
+--
+[options="nowrap"]
+----
+vhost {
+    hostname: my-connector-policy
+    groups: {
+        $connector: {
+            sources: *
+            targets: *
+            maxSenders: 5
+            maxReceivers: 10
+            allowAnonymousSender: true
+            allowWaypointLinks: true
+        }
+    }
+}
+----
+`hostname`:: A unique name to identify the connector vhost policy. This name does not represent an actual hostname; therefore, choose a name that will not conflict with an actual vhost hostname.
+`$connector`:: Identifies this vhost policy as a connector vhost policy.
+--
+
+. Apply the connector vhost policy to the connector that establishes the connection to the external AMQP container.
++
+--
+This example applies the connector vhost policy configured in the previous step:
+
+[options="nowrap"]
+----
+connector {
+    host: 192.0.2.10
+    port: 5672
+    role: normal
+    policyVhost: my-connector-policy
+}
+----
+--
+
 [id='configuring-vhost-policies-json']
 === Configuring Vhost Policies as JSON Files
 
