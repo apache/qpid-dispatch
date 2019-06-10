@@ -692,11 +692,14 @@ class SenderFirstAutoLinkTest(MessagingHandler):
         if event.sender == self.sender:
             self.receiver_conn = event.container.connect(self.receiver_host)
 
+    def send(self):
+        while self.sender.credit > 0 and self.n_tx < self.count:
+            self.sender.send(Message("Message %d" % self.n_tx))
+            self.n_tx += 1
+
     def on_sendable(self, event):
         if event.sender == self.sender:
-            while self.sender.credit > 0 and self.n_tx < self.count:
-                self.sender.send(Message("Message %d" % self.n_tx))
-                self.n_tx += 1
+            self.send()
 
     def on_message(self, event):
         self.n_rx += 1
@@ -706,6 +709,7 @@ class SenderFirstAutoLinkTest(MessagingHandler):
     def on_released(self, event):
         self.n_rel += 1
         self.n_tx -= 1
+        self.send()
 
     def run(self):
         Container(self).run()
@@ -758,11 +762,14 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
             self.sender_conn = event.container.connect(self.sender_host)
             self.sender      = event.container.create_sender(self.sender_conn, self.addr)
 
+    def send(self):
+        while self.sender.credit > 0 and self.n_tx < self.count:
+            self.sender.send(Message("Message %d" % self.n_tx))
+            self.n_tx += 1
+
     def on_sendable(self, event):
         if event.sender == self.sender:
-            while self.sender.credit > 0 and self.n_tx < self.count:
-                self.sender.send(Message("Message %d" % self.n_tx))
-                self.n_tx += 1
+            self.send()
 
     def on_message(self, event):
         self.n_rx += 1
@@ -772,6 +779,7 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
     def on_released(self, event):
         self.n_rel += 1
         self.n_tx -= 1
+        self.send()
 
     def run(self):
         Container(self).run()
