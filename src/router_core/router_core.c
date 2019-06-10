@@ -519,10 +519,13 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
         cr = DEQ_HEAD(addr->conns);
     }
 
-    if (!!addr->fallback) {
+    //
+    // If there are any fallback-related linkages, disconnect them.
+    //
+    if (!!addr->fallback)
         addr->fallback->fallback_for = 0;
-        qdr_check_addr_CT(core, addr->fallback);
-    }
+    if (!!addr->fallback_for)
+        addr->fallback_for->fallback = 0;
 
     free(addr->add_prefix);
     free(addr->del_prefix);

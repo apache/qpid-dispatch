@@ -1173,7 +1173,15 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
         && addr->tracked_deliveries == 0
         && addr->core_endpoint == 0
         && addr->fallback_for == 0) {
+        qdr_address_t *fallback = addr->fallback;
         qdr_core_remove_address(core, addr);
+
+        //
+        // If the address being removed had a fallback address, check to see if that
+        // address should now also be removed.
+        //
+        if (!!fallback)
+            qdr_check_addr_CT(core, fallback);
     }
 }
 
