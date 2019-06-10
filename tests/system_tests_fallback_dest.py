@@ -754,7 +754,7 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
             event.receiver.open()
 
     def on_link_opened(self, event):
-        if event.receiver == self.alt_receiver:
+        if event.receiver == self.alt_receiver and not self.sender_conn:
             self.sender_conn = event.container.connect(self.sender_host)
             self.sender      = event.container.create_sender(self.sender_conn, self.addr)
 
