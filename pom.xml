@@ -107,6 +107,7 @@
                       <exclude>**/server-password-file.txt</exclude>
                       <exclude>**/server-password-file-bad.txt</exclude>
                       <exclude>**/client-password-file.txt</exclude>
+                      <exclude>**/*.pkcs12</exclude>
                       <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->
                       <exclude>**/*~</exclude> <!-- This is for files created by emacs -->
                       <exclude>.pydevproject</exclude> <!-- PyCharm project file -->
