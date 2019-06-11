@@ -17,6 +17,15 @@
 ## under the License.
 ##
 
+# Define short and long test timeouts in seconds.
+# These make be specified on cmake command line.
+if    (NOT DEFINED TEST_TIMEOUT_SHORT)
+  set             (TEST_TIMEOUT_SHORT "10")
+endif (NOT DEFINED TEST_TIMEOUT_SHORT)
+if    (NOT DEFINED TEST_TIMEOUT_LONG)
+  set             (TEST_TIMEOUT_LONG "300")
+endif (NOT DEFINED TEST_TIMEOUT_LONG)
+
 include_directories(
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_BINARY_DIR}/src
@@ -55,31 +64,31 @@ target_link_libraries(unit_tests_size qpid-dispatch)
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} unit_tests_size 10000)
-set_tests_properties(unit_tests_size_10000 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_10000 PROPERTIES TIMEOUT ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_512   ${TEST_WRAP} unit_tests_size 512)
-set_tests_properties(unit_tests_size_512 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_512 PROPERTIES TIMEOUT   ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_10    ${TEST_WRAP} unit_tests_size 10)
-set_tests_properties(unit_tests_size_10 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_10 PROPERTIES TIMEOUT    ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_7     ${TEST_WRAP} unit_tests_size 7)
-set_tests_properties(unit_tests_size_7 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_7 PROPERTIES TIMEOUT     ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_5     ${TEST_WRAP} unit_tests_size 5)
-set_tests_properties(unit_tests_size_5 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_5 PROPERTIES TIMEOUT     ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_3     ${TEST_WRAP} unit_tests_size 3)
-set_tests_properties(unit_tests_size_3 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_3 PROPERTIES TIMEOUT     ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_2     ${TEST_WRAP} unit_tests_size 2)
-set_tests_properties(unit_tests_size_2 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_2 PROPERTIES TIMEOUT     ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests_size_1     ${TEST_WRAP} unit_tests_size 1)
-set_tests_properties(unit_tests_size_1 PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests_size_1 PROPERTIES TIMEOUT     ${TEST_TIMEOUT_SHORT})
 add_test(unit_tests            ${TEST_WRAP} unit_tests ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf)
-set_tests_properties(unit_tests PROPERTIES TIMEOUT 10)
+set_tests_properties(unit_tests PROPERTIES TIMEOUT            ${TEST_TIMEOUT_SHORT})
 
 # Unit test python modules
 add_test(router_engine_test    ${TEST_WRAP} unit2 -v router_engine_test)
-set_tests_properties(router_engine_test PROPERTIES TIMEOUT 10)
+set_tests_properties(router_engine_test PROPERTIES TIMEOUT ${TEST_TIMEOUT_SHORT})
 add_test(management_test       ${TEST_WRAP} unit2 -v management)
-set_tests_properties(management_test PROPERTIES TIMEOUT 10)
+set_tests_properties(management_test PROPERTIES TIMEOUT    ${TEST_TIMEOUT_SHORT})
 add_test(router_policy_test    ${TEST_WRAP} unit2 -v router_policy_test)
-set_tests_properties(router_policy_test PROPERTIES TIMEOUT 10)
+set_tests_properties(router_policy_test PROPERTIES TIMEOUT ${TEST_TIMEOUT_SHORT})
 
 if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
@@ -142,7 +151,7 @@ foreach(py_test_module
     )
 
   add_test(${py_test_module} ${TEST_WRAP} unit2 -v ${py_test_module})
-  set_tests_properties(${py_test_module} PROPERTIES TIMEOUT 300) 
+  set_tests_properties(${py_test_module} PROPERTIES TIMEOUT ${TEST_TIMEOUT_LONG})
   list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
 endforeach()
 
