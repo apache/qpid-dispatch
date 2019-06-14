@@ -72,7 +72,7 @@ export class DelayedDeliveriesController {
       noUnselect: true
     };
 
-    // get info for all addresses
+    // get info for all links
     var allLinkInfo = function(link, callback) {
       let nodes = {};
       // gets called each node/entity response
@@ -110,31 +110,44 @@ export class DelayedDeliveriesController {
                   link,
                   ["deliveriesDelayed1Sec", "deliveriesDelayed10Sec"],
                   rates,
-                  "delayed",
-                  10
+                  link.name,
+                  12 // average over 12 snapshots (each snapshot is 5 seconds apart)
                 );
-                link.deliveriesDelayed1SecRate = Math.max(
+                link.deliveriesDelayed1SecRate = Math.round(
                   delayedRates.deliveriesDelayed1Sec,
-                  0
+                  1
                 );
-                link.deliveriesDelayed10SecRate = Math.max(
+                link.deliveriesDelayed10SecRate = Math.round(
                   delayedRates.deliveriesDelayed10Sec,
-                  0
+                  1
                 );
+                /* The killConnection event handler (in qdrOverview.js) expects
+                   a row object with a routerId and the identity of a connection. 
+                   Here we set those attributes so that when killConnection is 
+                   called, it will kill the link's connection
+                */
+                link.routerId = node;
+                link.identity = link.connectionId;
+
                 links.push(link);
               }
             });
           }
           if (links.length === 0) return;
           // update the grid's data
-          /*
           links = links.filter(function(link) {
             return (
               link.deliveriesDelayed1SecRate > 0 ||
               link.deliveriesDelayed10SecRate > 0
             );
           });
-          */
+          links.sort((a, b) => {
+            if (a.deliveriesDelayed1SecRate > b.deliveriesDelayed1SecRate)
+              return -1;
+            else if (a.deliveriesDelayed1SecRate < b.deliveriesDelayed1SecRate)
+              return 1;
+            else return 0;
+          });
           // take top 5 records
           links.splice(5);
 
