@@ -75,6 +75,10 @@ if(UNITTEST2_MISSING)
   # add bogus test for folk who may have missed the cmake warning
   add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
 else(UNITTEST2_MISSING)
+  if    (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+    set             (DISPATCH_TEST_TIMEOUT "360")
+  endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+  SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
   include (CTest)
 endif(UNITTEST2_MISSING)
 
