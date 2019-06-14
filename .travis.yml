@@ -17,14 +17,32 @@
 # under the License
 #
 
-os: linux
 sudo: true
 language: c
 cache: ccache
-env:
-  - PROTON_VERSION=master BUILD_TYPE=Debug
-  - PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
-  - PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
+matrix:
+  fast_finish: true
+  allow_failures:
+    - os: osx
+  include:
+  - os: linux
+    env:
+    - PROTON_VERSION=master BUILD_TYPE=Debug
+  - os: linux
+    env:
+    - PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
+  - os: linux
+    env:
+    - PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
+  - os: osx
+    osx_image: xcode10.1
+    env:
+    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/opt/python/libexec/bin:/usr/local/bin:$PATH" PROTON_VERSION=master
+    before_install:
+    - sudo /usr/bin/python -m easy_install unittest2
+    - bash ./macports.sh
+    - export COLUMNS=80
+    - yes | sudo port install swig swig-python libuv jsoncpp cyrus-sasl2 pkgconfig
 
 addons:
   apt:
@@ -49,29 +67,31 @@ addons:
     - lcov
 
 install:
+- NPROC=2
 - PREFIX=$PWD/install
 - git clone --depth=10 --branch=$PROTON_VERSION https://github.com/apache/qpid-proton.git
 
-# Build and install latest proton from source.
+# Build and install proton from source.
 - mkdir qpid-proton/build
 - pushd qpid-proton/build
 - export PATH="/usr/bin:$PATH" # Avoid mismatched python interpreters in /opt
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO 
-- cmake --build . --target install
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO
+- cmake --build . --target install -- -j $NPROC
 - popd
 
 before_script:
-- PREFIX=$PWD/install
 - source qpid-proton/build/config.sh
 - mkdir build
 - pushd build
 - cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DDISPATCH_TEST_TIMEOUT=600
-- cmake --build . --target install
+- cmake --build . --target install -- -j $NPROC
 
 script:
 - pushd ../qpid-proton
 - echo $(echo "Current proton commit:") $(git rev-parse HEAD) "(${PROTON_VERSION})"
 - popd
+# Workaround on macOS for PROTON-808 Binaries have their library locations stripped
+- if [[ "$OSTYPE" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
 - ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
 - popd
 - mvn apache-rat:check
