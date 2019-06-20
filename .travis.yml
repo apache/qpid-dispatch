@@ -79,3 +79,9 @@ script:
 after_success:
 - pushd build
 - if [ "$BUILD_TYPE" = "Coverage" ]; then bash <(curl -s https://codecov.io/bash); fi
+
+cache:
+  directories:
+  - $HOME/.m2/repository
+  before_cache:
+  - rm -rf $HOME/.m2/repository/org/apache/qpid/*
