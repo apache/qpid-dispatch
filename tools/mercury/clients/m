@@ -1,0 +1,42 @@
+#! /bin/bash
+
+
+# NOTE: the following environment variable is a serving suggestion.
+#       Alter as necessary for your system.
+
+
+export PROTON_INSTALL_ROOT=${HOME}/latest/install/proton
+
+
+PROJECT=c_proactor_client
+echo Making $PROJECT =================================================
+
+FLAGS="-g -fpermissive"
+DEFS=
+OPTO=-O3
+
+for file in *.c
+do
+  echo compiling $file --------------------------------------------
+  g++                           \
+    $FLAGS                      \
+    $DEFS                       \
+    $OPTO                       \
+    -I${PROTON_INSTALL_ROOT}/include \
+    -c                          \
+    $file
+done
+
+echo Linking ====================================================
+
+g++                           \
+  -o $PROJECT                 \
+  -L${PROTON_INSTALL_ROOT}/lib64 \
+  $PROJECT.o                  \
+  -lqpid-proton               \
+  -lpthread
+
+rm *.o
+
+echo -e "Done ================================\n\n\n\n"
+
