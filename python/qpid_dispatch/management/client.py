@@ -124,6 +124,12 @@ class Node(object):
         self.url = connection.url
         self.client = SyncRequestResponse(connection, self.url.path)
         self.reply_to = self.client.reply_to
+        self.connection = connection
+
+    def set_client(self, url_path):
+        if url_path:
+            self.url.path = u'%s'%url_path
+            self.client = SyncRequestResponse(self.connection, self.url.path)
 
     def close(self):
         """Shut down the node"""

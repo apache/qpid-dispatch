@@ -30,6 +30,7 @@ import sys
 import locale
 import socket
 import re
+from datetime import datetime
 from time import ctime, strftime, gmtime
 import  qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
@@ -43,7 +44,6 @@ def parse_args(argv):
     """ Set global variables for options, return arguments """
 
     usage = "%prog [options]"
-
     parser = OptionParser(usage=usage)
 
     parser.add_option_group(connection_options(parser))
@@ -57,6 +57,10 @@ def parse_args(argv):
     parser.add_option("-m", "--memory", help="Show Router Memory Stats",    action="store_const", const="m",   dest="show")
     parser.add_option("--autolinks", help="Show Auto Links",                action="store_const", const="autolinks",  dest="show")
     parser.add_option("--linkroutes", help="Show Link Routes",              action="store_const", const="linkroutes", dest="show")
+
+    parser.add_option("--all-routers", help="Show entities for all routers in network. Can also be used in combination with other options",  action="store_const", const="all_routers",  dest="all_routers")
+    parser.add_option("--all-entities", help="Show all router entities. Can be combined with --all-routers option", action="store_const", const="all_entities", dest="all_entities")
+
     parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
     parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
 
@@ -64,16 +68,20 @@ def parse_args(argv):
     # can be used in conjunction with options
     # like -c, -l, -a, --autolinks, --linkroutes and --log.
     # By default, the limit is not set, which means the limit is unlimited.
-
     parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
 
     opts, args = parser.parse_args(args=argv)
 
-    if not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, --autolinks, --linkroutes, or --log.")
+    if opts.router and opts.all_routers:
+        parser.error("--all-routers cannot be combined with single router option -r " + opts.router)
+
+    if opts.all_entities and opts.show:
+           parser.error("--all-entities cannot be combined with specific entity option -" + opts.show)
+
+    if not opts.all_routers and not opts.all_entities and not opts.show:
+        opts.all_entities = u'all_entities'
 
     return opts, args
-
 
 def get(obj, attr):
     if attr in obj.__dict__:
@@ -656,7 +664,27 @@ class BusManager(Node):
         for line in log:
             print("%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2]))
 
-    def displayMain(self, identitys, main):
+    def show_all(self):
+        self.displayRouterLinks()
+        self.displayAddresses()
+        self.displayConnections()
+        self.displayAutolinks()
+        self.displayLinkRoutes()
+        self.displayGeneral()
+        self.displayMemory()
+
+    def has_nodes(self):
+        all_nodes = super(BusManager, self).get_mgmt_nodes()
+        has_nodes = True
+        if all_nodes:
+            if len(all_nodes) < 2:
+                has_nodes = False
+        else:
+           has_nodes = False
+
+        return has_nodes, all_nodes
+
+    def show_entity(self, main):
         if   main == 'l': self.displayRouterLinks()
         elif main == 'n': self.displayRouterNodes()
         elif main == 'a': self.displayAddresses()
@@ -668,8 +696,48 @@ class BusManager(Node):
         elif main == 'linkroutes': self.displayLinkRoutes()
         elif main == 'log': self.displayLog()
 
+    def all_routers_entities(self):
+        has_nodes, nodes = self.has_nodes()
+        if has_nodes:
+            for node in nodes:
+                super(BusManager, self).set_client(node[6:])
+                parts = node.split("/")
+                print ("Router ", parts[3])
+                self.show_all()
+                print("")
+        else:
+            self.show_all()
+
+    def displayMain(self, identitys, opts):
+        main = opts.show
+        if opts.all_routers and main:
+            print (str(datetime.now()))
+            has_nodes, nodes = self.has_nodes()
+            if has_nodes:
+                for node in nodes:
+                    super(BusManager, self).set_client(node[6:])
+                    parts = node.split("/")
+                    print ("Router ", parts[3])
+                    self.show_entity(main)
+                    print("")
+            else:
+                self.show_entity(main)
+        elif opts.all_routers and opts.all_entities:
+            print (str(datetime.now()))
+            self.all_routers_entities()
+        elif opts.all_routers:
+            print (str(datetime.now()))
+            self.all_routers_entities()
+        elif opts.all_entities:
+            print (str(datetime.now()))
+            # Display all the relevant entities from the one router that
+            # qdstat is connecting to.
+            self.show_all()
+        elif main:
+            self.show_entity(main)
+
     def display(self, identitys):
-        self.displayMain(identitys, self.opts.show)
+        self.displayMain(identitys, self.opts)
 
 def run(argv):
     opts, args = parse_args(argv)
