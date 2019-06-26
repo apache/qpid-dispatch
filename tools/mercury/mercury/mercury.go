@@ -882,7 +882,12 @@ func main ( ) {
     Process files named on command line.
   --------------------------------------------*/
   for i := 1; i < len(os.Args); i ++ {
-    read_file ( merc, os.Args[i] )
+    file := os.Args[i]
+    if ! utils.Path_exists ( file ) {
+      ume ( "main: Can't find script file |%s|.", file )
+      os.Exit ( 1 )
+    }
+    read_file ( merc, file )
   }
 
   /*--------------------------------------------
