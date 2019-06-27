@@ -781,6 +781,12 @@ func main ( ) {
                 "Clients per address. Makes each address shared by N clients." )
 
 
+  // init_only command -------------------------------------------------------
+  cmd = merc.add_command ( "init_only",
+                            init_only,
+                            "Tell Mercury to initialize the network, and then quit." )
+
+
   // run command -------------------------------------------------------
   cmd = merc.add_command ( "run",
                             run,

@@ -27,6 +27,7 @@ import (
   "strconv"
 
   "lisp"
+  "utils"
 )
 
 
@@ -37,6 +38,11 @@ var mercury = '\u263F'
 
 
 func read_file ( merc * Merc, file_name string ) {
+
+  if ! utils.Path_exists ( file_name ) {
+    ume ( "read_file error: can't find file |%s|.", file_name )
+    os.Exit ( 1 )
+  }
 
   file, err := os.Open ( file_name )
   if err != nil {

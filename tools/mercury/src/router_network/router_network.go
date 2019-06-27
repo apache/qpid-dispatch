@@ -181,6 +181,8 @@ type Router_network struct {
 
   Failsafe                    int
   failsafe_timer            * time.Ticker
+
+  init_only                   bool
 }
 
 
@@ -205,6 +207,14 @@ func ( rn * Router_network ) Last_router_name ( ) ( string ) {
 
 
 
+func ( rn * Router_network ) Init_only ( val bool ) {
+  rn.init_only = val
+}
+
+
+
+
+
 func ( rn * Router_network ) Reset ( ) {
   rn.Halt ( )
   rn.Running         = false
@@ -216,6 +226,7 @@ func ( rn * Router_network ) Reset ( ) {
   rn.n_senders       = 0
   rn.Failsafe        = 0
   rn.failsafe_timer  = nil
+  rn.init_only       = false
 }
 
 
@@ -249,7 +260,8 @@ func New_router_network ( name         string,
 
   rn.client_path = mercury_root + "/clients/c_proactor_client" 
   if ! utils.Path_exists ( rn.client_path  ) {
-    ume ( "network error; client path |%s| does not exist.", rn.client_path )
+    ume ( "network error; client path |%s| does not exist. It probably needs to be built.", 
+          rn.client_path )
     os.Exit ( 1 )
   }
 
@@ -664,6 +676,10 @@ func ( rn * Router_network ) Init ( ) {
   }
   
   umi ( rn.verbose, "Network is initialized." )
+  if rn.init_only {
+    umi ( rn.verbose, "Init only is set : halting." )
+    os.Exit ( 0 )
+  }
 }
 
 

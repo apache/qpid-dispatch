@@ -1092,6 +1092,12 @@ func random_network ( merc  * Merc, command_line * lisp.List, _ string ) {
 //=======================================================================
 
 
+func init_only ( merc  * Merc, command_line * lisp.List, _ string ) {
+  merc.network.Init_only ( true )
+  umi ( merc.verbose, "init_only is set. Mercury will quit after writing config files." )
+}
+
+
 
 
 
