@@ -890,7 +890,6 @@ qd_message_t *qd_message()
     DEQ_INIT(msg->ma_to_override);
     DEQ_INIT(msg->ma_trace);
     DEQ_INIT(msg->ma_ingress);
-    msg->ma_phase = 0;
     msg->ma_phase      = 0;
     msg->sent_depth    = QD_DEPTH_NONE;
     msg->cursor.buffer = 0;
