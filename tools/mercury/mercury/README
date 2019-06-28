@@ -48,7 +48,7 @@ directory.
             inc versions 
             linear 3
 
-            recv 10 A n_messages 10000 address addr_%d
+            recv 10 A n_messages 10000 address addr_%d delay 15
             send 10 C n_messages 10000 address addr_%d delay 15
 
             run

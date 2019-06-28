@@ -780,6 +780,12 @@ func main ( ) {
                 "1",
                 "Clients per address. Makes each address shared by N clients." )
 
+  cmd.add_arg ( "delay",
+                false,
+                "string",
+                "0",
+                "How many seconds each receiver waits before output of statistics at end of run." )
+
 
   // init_only command -------------------------------------------------------
   cmd = merc.add_command ( "init_only",

@@ -424,6 +424,7 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
   max_message_length := cmd.argmap [ "max_message_length" ] . int_value
   apc                := cmd.argmap [ "apc"                ] . int_value
   cpa                := cmd.argmap [ "cpa"                ] . int_value
+  delay              := cmd.argmap [ "delay"              ] . string_value
 
   if apc > 1 && ! variable_address {
     ume ( "recv: can't have apc > 1 but no variable address.\n" )
@@ -457,7 +458,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   config_path,
                                   n_messages,
                                   max_message_length,
-                                  router_name )
+                                  router_name,
+                                  delay )
       umi ( merc.verbose,
             "recv: added receiver |%s| to router |%s|.", 
             receiver_name,
@@ -499,7 +501,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   config_path,
                                   n_messages,
                                   max_message_length,
-                                  router_name )
+                                  router_name,
+                                  delay )
       merc.network.Add_Address_To_Client ( receiver_name, final_addr )
                                   
 
@@ -534,7 +537,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   config_path,
                                   n_messages,
                                   max_message_length,
-                                  router_name )
+                                  router_name,
+                                  delay )
       merc.network.Add_Address_To_Client ( receiver_name, final_addr )
 
 

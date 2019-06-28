@@ -500,10 +500,10 @@ func ( rn * Router_network ) Add_receiver ( name               string,
                                             config_path        string,
                                             n_messages         int, 
                                             max_message_length int, 
-                                            router_name        string ) {
+                                            router_name        string,
+                                            delay              string ) {
 
   throttle := "0" // Receivers do not get throttled.
-  delay    := "0" // Receivers do not have delays.
 
   rn.add_client ( name, 
                   config_path,

@@ -16,7 +16,6 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-
 #include <proton/codec.h>
 #include <proton/delivery.h>
 #include <proton/engine.h>
@@ -130,6 +129,7 @@ struct context_s
                     stop_time;
 
   bool              doing_throughput;
+  bool              dumped_flight_times;
 }
 context_t,
 * context_p;
@@ -174,6 +174,8 @@ dump_flight_times ( context_p context )
     return;
   }
 
+  log ( context, "Dumping flight times.\n" );
+
   char default_file_name[1000];
   char * file_name = context->flight_times_file_name;
 
@@ -193,6 +195,8 @@ dump_flight_times ( context_p context )
             );
   }
   fclose ( fp );
+
+  context->dumped_flight_times = true;
 }
 
 
@@ -779,6 +783,7 @@ init_context ( context_p context, int argc, char ** argv )
   context->grand_start_time        = get_timestamp();
 
   context->doing_throughput        = false;
+  context->dumped_flight_times     = false;
 
 
   for ( int i = 1; i < argc; ++ i )
@@ -961,7 +966,12 @@ main ( int argc, char ** argv )
     pn_proactor_done ( context.proactor, events );
   }
 
-  write_report ( );
+  while ( ! context.dumped_flight_times )
+  {
+    sleep ( 1 );
+  }
+
+  log ( & context, "client exiting.\n" );
 
   return 0;
 }
