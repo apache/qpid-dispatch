@@ -1333,7 +1333,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             }
             UNLOCK(content->lock);
             if (!!pending_free) {
-                qd_buffer_free(content->pending);
+                qd_buffer_free(pending_free);
             }
             break;
         }
