@@ -48,8 +48,8 @@ In this example, `ROUTER` logs show the lifecycle of a connection and a link tha
 2019-04-05 14:54:38.041103 -0400 ROUTER (info) [C1][L6] Link lost: del=1 presett=0 psdrop=0 acc=1 rej=0 rel=0 mod=0 delay1=0 delay10=0 // <3>
 2019-04-05 14:54:38.041154 -0400 ROUTER (info) [C1] Connection Closed // <4>
 ----
-<1> The connection is opened. Each connection is identified with a unique ID (`C1`). The log also shows some information about the connection.
-<2> A link is attached over the connection. The link is identified with a unique ID (`L1`). The log also shows the direction of the link, and the source and target addresses.
+<1> The connection is opened. Each connection has a unique ID (`C1`). The log also shows some information about the connection.
+<2> A link is attached over the connection. The link is identified with a unique ID (`L6`). The log also shows the direction of the link, and the source and target addresses.
 <3> The link is detached. The log shows the link's terminal statistics.
 <4> The connection is closed.
 ====
@@ -156,7 +156,7 @@ Tue Jun  7 14:36:54 2016 MESSAGE (trace) Sending Message{to='amqp:/_topo/0/Route
 
 === The `SERVER` Logging Module
 
-This module provides information about how the router is listening for and connecting to other containers in the network (such as clients, routers, and brokers). This includes the state of AMQP messages sent and received by the broker (open, begin, attach, transfer, flow, and so on), and the related content of those messages.
+This module provides information about how the router is listening for and connecting to other containers in the network (such as clients, routers, and brokers). This information includes the state of AMQP messages sent and received by the broker (open, begin, attach, transfer, flow, and so on), and the related content of those messages.
 
 For example, this log shows details about how the router handled a link attachment:
 

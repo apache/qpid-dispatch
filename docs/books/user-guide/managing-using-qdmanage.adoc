@@ -79,7 +79,7 @@ For more information about `qdmanage`, see the {qdmanageManPageLink}.
 
 == Closing a connection
 
-If a consumer is processing messages too slowly, or has stopped processing messages without settling their deliveries, you can close the connection. By closing the connection, the "stuck" deliveries will be released, and they can be redelivered to a different consumer.
+If a consumer is processing messages too slowly, or has stopped processing messages without settling its deliveries, you can close the connection. When you close the connection, the "stuck" deliveries are released.
 
 .Procedure
 
