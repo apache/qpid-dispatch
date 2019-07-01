@@ -887,13 +887,13 @@ qd_message_t *qd_message()
         return 0;
 
     DEQ_ITEM_INIT(msg);
+    msg->cursor.buffer = 0;
+    msg->cursor.cursor = 0;
+    msg->sent_depth    = QD_DEPTH_NONE;
     DEQ_INIT(msg->ma_to_override);
     DEQ_INIT(msg->ma_trace);
     DEQ_INIT(msg->ma_ingress);
     msg->ma_phase      = 0;
-    msg->sent_depth    = QD_DEPTH_NONE;
-    msg->cursor.buffer = 0;
-    msg->cursor.cursor = 0;
     msg->send_complete = false;
     msg->tag_sent      = false;
     msg->is_fanout     = false;
@@ -1265,9 +1265,8 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     //
     if (!msg) {
         msg = (qd_message_pvt_t*) qd_message();
-        qd_link_t       *qdl = (qd_link_t *)pn_link_get_context(link);
         qd_connection_t *qdc = qd_link_connection(qdl);
-        set_safe_ptr_qd_link_t(pn_link_get_context(link), &msg->content->input_link_sp);
+        set_safe_ptr_qd_link_t(qdl, &msg->content->input_link_sp);
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
@@ -1277,7 +1276,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
     // The discard flag indicates we should keep reading the input stream
     // but not process the message for delivery.
     //
-    if (qd_message_is_discard((qd_message_t*)msg)) {
+    if (msg->content->discard) {
         return discard_receive(delivery, link, (qd_message_t *)msg);
     }
 
@@ -1306,6 +1305,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
 
         if (at_eos || recv_error) {
             // Message is complete
+            qd_buffer_t * pending_free = 0; // free empty pending buffer outside of lock
             LOCK(content->lock);
             {
                 // Append last buffer if any with data
@@ -1317,7 +1317,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                                         content->pending);
                     } else {
                         // pending buffer is empty
-                        qd_buffer_free(content->pending);
+                        pending_free = content->pending;
                     }
                     content->pending = 0;
                 } else {
@@ -1332,6 +1332,9 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
                 pn_record_set(record, PN_DELIVERY_CTX, 0);
             }
             UNLOCK(content->lock);
+            if (!!pending_free) {
+                qd_buffer_free(content->pending);
+            }
             break;
         }
 
