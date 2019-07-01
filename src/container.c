@@ -282,6 +282,7 @@ static void close_links(qd_container_t *container, pn_connection_t *conn, bool p
         qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
 
         if (qd_link && qd_link_get_context(qd_link) == 0) {
+            pn_link_set_context(pn_link, 0);
             pn_link = pn_link_next(pn_link, 0);
             qd_link_free(qd_link);
             continue;
