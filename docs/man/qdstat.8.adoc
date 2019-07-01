@@ -255,8 +255,8 @@ The operational status of the link route:
   - 'active' - The route is actively routing attaches (it is ready for use).
   - 'inactive' - The route is inactive, because no local destination is connected.
 
-qstat --autolinks
-~~~~~~~~~~~~~~~~~
+qdstat --autolinks
+~~~~~~~~~~~~~~~~~~
 addr::
 The auto link's address.
 
