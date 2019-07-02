@@ -39,20 +39,8 @@
 
 <h3>Starting Mercury</h3>
 
-<p>The directory from which to run Mercury is also called mercury.  So it&rsquo;s mercury/mercury.  And the run-script that I use is &lsquo;r&rsquo;.
-In that script you will see that it sets an environment variable MERCURY_ROOT to ${HOME}/mercury. If you install mercury someplace other than your home directory, change this variable as appropriate.</p>
-
-<p>Here, as an example, is the startup script that I use:</p>
-
-<pre><code>#! /usr/bin/bash
-
-export MERCURY_ROOT=${HOME}/mercury
-export GOPATH=${MERCURY_ROOT}
-
-# go run ./*.go  ./test_3
-</code></pre>
-
-<p>The last arg on the command line in the above startup script is the filename of the script for Mercury to run.</p>
+<p>The directory from which to run Mercury is also called mercury.  So it&rsquo;s mercury/mercury.  And an example of the kind of run-script that I use is &lsquo;example_run_script&rsquo;.
+In that script you will see that it sets an environment variable MERCURY_ROOT. On your system, please change this to something appropriate to your installation.</p>
 
 <p><br/></p>
 

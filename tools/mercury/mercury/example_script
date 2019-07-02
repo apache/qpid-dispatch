@@ -1,0 +1,33 @@
+echo 
+echo ==============================================
+echo test: example_script
+echo ==============================================
+echo 
+
+seed PID
+verbose
+
+version_roots name latest dispatch /home/mick/latest/install/dispatch proton /home/mick/latest/install/proton
+
+
+# Make a linear array of three routers, with 100 senders
+# at one end, and 100 receivers at the other.
+
+linear 3
+
+# The 15 second delay on the senders should provide 
+# plenty of time (probably too much by a factor of 10) 
+# for the routers to communicate with each other and get 
+# everything ready, before the senders start to send.
+
+# The 'throttle 10' arg to the send command tells all of
+# the 100 senders to put a 10 msec pause in between 
+# messages, so they will send close to 100 per second.
+# If you do not use a throttle arg, they will send as
+# fast as they can.
+
+recv 100 C n_messages 1000 address addr_%d delay 15
+send 100 A n_messages 1000 address addr_%d delay 15 throttle 10
+
+run
+
