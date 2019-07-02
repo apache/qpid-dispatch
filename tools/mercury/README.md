@@ -17,9 +17,9 @@
 
 ###Mercury Audience
 
-I see Mercury as a tool for developers. The user has one or more installed versions of the Dispatch Router + Proton code and wantsto easily set up a complex network including Dispatch routers, edge routers, and clients with nontrivial addressing patterns. Currently I think that creation of nontrivial networks is difficult enough that it discourages extensive testing during development.
+Mercury is a tool for developers. The user has one or more installed versions of the Dispatch Router + Proton code and wantsto easily set up a complex network including interior routers, edge routers, and clients with nontrivial addressing patterns. Currently the creation of nontrivial networks is difficult enough that it discourages extensive testing during development.
 
-Especially I would like to see a more interactive form of development testing, in which a developer easily creates a network, and easily iterates through a cycle of altering the network, running it, and seeing results from the run. At the end of such a 'session' all of the developer's actions have been captured and will be reproducible later if desired. The captured session is a runnable script, and can be edited and used as a standardized test.
+Especially Mercury provides a more interactive form of development testing, in which a developer easily creates a network, and easily iterates through a cycle of altering the network, running it, and seeing results from the run. At the end of such a 'session' all of the developer's actions have been captured and will be reproducible later if desired. The captured session is a runnable script, and can be edited and used as a standardized test.
 
 
 <br/>
@@ -28,9 +28,9 @@ Especially I would like to see a more interactive form of development testing, i
 
 ###The C Client
 
-The client that I use is written in C to the proactor interface and has been heavily adapted from an original by Alan Conway. It needs to be built before Mercury will be able to do anything useful. Look at the directory mercury/clients, look at the file in there called "m", adapt it for your system, and run it so you get an executable.
+The client is written in C to the proactor interface and has been heavily adapted from an original by Alan Conway. It needs to be built before Mercury will be able to do anything useful. Look at the directory mercury/clients, look at the file in there called "m", adapt it for your system, and run it so you get an executable.
 
-Having my own client allows me to do things like:
+Having Mercury's own client allows it to do things like:
 
 1. throttle send-speed with the "--throttle" argument
 2. Tell the client to form multiple links with multiple "--address" arguments.
@@ -42,7 +42,7 @@ Having my own client allows me to do things like:
 
 ###Starting Mercury
 
-The directory from which to run Mercury is also called mercury.  So it's mercury/mercury.  And an example of the kind of run-script that I use is 'example_run_script'.
+The directory from which to run Mercury is also called mercury.  So it's mercury/mercury.  And an example of a simple run-script is 'example_run_script'.
 In that script you will see that it sets an environment variable MERCURY\_ROOT. On your system, please change this to something appropriate to your installation.
 
 
@@ -114,7 +114,7 @@ You can define a version in one of two different ways
 
 2. You can directly provide all the paths. This second option is meant for situations where your installation is different somehow from what Mercury expects.
 
-To define a version with roots, use the 'version\_roots' command something like this:  (Here I am defining two different versions.)
+To define a version with roots, use the 'version\_roots' command something like this:  (Here we define two different versions.)
 
 
     version_roots name latest dispatch /home/mick/latest/install/dispatch proton /home/mick/latest/install/proton
@@ -401,7 +401,7 @@ typical usage :  random_network  6
 <br/>
 
 ####recv  
-Create one or more receivers on one or more routers, all using the same version of code, or all selecting randomly.  There are lots of arguments -- look at "help recv".  Below I give an example in which you want to create 100 receivers distributed across all edge-routers connected to router A, using random versions of the code, and each expecting 1000 messages. And there 5 addresses per receiver, i.e. receiver_1 gets addr_1 to addr_5, receiver_2 gets addr_6 to addr_10, etc.
+Create one or more receivers on one or more routers, all using the same version of code, or all selecting randomly.  There are lots of arguments -- look at "help recv".  Below is an example in which we create 100 receivers distributed across all edge-routers connected to router A, using random versions of the code, and each expecting 1000 messages. And there 5 addresses per receiver, i.e. receiver_1 gets addr_1 to addr_5, receiver_2 gets addr_6 to addr_10, etc.
 
 <br/>
 typical usage : recv count 100 apc 5 n_messages 1000 edges A
