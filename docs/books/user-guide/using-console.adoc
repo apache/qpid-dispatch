@@ -96,7 +96,7 @@ The {ConsoleName} opens. If you set up user name and password authentication, th
 --
 If you set up user name and password authentication, enter your user name and password to access the web console.
 
-The syntax for the user name is <user>@<domain>. For example: `admin@my-domain`.
+The syntax for the user name is <__user__>@<__domain__>. For example: `admin@my-domain`.
 --
 
 == Monitoring the router network using the web console
@@ -120,3 +120,17 @@ In the web console, you use the tabs to monitor the router network.
 | `Schema` | The management schema that controls each of the routers in the router network.
 
 |===
+
+== Closing a connection
+
+If a consumer is processing messages too slowly, or has stopped processing messages without settling its deliveries, you can close the connection. When you close the connection, the "stuck" deliveries are released (meaning they are not delivered to any consumers).
+
+.Procedure
+
+. Identify any connections with slow or stuck consumers.
+.. Navigate to menu:Overview[Connections].
+.. Click a connection, and then click *Links*.
++
+The *Rate*, *Delayed 10 sec*, and *Delayed 1 sec* columns indicate if there are any slow or stuck consumers on the connection.
+
+. Click btn:[Kill] to close the connection.
