@@ -232,13 +232,13 @@ The advanced user group settings enable you to define resource limits based on t
 
 If the router establishes an outgoing connection to an external AMQP container (such as a client or broker), you can restrict the resources that the external container can access on the router by configuring a connector vhost policy.
 
-The resource limits defined in a connector vhost policy are applied to links initiated by the external AMQP container. The connector vhost policy does not restrict links created by the router.
+The resource limits that are defined in a connector vhost policy are applied to links that are initiated by the external AMQP container. The connector vhost policy does not restrict links that the router creates.
 
-A connector vhost policy can only be applied to a connector with a `normal` or `route-container` role. You can not apply connector vhost policies to connectors with `inter-router` or `edge` roles.
+A connector vhost policy can only be applied to a connector with a `normal` or `route-container` role. You cannot apply connector vhost policies to connectors that have `inter-router` or `edge` roles.
 
 .Prerequisites
 
-Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies[].
+Vhost policies are enabled for the router. For more information, see xref:enabling-vhost-policies[].
 
 .Procedure
 
@@ -268,7 +268,7 @@ vhost {
 . Apply the connector vhost policy to the connector that establishes the connection to the external AMQP container.
 +
 --
-This example applies the connector vhost policy configured in the previous step:
+The following example applies the connector vhost policy that was configured in the previous step:
 
 [options="nowrap"]
 ----
