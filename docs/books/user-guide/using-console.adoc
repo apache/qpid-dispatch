@@ -123,7 +123,7 @@ In the web console, you use the tabs to monitor the router network.
 
 == Closing a connection
 
-If a consumer is processing messages too slowly, or has stopped processing messages without settling its deliveries, you can close the connection. When you close the connection, the "stuck" deliveries are released.
+If a consumer is processing messages too slowly, or has stopped processing messages without settling its deliveries, you can close the connection. When you close the connection, the "stuck" deliveries are released (meaning they are not delivered to any consumers).
 
 .Procedure
 
