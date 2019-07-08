@@ -1204,11 +1204,11 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
     causes an immediate connection close.
     '''
     def __init__(self, url, container_id=None):
-        super(ConnectorPolicyMisconfiguredClient, self).__init__(url, container_id)
         self.connection_opening = 0
         self.connection_opened = 0
         self.connection_error = 0
         self.main_exited = False
+        super(ConnectorPolicyMisconfiguredClient, self).__init__(url, container_id)
 
     def _main(self):
         self._container.timeout = 1.0
@@ -1315,7 +1315,6 @@ class ConnectorPolicyClient(FakeBroker):
     allows certain sources and targets.
     '''
     def __init__(self, url, container_id=None):
-        super(ConnectorPolicyClient, self).__init__(url, container_id)
         self.connection_opening = 0
         self.connection_opened = 0
         self.connection_error = 0
@@ -1329,6 +1328,7 @@ class ConnectorPolicyClient(FakeBroker):
         self.req_close_sender = False
         self.req_close_receiver = False
         self.req_anonymous_sender = False
+        super(ConnectorPolicyClient, self).__init__(url, container_id)
 
     def _main(self):
         self._container.timeout = 1.0
