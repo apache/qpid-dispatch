@@ -113,11 +113,9 @@ func process_line ( merc * Merc, line string ) {
 
 // This gets called by the individual commands, if they 
 // want standardized command-line processing. Some don't.
-func parse_command_line ( merc *      Merc, 
+func parse_command_line ( merc         * Merc, 
                           cmd          * command, 
                           command_line * lisp.List ) {
-
-  var err error
 
   // Fill in all args with their default values.
   // First the unlabelables
@@ -145,7 +143,13 @@ func parse_command_line ( merc *      Merc,
   for _, arg := range cmd.argmap {
 
     if arg.data_type != "list" {
-      str_val := command_line.Get_atom_value_and_remove ( arg.name )
+      str_val, err := command_line.Get_atom_value_and_remove ( arg.name )
+
+      if err != nil {
+        ume ( "parse_command_line: error reading value for attribute |%s|", arg.name )
+        os.Exit ( 1 )
+      }
+
       if str_val != "" {
         // The user provided a value.
         if arg.data_type == "string" {

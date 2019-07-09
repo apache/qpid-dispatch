@@ -1,0 +1,27 @@
+echo 
+echo ==============================================
+echo test: soak_test
+echo ==============================================
+echo 
+echo 
+
+seed PID
+
+verbose
+
+version_roots name latest dispatch /home/mick/code_for_tests/lock_free/install/d proton /home/mick/code_for_tests/lock_free/install/p  
+
+routers 1
+
+recv 10 A n_messages 100 address addr_%d delay 10  soak true
+
+run
+
+sleep 10
+
+send 10 A n_messages 100 address addr_%d delay 10 throttle 100 soak true
+
+run
+
+kill_and_restart_random_clients  30
+

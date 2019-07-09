@@ -25,6 +25,7 @@ import ( "errors"
          "io/ioutil"
          "os"
          "strings"
+         "math/rand"
          "sync"
          "time"
 
@@ -183,6 +184,24 @@ type Router_network struct {
   failsafe_timer            * time.Ticker
 
   init_only                   bool
+}
+
+
+
+
+
+func ( rn * Router_network ) Kill_and_restart_random_client ( ) {
+  n_clients := len ( rn.clients )
+  if n_clients <= 0 {
+    ume ( "router_network.Kill_and_restart_random_client error: no clients.\n" )
+    return
+  }
+
+  client_number := rand.Intn ( n_clients )
+  fp ( os.Stdout,  "Kill_and_restart_random_client: %d\n", client_number )
+
+  client := rn.clients [ client_number ]
+  client.Kill_and_restart ( 15 )
 }
 
 
@@ -501,7 +520,8 @@ func ( rn * Router_network ) Add_receiver ( name               string,
                                             n_messages         int, 
                                             max_message_length int, 
                                             router_name        string,
-                                            delay              string ) {
+                                            delay              string,
+                                            soak               string ) {
 
   throttle := "0" // Receivers do not get throttled.
 
@@ -513,7 +533,8 @@ func ( rn * Router_network ) Add_receiver ( name               string,
                   max_message_length, 
                   router_name, 
                   throttle,
-                  delay )
+                  delay,
+                  soak )
 }
 
 
@@ -526,7 +547,8 @@ func ( rn * Router_network ) Add_sender ( name               string,
                                           max_message_length int, 
                                           router_name        string, 
                                           throttle           string,
-                                          delay              string ) {
+                                          delay              string,
+                                          soak               string ) {
   rn.add_client ( name, 
                   config_path,
                   rn.results_path,
@@ -535,7 +557,8 @@ func ( rn * Router_network ) Add_sender ( name               string,
                   max_message_length, 
                   router_name, 
                   throttle,
-                  delay )
+                  delay,
+                  soak )
 }
 
 
@@ -550,7 +573,9 @@ func ( rn * Router_network ) add_client ( name               string,
                                           max_message_length int, 
                                           router_name        string, 
                                           throttle           string,
-                                          delay              string ) {
+                                          delay              string,
+                                          soak               string ) {
+
 
   var operation string
   if sender {
@@ -589,7 +614,8 @@ func ( rn * Router_network ) add_client ( name               string,
                            max_message_length,
                            throttle,
                            rn.verbose,
-                           delay )
+                           delay,
+                           soak )
 
   rn.clients = append ( rn.clients, c )
 }

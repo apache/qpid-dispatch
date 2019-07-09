@@ -96,6 +96,8 @@ type Client struct {
 
   delay                string
 
+  soak                 string
+
   status_file_name     string
 
 
@@ -127,7 +129,8 @@ func New_client ( name                  string,
                   max_message_length    int, 
                   throttle              string,
                   verbose               bool,
-                  delay                 string ) ( * Client )  { 
+                  delay                 string,
+                  soak                  string ) ( * Client )  { 
   var c * Client
 
   c = & Client { Name                  : name,
@@ -144,7 +147,8 @@ func New_client ( name                  string,
                  max_message_length    : max_message_length,
                  throttle              : throttle,
                  verbose               : verbose,
-                 delay                 : delay }
+                 delay                 : delay,
+                 soak                  : soak }
 
   if ! utils.Path_exists ( path ) {
     ume ( "client: executable path |%s| isn't there.", c.Path )
@@ -198,6 +202,11 @@ func ( c * Client ) Run ( ) {
           " --max_message_length " + strconv.Itoa(c.max_message_length) + 
           " --throttle " + c.throttle +
           " --delay " + c.delay
+
+  if c.soak == "true" {
+    args += " --soak"
+  }
+
   for _, addr := range c.addrs {
     args += " --address " + addr
   }
@@ -297,6 +306,19 @@ func ( c * Client ) Halt ( ) error {
   // I think this is unreachable.
   c.State = halted
   return nil
+}
+
+
+
+
+
+func ( c * Client ) Kill_and_restart ( pause int ) {
+  umi ( c.verbose, "client |%s| going down for kill-and-restart.", c.Name )
+  c.Halt ( )
+  c.State = initialized
+  time.Sleep ( time.Duration(pause) * time.Second )
+  c.Run ( )
+  umi ( c.verbose, "client |%s| restarted.", c.Name )
 }
 
 

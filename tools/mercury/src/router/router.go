@@ -377,6 +377,7 @@ func ( r * Router ) write_config_file ( ) error {
 
   fp ( f, "router {\n" )
   fp ( f, "  workerThreads : %d\n", r.worker_threads )
+  // fp ( f, "  actionListCapacity : 131072\n" )   TEMP -- Franz lock-free
   fp ( f, "  mode          : %s\n", r.router_type )
   fp ( f, "  id            : %s\n", r.name )
   fp ( f, "}\n" )

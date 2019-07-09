@@ -245,19 +245,24 @@ func ( l * List ) Get_value ( attr string ) ( string ) {
 
 
 
-func ( l * List ) Get_atom_value_and_remove ( attr string ) ( string ) {
+func ( l * List ) Get_atom_value_and_remove ( attr string ) ( string, error ) {
   for index, el := range l.Elements {
     if string(el.atom) == attr {
+
+      if len(l.Elements) <= index + 1 {
+        return "", errors.New ( "It ain't there." )
+      }
+
       // Save the value to be returned.
       value_element := l.Elements [ index + 1 ]
       value         := string ( value_element.atom )
       // Remove the value from the list.
       l.Elements = append ( l.Elements [ : index ], l.Elements [ index+2 : ] ...)
-      return value
+      return value, nil
     }
   }
 
-  return ""
+  return "", nil
 }
 
 

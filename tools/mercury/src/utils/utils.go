@@ -39,11 +39,13 @@ var mercury = '\u263F'
 
 
 
+
 func Check ( err error ) {
   if err != nil {
     panic ( err )
   }
 }
+
 
 
 
@@ -57,8 +59,17 @@ func Get_homedir ( ) ( string ) {
 
 
 
-func M_error ( format string, args ...interface{}) {
-  new_format := fmt.Sprintf ( "    %c error: %s", mercury, format + "\n" )
+func timestamp ( ) ( float64 ) {
+  now   := time.Now()
+  return float64 ( now.UnixNano() ) / 1000000000
+}
+
+
+
+
+
+func M_error ( format string, args ...interface{} ) {
+  new_format := fmt.Sprintf ( "    %c error %.6f : %s", mercury, timestamp(), format + "\n" )
   fp ( os.Stdout, "\n------------------------------------------------\n" )
   fp ( os.Stdout, new_format, args ... )
   fp ( os.Stdout,   "------------------------------------------------\n\n" )
@@ -72,7 +83,7 @@ func M_info ( verbose bool, format string, args ...interface{}) {
   if ! verbose {
     return
   }
-  new_format := fmt.Sprintf ( "    %c info: %s\n", mercury, format )
+  new_format := fmt.Sprintf ( "    %c info %.6f: %s\n", mercury, timestamp(), format )
   fp ( os.Stdout, new_format, args ... )
 }
 

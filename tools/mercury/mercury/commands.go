@@ -230,6 +230,7 @@ func send ( merc * Merc, command_line * lisp.List, _ string ) {
   apc                := cmd.argmap [ "apc"                ] . int_value
   cpa                := cmd.argmap [ "cpa"                ] . int_value
   delay              := cmd.argmap [ "delay"              ] . string_value
+  soak               := cmd.argmap [ "soak"               ] . string_value
 
   if apc > 1 && ! variable_address {
     ume ( "send: can't have apc > 1 but no variable address.\n" )
@@ -271,7 +272,8 @@ func send ( merc * Merc, command_line * lisp.List, _ string ) {
                                 max_message_length,
                                 router_name,
                                 throttle,
-                                delay )
+                                delay,
+                                soak )
       umi ( merc.verbose,
             "send: added sender |%s| to router |%s|.",
             sender_name,
@@ -310,7 +312,8 @@ func send ( merc * Merc, command_line * lisp.List, _ string ) {
                                 max_message_length,
                                 router_name,
                                 throttle,
-                                delay )
+                                delay,
+                                soak )
 
       merc.network.Add_Address_To_Client ( sender_name, final_addr )
 
@@ -347,7 +350,8 @@ func send ( merc * Merc, command_line * lisp.List, _ string ) {
                                 max_message_length,
                                 router_name,
                                 throttle,
-                                delay )
+                                delay,
+                                soak )
       merc.network.Add_Address_To_Client ( sender_name, final_addr )
 
       umi ( merc.verbose,
@@ -425,6 +429,7 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
   apc                := cmd.argmap [ "apc"                ] . int_value
   cpa                := cmd.argmap [ "cpa"                ] . int_value
   delay              := cmd.argmap [ "delay"              ] . string_value
+  soak               := cmd.argmap [ "soak"               ] . string_value
 
   if apc > 1 && ! variable_address {
     ume ( "recv: can't have apc > 1 but no variable address.\n" )
@@ -459,7 +464,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   n_messages,
                                   max_message_length,
                                   router_name,
-                                  delay )
+                                  delay,
+                                  soak )
       umi ( merc.verbose,
             "recv: added receiver |%s| to router |%s|.", 
             receiver_name,
@@ -502,7 +508,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   n_messages,
                                   max_message_length,
                                   router_name,
-                                  delay )
+                                  delay,
+                                  soak )
       merc.network.Add_Address_To_Client ( receiver_name, final_addr )
                                   
 
@@ -538,7 +545,8 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
                                   n_messages,
                                   max_message_length,
                                   router_name,
-                                  delay )
+                                  delay,
+                                  soak )
       merc.network.Add_Address_To_Client ( receiver_name, final_addr )
 
 
@@ -1413,7 +1421,7 @@ func example_test_1 ( merc * Merc, command_line * lisp.List, _ string ) {
 
 
 func latency_test_1 ( merc * Merc, command_line * lisp.List, _ string ) {
-  // cmd := merc.commands [ "example_test_1" ]
+  // cmd := merc.commands [ "latency_test_1" ]
   var command_lines [] string
 
   command_lines = append ( command_lines, "seed PID" )
@@ -1446,6 +1454,34 @@ func latency_test_1 ( merc * Merc, command_line * lisp.List, _ string ) {
     last_router_name  := merc.network.Last_router_name  ( )
     fmt.Fprintf ( os.Stdout, "first |%s|   last |%s|\n", first_router_name, last_router_name )
   }
+}
+
+
+
+
+
+func karrc ( merc * Merc, seconds int ) {
+  for {
+    time.Sleep ( time.Duration(seconds) * time.Second )
+    merc.network.Kill_and_restart_random_client ( )
+  }
+}
+
+
+
+
+
+// This is a command function, callable (like most of the functions in this file) 
+// from the Mercury interactive command line. All it does is launch a goroutine to handle 
+// this repeating action, and immediately return control to the cammand parser.
+func kill_and_restart_random_clients ( merc * Merc, command_line * lisp.List, _ string ) {
+  cmd := merc.commands [ "kill_and_restart_random_clients" ]
+  parse_command_line ( merc, cmd, command_line )
+
+  seconds := cmd.unlabelable_int.int_value
+  umi ( merc.verbose, "kill_and_restart_random_clients: every %d seconds.", seconds )
+
+  go karrc ( merc, seconds )
 }
 
 

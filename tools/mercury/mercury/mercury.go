@@ -682,7 +682,7 @@ func main ( ) {
 
   cmd.add_arg ( "throttle",
                 false,
-                "string",    // Just ... don't ask.
+                "string",
                 "0",
                 "How many msec between each sent message. " +
                 "0 means send as fast as possible." )
@@ -719,6 +719,13 @@ func main ( ) {
                 "0",
                 "How many seconds each sender should wait before starting to send." )
 
+  cmd.add_arg ( "soak",
+                false,
+                "string",
+                "false",
+                "If true, run a soak test. I.e. never stop sending regardless of n_messages." )
+
+
 
   // recv command -------------------------------------------------------
   cmd = merc.add_command ( "recv",
@@ -728,32 +735,32 @@ func main ( ) {
                 true,   // unlabelable
                 "string",
                 "",
-                "Which router the senders should attach to." )
+                "Which router the receivers should attach to." )
 
   cmd.add_arg ( "count",
                 true,   // unlabelable
                 "int",
                 "1",
-                "How many senders to make." )
+                "How many receivers to make." )
 
   cmd.add_arg ( "n_messages",
                 false,
                 "int",
                 "1000",
-                "How many messages to send." )
+                "How many messages to receive." )
 
   cmd.add_arg ( "edges",
                 false,
                 "string",
                 "",
                 "Add receivers to the edges of this router. " +
-                "i.e. 'edges A' means add senders to edges of router A." )
+                "i.e. 'edges A' means add receivers to edges of router A." )
 
   cmd.add_arg ( "address",
                 false,
                 "string",
                 "my_address",
-                "Address to send to. Embed a '%d' if you " +
+                "Address to receive from. Embed a '%d' if you " +
                 "want addresses to count up." )
 
   cmd.add_arg ( "start_at",
@@ -785,6 +792,12 @@ func main ( ) {
                 "string",
                 "0",
                 "How many seconds each receiver waits before output of statistics at end of run." )
+
+  cmd.add_arg ( "soak",
+                false,
+                "string",
+                "false",
+                "If true, run a soak test. I.e. never stop receiving regardless of n_messages." )
 
 
   // init_only command -------------------------------------------------------
@@ -906,6 +919,18 @@ func main ( ) {
   cmd = merc.add_command ( "reset",
                            reset,
                            "Restore Mercury to original conditions." )
+
+
+
+  // kill_and_restart_random_clients command -------------------------------------------------------
+  cmd = merc.add_command ( "kill_and_restart_random_clients",
+                           kill_and_restart_random_clients,
+                           "Evenry N seconds, choose a random client. Kill and restart it." )
+  cmd.add_arg ( "seconds",
+                true,   // unlabelable
+                "int",
+                "60",
+                "The number of seconds until forced failure." )
 
 
 
