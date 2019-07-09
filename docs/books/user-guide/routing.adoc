@@ -615,8 +615,7 @@ add an _incoming_ autolink.
 As soon as a consumer attaches to the router,
 it will receive the messages stored in the broker queue,
 along with any new messages sent by the producer.
-However, the original delivery order of the queued messages is not preserved -
-the queued messages will be interleaved with the new messages.
+However, the original delivery order of the queued messages is not preserved; the queued messages will be interleaved with the new messages.
 
 If you do not add the incoming autolink,
 the messages will be stored on the broker,
