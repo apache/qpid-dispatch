@@ -50,16 +50,6 @@
 
 typedef struct qd_message_t qd_message_t;
 
-DEQ_DECLARE(qd_message_t, qd_message_list_t);
-
-/** Message representation.
- *@internal
- */
-struct qd_message_t {
-    DEQ_LINKS(qd_message_t);
-    // Private members not listed here.
-};
-
 /** Amount of message to be parsed.  */
 typedef enum {
     QD_DEPTH_NONE,

@@ -886,7 +886,6 @@ qd_message_t *qd_message()
     if (!msg)
         return 0;
 
-    DEQ_ITEM_INIT(msg);
     msg->cursor.buffer = 0;
     msg->cursor.cursor = 0;
     msg->sent_depth    = QD_DEPTH_NONE;
@@ -995,7 +994,6 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     if (!copy)
         return 0;
 
-    DEQ_ITEM_INIT(copy);
     qd_buffer_list_clone(&copy->ma_to_override, &msg->ma_to_override);
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
