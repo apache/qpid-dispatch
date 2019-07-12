@@ -124,7 +124,6 @@ typedef struct {
 } qd_message_content_t;
 
 typedef struct {
-    DEQ_LINKS(qd_message_t);   // Deque linkage that overlays the qd_message_t
     qd_iterator_pointer_t cursor;          // A pointer to the current location of the outgoing byte stream.
     qd_message_depth_t    message_depth;   // What is the depth of the message that has been received so far
     qd_message_depth_t    sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
