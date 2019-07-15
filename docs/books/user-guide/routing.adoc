@@ -553,19 +553,19 @@ For information about additional attributes, see link:{qdrouterdConfManPageUrl}#
 
 === Handling Undeliverable Messages for an Address
 
-You handle undeliverable messages for an address by configuring _fallback destinations_.
-A fallback destination is a queue on a broker that stores messages that are not directly routable to any consumers.
+You handle undeliverable messages for an address by configuring autolinks that point to _fallback destinations_.
+A fallback destination (such as a queue on a broker) stores messages that are not directly routable to any consumers.
 
 During normal message delivery,
 {RouterName} delivers messages to the consumers that are attached to the router network.
 However, if no consumers are reachable,
-the messages are diverted to any fallback destinations that were configured for the address.
+the messages are diverted to any fallback destinations that were configured for the address (if the autolinks that point to the fallback destinations are active).
 When a consumer reconnects and becomes reachable again,
 it receives the messages stored at the fallback destination.
 
 [NOTE]
 ====
-{RouterName} does not preserve delivery order for messages stored at a fallback destination. When a consumer reconnects, it will receive the stored messages interleaved with any new messages sent by producers.
+{RouterName} preserves the original delivery order for messages stored at a fallback destination. However, when a consumer reconnects, any new messages produced while the queue is draining will be interleaved with the messages stored at the fallback destination.
 ====
 
 .Prerequisites
@@ -615,11 +615,12 @@ add an _incoming_ autolink.
 As soon as a consumer attaches to the router,
 it will receive the messages stored in the broker queue,
 along with any new messages sent by the producer.
-However, the original delivery order of the queued messages is not preserved; the queued messages will be interleaved with the new messages.
+The original delivery order of the queued messages is preserved;
+however, the queued messages will be interleaved with the new messages.
 
 If you do not add the incoming autolink,
 the messages will be stored on the broker,
-but will not be automatically sent to consumers when they attach to the router.
+but will not be sent to consumers when they attach to the router.
 
 [options="nowrap",subs="+quotes"]
 ----
