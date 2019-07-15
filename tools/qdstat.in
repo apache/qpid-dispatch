@@ -44,7 +44,6 @@ def parse_args(argv):
     """ Set global variables for options, return arguments """
 
     usage = "%prog [options]"
-
     parser = OptionParser(usage=usage)
 
     parser.add_option_group(connection_options(parser))
@@ -80,7 +79,7 @@ def parse_args(argv):
            parser.error("--all-entities cannot be combined with specific entity option -" + opts.show)
 
     if not opts.all_routers and not opts.all_entities and not opts.show:
-        parser.error("You must specify one of these options: -g, -c, -l, -n, -a, -m, -h, --autolinks, --linkroutes, --all-routers, --all-entities or --log.")
+        opts.all_entities = u'all_entities'
 
     return opts, args
 

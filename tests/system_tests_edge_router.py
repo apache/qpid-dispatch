@@ -1211,8 +1211,14 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
     def run_qdstat(self, args, regexp=None, address=None):
-        popen_arg = ['qdstat', '--bus', str(address or self.router.addresses[0]),
-             '--timeout', str(TIMEOUT)] + args
+        if args:
+            popen_arg = ['qdstat', '--bus', str(address or self.router.addresses[0]),
+                 '--timeout', str(TIMEOUT)] + args
+        else:
+            popen_arg = ['qdstat', '--bus',
+                         str(address or self.router.addresses[0]),
+                         '--timeout', str(TIMEOUT)]
+
         p = self.popen(popen_arg,
                        name='qdstat-' + self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
@@ -1265,6 +1271,35 @@ class RouterTest(TestCase):
         self.assertTrue("INT.A" in outs)
         self.assertTrue("inter-router" not in outs)
 
+        outs = self.run_qdstat(['--all-entities'],
+                               address=self.routers[2].addresses[0])
+        # Check if each entity  section is showing
+        self.assertTrue("Router Links" in outs)
+        self.assertTrue("Router Addresses" in outs)
+        self.assertTrue("Connections" in outs)
+        self.assertTrue("AutoLinks" in outs)
+        self.assertTrue("Auto Links" in outs)
+        self.assertEqual(outs.count("Link Routes"), 2)
+        self.assertTrue("Router Statistics" in outs)
+        self.assertTrue("Router Id                        EA1" in outs)
+
+        self.assertTrue("Types" in outs)
+
+
+        # Run qdstat with no prarameters and make sure it executes qdstat --all-entities
+        outs = self.run_qdstat(None,
+                               address=self.routers[2].addresses[0])
+        # Check if each entity  section is showing
+        self.assertTrue("Router Links" in outs)
+        self.assertTrue("Router Addresses" in outs)
+        self.assertTrue("Connections" in outs)
+        self.assertTrue("AutoLinks" in outs)
+        self.assertTrue("Auto Links" in outs)
+        self.assertEqual(outs.count("Link Routes"), 2)
+        self.assertTrue("Router Statistics" in outs)
+        self.assertTrue("Router Id                        EA1" in outs)
+
+        self.assertTrue("Types" in outs)
 
     def test_69_interior_qdstat_all_routers(self):
         # Connects to an interior router and runs "qdstat --all-routers"
