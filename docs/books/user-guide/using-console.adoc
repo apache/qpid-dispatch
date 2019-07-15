@@ -133,4 +133,4 @@ If a consumer is processing messages too slowly, or has stopped processing messa
 +
 The *Rate*, *Delayed 10 sec*, and *Delayed 1 sec* columns indicate if there are any slow or stuck consumers on the connection.
 
-. Click btn:[Kill] to close the connection.
+. Click btn:[Close] to close the connection.
