@@ -103,7 +103,6 @@ typedef struct qdr_action_t qdr_action_t;
 typedef void (*qdr_action_handler_t) (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 struct qdr_action_t {
-    DEQ_LINKS(qdr_action_t);
     qdr_action_handler_t  action_handler;
     const char           *label;
     union {
@@ -201,7 +200,25 @@ struct qdr_action_t {
 };
 
 ALLOC_DECLARE(qdr_action_t);
-DEQ_DECLARE(qdr_action_t, qdr_action_list_t);
+
+typedef struct qdr_action_q_t qdr_action_q_t;
+
+struct qdr_action_q_t {
+    uint64_t        p_seq;
+    uint64_t        c_seq;
+    uint64_t        capacity;
+    qdr_action_t   *action;
+};
+
+void qdr_action_q_init(qdr_action_q_t *actions, uint64_t capacity);
+
+void qdr_action_q_offer(qdr_action_q_t *actions, qdr_action_t *action);
+
+bool qdr_action_q_poll(qdr_action_q_t *actions, qdr_action_t *action);
+
+bool qdr_action_q_is_empty(qdr_action_q_t *actions);
+
+size_t qdr_action_q_batch_poll(qdr_action_q_t *actions, qdr_action_t *action_vec, size_t limit);
 
 //
 //
@@ -754,7 +771,8 @@ struct qdr_core_t {
     qd_log_source_t   *agent_log;
     sys_thread_t      *thread;
     bool               running;
-    qdr_action_list_t  action_list;
+    bool               sleeping;
+    qdr_action_q_t     action_list;
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
 

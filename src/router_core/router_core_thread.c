@@ -122,9 +122,9 @@ void qdr_modules_finalize(qdr_core_t *core)
 
 void *router_core_thread(void *arg)
 {
+    size_t             action_list_limit = 1024;
     qdr_core_t        *core = (qdr_core_t*) arg;
-    qdr_action_list_t  action_list;
-    qdr_action_t      *action;
+    qdr_action_t       action_list[action_list_limit];
 
     qdr_forwarder_setup_CT(core);
     qdr_route_table_setup_CT(core);
@@ -142,27 +142,29 @@ void *router_core_thread(void *arg)
         //
         // Block on the condition variable when there is no action to do
         //
-        while (core->running && DEQ_IS_EMPTY(core->action_list))
+        while (core->running && qdr_action_q_is_empty(&core->action_list)) {
+            core->sleeping = true;
             sys_cond_wait(core->action_cond, core->action_lock);
+            core->sleeping = false;
+        }
 
         //
         // Move the entire action list to a private list so we can process it without
         // holding the lock
         //
-        DEQ_MOVE(core->action_list, action_list);
+
+        const size_t actions = qdr_action_q_batch_poll(&core->action_list, action_list, action_list_limit);
         sys_mutex_unlock(core->action_lock);
 
         //
         // Process and free all of the action items in the list
         //
-        action = DEQ_HEAD(action_list);
-        while (action) {
-            DEQ_REMOVE_HEAD(action_list);
+        for (int i = 0; i< actions; i++) {
+            qdr_action_t *action = action_list + i;
             if (action->label)
-                qd_log(core->log, QD_LOG_TRACE, "Core action '%s'%s", action->label, core->running ? "" : " (discard)");
+                qd_log(core->log, QD_LOG_TRACE, "Core action '%s'%s", action->label,
+                       core->running ? "" : " (discard)");
             action->action_handler(core, action, !core->running);
-            free_qdr_action_t(action);
-            action = DEQ_HEAD(action_list);
         }
 
         //

@@ -40,6 +40,92 @@ ALLOC_DEFINE(qdr_connection_info_t);
 
 static void qdr_general_handler(void *context);
 
+uint64_t next_power_of_two(uint64_t v)
+{
+    assert(v > 0);
+    v--;
+    v |= v >> 1;
+    v |= v >> 2;
+    v |= v >> 4;
+    v |= v >> 8;
+    v |= v >> 16;
+    v++;
+    return v;
+}
+
+inline void qdr_action_q_init(qdr_action_q_t *actions, uint64_t capacity)
+{
+    capacity = next_power_of_two(capacity);
+    actions->c_seq = 0;
+    actions->p_seq = 0;
+    actions->capacity = capacity;
+    ALLOC_CACHE_ALIGNED(capacity * sizeof(qdr_action_t), actions->action);
+}
+
+inline void qdr_action_q_offer(qdr_action_q_t *actions, qdr_action_t *action)
+{
+    uint64_t size = (actions->p_seq + 1) - actions->c_seq;
+    if (size > actions->capacity) {
+        //increase capacity
+        uint64_t old_capacity = actions->capacity;
+        qdr_action_t *old_actions = actions->action;
+        actions->capacity = old_capacity * 2;
+        //can't use memmove due to wrapping, will use (at worst) 2 memcpy
+        ALLOC_CACHE_ALIGNED(actions->capacity * sizeof(qdr_action_t), actions->action);
+        const uint64_t old_c_mask = (old_capacity - 1);
+        const uint64_t start = actions->c_seq & old_c_mask;
+        const uint64_t end = actions->p_seq & old_c_mask;
+        const bool contiguous = end > start;
+        size_t remaining = contiguous ? (end - start) : (old_capacity - start);
+        memcpy(actions->action, old_actions + start, remaining * sizeof(qdr_action_t));
+        if (!contiguous) {
+            memcpy(actions->action + remaining, old_actions, end * sizeof(qdr_action_t));
+        }
+        free(old_actions);
+        actions->c_seq = 0;
+        actions->p_seq = size - 1;
+    }
+    const uint64_t index = actions->p_seq & (actions->capacity - 1);
+    actions->action[index] = *action;
+    actions->p_seq++;
+}
+
+inline bool qdr_action_q_poll(qdr_action_q_t *actions, qdr_action_t *action)
+{
+    if (actions->p_seq == actions->c_seq) {
+        return false;
+    }
+    uint64_t index = actions->c_seq & (actions->capacity - 1);
+    *action = actions->action[index];
+    actions->c_seq++;
+    return true;
+}
+
+inline bool qdr_action_q_is_empty(qdr_action_q_t *actions)
+{
+    return actions->p_seq == actions->c_seq;
+}
+
+inline size_t qdr_action_q_batch_poll(qdr_action_q_t *actions, qdr_action_t *action_vec, size_t limit)
+{
+    const uint64_t size = actions->p_seq - actions->c_seq;
+    if (size == 0) {
+        return 0;
+    }
+    limit = size < limit ? size : limit;
+    const uint64_t c_mask = (actions->capacity - 1);
+    const uint64_t start = actions->c_seq & c_mask;
+    const uint64_t end = (actions->c_seq + limit) & c_mask;
+    const bool contiguous = end > start;
+    size_t remaining = contiguous ? (end - start) : (actions->capacity - start);
+    memcpy(action_vec, actions->action + start, remaining * sizeof(qdr_action_t));
+    if (!contiguous) {
+        memcpy(action_vec + remaining, actions->action, end * sizeof(qdr_action_t));
+    }
+    actions->c_seq += limit;
+    return limit;
+}
+
 qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
 {
     qdr_core_t *core = NEW(qdr_core_t);
@@ -61,10 +147,11 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     // Set up the threading support
     //
+    core->sleeping = false;
     core->action_cond = sys_cond();
     core->action_lock = sys_mutex();
     core->running     = true;
-    DEQ_INIT(core->action_list);
+    qdr_action_q_init(&core->action_list, 1024);
 
     core->work_lock = sys_mutex();
     DEQ_INIT(core->work_list);
@@ -101,7 +188,11 @@ void qdr_core_free(qdr_core_t *core)
     // Stop and join the thread
     //
     core->running = false;
-    sys_cond_signal(core->action_cond);
+    sys_mutex_lock(core->action_lock);
+    if (core->sleeping) {
+        sys_cond_signal(core->action_cond);
+    }
+    sys_mutex_unlock(core->action_lock);
     sys_thread_join(core->thread);
 
     // Drain the general work lists
@@ -209,6 +300,8 @@ void qdr_core_free(qdr_core_t *core)
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
     if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
+
+    free(core->action_list.action);
 
     free(core);
 }
@@ -323,9 +416,12 @@ qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label)
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 {
     sys_mutex_lock(core->action_lock);
-    DEQ_INSERT_TAIL(core->action_list, action);
-    sys_cond_signal(core->action_cond);
+    qdr_action_q_offer(&core->action_list, action);
+    if (core->sleeping) {
+        sys_cond_signal(core->action_cond);
+    }
     sys_mutex_unlock(core->action_lock);
+    free_qdr_action_t(action);
 }
 
 
