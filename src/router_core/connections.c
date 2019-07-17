@@ -105,7 +105,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->links);
     DEQ_INIT(conn->work_list);
     conn->connection_info->role = conn->role;
-    conn->work_lock = sys_mutex();
+    sys_spin_init(&conn->work_lock);
 
     if (vhost) {
         conn->tenant_space_len = strlen(vhost) + 1;
@@ -240,7 +240,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         return 0;
     }
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     DEQ_MOVE(conn->work_list, work_list);
     for (int priority = 0; priority <= QDR_MAX_PRIORITY; ++ priority) {
         DEQ_MOVE(conn->links_with_work[priority], links_with_work[priority]);
@@ -256,7 +256,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             ref = DEQ_NEXT(ref);
         }
     }
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     event_count += DEQ_SIZE(work_list);
     qdr_connection_work_t *work = DEQ_HEAD(work_list);
@@ -289,21 +289,21 @@ int qdr_connection_process(qdr_connection_t *conn)
             // The work lock must be used to protect accesses to the link's work_list and
             // link_work->processing.
             //
-            sys_mutex_lock(conn->work_lock);
+            sys_spin_lock(&conn->work_lock);
             link_work = DEQ_HEAD(link->work_list);
             if (link_work) {
                 DEQ_REMOVE_HEAD(link->work_list);
                 link_work->processing = true;
             }
-            sys_mutex_unlock(conn->work_lock);
+            sys_spin_unlock(&conn->work_lock);
 
             //
             // Handle disposition/settlement updates
             //
             qdr_delivery_ref_list_t updated_deliveries;
-            sys_mutex_lock(conn->work_lock);
+            sys_spin_lock(&conn->work_lock);
             DEQ_MOVE(link->updated_deliveries, updated_deliveries);
-            sys_mutex_unlock(conn->work_lock);
+            sys_spin_unlock(&conn->work_lock);
 
             qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
             while (dref) {
@@ -344,7 +344,7 @@ int qdr_connection_process(qdr_connection_t *conn)
                     break;
                 }
 
-                sys_mutex_lock(conn->work_lock);
+                sys_spin_lock(&conn->work_lock);
                 if (link_work->work_type == QDR_LINK_WORK_DELIVERY && link_work->value > 0 && !link->detach_received) {
                     DEQ_INSERT_HEAD(link->work_list, link_work);
                     link_work->processing = false;
@@ -358,7 +358,7 @@ int qdr_connection_process(qdr_connection_t *conn)
                         link_work->processing = true;
                     }
                 }
-                sys_mutex_unlock(conn->work_lock);
+                sys_spin_unlock(&conn->work_lock);
                 event_count++;
             }
 
@@ -371,7 +371,7 @@ int qdr_connection_process(qdr_connection_t *conn)
         }
     }
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     for (int priority = QDR_MAX_PRIORITY; priority >= 0; -- priority) {
         ref = DEQ_HEAD(links_with_work[priority]);
         while (ref) {
@@ -385,7 +385,7 @@ int qdr_connection_process(qdr_connection_t *conn)
             ref = DEQ_HEAD(links_with_work[priority]);
         }
     }
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     return event_count;
 }
@@ -626,10 +626,10 @@ void qdr_connection_enqueue_work_CT(qdr_core_t            *core,
                                     qdr_connection_t      *conn,
                                     qdr_connection_work_t *work)
 {
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     DEQ_INSERT_TAIL(conn->work_list, work);
     bool notify = DEQ_SIZE(conn->work_list) == 1;
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     if (notify)
         qdr_connection_activate_CT(core, conn);
@@ -642,11 +642,11 @@ void qdr_link_enqueue_work_CT(qdr_core_t      *core,
 {
     qdr_connection_t *conn = link->conn;
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     DEQ_INSERT_TAIL(link->work_list, work);
     // Enqueue work at priority 0.
     qdr_add_link_ref(conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     qdr_connection_activate_CT(core, conn);
 }
@@ -673,7 +673,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
     qdr_delivery_list_t     unsettled;
     qdr_delivery_list_t     settled;
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     DEQ_MOVE(link->updated_deliveries, updated_deliveries);
 
     DEQ_MOVE(link->undelivered, undelivered);
@@ -701,7 +701,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
         d->where = QDR_DELIVERY_NOWHERE;
         d = DEQ_NEXT(d);
     }
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     //
     // Free all the 'updated' references
@@ -844,14 +844,14 @@ static void qdr_link_abort_undelivered_CT(qdr_core_t *core, qdr_link_t *link)
 
     qdr_connection_t *conn = link->conn;
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
     while (dlv) {
         if (!qdr_delivery_receive_complete(dlv))
             qdr_delivery_set_aborted(dlv, true);
         dlv = DEQ_NEXT(dlv);
     }
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 }
 
 
@@ -893,9 +893,9 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     qdr_link_work_list_t work_list;
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     DEQ_MOVE(link->work_list, work_list);
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     //
     // Free the work list
@@ -917,10 +917,10 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // Remove all references to this link in the connection's and owning
     // address reference lists
     //
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
     qdr_del_link_ref(conn->links_with_work + link->priority, link, QDR_LINK_LIST_CLASS_WORK);
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     if (link->ref[QDR_LINK_LIST_CLASS_ADDRESS]) {
         assert(link->owning_addr);
@@ -958,12 +958,12 @@ static void qdr_link_cleanup_protected_CT(qdr_core_t *core, qdr_connection_t *co
 {
     bool do_cleanup = false;
 
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     if (link->processing)
         link->ready_to_free = true;
     else
         do_cleanup = true;
-    sys_mutex_unlock(conn->work_lock);
+    sys_spin_unlock(&conn->work_lock);
 
     if (do_cleanup)
         qdr_link_cleanup_CT(core, conn, link, label);
@@ -1258,7 +1258,7 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
 
 void qdr_connection_free(qdr_connection_t *conn)
 {
-    sys_mutex_free(conn->work_lock);
+    sys_spin_destroy(&conn->work_lock);
     free(conn->tenant_space);
     qdr_error_free(conn->error);
     qdr_connection_info_free(conn->connection_info);

@@ -276,7 +276,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     // The lock needs to be acquired only for outgoing links
     //
     if (link->link_direction == QD_OUTGOING)
-        sys_mutex_lock(conn->work_lock);
+        sys_spin_lock(&conn->work_lock);
 
     if (dlv->where == QDR_DELIVERY_IN_UNSETTLED) {
         DEQ_REMOVE(link->unsettled, dlv);
@@ -285,7 +285,7 @@ bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     }
 
     if (link->link_direction == QD_OUTGOING)
-        sys_mutex_unlock(conn->work_lock);
+        sys_spin_unlock(&conn->work_lock);
 
     if (dlv->tracking_addr) {
         dlv->tracking_addr->outstanding_deliveries[dlv->tracking_addr_bit]--;
@@ -657,11 +657,11 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
         // after the streaming message has been sent.
         //
         if (!!work && !!peer_link) {
-            sys_mutex_lock(peer_link->conn->work_lock);
+            sys_spin_lock(&peer_link->conn->work_lock);
             if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
                 // Adding this work at priority 0.
                 qdr_add_link_ref(peer_link->conn->links_with_work, peer_link, QDR_LINK_LIST_CLASS_WORK);
-                sys_mutex_unlock(peer_link->conn->work_lock);
+                sys_spin_unlock(&peer_link->conn->work_lock);
 
                 //
                 // Activate the outgoing connection for later processing.
@@ -669,7 +669,7 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
                 qdr_connection_activate_CT(core, peer_link->conn);
             }
             else
-                sys_mutex_unlock(peer_link->conn->work_lock);
+                sys_spin_unlock(&peer_link->conn->work_lock);
         }
 
         peer = qdr_delivery_next_peer_CT(in_dlv);
@@ -758,7 +758,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 
     bool activate = false;
 
-    sys_mutex_lock(link->conn->work_lock);
+    sys_spin_lock(&link->conn->work_lock);
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv, "qdr_delivery_push_CT - add to updated list");
         qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
@@ -766,7 +766,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
         qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
-    sys_mutex_unlock(link->conn->work_lock);
+    sys_spin_unlock(&link->conn->work_lock);
 
     //
     // Activate the connection

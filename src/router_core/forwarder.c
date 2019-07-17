@@ -201,7 +201,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
 
 void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery_t *out_dlv)
 {
-    sys_mutex_lock(out_link->conn->work_lock);
+    sys_spin_lock(&out_link->conn->work_lock);
 
     //
     // If the delivery is pre-settled and the outbound link is at or above capacity,
@@ -235,7 +235,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
     qdr_add_link_ref(out_link->conn->links_with_work + out_link->priority, out_link, QDR_LINK_LIST_CLASS_WORK);
 
     out_dlv->link_work = work;
-    sys_mutex_unlock(out_link->conn->work_lock);
+    sys_spin_unlock(&out_link->conn->work_lock);
 
     //
     // We are dealing here only with link routed deliveries

@@ -140,7 +140,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             return 0;
 
         while (credit > 0) {
-            sys_mutex_lock(conn->work_lock);
+            sys_spin_lock(&conn->work_lock);
             dlv = DEQ_HEAD(link->undelivered);
             if (dlv) {
                 qdr_delivery_incref(dlv, "qdr_link_process_deliveries - holding the undelivered delivery locally");
@@ -155,9 +155,9 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 // the settled flag update.
                 do {
                     settled = dlv->settled;
-                    sys_mutex_unlock(conn->work_lock);
+                    sys_spin_unlock(&conn->work_lock);
                     new_disp = core->deliver_handler(core->user_context, link, dlv, settled);
-                    sys_mutex_lock(conn->work_lock);
+                    sys_spin_lock(&conn->work_lock);
                 } while (settled != dlv->settled);  // oops missed the settlement
                 send_complete = qdr_delivery_send_complete(dlv);
                 if (send_complete) {
@@ -176,7 +176,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     offer = DEQ_SIZE(link->undelivered);
                     if (offer == 0) {
                         qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - closed link");
-                        sys_mutex_unlock(conn->work_lock);
+                        sys_spin_unlock(&conn->work_lock);
                         return num_deliveries_completed;
                     }
 
@@ -206,7 +206,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     // 3. We need to break out of this loop otherwise a thread will keep spinning in here until
                     //    the entire message has been sent out.
                     //
-                    sys_mutex_unlock(conn->work_lock);
+                    sys_spin_unlock(&conn->work_lock);
 
                     //
                     // Note here that we are not incrementing num_deliveries_processed. Since this delivery is
@@ -214,14 +214,14 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     //
                     return num_deliveries_completed;
                 }
-                sys_mutex_unlock(conn->work_lock);
+                sys_spin_unlock(&conn->work_lock);
 
                 // the core will need to update the delivery's disposition
                 if (new_disp)
                     qdr_delivery_update_disposition(core, dlv, new_disp, true, 0, 0, false);
                 qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - done processing");
             } else {
-                sys_mutex_unlock(conn->work_lock);
+                sys_spin_unlock(&conn->work_lock);
                 break;
             }
         }
@@ -310,7 +310,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     if (link->stalled_outbound) {
         link->stalled_outbound = false;
 
-        sys_mutex_lock(link->conn->work_lock);
+        sys_spin_lock(&link->conn->work_lock);
 
         if (DEQ_SIZE(link->undelivered) > 0) {
             // Adding this work at priority 0.
@@ -318,7 +318,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             activate = true;
         }
 
-        sys_mutex_unlock(link->conn->work_lock);
+        sys_spin_unlock(&link->conn->work_lock);
     }
 
     if (link->core_endpoint) {
@@ -360,7 +360,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
                 work->drain_action = QDR_LINK_WORK_DRAIN_ACTION_DRAINED;
             }
 
-            sys_mutex_lock(link->conn->work_lock);
+            sys_spin_lock(&link->conn->work_lock);
             if (work)
                 DEQ_INSERT_TAIL(link->work_list, work);
             if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
@@ -368,7 +368,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
                 qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
                 activate = true;
             }
-            sys_mutex_unlock(link->conn->work_lock);
+            sys_spin_unlock(&link->conn->work_lock);
         } else if (link->link_direction == QD_INCOMING) {
             if (drain) {
                 link->credit_pending = link->capacity;
@@ -794,17 +794,17 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
         drain_action = drain ? QDR_LINK_WORK_DRAIN_ACTION_SET : QDR_LINK_WORK_DRAIN_ACTION_CLEAR;
 
     qdr_connection_t *conn = link->conn;
-    sys_mutex_lock(conn->work_lock);
+    sys_spin_lock(&conn->work_lock);
     qdr_link_work_t *work = DEQ_TAIL(link->work_list);
     // can we avoid adding a new work flow item?
     if (work && work->work_type == QDR_LINK_WORK_FLOW
         && (!drain_changed || work->drain_action == drain_action)) {
         work->value += credit;
-        sys_mutex_unlock(conn->work_lock);
+        sys_spin_unlock(&conn->work_lock);
         qdr_connection_activate_CT(core, conn);
 
     } else {
-        sys_mutex_unlock(conn->work_lock);
+        sys_spin_unlock(&conn->work_lock);
 
         // need a new work flow item
         work = new_qdr_link_work_t();

@@ -642,7 +642,7 @@ struct qdr_connection_t {
     int                         link_capacity;
     int                         mask_bit;
     qdr_connection_work_list_t  work_list;
-    sys_mutex_t                *work_lock;
+    sys_spinlock_t              work_lock;
     qdr_link_ref_list_t         links;
     qdr_link_ref_list_t         links_with_work[QDR_N_PRIORITIES];
     char                       *tenant_space;
