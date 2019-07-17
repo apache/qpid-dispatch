@@ -79,7 +79,7 @@ def parse_args(argv):
            parser.error("--all-entities cannot be combined with specific entity option -" + opts.show)
 
     if not opts.all_routers and not opts.all_entities and not opts.show:
-        opts.all_entities = u'all_entities'
+        opts.show = u'g'
 
     return opts, args
 

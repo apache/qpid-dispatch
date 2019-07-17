@@ -43,8 +43,14 @@ class QdstatTest(system_test.TestCase):
         cls.router = cls.tester.qdrouterd('test-router', config)
 
     def run_qdstat(self, args, regexp=None, address=None):
-        p = self.popen(
-            ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args,
+        if args:
+            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args
+        else:
+            popen_args = ['qdstat', '--bus',
+                          str(address or self.router.addresses[0]),
+                          '--timeout', str(system_test.TIMEOUT)]
+
+        p = self.popen(popen_args,
             name='qdstat-'+self.id(), stdout=PIPE, expect=None,
             universal_newlines=True)
 
@@ -87,6 +93,18 @@ class QdstatTest(system_test.TestCase):
         out = self.run_qdstat(['--address'], r'\$management')
         parts = out.split("\n")
         self.assertEqual(len(parts), 8)
+
+    def test_qdstat_no_args(self):
+        outs = self.run_qdstat(args=None)
+        self.assertTrue("Presettled Count" in outs)
+        self.assertTrue("Dropped Presettled Count" in outs)
+        self.assertTrue("Accepted Count" in outs)
+        self.assertTrue("Rejected Count" in outs)
+        self.assertTrue("Deliveries from Route Container" in outs)
+        self.assertTrue("Deliveries to Route Container" in outs)
+        self.assertTrue("Deliveries to Fallback" in outs)
+        self.assertTrue("Egress Count" in outs)
+        self.assertTrue("Ingress Count" in outs)
 
     def test_address_priority(self):
         out = self.run_qdstat(['--address'])
