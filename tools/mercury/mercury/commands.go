@@ -28,6 +28,7 @@ import (
   "time"
 
   "lisp"
+  "utils"
 )
 
 
@@ -568,10 +569,53 @@ func recv ( merc * Merc, command_line * lisp.List, _ string ) {
 
 
 
+func ( merc * Merc ) find_standard_versions ( ) ( bool ) {
+
+  umi ( merc.verbose, "Looking for standard install paths...\n" )
+
+  standard_proton_root   := "/usr/local/lib64/proton"
+  standard_dispatch_root := "/usr/local/lib/qpid-dispatch"
+
+  target_path := standard_proton_root
+  if ! utils.Path_exists ( target_path ) {
+    umi ( merc.verbose, "Can't find standard proton root |%s|", target_path )
+    return false
+  }
+
+  target_path = standard_dispatch_root
+  if ! utils.Path_exists ( target_path ) {
+    umi ( merc.verbose, "Can't find standard dispatch root |%s|", target_path )
+    return false
+  }
+
+  target_path = "/usr/local/sbin/qdrouterd"
+  if ! utils.Path_exists ( target_path ) {
+    umi ( merc.verbose, "Can't find dispatch executable |%s|", target_path )
+    return false
+  }
+
+  return true
+}
+
+
+
+
+
 func routers ( merc  * Merc, command_line * lisp.List, _ string ) {
   if len(merc.network.Versions) < 1 {
-    ume ( "routers: You must define at least one version before creating routers." )
-    return
+    umi ( merc.verbose, "No versions provided: looking for standard install." )
+    if merc.find_standard_versions ( ) {
+      umi ( merc.verbose, "Standard install found." )
+      merc.network.Add_version_with_paths ( "standard",
+                                            "/usr/local/sbin/qdrouterd",
+                                            "/usr/local/lib/qpid-dispatch:/usr/local/lib64",
+                                            "/usr/local/lib/qpid-dispatch/python:/usr/local/lib/python2.7/site-packages",
+                                            "/usr/local/lib/qpid-dispatch/python" )
+     // TODO make ^^^ return successs bool, and check it!
+    } else {
+      umi ( merc.verbose, "Standard install not found -- exiting." )
+      os.Exit ( 1 )
+    }
   }
 
   cmd := merc.commands [ "routers" ]
@@ -1041,6 +1085,7 @@ func random_network ( merc  * Merc, command_line * lisp.List, _ string ) {
 
   if len(merc.network.Versions) < 1 {
     ume ( "routers: You must define at least one version before creating routers." )
+    os.Exit ( 1 )
     return
   }
 

@@ -133,6 +133,8 @@ struct context_s
   bool              doing_throughput;
   bool              dumped_flight_times;
   bool              soak;
+
+  int               report_frequency;
 }
 context_t,
 * context_p;
@@ -520,6 +522,11 @@ send_message ( context_p context )
     context->sent       ++;
     context->total_sent ++;
 
+    if ( ! ( context->total_sent % context->report_frequency ) )
+    {
+      log ( context, "%d messages sent.\n", context->total_sent );
+    }
+
     pn_link_advance ( link );
   }
 }
@@ -729,6 +736,12 @@ process_event ( context_p context, pn_event_t * event )
         context->received ++;
         context->total_received ++;
 
+        if ( ! ( context->total_received % context->report_frequency ) )
+        {
+          log ( context, "%d messages received.\n", context->total_received );
+        }
+
+
         int index = find_addr ( context, event_link );
         if ( index < 0 )
         {
@@ -837,6 +850,7 @@ init_context ( context_p context, int argc, char ** argv )
   context->doing_throughput        = false;
   context->dumped_flight_times     = false;
   context->soak                    = false;
+  context->report_frequency        = 10000;
 
 
   for ( int i = 1; i < argc; ++ i )

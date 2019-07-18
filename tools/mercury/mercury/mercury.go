@@ -364,11 +364,17 @@ func main ( ) {
   // to have sudo NOPASSWD privileges,
   // and you need to have installed cpufrequtils.
   // i.e.   dnf install cpufrequtils
+  /*
+    TODO  This really just doesn't belong here
+          at all.Put it in a command or something,
+          and make it smart enough to tell the user
+          what's wrong if it doesn't work.
   merc.cpu_freqs = utils.Get_CPU_freqs ( )
   fp ( os.Stdout, "main: cpu freqs: \n" )
   for _, freq := range merc.cpu_freqs {
     fp ( os.Stdout, "   %s\n", freq )
   }
+  */
 
   // Put this outside of new_merc because in future we 
   // might want the choice of loading a session, based

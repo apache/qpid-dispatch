@@ -25,7 +25,7 @@
 #       Alter as necessary for your system.
 
 
-export PROTON_INSTALL_ROOT=${HOME}/latest/install/proton
+export PROTON_INSTALL_ROOT=${HOME}/latest/install/p
 
 
 PROJECT=c_proactor_client
