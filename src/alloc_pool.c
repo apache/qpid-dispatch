@@ -104,10 +104,11 @@ static inline qd_alloc_item_t *pop_stack(qd_alloc_linked_stack_t *const stack)
         }
         prev_chunk_stack(stack);
     }
+    assert(stack->top > 0);
     stack->top--;
-    assert(stack->top >= 0 && stack->top < CHUNK_SIZE);
+    assert(stack->top < CHUNK_SIZE);
+    assert(stack->size > 0);
     stack->size--;
-    assert(stack->size >= 0);
     qd_alloc_item_t *item = stack->top_chunk->items[stack->top];
     assert(item != NULL);
     return item;
@@ -153,6 +154,7 @@ static inline bool push_stack(qd_alloc_linked_stack_t *stack, qd_alloc_item_t *i
             return false;
         }
     }
+    assert(stack->top < chunk_size);
     stack->size++;
     stack->top_chunk->items[stack->top] = item;
     stack->top++;
