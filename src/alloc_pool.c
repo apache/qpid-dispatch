@@ -309,7 +309,9 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         //  -   would be better to allocate in batches == transfer_batch_size
         //      and put a small (== sizeof(transfer_batch_size)) ref_count to help the final free
         //  -   could be beneficial directly to delink a chunk?
-        for (idx = 0; idx < desc->config->transfer_batch_size; idx++) {
+        const int transfer_batch_size = desc->config->transfer_batch_size;
+        qd_alloc_item_t *items[transfer_batch_size];
+        for (idx = 0; idx < transfer_batch_size; idx++) {
             size_t size = sizeof(qd_alloc_item_t) + desc->total_size
 #ifdef QD_MEMORY_DEBUG
                                                   + sizeof(uint32_t)
@@ -318,11 +320,17 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
             ALLOC_CACHE_ALIGNED(size, item);
             if (item == 0)
                 break;
-            if (!push_stack(&pool->free_list, item)) {
+            items[idx] = item;
+        }
+        //insert into the stack in reverse order:
+        //it allows subsequent qd_alloc calls to stride forward to the memory
+        //if ALLOC_CACHE_ALIGNED has performed allocations using the same pattern
+        for (int i = idx - 1; i >= 0; i--) {
+            items[i]->sequence = 0;
+            if (!push_stack(&pool->free_list, items[i])) {
                 free(item);
                 break;
             }
-            item->sequence = 0;
 #if QD_MEMORY_STATS
             desc->stats->held_by_threads++;
             desc->stats->total_alloc_from_heap++;
