@@ -1294,7 +1294,7 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern)
         qd_log(policy->log_source,
             QD_LOG_WARNING,
             "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
-            hostPattern, oldp);
+            hostPattern, (char *)oldp);
     }
     return oldp == 0;
 }

@@ -151,9 +151,14 @@ static void qdr_agent_write_config_address_CT(qdr_query_t *query,  qdr_address_c
 
 static void qdr_manage_advance_config_address_CT(qdr_query_t *query, qdr_address_config_t *addr)
 {
-    query->next_offset++;
-    addr = DEQ_NEXT(addr);
-    query->more = !!addr;
+    if (addr) {
+        addr = DEQ_NEXT(addr);
+        query->more = !!addr;
+        query->next_offset++;
+    }
+    else {
+        query->more = false;
+    }
 }
 
 
@@ -205,6 +210,13 @@ void qdra_config_address_get_next_CT(qdr_core_t *core, qdr_query_t *query)
 
     if (query->next_offset < DEQ_SIZE(core->addr_config)) {
         addr = DEQ_HEAD(core->addr_config);
+
+        if (!addr) {
+            query->more = false;
+            qdr_agent_enqueue_response_CT(core, query);
+            return;
+        }
+
         for (int i = 0; i < query->next_offset && addr; i++)
             addr = DEQ_NEXT(addr);
     }

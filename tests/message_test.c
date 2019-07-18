@@ -78,7 +78,10 @@ static char* test_send_to_messenger(void *context)
     qd_message_content_t *content = MSG_CONTENT(msg);
     qd_message_compose_1(msg, "test_addr_0", 0);
     qd_buffer_t *buf = DEQ_HEAD(content->buffers);
-    if (buf == 0) return "Expected a buffer in the test message";
+    if (buf == 0) {
+        qd_message_free(msg);
+        return "Expected a buffer in the test message";
+    }
 
     pn_message_t *pn_msg = pn_message();
     size_t len = flatten_bufs(content);
@@ -338,7 +341,10 @@ static char* test_send_message_annotations(void *context)
     }
 
     pn_data_t *ma = pn_message_annotations(pn_msg);
-    if (!ma) return "Missing message annotations";
+    if (!ma) {
+        qd_message_free(msg);
+        return "Missing message annotations";
+    }
     pn_data_rewind(ma);
     pn_data_next(ma);
     if (pn_data_type(ma) != PN_MAP) return "Invalid message annotation type";

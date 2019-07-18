@@ -299,6 +299,8 @@ static char *test_map(void *context)
         unsigned char     *result   = qd_iterator_copy(key_iter);
         snprintf(error, 1000, "First key: expected 'first', got '%s'", result);
         free (result);
+        qd_iterator_free(data_iter);
+        qd_parse_free(field);
         return error;
     }
 

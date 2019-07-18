@@ -322,13 +322,26 @@ void qdra_conn_link_route_get_first_CT(qdr_core_t *core, qdr_query_t *query, int
         // Find the lr at the offset.
         //
         qdr_link_route_t *lr = DEQ_HEAD(conn->conn_link_routes);
+
+        if (!lr) {
+            query->more = false;
+            qdr_agent_enqueue_response_CT(core, query);
+            return;
+        }
+
         for (int i = 0; i < offset && lr; i++)
             lr = DEQ_NEXT(lr);
         assert(lr);
-        // write the lr into the response and advance to next
-        _write_as_list_CT(query, lr);
-        query->next_offset = offset + 1;
-        query->more = DEQ_NEXT(lr) != NULL;
+
+        if (lr) {
+            // write the lr into the response and advance to next
+            _write_as_list_CT(query, lr);
+            query->next_offset = offset + 1;
+            query->more = DEQ_NEXT(lr) != NULL;
+        }
+        else {
+            query->more = false;
+        }
     }
     qdr_agent_enqueue_response_CT(core, query);
 }

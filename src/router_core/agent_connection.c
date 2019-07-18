@@ -115,6 +115,9 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
     char id_str[100];
     const char *text = 0;
 
+    if (!conn)
+        return;
+
     if (as_map)
         qd_compose_insert_string(body, qdr_connection_columns[col]);
 
@@ -284,10 +287,13 @@ static void qdr_agent_write_connection_CT(qdr_core_t *core, qdr_query_t *query, 
     qd_composed_field_t *body = query->body;
 
     qd_compose_start_list(body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        qdr_connection_insert_column_CT(core, conn, query->columns[i], body, false);
-        i++;
+
+    if (conn) {
+        int i = 0;
+        while (query->columns[i] >= 0) {
+            qdr_connection_insert_column_CT(core, conn, query->columns[i], body, false);
+            i++;
+        }
     }
     qd_compose_end_list(body);
 }
@@ -295,9 +301,14 @@ static void qdr_agent_write_connection_CT(qdr_core_t *core, qdr_query_t *query, 
 
 static void qdr_manage_advance_connection_CT(qdr_query_t *query, qdr_connection_t *conn)
 {
-    query->next_offset++;
-    conn = DEQ_NEXT(conn);
-    query->more = !!conn;
+    if (conn) {
+        query->next_offset++;
+        conn = DEQ_NEXT(conn);
+        query->more = !!conn;
+    }
+    else {
+        query->more = false;
+    }
 }
 
 
@@ -325,16 +336,21 @@ void qdra_connection_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offs
         conn = DEQ_NEXT(conn);
     assert(conn);
 
-    //
-    // Write the columns of the object into the response body.
-    //
-    qdr_agent_write_connection_CT(core, query, conn);
+    if (conn) {
+        //
+        // Write the columns of the object into the response body.
+        //
+        qdr_agent_write_connection_CT(core, query, conn);
 
-    //
-    // Advance to the next connection
-    //
-    query->next_offset = offset;
-    qdr_manage_advance_connection_CT(query, conn);
+        //
+        // Advance to the next connection
+        //
+        query->next_offset = offset;
+        qdr_manage_advance_connection_CT(query, conn);
+    }
+    else {
+        query->more = false;
+    }
 
     //
     // Enqueue the response.

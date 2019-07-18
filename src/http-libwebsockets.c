@@ -58,7 +58,7 @@ static void logger(int lll, const char *line)  {
     while (len > 1 && isspace(line[len-1])) { /* Strip trailing newline */
         --len;
     }
-    qd_log(http_log, qd_level(lll), "%.*s", len, line);
+    qd_log(http_log, qd_level(lll), "%.*s", (int)len, line);
 }
 
 static void log_init() {
@@ -555,7 +555,7 @@ static int callback_metrics(struct lws *wsi, enum lws_callback_reasons reason,
         while (stats->current < metrics_length) {
             if (write_metric(&position, end, &metrics[stats->current], &stats->context->stats)) {
                 stats->current++;
-                qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %i of %i", stats->current, metrics_length);
+                qd_log(hs->log, QD_LOG_DEBUG, "wrote metric %lu of %lu", stats->current, metrics_length);
             } else {
                 qd_log(hs->log, QD_LOG_DEBUG, "insufficient space in buffer");
                 break;

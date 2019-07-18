@@ -67,6 +67,9 @@ static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, 
     const char *key;
     char id_str[100];
 
+    if (!al)
+        return;
+
     if (as_map)
         qd_compose_insert_string(body, qdr_config_auto_link_columns[col]);
 
@@ -176,10 +179,12 @@ static void qdr_agent_write_config_auto_link_CT(qdr_query_t *query,  qdr_auto_li
     qd_composed_field_t *body = query->body;
 
     qd_compose_start_list(body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        qdr_config_auto_link_insert_column_CT(al, query->columns[i], body, false);
-        i++;
+    if (al) {
+        int i = 0;
+        while (query->columns[i] >= 0) {
+            qdr_config_auto_link_insert_column_CT(al, query->columns[i], body, false);
+            i++;
+        }
     }
     qd_compose_end_list(body);
 }
@@ -187,9 +192,14 @@ static void qdr_agent_write_config_auto_link_CT(qdr_query_t *query,  qdr_auto_li
 
 static void qdr_manage_advance_config_auto_link_CT(qdr_query_t *query, qdr_auto_link_t *al)
 {
-    query->next_offset++;
-    al = DEQ_NEXT(al);
-    query->more = !!al;
+    if (al) {
+        query->next_offset++;
+        al = DEQ_NEXT(al);
+        query->more = !!al;
+    }
+    else {
+        query->more = false;
+    }
 }
 
 
@@ -217,16 +227,22 @@ void qdra_config_auto_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, in
         al = DEQ_NEXT(al);
     assert(al);
 
-    //
-    // Write the columns of the object into the response body.
-    //
-    qdr_agent_write_config_auto_link_CT(query, al);
+    if (al) {
 
-    //
-    // Advance to the next auto_link
-    //
-    query->next_offset = offset;
-    qdr_manage_advance_config_auto_link_CT(query, al);
+        //
+        // Write the columns of the object into the response body.
+        //
+        qdr_agent_write_config_auto_link_CT(query, al);
+
+        //
+        // Advance to the next auto_link
+        //
+        query->next_offset = offset;
+        qdr_manage_advance_config_auto_link_CT(query, al);
+    }
+    else {
+        query->more = false;
+    }
 
     //
     // Enqueue the response.

@@ -99,6 +99,9 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
 {
     char *text = 0;
 
+    if (!link)
+        return;
+
     switch(col) {
     case QDR_LINK_NAME: {
         if (link->name)
@@ -271,10 +274,12 @@ static void qdr_agent_write_link_CT(qdr_core_t *core, qdr_query_t *query,  qdr_l
     qd_composed_field_t *body = query->body;
 
     qd_compose_start_list(body);
-    int i = 0;
-    while (query->columns[i] >= 0) {
-        qdr_agent_write_column_CT(core, body, query->columns[i], link);
-        i++;
+    if (link) {
+        int i = 0;
+        while (query->columns[i] >= 0) {
+            qdr_agent_write_column_CT(core, body, query->columns[i], link);
+            i++;
+        }
     }
     qd_compose_end_list(body);
 }
@@ -315,16 +320,21 @@ void qdra_link_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
         link = DEQ_NEXT(link);
     assert(link);
 
-    //
-    // Write the columns of the link into the response body.
-    //
-    qdr_agent_write_link_CT(core, query, link);
+    if (link) {
+        //
+        // Write the columns of the link into the response body.
+        //
+        qdr_agent_write_link_CT(core, query, link);
 
-    //
-    // Advance to the next address
-    //
-    query->next_offset = offset;
-    qdr_manage_advance_link_CT(query, link);
+        //
+        // Advance to the next address
+        //
+        query->next_offset = offset;
+        qdr_manage_advance_link_CT(query, link);
+    }
+    else {
+        query->more = false;
+    }
 
     //
     // Enqueue the response.

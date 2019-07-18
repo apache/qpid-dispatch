@@ -501,6 +501,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     qd_connection_manager_t *cm = qd->connection_manager;
 
     qd_config_ssl_profile_t *ssl_profile = NEW(qd_config_ssl_profile_t);
+    ZERO(ssl_profile);
     DEQ_ITEM_INIT(ssl_profile);
     DEQ_INSERT_TAIL(cm->config_ssl_profiles, ssl_profile);
     ssl_profile->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
