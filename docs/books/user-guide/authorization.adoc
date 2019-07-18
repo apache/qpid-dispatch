@@ -28,9 +28,11 @@ Global policies::
 Settings for the router. A global policy defines the maximum number of incoming user connections for the router (across all messaging endpoints), and defines how the router should use vhost policies.
 
 Vhost policies::
-Connection and AMQP resource limits for a messaging endpoint (called an AMQP virtual host, or vhost). A vhost policy defines what a client can access on a messaging endpoint over a particular connection.
+Connection and AMQP resource limits for a router ingress port (called an AMQP virtual host, or vhost). A vhost policy defines what a client using a particular connection can access on any messaging endpoint in the router network.
 
 The resource limits defined in global and vhost policies are applied to user connections only. The limits do not affect inter-router connections or router connections that are outbound to waypoints.
+
+Access to an AMQP resource allowed by policy for a given user connection to a given vhost is granted across the entire router network. Access restrictions are applied only at the router port to which a client is connected and only to resource requests originated by the client.
 
 == How {RouterName} Enforces Connection and Resource Limits
 
@@ -407,13 +409,13 @@ Vhost hostname pattern matching applies the following precedence rules:
 
 If you want to allow or deny access to multiple addresses on a vhost, there are several methods you can use to match multiple addresses without having to specify each address individually.
 
-The following table describes the methods you can use to specify multiple source and target addresses for a vhost:
+The following table describes the methods a vhost policy can use to specify multiple source and target addresses:
 
 [cols="33,67",options="header"]
 |===
 | To... | Do this...
 
-| Allow all users in the user group to access all source or target addresses on the vhost
+| Allow all users in the user group to access all source or target addresses
 a| Use a `*` wildcard character.
 
 .Receive from Any Address
@@ -424,7 +426,7 @@ sources: *
 ----
 ====
 
-| Prevent all users in the user group from accessing all source or target addresses on the vhost
+| Prevent all users in the user group from accessing all source or target addresses
 a| Do not specify a value.
 
 .Prohibit Message Transfers to All Addresses
@@ -518,9 +520,9 @@ In this example, a vhost policy defines resource limits for clients connecting t
 
 <5> Users in the `admin` user group must connect from localhost. If the admin user attempts to connect from any other host, the connection will be denied.
 
-<6> Users in the admin user group can receive from any address offered by the vhost.
+<6> Users in the admin user group can receive from any address.
 
-<7> Users in the admin user group can send to any address offered by the vhost.
+<7> Users in the admin user group can send to any address.
 
 <8> Any non-admin user is permitted to connect from any host.
 
