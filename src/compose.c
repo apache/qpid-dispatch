@@ -29,7 +29,7 @@ ALLOC_DEFINE(qd_composite_t);
 ALLOC_DEFINE(qd_composed_field_t);
 
 
-static void bump_count(qd_composed_field_t *field)
+static inline void bump_count(qd_composed_field_t *field)
 {
     qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
     if (comp)
@@ -37,7 +37,7 @@ static void bump_count(qd_composed_field_t *field)
 }
 
 
-static void bump_count_by_n(qd_composed_field_t * field, uint32_t n)
+static inline void bump_count_by_n(qd_composed_field_t * field, uint32_t n)
 {
     qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
     if (comp)
@@ -45,7 +45,7 @@ static void bump_count_by_n(qd_composed_field_t * field, uint32_t n)
 }
 
 
-static void bump_length(qd_composed_field_t *field,
+static inline void bump_length(qd_composed_field_t *field,
                         uint32_t length)
 {
     qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
@@ -54,7 +54,7 @@ static void bump_length(qd_composed_field_t *field,
 }
 
 
-static void qd_insert(qd_composed_field_t *field, const uint8_t *seq, size_t len)
+static inline void qd_insert(qd_composed_field_t *field, const uint8_t *seq, size_t len)
 {
     qd_buffer_t    *buf  = DEQ_TAIL(field->buffers);
     qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
@@ -80,13 +80,13 @@ static void qd_insert(qd_composed_field_t *field, const uint8_t *seq, size_t len
 }
 
 
-static void qd_insert_8(qd_composed_field_t *field, uint8_t value)
+static inline void qd_insert_8(qd_composed_field_t *field, uint8_t value)
 {
     qd_insert(field, &value, 1);
 }
 
 
-static void qd_insert_32(qd_composed_field_t *field, uint32_t value)
+static inline void qd_insert_32(qd_composed_field_t *field, uint32_t value)
 {
     uint8_t buf[4];
     buf[0] = (uint8_t) ((value & 0xFF000000) >> 24);
@@ -97,7 +97,7 @@ static void qd_insert_32(qd_composed_field_t *field, uint32_t value)
 }
 
 
-static void qd_insert_64(qd_composed_field_t *field, uint64_t value)
+static inline void qd_insert_64(qd_composed_field_t *field, uint64_t value)
 {
     uint8_t buf[8];
     buf[0] = (uint8_t) ((value & 0xFF00000000000000L) >> 56);
@@ -112,7 +112,7 @@ static void qd_insert_64(qd_composed_field_t *field, uint64_t value)
 }
 
 
-static void qd_overwrite(qd_buffer_t **buf, size_t *cursor, uint8_t value)
+static inline void qd_overwrite(qd_buffer_t **buf, size_t *cursor, uint8_t value)
 {
     while (*buf) {
         if (*cursor >= qd_buffer_size(*buf)) {
@@ -127,7 +127,7 @@ static void qd_overwrite(qd_buffer_t **buf, size_t *cursor, uint8_t value)
 }
 
 
-static void qd_overwrite_32(qd_field_location_t *field, uint32_t value)
+static inline void qd_overwrite_32(qd_field_location_t *field, uint32_t value)
 {
     qd_buffer_t *buf    = field->buffer;
     size_t       cursor = field->offset;
@@ -139,7 +139,7 @@ static void qd_overwrite_32(qd_field_location_t *field, uint32_t value)
 }
 
 
-static void qd_compose_start_composite(qd_composed_field_t *field, int isMap)
+static inline void qd_compose_start_composite(qd_composed_field_t *field, int isMap)
 {
     if (isMap)
         qd_insert_8(field, QD_AMQP_MAP32);
@@ -180,7 +180,7 @@ static void qd_compose_start_composite(qd_composed_field_t *field, int isMap)
 }
 
 
-static void qd_compose_end_composite(qd_composed_field_t *field)
+static inline void qd_compose_end_composite(qd_composed_field_t *field)
 {
     qd_composite_t *comp = DEQ_HEAD(field->fieldStack);
     assert(comp);
