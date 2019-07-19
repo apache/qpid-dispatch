@@ -558,6 +558,32 @@ unsigned char qd_iterator_octet(qd_iterator_t *iter)
     if (!iter)
         return 0;
 
+    if (iter->state == STATE_IN_BODY) {
+        if (iter->view_pointer.remaining == 0)
+            return (unsigned char) 0;
+
+        unsigned char result = *(iter->view_pointer.cursor);
+
+        // instead of calling field_iterator_move_cursor(iter, 1), optimize inline
+        // we know remaining > 0, so simply move the cursor
+
+        iter->view_pointer.cursor++;
+
+        // the slow path: if we've moved "off" the end, simply advance to the next buffer
+        if (--iter->view_pointer.remaining
+            && iter->view_pointer.buffer
+            && qd_buffer_cursor(iter->view_pointer.buffer) == iter->view_pointer.cursor) {
+            iter->view_pointer.buffer = iter->view_pointer.buffer->next;
+            iter->view_pointer.cursor = qd_buffer_base(iter->view_pointer.buffer);
+        }
+
+        if (iter->mode == MODE_TO_SLASH && iter->view_pointer.remaining && *(iter->view_pointer.cursor) == '/') {
+            iter->view_pointer.remaining = 0;
+        }
+
+        return result;
+    }
+
     if (iter->state == STATE_AT_PREFIX) {
         iter->state = iter->prefix == QD_ITER_HASH_PREFIX_MOBILE ? STATE_AT_PHASE : (iter->view_space && iter->space) ? STATE_IN_SPACE : STATE_IN_BODY;
         iter->space_cursor = 0;
@@ -581,16 +607,8 @@ unsigned char qd_iterator_octet(qd_iterator_t *iter)
         return iter->space[iter->space_cursor++];
     }
 
-    if (iter->view_pointer.remaining == 0)
-        return (unsigned char) 0;
-
-    unsigned char result = *(iter->view_pointer.cursor);
-
-    field_iterator_move_cursor(iter, 1);
-    if (iter->view_pointer.remaining && iter->mode == MODE_TO_SLASH && *(iter->view_pointer.cursor) == '/')
-        iter->view_pointer.remaining = 0;
-
-    return result;
+    assert(false);  // all states checked - cannot get here
+    return 0;
 }
 
 
