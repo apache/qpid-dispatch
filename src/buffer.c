@@ -58,63 +58,6 @@ void qd_buffer_free(qd_buffer_t *buf)
 }
 
 
-unsigned char *qd_buffer_base(qd_buffer_t *buf)
-{
-    return (unsigned char*) &buf[1];
-}
-
-
-unsigned char *qd_buffer_cursor(qd_buffer_t *buf)
-{
-    return ((unsigned char*) &buf[1]) + buf->size;
-}
-
-
-size_t qd_buffer_capacity(qd_buffer_t *buf)
-{
-    return BUFFER_SIZE - buf->size;
-}
-
-
-size_t qd_buffer_size(qd_buffer_t *buf)
-{
-    return buf->size;
-}
-
-
-void qd_buffer_insert(qd_buffer_t *buf, size_t len)
-{
-    buf->size += len;
-    assert(buf->size <= BUFFER_SIZE);
-}
-
-
-uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value)
-{
-    return sys_atomic_set(&buf->bfanout, value);
-}
-
-
-uint32_t qd_buffer_inc_fanout(qd_buffer_t *buf)
-{
-    return sys_atomic_inc(&buf->bfanout);
-}
-
-
-uint32_t qd_buffer_dec_fanout(qd_buffer_t *buf)
-{
-    return sys_atomic_dec(&buf->bfanout);
-}
-
-
-unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len)
-{
-    // If the len is greater than the buffer size, we might point to some garbage.
-    // We dont want that to happen, so do the assert.
-    assert(len <= BUFFER_SIZE);
-    return ((unsigned char*) &buf[1]) + len;
-}
-
 unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t *src)
 {
     uint32_t len = 0;
