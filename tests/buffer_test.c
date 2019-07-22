@@ -72,7 +72,7 @@ static char *test_buffer_list_clone(void *context)
     qd_buffer_list_t copy;
     unsigned int len = qd_buffer_list_clone(&copy, &list);
     if (len != pattern_len) return "Copy failed";
-
+    if (qd_buffer_list_length(&list) != qd_buffer_list_length(&copy)) return "Buffer not copied correctly";
     // 'corrupt' source buffer list:
     *qd_buffer_base(DEQ_HEAD(list)) = (unsigned char)'X';
     qd_buffer_list_free_buffers(&list);

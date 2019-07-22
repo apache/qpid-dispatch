@@ -119,7 +119,7 @@ static inline void qd_buffer_insert(qd_buffer_t *buf, size_t len)
  * @param src A pointer to an existing buffer list
  * @return the number of bytes of data in the new chain
  */
-unsigned int qd_buffer_list_clone(qd_buffer_list_t *dst, const qd_buffer_list_t *src);
+unsigned int qd_buffer_list_clone(qd_buffer_list_t *restrict dst, const qd_buffer_list_t *restrict src);
 
 /**
  * Free all the buffers contained in a buffer list
