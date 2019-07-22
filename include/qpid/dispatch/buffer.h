@@ -64,28 +64,40 @@ void qd_buffer_free(qd_buffer_t *buf);
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first octet in the buffer
  */
-unsigned char *qd_buffer_base(qd_buffer_t *buf);
+static inline unsigned char *qd_buffer_base(const qd_buffer_t *buf)
+{
+    return (unsigned char*) &buf[1];
+}
 
 /**
  * Return a pointer to the first unused byte in the buffer.
  * @param buf A pointer to an allocated buffer
  * @return A pointer to the first free octet in the buffer, the insert point for new data.
  */
-unsigned char *qd_buffer_cursor(qd_buffer_t *buf);
+static inline unsigned char *qd_buffer_cursor(const qd_buffer_t *buf)
+{
+    return ((unsigned char*) &buf[1]) + buf->size;
+}
 
 /**
  * Return remaining capacity at end of buffer.
  * @param buf A pointer to an allocated buffer
  * @return The number of octets in the buffer's free space, how many octets may be inserted.
  */
-size_t qd_buffer_capacity(qd_buffer_t *buf);
+static inline size_t qd_buffer_capacity(const qd_buffer_t *buf)
+{
+    return BUFFER_SIZE - buf->size;
+}
 
 /**
  * Return the size of the buffers data content.
  * @param buf A pointer to an allocated buffer
  * @return The number of octets of data in the buffer
  */
-size_t qd_buffer_size(qd_buffer_t *buf);
+static inline size_t qd_buffer_size(const qd_buffer_t *buf)
+{
+    return buf->size;
+}
 
 /**
  * Notify the buffer that octets have been inserted at the buffer's cursor.  This will advance the
@@ -94,7 +106,11 @@ size_t qd_buffer_size(qd_buffer_t *buf);
  * @param buf A pointer to an allocated buffer
  * @param len The number of octets that have been appended to the buffer
  */
-void qd_buffer_insert(qd_buffer_t *buf, size_t len);
+static inline void qd_buffer_insert(qd_buffer_t *buf, size_t len)
+{
+    buf->size += len;
+    assert(buf->size <= BUFFER_SIZE);
+}
 
 /**
  * Create a new buffer list by cloning an existing one.
@@ -125,26 +141,39 @@ unsigned int qd_buffer_list_length(const qd_buffer_list_t *list);
  * Set the fanout value on the buffer.
  * @return the _old_ count before updating
  */
-uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value);
+static inline uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value)
+{
+    return sys_atomic_set(&buf->bfanout, value);
+}
 
 /**
  * Increase the fanout by 1. How many receivers should this buffer be sent to.
  * @return the _old_ count (pre increment)
  */
-uint32_t qd_buffer_inc_fanout(qd_buffer_t *buf);
+static inline uint32_t qd_buffer_inc_fanout(qd_buffer_t *buf)
+{
+    return sys_atomic_inc(&buf->bfanout);
+}
 
 /**
  * Decrease the fanout by one
  * @return the _old_ count (pre decrement)
  */
-uint32_t qd_buffer_dec_fanout(qd_buffer_t *buf);
+static inline uint32_t qd_buffer_dec_fanout(qd_buffer_t *buf)
+{
+    return sys_atomic_dec(&buf->bfanout);
+}
 
 /**
  * Advance the buffer by len. Does not manipulate the contents of the buffer
  * @param buf A pointer to an allocated buffer
  * @param len The number of octets that by which the buffer should be advanced.
  */
-unsigned char *qd_buffer_at(qd_buffer_t *buf, size_t len);
+static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
+{
+    assert(len <= BUFFER_SIZE);
+    return ((unsigned char*) &buf[1]) + len;
+}
 
 
 ///@}
