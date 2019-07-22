@@ -89,6 +89,34 @@ static const char    *SEPARATORS = "./";
 static const uint32_t HASH_INIT  = 5381;
 
 
+// returns true if the current iterator view has no transformations and is
+// dealing with raw field data (e.g. past the address prefix for address
+// iterators)
+//
+static inline int in_field_data(const qd_iterator_t *iter)
+{
+    return iter->view == ITER_VIEW_ALL || (iter->state == STATE_IN_BODY && iter->mode == MODE_TO_END);
+}
+
+
+static inline uint32_t iterator_remaining(const qd_iterator_t *iter)
+{
+    return iter->annotation_remaining + iter->view_pointer.remaining;
+}
+
+
+static inline bool iterator_at_end(const qd_iterator_t *iter)
+{
+    return iterator_remaining(iter) == 0;
+}
+
+
+static inline int iterator_length(const qd_iterator_t *iter)
+{
+    return iter->annotation_length + iter->view_start_pointer.remaining;
+}
+
+
 static void set_to_edge_connection(qd_iterator_t *iter)
 {
     static const char *EDGE_CONNECTION = "_edge";
@@ -228,7 +256,7 @@ void qd_iterator_remove_trailing_separator(qd_iterator_t *iter)
     qd_iterator_pointer_t save_pointer = iter->view_pointer;
 
     char current_octet = 0;
-    while (!qd_iterator_end(iter)) {
+    while (!iterator_at_end(iter)) {
         current_octet = qd_iterator_octet(iter);
     }
 
@@ -262,7 +290,7 @@ static void view_initialize(qd_iterator_t *iter)
     unsigned int          octet;
     qd_iterator_pointer_t save_pointer = {0,0,0};
 
-    while (!qd_iterator_end(iter) && state != STATE_AT_NODE_ID) {
+    while (!iterator_at_end(iter) && state != STATE_AT_NODE_ID) {
         octet = qd_iterator_octet(iter);
 
         switch (state) {
@@ -344,36 +372,158 @@ static void view_initialize(qd_iterator_t *iter)
 }
 
 
-static inline void field_iterator_move_cursor(qd_iterator_t *iter, uint32_t length)
+// data copy for optimized for simple (stateless) field data (e.g. past the
+// prefix of an address iterator)
+//
+static inline int iterator_field_ncopy(qd_iterator_t *iter, unsigned char *buffer, int n)
+{
+    assert(in_field_data(iter));
+
+    const unsigned char *start = buffer;
+    int count = MIN(n, iter->view_pointer.remaining);
+    if (iter->view_pointer.buffer) {
+        do {
+            size_t avail = qd_buffer_cursor(iter->view_pointer.buffer) - iter->view_pointer.cursor;
+            // optimize: early exit when no need to advance buffer pointers
+            if (count < avail) {
+                memcpy(buffer, iter->view_pointer.cursor, count);
+                iter->view_pointer.cursor += count;
+                iter->view_pointer.remaining -= count;
+                return buffer - start + count;
+            }
+            // count is >= what is available in the current buffer, move to next
+            memcpy(buffer, iter->view_pointer.cursor, avail);
+            buffer += avail;
+            count -= avail;
+            iter->view_pointer.cursor += avail;
+            iter->view_pointer.remaining -= avail;
+            if (iter->view_pointer.remaining) {
+                iter->view_pointer.buffer = DEQ_NEXT(iter->view_pointer.buffer);
+                if (iter->view_pointer.buffer) {
+                    iter->view_pointer.cursor = qd_buffer_base(iter->view_pointer.buffer);
+                } else {
+                    // DISPATCH-1394: field is truncated (remaining is inaccurate!)
+                    iter->view_pointer.remaining = 0;
+                    break;
+                }
+            }
+        } while (count);
+        return buffer - start;
+
+    } else {  // string or binary array
+        memcpy(buffer, iter->view_pointer.cursor, count);
+        iter->view_pointer.cursor += count;
+        iter->view_pointer.remaining -= count;
+        return count;
+    }
+}
+
+
+// cursor move optimized for simple (stateless) field data
+//
+static inline void iterator_field_move_cursor(qd_iterator_t *iter, uint32_t length)
 {
     // Only safe to call this help method if the cursor is parsing the data,
     // i.e. if iter is an address iterator, the cursor must be 'past' the
     // prefix
-    assert(iter->state == STATE_IN_BODY);
-    uint32_t count = (length > iter->view_pointer.remaining) ? iter->view_pointer.remaining : length;
+    assert(in_field_data(iter));
 
+    uint32_t count = MIN(length, iter->view_pointer.remaining);
     if (iter->view_pointer.buffer) {
-        while (count) {
-            uint32_t remaining = qd_buffer_cursor(iter->view_pointer.buffer) - iter->view_pointer.cursor;
-            remaining = (remaining > count) ? count : remaining;
-            iter->view_pointer.cursor += remaining;
-            iter->view_pointer.remaining -= remaining;
-            count -= remaining;
-            if (iter->view_pointer.cursor == qd_buffer_cursor(iter->view_pointer.buffer)) {
-                iter->view_pointer.buffer = iter->view_pointer.buffer->next;
-                if (iter->view_pointer.buffer == 0) {
-                    iter->view_pointer.remaining = 0;
-                    iter->view_pointer.cursor = 0;
-                    break;
-                } else {
+        do {
+            uint32_t avail = qd_buffer_cursor(iter->view_pointer.buffer) - iter->view_pointer.cursor;
+            // optimized: early exit when no need to update iterators buffer pointers
+            if (count < avail) {
+                iter->view_pointer.cursor += count;
+                iter->view_pointer.remaining -= count;
+                return;
+            }
+            // count is >= what is available in the current buffer, move to next
+            count -= avail;
+            iter->view_pointer.cursor += avail;
+            iter->view_pointer.remaining -= avail;
+            if (iter->view_pointer.remaining) {
+                iter->view_pointer.buffer = DEQ_NEXT(iter->view_pointer.buffer);
+                if (iter->view_pointer.buffer) {
                     iter->view_pointer.cursor = qd_buffer_base(iter->view_pointer.buffer);
+                } else {
+                    // DISPATCH-1394: field is truncated (remaining is inaccurate!)
+                    iter->view_pointer.remaining = 0;
+                    return;
                 }
             }
-        }
+        } while (count);
+
     } else {    // string/binary data
         iter->view_pointer.cursor    += count;
         iter->view_pointer.remaining -= count;
     }
+}
+
+
+// optimized iterator compare for simple field data. Note: the view is advanced
+// when equal.
+//
+static inline bool iterator_field_equal(qd_iterator_t *iter, const unsigned char *buffer, size_t count)
+{
+    // Only safe to call this help method if the cursor is parsing the data,
+    // i.e. if iter is an address iterator, the cursor must be 'past' the
+    // prefix
+    assert(in_field_data(iter));
+
+    // ensure at least count octets available
+    if (iter->view_pointer.remaining < count)
+        return false;
+
+    if (iter->view_pointer.buffer) {
+
+        qd_iterator_pointer_t save_pointer = iter->view_pointer;
+
+        do {
+            size_t avail = qd_buffer_cursor(iter->view_pointer.buffer) - iter->view_pointer.cursor;
+            // optimized: early exit when no need to update iterators buffer pointers
+            if (count < avail) {
+                if (memcmp(buffer, iter->view_pointer.cursor, count) != 0) {
+                    iter->view_pointer = save_pointer;
+                    return false;
+                }
+                iter->view_pointer.cursor    += count;
+                iter->view_pointer.remaining -= count;
+                return true;
+            }
+            // count is >= what is available in the current buffer
+            if (memcmp(buffer, iter->view_pointer.cursor, avail) != 0) {
+                iter->view_pointer = save_pointer;
+                return false;
+            }
+
+            buffer += avail;
+            count -= avail;
+            iter->view_pointer.cursor += avail;
+            iter->view_pointer.remaining -= avail;
+            if (iter->view_pointer.remaining) {
+                iter->view_pointer.buffer = DEQ_NEXT(iter->view_pointer.buffer);
+                if (iter->view_pointer.buffer) {
+                    iter->view_pointer.cursor = qd_buffer_base(iter->view_pointer.buffer);
+                } else {
+                    // DISPATCH-1394: field is truncated (remaining is inaccurate!)
+                    iter->view_pointer = save_pointer;
+                    return false;
+                }
+            }
+        } while (count);
+
+    } else {  // string or binary array
+
+        if (memcmp(buffer, iter->view_pointer.cursor, count) != 0) {
+            return false;
+        }
+
+        iter->view_pointer.cursor    += count;
+        iter->view_pointer.remaining -= count;
+    }
+
+    return true;
 }
 
 
@@ -516,7 +666,7 @@ void qd_iterator_trim_view(qd_iterator_t *iter, int length)
         return;
 
     iter->view_start_pointer = iter->view_pointer;
-    int view_length = qd_iterator_length(iter);
+    int view_length = iterator_length(iter);
     if (view_length > length) {
         if (iter->annotation_length > length) {
             iter->annotation_length            = length;
@@ -613,7 +763,7 @@ unsigned char qd_iterator_octet(qd_iterator_t *iter)
 
 bool qd_iterator_end(const qd_iterator_t *iter)
 {
-    return iter ? qd_iterator_remaining(iter) == 0 : true;
+    return iter ? iterator_at_end(iter) : true;
 }
 
 
@@ -645,13 +795,13 @@ void qd_iterator_advance(qd_iterator_t *iter, uint32_t length)
     if (!iter)
         return;
 
-    while (length > 0 && !qd_iterator_end(iter)) {
-        if (iter->state == STATE_IN_BODY) {
-            field_iterator_move_cursor(iter, length);
-            break;
-        } else {
+    while (length > 0 && !iterator_at_end(iter)) {
+        if (!in_field_data(iter)) {
             qd_iterator_octet(iter);
             length--;
+        } else {
+            iterator_field_move_cursor(iter, length);
+            break;
         }
     }
 }
@@ -659,7 +809,7 @@ void qd_iterator_advance(qd_iterator_t *iter, uint32_t length)
 
 uint32_t qd_iterator_remaining(const qd_iterator_t *iter)
 {
-    return iter ? iter->annotation_remaining + iter->view_pointer.remaining : 0;
+    return iter ? iterator_remaining(iter) : 0;
 }
 
 
@@ -670,14 +820,27 @@ bool qd_iterator_equal(qd_iterator_t *iter, const unsigned char *string)
 
     qd_iterator_reset(iter);
 
-    while (!qd_iterator_end(iter) && *string) {
-        unsigned char octet = qd_iterator_octet(iter);
-        if (*string != octet)
-            break;
-        string++;
+    while (!in_field_data(iter) &&
+           *string &&
+           !iterator_at_end(iter)) {
+        if (*string != qd_iterator_octet(iter)) {
+            qd_iterator_reset(iter);
+            return false;
+        }
+        ++string;
     }
 
-    bool match = (qd_iterator_end(iter) && (*string == 0));
+    if (*string == 0 && iterator_at_end(iter)) {
+        qd_iterator_reset(iter);
+        return true;
+    }
+
+    // otherwise there raw field data.  Check for a match on the field and be sure
+    // there is not anything left over in the iterator after the string.
+    bool match = (in_field_data(iter)
+                  && iterator_field_equal(iter, string, strlen((char *)string))
+                  && iterator_at_end(iter));
+
     qd_iterator_reset(iter);
     return match;
 }
@@ -772,7 +935,7 @@ bool qd_iterator_prefix_ptr(const qd_iterator_pointer_t *ptr, uint32_t skip, con
 
 int qd_iterator_length(const qd_iterator_t *iter)
 {
-    return iter ? iter->annotation_length + iter->view_start_pointer.remaining : 0;
+    return iter ? iterator_length(iter) : 0;
 }
 
 
@@ -783,8 +946,14 @@ int qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, int n)
 
     qd_iterator_reset(iter);
     int i = 0;
-    while (!qd_iterator_end(iter) && i < n)
-        buffer[i++] = qd_iterator_octet(iter);
+    while (i < n && !iterator_at_end(iter)) {
+        if (!in_field_data(iter)) {
+            buffer[i++] = qd_iterator_octet(iter);
+        } else {
+            i += iterator_field_ncopy(iter, &buffer[i], n - i);
+            break;
+        }
+    }
     return i;
 }
 
@@ -799,7 +968,7 @@ char* qd_iterator_strncpy(qd_iterator_t *iter, char* buffer, int n)
 
 uint8_t qd_iterator_uint8(qd_iterator_t *iter ) {
     qd_iterator_reset(iter);
-    if (qd_iterator_end(iter))
+    if (iterator_at_end(iter))
         return 0;
     return (uint8_t) qd_iterator_octet(iter);
 }
@@ -810,7 +979,7 @@ unsigned char *qd_iterator_copy(qd_iterator_t *iter)
     if (!iter)
         return 0;
 
-    int length = qd_iterator_length(iter);
+    int length = iterator_length(iter);
     unsigned char *copy = malloc(length+1);
     int i = qd_iterator_ncopy(iter, copy, length+1);
     copy[i] = '\0';
@@ -867,7 +1036,7 @@ uint32_t qd_iterator_hash_view(qd_iterator_t *iter)
     uint32_t hash = HASH_INIT;
 
     qd_iterator_reset(iter);
-    while (!qd_iterator_end(iter))
+    while (!iterator_at_end(iter))
         hash = ((hash << 5) + hash) + (uint32_t) qd_iterator_octet(iter); /* hash * 33 + c */
 
     return hash;
@@ -887,7 +1056,7 @@ void qd_iterator_hash_view_segments(qd_iterator_t *iter)
 
     qd_iterator_free_hash_segments(iter);
 
-    while (!qd_iterator_end(iter)) {
+    while (!iterator_at_end(iter)) {
         // Get the octet at which the iterator is currently pointing to.
         octet = qd_iterator_octet(iter);
         segment_length += 1;

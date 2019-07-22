@@ -263,6 +263,21 @@ static char *test_sub_iterator(void *context)
     return 0;
 }
 
+// verify qd_iterator_copy works
+static char *check_copy(void *context, qd_iterator_t *iter,
+                        const char *addr, const char *view)
+{
+    char *got = (char *) qd_iterator_copy(iter);
+    char *ret = 0;
+    if (!got || strcmp(got, view) != 0) {
+        snprintf(fail_text, FAIL_TEXT_SIZE, "Addr '%s' failed.  Expected '%s', got '%s'",
+                 addr, view, got);
+        ret = fail_text;
+    }
+    free(got);
+    return ret;
+}
+
 static char* view_address_hash(void *context, qd_iterator_t *iter,
                                const char *addr, const char *view)
 {
@@ -293,6 +308,8 @@ static char *verify_iterator(void *context, qd_iterator_t *iter,
     char *ret = view_address_hash(context, iter, addr, view);
     if (!ret)
         ret = check_dup(context, iter, addr, view);
+    if (!ret)
+        ret = check_copy(context, iter, addr, view);
     return ret;
 }
 
