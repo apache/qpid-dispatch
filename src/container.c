@@ -510,45 +510,47 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
             qd_conn->pn_sess = 0;
         if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
             if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
+
+
                 // remote has nuked our session.  Check for any links that were
                 // left open and forcibly detach them, since no detaches will
                 // arrive on this session.
                 pn_connection_t *conn = pn_session_connection(ssn);
-                pn_link_t *pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-                while (pn_link) {
-                    if (pn_link_session(pn_link) == ssn) {
-                        qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
-                        if (qd_link && qd_link->node) {
-                            if (qd_conn->policy_settings) {
-                                if (qd_link->direction == QD_OUTGOING) {
-                                    qd_conn->n_receivers--;
-                                    assert(qd_conn->n_receivers >= 0);
-                                } else {
-                                    qd_conn->n_senders--;
-                                    assert(qd_conn->n_senders >= 0);
-                                }
-                            }
-                            qd_log(container->log_source, QD_LOG_DEBUG,
-                                   "Aborting link '%s' due to parent session end",
-                                   pn_link_name(pn_link));
-                            qd_link->node->ntype->link_detach_handler(qd_link->node->context,
-                                                                      qd_link, QD_LOST);
-                        }
-                    }
-                    pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE);
-                }
-                if (qd_conn->policy_settings) {
-                    qd_conn->n_sessions--;
-                }
 
-                pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+                //Sweep thru every pn_link in this connection and a matching session and zero out the
+                // qd_link->pn_link reference. We do this in order to not miss any pn_links
+                pn_link = pn_link_head(conn, 0);
                 while (pn_link) {
                     if (pn_link_session(pn_link) == ssn) {
                         qd_link_t *qd_link = (qd_link_t*) pn_link_get_context(pn_link);
+
+                        if ((pn_link_state(pn_link) == (PN_LOCAL_ACTIVE | PN_REMOTE_ACTIVE))) {
+                            if (qd_link && qd_link->node) {
+                                if (qd_conn->policy_settings) {
+                                    if (qd_link->direction == QD_OUTGOING) {
+                                        qd_conn->n_receivers--;
+                                        assert(qd_conn->n_receivers >= 0);
+                                    } else {
+                                        qd_conn->n_senders--;
+                                        assert(qd_conn->n_senders >= 0);
+                                    }
+                                }
+                                qd_log(container->log_source, QD_LOG_DEBUG,
+                                       "Aborting link '%s' due to parent session end",
+                                       pn_link_name(pn_link));
+                                qd_link->node->ntype->link_detach_handler(qd_link->node->context,
+                                                                          qd_link, QD_LOST);
+                            }
+                        }
+
                         if (qd_link)
                             qd_link->pn_link = 0;
                     }
-                    pn_link = pn_link_next(pn_link, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
+                    pn_link = pn_link_next(pn_link, 0);
+
+                }
+                if (qd_conn->policy_settings) {
+                    qd_conn->n_sessions--;
                 }
 
                 pn_session_close(ssn);
