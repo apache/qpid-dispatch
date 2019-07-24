@@ -1375,13 +1375,17 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     if (!qlink)
         return;
 
+    pn_link_t *pn_link = qd_link_pn(qlink);
+    if (!pn_link)
+        return;
+
     qdr_terminus_copy(source, qd_link_source(qlink));
     qdr_terminus_copy(target, qd_link_target(qlink));
 
     //
     // Open (attach) the link
     //
-    pn_link_open(qd_link_pn(qlink));
+    pn_link_open(pn_link);
 
     qd_connection_t  *conn     = qd_link_connection(qlink);
     qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
