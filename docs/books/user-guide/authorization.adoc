@@ -229,7 +229,7 @@ A list of AMQP target addresses from which users in this group may send messages
 +
 The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhost[vhost^] in the `qdrouterd.conf` man page.
 
-[id='']
+[id='configuring-resource-limits-outgoing-connections']
 === Configuring Resource Limits for Outgoing Connections
 
 If the router establishes an outgoing connection to an external AMQP container (such as a client or broker), you can restrict the resources that the external container can access on the router by configuring a connector vhost policy.

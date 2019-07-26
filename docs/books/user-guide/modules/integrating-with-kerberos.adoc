@@ -54,10 +54,13 @@ mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN GSSAPI
 --
 
 . Verify the following:
-** The `mech_list` attribute contains the `GSSAPI` mechanism.
-** The `keytab` attribute points to the location of the keytab file.
++
+--
+* The `mech_list` attribute contains the `GSSAPI` mechanism.
+* The `keytab` attribute points to the location of the keytab file.
+--
 
-include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+. Open the `{RouterConfigFile}` configuration file.
 
 . In the `router` section, specify the path to the SASL configuration file.
 +
