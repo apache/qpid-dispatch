@@ -30,7 +30,9 @@ under the License.
 import {
   QDRLogger,
   QDRTemplatePath,
-  QDR_LAST_LOCATION
+  QDR_LAST_LOCATION,
+  QDR_CONSOLE_TITLE,
+  getConfigVars
 } from "./plugin/js/qdrGlobals.js";
 import { QDRService } from "./plugin/js/qdrService.js";
 import { QDRChartService } from "./plugin/js/qdrChartService.js";
@@ -276,8 +278,8 @@ import { posint } from "./plugin/js/posintDirective.js";
       $scope.topLevelTabs = [];
       $scope.topLevelTabs.push({
         id: "qdr",
-        content: "Qpid Dispatch Router Console",
-        title: "Dispatch Router Console",
+        content: document.title,
+        title: document.title,
         isValid: function() {
           return true;
         },
@@ -297,6 +299,12 @@ import { posint } from "./plugin/js/posintDirective.js";
     $timeout,
     QDRService
   ) {
+    $scope.console_logo = "";
+    getConfigVars().then(response => {
+      $timeout(function() {
+        $scope.console_logo = `${response.company} ${response.product} Console`;
+      });
+    });
     $scope.alerts = [];
     $scope.breadcrumb = {};
     $scope.closeAlert = function(index) {

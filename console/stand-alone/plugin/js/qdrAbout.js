@@ -17,54 +17,73 @@ specific language governing permissions and limitations
 under the License.
 */
 
+import { QDR_CONSOLE_TITLE, QDR_CONSOLE_COPYRIGHT } from "./qdrGlobals.js";
+
 export class AboutController {
   constructor($scope, QDRService, $timeout) {
-    this.controllerName = 'QDR.AboutController';
+    this.controllerName = "QDR.AboutController";
 
-    $scope.additionalInfo = "Console for the Apache Qpid dispatch router: A high-performance, lightweight AMQP 1.0 message router, written in C and built on Qpid Proton. It provides flexible and scalable interconnect between any AMQP endpoints, whether they be clients, brokers or other AMQP-enabled services.";
-    $scope.copyright = "Apache License, Version 2.0";
-    $scope.imgAlt = "Qpid Dispatch Router Logo";
+    $scope.additionalInfo = `Console for the ${QDR_CONSOLE_TITLE}: A high-performance, lightweight AMQP 1.0 message router, written in C and built on Qpid Proton. It provides flexible and scalable interconnect between any AMQP endpoints, whether they be clients, brokers or other AMQP-enabled services.`;
+    $scope.copyright = QDR_CONSOLE_COPYRIGHT;
+    $scope.imgAlt = QDR_CONSOLE_TITLE;
     $scope.imgSrc = "img/logo-alt.svg";
-    $scope.title = "Apache Qpid Dispatch Router Console";
+    $scope.title = QDR_CONSOLE_TITLE;
     $scope.productInfo = [
-      { name: 'Version', value: '<not connected>' },
-      { name: 'Server Name', value: window.location.host },
-      { name: 'User Name', value: '<not connected>' },
-      { name: 'User Role', value: 'Administrator' }];
-    $scope.open = function () {
+      { name: "Version", value: "<not connected>" },
+      { name: "Server Name", value: window.location.host },
+      { name: "User Name", value: "<not connected>" },
+      { name: "User Role", value: "Administrator" }
+    ];
+    $scope.open = function() {
       if (QDRService.management.connection.is_connected()) {
-        let parts = QDRService.management.connection.getReceiverAddress().split("/");
+        let parts = QDRService.management.connection
+          .getReceiverAddress()
+          .split("/");
         parts[parts.length - 1] = "$management";
-        let router = parts.join('/');
-        QDRService.management.topology.fetchEntity(router, "router", ["version"], function (nodeId, entity, response) {
-          $timeout(function () {
-            let r = QDRService.utilities.flatten(response.attributeNames, response.results[0]);
-            $scope.productInfo[0].value = r.version;
-          });
-        });
-        QDRService.management.topology.fetchEntity(router, "connection", [], function (nodeId, entity, response) {
-          $timeout(function () {
-            let user = '<unknown>';
-            response.results.some(result => {
-              let c = QDRService.utilities.flatten(response.attributeNames, result);
-              if (QDRService.utilities.isConsole(c)) {
-                user = c.user;
-                return true;
-              }
-              return false;
+        let router = parts.join("/");
+        QDRService.management.topology.fetchEntity(
+          router,
+          "router",
+          ["version"],
+          function(nodeId, entity, response) {
+            $timeout(function() {
+              let r = QDRService.utilities.flatten(
+                response.attributeNames,
+                response.results[0]
+              );
+              $scope.productInfo[0].value = r.version;
             });
-            $scope.productInfo[2].value = user;
-          });
-        });
-
+          }
+        );
+        QDRService.management.topology.fetchEntity(
+          router,
+          "connection",
+          [],
+          function(nodeId, entity, response) {
+            $timeout(function() {
+              let user = "<unknown>";
+              response.results.some(result => {
+                let c = QDRService.utilities.flatten(
+                  response.attributeNames,
+                  result
+                );
+                if (QDRService.utilities.isConsole(c)) {
+                  user = c.user;
+                  return true;
+                }
+                return false;
+              });
+              $scope.productInfo[2].value = user;
+            });
+          }
+        );
       }
       $scope.isOpen = true;
     };
-    $scope.onClose = function () {
+    $scope.onClose = function() {
       $scope.isOpen = false;
     };
-
   }
 }
 
-AboutController.$inject = ['$scope', 'QDRService', '$timeout'];
+AboutController.$inject = ["$scope", "QDRService", "$timeout"];

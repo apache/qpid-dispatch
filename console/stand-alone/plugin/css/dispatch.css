@@ -1663,6 +1663,9 @@ svg {
   span.logo {
     letter-spacing: 2px;
     font-weight: bold;
+    color: white;
+    margin: 8px;
+    display: inline-block;
   }
   
   /* using fancytree instead of treeview */

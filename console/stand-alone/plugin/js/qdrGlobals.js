@@ -17,7 +17,8 @@ specific language governing permissions and limitations
 under the License.
 */
 
-export var QDRFolder = (function () {
+/* globals Promise */
+export var QDRFolder = (function() {
   function Folder(title) {
     this.title = title;
     this.children = [];
@@ -25,7 +26,7 @@ export var QDRFolder = (function () {
   }
   return Folder;
 })();
-export var QDRLeaf = (function () {
+export var QDRLeaf = (function() {
   function Leaf(title) {
     this.title = title;
   }
@@ -33,27 +34,59 @@ export var QDRLeaf = (function () {
 })();
 
 export var QDRCore = {
-  notification: function (severity, msg) {
+  notification: function(severity, msg) {
     $.notify(msg, severity);
   }
 };
 
 export class QDRLogger {
   constructor($log, source) {
-    this.log = function (msg) { $log.log(`QDR-${source}: ${msg}`); };
-    this.debug = function (msg) { $log.debug(`QDR-${source}: ${msg}`); };
-    this.error = function (msg) { $log.error(`QDR-${source}: ${msg}`); };
-    this.info = function (msg) { $log.info(`QDR-${source}: ${msg}`); };
-    this.warn = function (msg) { $log.warn(`QDR-${source}: ${msg}`); };
+    this.log = function(msg) {
+      $log.log(`QDR-${source}: ${msg}`);
+    };
+    this.debug = function(msg) {
+      $log.debug(`QDR-${source}: ${msg}`);
+    };
+    this.error = function(msg) {
+      $log.error(`QDR-${source}: ${msg}`);
+    };
+    this.info = function(msg) {
+      $log.info(`QDR-${source}: ${msg}`);
+    };
+    this.warn = function(msg) {
+      $log.warn(`QDR-${source}: ${msg}`);
+    };
   }
 }
 
-export const QDRTemplatePath = 'html/';
-export const QDR_SETTINGS_KEY = 'QDRSettings';
-export const QDR_LAST_LOCATION = 'QDRLastLocation';
-export const QDR_INTERVAL = 'QDRInterval';
+export const QDRTemplatePath = "html/";
+export const QDR_SETTINGS_KEY = "QDRSettings";
+export const QDR_LAST_LOCATION = "QDRLastLocation";
+export const QDR_INTERVAL = "QDRInterval";
 
-export var QDRRedirectWhenConnected = function ($location, org) {
-  $location.path('/connect');
-  $location.search('org', org);
+export var QDRRedirectWhenConnected = function($location, org) {
+  $location.path("/connect");
+  $location.search("org", org);
 };
+
+export var QDR_CONSOLE_TITLE = "Console";
+export var QDR_ROUTER_NAME = "Router";
+export var QDR_CONSOLE_COPYRIGHT = "Copyright 2019";
+
+export var getConfigVars = () =>
+  new Promise((resolve, reject) => {
+    $.getJSON("console-config.json", function() {}).done(function(s) {
+      console.log(
+        `got x-stream text ${s.title} - ${s.router} - ${s.copyright}`
+      );
+      document.title = s.title;
+      QDR_CONSOLE_TITLE = `${s.company} ${s.product} Console`;
+      QDR_ROUTER_NAME = `${s.company} ${s.product} Router`;
+      QDR_CONSOLE_COPYRIGHT = `Copyright 2019 ${s.company}`;
+      resolve(s);
+    });
+  });
+
+$(document).ready(function(e) {
+  getConfigVars();
+});
