@@ -17,17 +17,24 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { QDR_CONSOLE_TITLE, QDR_CONSOLE_COPYRIGHT } from "./qdrGlobals.js";
+import { getConfigVars } from "./qdrGlobals.js";
 
 export class AboutController {
   constructor($scope, QDRService, $timeout) {
     this.controllerName = "QDR.AboutController";
 
-    $scope.additionalInfo = `Console for the ${QDR_CONSOLE_TITLE}: A high-performance, lightweight AMQP 1.0 message router, written in C and built on Qpid Proton. It provides flexible and scalable interconnect between any AMQP endpoints, whether they be clients, brokers or other AMQP-enabled services.`;
-    $scope.copyright = QDR_CONSOLE_COPYRIGHT;
-    $scope.imgAlt = QDR_CONSOLE_TITLE;
-    $scope.imgSrc = "img/logo-alt.svg";
-    $scope.title = QDR_CONSOLE_TITLE;
+    getConfigVars().then(response => {
+      $timeout(function() {
+        $scope.additionalInfo = `Console for ${
+          response.QDR_ROUTER_NAME
+        }: A high-performance, lightweight AMQP 1.0 message router, written in C and built on Qpid Proton. It provides flexible and scalable interconnect between any AMQP endpoints, whether they be clients, brokers or other AMQP-enabled services.`;
+        $scope.copyright = response.QDR_CONSOLE_COPYRIGHT;
+        $scope.imgAlt = response.QDR_CONSOLE_TITLE;
+        $scope.imgSrc = "img/logo-alt.svg";
+        $scope.title = response.QDR_CONSOLE_TITLE;
+      });
+    });
+
     $scope.productInfo = [
       { name: "Version", value: "<not connected>" },
       { name: "Server Name", value: window.location.host },

@@ -31,7 +31,6 @@ import {
   QDRLogger,
   QDRTemplatePath,
   QDR_LAST_LOCATION,
-  QDR_CONSOLE_TITLE,
   getConfigVars
 } from "./plugin/js/qdrGlobals.js";
 import { QDRService } from "./plugin/js/qdrService.js";
@@ -302,7 +301,7 @@ import { posint } from "./plugin/js/posintDirective.js";
     $scope.console_logo = "";
     getConfigVars().then(response => {
       $timeout(function() {
-        $scope.console_logo = `${response.company} ${response.product} Console`;
+        $scope.console_logo = response.QDR_CONSOLE_TITLE;
       });
     });
     $scope.alerts = [];

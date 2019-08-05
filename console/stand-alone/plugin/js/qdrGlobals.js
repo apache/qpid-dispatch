@@ -69,20 +69,18 @@ export var QDRRedirectWhenConnected = function($location, org) {
   $location.search("org", org);
 };
 
-export var QDR_CONSOLE_TITLE = "Console";
-export var QDR_ROUTER_NAME = "Router";
-export var QDR_CONSOLE_COPYRIGHT = "Copyright 2019";
-
 export var getConfigVars = () =>
   new Promise((resolve, reject) => {
     $.getJSON("console-config.json", function() {}).done(function(s) {
       console.log(
         `got x-stream text ${s.title} - ${s.router} - ${s.copyright}`
       );
-      document.title = s.title;
-      QDR_CONSOLE_TITLE = `${s.company} ${s.product} Console`;
-      QDR_ROUTER_NAME = `${s.company} ${s.product} Router`;
-      QDR_CONSOLE_COPYRIGHT = `Copyright 2019 ${s.company}`;
+      s.QDR_CONSOLE_TITLE = `${s.company} ${s.product} Console`;
+      document.title = s.QDR_CONSOLE_TITLE;
+
+      s.QDR_ROUTER_NAME = `${s.company} ${s.product} Router`;
+      s.COPYRIGHT_YEAR = "2019";
+      s.QDR_CONSOLE_COPYRIGHT = `Copyright ${s.COPYRIGHT_YEAR} ${s.company}`;
       resolve(s);
     });
   });
