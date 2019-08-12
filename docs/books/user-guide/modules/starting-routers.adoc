@@ -1,0 +1,60 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+[id='starting-router-{context}']
+= Starting a router
+
+You use the `qdrouterd` command to start a router. You can start a router in the foreground, the background, or as a service.
+
+.Procedure
+
+* Do one of the following:
++
+--
+[cols="30,70"]
+|===
+| To... | Enter this command...
+
+| Start the router in the foreground
+a|
+[source,bash,options="nowrap"]
+----
+$ qdrouterd
+----
+
+| Start the router in the background as a daemon
+a|
+[source,bash,options="nowrap"]
+----
+$ qdrouterd -d
+----
+
+| Start the router as a service
+a|
+include::{FragmentDir}/fragment-start-router-service-command.adoc[]
+
+[NOTE]
+====
+If you start the router as a service, the `systemd` `LimitNOFILE` limit affects the number of connections that can be open for the router. If you reach the limit, the router is not able to accept any more connections, and an error message is logged indicating "Too many open files". To avoid reaching this limit, increase the `LimitNOFILE` value for the `systemd` process.
+
+include::{FragmentDir}/fragment-systemd-limitnofile-fmi.adoc[]
+====
+
+|===
+--

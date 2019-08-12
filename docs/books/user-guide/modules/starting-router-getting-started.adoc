@@ -21,30 +21,32 @@ under the License
 //
 // getting-started.adoc
 
-[id='starting-router-{context}']
+[id='starting-router-getting-started-{context}']
 = Starting the router
 
 After installing {RouterName}, you start the router by using the `qdrouterd` command.
 
 .Procedure
 
-// Step 1 for starting the router.
-include::{FragmentDir}/fragment-starting-router-step.adoc[]
+. Start the router:
 +
-The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`.
-
-. View the log to verify the router status:
-+
+--
 [source,bash,options="nowrap"]
 ----
-$ qdstat --log
+$ qdrouterd
 ----
+
+The router starts, using the default configuration file stored at `/etc/qpid-dispatch/qdrouterd.conf`.
+--
+
+. Review the `qdrouterd` command output to verify the router status.
 +
+--
 This example shows that the router was correctly installed, is running, and is ready to route traffic between clients:
-+
+
 [options="nowrap"]
 ----
-$ qdstat --log
+$ qdrouterd
 Fri May 20 09:38:03 2017 SERVER (info) Container Name: Router.A
 Fri May 20 09:38:03 2017 ROUTER (info) Router started in Standalone mode
 Fri May 20 09:38:03 2017 ROUTER (info) Router Core thread running. 0/Router.A
@@ -59,6 +61,7 @@ Fri May 20 09:38:03 2017 POLICY (info) Policy configured maximumConnections: 0, 
 Fri May 20 09:38:03 2017 POLICY (info) Policy fallback defaultApplication is disabled
 Fri May 20 09:38:03 2017 SERVER (info) Operational, 4 Threads Running
 ----
+--
 
 .Additional resources
 

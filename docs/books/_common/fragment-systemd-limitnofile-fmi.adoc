@@ -17,13 +17,4 @@ specific language governing permissions and limitations
 under the License
 ////
 
-. To start the router, use the *`qdrouterd`* command.
-+
---
-This example uses the default configuration to start the router as a daemon:
-
-[source,bash,options="nowrap"]
-----
-$ qdrouterd -d
-----
---
+For more information, see the `systemd.exec(5)` man page.
