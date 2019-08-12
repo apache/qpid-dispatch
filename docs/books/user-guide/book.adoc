@@ -40,6 +40,7 @@ include::routing.adoc[leveloffset=+1]
 
 [id="monitoring-managing-router-network"]
 == Monitoring and managing the router network
+include::modules/starting-routers.adoc[leveloffset=+2]
 include::logging.adoc[leveloffset=+2]
 include::using-console.adoc[leveloffset=+2]
 include::monitoring-using-qdstat.adoc[leveloffset=+2]

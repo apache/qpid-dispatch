@@ -21,7 +21,7 @@ under the License
 //
 // getting-started.adoc
 
-[id='starting-router-{context}']
+[id='starting-router-getting-started-{context}']
 = Starting the router
 
 After installing {RouterName}, you start the router by using the `qdrouterd` command.
