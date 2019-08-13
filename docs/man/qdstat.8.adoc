@@ -57,6 +57,7 @@ The connection's role:
   - 'normal' - The normal connection from a client to a router.
   - 'inter-router' - The connection between routers to form a network.
   - 'route-container' - The connection to or from a broker or other host to receive link routes and waypoints.
+  - 'edge' - The connection between an edge router and an interior router.
 
 dir::
 The direction in which the connection was established:
@@ -167,7 +168,7 @@ name::
 The link name (only shown if the -v option is provided).
 
 qdstat -n
-^^^^^^^^^
+~~~~~~~~~
 
 router-id::
 The router's ID.
@@ -186,6 +187,32 @@ The list of neighbor routers (the router's link-state). This field is available 
 
 valid-origins::
 The list of origin routers for which the best path to the listed router passes through this router (available only with the -v option).
+
+qdstat -e
+~~~~~~~~~
+
+id::
+The connection's unique identifier.
+
+host::
+The hostname or internet address of the remotely-connected edge router.
+
+container::
+The container name of the remotely-connected edge router.
+
+dir::
+The direction in which the connection was established:
+  - 'in' - The connection was initiated by the edge router.
+  - 'out' - The connection was initiated by this router.
+
+security::
+The security or encryption method, if any, used for this connection.
+
+authentication::
+The authentication method and user ID of the connection's authenticated user.
+
+tenant::
+If the connection is to a listener using multi-tenancy, this column displays the tenant namespace for the connection.
 
 qdstat -a
 ~~~~~~~~~
