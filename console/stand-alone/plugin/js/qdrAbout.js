@@ -25,10 +25,10 @@ export class AboutController {
 
     getConfigVars().then(response => {
       $timeout(function() {
-        $scope.additionalInfo = `Console for ${
-          response.QDR_ROUTER_NAME
+        $scope.additionalInfo = `${
+          response.QDR_CONSOLE_TITLE
         }: A high-performance, lightweight AMQP 1.0 message router, written in C and built on Qpid Proton. It provides flexible and scalable interconnect between any AMQP endpoints, whether they be clients, brokers or other AMQP-enabled services.`;
-        $scope.copyright = response.QDR_CONSOLE_COPYRIGHT;
+        $scope.copyright = "License Apache 2.0";
         $scope.imgAlt = response.QDR_CONSOLE_TITLE;
         $scope.imgSrc = "img/logo-alt.svg";
         $scope.title = response.QDR_CONSOLE_TITLE;

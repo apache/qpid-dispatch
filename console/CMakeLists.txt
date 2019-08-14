@@ -79,7 +79,7 @@ if(CONSOLE_INSTALL)
             ${CONSOLE_SOURCE_DIR}/index.html
             ${CONSOLE_SOURCE_DIR}/main.js
             ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
-            ${CONSOLE_SOURCE_DIR}/console-config.json
+            ${CONSOLE_SOURCE_DIR}/config.json
           )
           ## Files copied to the img/ dir
           set(IMAGES
