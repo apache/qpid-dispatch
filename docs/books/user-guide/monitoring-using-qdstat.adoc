@@ -43,7 +43,7 @@ For more information about `qdstat`, see the {qdstatManPageLink}.
 
 == Creating a State Dump of the Router Network
 
-A state dump shows the current operational state of the router network. The following information is displayed for each router:
+A state dump shows the current operational state of the router network. You can display the following statistics for a single router, or for all routers in the router network:
 
 * Links
 * Addresses
@@ -53,17 +53,42 @@ A state dump shows the current operational state of the router network. The foll
 * General statistics
 * Memory usage
 
-The type of router on which you run the `qdstat` command determines which routers are included in the state dump. If you create the state dump on an interior router, then it includes all interior routers. If you create the state dump on an edge router, then it includes only that edge router.
-
 .Procedure
 
-* Use the following command:
+* Do one of the following:
 +
 --
-[options="nowrap",subs="+quotes"]
+[cols="30,70"]
+|===
+| To... | Use this command:
+
+| Create a state dump containing all statistics for all routers
+a|
+[options="nowrap"]
 ----
 $ qdstat --all-routers --all-entities
 ----
+
+If you run this command on an interior router, it displays the statistics for all interior routers. If you run the command on an edge router, it displays the statistics for only that edge router.
+
+| Create a state dump containing a single statistic for all routers
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -l\|-a\|-c\|--autolinks\|--linkroutes\|-g\|-m --all-routers
+----
+
+If you run this command on an interior router, it displays the statistic for all interior routers. If you run the command on an edge router, it displays the statistic for only that edge router.
+
+| Create a state dump containing all statistics for a single router
+a|
+[options="nowrap"]
+----
+$ qdstat --all-entities
+----
+
+This command shows the statistics for the local router only.
+|===
 --
 
 == Viewing General Statistics for a Router
