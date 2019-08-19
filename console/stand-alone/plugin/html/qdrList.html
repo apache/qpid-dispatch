@@ -72,7 +72,7 @@ under the License.
         <div class="tree-header"><select id="routerSelect" ng-options="node as node.name for node in nodes"
                 ng-model="currentNode" ng-change="selectNode(currentNode)"></select></div>
         <div class="_treeContainer">
-            <div id="entityTree" onSelect="onTreeSelected" onRoot="onRootReady" hideRoot="true"></div>
+            <div id="entityTree" hideRoot="true"></div>
             <div ng-init="treeReady()"></div>
         </div>
     </div>

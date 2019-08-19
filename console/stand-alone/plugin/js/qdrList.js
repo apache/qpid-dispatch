@@ -36,7 +36,6 @@ export class ListController {
       ActivatedKey = 'QDRActivatedKey';
     $scope.details = {};
 
-    $scope.tmplListTree = QDRTemplatePath + 'tmplListTree.html';
     $scope.selectedEntity = localStorage[SelectedEntityKey] || 'address';
     $scope.ActivatedKey = localStorage[ActivatedKey] || null;
     if ($scope.selectedEntity == 'undefined')
@@ -944,7 +943,7 @@ export class ListController {
       serviceReady = true;
       initTree();
     });
-    // called by ng-init="treeReady()" in tmplListTree.html
+    // called by ng-init="treeReady()" in qdrList.html
     $scope.treeReady = function () {
       treeReady = true;
       initTree();
