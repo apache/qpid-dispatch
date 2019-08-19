@@ -35,11 +35,61 @@ This specifies:
 
 * An `option` for the type of information to view.
 * One or more optional `connection_options` to specify a router for which to view the information.
-+ 
++
 If you do not specify a connection option, `qdstat` connects to the router listening on localhost and the default AMQP port (5672).
-* The `secure_connection_options` if the router for which you want to view information only accepts secure connections. 
+* The `secure_connection_options` if the router for which you want to view information only accepts secure connections.
 
 For more information about `qdstat`, see the {qdstatManPageLink}.
+
+== Creating a State Dump of the Router Network
+
+A state dump shows the current operational state of the router network. You can display the following statistics for a single router, or for all routers in the router network:
+
+* Links
+* Addresses
+* Connections
+* Autolinks
+* Link routes
+* General statistics
+* Memory usage
+
+.Procedure
+
+* Do one of the following:
++
+--
+[cols="30,70"]
+|===
+| To... | Use this command:
+
+| Create a state dump containing all statistics for all routers
+a|
+[options="nowrap"]
+----
+$ qdstat --all-routers --all-entities
+----
+
+If you run this command on an interior router, it displays the statistics for all interior routers. If you run the command on an edge router, it displays the statistics for only that edge router.
+
+| Create a state dump containing a single statistic for all routers
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -l\|-a\|-c\|--autolinks\|--linkroutes\|-g\|-m --all-routers
+----
+
+If you run this command on an interior router, it displays the statistic for all interior routers. If you run the command on an edge router, it displays the statistic for only that edge router.
+
+| Create a state dump containing all statistics for a single router
+a|
+[options="nowrap"]
+----
+$ qdstat --all-entities
+----
+
+This command shows the statistics for the local router only.
+|===
+--
 
 == Viewing General Statistics for a Router
 
@@ -52,7 +102,7 @@ You can view information about a router in the router network, such as its worki
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -g [__CONNECTION_OPTIONS__]
+$ qdstat -g [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 This example shows general statistics for the local router:
@@ -102,7 +152,7 @@ You can view:
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -c [__CONNECTION_OPTIONS__]
+$ qdstat -c [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_c[the qdstat -c output columns^].
@@ -132,7 +182,7 @@ id    host                        container                              role   
 
 [options="nowrap"]
 ----
-$ qdstat -c -r Router.B 
+$ qdstat -c -r Router.B
 Connections
 id    host                         container  role          dir  security     authentication  tenant
 ====================================================================================================
@@ -151,7 +201,7 @@ You can view a list of AMQP links attached to the router from clients (sender/re
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -l [__CONNECTION_OPTIONS__]
+$ qdstat -l [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_l[the qdstat -l output columns^].
@@ -200,7 +250,7 @@ To see the topology of the router network, you can view known routers on the net
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -n [__CONNECTION_OPTIONS__]
+$ qdstat -n [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_n[the qdstat -n output columns^].
@@ -265,7 +315,7 @@ You can view message-routed and link-routed addresses known to a router.
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -a [__CONNECTION_OPTIONS__]
+$ qdstat -a [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_a[the qdstat -a output columns^].
@@ -320,7 +370,7 @@ You can view a list of the autolinks that are associated with waypoint addresses
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat --autolinks [__CONNECTION_OPTIONS__]
+$ qdstat --autolinks [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_autolinks[the qdstat --autolinks output columns^].
@@ -337,7 +387,7 @@ AutoLinks
   my_queue_wp  out  0    5     active // <2>
 ----
 <1> The incoming autolink from `my_queue_wp`. As indicated by the `status` field, the link is active, because the broker is running and the connection for the link is already established (as indicated by the `link` field).
-<2> The outgoing autlink to `my_queue_wp`. Like the incoming link, it is active and has an established connection. 
+<2> The outgoing autolink to `my_queue_wp`. Like the incoming link, it is active and has an established connection.
 --
 
 == Viewing the Status of a Router's Link Routes
@@ -351,7 +401,7 @@ You can view the status of each incoming and outgoing link route.
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat --linkroutes [__CONNECTION_OPTIONS__]
+$ qdstat --linkroutes [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 For more information about the fields displayed by this command, see link:{qdstatManPageUrl}#_qdstat_linkroutes[the qdstat --linkroutes output columns^].
@@ -382,7 +432,7 @@ If you need to perform debugging or tracing for a router, you can view informati
 --
 [options="nowrap",subs="+quotes"]
 ----
-$ qdstat -m [__CONNECTION_OPTIONS__]
+$ qdstat -m [all-routers|__CONNECTION_OPTIONS__]
 ----
 
 This command displays information about allocated objects, their size, and their usage by application threads:
