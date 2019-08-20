@@ -22,6 +22,8 @@ under the License
 
 {ConsoleName} is a web console for monitoring the status and performance of {RouterName} router networks.
 
+include::{FragmentDir}/fragment-console-prereq.adoc[]
+
 == Setting up access to the web console
 
 Before you can access the web console, you must configure a `listener` to accept HTTP connections for the web console and serve the console files.
