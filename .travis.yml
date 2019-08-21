@@ -23,8 +23,8 @@ language: c
 cache: ccache
 env:
   - PROTON_VERSION=master BUILD_TYPE=Debug
-  - PROTON_VERSION=0.28.0 BUILD_TYPE=Coverage
-  - PROTON_VERSION=0.28.0 BUILD_TYPE=RelWithDebInfo
+  - PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
+  - PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
 
 addons:
   apt:
@@ -65,7 +65,7 @@ before_script:
 - source qpid-proton/build/config.sh
 - mkdir build
 - pushd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DDISPATCH_TEST_TIMEOUT=600
 - cmake --build . --target install
 
 script:
