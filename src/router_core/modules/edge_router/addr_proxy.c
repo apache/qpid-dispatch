@@ -428,7 +428,7 @@ static void on_transfer(void           *link_context,
     //
     // Validate the message
     //
-    if (qd_message_check(msg, QD_DEPTH_BODY)) {
+    if (qd_message_check_depth(msg, QD_DEPTH_BODY) == QD_MESSAGE_DEPTH_OK) {
         //
         // Get the message body.  It must be a list with two elements.  The first is an address
         // and the second is a boolean indicating whether that address has upstream destinations.

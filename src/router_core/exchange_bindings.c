@@ -192,7 +192,7 @@ int qdr_forward_exchange_CT(qdr_core_t     *core,
     if (!presettled)
         in_delivery->settled = true;
 
-    qd_iterator_t *subject = qd_message_check(msg, QD_DEPTH_PROPERTIES)
+    qd_iterator_t *subject = qd_message_check_depth(msg, QD_DEPTH_PROPERTIES) == QD_MESSAGE_DEPTH_OK
         ? qd_message_field_iterator(msg, QD_FIELD_SUBJECT)
         : NULL;
     next_hop_list_t transmit_list;

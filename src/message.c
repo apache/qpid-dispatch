@@ -69,6 +69,18 @@ static const unsigned char * const TAGS_ANY                     = (unsigned char
     "\xa1\xb1\xa3\xb3\xe0\xf0"
     "\x40\x56\x41\x42\x50\x60\x70\x52\x43\x80\x53\x44\x51\x61\x71\x54\x81\x55\x72\x82\x74\x84\x94\x73\x83\x98";
 
+
+static const char * const section_names[QD_DEPTH_ALL + 1] = {
+    [QD_DEPTH_NONE]                   = "none",
+    [QD_DEPTH_HEADER]                 = "header",
+    [QD_DEPTH_DELIVERY_ANNOTATIONS]   = "delivery annotations",
+    [QD_DEPTH_MESSAGE_ANNOTATIONS]    = "message annotations",
+    [QD_DEPTH_PROPERTIES]             = "properties",
+    [QD_DEPTH_APPLICATION_PROPERTIES] = "application properties",
+    [QD_DEPTH_BODY]                   = "body",
+    [QD_DEPTH_ALL]                    = "footer"
+};
+
 PN_HANDLE(PN_DELIVERY_CTX)
 
 ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
@@ -328,7 +340,9 @@ static void print_field(
 static const char REPR_END[] = "}\0";
 
 char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits flags) {
-    if (flags == 0 || !qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES)) {
+    if (flags == 0
+        || qd_message_check_depth(msg, QD_DEPTH_APPLICATION_PROPERTIES) != QD_MESSAGE_DEPTH_OK
+        || !((qd_message_pvt_t *)msg)->content->section_application_properties.parsed) {
         return NULL;
     }
     char *begin = buffer;
@@ -357,20 +371,22 @@ char* qd_message_repr(qd_message_t *msg, char* buffer, size_t len, qd_log_bits f
 /**
  * Advance cursor through buffer chain by 'consume' bytes.
  * Cursor and buffer args are advanced to point to new position in buffer chain.
- *  - if the number of bytes in the buffer chain is less than or equal to 
- *    the consume number then return a null buffer and cursor.
+ *  - if the number of bytes in the buffer chain is less than or equal to
+ *    the consume number then set *cursor and *buffer to NULL and
+ *    return the number of missing bytes
  *  - the original buffer chain is not changed or freed.
  *
  * @param cursor Pointer into current buffer content
  * @param buffer pointer to current buffer
  * @param consume number of bytes to advance
+ * @return 0 if all bytes consumed, != 0 if not enough bytes available
  */
-static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume)
+static int advance(unsigned char **cursor, qd_buffer_t **buffer, int consume)
 {
     unsigned char *local_cursor = *cursor;
     qd_buffer_t   *local_buffer = *buffer;
 
-    int remaining = qd_buffer_size(local_buffer) - (local_cursor - qd_buffer_base(local_buffer));
+    int remaining = qd_buffer_cursor(local_buffer) - local_cursor;
     while (consume > 0) {
         if (consume < remaining) {
             local_cursor += consume;
@@ -383,12 +399,14 @@ static void advance(unsigned char **cursor, qd_buffer_t **buffer, int consume)
                 break;
             }
             local_cursor = qd_buffer_base(local_buffer);
-            remaining = qd_buffer_size(local_buffer) - (local_cursor - qd_buffer_base(local_buffer));
+            remaining = qd_buffer_size(local_buffer);
         }
     }
 
     *cursor = local_cursor;
     *buffer = local_buffer;
+
+    return consume;
 }
 
 
@@ -556,33 +574,47 @@ static int start_list(unsigned char **cursor, qd_buffer_t **buffer)
 }
 
 
+// Validate a message section (header, body, etc).  This determines whether or
+// not a given section is present and complete at the start of the buffer chain.
 //
-// Check the buffer chain, starting at cursor to see if it matches the pattern.
-// If the pattern matches, check the next tag to see if it's in the set of expected
-// tags.  If not, return zero.  If so, set the location descriptor to the good
-// tag and advance the cursor (and buffer, if needed) to the end of the matched section.
+// The section is identified by a 'pattern' (a descriptor identifier, such as
+// "MESSAGE_ANNOTATION_LONG" above).  The descriptor also provides a type
+// 'tag', which MUST match else the section is invalid.
 //
-// If there is no match, don't advance the cursor.
+// Non-Body message sections are optional.  So if the pattern does NOT match
+// then the section that the pattern represents is not present.  Whether or not
+// this is acceptable is left to the caller.
 //
-// Return 0 if the pattern matches but the following tag is unexpected
-// Return 0 if the pattern matches and the location already has a pointer (duplicate section)
-// Return 1 if the pattern matches and we've advanced the cursor/buffer
-// Return 1 if the pattern does not match
+// If the pattern and tag match, extract the length and verify that the entire
+// section is present in the buffer chain.  If this is the case then store the
+// start of the section in 'location' and advance '*buffer' and '*cursor' to
+// the next section.
 //
-static int qd_check_and_advance(qd_buffer_t         **buffer,
-                                unsigned char       **cursor,
-                                const unsigned char  *pattern,
-                                int                   pattern_length,
-                                const unsigned char  *expected_tags,
-                                qd_field_location_t  *location)
+// if there is not enough of the section present in the buffer chain we need to
+// wait until more data arrives and try again.
+//
+//
+typedef enum {
+    QD_SECTION_INVALID,   // invalid section (tag mismatch, duplicate section, etc).
+    QD_SECTION_MATCH,
+    QD_SECTION_NO_MATCH,
+    QD_SECTION_NEED_MORE  // not enough data in the buffer chain - try again
+} qd_section_status_t;
+
+static qd_section_status_t message_section_check(qd_buffer_t         **buffer,
+                                                 unsigned char       **cursor,
+                                                 const unsigned char  *pattern,
+                                                 int                   pattern_length,
+                                                 const unsigned char  *expected_tags,
+                                                 qd_field_location_t  *location)
 {
     qd_buffer_t   *test_buffer = *buffer;
     unsigned char *test_cursor = *cursor;
 
     if (!test_cursor)
-        return 1; // no match
+        return QD_SECTION_NEED_MORE;
 
-    unsigned char *end_of_buffer = qd_buffer_base(test_buffer) + qd_buffer_size(test_buffer);
+    unsigned char *end_of_buffer = qd_buffer_cursor(test_buffer);
     int idx = 0;
 
     while (idx < pattern_length && *test_cursor == pattern[idx]) {
@@ -591,14 +623,14 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
         if (test_cursor == end_of_buffer) {
             test_buffer = test_buffer->next;
             if (test_buffer == 0)
-                return 1; // Pattern didn't match
+                return QD_SECTION_NEED_MORE;
             test_cursor = qd_buffer_base(test_buffer);
             end_of_buffer = test_cursor + qd_buffer_size(test_buffer);
         }
     }
 
     if (idx < pattern_length)
-        return 1; // Pattern didn't match
+        return QD_SECTION_NO_MATCH;
 
     //
     // Pattern matched, check the tag
@@ -606,10 +638,10 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     while (*expected_tags && *test_cursor != *expected_tags)
         expected_tags++;
     if (*expected_tags == 0)
-        return 0;  // Unexpected tag
+        return QD_SECTION_INVALID;  // Error: Unexpected tag
 
     if (location->parsed)
-        return 0;  // Duplicate section
+        return QD_SECTION_INVALID;  // Error: Duplicate section
 
     //
     // Pattern matched and tag is expected.  Mark the beginning of the section.
@@ -620,18 +652,22 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     location->hdr_length = pattern_length;
 
     //
-    // Advance the pointers to consume the whole section.
+    // Check that the full section is present, if so advance the pointers to
+    // consume the whole section.
     //
     int pre_consume = 1;  // Count the already extracted tag
-    int consume     = 0;
+    uint32_t consume = 0;
     unsigned char tag = next_octet(&test_cursor, &test_buffer);
-
     unsigned char tag_subcat = tag & 0xF0;
+
+    // if there is no more data the only valid data type is a null type (0x40),
+    // size is implied as 0
     if (!test_cursor && tag_subcat != 0x40)
-        return 0;
+        return QD_SECTION_NEED_MORE;
 
     switch (tag_subcat) {
-    case 0x40:               break;
+        // fixed sizes:
+    case 0x40: /* null */    break;
     case 0x50: consume = 1;  break;
     case 0x60: consume = 2;  break;
     case 0x70: consume = 4;  break;
@@ -641,37 +677,43 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
     case 0xB0:
     case 0xD0:
     case 0xF0:
+        // uint32_t size field:
         pre_consume += 3;
-        consume |= ((int) next_octet(&test_cursor, &test_buffer)) << 24;
-        if (!test_cursor) return 0;
-        consume |= ((int) next_octet(&test_cursor, &test_buffer)) << 16;
-        if (!test_cursor) return 0;
-        consume |= ((int) next_octet(&test_cursor, &test_buffer)) << 8;
-        if (!test_cursor) return 0;
+        consume |= ((uint32_t) next_octet(&test_cursor, &test_buffer)) << 24;
+        if (!test_cursor) return QD_SECTION_NEED_MORE;
+        consume |= ((uint32_t) next_octet(&test_cursor, &test_buffer)) << 16;
+        if (!test_cursor) return QD_SECTION_NEED_MORE;
+        consume |= ((uint32_t) next_octet(&test_cursor, &test_buffer)) << 8;
+        if (!test_cursor) return QD_SECTION_NEED_MORE;
         // Fall through to the next case...
 
     case 0xA0:
     case 0xC0:
     case 0xE0:
+        // uint8_t size field
         pre_consume += 1;
-        consume |= (int) next_octet(&test_cursor, &test_buffer);
-        if (!test_cursor) return 0;
+        consume |= (uint32_t) next_octet(&test_cursor, &test_buffer);
+        if (!test_cursor) return QD_SECTION_NEED_MORE;
         break;
     }
 
     location->length = pre_consume + consume;
-    if (consume)
-        advance(&test_cursor, &test_buffer, consume);
+    if (consume) {
+        if (advance(&test_cursor, &test_buffer, consume) != 0) {
+            return QD_SECTION_NEED_MORE;  // whole section not fully received
+        }
+    }
 
     //
     // increment the reference count of the parsed section as location now
-    // references it. Note that the cursor has advanced to the octet after the
-    // parsed section, so be careful not to include an extra buffer past the
-    // end
+    // references it. Note that the cursor may have advanced to the octet after
+    // the parsed section, so be careful not to include an extra buffer past
+    // the end.  And cursor + buffer will be null if the parsed section ends at
+    // the end of the buffer chain, so be careful of that, too!
     //
     qd_buffer_t *start = *buffer;
     qd_buffer_t *last = test_buffer;
-    if (last != start && last != 0) {
+    if (last && last != start) {
         if (test_cursor == qd_buffer_base(last)) {
             // last does not include octets for the current section
             last = DEQ_PREV(last);
@@ -689,7 +731,7 @@ static int qd_check_and_advance(qd_buffer_t         **buffer,
 
     *cursor = test_cursor;
     *buffer = test_buffer;
-    return 1;
+    return QD_SECTION_MATCH;
 }
 
 
@@ -762,7 +804,7 @@ static qd_field_location_t *qd_message_properties_field(qd_message_t *msg, qd_me
 
     qd_message_content_t *content = MSG_CONTENT(msg);
     if (!content->section_message_properties.parsed) {
-        if (!qd_message_check(msg, QD_DEPTH_PROPERTIES) || !content->section_message_properties.parsed)
+        if (qd_message_check_depth(msg, QD_DEPTH_PROPERTIES) != QD_MESSAGE_DEPTH_OK || !content->section_message_properties.parsed)
             return 0;
     }
 
@@ -834,7 +876,7 @@ static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_mess
     switch (section) {
     case QD_FIELD_HEADER:
         if (content->section_message_header.parsed ||
-            (qd_message_check(msg, QD_DEPTH_HEADER) && content->section_message_header.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_HEADER) == QD_MESSAGE_DEPTH_OK && content->section_message_header.parsed))
             return &content->section_message_header;
         break;
 
@@ -843,31 +885,31 @@ static qd_field_location_t *qd_message_field_location(qd_message_t *msg, qd_mess
 
     case QD_FIELD_DELIVERY_ANNOTATION:
         if (content->section_delivery_annotation.parsed ||
-            (qd_message_check(msg, QD_DEPTH_DELIVERY_ANNOTATIONS) && content->section_delivery_annotation.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_DELIVERY_ANNOTATIONS) == QD_MESSAGE_DEPTH_OK && content->section_delivery_annotation.parsed))
             return &content->section_delivery_annotation;
         break;
 
     case QD_FIELD_MESSAGE_ANNOTATION:
         if (content->section_message_annotation.parsed ||
-            (qd_message_check(msg, QD_DEPTH_MESSAGE_ANNOTATIONS) && content->section_message_annotation.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_MESSAGE_ANNOTATIONS) == QD_MESSAGE_DEPTH_OK && content->section_message_annotation.parsed))
             return &content->section_message_annotation;
         break;
 
     case QD_FIELD_APPLICATION_PROPERTIES:
         if (content->section_application_properties.parsed ||
-            (qd_message_check(msg, QD_DEPTH_APPLICATION_PROPERTIES) && content->section_application_properties.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_APPLICATION_PROPERTIES) == QD_MESSAGE_DEPTH_OK && content->section_application_properties.parsed))
             return &content->section_application_properties;
         break;
 
     case QD_FIELD_BODY:
         if (content->section_body.parsed ||
-            (qd_message_check(msg, QD_DEPTH_BODY) && content->section_body.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_BODY) == QD_MESSAGE_DEPTH_OK && content->section_body.parsed))
             return &content->section_body;
         break;
 
     case QD_FIELD_FOOTER:
         if (content->section_footer.parsed ||
-            (qd_message_check(msg, QD_DEPTH_ALL) && content->section_footer.parsed))
+            (qd_message_check_depth(msg, QD_DEPTH_ALL) == QD_MESSAGE_DEPTH_OK && content->section_footer.parsed))
             return &content->section_footer;
         break;
 
@@ -1754,154 +1796,201 @@ void qd_message_send(qd_message_t *in_msg,
 }
 
 
-static int qd_check_field_LH(qd_message_content_t *content,
-                             qd_message_depth_t    depth,
-                             const unsigned char  *long_pattern,
-                             const unsigned char  *short_pattern,
-                             const unsigned char  *expected_tags,
-                             qd_field_location_t  *location,
-                             int                   more)
+static qd_message_depth_status_t message_check_depth_LH(qd_message_content_t *content,
+                                                        qd_message_depth_t    depth,
+                                                        const unsigned char  *long_pattern,
+                                                        const unsigned char  *short_pattern,
+                                                        const unsigned char  *expected_tags,
+                                                        qd_field_location_t  *location,
+                                                        bool                  optional)
 {
 #define LONG  10
 #define SHORT 3
-    if (depth > content->parse_depth) {
-        if (0 == qd_check_and_advance(&content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location))
-            return 0;
-        if (0 == qd_check_and_advance(&content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location))
-            return 0;
-        if (!more)
-            content->parse_depth = depth;
+    if (depth <= content->parse_depth)
+        return QD_MESSAGE_DEPTH_OK;
+
+    qd_section_status_t rc;
+    rc = message_section_check(&content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location);
+    if (rc == QD_SECTION_NO_MATCH)  // try the alternative
+        rc = message_section_check(&content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location);
+
+    if (rc == QD_SECTION_MATCH || (optional && rc == QD_SECTION_NO_MATCH)) {
+        content->parse_depth = depth;
+        return QD_MESSAGE_DEPTH_OK;
     }
-    return 1;
+
+    if (rc == QD_SECTION_NEED_MORE) {
+        if (!content->receive_complete)
+            return QD_MESSAGE_DEPTH_INCOMPLETE;
+
+        // no more data is going to come. OK if at the end and optional:
+        if (!content->parse_cursor && optional)
+            return QD_MESSAGE_DEPTH_OK;
+
+        // otherwise we've got an invalid (truncated) header
+    }
+
+    // if QD_SECTION_NO_MATCH && !optional => INVALID;
+    // QD_SECTION_INVALID => INVALID;
+
+    return QD_MESSAGE_DEPTH_INVALID;
 }
 
 
-static bool qd_message_check_LH(qd_message_content_t *content, qd_message_depth_t depth)
+static qd_message_depth_status_t qd_message_check_LH(qd_message_content_t *content, qd_message_depth_t depth)
 {
     qd_error_clear();
 
-    //
-    // In the case of a streaming or multi buffer message, there is a chance that some buffers might be freed before the entire
-    // message has arrived in which case we cannot reliably check the message using the depth.
-    //
-    if (content->buffers_freed)
-        return true;
+    if (depth <= content->parse_depth || depth == QD_DEPTH_NONE)
+        return QD_MESSAGE_DEPTH_OK; // We've already parsed at least this deep
 
     qd_buffer_t *buffer  = DEQ_HEAD(content->buffers);
-
     if (!buffer) {
-        return false;
+        return content->receive_complete ? QD_MESSAGE_DEPTH_INVALID : QD_MESSAGE_DEPTH_INCOMPLETE;
     }
-
-    if (depth <= content->parse_depth)
-        return true; // We've already parsed at least this deep
 
     if (content->parse_buffer == 0) {
         content->parse_buffer = buffer;
         content->parse_cursor = qd_buffer_base(content->parse_buffer);
     }
 
-    if (depth == QD_DEPTH_NONE)
-        return true;
+    qd_message_depth_status_t rc = QD_MESSAGE_DEPTH_OK;
+    int last_section = QD_DEPTH_NONE;
 
-    //
-    // MESSAGE HEADER
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_HEADER,
-                               MSG_HDR_LONG, MSG_HDR_SHORT, TAGS_LIST, &content->section_message_header, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid header");
-        return false;
-    }
-    if (depth == QD_DEPTH_HEADER)
-        return true;
+    switch (content->parse_depth + 1) {  // start checking at the next unparsed section
+    case QD_DEPTH_HEADER:
+        //
+        // MESSAGE HEADER (optional)
+        //
+        last_section = QD_DEPTH_HEADER;
+        rc = message_check_depth_LH(content, QD_DEPTH_HEADER,
+                                    MSG_HDR_LONG, MSG_HDR_SHORT, TAGS_LIST,
+                                    &content->section_message_header, true);
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_HEADER)
+            break;
 
-    //
-    // DELIVERY ANNOTATION
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_DELIVERY_ANNOTATIONS,
-                               DELIVERY_ANNOTATION_LONG, DELIVERY_ANNOTATION_SHORT, TAGS_MAP, &content->section_delivery_annotation, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid delivery-annotations");
-        return false;
-    }
-    if (depth == QD_DEPTH_DELIVERY_ANNOTATIONS)
-        return true;
+        // fallthrough
 
-    //
-    // MESSAGE ANNOTATION
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_MESSAGE_ANNOTATIONS,
-                               MESSAGE_ANNOTATION_LONG, MESSAGE_ANNOTATION_SHORT, TAGS_MAP, &content->section_message_annotation, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid annotations");
-        return false;
-    }
-    if (depth == QD_DEPTH_MESSAGE_ANNOTATIONS)
-        return true;
+    case QD_DEPTH_DELIVERY_ANNOTATIONS:
+        //
+        // DELIVERY ANNOTATIONS (optional)
+        //
+        last_section = QD_DEPTH_DELIVERY_ANNOTATIONS;
+        rc = message_check_depth_LH(content, QD_DEPTH_DELIVERY_ANNOTATIONS,
+                                    DELIVERY_ANNOTATION_LONG, DELIVERY_ANNOTATION_SHORT, TAGS_MAP,
+                                    &content->section_delivery_annotation, true);
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_DELIVERY_ANNOTATIONS)
+            break;
 
-    //
-    // PROPERTIES
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_PROPERTIES,
-                               PROPERTIES_LONG, PROPERTIES_SHORT, TAGS_LIST, &content->section_message_properties, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid message properties");
-        return false;
-    }
-    if (depth == QD_DEPTH_PROPERTIES)
-        return true;
+        // fallthrough
 
-    //
-    // APPLICATION PROPERTIES
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_APPLICATION_PROPERTIES,
-                               APPLICATION_PROPERTIES_LONG, APPLICATION_PROPERTIES_SHORT, TAGS_MAP, &content->section_application_properties, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid application-properties");
-        return false;
-    }
-    if (depth == QD_DEPTH_APPLICATION_PROPERTIES)
-        return true;
+    case QD_DEPTH_MESSAGE_ANNOTATIONS:
+        //
+        // MESSAGE ANNOTATION (optional)
+        //
+        last_section = QD_DEPTH_MESSAGE_ANNOTATIONS;
+        rc = message_check_depth_LH(content, QD_DEPTH_MESSAGE_ANNOTATIONS,
+                                    MESSAGE_ANNOTATION_LONG, MESSAGE_ANNOTATION_SHORT, TAGS_MAP,
+                                    &content->section_message_annotation, true);
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_MESSAGE_ANNOTATIONS)
+            break;
 
-    //
-    // BODY
-    // Note that this function expects a limited set of types in a VALUE section.  This is
-    // not a problem for messages passing through Dispatch because through-only messages won't
-    // be parsed to BODY-depth.
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
-                               BODY_DATA_LONG, BODY_DATA_SHORT, TAGS_BINARY, &content->section_body, 1)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid body data");
-        return false;
-    }
-    if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
-                               BODY_SEQUENCE_LONG, BODY_SEQUENCE_SHORT, TAGS_LIST, &content->section_body, 1)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid body sequence");
-        return false;
-    }
-    if (0 == qd_check_field_LH(content, QD_DEPTH_BODY,
-                               BODY_VALUE_LONG, BODY_VALUE_SHORT, TAGS_ANY, &content->section_body, 0)) {
-        qd_error(QD_ERROR_MESSAGE, "Invalid body value");
-        return false;
-    }
-    if (depth == QD_DEPTH_BODY)
-        return true;
+        // fallthough
 
-    //
-    // FOOTER
-    //
-    if (0 == qd_check_field_LH(content, QD_DEPTH_ALL,
-                               FOOTER_LONG, FOOTER_SHORT, TAGS_MAP, &content->section_footer, 0)) {
+    case QD_DEPTH_PROPERTIES:
+        //
+        // PROPERTIES (optional)
+        //
+        last_section = QD_DEPTH_PROPERTIES;
+        rc = message_check_depth_LH(content, QD_DEPTH_PROPERTIES,
+                                    PROPERTIES_LONG, PROPERTIES_SHORT, TAGS_LIST,
+                                    &content->section_message_properties, true);
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_PROPERTIES)
+            break;
 
-        qd_error(QD_ERROR_MESSAGE, "Invalid footer");
-        return false;
+        // fallthrough
+
+    case QD_DEPTH_APPLICATION_PROPERTIES:
+        //
+        // APPLICATION PROPERTIES (optional)
+        //
+        last_section = QD_DEPTH_APPLICATION_PROPERTIES;
+        rc = message_check_depth_LH(content, QD_DEPTH_APPLICATION_PROPERTIES,
+                                    APPLICATION_PROPERTIES_LONG, APPLICATION_PROPERTIES_SHORT, TAGS_MAP,
+                                    &content->section_application_properties, true);
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_APPLICATION_PROPERTIES)
+            break;
+
+        // fallthrough
+
+    case QD_DEPTH_BODY:
+        // In the case of multi-buffer streaming we may discard buffers that
+        // contain only the Body or Footer section for those messages that are
+        // through-only.  We really cannot validate those sections if that should happen
+        //
+        if (content->buffers_freed)
+            return QD_MESSAGE_DEPTH_OK;
+
+        //
+        // BODY (not optional, but proton allows it - see PROTON-2085)
+        //
+        // AMQP 1.0 defines 3 valid Body types: Binary, Sequence (list), or Value (any type)
+        // Since the body is mandatory, we need to match one of these.  Setting
+        // the optional flag to false will force us to check each one until a match is found.
+        //
+        last_section = QD_DEPTH_BODY;
+        rc = message_check_depth_LH(content, QD_DEPTH_BODY,
+                                    BODY_VALUE_LONG, BODY_VALUE_SHORT, TAGS_ANY,
+                                    &content->section_body, false);
+        if (rc == QD_MESSAGE_DEPTH_INVALID) {   // may be a different body type, need to check:
+            rc = message_check_depth_LH(content, QD_DEPTH_BODY,
+                                        BODY_DATA_LONG, BODY_DATA_SHORT, TAGS_BINARY,
+                                        &content->section_body, false);
+            if (rc == QD_MESSAGE_DEPTH_INVALID) {
+                rc = message_check_depth_LH(content, QD_DEPTH_BODY,
+                                            BODY_SEQUENCE_LONG, BODY_SEQUENCE_SHORT, TAGS_LIST,
+                                            &content->section_body, true);  // PROTON-2085
+            }
+        }
+
+        if (rc != QD_MESSAGE_DEPTH_OK || depth == QD_DEPTH_BODY)
+            break;
+
+        // fallthrough
+
+    case QD_DEPTH_ALL:
+        //
+        // FOOTER (optional)
+        //
+        if (content->buffers_freed) // see above
+            return QD_MESSAGE_DEPTH_OK;
+
+        last_section = QD_DEPTH_ALL;
+        rc = message_check_depth_LH(content, QD_DEPTH_ALL,
+                                    FOOTER_LONG, FOOTER_SHORT, TAGS_MAP,
+                                    &content->section_footer, true);
+        break;
+
+    default:
+        assert(false);  // should not happen!
+        qd_error(QD_ERROR_MESSAGE, "BUG! Invalid message depth specified: %d",
+                 content->parse_depth + 1);
+        return QD_MESSAGE_DEPTH_INVALID;
     }
 
-    return true;
+    if (rc == QD_MESSAGE_DEPTH_INVALID)
+        qd_error(QD_ERROR_MESSAGE, "Invalid message: %s section invalid",
+                 section_names[last_section]);
+
+    return rc;
 }
 
 
-int qd_message_check(qd_message_t *in_msg, qd_message_depth_t depth)
+qd_message_depth_status_t qd_message_check_depth(const qd_message_t *in_msg, qd_message_depth_t depth)
 {
     qd_message_pvt_t     *msg     = (qd_message_pvt_t*) in_msg;
     qd_message_content_t *content = msg->content;
-    int                   result;
+    qd_message_depth_status_t    result;
 
     LOCK(content->lock);
     result = qd_message_check_LH(content, depth);

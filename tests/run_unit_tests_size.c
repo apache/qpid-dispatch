@@ -20,6 +20,9 @@
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/alloc.h>
 
+void qd_log_initialize(void);
+void qd_error_initialize();
+
 int message_tests();
 int field_tests();
 int parse_tests();
@@ -36,6 +39,8 @@ int main(int argc, char** argv)
     }
 
     qd_alloc_initialize();
+    qd_log_initialize();
+    qd_error_initialize();
     qd_buffer_set_size(buffer_size);
 
     int result = 0;

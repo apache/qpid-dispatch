@@ -520,7 +520,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int 
     //
     // Parse the message through the body and exit if the message is not well formed.
     //
-    if (!qd_message_check(msg, QD_DEPTH_BODY))
+    if (qd_message_check_depth(msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK)
         return;
 
     // This is called from non-python threads so we need to acquire the GIL to use python APIS.
