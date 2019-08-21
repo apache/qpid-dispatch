@@ -292,6 +292,18 @@ td.more-info {
                     </div>
                 </div>
             </div>
+            <div uib-accordion-group class="panel-default" is-open="legendOptions.options.open" heading="Options">
+                <ul class="options">
+                    <li><label>
+                        <input type='checkbox' ng-model="legendOptions.options.routerArrows" value="rchecked" />
+                        Show arrows between routers
+                    </label></li>
+                    <li><label>
+                        <input type='checkbox' ng-model="legendOptions.options.clientArrows" value="cchecked" />
+                        Show arrows to clients
+                    </label></li>
+        </ul>
+            </div>
         </uib-accordion>
     </div>
     <div class="diagram">

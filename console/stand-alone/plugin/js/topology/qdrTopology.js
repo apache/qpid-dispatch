@@ -21,7 +21,11 @@ under the License.
 /**
  * @module QDR
  */
-import { QDRLogger, QDRRedirectWhenConnected, QDRTemplatePath } from "../qdrGlobals.js";
+import {
+  QDRLogger,
+  QDRRedirectWhenConnected,
+  QDRTemplatePath
+} from "../qdrGlobals.js";
 import { Traffic } from "./traffic.js";
 import { separateAddresses } from "../chord/filters.js";
 import { Nodes } from "./nodes.js";
@@ -30,7 +34,13 @@ import { nextHop, connectionPopupHTML, getSizes } from "./topoUtils.js";
 import { BackgroundMap } from "./map.js";
 import { utils } from "../amqp/utilities.js";
 import { Legend } from "./legend.js";
-import { appendCircle, appendContent, addGradient, addDefs, updateState } from "./svgUtils.js";
+import {
+  appendCircle,
+  appendContent,
+  addGradient,
+  addDefs,
+  updateState
+} from "./svgUtils.js";
 /**
  * @module QDR
  */
@@ -71,10 +81,17 @@ export class TopologyController {
         open: false
       }
     };
+    if (!$scope.legendOptions.options) {
+      $scope.legendOptions.options = {
+        open: false,
+        routerArrows: false,
+        clientArrows: true
+      };
+    }
     let backgroundMap = new BackgroundMap(
       $scope,
       // notify: called each time a pan/zoom is performed
-      function () {
+      function() {
         if ($scope.legendOptions.map.open) {
           // set all the nodes' x,y position based on their saved lon,lat
           forceData.nodes.setXY(backgroundMap);
@@ -100,27 +117,45 @@ export class TopologyController {
       urlPrefix
     );
 
-    let changeTraffic = function (checked, type) {
+    let changeTraffic = function(checked, type) {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
       if ($scope.legendOptions.traffic.open) {
         if (checked) {
-          traffic.addAnimationType(type, separateAddresses, Nodes.radius("inter-router"));
+          traffic.addAnimationType(
+            type,
+            separateAddresses,
+            Nodes.radius("inter-router")
+          );
         } else {
           traffic.remove(type);
         }
       }
       restart();
     };
+    const saveLegendOptions = () => {
+      localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
+    };
     // the dots animation was checked/unchecked
-    $scope.$watch("legendOptions.traffic.dots", function (newValue) {
+    $scope.$watch("legendOptions.traffic.dots", function(newValue) {
       changeTraffic(newValue, "dots");
     });
+    $scope.$watch("legendOptions.options.routerArrows", function() {
+      saveLegendOptions();
+      restart();
+    });
+    $scope.$watch("legendOptions.options.clientArrows", function() {
+      saveLegendOptions();
+      restart();
+    });
+    $scope.$watch("legendOptions.options.open", function() {
+      saveLegendOptions();
+    });
     // the congestion animation was checked/unchecked
-    $scope.$watch("legendOptions.traffic.congestion", function (newValue) {
+    $scope.$watch("legendOptions.traffic.congestion", function(newValue) {
       changeTraffic(newValue, "congestion");
     });
     // the traffic section was opened/closed
-    $scope.$watch("legendOptions.traffic.open", function () {
+    $scope.$watch("legendOptions.traffic.open", function() {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
       if ($scope.legendOptions.traffic.open) {
         // opened the traffic area
@@ -132,7 +167,7 @@ export class TopologyController {
       restart();
     });
     // the background map was shown or hidden
-    $scope.$watch("legendOptions.map.open", function (newvalue, oldvalue) {
+    $scope.$watch("legendOptions.map.open", function(newvalue, oldvalue) {
       localStorage[TOPOOPTIONSKEY] = JSON.stringify($scope.legendOptions);
       // map was shown
       if ($scope.legendOptions.map.open && backgroundMap.initialized) {
@@ -159,7 +194,7 @@ export class TopologyController {
     $scope.current_node = null;
     $scope.mousedown_node = null;
     $scope.contextNode = null; // node that is associated with the current context menu
-    $scope.isRight = function (mode) {
+    $scope.isRight = function(mode) {
       return mode.right;
     };
 
@@ -187,19 +222,19 @@ export class TopologyController {
           templateUrl: QDRTemplatePath + which.templateUrl,
           controller: which.controller,
           resolve: {
-            d: function () {
+            d: function() {
               return d;
             },
-            tip: function () {
+            tip: function() {
               return toolTip;
             }
           }
         })
-        .result.then(function () { });
+        .result.then(function() {});
     }
 
     // called from the html page's popup menu
-    $scope.setFixed = function (b) {
+    $scope.setFixed = function(b) {
       if ($scope.contextNode) {
         forceData.nodes.setFixed($scope.contextNode, b);
         forceData.nodes.savePositions();
@@ -208,34 +243,36 @@ export class TopologyController {
       // redraw the circles/links
       restart();
     };
-    $scope.isFixed = function () {
+    $scope.isFixed = function() {
       if (!$scope.contextNode) return false;
       return $scope.contextNode.fixed;
     };
-    $scope.isSelectable = function () {
+    $scope.isSelectable = function() {
       if (!$scope.contextNode) return false;
       const d = $scope.contextNode;
-      return d.nodeType !== "normal" &&
+      return (
+        d.nodeType !== "normal" &&
         d.nodeType !== "on-demand" &&
         d.nodeType !== "edge" &&
-        d.nodeTYpe !== "_edge";
+        d.nodeTYpe !== "_edge"
+      );
     };
-    $scope.isSelected = function () {
+    $scope.isSelected = function() {
       return $scope.isSelectable() && $scope.contextNode === selected_node;
     };
-    $scope.setSelected = function (b) {
+    $scope.setSelected = function(b) {
       selected_node = b ? $scope.contextNode : null;
       restart();
     };
 
-    $scope.addressStyle = function (address) {
+    $scope.addressStyle = function(address) {
       return {
         "background-color": $scope.addressColors[address]
       };
     };
 
     let mouseX, mouseY;
-    var relativeMouse = function () {
+    var relativeMouse = function() {
       let offset = $("#main_container").offset();
       return {
         left: mouseX + $(document).scrollLeft() - 1,
@@ -249,19 +286,19 @@ export class TopologyController {
       mouseY = e.clientY;
     });
     $(document).mousemove();
-    $(document).click(function () {
+    $(document).click(function() {
       $scope.contextNode = null;
       $(".contextMenu").fadeOut(200);
     });
 
     let svg; // main svg
     let force;
-    let path, circle;   // the d3 selections for links and nodes respectively
+    let path, circle; // the d3 selections for links and nodes respectively
     let savedKeys = {}; // so we can redraw the svg if the topology changes
     let width = 0;
     let height = 0;
 
-    var resize = function () {
+    var resize = function() {
       if (!svg) return;
       let sizes = getSizes(QDRLog);
       width = sizes[0];
@@ -277,12 +314,12 @@ export class TopologyController {
 
     // the window is narrow and the page menu icon was clicked.
     // Re-create the legend
-    $scope.$on("pageMenuClicked", function () {
+    $scope.$on("pageMenuClicked", function() {
       $timeout(updateLegend);
     });
 
     // initialize the nodes and links array from the QDRService.topology._nodeInfo object
-    var initForceGraph = function () {
+    var initForceGraph = function() {
       if (width < 768) {
         $scope.legendOptions.map.open = false;
       }
@@ -304,11 +341,11 @@ export class TopologyController {
           .attr("id", "SVG_ID")
           .attr("width", width)
           .attr("height", height)
-          .on("click", function () {
+          .on("click", function() {
             clearPopups();
           });
         // read the map data from the data file and build the map layer
-        backgroundMap.init($scope, svg, width, height).then(function () {
+        backgroundMap.init($scope, svg, width, height).then(function() {
           forceData.nodes.saveLonLat(backgroundMap);
           backgroundMap.setMapOpacity($scope.legendOptions.map.open);
         });
@@ -316,14 +353,28 @@ export class TopologyController {
         addGradient(svg);
       }
       // handles to link and node element groups
-      path = svg.append("svg:g").attr("class", "links").selectAll("g");
-      circle = svg.append("svg:g").attr("class", "nodes").selectAll("g");
+      path = svg
+        .append("svg:g")
+        .attr("class", "links")
+        .selectAll("g");
+      circle = svg
+        .append("svg:g")
+        .attr("class", "nodes")
+        .selectAll("g");
       traffic.remove();
       if ($scope.legendOptions.traffic.open) {
         if ($scope.legendOptions.traffic.dots)
-          traffic.addAnimationType('dots', separateAddresses, Nodes.radius("inter-router"));
+          traffic.addAnimationType(
+            "dots",
+            separateAddresses,
+            Nodes.radius("inter-router")
+          );
         if ($scope.legendOptions.traffic.congestion)
-          traffic.addAnimationType('dots', separateAddresses, Nodes.radius("inter-router"));
+          traffic.addAnimationType(
+            "dots",
+            separateAddresses,
+            Nodes.radius("inter-router")
+          );
       }
 
       // mouse event vars
@@ -336,11 +387,13 @@ export class TopologyController {
 
       // initialize the list of links
       let unknowns = [];
-      forceData.links.initialize(nodeInfo,
+      forceData.links.initialize(
+        nodeInfo,
         forceData.nodes,
         unknowns,
         height,
-        localStorage);
+        localStorage
+      );
       $scope.schema = QDRService.management.schema();
       // init D3 force layout
       force = d3.layout
@@ -348,18 +401,18 @@ export class TopologyController {
         .nodes(forceData.nodes.nodes)
         .links(forceData.links.links)
         .size([width, height])
-        .linkDistance(function (d) {
+        .linkDistance(function(d) {
           return forceData.nodes.linkDistance(d, nodeCount);
         })
-        .charge(function (d) {
+        .charge(function(d) {
           return forceData.nodes.charge(d, nodeCount);
         })
         .friction(0.1)
-        .gravity(function (d) {
+        .gravity(function(d) {
           return forceData.nodes.gravity(d, nodeCount);
         })
         .on("tick", tick)
-        .on("end", function () {
+        .on("end", function() {
           forceData.nodes.savePositions();
           forceData.nodes.saveLonLat(backgroundMap);
         })
@@ -370,8 +423,7 @@ export class TopologyController {
       }
 
       // app starts here
-      if (unknowns.length === 0)
-        restart();
+      if (unknowns.length === 0) restart();
       // the legend
       // call updateLegend in timeout because:
       // If we create the legend right away, then it will be destroyed when the accordian
@@ -379,7 +431,7 @@ export class TopologyController {
       $timeout(updateLegend);
 
       if (oldSelectedNode) {
-        d3.selectAll("circle.inter-router").classed("selected", function (d) {
+        d3.selectAll("circle.inter-router").classed("selected", function(d) {
           if (d.key === oldSelectedNode.key) {
             selected_node = d;
             return true;
@@ -388,15 +440,17 @@ export class TopologyController {
         });
       }
       if (oldMouseoverNode && selected_node) {
-        d3.selectAll("circle.inter-router").each(function (d) {
+        d3.selectAll("circle.inter-router").each(function(d) {
           if (d.key === oldMouseoverNode.key) {
             mouseover_node = d;
             QDRService.management.topology.ensureAllEntities(
-              [{
-                entity: "router.node",
-                attrs: ["id", "nextHop"]
-              }],
-              function () {
+              [
+                {
+                  entity: "router.node",
+                  attrs: ["id", "nextHop"]
+                }
+              ],
+              function() {
                 nextHopHighlight(selected_node, d);
                 restart();
               }
@@ -409,7 +463,7 @@ export class TopologyController {
       if (unknowns.length > 0)
         setTimeout(resolveUnknowns, 10, nodeInfo, unknowns);
 
-      var continueForce = function (extra) {
+      var continueForce = function(extra) {
         if (extra > 0) {
           --extra;
           force.start();
@@ -426,7 +480,7 @@ export class TopologyController {
     // and client should point. (Direction between interior routers is determined by connection.dir)
     // So, the first time through links.initialize() we keep track of the nodes for which we
     // need router.link info and fill in that info here.
-    var resolveUnknowns = function (nodeInfo, unknowns) {
+    var resolveUnknowns = function(nodeInfo, unknowns) {
       let unknownNodes = {};
       // collapse the unknown nodes using an object
       for (let i = 0; i < unknowns.length; ++i) {
@@ -435,16 +489,24 @@ export class TopologyController {
       unknownNodes = Object.keys(unknownNodes);
       QDRService.management.topology.ensureEntities(
         unknownNodes,
-        [{
-          entity: "router.link",
-          attrs: ["linkType", "connectionId", "linkDir", "owningAddr"],
-          force: true
-        }],
-        function () {
+        [
+          {
+            entity: "router.link",
+            attrs: ["linkType", "connectionId", "linkDir", "owningAddr"],
+            force: true
+          }
+        ],
+        function() {
           let nodeInfo = QDRService.management.topology.nodeInfo();
           forceData.nodes.initialize(nodeInfo, width, height, localStorage);
           let edgeUnknowns = [];
-          forceData.links.initialize(nodeInfo, forceData.nodes, edgeUnknowns, height, localStorage);
+          forceData.links.initialize(
+            nodeInfo,
+            forceData.nodes,
+            edgeUnknowns,
+            height,
+            localStorage
+          );
           force
             .nodes(forceData.nodes.nodes)
             .links(forceData.links.links)
@@ -465,7 +527,7 @@ export class TopologyController {
     // update force layout (called automatically each iteration)
     function tick() {
       // move the circles
-      circle.attr("transform", function (d) {
+      circle.attr("transform", function(d) {
         if (isNaN(d.x) || isNaN(d.px)) {
           d.x = d.px = d.sx;
           d.y = d.py = d.sy;
@@ -478,7 +540,7 @@ export class TopologyController {
       });
 
       // draw lines from node centers
-      path.selectAll("path").attr("d", function (d) {
+      path.selectAll("path").attr("d", function(d) {
         return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
       });
     }
@@ -491,7 +553,7 @@ export class TopologyController {
         forceData.links,
         QDRService.management.topology.nodeInfo(),
         selected_node,
-        function (hlLink, hnode) {
+        function(hlLink, hnode) {
           hlLink.highlighted = true;
           hnode.highlighted = true;
         }
@@ -518,13 +580,21 @@ export class TopologyController {
     function handleMouseOutPath(d) {
       // mouse out of a path
       popupCancelled = true;
-      QDRService.management.topology.delUpdatedAction(
-        "connectionPopupHTML"
-      );
+      QDRService.management.topology.delUpdatedAction("connectionPopupHTML");
       d3.select("#popover-div").style("display", "none");
       d.selected = false;
       connectionPopupHTML();
     }
+
+    const showMarker = d => {
+      if (d.source.nodeType === "normal" || d.target.nodeType === "normal") {
+        // link between router and client
+        return $scope.legendOptions.options.clientArrows;
+      } else {
+        // link between routers or edge routers
+        return $scope.legendOptions.options.routerArrows;
+      }
+    };
 
     // Takes the forceData.nodes and forceData.links array and creates svg elements
     // Also updates any existing svg elements based on the updated values in forceData.nodes
@@ -536,20 +606,20 @@ export class TopologyController {
       // path is a selection of all g elements under the g.links svg:group
       // here we associate the links.links array with the {g.links g} selection
       // based on the link.uid
-      path = path.data(forceData.links.links, function (d) {
+      path = path.data(forceData.links.links, function(d) {
         return d.uid;
       });
 
       // update each existing {g.links g.link} element
       path
         .select(".link")
-        .classed("selected", function (d) {
+        .classed("selected", function(d) {
           return d.selected;
         })
-        .classed("highlighted", function (d) {
+        .classed("highlighted", function(d) {
           return d.highlighted;
         })
-        .classed("unknown", function (d) {
+        .classed("unknown", function(d) {
           return !d.right && !d.left;
         });
 
@@ -560,26 +630,28 @@ export class TopologyController {
       ) {
         path
           .select(".link")
-          .attr("marker-end", function (d) {
+          .attr("marker-end", function(d) {
+            if (!showMarker(d)) return null;
             return d.right ? `url(${urlPrefix}#end${d.markerId("end")})` : null;
           })
-          .attr("marker-start", function (d) {
-            return d.left || (!d.left && !d.right) ?
-              `url(${urlPrefix}#start${d.markerId("start")})` :
-              null;
+          .attr("marker-start", function(d) {
+            if (!showMarker(d)) return null;
+            return d.left || (!d.left && !d.right)
+              ? `url(${urlPrefix}#start${d.markerId("start")})`
+              : null;
           });
       }
       // add new links. if a link with a new uid is found in the data, add a new path
       let enterpath = path
         .enter()
         .append("g")
-        .on("mouseover", function (d) {
+        .on("mouseover", function(d) {
           // mouse over a path
           let event = d3.event;
           d.selected = true;
           popupCancelled = false;
-          let updateTooltip = function () {
-            $timeout(function () {
+          let updateTooltip = function() {
+            $timeout(function() {
               if (d.selected) {
                 $scope.trustedpopoverContent = $sce.trustAsHtml(
                   connectionPopupHTML(
@@ -601,23 +673,27 @@ export class TopologyController {
           );
           // request the data and update the tooltip as soon as it arrives
           QDRService.management.topology.ensureAllEntities(
-            [{
-              entity: "router.link",
-              force: true
-            }, {
-              entity: "connection"
-            }], updateTooltip
+            [
+              {
+                entity: "router.link",
+                force: true
+              },
+              {
+                entity: "connection"
+              }
+            ],
+            updateTooltip
           );
           // just show the tooltip with whatever data we have
           updateTooltip();
           restart();
         })
-        .on("mouseout", function (d) {
+        .on("mouseout", function(d) {
           handleMouseOutPath(d);
           restart();
         })
         // left click a path
-        .on("click", function () {
+        .on("click", function() {
           d3.event.stopPropagation();
           clearPopups();
         });
@@ -625,20 +701,22 @@ export class TopologyController {
       enterpath
         .append("path")
         .attr("class", "link")
-        .attr("marker-end", function (d) {
+        .attr("marker-end", function(d) {
+          if (!showMarker(d)) return null;
           return d.right ? `url(${urlPrefix}#end${d.markerId("end")})` : null;
         })
-        .attr("marker-start", function (d) {
-          return d.left || (!d.left && !d.right) ?
-            `url(${urlPrefix}#start${d.markerId("start")})` :
-            null;
+        .attr("marker-start", function(d) {
+          if (!showMarker(d)) return null;
+          return d.left || (!d.left && !d.right)
+            ? `url(${urlPrefix}#start${d.markerId("start")})`
+            : null;
         })
-        .attr("id", function (d) {
+        .attr("id", function(d) {
           const si = d.source.uid();
           const ti = d.target.uid();
           return ["path", si, ti].join("-");
         })
-        .classed("unknown", function (d) {
+        .classed("unknown", function(d) {
           return !d.right && !d.left;
         });
 
@@ -648,8 +726,10 @@ export class TopologyController {
       path.exit().remove();
 
       // circle (node) group
-      circle = d3.select("g.nodes").selectAll("g")
-        .data(forceData.nodes.nodes, function (d) {
+      circle = d3
+        .select("g.nodes")
+        .selectAll("g")
+        .data(forceData.nodes.nodes, function(d) {
           return d.uid();
         });
 
@@ -660,17 +740,17 @@ export class TopologyController {
       let enterCircle = circle
         .enter()
         .append("g")
-        .classed("multiple", function (d) {
+        .classed("multiple", function(d) {
           return d.normals && d.normals.length > 1;
         })
-        .attr("id", function (d) {
+        .attr("id", function(d) {
           return (
             (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index
           );
         });
 
       appendCircle(enterCircle, urlPrefix)
-        .on("mouseover", function (d) {
+        .on("mouseover", function(d) {
           // mouseover a circle
           $scope.current_node = d;
           QDRService.management.topology.delUpdatedAction(
@@ -678,7 +758,7 @@ export class TopologyController {
           );
           let e = d3.event;
           popupCancelled = false;
-          d.toolTip(QDRService.management.topology).then(function (toolTip) {
+          d.toolTip(QDRService.management.topology).then(function(toolTip) {
             showToolTip(toolTip, e);
           });
           if (d === $scope.mousedown_node) return;
@@ -691,18 +771,20 @@ export class TopologyController {
           clearAllHighlights();
           // we need .router.node info to highlight hops
           QDRService.management.topology.ensureAllEntities(
-            [{
-              entity: "router.node",
-              attrs: ["id", "nextHop"]
-            }],
-            function () {
+            [
+              {
+                entity: "router.node",
+                attrs: ["id", "nextHop"]
+              }
+            ],
+            function() {
               mouseover_node = d; // save this node in case the topology changes so we can restore the highlights
               nextHopHighlight(selected_node, d);
               restart();
             }
           );
         })
-        .on("mouseout", function () {
+        .on("mouseout", function() {
           // mouse out for a circle
           $scope.current_node = null;
           // unenlarge target node
@@ -713,7 +795,7 @@ export class TopologyController {
           mouseover_node = null;
           restart();
         })
-        .on("mousedown", function (d) {
+        .on("mousedown", function(d) {
           // mouse down for circle
           backgroundMap.cancelZoom();
           $scope.current_node = d;
@@ -727,7 +809,7 @@ export class TopologyController {
             .mouse(this.parentNode.parentNode.parentNode)
             .slice();
         })
-        .on("mouseup", function (d) {
+        .on("mouseup", function(d) {
           // mouse up for circle
           backgroundMap.restartZoom();
           if (!$scope.mousedown_node) return;
@@ -756,16 +838,18 @@ export class TopologyController {
           $scope.mousedown_node = null;
           // handle clicking on nodes that represent multiple sub-nodes
           if (d.normals && !d.isArtemis && !d.isQpid) {
-            doDialog(d, 'client');
-          } else if (d.nodeType === '_topo') {
-            d.toolTip(QDRService.management.topology, true).then(function (toolTip) {
-              doDialog(d, 'router', toolTip);
+            doDialog(d, "client");
+          } else if (d.nodeType === "_topo") {
+            d.toolTip(QDRService.management.topology, true).then(function(
+              toolTip
+            ) {
+              doDialog(d, "router", toolTip);
             });
           }
           // apply any data changes to the interface
           $timeout(restart);
         })
-        .on("dblclick", function (d) {
+        .on("dblclick", function(d) {
           // circle
           d3.event.preventDefault();
           if (d.fixed) {
@@ -774,7 +858,7 @@ export class TopologyController {
             force.start(); // let the nodes move to a new position
           }
         })
-        .on("contextmenu", function (d) {
+        .on("contextmenu", function(d) {
           // circle
           $(document).click();
           d3.event.preventDefault();
@@ -784,20 +868,24 @@ export class TopologyController {
             left: rm.left + "px",
             top: rm.top - rm.offset.top + "px"
           });
-          $timeout(function () {
+          $timeout(function() {
             $scope.contextNode = d;
           });
         })
-        .on("click", function (d) {
+        .on("click", function(d) {
           // circle
           if (!mouseup_node) return;
           // clicked on a circle
           clearPopups();
           // circle was a broker
           if (utils.isArtemis(d)) {
-            const host = d.container === '0.0.0.0' ? 'localhost' : d.container;
+            const host = d.container === "0.0.0.0" ? "localhost" : d.container;
             const artemis = `${$location.protocol()}://${host}:8161/console`;
-            window.open(artemis, 'artemis', 'fullscreen=yes, toolbar=yes,location = yes, directories = yes, status = yes, menubar = yes, scrollbars = yes, copyhistory = yes, resizable = yes');
+            window.open(
+              artemis,
+              "artemis",
+              "fullscreen=yes, toolbar=yes,location = yes, directories = yes, status = yes, menubar = yes, scrollbars = yes, copyhistory = yes, resizable = yes"
+            );
             return;
           }
           d3.event.stopPropagation();
@@ -811,7 +899,7 @@ export class TopologyController {
       // add text to client circles if there are any that represent multiple clients
       svg.selectAll(".subtext").remove();
       let multiples = svg.selectAll(".multiple");
-      multiples.each(function (d) {
+      multiples.each(function(d) {
         let g = d3.select(this);
         let r = Nodes.radius(d.nodeType);
         g.append("svg:text")
@@ -821,8 +909,7 @@ export class TopologyController {
           .text("* " + d.normals.length);
       });
 
-      if (!$scope.mousedown_node || !selected_node)
-        return;
+      if (!$scope.mousedown_node || !selected_node) return;
 
       // set the graph in motion
       force.start();
@@ -836,14 +923,14 @@ export class TopologyController {
 
     function showToolTip(title, event) {
       // show the tooltip
-      $timeout(function () {
+      $timeout(function() {
         $scope.trustedpopoverContent = $sce.trustAsHtml(title);
         displayTooltip(event);
       });
     }
 
     function displayTooltip(event) {
-      $timeout(function () {
+      $timeout(function() {
         if (popupCancelled) {
           d3.select("#popover-div").style("display", "none");
           return;
@@ -861,7 +948,7 @@ export class TopologyController {
         d3.select("#popover-div")
           .style("visibility", "visible")
           .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
-          .on("mouseout", function () {
+          .on("mouseout", function() {
             d3.select(this).style("display", "none");
           });
       });
@@ -872,10 +959,10 @@ export class TopologyController {
       // Once adding is completed, the topology will update automatically if it has changed
       let nodeInfo = QDRService.management.topology.nodeInfo();
       // don't count the nodes without connection info
-      let cnodes = Object.keys(nodeInfo).filter(function (node) {
+      let cnodes = Object.keys(nodeInfo).filter(function(node) {
         return nodeInfo[node]["connection"];
       });
-      let routers = forceData.nodes.nodes.filter(function (node) {
+      let routers = forceData.nodes.nodes.filter(function(node) {
         return node.nodeType === "_topo";
       });
       if (routers.length > cnodes.length) {
@@ -922,11 +1009,11 @@ export class TopologyController {
     // When the DOM element is removed from the page,
     // AngularJS will trigger the $destroy event on
     // the scope
-    $scope.$on("$destroy", function () {
+    $scope.$on("$destroy", function() {
       destroy();
     });
     // we are about to leave the page, save the node positions
-    $rootScope.$on("$locationChangeStart", function () {
+    $rootScope.$on("$locationChangeStart", function() {
       destroy();
     });
 
@@ -943,12 +1030,14 @@ export class TopologyController {
       saveChanged();
       // after the graph is displayed fetch all .router.node info. This is done so highlighting between nodes
       // doesn't incur a delay
-      QDRService.management.topology.addUpdateEntities([{
-        entity: "router.node",
-        attrs: ["id", "nextHop"]
-      }]);
+      QDRService.management.topology.addUpdateEntities([
+        {
+          entity: "router.node",
+          attrs: ["id", "nextHop"]
+        }
+      ]);
       // call this function every time a background update is done
-      QDRService.management.topology.addUpdatedAction("topology", function () {
+      QDRService.management.topology.addUpdatedAction("topology", function() {
         let changed = hasChanged();
         // there is a new node, we need to get all of it's entities before drawing the graph
         if (changed > 0) {
@@ -968,9 +1057,11 @@ export class TopologyController {
     function setupInitialUpdate() {
       // make sure all router nodes have .connection info. if not then fetch any missing info
       QDRService.management.topology.ensureAllEntities(
-        [{
-          entity: "connection"
-        }],
+        [
+          {
+            entity: "connection"
+          }
+        ],
         handleInitialUpdate
       );
     }
