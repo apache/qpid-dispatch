@@ -465,20 +465,19 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     // using the address from the link target.
     //
     qd_message_depth_t  validation_depth = (anonymous_link || check_user) ? QD_DEPTH_PROPERTIES : QD_DEPTH_MESSAGE_ANNOTATIONS;
-    bool                valid_message    = qd_message_check(msg, validation_depth);
+    qd_message_depth_status_t  depth_valid = qd_message_check_depth(msg, validation_depth);
 
-    if (!valid_message) {
-        if (receive_complete) {
-            //
-            // The entire message has been received and the message is still invalid.  Reject the message.
-            //
+    if (depth_valid != QD_MESSAGE_DEPTH_OK) {
+        if (depth_valid == QD_MESSAGE_DEPTH_INVALID) {
             qd_message_set_discard(msg, true);
             pn_link_flow(pn_link, 1);
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
             qd_message_free(msg);
+        } else {
+            // otherwise wait until more data arrives and re-try the validation
+            assert(depth_valid == QD_MESSAGE_DEPTH_INCOMPLETE);
         }
-        // otherwise wait until more data arrives and re-try the validation
         return next_delivery;
     }
 
