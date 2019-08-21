@@ -661,6 +661,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     //       connection's work lock for incoming links.  This protection is only
     //       needed for outgoing links.
     //
+    assert(link->link_direction == QD_INCOMING);
 
     if (DEQ_IS_EMPTY(link->undelivered)) {
         qdr_link_ref_t *temp_rlink = 0;
@@ -727,7 +728,6 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             free_qdr_link_ref_t(temp_rlink);
         }
     } else {
-        assert(false);
         //
         // Take the action reference and use it for undelivered.  Don't decref/incref.
         //
@@ -823,6 +823,10 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
  */
 void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr)
 {
+    // we don't need to hold the lock since this link is incoming - only
+    // outgoing links require locking the undelivered list
+    assert(link->link_direction == QD_INCOMING);
+
     if (DEQ_SIZE(link->undelivered) > 0) {
         //
         // Move all the undelivered to a local list in case not all can be delivered.
@@ -830,6 +834,7 @@ void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_ad
         // list.
         //
         qdr_delivery_list_t deliveries;
+        // coverity[missing_lock]
         DEQ_MOVE(link->undelivered, deliveries);
 
         qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
