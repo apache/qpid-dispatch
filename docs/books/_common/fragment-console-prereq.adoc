@@ -21,4 +21,4 @@ under the License
 
 * {ConsoleName} requires the `qpid-dispatch-console` package.
 +
-For more information, see the link:https://qpid.apache.org/packages.html[Packages page^].
+For more information about installing packages, see the link:https://qpid.apache.org/packages.html[Packages page^].
