@@ -266,59 +266,50 @@ In this scenario, all messages are sent to all receivers:
 .Multicast Message Routing
 image::multicast-routing.png[Multicast Message Routing, align="center"]
 
-=== Message Settlement
+=== Message Settlement and Reliability
 
-Message settlement is negotiated between the producer and the router when the producer establishes a link to the router. Depending on the settlement pattern, messages might be delivered with any of the following degrees of reliability:
+{RouterName} can deliver messages with the following degrees of reliability:
 
 * At most once
 * At least once
 * Exactly once
 
-{RouterName} treats all messages as either _pre-settled_ or _unsettled_, and it is responsible for propagating the settlement of each message it routes.
+The level of reliability is negotiated between the producer and the router when the producer establishes a link to the router. To achieve the negotiated level of reliability, {RouterName} treats all messages as either _pre-settled_ or _unsettled_.
 
-Pre-settled:: Sometimes called _fire and forget_, the router settles the incoming and outgoing deliveries and propagates the settlement to the message's destination. However, it does not guarantee delivery.
+Pre-settled::
+Sometimes called _fire and forget_, the router settles the incoming and outgoing deliveries and propagates the settlement to the message's destination. However, it does not guarantee delivery.
 
-Unsettled:: The router propagates the settlement between the sender and receiver, and guarantees one of the following outcomes:
+Unsettled::
+{RouterName} propagates the settlement between the producer and consumer. For an anycast address, the router associates the incoming delivery with the resulting outgoing delivery. Based on this association, the router propagates changes in delivery state from the consumer to the producer.
 +
-* The message is delivered and settled, with the consumer's disposition indicated.
-* The delivery is settled with a disposition of `RELEASED`.
+For a multicast address, the router associates the incoming delivery with all outbound deliveries. The router waits for each consumer to set their delivery's final state. After all outgoing deliveries have reached their final state, the router sets a final delivery state for the original inbound delivery and passes it to the producer.
 +
-This means that the message did not reach its destination.
-* The delivery is settled with a disposition of `MODIFIED`.
+The following table describes the reliability guarantees for unsettled messages sent to an anycast or multicast address:
 +
-This means that the message might or might not have reached its destination. The delivery is considered to be "in-doubt" and should be re-sent if "at least once" delivery is required.
-* The link, session, or connection to {RouterName} was dropped, and all deliveries are "in-doubt".
-
-=== Routing Pattern Reliability
-
-The following table describes the levels of reliability provided by each routing pattern:
-
-[options="header",cols="30,70"]
+[cols="20,40,40"]
 |===
-| Routing pattern | Reliable?
+| Final disposition | Anycast | Multicast
 
-| Anycast (Balanced or Closest)
-a| Yes, when the message deliveries are unsettled.
+| `accepted`
+| The consumer received the message.
+a|
+Either:
 
-There is a reliability contract that the router network abides by when delivering unsettled messages to anycast addresses. For every such delivery sent by a producer, the router network guarantees that one of the following outcomes will occur:
+* All consumers received the message,
 
-* The delivery shall be settled with ACCEPTED or REJECTED disposition where the disposition is supplied by the consumer.
+* Or, at least one consumer received the message, but no consumers rejected it.
 
-* The delivery shall be settled with RELEASED disposition, meaning that the message was not delivered to any consumer.
+| `released`
+| The message did not reach its destination.
+| The message did not reach any of the consumers.
 
-* The delivery shall be settled with MODIFIED disposition, meaning that the message may have been delivered to a consumer but should be considered in-doubt and re-sent.
+| `modified`
+| The message may or may not have reached its destination. The delivery is considered to be "in-doubt" and should be re-sent if "at least once" delivery is required.
+| The message may or may not have reached any of the consumers. However, no consumers rejected or accepted it.
 
-* The connection to the producer shall be dropped, signifying that all unsettled deliveries should now be considered in-doubt by the producer and later re-sent.
-
-| Multicast
-a| No.
-
-If a producer sends an unsettled delivery, the disposition may be ACCEPTED or RELEASED.
-
-* If ACCEPTED, there is no guarantee that the message was delivered to any consumer.
-
-* If RELEASED, the message was definitely not delivered to any consumer.
-
+| `rejected`
+| The consumer rejected the message.
+| At least one consumer rejected the message.
 |===
 
 [id='prioritized-message-delivery']
