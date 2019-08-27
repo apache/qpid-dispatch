@@ -286,15 +286,18 @@ For a multicast address, the router associates the incoming delivery with all ou
 +
 The following table describes the reliability guarantees for unsettled messages sent to an anycast or multicast address:
 +
-[cols="20,40,40"
+[cols="20,40,40"]
 |===
 | Final disposition | Anycast | Multicast
 
 | `accepted`
 | The consumer received the message.
-| Either:
-* All consumers received the message.
-* At least one consumer received the message, but no consumers rejected it.
+a|
+Either:
+
+* All consumers received the message,
+
+* Or, at least one consumer received the message, but no consumers rejected it.
 
 | `released`
 | The message did not reach its destination.
