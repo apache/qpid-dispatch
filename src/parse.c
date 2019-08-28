@@ -701,6 +701,63 @@ qd_parsed_field_t *qd_parse_value_by_key(qd_parsed_field_t *field, const char *k
 }
 
 
+// TODO(kgiusti) - de-duplicate all the buffer chain walking code!
+// See DISPATCH-1403
+//
+static inline int _turbo_advance(qd_iterator_pointer_t *ptr, int length)
+{
+    const int start = ptr->remaining;
+    int move = MIN(length, ptr->remaining);
+    while (move > 0) {
+        int avail = qd_buffer_cursor(ptr->buffer) - ptr->cursor;
+        if (move < avail) {
+            ptr->cursor += move;
+            ptr->remaining -= move;
+            break;
+        }
+        move -= avail;
+        ptr->remaining -= avail;
+        if (ptr->remaining == 0) {
+            ptr->cursor += avail;   // move to end
+            break;
+        }
+
+        // More remaining in buffer chain: advance to next buffer in chain
+        assert(DEQ_NEXT(ptr->buffer));
+        if (!DEQ_NEXT(ptr->buffer)) {
+            // this is an error!  ptr->remainer is not accurate.  This should not happen
+            // since the MA field must be completely received at this point
+            // (see DISPATCH-1394).
+            int copied = start - ptr->remaining;
+            ptr->remaining = 0;
+            ptr->cursor += avail;  // force to end of chain
+            return copied;
+        }
+        ptr->buffer = DEQ_NEXT(ptr->buffer);
+        ptr->cursor = qd_buffer_base(ptr->buffer);
+    }
+    return start - ptr->remaining;
+}
+
+
+// TODO(kgiusti): deduplicate!
+// See DISPATCH-1403
+//
+static inline int _turbo_copy(qd_iterator_pointer_t *ptr, char *buffer, int length)
+{
+    int move = MIN(length, ptr->remaining);
+    char * const start = buffer;
+    while (ptr->remaining && move > 0) {
+        int avail = MIN(move, qd_buffer_cursor(ptr->buffer) - ptr->cursor);
+        memcpy(buffer, ptr->cursor, avail);
+        buffer += avail;
+        move -= avail;
+        _turbo_advance(ptr, avail);
+    }
+    return (buffer - start);
+}
+
+
 const char *qd_parse_annotations_v1(
     bool                   strip_anno_in,
     qd_iterator_t         *ma_iter_in,
@@ -735,32 +792,19 @@ const char *qd_parse_annotations_v1(
         while (anno) {
             uint8_t * dp;                     // pointer to key name in raw buf or extract buf
             char key_name[QD_MA_MAX_KEY_LEN]; // key name extracted across buf boundary
+            int key_len = anno->size;
 
-            if (anno->bufptr.remaining >= anno->size + anno->length_of_size + 1) {
+            const int avail = qd_buffer_cursor(anno->bufptr.buffer) - anno->bufptr.cursor;
+            if (avail >= anno->size + anno->length_of_size + 1) {
                 // The best case: key name is completely in current raw buffer
                 dp = anno->bufptr.cursor + anno->length_of_size + 1;
             } else {
                 // Pull the key name from multiple buffers
                 qd_iterator_pointer_t wbuf = anno->bufptr;    // scratch buf pointers for getting key
-                uint8_t * wip = wbuf.cursor + anno->length_of_size + 1; // where to look in first buf
+                _turbo_advance(&wbuf, anno->length_of_size + 1);
                 int t_size = MIN(anno->size, QD_MA_MAX_KEY_LEN); // get this many total
-                int n_local = 0;                              // n copied so far. t_size is goal.
-                while (wbuf.buffer && n_local < t_size) {
-                    // copy current buf bytes in key_name buffer
-                    int n_needed = t_size - n_local;
-                    int n_to_copy = MIN(n_needed, wbuf.remaining);
-                    memmove(key_name + n_local, wip, n_to_copy);
-                    n_local += n_to_copy;
-                    
-                    if (n_local < t_size) {
-                        // move to next buffer
-                        wbuf.buffer = DEQ_NEXT(wbuf.buffer);
-                        if (wbuf.buffer) {
-                            wbuf.remaining = qd_buffer_size(wbuf.buffer);
-                            wip = qd_buffer_base(wbuf.buffer);
-                        }
-                    }
-                }
+                key_len = _turbo_copy(&wbuf, key_name, t_size);
+
                 dp = (uint8_t *)key_name;
             }
 
@@ -769,13 +813,13 @@ const char *qd_parse_annotations_v1(
             // stream then the remainder of the keys must be routing keys.
             // Padding keys are not real routing annotations but they have
             // the routing prefix.
-            assert(memcmp(QD_MA_PREFIX, dp, QMPL) == 0);
-            
+            assert(key_len >= QMPL && memcmp(QD_MA_PREFIX, dp, QMPL) == 0);
+
             // Advance pointer to data beyond the common prefix
             dp += QMPL;
-            
+
             qd_ma_enum_t ma_type = QD_MAE_NONE;
-            switch (anno->size) {
+            switch (key_len) {
                 case QD_MA_TO_LEN:
                     if (memcmp(QD_MA_TO + QMPL,      dp, QD_MA_TO_LEN - QMPL) == 0) {
                         ma_type = QD_MAE_TO;
