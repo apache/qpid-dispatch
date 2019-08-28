@@ -386,6 +386,12 @@ class MulticastLinearTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_80_unsettled_3ack_message_annotations(self):
+        body = " MCAST UNSETTLED 3ACK LARGE MESSAGE ANNOTATIONS " + LARGE_PAYLOAD
+        test = MulticastUnsettled3AckMA(self.config, 10, body)
+        test.run()
+        self.assertEqual(None, test.error)
+
     def test_999_check_for_leaks(self):
         self._check_for_leaks()
 
@@ -846,6 +852,41 @@ class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
                 event.connection.close()
         super(MulticastUnsettledRxFail, self).on_message(event)
 
+
+class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
+    """
+    Try 3 Ack, but with a bunch of user Message Annotations (why not?)
+    """
+    def __init__(self, config, count, body, outcomes=None):
+        super(MulticastUnsettled3AckMA, self).__init__(config,
+                                                       count,
+                                                       body,
+                                                       outcomes=None)
+        self._huge_ma = {
+            "my-key": "my-data",
+            "my-other-key": "my-other-data",
+            "my-map": { "my-map-key1": "X",
+                        "my-map-key2": 0x12,
+                        "my-map-key3": "+0123456789" * 101,
+                        "my-map-list": [i for i in range(97)]
+            },
+            "my-last-key": "so long, folks!"
+        }
+
+    def do_send(self, sender):
+        for i in range(self.msg_count):
+            msg = Message(body=" %s -> %s:%s" % (sender.name, i, self.body))
+            msg.annotations = self._huge_ma
+            dlv = sender.send(msg)
+            self.n_sent += 1
+
+    def on_message(self, event):
+        msg = event.message
+        if event.message.annotations != self._huge_ma:
+            self.error = "forwarded message annotations mismatch original"
+            self.done()
+            return
+        super(MulticastUnsettled3AckMA, self).on_message(event)
 
 if __name__ == '__main__':
     unittest.main(main_module())
