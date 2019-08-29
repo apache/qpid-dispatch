@@ -1230,6 +1230,14 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 
     qd_server->http = qd_http_server(qd_server, qd_server->log_source);
 
+    qd_log(qd_server->log_source, QD_LOG_INFO,
+           "\n"
+           "    ____        ____           ____\n"
+           "   / __ \\      / __ \\         / __ \\\n"
+           "  / / / /     / / / /        / /_/ /\n"
+           " / /_/ /     / /_/ /        / __ _/\n"
+           " \\___\\_\\pid /_____/ispatch /_/ \\_\\outer\n");
+
     qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
 
     return qd_server;
