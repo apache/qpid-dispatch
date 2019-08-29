@@ -176,6 +176,70 @@ static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
 }
 
 
+//
+// API for handling data that spans one or more buffers
+//
+
+/**
+ * Represents a span of data within a buffer chain.
+ * The buffer and cursor fields are guaranteed to be !null if length > 0.
+ */
+typedef struct qd_buffered_data_t {
+    qd_buffer_t   *buffer;  // head of buffer chain
+    unsigned char *cursor;  // start of first byte of data in 'buffer'
+    size_t         length;  // number of bytes of data
+} qd_buffered_data_t;
+
+
+/**
+ * Allocate from the pool
+ * @param head Start of buffered data
+ * @param offset To start of data from qd_buffer_base(head)
+ * @param length Number of bytes in field
+ */
+qd_buffered_data_t *qd_buffered_data(qd_buffer_t *head, size_t offset, size_t length);
+
+/**
+ * Free an allocated qd_buffer_data_t
+ * @param bdata A pointer to the qd_buffered_data_t to free.  Note that the
+ * underlying buffer chain is not freed.
+ */
+void qd_buffered_data_free(qd_buffered_data_t *bdata);
+
+/**
+ * Copy n bytes of data from start of buffer chain (cursor) into buffer.
+ * Advance the cursor past the last byte copied.
+ * @param bdata Buffered data
+ * @param buffer Destination for copied bytes
+ * @param n Number of bytes to copy
+ * @return Number of bytes actually copied, which may be < n if length of
+ * buffered data is shorter than n.
+ */
+static inline size_t qd_buffered_data_copy(qd_buffered_data_t *bdata, unsigned char *buffer, size_t n)
+{}
+
+/**
+ * Compare the first n bytes in the buffered data to contents of buffer.
+ * Advance the cursor past the last byte copied.  If matched advance the cursor past the nth byte.
+ * @param bdata Buffered data
+ * @param buffer Data to compare
+ * @param n Number of bytes to compare
+ * @return true if match.
+ */
+static inline bool qd_buffered_data_equal(qd_buffered_data_t *bdata, const unsigned char *buffer, size_t n)
+{}
+
+/**
+ * Move the cursor n bytes forward (e.g. skip the first n bytes).
+ * @param bdata Buffered data
+ * @param n Number of bytes to skip
+ * @return Actual number of bytes skipped.  May be < n if buffered data is shorter than n.
+ * buffered data is shorter than n.
+ */
+static inline bool qd_buffered_data_equal(qd_buffered_data_t *bdata, const unsigned char *buffer, size_t n)
+{}
+
+
 ///@}
 
 #endif
