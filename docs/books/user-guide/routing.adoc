@@ -282,7 +282,7 @@ Sometimes called _fire and forget_, the router settles the incoming and outgoing
 Unsettled::
 {RouterName} propagates the settlement between the producer and consumer. For an anycast address, the router associates the incoming delivery with the resulting outgoing delivery. Based on this association, the router propagates changes in delivery state from the consumer to the producer.
 +
-For a multicast address, the router associates the incoming delivery with all outbound deliveries. When each outbound delivery is settled by its consumer, the router sets a final delivery state for the original inbound delivery and passes it to the producer.
+For a multicast address, the router associates the incoming delivery with all outbound deliveries. The router waits for each consumer to set their delivery's final state. After all outgoing deliveries have reached their final state, the router sets a final delivery state for the original inbound delivery and passes it to the producer.
 +
 The following table describes the reliability guarantees for unsettled messages sent to an anycast or multicast address:
 +
