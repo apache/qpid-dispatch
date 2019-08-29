@@ -29,6 +29,8 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/atomic.h>
 
+#include <stdbool.h>
+
 typedef struct qd_buffer_t qd_buffer_t;
 
 DEQ_DECLARE(qd_buffer_t, qd_buffer_list_t);
@@ -187,17 +189,18 @@ static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
 typedef struct qd_buffered_data_t {
     qd_buffer_t   *buffer;  // head of buffer chain
     unsigned char *cursor;  // start of first byte of data in 'buffer'
-    size_t         length;  // number of bytes of data
+    size_t         length;  // total number of bytes of data in chain
 } qd_buffered_data_t;
 
 
 /**
- * Allocate from the pool
+ * Allocate a buffered data instance from the pool
  * @param head Start of buffered data
  * @param offset To start of data from qd_buffer_base(head)
  * @param length Number of bytes in field
  */
 qd_buffered_data_t *qd_buffered_data(qd_buffer_t *head, size_t offset, size_t length);
+
 
 /**
  * Free an allocated qd_buffer_data_t
@@ -205,6 +208,7 @@ qd_buffered_data_t *qd_buffered_data(qd_buffer_t *head, size_t offset, size_t le
  * underlying buffer chain is not freed.
  */
 void qd_buffered_data_free(qd_buffered_data_t *bdata);
+
 
 /**
  * Copy n bytes of data from start of buffer chain (cursor) into buffer.
@@ -216,7 +220,7 @@ void qd_buffered_data_free(qd_buffered_data_t *bdata);
  * buffered data is shorter than n.
  */
 static inline size_t qd_buffered_data_copy(qd_buffered_data_t *bdata, unsigned char *buffer, size_t n)
-{}
+{ return 0; }
 
 /**
  * Compare the first n bytes in the buffered data to contents of buffer.
@@ -227,17 +231,106 @@ static inline size_t qd_buffered_data_copy(qd_buffered_data_t *bdata, unsigned c
  * @return true if match.
  */
 static inline bool qd_buffered_data_equal(qd_buffered_data_t *bdata, const unsigned char *buffer, size_t n)
-{}
+{ return true; }
 
 /**
  * Move the cursor n bytes forward (e.g. skip the first n bytes).
  * @param bdata Buffered data
  * @param n Number of bytes to skip
  * @return Actual number of bytes skipped.  May be < n if buffered data is shorter than n.
- * buffered data is shorter than n.
  */
-static inline bool qd_buffered_data_equal(qd_buffered_data_t *bdata, const unsigned char *buffer, size_t n)
-{}
+static inline bool qd_buffered_data_advance(qd_buffered_data_t *bdata, const unsigned char *buffer, size_t n)
+{ return true; }
+
+
+/**
+ * Extract the unsigned byte at the current cursor, and advance to the next byte
+ * @param bdata Buffered data
+ * @param octet Location to write the unsigned byte
+ * @return true if octet set, false if no data available (length == 0)
+ */
+static inline bool qd_buffered_data_octet(qd_buffered_data_t *bdata, uint8_t *octet)
+{ return true; }
+
+
+/**
+ * Extract the unsigned 32 bit integer at the current cursor and advance past it.
+ * Converts the result into host byte order.
+ * @param bdata Buffered data
+ * @param uinteger32 Location to write the integer
+ * @return true on success, false if length < 4 octets (cursor is not moved)
+ */
+static inline bool qd_buffered_data_uint32(qd_buffered_data_t *bdata, uint32_t *uinteger32)
+{ return true; }
+
+
+//////////////////////////////////////
+// API for processing buffered data
+//////////////////////////////////////
+
+
+/**
+ * Callback provided by the caller for processing data in a buffer chain.
+ * @param context Caller provided handle
+ * @param data Start of data (contiguous)
+ * @param length Number of contiguous bytes starting at data
+ * @return The number of bytes processed by the handler:
+ * If != to length:
+ *    if < 0 a non-recoverable error occurred.  Processing is aborted.
+ *    if (> 0 && < length) handler is done and no further callbacks will be made
+ */
+typedef ssize_t (*qd_buffered_data_handler_t)(void *context,
+                                              const unsigned char *data,
+                                              size_t length);
+
+/**
+ * Pass the data in a buffered list to a processing function.  The handler is
+ * called repeatedly passing the contiguous data from each buffer in the buffer
+ * chain (up to bdata->length bytes.  bdata is advanced by the number of bytes
+ * processed by the handler after each successful call.
+ *
+ * The handler can signal that it is complete by returning a value that
+ * is < length.  This will cause qd_buffered_data_consume to return.
+ *
+ * If the handler returns an error (value < 0) then bdata is not modified.
+ *
+ * @param bdata The buffered data
+ * @param handler A qd_buffered_data_handler_t function
+ * @param context Passed to the handler function
+ * @return the total number of bytes processed, or an error code if one is
+ * returned by the handler.
+ */
+static inline ssize_t qd_buffered_data_consume(qd_buffered_data_t *bdata,
+                                               qd_buffered_data_handler_t *handler,
+                                               void *context)
+{ return 0; }
+
+
+//////////////////////////////////////////
+// API for extracting AMQP type encodings
+//////////////////////////////////////////
+
+
+/**
+ * Extract the AMQP type descriptor information from a buffered field.
+ * Expects bdata to point at the tag octet of the descriptor.
+ * On success bdata is advanced past the descriptor
+ *
+ * @param bdata The buffered data
+ * @param tag Set to the AMQP type tag
+ * @param size Set to the size of the data in octets (includes length_of_count)
+ * @param length_of_size In bytes, set to 1 or 4, depending on the type
+ * @param count Set to the number of entries if type is compound, else zero
+ * @param length_of_count In bytes (1 or 4) if type is compound
+ * @return 0 on success, else a descriptive parse error message
+ */
+static inline const char *qd_buffered_data_get_type_info(qd_buffered_data_t *bdata,
+                                                         uint8_t  *tag,
+                                                         uint32_t *size,
+                                                         uint32_t *length_of_size,
+                                                         uint32_t *count,
+                                                         uint32_t *length_of_count)
+{ return 0; }
 
 
 ///@}
