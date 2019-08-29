@@ -1233,22 +1233,12 @@ class RouterTest(TestCase):
 
     def test_68_edge_qdstat_all_routers(self):
         # Connects to an edge router and runs "qdstat --all-routers"
-        # "qdstat --all-routers" is same as "qdstat --all-routers --all-entities"
+        # "qdstat --all-routers" is same as "qdstat --all-routers --g"
         # Connecting to an edge router and running "qdstat --all-routers""will only yield the
         # summary statostics of the edge router. It will not show statistics of the interior routers.
         outs = self.run_qdstat(['--all-routers'],
                                address=self.routers[2].addresses[0])
-        # Check if each entity  section is showing
-        self.assertEqual(outs.count("Router Links"), 1)
-        self.assertEqual(outs.count("Router Addresses"), 1)
-        self.assertEqual(outs.count("AutoLinks"), 1)
-        self.assertEqual(outs.count("Auto Links"), 1)
-        self.assertEqual(outs.count("Router Statistics"), 1)
-        self.assertEqual(outs.count("Link Routes"), 2)
-        self.assertEqual(outs.count("Types"), 1)
         self.assertTrue("Router Id                        EA1" in outs)
-
-        self.assertTrue("Types" in outs)
 
         outs = self.run_qdstat(['--all-routers', '--all-entities'],
                                address=self.routers[2].addresses[0])
@@ -1292,14 +1282,7 @@ class RouterTest(TestCase):
         # summary statostics of all the interior routers.
         outs = self.run_qdstat(['--all-routers'],
                                address=self.routers[0].addresses[0])
-        self.assertEqual(outs.count("Router Links"), 2)
-        self.assertEqual(outs.count("Router Addresses"), 2)
-        self.assertEqual(outs.count("Connections"), 4)
-        self.assertEqual(outs.count("AutoLinks"), 2)
-        self.assertEqual(outs.count("Auto Links"), 2)
-        self.assertEqual(outs.count("Link Routes"), 4)
         self.assertEqual(outs.count("Router Statistics"), 2)
-        self.assertEqual(outs.count("Types"), 2)
 
         outs = self.run_qdstat(['--all-routers', '-nv'],
                                address=self.routers[0].addresses[0])

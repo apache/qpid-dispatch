@@ -78,6 +78,9 @@ def parse_args(argv):
     if opts.all_entities and opts.show:
            parser.error("--all-entities cannot be combined with specific entity option -" + opts.show)
 
+    if not opts.show and not opts.all_entities and opts.all_routers:
+        opts.show = u'g'
+
     if not opts.all_routers and not opts.all_entities and not opts.show:
         opts.show = u'g'
 
@@ -723,9 +726,6 @@ class BusManager(Node):
             else:
                 self.show_entity(main)
         elif opts.all_routers and opts.all_entities:
-            print (str(datetime.now()))
-            self.all_routers_entities()
-        elif opts.all_routers:
             print (str(datetime.now()))
             self.all_routers_entities()
         elif opts.all_entities:
