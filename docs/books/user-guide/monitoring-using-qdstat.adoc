@@ -387,7 +387,7 @@ AutoLinks
   my_queue_wp  out  0    5     active // <2>
 ----
 <1> The incoming autolink from `my_queue_wp`. As indicated by the `status` field, the link is active, because the broker is running and the connection for the link is already established (as indicated by the `link` field).
-<2> The outgoing autlink to `my_queue_wp`. Like the incoming link, it is active and has an established connection.
+<2> The outgoing autolink to `my_queue_wp`. Like the incoming link, it is active and has an established connection.
 --
 
 == Viewing the Status of a Router's Link Routes
