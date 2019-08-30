@@ -1,0 +1,563 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+
+=====================================================
+Router Threading and Interprocess Communication Guide
+=====================================================
+
+The Qpid Dispatch Router (qdrouterd) threading architecture is based
+on two classes of threads:
+
+ *) A Worker thread which interfaces with the Proton subsystem, and
+ *) The Core Routing thread which manages the routing database and
+performs forwarding.
+
+In a running router there is a single Core Routing thread (core) and
+one or more Worker threads.  The number of Worker threads is
+determined by the router configuration setting "workerThreads", which
+defaults to four.
+
+IPC between these threads is done using Action queues, Work queues,
+and manipulation of shared data.
+
+
+Worker Threads
+==============
+
+The Worker thread is responsible for interfacing with the Proton
+subsystem.  Only a worker thread can safely call directly into the
+Proton library.  The core thread must communicate with a worker thread
+in order to have the worker manipulate Proton state on the core's
+behalf.
+
+The Proton subsystem limits concurrency to a single connection.  That
+is, only one thread can be processing a given Proton connection (and
+all of its child elements, such as links and deliveries) at a time.
+The router honors this requirement by restricting access to a given
+Proton connection (and its children) to a single worker thread at a
+time.  To say this another way, a particular Proton connection can be
+processed by any worker threads but not concurrently.
+
+A worker thread is driven by the Proton proactor API.  The worker's
+main loop blocks on the proactor waiting for events, processes
+incoming events, then blocks again.
+
+
+Core Thread
+===========
+
+The one core thread has several responsibilities, including:
+
+ *) Managing the forwarding state
+ *) Forwarding messages across the router
+ *) Forwarding disposition and settlement state changes across the router
+ *) Managing link credit flow
+ *) Running the management Agent
+
+The core thread can be thought of as sitting in between the worker
+threads, moving messages and state between them.
+
+When a worker thread needs to forward a received message it passes the
+message and associated delivery state to the core thread.  The core
+thread uses address information from the message to determine the
+outgoing link(s) for the message.  The core then queues the message to
+the proper outgoing link(s).  The core wakes the worker thread(s) (via
+the Proton proactor) so the message(s) can be written out the Proton
+link.
+
+When delivery disposition or settlement changes are detected by a
+worker thread it notifies the core thread.  The core thread then
+finds the link or delivery to which the changes need to be propagated
+to.  This results in the core thread setting the new state in the
+link/delivery and waking a worker thread to update the new state in
+Proton.
+
+The core also manages credit flow.  The core grants credit to inbound
+links.  The core grants an initial batch of credit to a non-anonymous
+link (a link with a target address) when the target address is
+available for routing.  The core will continue granting credit to the
+link as long as the address is routable.  The core ties the
+replenishment of credit with the settlement of messages arriving on
+the link: when the message is settled a single credit is granted by
+the core.  All credit flow operations involve having the core put a
+credit flow work event on the proper inbound link then waking the
+worker thread to update the credit in proton.
+
+The core can be the destination or source of AMQP message flows
+from/to clients outside the router.  This is used by services like the
+Management Agent to receive management requests and send responses to
+management clients.  The core sends and receives these messages in
+exactly the same way it forwards routed traffic - via the worker
+threads.
+
+The core thread's main loop is driven by a work queue (the
+qdr_core_t's action_list).  The core thread blocks on a mutex
+condition waiting for work.  When a worker thread needs a service from
+the core thread, the worker queues a work item to the action_list then
+triggers the condition.  This causes the core thread to unblock and
+service the action_list work items.
+
+
+Source Code Conventions
+=======================
+
+In general, core thread code and data structure have names that are
+prefixed by "qdr_".  Functions that can only be run on the core thread
+- that cannot be invoked from the context of a worker thread - are
+suffixed with "_CT".  For example "qdr_update_delivery_CT()" is a core
+function that must never be invoked by a worker thread.
+
+Code that is private to the Core thread is in the "src/router_core"
+subdirectory of the source code repo.
+
+Worker thread code does not have a particular naming convention. Most
+worker thread-only APIs do start with "qd_", but this prefix is not
+reserved for worker thread APIs.
+
+
+Principal Data Structures
+=========================
+
+There are many data structures that are used throughout the code.
+This section will overview a few of those data structures which are
+involved in inter-thread communications.
+
+qdr_delivery_t
+--------------
+
+The qdr_delivery_t structure represents the router's view of a Proton
+delivery instance (pn_delivery_t).  Its definition is private to core,
+however core defines an API that allows a worker to concurrently
+access parts of this structure.
+
+There is a one-to-one relationship between a qdr_delivery_t and a
+Proton pn_delivery_t.  When an incoming message arrives at the router
+a new incoming qdr_delivery_t is created and tied to the message's
+pn_delivery_t.  When a message is forwarded a new outgoing
+qdr_delivery_t is created to associate with the outgoing link's
+pn_delivery_t.
+
+It is important to understand that pn_delivery_t's - and by extension
+qdr_delivery_t's - are "owned" by the parent pn_link_t
+(qdr_link_t). This means that a delivery object cannot be moved from
+an inbound link to an outbound link - which seems counterintiutive to
+the process of routing a message.
+
+In reality when an inbound delivery is routed, the router create a new
+outbound delivery for each outbound link.  These outbound deliveries
+are also represented by their own pn_delivery_t and qdr_delivery_t
+instances.
+
+The core thread links the inbound and outbound qdr_deliver_t's
+together.  This makes it trival to determine the "peer" of any
+delivery that is being forwarded.
+
+Note that a single inbound qdr_delivery_t may be linked to
+more than one outgoing qdr_delivery_t in the case of multicast
+forwarding.
+
+A qdr_delivery_t state includes:
+
+ *) the delivery's disposition (local and remote)
+ *) the delivery's settlement state
+ *) a reference to the AMQP message (qd_message_t *)
+
+The qdr_delivery_t structure is defined in src/router_core/delivery.h
+
+qd_message_t
+------------
+
+The qd_message_t structure represents a delivery's interface to an
+AMQP message.  A qd_message_t is shared between core and worker
+threads.  The qd_message_t contains a mutex to guarantee consistency.
+
+qd_message_t is actually an alias for a structure that is private to
+the message.c module called 'qd_message_pvt_t'. For simplicity this
+document will use the public name 'qd_message_t' when referring to
+this structure.
+
+Despite the name the qd_message_t is not the actual AMQP message
+data.  Rather it is an interface between a qdr_delivery_t and the
+actual AMQP message data.  There is a one-to-one relationship between
+a qdr_delivery_t and its associated qd_message_t.  Since a single
+routed message may have several qdr_delivery_t's referencing it
+(inbound, outbound(s)), there are multiple qd_message_t's that share
+the same physical AMQP message data.
+
+The actual message data is represented by a qd_message_content_t
+structure which is private to the message.c module.
+
+Here's a rough depiction of the implementation:
+
+  +-------------------+             +--------------------+
+  | in qdr_delivery_t |<----------->| out qdr_delivery_t |
+  +-------------------+             +--------------------+
+           ^                                 ^
+           |                                 |
+           V                                 V
+    +--------------+                  +--------------+
+    | qd_message_t |                  | qd_message_t |
+    +------+-------+                  +-------+------+
+           |                                  |
+           |     +----------------------+     |
+           +---->| qd_message_content_t |<----+
+                 +---------+------------+
+                           |     +-------------+
+                           +---> | qd_buffer_t | --> ...
+                                 +-------------+
+
+This allows the sharing of a single instance of message data among
+multiple deliveries without the need for copying actual message data.
+
+The qd_message_t maintains state that corresponds to its associated
+qdr_delivery_t.  This includes:
+
+ *) a cursor into the message body
+ *) header value overrides that apply only to the assoicated delivery.
+
+Each delivery requires its own cursor into the message body.
+
+The inbound delivery's qd_message_t maintains a "write" cursor which
+points to the end of message's buffer chain.  New data arriving for
+the message on the inbound delivery is appended at this cursor.
+
+Since outgoing deliveries can send data at different rates (due to
+network buffering, etc), each outgoing delivery's qd_message_t
+maintains a "read" cursor which points to the next byte to be sent on
+the delivery.
+
+For reasons beyond the scope of this document the router needs to be
+able to override the value of the inbound message's annotations for
+each forwarded message.  These new message annotations can vary across
+multiple outgoing deliveries.  To support this the qd_message_t also
+holds per-destination message annotation overrides.
+
+qdr_link_t
+----------
+
+The router defines two separate structures representing a Proton
+pn_link_t: a 'qd_link_t' and a 'qdr_link_t'.  The qd_link_t structure
+is owned by the worker thread(s), while the qdr_link_t is the core's
+own representation.
+
+The qd_link_t is a small structure containing references to the Proton
+pn_link_t and parent pn_session_t.  Only the worker thread currently
+processing the parent Proton connection may call into Proton using
+these references. It is not ment to be shared with the core thread.
+
+The qdr_link_t is a much bigger (more complex?) structure and is
+directly shared between worker and core threads.  Consistency is
+maintained by a mutex that is owned by the qdr_link_t's parent
+qdr_connection_t structure (see below).
+
+qdr_link_t is a container for qdr_delivery_t instances.  qdr_link_t's
+corresponding to an inbound AMQP link hold all inbound
+qdr_delivery_t's for that link.  Likewise an outbound AMQP link's
+qdr_link_t holds all qdr_delivery_t's being sent out that link.
+
+There are several components of the qdr_link_t that are shared between
+the core and worker threads.  The most notable are:
+
+ *) the work_list
+ *) the updated_deliveries list
+ *) the qdr_delivery_t lists
+
+The work_list is a work queue used by the core to schedule work on a
+worker thread.  The work includes state updates that the core needs to
+be written to Proton.  Since Proton access is restricted to worker
+threads, the core will add work items to this list then activate a
+worker thread (via the Proactor "wakeup" event) to do the actual
+processing.
+
+There are several work events supported:
+
+ *) QDR_LINK_WORK_FLOW - Link credit state update that needs to be
+    written to Proton.
+ *) QDR_LINK_WORK_FIRST/SECOND_DETACH - Core needs a link to be
+    detached/closed.
+ *) QDR_LINK_WORK_DELIVERY - one or more outgoing deliveries are ready
+    to be sent.  This is described further later in this document.
+
+The work_list is protected by the parent qdr_connection_t's work_lock.
+The worker thread code that processes the work_list can be found in
+src/router_core/connections.c::qdr_connection_process()
+
+Note well that scheduling work via the qdr_link_t->link_work list is a
+two-step process: first the work item is queued to the
+qdr_link_t->work_list, then a reference to the qdr_link_t is placed in
+the qdr_connection_t's links_with_work list. Once this is done, the
+core activate a worker.  See below for more details.
+
+The qdr_link_t->updated_deliveries list is a list of qdr_delivery_t
+references.  Each of these deliveries have had its settlement or
+disposition state modified by the core.  The core places a reference
+to a delivery on this list then activates a worker thread.  The worker
+thread then walks this list updating the corresponding delivery state
+in Proton.  The worker thread code that processes this list is also in
+qdr_connection_process().
+
+The qdr_link_t maintains separate lists for its qdr_delivery_ts.  Each
+list corresponds to the state the qdr_delivery_t is in:
+
+ *) undelivered - these are deliveries that are being forwarded.  For
+    an outgoing qdr_link_t this list is used by the worker threads to
+    determine which delivery is next/currently being transmitted.
+ *) unsettled - the delivery has been forwarded and is pending
+    settlement from the remote.  Obviously qdr_delivery_ts on this list
+    are unsettled!.
+ *) settled - these deliveries are pre-settled and are not yet
+    completely sent.
+
+The core and worker threads move qdr_delivery_ts between these lists
+as state changes.  Consistency is enforced by locking these lists
+using the parent qdr_connection_t->work_lock mutex.
+
+The qdr_link_t structure is defined in
+src/router_core/router_core_private.h
+
+qdr_connection_t
+----------------
+
+The qdr_connection_t structure maintains state corresponding to an
+AMQP connection.  It is a container for qdr_link_t's (and by
+indirection qdr_delivery_t's).  It is concurrently accessed by the
+core and worker threads.
+
+Note that the worker thread defines a qd_connection_t structure which
+is used to hold a reference to the corresponding Proton
+pn_connection_t.  This structure is private to the worker threads and
+is not shared with core.
+
+The qdr_connection_t maintains a mutex which acts as the "topmost"
+mutex in the data structure tree.  It enforces consistency not only
+for qdr_connection_t, but for its children qdr_link_t's and
+qdr_delivery_t's.  This mutex is the qdr_connection_t->work_lock
+member.
+
+In addition to the critical sections for qdr_link_t described
+previously, the work_lock is taken when accessing the following
+qdr_connection_t members:
+
+ *) work_list
+ *) child qdr_link_t reference list
+ *) list of child qdr_link_ts scheduled for work on the worker thread
+
+The work_list is a list of qdr_connection_work_t instances.  Work is
+requested by the core thread and processed by the worker thread. There
+are two types of work defined:
+
+ *) QDR_CONNECTION_WORK_FIRST_ATTACH - issued by the core thread when
+    it needs a new link created on a given connection
+ *) QDR_CONNECTION_WORK_SECOND_ATTACH - issued by the core in response
+    to an incoming link attach.
+
+The qdr_connection_t maintains a list of child qdr_link_t's in its
+'links' list.  This is not a "high touch" list - qdr_link_t's are added
+and removed as needed.  The list is also used when cleaning up a
+connections resources.
+
+The qdr_connection_t's links_with_work member is an entirely different
+matter - it plays a central role in the forwarding process.
+
+The links_with_work member is actually a fixed array of lists of
+qdr_link_t references.  The array is indexed by *priority* - this is
+the transmit priority associated with an outgoing address.  The router
+supports 10 priority levels with 10 being the highest priority.
+
+Forwarding a message involves having the core thread add a reference
+to the message's corresponding outgoing qdr_link_t to the end of the
+link_with_work list for that address's priority.  It is then up to the
+worker thread to service the qdr_link_t's outgoing deliveries in
+priority order.  This process is explained in detail later in this
+document.
+
+
+Putting It All Together
+=======================
+
+Now that the data structures associated with threading have been
+described it is time to walk through a few basic router operations
+describing the thread interaction that occurs.
+
+Example 1: Endpoint Activation
+------------------------------
+
+This is the sequence of operations that occur when a new connection
+and link are established to the router.
+
+1) A worker thread is woken by the Proton proactor to service a
+PN_CONNECTION_REMOTE_OPEN event.  If the policy configuration permits
+the connection the worker will respond by opening the Proton
+connection locally and queues a qdr_action_t to the core thread's
+action list and wakes the core thread.  The action contains
+connection-related information, including a new qdr_connection_t
+instance.
+
+2) The core thread processes the new connection. For normal
+connections this simply involves initializing the qdr_connection_t and
+storing a reference to it.
+
+Inter router connections are more involved.  For these connections the
+router will establish one inter-router link for each supported message
+priority (as described above).  Therefore inter-router connections are
+the only connections supporting more than one priorty link.
+
+3) The handling of Proton session creation is totally reserved to the
+worker thread.  The core does not deal with session management at all.
+
+4) When a link attach is issued by the remote client over the
+connection, the worker thread will be woken to process a
+PN_LINK_REMOTE_OPEN.  The worker thread instantiates a qd_link_t and
+links it to the pn_link_t.  The worker then creates a new qdr_action_t
+for the core thread and includes a new qdr_link_t instance.  Note well
+that the worker thread does NOT respond to the attach by opening the
+link at this point.
+
+5) The core thread then processes the link first attach action sent by
+the worker.  Many things occur at this point that are beyond the scope
+of this document.  Eventually the core determines if the Proton link
+should be allowed.  If this is the case the core will create a
+QDR_CONNECTION_WORK_SECOND_ATTACH connection work item, enqueue it to
+the qdr_connection_t and wake the worker via the Proton proactor wake
+call.  If the core instead decides to reject the attach, it will
+create a QDR_LINK_WORK_FIRST_DETACH link work item, enqueue it to the
+qdr_link_t and wake the worker.
+
+6) The worker thread wakes and processes the work item.  In the case
+of QDR_CONNECTION_WORK_SECOND_ATTACH the worker will open the Proton
+pn_link_t.  If detaching the worker will close/detach the proton
+pn_link_t.
+
+
+Example: Credit Grant from Remote Client
+----------------------------------------
+
+1) This starts with a worker thread receiving a PN_LINK_FLOW event
+from Proton.  The worker thread creates an qdr_action_t request for
+the core thread.  This request includes the qdr_link_t the flow
+arrived on, the credit value, and drain mode.
+
+2) How the core thread services the flow action depends on the state
+of the link.  If the link is a connected link (e.g. a link route) then
+the core propagates the credit state to the peer link (see Example:
+Credit Grant from Core).  Otherwise if the link is outgoing and has
+pending qdr_delivery_t's queued on the qdr_link_t->undelivered list
+the core puts the qdr_link_t on the qdr_connection_t's links_with_work
+lists and activates the worker thread.  (See Example: Forwarding a
+Message)
+
+
+Example: Credit Grant from Core
+-------------------------------
+
+1) The core thread is in charge of managing credit.  When the time
+comes to update or drain credit the core thread will create a
+QDR_LINK_WORK_FLOW link work instance.  The core populates this with
+credit information, including drain state if necessary. The work item
+is then queued to the qdr_link_t link_work list.  The qdr_link_t is
+then added to the proper links_with_work list in the qdr_connection_t.
+The core then then wakes a worker.
+
+2) When the worker is activated it services the links_with_work lists
+in the qdr_connection_t.  For each qdr_link_t the worker services the
+link's work_list.  At that point the worker thread will process the
+QDR_LINK_WORK_FLOW item, updating credit state in the corresponding
+pn_link_t.
+
+
+Example: Forwarding a Message
+-----------------------------
+
+1) The forwarding process begins with a worker thread receiving a new
+writable PN_DELIVERY event from Proton.  The worker thread will
+extract the Proton pn_link_t from its qd_link_t, and get the current
+active Proton delivery.  Using this delivery it attempts to read in an
+AMQP message.  This results in either a new qd_message_t or an update
+to an existing qd_message_t (think streaming data).
+
+The worker will start the forwarding process when enough of the
+message has arrived to be able to determine the destination address.
+In this case the worker creates a new qdr_delivery_t and issues a
+"link_deliver" action to the core thread.
+
+2) The core thread forwards the delivery by looking up the destination
+address in its route table and determining the outgoing links
+corresponding to the address.  For each outgoing link, the core
+creates a new outgoing qdr_delivery_t and qd_message_t pair that are
+tied to the incoming qdr_delivery_t and qd_message_t.  The core then
+puts these outgoing qdr_deliver_t's on their parent
+qdr_link_t->undelivered delivery list.
+
+The core thread then adds a new QDR_LINK_WORK_DELIVERY work item to
+each outgoing qdr_link_t.  The core also puts the outgoing qdr_link_t's
+onto their parent qdr_connection_t->link_with_work lists (at the
+proper priority).  Once this is all done the core wakes the worker
+threads.
+
+3) The worker thread services each qdr_link_t on the
+qdr_connection_t->links_with_work list in priority order.  For each
+qdr_link_t it processes the qdr_link_t->work_list.  For the
+QDR_LINK_WORK_DELIVERY, the worker starts at the head of the
+qdr_link_t->undelivered list and starts writing the message content to
+the Proton link.  Note well that the first time this is attempted for
+a qdr_delivery_t there will be no corresponding pn_delivery_t since it
+has not been created yet (it cannot be created by the core thread when
+the core creates the new outgoing qdr_delivery_t). In this case the
+worker will create a new pn_delivery_t for the new qdr_delivery_t.
+
+The worker thread will continue writing message data until the link's
+credit is exhausted or all deliveries have been sent.  In the case of
+unsettled messages the worker will move completed qdr_delivery_t's from
+the qdr_link_t->undelivered list to qdr_link_t->unsettled list.
+
+Example: Propagating Disposition and Settlement
+-----------------------------------------------
+
+1) Continuing the example above, let's examine what happens when the
+remote consumer sets the final disposition and settles the received
+delivery.  This causes a PN_DELIVERY event to be sent to a worker
+thread.  The worker thread then creates a core action containing the
+corresponding qdr_delivery_t and the updated disposition data.  If the
+remote has settled the worker thread immediately settles the
+pn_delivery_t.  The worker then dispatches the action to the core.
+
+
+2) The core services the request by propagating the new state from the
+source qdr_delivery_t to its "downstream" peers.  Remember that an
+inbound qdr_delivery_t is linked to all of its outbound deliveries by
+the core when the delivery is forwarded.  These links are
+bi-directional and are used by the core to determine which
+qdr_delivery_t(s) the disposition/settlement needs to be propagated
+to.  For each peer qdr_delivery_t the core updates the desired
+disposition and settlement to match the change.  It then puts a
+reference to the updated qdr_delivery_t into its parent
+qdr_link_t->updated_deliveries list.  The core finally puts the
+qdr_link_t's onto their parent qdr_connection_t->links_with_work lists
+and schedules a worker thread to service them.
+
+3) The worker thread is activated and starts servicing the
+qdr_connection_t->links_with_work lists.  For each qdr_link_t it
+services, the worker drains the qdr_link_t->updated_deliveries list.
+The worker compares the disposition state and settlement in the
+qdr_delivery_t against the corresponding state in the Proton
+pn_delivery_t.  The worker updates the pn_delivery_t as necessary,
+including settling it.
+
+
