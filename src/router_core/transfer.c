@@ -726,7 +726,6 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             free_qdr_link_ref_t(temp_rlink);
         }
     } else {
-        assert(false);
         //
         // Take the action reference and use it for undelivered.  Don't decref/incref.
         //
