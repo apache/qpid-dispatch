@@ -480,20 +480,39 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     }
 
     //
-    // There is no address that we can send this delivery to, which means the addr was not found in our hastable. This
+    // There is no address that we can send this delivery to, which means the addr was not found in our hash table. This
     // can be because there were no receivers or because the address was not defined in the config file.
-    // If the treatment for such addresses is set to be unavailable, we send back a rejected disposition and detach the link
     //
     else if (core->qd->default_treatment == QD_TREATMENT_UNAVAILABLE) {
-        dlv->disposition = PN_REJECTED;
-        dlv->error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Deliveries cannot be sent to an unavailable address");
-        qdr_delivery_push_CT(core, dlv);
+        //
+        // If the treatment for these addresses is set to be unavailable, we
+        // stop trying to forward it.  If the link is a locally attached client
+        // we reject the message if the link is not anonymous as per the
+        // documentation of the router's defaultTreatment=unavailable.  We
+        // simply release it for other link types as the message did have a
+        // destination at some point (it was forwarded to this router after
+        // all) - the loss of the destination may be temporary.
+        //
+        if (link->link_type == QD_LINK_ENDPOINT) {
+            dlv->error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Deliveries cannot be sent to an unavailable address");
+            qdr_delivery_reject_CT(core, dlv);
+            if (qdr_link_is_anonymous(link)) {
+                qdr_link_issue_credit_CT(core, link, 1, false);
+            } else {
+                // cannot forward on this targeted link.  withhold credit and drain
+                qdr_link_issue_credit_CT(core, link, 0, true);
+            }
+        } else {
+            qdr_delivery_release_CT(core, dlv);
+            qdr_link_issue_credit_CT(core, link, 1, false);
+        }
 
         //
         // We will not detach this link because this could be anonymous sender. We don't know
         // which address the sender will be sending to next
         // If this was not an anonymous sender, the initial attach would have been rejected if the target address was unavailable.
         //
+        qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (treatment unavailable)");
         return;
     }
 

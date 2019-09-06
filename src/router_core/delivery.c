@@ -264,6 +264,25 @@ void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
+void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+{
+    bool push = dlv->disposition != PN_REJECTED;
+
+    dlv->disposition = PN_REJECTED;
+    dlv->settled = true;
+    bool moved = qdr_delivery_settled_CT(core, dlv);
+
+    if (push || moved)
+        qdr_delivery_push_CT(core, dlv);
+
+    //
+    // Remove the unsettled reference
+    //
+    if (moved)
+        qdr_delivery_decref_CT(core, dlv, "qdr_delivery_reject_CT - remove from unsettled list");
+}
+
+
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 {
     //
