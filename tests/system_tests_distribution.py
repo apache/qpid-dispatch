@@ -2271,6 +2271,8 @@ class ClosestTest ( MessagingHandler ):
         self.bailed              = False
         self.test_name           = test_name
 
+        self.sender = None
+
     def timeout ( self ):
         self.bail ( "Timeout Expired " )
 
@@ -2333,10 +2335,11 @@ class ClosestTest ( MessagingHandler ):
 
 
     def on_sendable ( self, event ):
-        msg = Message ( body     = "Hello, closest.",
-                        address  = self.dest
-                      )
-        event.sender.send ( msg )
+        # Fix for DISPATCH-1408 - Make sure that the correct sender  is sending the messages to self.dest
+        if event.sender == self.sender:
+            msg = Message ( body     = "Hello, closest.",
+                            address  = self.dest)
+            event.sender.send ( msg )
 
 
     def on_message ( self, event ):
