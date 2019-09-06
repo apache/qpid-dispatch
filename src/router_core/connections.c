@@ -1038,6 +1038,22 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     work->source    = source;
     work->target    = target;
 
+    char   source_str[1000];
+    char   target_str[1000];
+    size_t source_len = 1000;
+    size_t target_len = 1000;
+
+    source_str[0] = '\0';
+    target_str[0] = '\0';
+
+    if (qd_log_enabled(core->log, QD_LOG_INFO)) {
+        qdr_terminus_format(source, source_str, &source_len);
+        qdr_terminus_format(target, target_str, &target_len);
+    }
+
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Link attached: dir=%s source=%s target=%s",
+               conn->identity, link->identity, dir == QD_INCOMING ? "in" : "out", source_str, target_str);
+
     qdr_connection_enqueue_work_CT(core, conn, work);
     return link;
 }
