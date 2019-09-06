@@ -1503,7 +1503,7 @@ class LinkRouteProxyTest(TestCase):
         rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
                                wait=False, recover_link=True)
         tx = AsyncTestSender(self.EA1.listener, 'CfgLinkRoute1/foo',
-                             body="HEY HO LET'S GO!")
+                             message=Message(body="HEY HO LET'S GO!"))
         tx.wait()
 
         msg = rx.queue.get(timeout=TIMEOUT)

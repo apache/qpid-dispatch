@@ -47,11 +47,14 @@ import uuid
 
 import proton
 from proton import Message
+from proton import Delivery
 from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
 from proton.reactor import AtLeastOnce, Container
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
+
+is_python2 = sys.version_info[0] == 2
 
 # Optional modules
 MISSING_MODULES = []
@@ -267,6 +270,39 @@ class Process(subprocess.Popen):
             status = self.wait()
         if self.expect != None and self.expect != status:
             error("exit code %s, expected %s" % (status, self.expect))
+
+    def wait(self, timeout=None):
+        """
+        Add support for a timeout when using Python 2
+        """
+        if timeout is None:
+            return super(Process, self).wait()
+
+        if is_python2:
+            start = time.time()
+            while True:
+                rc = super(Process, self).poll()
+                if rc is not None:
+                    return rc
+                if time.time() - start >= timeout:
+                    raise Exception("Process did not terminate")
+                time.sleep(0.1)
+        else:
+            return super(Process, self).wait(timeout=timeout)
+
+    def communicate(self, input=None, timeout=None):
+        """
+        Add support for a timeout when using Python 2
+        """
+        if timeout is None:
+            return super(Process, self).communicate(input=input)
+
+        if is_python2:
+            self.wait(timeout=timeout)
+            return super(Process, self).communicate(input=input)
+
+        return super(Process, self).communicate(input=input,
+                                                timeout=timeout)
 
 
 class Config(object):
@@ -798,13 +834,24 @@ class AsyncTestSender(MessagingHandler):
     A simple sender that runs in the background and sends 'count' messages to a
     given target.
     """
-    def __init__(self, address, target, count=1, body=None, container_id=None):
-        super(AsyncTestSender, self).__init__()
+    class TestSenderException(Exception):
+        def __init__(self, error=None):
+            super(AsyncTestSender.TestSenderException, self).__init__(error)
+
+    def __init__(self, address, target, count=1, message=None, container_id=None):
+        super(AsyncTestSender, self).__init__(auto_accept=False,
+                                              auto_settle=False)
         self.address = address
         self.target = target
-        self.count = count
-        self._unaccepted = count
-        self._body = body or "test"
+        self.total = count
+        self.accepted = 0
+        self.released = 0
+        self.modified = 0
+        self.rejected = 0
+        self.sent = 0
+        self.error = None
+
+        self._message = message or Message(body="test")
         self._container = Container(self)
         cid = container_id or "ATS-%s:%s" % (target, uuid.uuid4())
         self._container.container_id = cid
@@ -821,6 +868,8 @@ class AsyncTestSender(MessagingHandler):
         # don't stop it - wait until everything is sent
         self._thread.join(timeout=TIMEOUT)
         assert not self._thread.is_alive(), "sender did not complete"
+        if self.error:
+            raise AsyncTestSender.TestSenderException(self.error)
 
     def on_start(self, event):
         self._conn = self._container.connect(self.address)
@@ -831,15 +880,46 @@ class AsyncTestSender(MessagingHandler):
                                                      options=AtLeastOnce())
 
     def on_sendable(self, event):
-        if self.count:
-            self._sender.send(Message(body=self._body))
-            self.count -= 1
+        if self.sent < self.total:
+            self._sender.send(self._message)
+            self.sent += 1
 
-    def on_accepted(self, event):
-        self._unaccepted -= 1;
-        if self._unaccepted == 0:
+    def _check_if_done(self):
+        done = (self.sent == self.total
+                and (self.accepted + self.released + self.modified
+                     + self.rejected) == self.sent)
+        if done:
             self._conn.close()
             self._conn = None
+
+    def on_accepted(self, event):
+        self.accepted += 1;
+        event.delivery.settle()
+        self._check_if_done()
+
+    def on_released(self, event):
+        # for some reason Proton 'helpfully' calls on_released even though the
+        # delivery state is actually MODIFIED
+        if event.delivery.remote_state == Delivery.MODIFIED:
+            return self.on_modified(event)
+        self.released += 1
+        event.delivery.settle()
+        self._check_if_done()
+
+    def on_modified(self, event):
+        self.modified += 1
+        event.delivery.settle()
+        self._check_if_done()
+
+    def on_rejected(self, event):
+        self.rejected += 1
+        event.delivery.settle()
+        self._check_if_done()
+
+    def on_link_error(self, event):
+        self.error = "link error:%s" % str(event.link.remote_condition)
+        self._conn.close()
+        self._conn = None
 
 
 class QdManager(object):

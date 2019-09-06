@@ -52,6 +52,13 @@ set(unit_test_size_SOURCES
 add_executable(unit_tests_size ${unit_test_size_SOURCES})
 target_link_libraries(unit_tests_size qpid-dispatch)
 
+add_executable(test-sender test-sender.c)
+target_link_libraries(test-sender ${Proton_LIBRARIES})
+
+add_executable(test-receiver test-receiver.c)
+target_link_libraries(test-receiver ${Proton_LIBRARIES})
+
+
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
 add_test(unit_tests_size_10000 ${TEST_WRAP} unit_tests_size 10000)
@@ -127,6 +134,7 @@ foreach(py_test_module
     system_tests_multi_phase
     system_tests_multicast
     system_tests_fallback_dest
+    system_tests_router_mesh
     )
 
   add_test(${py_test_module} ${TEST_WRAP} unit2 -v ${py_test_module})

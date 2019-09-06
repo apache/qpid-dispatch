@@ -1820,7 +1820,7 @@ class ConnectionLinkRouteTest(TestCase):
         s = AsyncTestSender(self.QDR_A.addresses[0],
                             "flea.B",
                             container_id="flea.BSender",
-                            body="SENDING TO flea.B",
+                            message=Message(body="SENDING TO flea.B"),
                             count=COUNT)
         s.wait()   # for sender to complete
         for i in range(COUNT):
@@ -1836,7 +1836,7 @@ class ConnectionLinkRouteTest(TestCase):
         s = AsyncTestSender(self.QDR_B.addresses[0],
                             "flea.A",
                             container_id="flea.ASender",
-                            body="SENDING TO flea.A",
+                            message=Message(body="SENDING TO flea.A"),
                             count=COUNT)
         s.wait()
         for i in range(COUNT):
