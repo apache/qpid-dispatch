@@ -125,6 +125,7 @@ qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery)
 
 /* update settlement and/or disposition and schedule I/O processing */
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 
