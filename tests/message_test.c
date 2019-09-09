@@ -360,6 +360,7 @@ static char* test_send_message_annotations(void *context)
 {
     qd_message_t         *msg     = qd_message();
     qd_message_content_t *content = MSG_CONTENT(msg);
+    char *error = 0;
 
     qd_composed_field_t *trace = qd_compose_subfield(0);
     qd_compose_start_list(trace);
@@ -387,23 +388,33 @@ static char* test_send_message_annotations(void *context)
     size_t len = flatten_bufs(content);
     int result = pn_message_decode(pn_msg, (char *)buffer, len);
     if (result != 0) {
-        qd_message_free(msg);
-        return "Error in pn_message_decode";
+        error = "Error in pn_message_decode";
+        goto exit;
     }
 
     pn_data_t *ma = pn_message_annotations(pn_msg);
     if (!ma) {
-        qd_message_free(msg);
-        return "Missing message annotations";
+        error = "Missing message annotations";
+        goto exit;
     }
     pn_data_rewind(ma);
     pn_data_next(ma);
-    if (pn_data_type(ma) != PN_MAP) return "Invalid message annotation type";
-    if (pn_data_get_map(ma) != QD_MA_N_KEYS * 2) return "Invalid map length";
+    if (pn_data_type(ma) != PN_MAP) {
+        error = "Invalid message annotation type";
+        goto exit;
+    }
+    if (pn_data_get_map(ma) != QD_MA_N_KEYS * 2) {
+        error = "Invalid map length";
+        goto exit;
+    }
+
     pn_data_enter(ma);
     for (int i = 0; i < QD_MA_N_KEYS; i++) {
         pn_data_next(ma);
-        if (pn_data_type(ma) != PN_SYMBOL) return "Bad map index";
+        if (pn_data_type(ma) != PN_SYMBOL) {
+            error = "Bad map index";
+            goto exit;
+        }
         pn_bytes_t sym = pn_data_get_symbol(ma);
         if (!strncmp(QD_MA_PREFIX, sym.start, sym.size)) {
             pn_data_next(ma);
@@ -411,33 +422,50 @@ static char* test_send_message_annotations(void *context)
         } else if (!strncmp(QD_MA_INGRESS, sym.start, sym.size)) {
             pn_data_next(ma);
             sym = pn_data_get_string(ma);
-            if (strncmp("distress", sym.start, sym.size)) return "Bad ingress";
+            if (strncmp("distress", sym.start, sym.size)) {
+                error = "Bad ingress";
+                goto exit;
+            }
             //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
         } else if (!strncmp(QD_MA_TO, sym.start, sym.size)) {
             pn_data_next(ma);
             sym = pn_data_get_string(ma);
-            if (strncmp("to/address", sym.start, sym.size)) return "Bad to override";
+            if (strncmp("to/address", sym.start, sym.size)) {
+                error = "Bad to override";
+                goto exit;
+            }
             //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
         } else if (!strncmp(QD_MA_TRACE, sym.start, sym.size)) {
             pn_data_next(ma);
-            if (pn_data_type(ma) != PN_LIST) return "List not found";
+            if (pn_data_type(ma) != PN_LIST) {
+                error = "List not found";
+                goto exit;
+            }
             pn_data_enter(ma);
             pn_data_next(ma);
             sym = pn_data_get_string(ma);
-            if (strncmp("Node1", sym.start, sym.size)) return "Bad trace entry";
+            if (strncmp("Node1", sym.start, sym.size)) {
+                error = "Bad trace entry";
+                goto exit;
+            }
             //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
             pn_data_next(ma);
             sym = pn_data_get_string(ma);
-            if (strncmp("Node2", sym.start, sym.size)) return "Bad trace entry";
+            if (strncmp("Node2", sym.start, sym.size)) {
+                error = "Bad trace entry";
+                goto exit;
+            }
             //fprintf(stderr, "[%.*s]\n", (int)sym.size, sym.start);
             pn_data_exit(ma);
-        } else return "Unexpected map key";
+        } else error = "Unexpected map key";
     }
+
+exit:
 
     pn_message_free(pn_msg);
     qd_message_free(msg);
 
-    return 0;
+    return error;
 }
 
 
@@ -671,7 +699,7 @@ static char *test_check_weird_messages(void *context)
     }
 
 exit:
-    if (msg) qd_message_free(msg);
+    qd_message_free(msg);
     return result;
 }
 
