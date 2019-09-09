@@ -289,16 +289,22 @@ void qdra_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
         addr = DEQ_NEXT(addr);
     assert(addr != 0);
 
-    //
-    // Write the columns of the address entity into the response body.
-    //
-    qdr_manage_write_address_list_CT(core, query, addr);
+    if (addr) {
+        //
+        // Write the columns of the address entity into the response body.
+        //
+        qdr_manage_write_address_list_CT(core, query, addr);
 
-    //
-    // Advance to the next address
-    //
-    query->next_offset = offset;
-    qdr_manage_advance_address_CT(query, addr);
+        //
+        // Advance to the next address
+        //
+        query->next_offset = offset;
+        qdr_manage_advance_address_CT(query, addr);
+    }
+    else {
+        query->more = false;
+    }
+
 
     //
     // Enqueue the response.
