@@ -620,6 +620,8 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
                 if (node) {
                     node->ntype->link_detach_handler(node->context, qd_link, dt);
                 }
+            } else {
+                pn_link_free(pn_link);
             }
         }
         break;
