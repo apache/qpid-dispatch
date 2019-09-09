@@ -186,16 +186,24 @@ void qdra_config_address_get_first_CT(qdr_core_t *core, qdr_query_t *query, int 
         addr = DEQ_NEXT(addr);
     assert(addr);
 
-    //
-    // Write the columns of the object into the response body.
-    //
-    qdr_agent_write_config_address_CT(query, addr);
+    if (addr) {
+        //
+        // Write the columns of the object into the response body.
+        //
+        qdr_agent_write_config_address_CT(query, addr);
 
-    //
-    // Advance to the next address
-    //
-    query->next_offset = offset;
-    qdr_manage_advance_config_address_CT(query, addr);
+        //
+        // Advance to the next address
+        //
+        query->next_offset = offset;
+        qdr_manage_advance_config_address_CT(query, addr);
+
+    }
+    else {
+        query->more = false;
+    }
+
+
 
     //
     // Enqueue the response.

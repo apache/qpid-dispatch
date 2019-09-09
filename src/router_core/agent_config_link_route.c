@@ -185,9 +185,14 @@ static void qdr_agent_write_config_link_route_CT(qdr_query_t *query,  qdr_link_r
 
 static void qdr_manage_advance_config_link_route_CT(qdr_query_t *query, qdr_link_route_t *lr)
 {
-    query->next_offset++;
-    lr = DEQ_NEXT(lr);
-    query->more = !!lr;
+    if (lr){
+        query->next_offset++;
+        lr = DEQ_NEXT(lr);
+        query->more = !!lr;
+    }
+    else {
+        query->more = false;
+    }
 }
 
 
