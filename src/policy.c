@@ -74,6 +74,9 @@ static const char * const POLICY_VHOST_GROUP = "$connector";
 
 static void hostname_tree_free(qd_parse_tree_t *hostname_tree);
 
+// Imported qpid_dispatch_internal.policy.policy_manager python module
+static PyObject * module = 0;
+
 //
 // Policy configuration/statistics management interface
 //
@@ -122,6 +125,7 @@ void qd_policy_free(qd_policy_t *policy)
     if (policy->tree_lock)
         sys_mutex_free(policy->tree_lock);
     hostname_tree_free(policy->hostname_tree);
+    Py_XDECREF(module);
     free(policy);
 }
 
@@ -131,6 +135,11 @@ void qd_policy_free(qd_policy_t *policy)
 
 qd_error_t qd_entity_configure_policy(qd_policy_t *policy, qd_entity_t *entity)
 {
+    module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
+    if (!module) {
+        qd_log(policy->log_source, QD_LOG_CRITICAL, "Required internal policy manager python module did not load. Shutting down.");
+        exit(1);
+    }
     policy->max_connection_limit = qd_entity_opt_long(entity, "maxConnections", 65535); CHECK();
     if (policy->max_connection_limit < 0)
         return qd_error(QD_ERROR_CONFIG, "maxConnections must be >= 0");
@@ -244,8 +253,7 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
     if (policy->enableVhostPolicy) {
         // HACK ALERT: TODO: This should be deferred to a Python thread
         qd_python_lock_state_t lock_state = qd_python_lock();
-        PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
-        if (module) {
+        {
             PyObject *close_connection = PyObject_GetAttrString(module, "policy_close_connection");
             if (close_connection) {
                 PyObject *result = PyObject_CallFunction(close_connection, "(OK)",
@@ -260,9 +268,6 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
             } else {
                 qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: Connection close failed: close_connection");
             }
-            Py_XDECREF(module);
-        } else {
-            qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: Connection close failed: module");
         }
         qd_python_unlock(lock_state);
     }
@@ -383,8 +388,7 @@ bool qd_policy_open_lookup_user(
     bool res = false;
     name_buf[0] = 0;
     qd_python_lock_state_t lock_state = qd_python_lock();
-    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
-    if (module) {
+    {
         PyObject *lookup_user = PyObject_GetAttrString(module, "policy_lookup_user");
         if (lookup_user) {
             PyObject *result = PyObject_CallFunction(lookup_user, "(OssssK)",
@@ -409,7 +413,6 @@ bool qd_policy_open_lookup_user(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: lookup_user");
         }
-        Py_XDECREF(module);
     }
     qd_python_unlock(lock_state);
 
@@ -440,8 +443,7 @@ bool qd_policy_open_fetch_settings(
 {
     bool res = false;
     qd_python_lock_state_t lock_state = qd_python_lock();
-    PyObject *module = PyImport_ImportModule("qpid_dispatch_internal.policy.policy_manager");
-    if (module) {
+    {
         res = false;
         PyObject *upolicy = PyDict_New();
         if (upolicy) {
@@ -501,7 +503,6 @@ bool qd_policy_open_fetch_settings(
         } else {
             qd_log(policy->log_source, QD_LOG_DEBUG, "Internal: lookup_user: upolicy");
         }
-        Py_XDECREF(module);
     }
     qd_python_unlock(lock_state);
 
