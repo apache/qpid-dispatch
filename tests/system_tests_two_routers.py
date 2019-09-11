@@ -1444,26 +1444,22 @@ class PropagatedDisposition(MessagingHandler):
         self.receiver = event.container.create_receiver(self.receiver_conn, addr)
         self.receiver.flow(2)
         self.trackers = {}
+        for b in ['accept', 'reject']:
+            self.trackers[self.sender.send(Message(body=b))] = b
 
     def timeout(self):
-        unique_list = list(dict.fromkeys(self.settled))
-        self.error = "Timeout Expired: Expected ['accept', 'reject'] got " + unique_list
+        unique_list = sorted(list(dict.fromkeys(self.settled)))
+        self.error = "Timeout Expired: Expected ['accept', 'reject'] got %s" % unique_list
         self.sender_conn.close()
         self.receiver_conn.close()
 
     def check(self):
-        unique_list = list(dict.fromkeys(self.settled))
+        unique_list = sorted(list(dict.fromkeys(self.settled)))
         if unique_list == [u'accept', u'reject']:
             self.passed = True
             self.sender_conn.close()
             self.receiver_conn.close()
             self.timer.cancel()
-
-    def on_sendable(self, event):
-        if self.sender == event.sender:
-            for b in ['accept', 'reject']:
-                msg = Message(body=b)
-                self.trackers[self.sender.send(msg)] = b
 
     def on_message(self, event):
         if event.message.body == u'accept':
