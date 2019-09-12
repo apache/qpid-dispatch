@@ -126,4 +126,6 @@ void qd_dispatch_set_agent(qd_dispatch_t *qd, void *agent);
 
 qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd);
 
+sys_mutex_t *qd_server_get_activation_lock(qd_server_t *server);
+
 #endif

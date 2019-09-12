@@ -68,6 +68,7 @@ struct qd_server_t {
     uint64_t                  next_connection_id;
     void                     *py_displayname_obj;
     qd_http_server_t         *http;
+    sys_mutex_t              *conn_activation_lock;
 };
 
 #define HEARTBEAT_INTERVAL 1000
@@ -1011,7 +1012,9 @@ static void *thread_run(void *arg)
             /* Free the connection after all other processing is complete */
             if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
                 pn_connection_set_context(pn_conn, NULL);
+                sys_mutex_lock(qd_server->conn_activation_lock);
                 qd_connection_free(qd_conn);
+                sys_mutex_unlock(qd_server->conn_activation_lock);
                 qd_conn = 0;
             }
         }
@@ -1216,6 +1219,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
     qd_server->container        = 0;
     qd_server->start_context    = 0;
     qd_server->lock             = sys_mutex();
+    qd_server->conn_activation_lock = sys_mutex();
     qd_server->cond             = sys_cond();
     DEQ_INIT(qd_server->conn_list);
 
@@ -1252,6 +1256,7 @@ void qd_server_free(qd_server_t *qd_server)
     }
     qd_timer_finalize();
     sys_mutex_free(qd_server->lock);
+    sys_mutex_free(qd_server->conn_activation_lock);
     sys_cond_free(qd_server->cond);
     Py_XDECREF((PyObject *)qd_server->py_displayname_obj);
     free(qd_server);
@@ -1546,4 +1551,9 @@ void qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
 
 bool qd_connection_strip_annotations_in(const qd_connection_t *c) {
     return c->strip_annotations_in;
+}
+
+sys_mutex_t *qd_server_get_activation_lock(qd_server_t * server)
+{
+    return server->conn_activation_lock;
 }
