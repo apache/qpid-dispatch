@@ -844,7 +844,9 @@ static void qd_connection_free(qd_connection_t *ctx)
     if (ctx->timer) qd_timer_free(ctx->timer);
     free(ctx->name);
     free(ctx->role);
+    sys_mutex_lock(qd_server->conn_activation_lock);
     free_qd_connection_t(ctx);
+    sys_mutex_unlock(qd_server->conn_activation_lock);
 
     /* Note: pn_conn is freed by the proactor */
 }
@@ -1012,9 +1014,7 @@ static void *thread_run(void *arg)
             /* Free the connection after all other processing is complete */
             if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
                 pn_connection_set_context(pn_conn, NULL);
-                sys_mutex_lock(qd_server->conn_activation_lock);
                 qd_connection_free(qd_conn);
-                sys_mutex_unlock(qd_server->conn_activation_lock);
                 qd_conn = 0;
             }
         }
