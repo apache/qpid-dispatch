@@ -118,6 +118,7 @@ foreach(py_test_module
     system_tests_bad_configuration
     system_tests_ssl
     system_tests_edge_router
+    system_tests_connector_status
     system_tests_core_endpoint
     ${SYSTEM_TESTS_HTTP}
     ${CONSOLE_TEST}

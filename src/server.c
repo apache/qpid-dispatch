@@ -894,6 +894,7 @@ static void qd_increment_conn_index(qd_connection_t *ctx)
 
 }
 
+
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
@@ -963,11 +964,18 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
             if (ctx && ctx->connector) { /* Outgoing connection */
                 qd_increment_conn_index(ctx);
                 const qd_server_config_t *config = &ctx->connector->config;
+                ctx->connector->state = CXTR_STATE_FAILED;
+                char conn_msg[300];
                 if (condition  && pn_condition_is_set(condition)) {
-                    qd_log(qd_server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
-                           pn_condition_get_name(condition), pn_condition_get_description(condition));
+                    format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
+                            pn_condition_get_name(condition), pn_condition_get_description(condition));
+                    strcpy(ctx->connector->conn_msg, conn_msg);
+
+                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
                 } else {
-                    qd_log(qd_server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection to %s failed", ctx->connection_id, config->host_port);
+                    format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed", ctx->connection_id, config->host_port);
+                    strcpy(ctx->connector->conn_msg, conn_msg);
+                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
                 }
             } else if (ctx && ctx->listener) { /* Incoming connection */
                 if (condition && pn_condition_is_set(condition)) {
@@ -1063,6 +1071,7 @@ static void try_open_lh(qd_connector_t *ct)
         qd_timer_schedule(ct->timer, ct->delay);
         return;
     }
+
     ctx->connector    = ct;
     const qd_server_config_t *config = &ct->config;
 
@@ -1454,6 +1463,8 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     ct->conn_index = 1;
     ct->state   = CXTR_STATE_INIT;
     ct->lock = sys_mutex();
+    ct->conn_msg = (char*) malloc(300);
+    memset(ct->conn_msg, 0, 300);
     ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
     if (!ct->lock || !ct->timer) {
         qd_connector_decref(ct);
@@ -1506,6 +1517,7 @@ bool qd_connector_decref(qd_connector_t* ct)
         }
         sys_mutex_free(ct->lock);
         if (ct->policy_vhost) free(ct->policy_vhost);
+        free(ct->conn_msg);
         free_qd_connector_t(ct);
         return true;
     }

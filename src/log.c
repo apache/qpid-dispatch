@@ -566,6 +566,14 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     return qd_error_code();
 }
 
+void format_string(char* buf, int buf_size, const char *fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    vsnprintf(buf, buf_size, fmt, args);
+    va_end(args);
+}
+
 
 qd_error_t qd_entity_refresh_logStats(qd_entity_t* entity, void *impl)
 {

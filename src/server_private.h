@@ -118,6 +118,7 @@ struct qd_connector_t {
     /* Connector state and ctx can be modified in proactor or management threads. */
     sys_mutex_t              *lock;
     cxtr_state_t              state;
+    char                     *conn_msg;
     qd_connection_t          *ctx;
 
     /* This conn_list contains all the connection information needed to make a connection. It also includes failover connection information */
