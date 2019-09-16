@@ -1202,6 +1202,16 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     pn_data_format(props, props_str, &props_len);
 
+    if (conn->connector) {
+        char conn_msg[300];
+        qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+                " auth=%s user=%s container_id=%s",
+                connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
+                        authenticated ? mech : "no", (char*) user, container);
+        strcpy(conn->connector->conn_msg, conn_msg);
+    }
+
+
     qd_log(router->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
            " auth=%s user=%s container_id=%s props=%s",
            connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",

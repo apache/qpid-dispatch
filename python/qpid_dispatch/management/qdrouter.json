@@ -1026,6 +1026,16 @@
                     "create": false
                     
                 },
+                "connectionStatus": {
+                    "type": "string",
+                    "description": "A read-only status of the connection. Could be one of CONNECTING, SUCCESS, FAILED",
+                    "create": false  
+                },
+                "connectionMsg": {
+                    "type": "string",
+                    "description": "A read-only connection message. Contains the connection message",
+                    "create": false  
+                },                                   
                 "policyVhost": {
                     "type": "string",
                     "required": false,

@@ -811,7 +811,33 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
             item = DEQ_HEAD(conn_info_list);
     }
 
-    if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0)
+    int state_length = 0;
+    char *state = 0;
+
+    if (ct->state == CXTR_STATE_CONNECTING) {
+        state_length = 13;
+        state = "CONNECTING\0";
+    }
+    else if (ct->state == CXTR_STATE_OPEN) {
+        state_length = 12;
+        state = "SUCCESS\0";
+    }
+    else if (ct->state == CXTR_STATE_FAILED) {
+        state_length = 9;
+        state = "FAILED\0";
+    }
+    else if (ct->state == CXTR_STATE_INIT) {
+        state_length = 15;
+        state = "INITIALIZING\0";
+    }
+
+    char state_info[state_length];
+    memset(state_info, 0, sizeof(state_length));;
+    strcat(state_info, state);
+
+    if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0
+            && qd_entity_set_string(entity, "connectionStatus", state_info) == 0
+            && qd_entity_set_string(entity, "connectionMsg", ct->conn_msg) == 0)
         return QD_ERROR_NONE;
 
     return qd_error_code();

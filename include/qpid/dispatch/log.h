@@ -74,4 +74,6 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
 /** Maximum length for a log message */
 int qd_log_max_len();
 
+void qd_format_string(char* buf, int buf_size, const char *fmt, ...);
+
 #endif
