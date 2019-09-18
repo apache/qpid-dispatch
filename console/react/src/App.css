@@ -1,0 +1,623 @@
+.App {
+  text-align: center;
+}
+
+.App-logo {
+  animation: App-logo-spin infinite 20s linear;
+  height: 40vmin;
+  pointer-events: none;
+}
+
+.App-header {
+  background-color: #282c34;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(10px + 2vmin);
+  color: white;
+}
+
+.App-link {
+  color: #61dafb;
+}
+
+@keyframes App-logo-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.pf-c-avatar {
+  --pf-c-avatar--Width: initial !important;
+}
+
+.donut-chart-sm {
+  width: 8em;
+  height: 8em;
+}
+
+.donut-chart-sm tspan {
+  fill: #000000 !important;
+}
+
+.deployment-donut {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.deployment-donut .deployment-donut-row {
+  display: flex;
+}
+
+.deployment-donut .deployment-donut-column {
+  display: flex;
+  flex-direction: column;
+}
+
+.deployment-donut .scaling-controls {
+  justify-content: center;
+  font-size: 24px;
+}
+
+.deployment-donut .scaling-controls a {
+  color: #bbb;
+}
+
+.topo-middle {
+  margin: auto;
+}
+
+.topo-name {
+  padding-top: 30px;
+  padding-bottom: 30px;
+}
+
+.force-graph {
+  min-height: 480px;
+  height: 800px;
+}
+
+.node.interior path {
+  fill: green;
+  stroke-width: 1;
+  stroke: green;
+}
+
+.node circle {
+  fill: #fff;
+  stroke: #000;
+  stroke-width: 2px;
+}
+
+.node.selected circle,
+.node.edgeClass.selected circle {
+  stroke-width: 4px;
+  stroke: green;
+  fill: #eaeaea;
+}
+
+.node text {
+  fill: #000;
+  stroke: none;
+  font-size: 0.8em;
+}
+
+g.over line {
+  stroke: #000;
+  stroke-width: 4;
+}
+
+g.selected line {
+  stroke: green;
+  stroke-width: 4;
+}
+
+.link {
+  stroke: #000;
+}
+.topology-header path.link {
+  stroke: #fff;
+}
+
+path.hittarget {
+  stroke-width: 15px;
+  stroke: transparent;
+}
+
+.node.client rect {
+  stroke: black;
+  fill: white;
+}
+
+.node.edgeClass circle {
+  stroke: black;
+  fill: white;
+  stroke-width: 2;
+  stroke-dasharray: 4;
+}
+
+.tag-line {
+  font-size: 0.8em;
+  color: #888888;
+}
+
+.deployment-donut.table-cell button {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.deployment-donut.table-cell .scaling-controls {
+  font-size: 14px;
+}
+
+.address-table-container {
+  width: 31em;
+}
+
+.no-addresses {
+  margin-top: 1em;
+}
+
+.form-sub-group {
+  margin-left: 3em;
+}
+
+.sm-input {
+  width: 6em !important;
+}
+
+.incdec-label {
+  padding-left: 1em;
+}
+
+.incdec-label.disabled {
+  color: #555555;
+}
+
+.messages-receivers {
+  display: none !important;
+}
+
+.topology-header line {
+  stroke: white;
+}
+
+.network-name {
+  width: 48em;
+  margin: auto !important;
+}
+
+.not-editing-cancel {
+  display: none !important;
+}
+
+.not-editing {
+  border: 0 0 1px 0 !important;
+}
+
+path.cloud-outline {
+  stroke-width: 3px;
+  stroke: #ccc;
+  fill: white;
+}
+.cluster.selected path.cloud-outline {
+  stroke-width: 4px;
+  stroke: #cfc;
+  fill: #fcfcfc;
+}
+
+.network-toolbar {
+  padding-bottom: 1em;
+  border-bottom: 1px solid #cccccc;
+}
+
+.context-form {
+  text-align: left;
+  min-width: 34em;
+  padding-left: 2em;
+  margin-right: 0;
+  border-left: 1px solid lightgray;
+}
+
+.context-form .pf-c-form__group.pf-m-action {
+  margin-top: 0;
+}
+
+.enter-prompt {
+  padding-top: 0.25em;
+}
+
+table.edge-table td[data-label="State"] svg {
+  position: relative;
+  top: 10px;
+}
+
+.edge-table-actions {
+  position: absolute;
+  right: 1em;
+}
+
+.empty-selection {
+  max-width: 30em;
+}
+
+.link-label {
+  margin-left: 1em;
+  font-weight: bold;
+}
+
+.logo-text {
+  text-decoration: none;
+  color: white;
+  font-weight: bold;
+}
+
+.state-copy input {
+  display: none;
+}
+
+.state-copy {
+  display: inline-block;
+}
+.state-container svg {
+  position: relative;
+  top: 0.5em;
+}
+
+.state-placeholder {
+  width: 16px;
+  height: 24px;
+  display: inline-block;
+}
+
+.state-text {
+  display: inline-block;
+}
+
+div.state-container button.pf-c-clipboard-copy__group-copy {
+  display: inline-block;
+  padding: 0;
+  margin: 0;
+  position: relative;
+  top: -0.5em;
+}
+
+.pf-c-clipboard-copy__group input {
+  border: 0;
+}
+
+.pf-c-clipboard-copy {
+  --pf-c-clipboard-copy__group-copy--PaddingRight: 0;
+  --pf-c-clipboard-copy__group-copy--PaddingLeft: 0;
+  --pf-c-clipboard-copy__group-copy--BorderWidth: 0;
+}
+
+.over-alert {
+  position: absolute;
+  width: 95%;
+  z-index: 1;
+}
+
+.force-right {
+  position: absolute;
+  right: 1em;
+}
+
+.connect-modal {
+  width: 40em !important;
+  position: absolute !important;
+  right: 0;
+  padding: 2em;
+  background-color: #fafafa;
+  border: 1px solid #d1d1d1;
+  box-shadow: 0 6px 12px rgba(3, 3, 3, 0.175);
+  z-index: 2;
+}
+
+.connect-modal * {
+  color: black !important;
+}
+
+.connect-modal .pf-m-primary {
+  background-color: #06c !important;
+  color: white !important;
+}
+
+.qdr-sidebar {
+  text-align: left;
+  height: 100vh;
+}
+
+.connect-page {
+  background-color: black !important;
+  height: 100vh;
+}
+
+.connect-page * {
+  color: white;
+}
+
+.connect-page p {
+  margin-top: 4em;
+}
+.left-content {
+  width: 60%;
+  padding: 6em;
+  text-align: left;
+}
+
+.console-banner {
+  text-transform: uppercase;
+  letter-spacing: 0.3em;
+}
+
+.overview-title::first-letter {
+  text-transform: uppercase;
+}
+.overview-charts-page,
+.overview-table {
+  background-color: #eaeaea !important;
+  padding: 3em;
+}
+
+.overview-table-page {
+  padding-left: 0 !important;
+  padding-right: 0 !important;
+}
+.overview-header {
+  padding: 0.5em;
+  font-size: 5em;
+  text-align: left;
+}
+.fill-card {
+  width: 100%;
+}
+
+.qdrTopology dl.pf-c-accordion {
+  position: absolute;
+  width: 20em;
+  right: 1em;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 1em;
+}
+
+.qdrTopology dl.pf-c-accordion * {
+  border-left-color: transparent;
+}
+
+.qdrTopology dl.pf-c-accordion dt {
+  background-image: linear-gradient(to bottom, #fafafa 0, #ededed 100%);
+  background-repeat: repeat-x;
+}
+
+.qdrTopology dl.pf-c-accordion h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.pf-c-page {
+  background-color: white !important;
+}
+.topology-header {
+  background-color: #0e0e0e;
+}
+
+.qdrPopup {
+  position: absolute;
+  z-index: 200;
+  border-radius: 4px;
+  border: 1px solid gray;
+  background-color: white;
+  color: black;
+  opacity: 1;
+  padding: 12px;
+  font-size: 14px;
+}
+
+table.popupTable td {
+  padding-right: 5px;
+  font-size: 10px;
+}
+
+g text {
+  pointer-events: none;
+}
+
+svg.address-svg g text {
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+svg {
+  background-color: transparent;
+  cursor: default;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  -o-user-select: none;
+  user-select: none;
+}
+
+svg:not(.active):not(.ctrl) {
+  cursor: crosshair;
+}
+
+svg.address-svg {
+  cursor: pointer;
+}
+path.link.selected:not(.traffic) {
+  /* stroke-dasharray: 10,2; */
+  stroke: #33f !important;
+}
+
+path.link {
+  fill: #000;
+  /* stroke: #000; */
+  stroke-width: 2.5px;
+  cursor: default;
+}
+
+path.link.unknown {
+  stroke-dasharray: 4 3;
+  stroke: #888888;
+}
+path:not(.traffic) {
+  stroke: #000;
+}
+svg:not(.active):not(.ctrl) path.link {
+  cursor: pointer;
+}
+
+path.hittarget {
+  stroke-width: 15px;
+  stroke: transparent;
+}
+
+path.link.small {
+  stroke-width: 2.5;
+}
+path.link.small:not(.traffic) {
+  stroke: #000;
+}
+path.link.highlighted:not(.traffic) {
+  stroke: #6f6 !important;
+}
+marker {
+  fill: #000;
+  stroke-width: 0;
+}
+path.link.dragline {
+  pointer-events: none;
+}
+
+path.link.hidden {
+  stroke-width: 0;
+}
+
+circle.node {
+  stroke-width: 1.5px;
+  cursor: pointer;
+  stroke: darkgray;
+}
+
+circle.node.reflexive {
+  stroke: #f00 !important;
+  stroke-width: 2.5px;
+}
+circle.node.selected {
+  stroke: #6f6 !important;
+  stroke-width: 2px;
+  fill: #e0e0ff !important;
+}
+circle.node.highlighted {
+  stroke: #6f6;
+}
+circle.node.inter-router {
+  fill: #eaeaea;
+}
+circle.node.normal.in {
+  fill: #f0f000;
+}
+circle.node.normal.out {
+  fill: #c0f0c0;
+}
+circle.node.edge {
+  fill: #e0e0ff;
+}
+circle.node.on-demand {
+  fill: #c0ffc0;
+}
+circle.node.on-demand.artemis {
+  fill: #fcc;
+  /*opacity: 0.2; */
+}
+
+circle.node.normal.console {
+  fill: lightcyan;
+}
+circle.node.artemis {
+  fill: lightgreen;
+}
+circle.node.route-container {
+  fill: orange;
+}
+
+text.console,
+text.on-demand,
+text.normal,
+text.edge,
+text.address-checkbox {
+  font-family: FontAwesome;
+  font-weight: normal;
+  font-size: 16px;
+}
+
+text.address-checkbox {
+  fill: white;
+  cursor: pointer;
+}
+text.id {
+  text-anchor: middle;
+  font-weight: bold;
+}
+
+text.label {
+  text-anchor: start;
+  font-weight: bold;
+}
+
+@font-face {
+  font-family: "Brokers";
+  src: url("./assets/brokers.ttf"); /* TTF file for CSS3 browsers */
+}
+
+text.artemis {
+  font-family: Brokers;
+  font-size: 20px;
+  font-weight: bold;
+}
+
+text.qpid-cpp {
+  font-family: Brokers;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+svg#svglegend {
+  max-width: 280px;
+}
+#legend-expand,
+#traffic-expand,
+#map-expand,
+#arrows-expand {
+  max-height: 20em;
+}
+
+div.qdrTopology {
+  text-align: left;
+}
+
+#arrows-expand label,
+#traffic-dots label,
+#traffic-congestion label {
+  position: relative;
+  top: 4px;
+}
+
+#traffic-address .pf-c-check {
+  padding-bottom: 0.5em;
+}
+.address-svg {
+  margin-left: 1.5em;
+}
+
+.popup-info table.popupTable td {
+  font-size: 14px;
+}
