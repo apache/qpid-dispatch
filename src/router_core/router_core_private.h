@@ -635,6 +635,7 @@ struct qdr_connection_t {
     qdr_connection_role_t       role;
     int                         inter_router_cost;
     qdr_conn_identifier_t      *conn_id;
+    qdr_conn_identifier_t      *alt_conn_id;
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
     bool                        policy_allow_dynamic_link_routes;

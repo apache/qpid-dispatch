@@ -2052,6 +2052,136 @@ class InvalidTagTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class Dispatch1428(TestCase):
+    """
+    Sets up 2 routers (one of which are acting as brokers (QDR.A)).
+
+        QDR.A acting broker #1
+             +---------+         +---------+
+             |         | <------ |         |
+             |  QDR.A  |         |  QDR.B  |
+             |         | ------> |         |
+             +---------+         +---------+
+
+    """
+    @classmethod
+    def get_router(cls, index):
+        return cls.routers[index]
+
+    @classmethod
+    def setUpClass(cls):
+        """Start two routers"""
+        super(Dispatch1428, cls).setUpClass()
+
+        def router(name, connection):
+
+            config = [
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+            ] + connection
+
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
+
+        cls.routers = []
+        a_listener_port = cls.tester.get_port()
+        b_listener_port = cls.tester.get_port()
+
+        router('A',
+               [
+                   ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+               ])
+        router('B',
+               [
+                   ('listener', {'role': 'normal', 'host': '0.0.0.0', 'port': b_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('connector', {'name': 'one', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'}),
+                   ('connector', {'name': 'two', 'role': 'route-container', 'host': '0.0.0.0', 'port': a_listener_port, 'saslMechanisms': 'ANONYMOUS'})
+               ]
+               )
+        sleep(2)
+
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK, address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', address or self.address(), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
+    def test_both_link_routes_active(self):
+        cmds = [
+            'CREATE --type=linkRoute name=foo prefix=foo direction=in connection=one',
+            'CREATE --type=linkRoute name=bar prefix=bar direction=in connection=two',
+            'CREATE --type=linkRoute name=baz prefix=baz direction=in containerId=QDR.A'
+        ]
+        for c in cmds:
+            self.run_qdmanage(cmd=c, address=self.routers[1].addresses[0])
+
+        first = SendReceive("%s/foo" % self.routers[1].addresses[0], "%s/foo" % self.routers[0].addresses[0])
+        first.run()
+        self.assertEqual(None, first.error)
+        second = SendReceive("%s/bar" % self.routers[1].addresses[0], "%s/bar" % self.routers[0].addresses[0])
+        second.run()
+        self.assertEqual(None, second.error)
+        third = SendReceive("%s/baz" % self.routers[1].addresses[0], "%s/baz" % self.routers[0].addresses[0])
+        third.run()
+        self.assertEqual(None, third.error)
+
+class Timeout(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.timeout()
+
+
+class SendReceive(MessagingHandler):
+    def __init__(self, send_url, recv_url, message=None):
+        super(SendReceive, self).__init__()
+        self.send_url = send_url
+        self.recv_url = recv_url
+        self.message = message or Message(body="SendReceiveTest")
+        self.sent = False
+        self.error = None
+
+    def close(self):
+        self.sender.close()
+        self.receiver.close()
+        self.sender.connection.close()
+        self.receiver.connection.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.close()
+
+    def stop(self):
+        self.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        event.container.container_id = "SendReceiveTestClient"
+        self.sender = event.container.create_sender(self.send_url)
+        self.receiver = event.container.create_receiver(self.recv_url)
+
+    def on_sendable(self, event):
+        if not self.sent:
+            event.sender.send(self.message)
+            self.sent = True
+
+    def on_message(self, event):
+        if self.message.body != event.message.body:
+            self.error = "Incorrect message. Got %s, expected %s" % (event.message.body, self.message.body)
+
+    def on_accepted(self, event):
+        self.stop()
+
+    def run(self):
+        Container(self).run()
 
 if __name__ == '__main__':
     unittest.main(main_module())
