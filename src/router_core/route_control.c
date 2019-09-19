@@ -549,22 +549,8 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
     qdr_core_delete_auto_link(core, al);
 }
 
-
-void qdr_route_connection_opened_CT(qdr_core_t       *core,
-                                    qdr_connection_t *conn,
-                                    qdr_field_t      *container_field,
-                                    qdr_field_t      *connection_field)
+static void activate_route_connection(qdr_core_t *core, qdr_connection_t *conn, qdr_conn_identifier_t *cid)
 {
-    if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
-        return;
-
-    qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core,
-            container_field?container_field->iterator:0, connection_field?connection_field->iterator:0);
-
-    qdr_add_connection_ref(&cid->connection_refs, conn);
-
-    conn->conn_id        = cid;
-
     //
     // Activate all link-routes associated with this remote container.
     //
@@ -584,24 +570,8 @@ void qdr_route_connection_opened_CT(qdr_core_t       *core,
     }
 }
 
-
-void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
+static void deactivate_route_connection(qdr_core_t *core, qdr_connection_t *conn, qdr_conn_identifier_t *cid)
 {
-    //
-    // release any connection-based link routes.  These can exist on
-    // QDR_ROLE_NORMAL connections.
-    //
-    while (DEQ_HEAD(conn->conn_link_routes)) {
-        qdr_link_route_t *lr = DEQ_HEAD(conn->conn_link_routes);
-        // removes the link route from conn->link_routes
-        qdr_route_del_conn_route_CT(core, lr);
-    }
-
-    if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
-        return;
-
-    qdr_conn_identifier_t *cid = conn->conn_id;
-    if (cid) {
         //
         // Deactivate all link-routes associated with this remote container.
         //
@@ -625,9 +595,65 @@ void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
         //
         qdr_del_connection_ref(&cid->connection_refs, conn);
 
-        conn->conn_id        = 0;
-
         qdr_route_check_id_for_deletion_CT(core, cid);
+}
+
+void qdr_route_connection_opened_CT(qdr_core_t       *core,
+                                    qdr_connection_t *conn,
+                                    qdr_field_t      *container_field,
+                                    qdr_field_t      *connection_field)
+{
+    if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
+        return;
+
+    if (connection_field) {
+        qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core, 0, connection_field->iterator);
+        qdr_add_connection_ref(&cid->connection_refs, conn);
+        conn->conn_id = cid;
+        activate_route_connection(core, conn, conn->conn_id);
+        if (container_field) {
+            cid = qdr_route_declare_id_CT(core, container_field->iterator, 0);
+            if (cid != conn->conn_id) {
+                //the connection and container may be indexed to different objects if
+                //there are multiple distinctly named connectors which connect to the
+                //same amqp container
+                qdr_add_connection_ref(&cid->connection_refs, conn);
+                conn->alt_conn_id = cid;
+                activate_route_connection(core, conn, conn->alt_conn_id);
+            }
+        }
+    } else {
+        qdr_conn_identifier_t *cid = qdr_route_declare_id_CT(core, container_field->iterator, 0);
+        qdr_add_connection_ref(&cid->connection_refs, conn);
+        conn->conn_id = cid;
+        activate_route_connection(core, conn, conn->conn_id);
+    }
+}
+
+void qdr_route_connection_closed_CT(qdr_core_t *core, qdr_connection_t *conn)
+{
+    //
+    // release any connection-based link routes.  These can exist on
+    // QDR_ROLE_NORMAL connections.
+    //
+    while (DEQ_HEAD(conn->conn_link_routes)) {
+        qdr_link_route_t *lr = DEQ_HEAD(conn->conn_link_routes);
+        // removes the link route from conn->link_routes
+        qdr_route_del_conn_route_CT(core, lr);
+    }
+
+    if (conn->role != QDR_ROLE_ROUTE_CONTAINER)
+        return;
+
+    qdr_conn_identifier_t *cid = conn->conn_id;
+    if (cid) {
+        deactivate_route_connection(core, conn, cid);
+        conn->conn_id = 0;
+    }
+    cid = conn->alt_conn_id;
+    if (cid) {
+        deactivate_route_connection(core, conn, cid);
+        conn->alt_conn_id = 0;
     }
 }
 
