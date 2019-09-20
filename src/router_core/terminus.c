@@ -249,13 +249,9 @@ bool qdr_terminus_has_capability(qdr_terminus_t *term, const char *capability)
     return false;
 }
 
-
-int qdr_terminus_waypoint_capability(qdr_terminus_t *term)
+static int get_waypoint_ordinal(pn_data_t* cap)
 {
-    pn_data_t *cap = term->capabilities;
-    pn_data_rewind(cap);
-    pn_data_next(cap);
-    if (cap && pn_data_type(cap) == PN_SYMBOL) {
+    if (pn_data_type(cap) == PN_SYMBOL) {
         pn_bytes_t sym = pn_data_get_symbol(cap);
         size_t     len = strlen(QD_CAPABILITY_WAYPOINT_DEFAULT);
         if (sym.size >= len && strncmp(sym.start, QD_CAPABILITY_WAYPOINT_DEFAULT, len) == 0) {
@@ -263,6 +259,28 @@ int qdr_terminus_waypoint_capability(qdr_terminus_t *term)
                 return 1;    // This is the default ordinal
             if (sym.size == len + 2 && sym.start[len + 1] > '0' && sym.start[len + 1] <= '9')
                 return (int) (sym.start[len + 1] - '0');
+        }
+    }
+    return 0;
+}
+
+
+int qdr_terminus_waypoint_capability(qdr_terminus_t *term)
+{
+    pn_data_t *cap = term->capabilities;
+    pn_data_rewind(cap);
+    pn_data_next(cap);
+    if (cap) {
+        int ordinal = get_waypoint_ordinal(cap);
+        if (ordinal) {
+            return ordinal;
+        } else if (pn_data_type(cap) == PN_ARRAY && pn_data_enter(cap)) {
+            while (pn_data_next(cap)) {
+                ordinal = get_waypoint_ordinal(cap);
+                if (ordinal) {
+                    return ordinal;
+                }
+            }
         }
     }
 
