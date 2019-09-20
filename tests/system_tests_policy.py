@@ -38,7 +38,7 @@ from test_broker import FakeBroker
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
-    Verify that connections beyond the absolute limit are denied
+    Verify that connections beyond the absolute limit are denied and counted
     """
     @classmethod
     def setUpClass(cls):
@@ -54,6 +54,18 @@ class AbsoluteConnectionCountLimit(TestCase):
 
     def address(self):
         return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
 
     def test_verify_maximum_connections(self):
         addr = self.address()
@@ -79,6 +91,10 @@ class AbsoluteConnectionCountLimit(TestCase):
 
         bc1.close()
         bc2.close()
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["connectionsDenied"] == 1)
+        self.assertTrue(policystats[0]["totalDenials"] == 1)
 
 class LoadPolicyFromFolder(TestCase):
     """
@@ -263,9 +279,7 @@ class LoadPolicyFromFolder(TestCase):
 
 class SenderReceiverLimits(TestCase):
     """
-    Verify that specifying a policy folder from the router conf file
-    effects loading the policies in that folder.
-    This test relies on qdmanage utility.
+    Verify that policy can limit senders and receivers by count.
     """
     @classmethod
     def setUpClass(cls):
@@ -312,11 +326,12 @@ class SenderReceiverLimits(TestCase):
 
         bs1.close()
 
-
 class PolicyVhostOverride(TestCase):
     """
-    Verify that specifying a policy folder from the router conf file
-    effects loading the policies in that folder.
+    Verify that listener policyVhost can override normally discovered vhost.
+    Verify that specific vhost and global denial counts are propagated.
+      This test conveniently forces the vhost denial statistics to be
+      on a named vhost and we know where to find them.
     This test relies on qdmanage utility.
     """
     @classmethod
@@ -335,6 +350,18 @@ class PolicyVhostOverride(TestCase):
     def address(self):
         return self.router.addresses[0]
 
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
     def test_verify_n_receivers(self):
         n = 4
         addr = self.address()
@@ -352,6 +379,20 @@ class PolicyVhostOverride(TestCase):
 
         br1.close()
 
+        vhoststats = json.loads(self.run_qdmanage('query --type=vhostStats'))
+        foundStat = False
+        for vhs in vhoststats:
+            if vhs["id"] == "override.host.com":
+                foundStat = True
+                self.assertTrue(vhs["senderDenied"] == 0)
+                self.assertTrue(vhs["receiverDenied"] == 1)
+                break
+        self.assertTrue(foundStat, msg="did not find virtual host id 'override.host.com' in stats")
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["linksDenied"] == 1)
+        self.assertTrue(policystats[0]["totalDenials"] == 1)
+
     def test_verify_n_senders(self):
         n = 2
         addr = self.address()
@@ -365,6 +406,20 @@ class PolicyVhostOverride(TestCase):
         self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
 
         bs1.close()
+
+        vhoststats = json.loads(self.run_qdmanage('query --type=vhostStats'))
+        foundStat = False
+        for vhs in vhoststats:
+            if vhs["id"] == "override.host.com":
+                foundStat = True
+                self.assertTrue(vhs["senderDenied"] == 1)
+                self.assertTrue(vhs["receiverDenied"] == 1)
+                break
+        self.assertTrue(foundStat, msg="did not find virtual host id 'override.host.com' in stats")
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["linksDenied"] == 2)
+        self.assertTrue(policystats[0]["totalDenials"] == 2)
 
 
 class Capabilities(ReceiverOption):

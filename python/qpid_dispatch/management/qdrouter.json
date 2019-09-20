@@ -1831,7 +1831,17 @@
                 },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
-                "connectionsCurrent": {"type": "integer", "graph": true}
+                "connectionsCurrent": {"type": "integer", "graph": true},
+                "linksDenied": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The sum of all vhost sender and receiver denials."
+                },
+                "totalDenials": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of connection and link denials."
+                }
             }
         },
 
