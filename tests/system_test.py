@@ -330,7 +330,7 @@ class Qdrouterd(Process):
             'listener': {'host':'0.0.0.0', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120',
                          'authenticatePeer': 'no', 'role': 'normal'},
             'connector': {'host':'127.0.0.1', 'saslMechanisms':'ANONYMOUS', 'idleTimeoutSeconds': '120'},
-            'router': {'mode': 'standalone', 'id': 'QDR', 'debugDumpFile': 'qddebug.txt'}
+            'router': {'mode': 'standalone', 'id': 'QDR'}
         }
 
         def sections(self, name):
@@ -376,6 +376,8 @@ class Qdrouterd(Process):
         self.perform_teardown = perform_teardown
         if not name: name = self.config.router_id
         assert name
+        # setup log and debug dump files
+        self.config.sections('router')[0]['debugDumpFile'] = '%s-qddebug.txt' % name
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
             config.append(
