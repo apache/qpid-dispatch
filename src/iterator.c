@@ -203,6 +203,8 @@ static void parse_address_view(qd_iterator_t *iter)
                 return;
             }
         }
+
+        iter->view_pointer  = save_pointer;
     }
 
     iter->prefix            = iter->prefix_override ? iter->prefix_override : QD_ITER_HASH_PREFIX_MOBILE;
