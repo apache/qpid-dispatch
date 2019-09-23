@@ -312,6 +312,12 @@ class SenderReceiverLimits(TestCase):
 
         bs1.close()
 
+    def test_verify_z_connection_stats(self):
+        with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+            close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
+            self.assertTrue(len(close_lines) == 1, msg='Policy did not log sender and receiver denials.')
+
 
 class PolicyVhostOverride(TestCase):
     """
