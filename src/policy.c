@@ -301,8 +301,19 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
         qd_python_unlock(lock_state);
     }
     const char *hostname = qd_connection_name(conn);
-    qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. nConnections= %d.",
-            hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
+    int ssnDenied = 0;
+    int sndDenied = 0;
+    int rcvDenied = 0;
+    if (conn->policy_settings && conn->policy_settings->denialCounts) {
+        ssnDenied = conn->policy_settings->denialCounts->sessionDenied;
+        sndDenied = conn->policy_settings->denialCounts->senderDenied;
+        rcvDenied = conn->policy_settings->denialCounts->receiverDenied;
+    }
+    qd_log(policy->log_source, QD_LOG_DEBUG, 
+           "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d, "
+           "sessions_denied=%d, senders_denied=%d, receivers_denied=%d. nConnections= %d.",
+            hostname, conn->n_sessions, conn->n_senders, conn->n_receivers,
+            ssnDenied, sndDenied, rcvDenied, n_connections);
 }
 
 
