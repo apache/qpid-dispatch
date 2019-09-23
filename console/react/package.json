@@ -23,6 +23,7 @@
     "react-scripts": "3.0.1",
     "redux": "^4.0.1",
     "rhea": "^1.0.8",
+    "topojson-client": "^3.0.1",
     "typescript": "^3.5.2"
   },
   "scripts": {

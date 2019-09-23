@@ -17,7 +17,9 @@ specific language governing permissions and limitations
 under the License.
 */
 
-/* global angular d3 topojson Promise */
+import * as d3 from "d3";
+import * as topojson from "topojson-client";
+
 const maxnorth = 84;
 const maxsouth = 60;
 const MAPOPTIONSKEY = "QDRMapOptions";
@@ -31,10 +33,14 @@ export class BackgroundMap {
     this.$scope = $scope;
     this.initialized = false;
     this.notify = notifyFn;
-    $scope.mapOptions = angular.fromJson(localStorage[MAPOPTIONSKEY]) || {
-      areaColor: defaultLandColor,
-      oceanColor: defaultOceanColor
-    };
+
+    let savedOptions = localStorage.getItem(MAPOPTIONSKEY);
+    this.mapOptions = savedOptions
+      ? JSON.parse(savedOptions)
+      : {
+          areaColor: defaultLandColor,
+          oceanColor: defaultOceanColor
+        };
     this.last = {
       translate: [0, 0],
       scale: null

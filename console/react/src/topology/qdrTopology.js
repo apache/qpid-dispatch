@@ -94,6 +94,21 @@ class TopologyPage extends Component {
       this.forceData,
       ["dots", "congestion"].filter(t => this.state.legendOptions.traffic[t])
     );
+    this.backgroundMap = new BackgroundMap(this, () => {});
+    this.backgroundMap = new BackgroundMap(
+      this,
+      // notify: called each time a pan/zoom is performed
+      () => {
+        if (this.legendOptions.map.open) {
+          // set all the nodes' x,y position based on their saved lon,lat
+          this.forceData.nodes.setXY(this.backgroundMap);
+          this.forceData.nodes.savePositions();
+          // redraw the nodes in their x,y position and let non-fixed nodes bungie
+          this.force.start();
+          this.clearPopups();
+        }
+      }
+    );
   }
 
   // called only once when the component is initialized
@@ -133,13 +148,13 @@ class TopologyPage extends Component {
         .attr("width", this.width)
         .attr("height", this.height)
         .on("click", this.clearPopups);
-      /*
-        // read the map data from the data file and build the map layer
-      backgroundMap.init($scope, svg, width, height).then(function() {
-        forceData.nodes.saveLonLat(backgroundMap);
-        backgroundMap.setMapOpacity($scope.legendOptions.map.open);
-      });
-      */
+      // read the map data from the data file and build the map layer
+      this.backgroundMap
+        .init(this, this.svg, this.width, this.height)
+        .then(() => {
+          this.forceData.nodes.saveLonLat(this.backgroundMap);
+          this.backgroundMap.setMapOpacity(this.legendOptions.map.open);
+        });
       addDefs(this.svg);
       addGradient(this.svg);
     }
@@ -211,7 +226,7 @@ class TopologyPage extends Component {
       .on("tick", this.tick)
       .on("end", () => {
         this.forceData.nodes.savePositions();
-        //this.forceData.nodes.saveLonLat(backgroundMap);
+        this.forceData.nodes.saveLonLat(this.backgroundMap);
       })
       .start();
     for (let i = 0; i < this.forceData.nodes.nodes.length; i++) {
@@ -313,7 +328,7 @@ class TopologyPage extends Component {
           .nodes(this.forceData.nodes.nodes)
           .links(this.forceData.links.links)
           .start();
-        //this.forceData.nodes.saveLonLat(backgroundMap);
+        this.forceData.nodes.saveLonLat(this.backgroundMap);
         this.restart();
         this.updateLegend();
       }
@@ -546,7 +561,7 @@ class TopologyPage extends Component {
       })
       .on("mousedown", d => {
         // mouse down for circle
-        //backgroundMap.cancelZoom();
+        this.backgroundMap.cancelZoom();
         this.current_node = d;
         if (d3.event.button !== 0) {
           // ignore all but left button
@@ -560,7 +575,7 @@ class TopologyPage extends Component {
       })
       .on("mouseup", function(d) {
         // mouse up for circle
-        //backgroundMap.restartZoom();
+        this.backgroundMap.restartZoom();
         if (!self.mousedown_node) return;
 
         // unenlarge target node
@@ -577,7 +592,7 @@ class TopologyPage extends Component {
         ) {
           self.forceData.nodes.setFixed(d, true);
           self.forceData.nodes.savePositions();
-          //self.forceData.nodes.saveLonLat(backgroundMap);
+          self.forceData.nodes.saveLonLat(this.backgroundMap);
           self.resetMouseVars();
           self.restart();
           return;
