@@ -102,8 +102,9 @@ static qdr_delivery_t *qdr_node_delivery_qdr_from_pn(pn_delivery_t *dlv)
 }
 
 
-static void qdr_node_reap_abandoned_deliveries(qdr_core_t *core, qd_link_t *link)
+void qd_link_abandoned_deliveries_handler(void *context, qd_link_t *link)
 {
+    qd_router_t    *router = (qd_router_t*) context;
     qd_link_ref_list_t *list = qd_link_get_ref_list(link);
     qd_link_ref_t      *ref  = DEQ_HEAD(*list);
 
@@ -112,12 +113,11 @@ static void qdr_node_reap_abandoned_deliveries(qdr_core_t *core, qd_link_t *link
         qdr_delivery_t *dlv = (qdr_delivery_t*) ref->ref;
         ref->ref = 0;
         qdr_delivery_set_context(dlv, 0);
-        qdr_delivery_decref(core, dlv, "qdr_node_reap_abandoned_deliveries");
+        qdr_delivery_decref(router->router_core, dlv, "qd_link_abandoned_deliveries_handler");
         free_qd_link_ref_t(ref);
         ref = DEQ_HEAD(*list);
     }
 }
-
 
 
 
@@ -826,7 +826,6 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         }
     }
 
-    qd_router_t    *router = (qd_router_t*) context;
     qdr_link_t     *rlink  = (qdr_link_t*) qd_link_get_context(link);
     pn_condition_t *cond   = qd_link_pn(link) ? pn_link_remote_condition(qd_link_pn(link)) : 0;
 
@@ -844,7 +843,6 @@ static int AMQP_link_detach_handler(void* context, qd_link_t *link, qd_detach_ty
         //
         if (dt == QD_LOST || qdr_link_get_context(rlink) == 0) {
             qdr_link_set_context(rlink, 0);
-            qdr_node_reap_abandoned_deliveries(router->router_core, link);
             qd_link_free(link);
         }
 
@@ -1263,6 +1261,7 @@ static qd_node_type_t router_node = {"router", 0, 0,
                                      AMQP_writable_conn_handler,
                                      AMQP_link_detach_handler,
                                      AMQP_link_attach_handler,
+                                     qd_link_abandoned_deliveries_handler,
                                      AMQP_link_flow_handler,
                                      0,   // node_created_handler
                                      0,   // node_destroyed_handler
@@ -1429,7 +1428,6 @@ static void CORE_close_connection(void *context, qdr_connection_t *qdr_conn, qdr
 
 static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close)
 {
-    qd_router_t *router = (qd_router_t*) context;
     qd_link_t   *qlink  = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
         return;
@@ -1473,7 +1471,6 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
     // If this is the second detach, free the qd_link
     //
     if (!first) {
-        qdr_node_reap_abandoned_deliveries(router->router_core, qlink);
         qd_link_free(qlink);
     }
 }
