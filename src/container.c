@@ -900,17 +900,8 @@ void qd_link_free(qd_link_t *link)
     DEQ_REMOVE(container->links, link);
     sys_mutex_unlock(container->lock);
 
-
-    qd_link_ref_list_t *list = qd_link_get_ref_list(link);
-
-    if (list) {
-        qd_link_ref_t *link_ref = DEQ_HEAD (*list);
-        while (link_ref) {
-            DEQ_REMOVE_HEAD(*list);
-            free_qd_link_ref_t(link_ref);
-            link_ref = DEQ_HEAD (*list);
-        }
-    }
+    qd_node_t *node = link->node;
+    node->ntype->link_abandoned_deliveries_handler(node->context, link);
 
     free_qd_link_t(link);
 }

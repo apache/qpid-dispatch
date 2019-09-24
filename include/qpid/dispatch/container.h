@@ -73,12 +73,13 @@ typedef struct qd_link_t     qd_link_t;
 
 ALLOC_DECLARE(qd_link_t);
 
-typedef bool (*qd_container_delivery_handler_t)    (void *node_context, qd_link_t *link);
-typedef void (*qd_container_disposition_handler_t) (void *node_context, qd_link_t *link, pn_delivery_t *pnd);
-typedef int  (*qd_container_link_handler_t)        (void *node_context, qd_link_t *link);
-typedef int  (*qd_container_link_detach_handler_t) (void *node_context, qd_link_t *link, qd_detach_type_t dt);
-typedef void (*qd_container_node_handler_t)        (void *type_context, qd_node_t *node);
-typedef int  (*qd_container_conn_handler_t)        (void *type_context, qd_connection_t *conn, void *context);
+typedef bool (*qd_container_delivery_handler_t)                  (void *node_context, qd_link_t *link);
+typedef void (*qd_container_disposition_handler_t)               (void *node_context, qd_link_t *link, pn_delivery_t *pnd);
+typedef int  (*qd_container_link_handler_t)                      (void *node_context, qd_link_t *link);
+typedef int  (*qd_container_link_detach_handler_t)               (void *node_context, qd_link_t *link, qd_detach_type_t dt);
+typedef void (*qd_container_node_handler_t)                      (void *type_context, qd_node_t *node);
+typedef int  (*qd_container_conn_handler_t)                      (void *type_context, qd_connection_t *conn, void *context);
+typedef void (*qd_container_link_abandoned_deliveries_handler_t) (void *node_context, qd_link_t *link);
 
 /**
  * A set  of Node handlers for deliveries, links and container events.
@@ -113,6 +114,8 @@ typedef struct {
 
     /** Invoked when a link we created was opened by the peer */
     qd_container_link_handler_t link_attach_handler;
+
+    qd_container_link_abandoned_deliveries_handler_t link_abandoned_deliveries_handler;
 
     /** Invoked when a link receives a flow event */
     qd_container_link_handler_t link_flow_handler;
