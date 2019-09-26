@@ -31,6 +31,7 @@ import ConnectPage from "./connectPage";
 import OverviewChartsPage from "./overviewChartsPage";
 import OverviewTablePage from "./overviewTablePage";
 import TopologyPage from "./topology/qdrTopology";
+import MessageFlowPage from "./chord/qdrChord";
 import { QDRService } from "./qdrService";
 const avatarImg = require("./assets/img_avatar.svg");
 
@@ -349,7 +350,11 @@ class PageLayout extends React.Component {
           />
         );
       } else if (this.state.activeGroup === "visualizations") {
-        return <TopologyPage service={this.service} />;
+        if (this.state.activeItem === "topology") {
+          return <TopologyPage service={this.service} />;
+        } else {
+          return <MessageFlowPage service={this.service} />;
+        }
       }
       //console.log("using overview charts page");
       return <OverviewChartsPage />;

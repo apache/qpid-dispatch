@@ -27,6 +27,7 @@ import {
 
 import ArrowsComponent from "./arrowsComponent";
 import TrafficComponent from "./trafficComponent";
+import MapLegendComponent from "./mapLegendComponent";
 
 class LegendComponent extends Component {
   constructor(props) {
@@ -99,7 +100,12 @@ class LegendComponent extends Component {
             isHidden={!this.props.mapOpen}
             isFixed
           >
-            <p>Map options go here</p>
+            <MapLegendComponent
+              open={this.props.mapOpen}
+              areaColor={this.props.areaColor}
+              oceanColor={this.props.oceanColor}
+              handleUpdateMapColor={this.props.handleUpdateMapColor}
+            />
           </AccordionContent>
         </AccordionItem>
         <AccordionItem>

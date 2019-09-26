@@ -46,133 +46,119 @@ export class BackgroundMap {
       scale: null
     };
   }
+  updateMapColor(which, color) {
+    console.log(`map received request to update ${which} color to ${color}`);
+    if (which === "areaColor") {
+      this.updateLandColor(color);
+    } else if (which === "oceanColor") {
+      this.updateOceanColor(color);
+    }
+    return this.mapOptions;
+  }
   updateLandColor(color) {
-    localStorage[MAPOPTIONSKEY] = JSON.stringify(this.$scope.mapOptions);
+    this.mapOptions.areaColor = color;
+    localStorage[MAPOPTIONSKEY] = JSON.stringify(this.mapOptions);
     d3.select("g.geo path.land")
       .style("fill", color)
       .style("stroke", d3.rgb(color).darker());
   }
   updateOceanColor(color) {
-    localStorage[MAPOPTIONSKEY] = JSON.stringify(this.$scope.mapOptions);
-    if (!color) color = this.$scope.mapOptions.oceanColor;
+    this.mapOptions.oceanColor = color;
+    localStorage[MAPOPTIONSKEY] = JSON.stringify(this.mapOptions);
+    if (!color) color = this.mapOptions.oceanColor;
     d3.select("g.geo rect.ocean").style("fill", color);
-    if (this.$scope.legendOptions.map.open) {
-      d3.select("#main_container").style("background-color", color);
+    if (this.$scope.state.legendOptions.map.open) {
+      d3.select(".pf-c-page__main").style("background-color", color);
     } else {
-      d3.select("#main_container").style("background-color", "#FFF");
+      d3.select(".pf-c-page__main").style("background-color", "#FFF");
     }
   }
 
   init($scope, svg, width, height) {
-    return new Promise(
-      function(resolve, reject) {
-        if (this.initialized) {
-          resolve();
-          return;
-        }
-        this.svg = svg;
-        this.width = width;
-        this.height = height;
-        // track last translation and scale event we processed
-        this.rotate = 20;
-        this.scaleExtent = [1, 10];
+    return new Promise((resolve, reject) => {
+      if (this.initialized) {
+        resolve();
+        return;
+      }
+      this.svg = svg;
+      this.width = width;
+      this.height = height;
+      // track last translation and scale event we processed
+      this.rotate = 20;
+      this.scaleExtent = [1, 10];
 
-        // handle ui events to change the colors
-        $scope.$watch(
-          "mapOptions.areaColor",
-          function(newValue, oldValue) {
-            if (newValue !== oldValue) {
-              this.updateLandColor(newValue);
-            }
-          }.bind(this)
-        );
-        $scope.$watch(
-          "mapOptions.oceanColor",
-          function(newValue, oldValue) {
-            if (newValue !== oldValue) {
-              this.updateOceanColor(newValue);
-            }
-          }.bind(this)
-        );
+      // setup the projection with some defaults
+      this.projection = d3.geo
+        .mercator()
+        .rotate([this.rotate, 0])
+        .scale(1)
+        .translate([width / 2, height / 2]);
 
-        // setup the projection with some defaults
-        this.projection = d3.geo
-          .mercator()
-          .rotate([this.rotate, 0])
-          .scale(1)
-          .translate([width / 2, height / 2]);
+      // this path will hold the land coordinates once they are loaded
+      this.geoPath = d3.geo.path().projection(this.projection);
 
-        // this path will hold the land coordinates once they are loaded
-        this.geoPath = d3.geo.path().projection(this.projection);
+      // set up the scale extent and initial scale for the projection
+      var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
+        s = width / (b[1][0] - b[0][0]);
+      this.scaleExtent = [s, 15 * s];
 
-        // set up the scale extent and initial scale for the projection
-        var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
-          s = width / (b[1][0] - b[0][0]);
-        this.scaleExtent = [s, 15 * s];
+      this.projection.scale(this.scaleExtent[0]);
 
-        this.projection.scale(this.scaleExtent[0]);
-        this.lastProjection = angular.fromJson(
-          localStorage[MAPPOSITIONKEY]
-        ) || {
-          rotate: 20,
-          scale: this.scaleExtent[0],
-          translate: [width / 2, height / 2]
-        };
+      let savedOptions = localStorage.getItem(MAPPOSITIONKEY);
+      this.lastProjection = savedOptions
+        ? JSON.parse(savedOptions)
+        : {
+            rotate: 20,
+            scale: this.scaleExtent[0],
+            translate: [width / 2, height / 2]
+          };
 
-        this.zoom = d3.behavior
-          .zoom()
-          .scaleExtent(this.scaleExtent)
-          .scale(this.projection.scale())
-          .translate([0, 0]) // not linked directly to projection
-          .on("zoom", this.zoomed.bind(this));
+      this.zoom = d3.behavior
+        .zoom()
+        .scaleExtent(this.scaleExtent)
+        .scale(this.projection.scale())
+        .translate([0, 0]) // not linked directly to projection
+        .on("zoom", this.zoomed.bind(this));
 
-        this.geo = svg
-          .append("g")
-          .attr("class", "geo")
-          .style("opacity", this.$scope.legendOptions.map.open ? "1" : "0");
+      this.geo = svg
+        .append("g")
+        .attr("class", "geo")
+        .style("opacity", this.$scope.state.legendOptions.map.open ? "1" : "0");
 
+      this.geo
+        .append("rect")
+        .attr("class", "ocean")
+        .attr("width", width)
+        .attr("height", height)
+        .attr("fill", "#FFF");
+
+      if (this.$scope.state.legendOptions.map.open) {
+        this.svg.call(this.zoom).on("dblclick.zoom", null);
+      }
+
+      // async load of data file. calls resolve when this completes to let caller know
+      d3.json("data/countries.json", (error, world) => {
+        if (error) reject(error);
         this.geo
-          .append("rect")
-          .attr("class", "ocean")
-          .attr("width", width)
-          .attr("height", height)
-          .attr("fill", "#FFF");
+          .append("path")
+          .datum(topojson.feature(world, world.objects.countries))
+          .attr("class", "land")
+          .attr("d", this.geoPath)
+          .style("stroke", d3.rgb(this.mapOptions.areaColor).darker());
 
-        if (this.$scope.legendOptions.map.open) {
-          this.svg.call(this.zoom).on("dblclick.zoom", null);
-        }
+        this.updateLandColor(this.mapOptions.areaColor);
+        this.updateOceanColor(this.mapOptions.oceanColor);
 
-        // async load of data file. calls resolve when this completes to let caller know
-        d3.json(
-          "plugin/data/countries.json",
-          function(error, world) {
-            if (error) reject(error);
+        // restore map rotate, scale, translate
+        this.restoreState();
 
-            this.geo
-              .append("path")
-              .datum(topojson.feature(world, world.objects.countries))
-              .attr("class", "land")
-              .attr("d", this.geoPath)
-              .style(
-                "stroke",
-                d3.rgb(this.$scope.mapOptions.areaColor).darker()
-              );
+        // draw with current positions
+        this.geo.selectAll(".land").attr("d", this.geoPath);
 
-            this.updateLandColor(this.$scope.mapOptions.areaColor);
-            this.updateOceanColor(this.$scope.mapOptions.oceanColor);
-
-            // restore map rotate, scale, translate
-            this.restoreState();
-
-            // draw with current positions
-            this.geo.selectAll(".land").attr("d", this.geoPath);
-
-            this.initialized = true;
-            resolve();
-          }.bind(this)
-        );
-      }.bind(this)
-    );
+        this.initialized = true;
+        resolve();
+      });
+    });
   }
 
   setMapOpacity(opacity) {
@@ -212,7 +198,7 @@ export class BackgroundMap {
       d3.event &&
       !this.$scope.current_node &&
       !this.$scope.mousedown_node &&
-      this.$scope.legendOptions.map.open
+      this.$scope.state.legendOptions.map.open
     ) {
       let scale = d3.event.scale,
         t = d3.event.translate,
@@ -223,8 +209,8 @@ export class BackgroundMap {
       // zoomed
       if (scale !== this.last.scale) {
         // get the mouse's x,y relative to the svg
-        let top = d3.select("#main_container").node().offsetTop;
-        let left = d3.select("#main_container").node().offsetLeft;
+        let top = d3.select(".pf-c-page__main").node().offsetTop;
+        let left = d3.select(".pf-c-page__main").node().offsetLeft;
         let mx = d3.event.sourceEvent.clientX - left;
         let my = d3.event.sourceEvent.clientY - top - 1;
 

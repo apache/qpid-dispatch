@@ -68,6 +68,7 @@ class TopologyPage extends Component {
             clientArrows: true
           }
         };
+
     this.state = {
       popupContent: "",
       showPopup: false,
@@ -94,12 +95,11 @@ class TopologyPage extends Component {
       this.forceData,
       ["dots", "congestion"].filter(t => this.state.legendOptions.traffic[t])
     );
-    this.backgroundMap = new BackgroundMap(this, () => {});
     this.backgroundMap = new BackgroundMap(
       this,
       // notify: called each time a pan/zoom is performed
       () => {
-        if (this.legendOptions.map.open) {
+        if (this.state.legendOptions.map.open) {
           // set all the nodes' x,y position based on their saved lon,lat
           this.forceData.nodes.setXY(this.backgroundMap);
           this.forceData.nodes.savePositions();
@@ -109,6 +109,7 @@ class TopologyPage extends Component {
         }
       }
     );
+    this.state.mapOptions = this.backgroundMap.mapOptions;
   }
 
   // called only once when the component is initialized
@@ -153,7 +154,7 @@ class TopologyPage extends Component {
         .init(this, this.svg, this.width, this.height)
         .then(() => {
           this.forceData.nodes.saveLonLat(this.backgroundMap);
-          this.backgroundMap.setMapOpacity(this.legendOptions.map.open);
+          this.backgroundMap.setMapOpacity(this.state.legendOptions.map.open);
         });
       addDefs(this.svg);
       addGradient(this.svg);
@@ -575,7 +576,7 @@ class TopologyPage extends Component {
       })
       .on("mouseup", function(d) {
         // mouse up for circle
-        this.backgroundMap.restartZoom();
+        self.backgroundMap.restartZoom();
         if (!self.mousedown_node) return;
 
         // unenlarge target node
@@ -862,6 +863,11 @@ class TopologyPage extends Component {
       this.handleLegendOptionsChange(legendOptions);
     }
   };
+  handleUpdateMapColor = (which, color) => {
+    let mapOptions = this.backgroundMap.updateMapColor(which, color);
+    this.setState({ mapOptions });
+  };
+
   render() {
     return (
       <div className="qdrTopology">
@@ -876,10 +882,13 @@ class TopologyPage extends Component {
           congestion={this.state.legendOptions.traffic.congestion}
           routerArrows={this.state.legendOptions.arrows.routerArrows}
           clientArrows={this.state.legendOptions.arrows.clientArrows}
+          areaColor={this.state.mapOptions.areaColor}
+          oceanColor={this.state.mapOptions.oceanColor}
           handleOpenChange={this.handleOpenChange}
           handleChangeArrows={this.handleChangeArrows}
           handleChangeTrafficAnimation={this.handleChangeTrafficAnimation}
           handleChangeTrafficFlowAddress={this.handleChangeTrafficFlowAddress}
+          handleUpdateMapColor={this.handleUpdateMapColor}
         />
 
         <div className="diagram">

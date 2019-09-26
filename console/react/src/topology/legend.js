@@ -113,37 +113,40 @@ export class Legend {
     } else {
       lsvg = d3.select("#topo_svg_legend svg g").selectAll("g");
     }
-    const isNew = look => this.nodes.nodes.some(n => look.cmp(n));
     // add a node to legendNodes for each node type that is currently in the svg
     let legendNodes = new Nodes(this.log);
-    lookFor.forEach(function(node, i) {
-      // if we haven't already added a node of this cls to the nodes
-      if (isNew(node)) {
-        let lnode = legendNodes.addUsing(
-          node.title,
-          node.text,
-          node.role,
-          undefined,
-          0,
-          0,
-          i,
-          0,
-          false,
-          node.props ? node.props : {}
-        );
-        if (node.cdir) lnode.cdir = node.cdir;
+    this.nodes.nodes.forEach((n, i) => {
+      let node = lookFor.find(lf => lf.cmp(n));
+      if (node) {
+        if (!legendNodes.nodes.some(ln => ln.key === node.title)) {
+          let newNode = legendNodes.addUsing(
+            node.title,
+            node.text,
+            node.role,
+            undefined,
+            0,
+            0,
+            i,
+            0,
+            false,
+            node.props ? node.props : {}
+          );
+          if (node.cdir) {
+            newNode.cdir = node.cdir;
+          }
+        }
       }
-    }, this);
+    });
 
     // determine the y coordinate of the last existing node in the legend
     let cury = 0;
     lsvg.each(function(d) {
-      cury += Nodes.radius(d.nodeType) * 2 + 10;
+      cury += Nodes.radius(d.nodeType) * 2 + 5;
     });
 
     // associate the legendNodes with lsvg
     lsvg = lsvg.data(legendNodes.nodes, function(d) {
-      return d.uid();
+      return d.key;
     });
 
     // add any new nodes
@@ -152,7 +155,7 @@ export class Legend {
       .append("svg:g")
       .attr("transform", function(d) {
         let t = `translate(0, ${cury})`;
-        cury += Nodes.radius(d.nodeType) * 2 + 10;
+        cury += Nodes.radius(d.nodeType) * 2 + 5;
         return t;
       });
     appendCircle(legendEnter, this.urlPrefix);
@@ -170,6 +173,10 @@ export class Legend {
     // remove any nodes that dropped out of legendNodes
     lsvg.exit().remove();
 
+    let svgEl = document.getElementById("svglegend");
+    if (svgEl) {
+      svgEl.style.height = `${cury + 20}px`;
+    }
     /*
     // position the legend based on it's size
     let svgEl = document.getElementById("svglegend");

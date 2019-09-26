@@ -24,7 +24,7 @@ import { nextHop } from "./topoUtils.js";
 import { utils } from "../amqp/utilities.js";
 
 const transitionDuration = 1000;
-const CHORDFILTERKEY = "chordFilter";
+//const CHORDFILTERKEY = "chordFilter";
 
 export class Traffic {
   // eslint-disable-line no-unused-vars
@@ -611,7 +611,8 @@ class Dots extends TrafficAnimation {
       // Now find the created node that each link is associated with
       for (let linkIndex = 0; linkIndex < foundLinks.length; linkIndex++) {
         // use .some so the loop stops at the 1st match
-        nodes.some(function(node) {
+        // eslint-disable-next-line no-loop-func
+        nodes.some(node => {
           if (
             node.normals &&
             node.normals.some(function(normal) {

@@ -548,18 +548,18 @@ class Topology {
     newResponse.attributeNames = thisNode.attributeNames;
     newResponse.results = thisNode.results;
     newResponse.aggregates = [];
+    const addVal = (vals, val) => {
+      vals.push({ sum: val, detail: [] });
+    };
     // initialize the aggregates
     for (var i = 0; i < thisNode.results.length; ++i) {
       // there is a result for each unique entity found (ie addresses, links, etc.)
       var result = thisNode.results[i];
       var vals = [];
       // there is a val for each attribute in this entity
-      result.forEach(function(val) {
-        vals.push({
-          sum: val,
-          detail: []
-        });
-      });
+      for (let i = 0; i < result.length; i++) {
+        addVal(vals, result[i]);
+      }
       newResponse.aggregates.push(vals);
     }
     var nameIndex = thisNode.attributeNames.indexOf("name");

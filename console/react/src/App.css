@@ -379,7 +379,8 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   width: 100%;
 }
 
-.qdrTopology dl.pf-c-accordion {
+.qdrTopology dl.pf-c-accordion,
+.qdrChord dl.pf-c-accordion {
   position: absolute;
   width: 20em;
   right: 1em;
@@ -388,16 +389,19 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   margin-top: 1em;
 }
 
-.qdrTopology dl.pf-c-accordion * {
+.qdrTopology dl.pf-c-accordion *,
+.qdrChord dl.pf-c-accordion * {
   border-left-color: transparent;
 }
 
-.qdrTopology dl.pf-c-accordion dt {
+.qdrTopology dl.pf-c-accordion dt,
+.qdrChord dl.pf-c-accordion dt {
   background-image: linear-gradient(to bottom, #fafafa 0, #ededed 100%);
   background-repeat: repeat-x;
 }
 
-.qdrTopology dl.pf-c-accordion h3 {
+.qdrTopology dl.pf-c-accordion h3,
+.qdrChord dl.pf-c-accordion h3 {
   margin-top: 0;
   margin-bottom: 0;
 }
@@ -430,7 +434,8 @@ g text {
   pointer-events: none;
 }
 
-svg.address-svg g text {
+svg.address-svg g text,
+svg.chord-address-svg g text {
   cursor: pointer;
   pointer-events: auto;
 }
@@ -597,18 +602,28 @@ svg#svglegend {
 #traffic-expand,
 #map-expand,
 #arrows-expand {
-  max-height: 20em;
+  max-height: 23em;
 }
 
-div.qdrTopology {
+div.qdrTopology,
+div.qdrChord {
   text-align: left;
 }
 
 #arrows-expand label,
 #traffic-dots label,
-#traffic-congestion label {
+#traffic-congestion label,
+#options-expand label {
   position: relative;
   top: 4px;
+  padding-left: 0.25em;
+}
+
+#arrows-expand .pf-c-check {
+  padding-top: 0.5em;
+}
+.map-legend label {
+  padding-left: 1em;
 }
 
 #traffic-address .pf-c-check {
@@ -620,4 +635,106 @@ div.qdrTopology {
 
 .popup-info table.popupTable td {
   font-size: 14px;
+}
+
+circle.flow {
+  pointer-events: none;
+}
+/* for message flow chord diagram */
+path.chord {
+  fill-opacity: 0.67;
+}
+#circle circle {
+  fill: none;
+  pointer-events: all;
+}
+path.fade {
+  opacity: 0.1;
+}
+
+.routers rect {
+  fill: white;
+}
+
+g.arc text {
+  fill: black;
+  stroke-width: 0;
+}
+#chord {
+  position: absolute;
+}
+
+path.empty {
+  fill: rgb(31, 119, 180);
+  fill-opacity: 0.67;
+}
+
+.addresses .btn {
+  padding: 0px 4px !important;
+  background-image: none;
+  box-shadow: 0 0 0;
+  border-color: black;
+}
+
+#popover-div {
+  position: absolute;
+  z-index: 200;
+  border-radius: 4px;
+  background-color: black;
+  color: white;
+  opacity: 0.95;
+  padding: 12px;
+  font-size: 14px;
+}
+
+#chord text {
+  pointer-events: all;
+}
+
+#noTraffic {
+  position: relative;
+  top: 3em;
+  left: 5em;
+}
+
+.page-menu {
+  position: absolute;
+  right: 1em;
+  top: 1em;
+  left: auto;
+  width: auto;
+}
+
+@media (max-width: 768px) {
+  .navbar-collapse.page-menu {
+    left: 0;
+    top: 0;
+    right: auto;
+  }
+}
+
+.navbar-collapse {
+  padding-right: 0;
+}
+
+.panel-group {
+  margin-bottom: 0;
+}
+
+span.legend-color {
+  width: 20px;
+  height: 20px;
+  display: inline-block;
+  margin-right: 0.5em;
+}
+
+span.legend-router {
+  white-space: nowrap;
+  position: relative;
+  top: -5px;
+}
+
+div.qdrChord .legend-text {
+  color: black;
+  font-size: 16px;
 }

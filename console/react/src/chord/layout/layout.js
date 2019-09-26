@@ -16,24 +16,42 @@ KIND, either express or implied.  See the License for the
 specific language governing permissions and limitations
 under the License.
 */
-/* global d3 */
+import * as d3 from "d3";
 
-var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
-  var chord = {}, chords, groups, matrix, n, padding = 0, τ = Math.PI*2, groupBy;
+var qdrlayoutChord = function() {
+  // eslint-disable-line no-unused-vars
+  var chord = {},
+    chords,
+    groups,
+    matrix,
+    n,
+    padding = 0,
+    τ = Math.PI * 2,
+    groupBy;
   function relayout() {
     groupBy = groupBy || d3.range(n);
     // number of unique values in the groupBy array. This will be the number
     // of groups generated.
     var groupLen = unique(groupBy);
-    var subgroups = {}, groupSums = fill(0, groupLen), k, x, x0, i, j, di, ldi;
+    var subgroups = {},
+      groupSums = fill(0, groupLen),
+      k,
+      x,
+      x0,
+      i,
+      j,
+      di,
+      ldi;
 
     chords = [];
     groups = [];
 
     // calculate the sum of the values for each group
-    k = 0, i = -1;
+    k = 0;
+    i = -1;
     while (++i < n) {
-      x = 0, j = -1;
+      x = 0;
+      j = -1;
       while (++j < n) {
         x += matrix[i][j];
       }
@@ -43,7 +61,9 @@ var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
     // the fraction of the circle for each incremental value
     k = (τ - padding * groupLen) / k;
     // for each row
-    x = 0, i = -1, ldi = groupBy[0];
+    x = 0;
+    i = -1;
+    ldi = groupBy[0];
     while (++i < n) {
       di = groupBy[i];
       // insert padding after each group
@@ -52,11 +72,15 @@ var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
         ldi = di;
       }
       // for each column
-      x0 = x, j = -1;
+      x0 = x;
+      j = -1;
       while (++j < n) {
-        var dj = groupBy[j], v = matrix[i][j], a0 = x, a1 = x += v * k;
+        var dj = groupBy[j],
+          v = matrix[i][j],
+          a0 = x,
+          a1 = (x += v * k);
         // create a structure for each cell in the matrix. these are the potential chord ends
-        subgroups[i + '-' + j] = {
+        subgroups[i + "-" + j] = {
           index: di,
           subindex: dj,
           orgindex: i,
@@ -85,16 +109,21 @@ var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
     while (++i < n) {
       j = i - 1;
       while (++j < n) {
-        var source = subgroups[i + '-' + j], target = subgroups[j + '-' + i];
+        var source = subgroups[i + "-" + j],
+          target = subgroups[j + "-" + i];
         // Only make a chord if there is a value at one of the two ends
         if (source.value || target.value) {
-          chords.push(source.value < target.value ? {
-            source: target,
-            target: source
-          } : {
-            source: source,
-            target: target
-          });
+          chords.push(
+            source.value < target.value
+              ? {
+                  source: target,
+                  target: source
+                }
+              : {
+                  source: source,
+                  target: target
+                }
+          );
         }
       }
     }
@@ -111,7 +140,7 @@ var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
     chords = groups = null;
     return chord;
   };
-  chord.groupBy = function (x) {
+  chord.groupBy = function(x) {
     if (!arguments.length) return groupBy;
     groupBy = x;
     chords = groups = null;
@@ -128,15 +157,15 @@ var qdrlayoutChord = function() { // eslint-disable-line no-unused-vars
   return chord;
 };
 
-let fill = function (value, length) {
-  var i=0, array = []; 
-  array.length = length; 
-  while(i < length) 
-    array[i++] = value;
+let fill = function(value, length) {
+  var i = 0,
+    array = [];
+  array.length = length;
+  while (i < length) array[i++] = value;
   return array;
 };
 
-let unique = function (arr) {
+let unique = function(arr) {
   var counts = {};
   for (var i = 0; i < arr.length; i++) {
     counts[arr[i]] = 1 + (counts[arr[i]] || 0);
