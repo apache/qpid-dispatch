@@ -33,7 +33,7 @@ You can connect to an external AMQP container (such as a broker) using mutual SS
 * A security certificate must be generated for the router and be signed by the CA.
 
 .Procedure
-{FragmentDir}
+
 include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
 
 . If the router does not contain an `sslProfile` that defines the private keys and certificates to connect to the external AMQP container, then add one.
