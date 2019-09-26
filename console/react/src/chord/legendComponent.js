@@ -26,7 +26,7 @@ import {
 } from "@patternfly/react-core";
 import OptionsComponent from "./optionsComponent";
 import RoutersComponent from "./routersComponent";
-import AddressesComponent from "./addressesComponent";
+import AddressesComponent from "../addressesComponent";
 
 class LegendComponent extends Component {
   constructor(props) {
@@ -41,7 +41,7 @@ class LegendComponent extends Component {
     };
 
     return (
-      <Accordion>
+      <Accordion className="legend">
         <AccordionItem>
           <AccordionToggle
             onClick={() => toggle("options")}
@@ -96,7 +96,7 @@ class LegendComponent extends Component {
           >
             <AddressesComponent
               addresses={this.props.addresses}
-              chordColors={this.props.chordColors}
+              addressColors={this.props.chordColors}
               handleChangeAddress={this.props.handleChangeAddress}
               handleHoverAddress={this.props.handleHoverAddress}
             />

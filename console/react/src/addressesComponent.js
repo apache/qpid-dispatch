@@ -30,13 +30,15 @@ class AddressesComponent extends Component {
   };
 
   dotHover = (address, over) => {
-    this.props.handleHoverAddress(address, over);
+    if (this.props.handleHoverAddress) {
+      this.props.handleHoverAddress(address, over);
+    }
   };
 
   coloredDot = (address, i) => {
     return (
       <svg
-        className="chord-address-svg"
+        className="address-svg"
         id={`address-dot-${i}`}
         width="200"
         height="20"
@@ -48,7 +50,7 @@ class AddressesComponent extends Component {
           onMouseOver={() => this.dotHover(address, true)}
           onMouseOut={() => this.dotHover(address, false)}
         >
-          <circle r="10" fill={this.props.chordColors[address]} />
+          <circle r="10" fill={this.props.addressColors[address]} />
           {this.props.addresses[address] ? (
             <text x="-8" y="5" className="address-checkbox">
               &#xf00c;

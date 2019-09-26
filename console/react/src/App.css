@@ -434,8 +434,7 @@ g text {
   pointer-events: none;
 }
 
-svg.address-svg g text,
-svg.chord-address-svg g text {
+svg.address-svg g text {
   cursor: pointer;
   pointer-events: auto;
 }
@@ -457,6 +456,13 @@ svg:not(.active):not(.ctrl) {
 svg.address-svg {
   cursor: pointer;
 }
+svg.address-svg {
+  margin-left: 1.5em;
+}
+.qdrChord svg.address-svg {
+  margin-left: 0;
+}
+
 path.link.selected:not(.traffic) {
   /* stroke-dasharray: 10,2; */
   stroke: #33f !important;
@@ -629,9 +635,6 @@ div.qdrChord {
 #traffic-address .pf-c-check {
   padding-bottom: 0.5em;
 }
-.address-svg {
-  margin-left: 1.5em;
-}
 
 .popup-info table.popupTable td {
   font-size: 14px;
@@ -737,4 +740,8 @@ span.legend-router {
 div.qdrChord .legend-text {
   color: black;
   font-size: 16px;
+}
+
+.legend ul {
+  margin-bottom: 0;
 }

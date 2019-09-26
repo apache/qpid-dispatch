@@ -19,6 +19,7 @@ under the License.
 
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
+import AddressesComponent from "../addressesComponent";
 
 class TrafficComponent extends Component {
   constructor(props) {
@@ -75,21 +76,19 @@ class TrafficComponent extends Component {
                 name="dots"
               />
             </li>
-            <li id="traffic-dots-addresses">
-              <ul className={this.props.dots ? "addresses" : "hidden"}>
-                {Object.keys(this.props.addresses).length === 0 ? (
-                  <li key={`address-empty`}>There is no traffic</li>
-                ) : (
-                  Object.keys(this.props.addresses).map((address, i) => {
-                    return (
-                      <li key={`address-${i}`} className="legend-line">
-                        {this.coloredDot(address, i)}
-                      </li>
-                    );
-                  })
-                )}
-              </ul>
-            </li>
+            {this.props.dots ? (
+              <li id="traffic-dots-addresses">
+                <AddressesComponent
+                  addresses={this.props.addresses}
+                  addressColors={this.props.addressColors}
+                  handleChangeAddress={
+                    this.props.handleChangeTrafficFlowAddress
+                  }
+                />
+              </li>
+            ) : (
+              <React.Fragment />
+            )}
           </ul>
           <ul>
             <li id="traffic-congestion">
