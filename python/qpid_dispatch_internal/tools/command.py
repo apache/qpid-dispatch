@@ -173,6 +173,31 @@ def _qdstat_parser(BusManager):
     parser.add_argument("--limit", help="Limit number of output rows", type=int, default=None)
     return parser
 
+def _qdmanage_parser(operations):
+    parser = argparse.ArgumentParser(prog="qdmanage", parents=[common_parser])
+    parser.add_argument("-r", "--router",
+                     metavar="ROUTER-ID", help="Router to be queried")
+    parser.add_argument('--type', help='Type of entity to operate on.') # add choices
+    parser.add_argument('--name', help='Name of entity to operate on.')
+    parser.add_argument('--identity', help='Identity of entity to operate on.',
+                        metavar="ID")
+    parser.add_argument("--indent", type=int, default=2,
+                 help="Pretty-printing indent. -1 means don't pretty-print (default %(default)s)")
+    parser.add_argument('--stdin', action='store_true',
+                  help='Read attributes as JSON map or list of maps from stdin.')
+    parser.add_argument('--body', help='JSON value to use as body of a non-standard operation call.')
+    parser.add_argument('--properties', help='JSON map to use as properties for a non-standard operation call.')
+
+    _description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." % (", ".join(operations))
+    parser.add_argument_group('Operation', _description)
+    #group.add_argument("operation", nargs="+", help="command, add choices to me")
+    return parser
+
+def parse_args_qdmanage(operations, argv=None):
+    """ Set global variables for options, return arguments """
+    parser = _qdmanage_parser(operations)
+    return parser.parse_known_args(args=argv)
+
 def get_password(file=None):
     if file:
         with open(file, 'r') as password_file:

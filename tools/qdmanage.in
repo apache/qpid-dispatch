@@ -26,14 +26,15 @@ from __future__ import print_function
 
 import sys, json, re
 import  qpid_dispatch_site
-from qpid_dispatch.management.client import Node, Url
+import argparse
 try:
     from collections.abc import Mapping, Sequence
 except ImportError:
     from collections import Mapping, Sequence
-from optparse import OptionGroup
-from qpid_dispatch_internal.tools.command import OptionParser, Option, UsageError, connection_options, check_args, \
-    main, opts_ssl_domain, opts_url, opts_sasl
+
+from qpid_dispatch.management.client import Node, Url
+from qpid_dispatch_internal.tools.command import (UsageError, _qdmanage_parser, check_args,
+                                                  main, opts_ssl_domain, opts_url, opts_sasl)
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 from qpid_dispatch_internal.compat import PY_STRING_TYPE
@@ -63,23 +64,7 @@ class QdManage():
         self.operations = ['QUERY', 'CREATE', 'READ', 'UPDATE', 'DELETE',
                            'GET-TYPES', 'GET-OPERATIONS', 'GET-ATTRIBUTES', 'GET-ANNOTATIONS',
                            'GET-MGMT-NODES', 'GET-SCHEMA', 'GET-LOG']
-
-        usage = "%prog <operation> [options...] [arguments...]"
-        description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." \
-                      % (", ".join(self.operations))
-
-        op = OptionParser(usage=usage, option_class=Option, description=description)
-        op.add_option('--type', help='Type of entity to operate on.')
-        op.add_option('--name', help='Name of entity to operate on.')
-        op.add_option('--identity', help='Identity of entity to operate on.', metavar="ID")
-        op.add_option("--indent", type="int", default=2,
-                     help="Pretty-printing indent. -1 means don't pretty-print (default %default)")
-        op.add_option('--stdin', action='store_true',
-                      help='Read attributes as JSON map or list of maps from stdin.')
-        op.add_option('--body', help='JSON value to use as body of a non-standard operation call.')
-        op.add_option('--properties', help='JSON map to use as properties for a non-standard operation call.')
-        op.add_option_group(connection_options(op))
-        self.op = op
+        self.op = _qdmanage_parser(self.operations)
 
     def clean_opts(self):
         attr_type = self.opts.type
@@ -90,7 +75,7 @@ class QdManage():
         # Make all args unicode to avoid encoding arg values as AMQP bytes.
         al = [x.decode() if not isinstance(x, PY_TEXT_TYPE) else x
               for x in argv[1:]]
-        self.opts, self.args = self.op.parse_args(al)
+        self.opts, self.args = self.op.parse_known_args(al)
         self.clean_opts()
         if self.opts.indent == -1:
             self.opts.indent = None

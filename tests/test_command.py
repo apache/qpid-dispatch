@@ -3,6 +3,8 @@ import unittest, argparse, sys
 from qpid_dispatch_internal.tools.command import (main,
                                                   UsageError,
                                                   parse_args_qdstat,
+                                                  parse_args_qdmanage,
+                                                  _qdmanage_parser,
                                                   _qdstat_parser)
 
 def mock_error(self, message):
@@ -77,6 +79,30 @@ class TestParseArgsQdstat(unittest.TestCase):
 
         args = self.parser.parse_args(["--limit", "1"])
         self.assertEqual(1, args.limit)
+
+class TestParseArgsQdmanage(unittest.TestCase):
+    def setUp(self):
+        self.operations = ["HERE", "SOME", "OPERATIONS"]
+        self.parser = _qdmanage_parser(operations=self.operations)
+
+    def test_parse_args_qdmanage_print_help(self):
+        self.parser.print_help()
+
+    def _test_parse_args_qdmanage_no_operation(self):
+        argv = "-r r1 --type some --name the_name -b 127.0.0.1:5672"
+        with self.assertRaises(ValueError):
+            self.parser.parse_known_args(argv.split())
+
+    def test_parse_args_qdmanage_operation_no_args(self):
+        argv = "-r r1 QUERY --type some --name the_name -b 127.0.0.1:5672"
+        opts, args = self.parser.parse_known_args(argv.split())
+        self.assertEqual("QUERY", args[0])
+
+    def test_parse_args_qdmanage_operation_and_args(self):
+        argv = "-r r1 QUERY arg1=val1 --type some other=argument --name the_name -b 127.0.0.1:5672"
+        opts, args = self.parser.parse_known_args(argv.split())
+        self.assertEqual(["QUERY", "arg1=val1", "other=argument"], args)
+
 
 class TestMain(unittest.TestCase):
     def test_main(self):
