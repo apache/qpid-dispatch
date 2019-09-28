@@ -73,42 +73,105 @@ def check_args(args, maxargs=0, minargs=0):
         raise UsageError("Unexpected arguments: %s" % (" ".join(args[maxargs:])))
     return args + [None] * (maxargs - len(args))
 
-def connection_options(options, title="Connection Options"):
-    """Return an OptionGroup for connection options."""
-    group = optparse.OptionGroup(options, title)
-    group.add_option("-b", "--bus", action="store", type="string", default="0.0.0.0",
-                     metavar="URL", help="URL of the messaging bus to connect to (default %default)")
-    group.add_option("-r", "--router", action="store", type="string", default=None,
+connection_parser = argparse.ArgumentParser(add_help=False)
+group = connection_parser.add_argument_group('Connection', 'Connection Options')
+group.add_argument("-b", "--bus", default="0.0.0.0",
+                 metavar="URL", help="URL of the messaging bus to connect to default %(default)s")
+group.add_argument("-t", "--timeout", type=float, default=5, metavar="SECS",
+                  help="Maximum time to wait for connection in seconds default %(default)s")
+group.add_argument("--ssl-certificate", metavar="CERT",
+                 help="Client SSL certificate (PEM Format)")
+group.add_argument("--ssl-key", metavar="KEY",
+                 help="Client SSL private key (PEM Format)")
+group.add_argument("--ssl-trustfile", metavar="TRUSTED-CA-DB",
+                 help="Trusted Certificate Authority Database file (PEM Format)")
+group.add_argument("--ssl-password", metavar="PASSWORD",
+                 help="Certificate password, will be prompted if not specifed.")
+# Use the --ssl-password-file option to avoid having the --ssl-password in history or scripts.
+group.add_argument("--ssl-password-file", metavar="SSL-PASSWORD-FILE",
+                 help="Certificate password, will be prompted if not specifed.")
+
+group.add_argument("--sasl-mechanisms", metavar="SASL-MECHANISMS",
+                 help="Allowed sasl mechanisms to be supplied during the sasl handshake.")
+group.add_argument("--sasl-username", metavar="SASL-USERNAME",
+                 help="User name for SASL plain authentication")
+group.add_argument("--sasl-password", metavar="SASL-PASSWORD",
+                 help="Password for SASL plain authentication")
+# Use the --sasl-password-file option to avoid having the --sasl-password in history or scripts.
+group.add_argument("--sasl-password-file", metavar="SASL-PASSWORD-FILE",
+                 help="Password for SASL plain authentication")
+group.add_argument("--ssl-disable-peer-name-verify", action="store_true",
+                 help="Disables SSL peer name verification. WARNING - This option is insecure and must not be used "
+                      "in production environments")
+
+common_parser = argparse.ArgumentParser(add_help=False,
+                                 parents=[connection_parser])
+common_parser.add_argument('--version', action='version', version=VERSION)
+common_parser.add_argument("-v", "--verbose", help="Show maximum detail",
+                        action="count") # support -vvv
+
+def parse_args_qdstat(BusManager, argv=None):
+    """ Set global variables for options, return arguments """
+    parser = _qdstat_parser(BusManager)
+    return parser.parse_args(args=argv)
+
+def _qdstat_parser(BusManager):
+    parser = argparse.ArgumentParser(prog="qdstat", parents=[common_parser])
+    _group = parser.add_argument_group('Display', 'Choose what kind of \
+                                                   information you want to be displayed')
+    display = _group.add_mutually_exclusive_group(required=False)
+    display.add_argument("-g", "--general", action="store_const", dest="show",
+                         help="Show General Router Stats",
+                         const=BusManager.displayGeneral.__name__)
+    display.add_argument("-c", "--connections", action="store_const", dest="show",
+                         help="Show Connections",
+                         const=BusManager.displayConnections.__name__)
+    display.add_argument("-l", "--links", action="store_const", dest="show",
+                         help="Show Router Links",
+                         const=BusManager.displayRouterLinks.__name__)
+    display.add_argument("-n", "--nodes", action="store_const", dest="show",
+                         help="Show Router Nodes",
+                         const=BusManager.displayRouterNodes.__name__)
+    display.add_argument("-e", "--edge", action="store_const", dest="show",
+                         help="Show edge connections",
+                         const=BusManager.displayEdges.__name__)
+    display.add_argument("-a", "--address", action="store_const", dest="show",
+                         help="Show Router Addresses",
+                         const=BusManager.displayAddresses.__name__)
+    display.add_argument("-m", "--memory", action="store_const", dest="show",
+                         help="Show Router Memory Stats",
+                         const=BusManager.displayMemory.__name__)
+    display.add_argument("--autolinks", action="store_const", dest="show",
+                         help="Show Auto Links",
+                         const=BusManager.displayAutolinks.__name__)
+    display.add_argument("--linkroutes", action="store_const", dest="show",
+                         help="Show Link Routes",
+                         const=BusManager.displayLinkRoutes.__name__)
+    display.add_argument("--log", action="store_const", dest="show",
+                         help="Show recent log entries",
+                         const=BusManager.displayLog.__name__)
+    display.add_argument("--all-entities", action="store_const", dest="show",
+                         help="Show all router entities. Can be combined with --all-routers option",
+                         const=BusManager.show_all.__name__)
+
+    display.set_defaults(show=BusManager.displayGeneral.__name__)
+
+
+    _group = parser.add_argument_group('Target', 'Choose destination router to \
+                                                  required, default the one you connect to.')
+    target = _group.add_mutually_exclusive_group(required=False)
+    target.add_argument("--all-routers", action="store_true",
+                        help="Show entities for all routers in network. \
+                        Can also be used in combination with other options")
+    target.add_argument("-r", "--router",
                      metavar="ROUTER-ID", help="Router to be queried")
-    group.add_option("-t", "--timeout", action="store", type="float", default=5, metavar="SECS",
-                      help="Maximum time to wait for connection in seconds (default %default)")
-    group.add_option("--ssl-certificate", action="store", type="string", metavar="CERT",
-                     help="Client SSL certificate (PEM Format)")
-    group.add_option("--ssl-key", action="store", type="string", metavar="KEY",
-                     help="Client SSL private key (PEM Format)")
-    group.add_option("--ssl-trustfile", action="store", type="string", metavar="TRUSTED-CA-DB",
-                     help="Trusted Certificate Authority Database file (PEM Format)")
-    group.add_option("--ssl-password", action="store", type="string", metavar="PASSWORD",
-                     help="Certificate password, will be prompted if not specifed.")
-    # Use the --ssl-password-file option to avoid having the --ssl-password in history or scripts.
-    group.add_option("--ssl-password-file", action="store", type="string", metavar="SSL-PASSWORD-FILE",
-                     help="Certificate password, will be prompted if not specifed.")
 
-    group.add_option("--sasl-mechanisms", action="store", type="string", metavar="SASL-MECHANISMS",
-                     help="Allowed sasl mechanisms to be supplied during the sasl handshake.")
-    group.add_option("--sasl-username", action="store", type="string", metavar="SASL-USERNAME",
-                     help="User name for SASL plain authentication")
-    group.add_option("--sasl-password", action="store", type="string", metavar="SASL-PASSWORD",
-                     help="Password for SASL plain authentication")
-    # Use the --sasl-password-file option to avoid having the --sasl-password in history or scripts.
-    group.add_option("--sasl-password-file", action="store", type="string", metavar="SASL-PASSWORD-FILE",
-                     help="Password for SASL plain authentication")
-    group.add_option("--ssl-disable-peer-name-verify", action="store_true", default=False,
-                     help="Disables SSL peer name verification. WARNING - This option is insecure and must not be used "
-                          "in production environments")
-
-    return group
-
+    # This limit can be used to limit the number of output rows and
+    # can be used in conjunction with options
+    # like -c, -l, -a, --autolinks, --linkroutes and --log.
+    # By default, the limit is not set, which means the limit is unlimited.
+    parser.add_argument("--limit", help="Limit number of output rows", type=int, default=None)
+    return parser
 
 def get_password(file=None):
     if file:
