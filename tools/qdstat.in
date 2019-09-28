@@ -87,10 +87,7 @@ def parse_args(argv):
     return opts, args
 
 def get(obj, attr):
-    if attr in obj.__dict__:
-        return obj.__dict__[attr]
-    return None
-
+    return getattr(obj, attr, None)
 
 class BusManager(Node):
 
