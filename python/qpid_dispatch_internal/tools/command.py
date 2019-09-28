@@ -25,7 +25,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, json, optparse, os
+import sys, json, argparse, os
 try:
     from collections.abc import Mapping, Sequence
 except ImportError:
@@ -41,10 +41,10 @@ class UsageError(Exception):
     """
     pass
 
-def main(run, argv=sys.argv, op=None):
+def main(run, argv=sys.argv, parser=None):
     """
     Call run(argv) with exception handling, do appropriate sys.exit().
-    @param op: an OptionParser to use for usage related error messages.
+    @param parser: a Parser to use for usage related error messages.
     @return: exit value for sys.exit
     """
     try:
@@ -53,7 +53,7 @@ def main(run, argv=sys.argv, op=None):
     except KeyboardInterrupt:
         print()
     except UsageError as e:
-        op.error(e)
+        parser.error(e)
     except Exception as e:
         if "_QPID_DISPATCH_TOOLS_DEBUG_" in os.environ:
             raise
@@ -177,33 +177,4 @@ def opts_ssl_domain(opts, mode=SSLDomain.MODE_CLIENT):
     if certificate:
         domain.set_credentials(str(certificate), str(key), str(password))
     return domain
-
-class Option(optparse.Option):
-    """Addes two new types to optparse.Option: json_map, json_list"""
-
-    def check_json(option, opt, value):
-        """Validate a json value, for use with L{Option}"""
-        try:
-            result = json.loads(value)
-            if option.type == 'json_list' and not isinstance(result, Sequence) or \
-               option.type == 'json_map' and not isinstance(result, Mapping):
-                raise ValueError()
-            return result
-        except ValueError:
-            raise optparse.OptionValueError("%s: invalid %s: %r" % (opt, option.type, value))
-
-    TYPES = optparse.Option.TYPES + ("json_list", "json_map")
-    TYPE_CHECKER = dict(optparse.Option.TYPE_CHECKER, json_list=check_json, json_map=check_json)
-
-
-class OptionParser(optparse.OptionParser):
-    """Adds standard --version option to optparse.OptionParser"""
-    def __init__(self, *args, **kwargs):
-        optparse.OptionParser.__init__(self, *args, **kwargs)
-        def version_cb(*args):
-            print("%s" % VERSION)
-            exit(0)
-
-        self.add_option("--version", help="Print version and exit.",
-                        action="callback", callback=version_cb)
 
