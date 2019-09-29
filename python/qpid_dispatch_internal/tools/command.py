@@ -188,9 +188,10 @@ def _qdmanage_parser(operations):
     parser.add_argument('--body', help='JSON value to use as body of a non-standard operation call.')
     parser.add_argument('--properties', help='JSON map to use as properties for a non-standard operation call.')
 
+    #This is a hack to include in parsing help, some reference to the operation
+    #options which "for now" is being parsed manually in the Qdmanage class
     _description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." % (", ".join(operations))
     parser.add_argument_group('Operation', _description)
-    #group.add_argument("operation", nargs="+", help="command, add choices to me")
     return parser
 
 def parse_args_qdmanage(operations, argv=None):
