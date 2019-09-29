@@ -88,7 +88,8 @@ class TestParseArgsQdmanage(unittest.TestCase):
     def test_parse_args_qdmanage_print_help(self):
         self.parser.print_help()
 
-    def _test_parse_args_qdmanage_no_operation(self):
+    @unittest.skip("Operation positional argument parsing is done in Qdmanage class, for now")
+    def test_parse_args_qdmanage_no_operation(self):
         argv = "-r r1 --type some --name the_name -b 127.0.0.1:5672"
         with self.assertRaises(ValueError):
             self.parser.parse_known_args(argv.split())
