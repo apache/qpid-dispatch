@@ -1313,7 +1313,7 @@ class RouterTest(TestCase):
             outs = self.run_qdstat(['-c', '--all-entities'],
                                address=self.routers[0].addresses[0])
         except Exception as e:
-            if "--all-entities cannot be combined with specific entity option -c" in str(e):
+            if "error: argument --all-entities: not allowed with argument -c/--connections" in str(e):
                 has_error=True
 
         self.assertTrue(has_error)
@@ -1334,7 +1334,7 @@ class RouterTest(TestCase):
             outs = self.run_qdstat(['-r', 'INT.A', '--all-routers'],
                                    address=self.routers[0].addresses[0])
         except Exception as e:
-            if "--all-routers cannot be combined with single router option" in str(e):
+            if "error: argument --all-routers: not allowed with argument -r/--router" in str(e):
                 has_error=True
 
         self.assertTrue(has_error)
