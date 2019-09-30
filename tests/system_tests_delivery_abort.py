@@ -480,6 +480,8 @@ class MulticastTruncateTest(MessagingHandler):
         self.receiver_host1   = receiver_host1
         self.receiver_host2   = receiver_host2
         self.address          = address
+        self.r_attach_count   = 0
+        self.senders_created  = False
 
         self.sender_conn    = None
         self.receiver1_conn = None
@@ -515,9 +517,6 @@ class MulticastTruncateTest(MessagingHandler):
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver1_conn = event.container.connect(self.receiver_host1)
         self.receiver2_conn = event.container.connect(self.receiver_host2)
-        self.sender1        = event.container.create_sender(self.sender_conn, self.address, name="S1")
-        self.sender2        = event.container.create_sender(self.sender_conn, self.address, name="S2")
-        self.sender3        = event.container.create_sender(self.sender_conn, self.address, name="S3")
         self.receiver1      = event.container.create_receiver(self.receiver1_conn, self.address)
         self.receiver2      = event.container.create_receiver(self.receiver2_conn, self.address)
 
@@ -537,6 +536,7 @@ class MulticastTruncateTest(MessagingHandler):
         if next_op == 'Send_Short_1':
             m = Message(body="%s" % next_op)
             self.sender1.send(m)
+
         elif next_op == 'Send_Long_Truncated':
             for i in range(100):
                 self.long_data += self.data
@@ -561,6 +561,24 @@ class MulticastTruncateTest(MessagingHandler):
     def on_sendable(self, event):
         self.send()
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver1:
+            self.r_attach_count += 1
+
+        if event.receiver == self.receiver2:
+            self.r_attach_count += 1
+
+        if self.r_attach_count == 2 and not self.senders_created:
+            self.senders_created = True
+            self.sender1 = event.container.create_sender(self.sender_conn,
+                                                         self.address,
+                                                         name="S1")
+            self.sender2 = event.container.create_sender(self.sender_conn,
+                                                         self.address,
+                                                         name="S2")
+            self.sender3 = event.container.create_sender(self.sender_conn,
+                                                         self.address,
+                                                         name="S3")
     def on_message(self, event):
         m = event.message
         if event.receiver == self.receiver1:
