@@ -490,6 +490,10 @@ path.hittarget {
   stroke-width: 15px;
   stroke: transparent;
 }
+path.hittarget.highlighted {
+  stroke: #6f6;
+  opacity: 0.5;
+}
 
 path.link.small {
   stroke-width: 2.5;
@@ -525,7 +529,6 @@ circle.node.reflexive {
 circle.node.selected {
   stroke: #6f6 !important;
   stroke-width: 2px;
-  fill: #e0e0ff !important;
 }
 circle.node.highlighted {
   stroke: #6f6;

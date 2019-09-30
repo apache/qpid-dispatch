@@ -143,10 +143,18 @@ class TopologyPage extends Component {
   }
 
   // called only once when the component is initialized
-  componentDidMount() {
+  componentDidMount = () => {
     this.init();
-  }
+    this.props.service.management.topology.startUpdating();
+    this.props.service.management.topology.addChangedAction("topology", () => {
+      this.init();
+    });
+  };
 
+  componentWillUnmount = () => {
+    this.props.service.management.topology.stopUpdating();
+    this.props.service.management.topology.delChangedAction("topology");
+  };
   setFixed = (item, data) => {
     data.setFixed(item.title !== "Unfreeze");
   };
@@ -162,9 +170,7 @@ class TopologyPage extends Component {
     });
     // set the selected attr for this node
     data.selected = item.title === "Select";
-    if (item.title === "Select") {
-      this.selected_node = data;
-    }
+    this.selected_node = data.selected ? data : null;
     this.restart();
   };
   isSelected = data => {
@@ -223,10 +229,8 @@ class TopologyPage extends Component {
       .attr("class", "nodes")
       .selectAll("g");
 
-    /*
-      this.traffic.remove();
+    this.traffic.remove();
     if (this.state.legendOptions.traffic.open) {
-      
       if (this.state.legendOptions.traffic.dots)
         this.traffic.addAnimationType(
           "dots",
@@ -240,7 +244,7 @@ class TopologyPage extends Component {
           Nodes.radius("inter-router")
         );
     }
-*/
+
     // mouse event vars
     this.mousedown_node = null;
 
@@ -535,7 +539,10 @@ class TopologyPage extends Component {
         return !d.right && !d.left;
       });
 
-    enterpath.append("path").attr("class", "hittarget");
+    enterpath
+      .append("path")
+      .attr("class", "hittarget")
+      .attr("id", d => `hitpath-${d.source.uid()}-${d.target.uid()}`);
 
     // remove old links
     this.path.exit().remove();
@@ -757,6 +764,10 @@ class TopologyPage extends Component {
       let link = this.forceData.links.linkFor(selected_node, connected_node);
       if (link) {
         link.highlighted = true;
+        d3.select(`path[id='hitpath-${link.uid}']`).classed(
+          "highlighted",
+          true
+        );
       }
       // start at the router
       selected_node = connected_node;
@@ -771,6 +782,10 @@ class TopologyPage extends Component {
       let link = this.forceData.links.linkFor(d, connected_node);
       if (link) {
         link.highlighted = true;
+        d3.select(`path[id='hitpath-${link.uid}']`).classed(
+          "highlighted",
+          true
+        );
       }
       // end at the router
       d = connected_node;
@@ -784,15 +799,13 @@ class TopologyPage extends Component {
       selected_node,
       (link, fnode, tnode) => {
         link.highlighted = true;
+        d3.select(`path[id='hitpath-${link.uid}']`).classed(
+          "highlighted",
+          true
+        );
         fnode.highlighted = true;
         tnode.highlighted = true;
       }
-      /*
-      function(hlLink, hnode) {
-        hlLink.highlighted = true;
-        hnode.highlighted = true;
-      }
-      */
     );
     let hnode = this.forceData.nodes.nodeFor(d.name);
     hnode.highlighted = true;
@@ -845,6 +858,7 @@ class TopologyPage extends Component {
   clearAllHighlights = () => {
     this.forceData.links.clearHighlighted();
     this.forceData.nodes.clearHighlighted();
+    d3.selectAll(".hittarget").classed("highlighted", false);
   };
 
   saveLegendOptions = legendOptions => {
@@ -920,12 +934,13 @@ class TopologyPage extends Component {
       this.handleLegendOptionsChange(legendOptions, this.addressFilterChanged);
     }
   };
+
   handleUpdateAddressColors = addressColors => {
     const { legendOptions } = this.state;
     let changed = false;
     // set any new keys to the passed in value
     Object.keys(addressColors).forEach(address => {
-      if (typeof legendOptions.traffic.addresses[address] === "undefined") {
+      if (typeof legendOptions.traffic.addressColors[address] === "undefined") {
         legendOptions.traffic.addressColors[address] = addressColors[address];
         changed = true;
       }
@@ -971,7 +986,6 @@ class TopologyPage extends Component {
   };
 
   render() {
-    console.log("rendering qdrTopology");
     return (
       <div className="qdrTopology">
         <LegendComponent

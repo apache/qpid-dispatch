@@ -22,14 +22,17 @@ class Topology {
   constructor(connectionManager, interval) {
     this.connection = connectionManager;
     this.updatedActions = {};
+    this.changedActions = {};
     this.entities = []; // which entities to request each topology update
     this.entityAttribs = { connection: [] };
     this._nodeInfo = {}; // info about all known nodes and entities
     this.filtering = false; // filter out nodes that don't have connection info
     this.timeout = 5000;
     this.updateInterval = interval;
+    console.log(`topology constructed with interval of ${interval}`);
     this._getTimer = null;
     this.updating = false;
+    this.counter = 0;
   }
   addUpdatedAction(key, action) {
     if (typeof action === "function") {
@@ -59,8 +62,25 @@ class Topology {
       this.entityAttribs[entity] = entityAttribs[i].attrs || [];
     }
   }
+  addChangedAction(key, action) {
+    if (typeof action === "function") {
+      this.changedActions[key] = action;
+    }
+  }
+  delChangedAction(key) {
+    if (key in this.changedActions) delete this.changedActions[key];
+  }
+  executeChangedActions(error) {
+    for (var action in this.changedActions) {
+      this.changedActions[action].apply(this, [error]);
+    }
+  }
   on(eventName, fn, key) {
-    if (eventName === "updated") this.addUpdatedAction(key, fn);
+    if (eventName === "updated") {
+      this.addUpdatedAction(key, fn);
+    } else if (eventName === "changed") {
+      this.addChangedAction(key, fn);
+    }
   }
   unregister(eventName, key) {
     if (eventName === "updated") this.delUpdatedAction(key);
@@ -68,15 +88,12 @@ class Topology {
   nodeInfo() {
     return this._nodeInfo;
   }
-  saveResults(workInfo) {
+  saveResults(workInfo, all) {
+    const changes = { newRouters: [], lostRouters: [], connections: [] };
+    let changed = false;
     let workSet = new Set(Object.keys(workInfo));
     for (let rId in this._nodeInfo) {
-      if (!workSet.has(rId)) {
-        // mark any routers that went away since the last request as removed
-        this._nodeInfo[rId]["removed"] = true;
-      } else {
-        if (this._nodeInfo[rId]["removed"])
-          delete this._nodeInfo[rId]["removed"];
+      if (workSet.has(rId)) {
         // copy entities
         for (let entity in workInfo[rId]) {
           if (
@@ -84,9 +101,30 @@ class Topology {
             workInfo[rId][entity]["timestamp"] + "" >
               this._nodeInfo[rId][entity]["timestamp"] + ""
           ) {
+            // check for changed number of connections
+            if (entity === "connection") {
+              const oldConnections =
+                this._nodeInfo &&
+                this._nodeInfo[rId] &&
+                this._nodeInfo[rId].connection
+                  ? this._nodeInfo[rId].connection.results.length
+                  : 0;
+              const newConnections = workInfo[rId].connection.results.length;
+              if (oldConnections !== newConnections) {
+                changes.connections.push({
+                  router: rId,
+                  from: oldConnections,
+                  to: newConnections
+                });
+                changed = true;
+              }
+            }
             this._nodeInfo[rId][entity] = utils.copy(workInfo[rId][entity]);
           }
         }
+      } else if (all) {
+        changes.lostRouters.push(rId);
+        changed = true;
       }
     }
     // add any new routers
@@ -94,19 +132,20 @@ class Topology {
     for (let rId in workInfo) {
       if (!nodeSet.has(rId)) {
         this._nodeInfo[rId] = utils.copy(workInfo[rId]);
+        changes.newRouters.push(rId);
+        changed = true;
       }
     }
-  }
-  // remove any nodes that don't have connection info
-  purge() {
-    for (let id in this._nodeInfo) {
-      let node = this._nodeInfo[id];
-      if (node.removed) {
-        delete this._nodeInfo[id];
-      }
+    if (changed) {
+      this.executeChangedActions(changes);
     }
   }
+
   get() {
+    if (typeof this.getCounter === "undefined") {
+      this.getCounter = 0;
+    }
+    console.log(`topology: get - ${this.getCounter++}`);
     return new Promise(
       function(resolve, reject) {
         this.connection.sendMgmtQuery("GET-MGMT-NODES").then(
@@ -122,7 +161,7 @@ class Topology {
                 routerIds.push(parts.join("/"));
               }
               let finish = function(workInfo) {
-                this.saveResults(workInfo);
+                this.saveResults(workInfo, true);
                 this.onDone(this._nodeInfo);
                 resolve(this._nodeInfo);
               };
@@ -194,45 +233,41 @@ class Topology {
     );
   }
   doget(ids) {
-    return new Promise(
-      function(resolve) {
-        let workInfo = {};
-        for (var i = 0; i < ids.length; ++i) {
-          workInfo[ids[i]] = {};
+    return new Promise(resolve => {
+      let workInfo = {};
+      for (var i = 0; i < ids.length; ++i) {
+        workInfo[ids[i]] = {};
+      }
+      var gotResponse = (nodeName, entity, response) => {
+        workInfo[nodeName][entity] = response;
+        workInfo[nodeName][entity]["timestamp"] = new Date();
+      };
+      var q = queue(this.connection.availableQeueuDepth());
+      for (var id in workInfo) {
+        for (var entity in this.entityAttribs) {
+          q.defer(
+            this.q_fetchNodeInfo.bind(this),
+            id,
+            entity,
+            this.entityAttribs[entity],
+            q,
+            gotResponse
+          );
         }
-        var gotResponse = function(nodeName, entity, response) {
-          workInfo[nodeName][entity] = response;
-          workInfo[nodeName][entity]["timestamp"] = new Date();
-        };
-        var q = queue(this.connection.availableQeueuDepth());
-        for (var id in workInfo) {
-          for (var entity in this.entityAttribs) {
-            q.defer(
-              this.q_fetchNodeInfo.bind(this),
-              id,
-              entity,
-              this.entityAttribs[entity],
-              q,
-              gotResponse
-            );
+      }
+      q.await(() => {
+        // filter out nodes that have no connection info
+        if (this.filtering) {
+          for (var id in workInfo) {
+            if (!workInfo[id].connection) {
+              this.flux = true;
+              delete workInfo[id];
+            }
           }
         }
-        q.await(
-          function() {
-            // filter out nodes that have no connection info
-            if (this.filtering) {
-              for (var id in workInfo) {
-                if (!workInfo[id].connection) {
-                  this.flux = true;
-                  delete workInfo[id];
-                }
-              }
-            }
-            resolve(workInfo);
-          }.bind(this)
-        );
-      }.bind(this)
-    );
+        resolve(workInfo);
+      });
+    });
   }
 
   onDone(result) {
@@ -365,7 +400,7 @@ class Topology {
     this.addUpdateEntities(entityAttribs);
     this.doget(nodes).then(
       function(results) {
-        this.saveResults(results);
+        this.saveResults(results, false);
         callback(extra, results);
       }.bind(this)
     );

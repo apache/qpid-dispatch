@@ -20,17 +20,14 @@ Licensed to the Apache Software Foundation (ASF) under one
 import { Management as dm } from "./amqp/management.js";
 import { utils } from "./amqp/utilities.js";
 
-import { QDR_LAST_LOCATION, QDR_INTERVAL } from "./qdrGlobals.js";
+import { QDR_LAST_LOCATION } from "./qdrGlobals.js";
 
 // number of milliseconds between topology updates
 const DEFAULT_INTERVAL = 5000;
 export class QDRService {
   constructor(hooks) {
     const url = utils.getUrlParts(window.location);
-    this.management = new dm(
-      url.protocol,
-      localStorage[QDR_INTERVAL] || DEFAULT_INTERVAL
-    );
+    this.management = new dm(url.protocol, DEFAULT_INTERVAL);
     this.utilities = utils;
     this.hooks = hooks;
   }
@@ -84,10 +81,7 @@ export class QDRService {
   disconnect() {
     this.management.connection.disconnect();
     delete this.management;
-    this.management = new dm(
-      this.$location.protocol(),
-      localStorage[QDR_INTERVAL] || DEFAULT_INTERVAL
-    );
+    this.management = new dm(this.$location.protocol(), DEFAULT_INTERVAL);
   }
 }
 

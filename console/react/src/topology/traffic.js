@@ -334,29 +334,6 @@ class Dots extends TrafficAnimation {
       // set excludedAddresses
       this.updateAddresses();
     });
-    let self = this;
-    // event notification that an address checkbox has changed
-    traffic.$scope.addressFilterChanged = function() {
-      self.updateAddresses();
-      // don't wait for the next polling cycle. update now
-      self.traffic.stop();
-      self.traffic.start();
-    };
-    // called when mouse enters one of the address legends
-    traffic.$scope.enterLegend = function(address) {
-      // fade all flows that aren't for this address
-      self.fadeOtherAddresses(address);
-    };
-    // called when the mouse leaves one of the address legends
-    traffic.$scope.leaveLegend = function() {
-      self.unFadeAll();
-    };
-    // clicked on the address name. toggle the address checkbox
-    traffic.$scope.addressClick = function(address) {
-      self.toggleAddress(address).then(function() {
-        self.updateAddresses();
-      });
-    };
   }
   remove() {
     d3.select("#SVG_ID")
@@ -377,14 +354,6 @@ class Dots extends TrafficAnimation {
     if (this.chordData) {
       this.chordData.setFilter(this.excludedAddresses);
     }
-  }
-  toggleAddress(address) {
-    this.traffic.$scope.addresses[address] = !this.traffic.$scope.addresses[
-      address
-    ];
-    return new Promise(function(resolve) {
-      return resolve();
-    });
   }
   fadeOtherAddresses(address) {
     d3.selectAll("circle.flow").classed("fade", function(d) {
@@ -417,8 +386,14 @@ class Dots extends TrafficAnimation {
   }
   render(matrix) {
     if (this.stopped === false) {
-      this.traffic.$scope.addresses = this.chordData.getAddresses();
-      this.traffic.$scope.handleUpdatedAddresses(this.traffic.$scope.addresses);
+      const addresses = this.chordData.getAddresses();
+      this.traffic.$scope.handleUpdatedAddresses(addresses);
+      const addressColors = {};
+      for (let address in addresses) {
+        this.fillColor(address, addressColors);
+      }
+      this.traffic.$scope.handleUpdateAddressColors(addressColors);
+
       // get the rate of message flow between routers
       let hops = {}; // every hop between routers that is involved in message flow
       let matrixMessages = matrix.matrixMessages();
@@ -639,7 +614,7 @@ class Dots extends TrafficAnimation {
     }
   }
   addressIndex(vis, address) {
-    return Object.keys(vis.traffic.$scope.addresses).indexOf(address);
+    return Object.keys(vis.traffic.addresses).indexOf(address);
   }
   // calculate the translation for each dot along the path
   translateDots(radius, path, count, back) {

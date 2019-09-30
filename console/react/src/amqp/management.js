@@ -16,45 +16,46 @@
 
 /* global Promise */
 
-import { ConnectionManager } from './connection.js';
-import Topology from './topology.js';
+import { ConnectionManager } from "./connection.js";
+import Topology from "./topology.js";
 
 export class Management {
-  constructor(protocol) {
+  constructor(protocol, interval) {
     this.connection = new ConnectionManager(protocol);
-    this.topology = new Topology(this.connection);
+    this.topology = new Topology(this.connection, interval);
   }
   getSchema(callback) {
     var self = this;
-    return new Promise(function (resolve, reject) {
-      self.connection.sendMgmtQuery('GET-SCHEMA')
-        .then(function (responseAndContext) {
+    return new Promise(function(resolve, reject) {
+      self.connection.sendMgmtQuery("GET-SCHEMA").then(
+        function(responseAndContext) {
           var response = responseAndContext.response;
           for (var entityName in response.entityTypes) {
             var entity = response.entityTypes[entityName];
             if (entity.deprecated) {
               // deprecated entity
               delete response.entityTypes[entityName];
-            }
-            else {
+            } else {
               for (var attributeName in entity.attributes) {
                 var attribute = entity.attributes[attributeName];
                 if (attribute.deprecated) {
                   // deprecated attribute
-                  delete response.entityTypes[entityName].attributes[attributeName];
+                  delete response.entityTypes[entityName].attributes[
+                    attributeName
+                  ];
                 }
               }
             }
           }
           self.connection.setSchema(response);
-          if (callback)
-            callback(response);
+          if (callback) callback(response);
           resolve(response);
-        }, function (error) {
-          if (callback)
-            callback(error);
+        },
+        function(error) {
+          if (callback) callback(error);
           reject(error);
-        });
+        }
+      );
     });
   }
   schema() {
