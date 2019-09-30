@@ -75,6 +75,7 @@ add_test(unit_tests            ${TEST_WRAP} unit_tests ${CMAKE_CURRENT_SOURCE_DI
 add_test(router_engine_test    ${TEST_WRAP} unit2 -v router_engine_test)
 add_test(management_test       ${TEST_WRAP} unit2 -v management)
 add_test(router_policy_test    ${TEST_WRAP} unit2 -v router_policy_test)
+add_test(test_command          ${TEST_WRAP} unit2 -v test_command)
 
 if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
