@@ -180,6 +180,9 @@ export class Node {
     if (!fixed & 1) this.lat = this.lon = null;
     this.fixed = fixed & 1 ? true : false;
   }
+  isFixed() {
+    return this.fixed & 1 ? true : false;
+  }
 }
 const nodeProperties = {
   // router types

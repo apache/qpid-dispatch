@@ -31,6 +31,7 @@ import { Legend } from "./legend.js";
 import LegendComponent from "./legendComponent";
 import RouterInfoComponent from "./routerInfoComponent";
 import ClientInfoComponent from "./clientInfoComponent";
+import ContextMenuComponent from "../contextMenuComponent";
 import {
   appendCircle,
   appendContent,
@@ -60,7 +61,8 @@ class TopologyPage extends Component {
             open: true
           },
           map: {
-            open: false
+            open: false,
+            show: false
           },
           arrows: {
             open: false,
@@ -68,13 +70,17 @@ class TopologyPage extends Component {
             clientArrows: true
           }
         };
-
+    // previous version read from storage didn't have show attribute
+    if (typeof savedOptions.map.show === "undefined") {
+      savedOptions.map.show = false;
+    }
     this.state = {
       popupContent: "",
       showPopup: false,
       legendOptions: savedOptions,
       showRouterInfo: false,
-      showClientInfo: false
+      showClientInfo: false,
+      showContextMenu: false
     };
     this.QDRLog = new QDRLogger(console, "Topology");
     this.popupCancelled = true;
@@ -99,7 +105,7 @@ class TopologyPage extends Component {
       this,
       // notify: called each time a pan/zoom is performed
       () => {
-        if (this.state.legendOptions.map.open) {
+        if (this.state.legendOptions.map.show) {
           // set all the nodes' x,y position based on their saved lon,lat
           this.forceData.nodes.setXY(this.backgroundMap);
           this.forceData.nodes.savePositions();
@@ -110,6 +116,30 @@ class TopologyPage extends Component {
       }
     );
     this.state.mapOptions = this.backgroundMap.mapOptions;
+
+    this.contextMenuItems = [
+      {
+        title: "Freeze in place",
+        action: this.setFixed,
+        enabled: data => !this.isFixed(data)
+      },
+      {
+        title: "Unfreeze",
+        action: this.setFixed,
+        enabled: this.isFixed,
+        endGroup: true
+      },
+      {
+        title: "Unselect",
+        action: this.setSelected,
+        enabled: this.isSelected
+      },
+      {
+        title: "Select",
+        action: this.setSelected,
+        enabled: data => !this.isSelected(data)
+      }
+    ];
   }
 
   // called only once when the component is initialized
@@ -117,6 +147,29 @@ class TopologyPage extends Component {
     this.init();
   }
 
+  setFixed = (item, data) => {
+    data.setFixed(item.title !== "Unfreeze");
+  };
+
+  isFixed = data => {
+    return data.isFixed();
+  };
+
+  setSelected = (item, data) => {
+    // remove the selected attr from each node
+    this.circle.each(function(d) {
+      d.selected = false;
+    });
+    // set the selected attr for this node
+    data.selected = item.title === "Select";
+    if (item.title === "Select") {
+      this.selected_node = data;
+    }
+    this.restart();
+  };
+  isSelected = data => {
+    return data.selected ? true : false;
+  };
   updateLegend = () => {
     this.legend.update();
   };
@@ -130,6 +183,7 @@ class TopologyPage extends Component {
     if (this.width < 768) {
       const legendOptions = this.state.legendOptions;
       legendOptions.map.open = false;
+      legendOptions.map.show = false;
       this.setState({ legendOptions });
     }
     let nodeInfo = this.props.service.management.topology.nodeInfo();
@@ -154,7 +208,7 @@ class TopologyPage extends Component {
         .init(this, this.svg, this.width, this.height)
         .then(() => {
           this.forceData.nodes.saveLonLat(this.backgroundMap);
-          this.backgroundMap.setMapOpacity(this.state.legendOptions.map.open);
+          this.backgroundMap.setMapOpacity(this.state.legendOptions.map.show);
         });
       addDefs(this.svg);
       addGradient(this.svg);
@@ -239,9 +293,6 @@ class TopologyPage extends Component {
 
     if (unknowns.length === 0) this.restart();
     // the legend
-    // call updateLegend in timeout because:
-    // If we create the legend right away, then it will be destroyed when the accordian
-    // gets initialized as the page loads.
     this.legend = new Legend(this.forceData.nodes, this.QDRLog);
     this.updateLegend();
 
@@ -498,7 +549,7 @@ class TopologyPage extends Component {
       });
 
     // update existing nodes visual states
-    updateState(this.circle, this.selected_node);
+    updateState(this.circle);
 
     // add new circle nodes
     let enterCircle = this.circle
@@ -619,22 +670,14 @@ class TopologyPage extends Component {
           this.force.start(); // let the nodes move to a new position
         }
       })
-      /*
-      .on("contextmenu", function(d) {
+      .on("contextmenu", d => {
         // circle
-        $(document).click();
         d3.event.preventDefault();
-        let rm = relativeMouse();
-        d3.select("#node_context_menu").style({
-          display: "block",
-          left: rm.left + "px",
-          top: rm.top - rm.offset.top + "px"
-        });
-        $timeout(function() {
-          $scope.contextNode = d;
-        });
+        this.contextEventPosition = [d3.event.pageX, d3.event.pageY];
+        this.contextEventData = d;
+        this.setState({ showContextMenu: true });
+        return false;
       })
-      */
       .on("click", d => {
         // circle
         if (!this.mouseup_node) return;
@@ -700,6 +743,38 @@ class TopologyPage extends Component {
   };
 
   nextHopHighlight = (selected_node, d) => {
+    selected_node.highlighted = true;
+    d.highlighted = true;
+    // if the selected node isn't a router,
+    // find the router to which it is connected
+    if (selected_node.nodeType !== "_topo") {
+      let connected_node = this.forceData.nodes.find(
+        selected_node.routerId,
+        {},
+        selected_node.routerId
+      );
+      // push the link between the selected_node and the router
+      let link = this.forceData.links.linkFor(selected_node, connected_node);
+      if (link) {
+        link.highlighted = true;
+      }
+      // start at the router
+      selected_node = connected_node;
+    }
+    if (d.nodeType !== "_topo") {
+      let connected_node = this.forceData.nodes.find(
+        d.routerId,
+        {},
+        d.routerId
+      );
+      // push the link between the target_node and its router
+      let link = this.forceData.links.linkFor(d, connected_node);
+      if (link) {
+        link.highlighted = true;
+      }
+      // end at the router
+      d = connected_node;
+    }
     nextHop(
       selected_node,
       d,
@@ -707,10 +782,17 @@ class TopologyPage extends Component {
       this.forceData.links,
       this.props.service.management.topology.nodeInfo(),
       selected_node,
+      (link, fnode, tnode) => {
+        link.highlighted = true;
+        fnode.highlighted = true;
+        tnode.highlighted = true;
+      }
+      /*
       function(hlLink, hnode) {
         hlLink.highlighted = true;
         hnode.highlighted = true;
       }
+      */
     );
     let hnode = this.forceData.nodes.nodeFor(d.name);
     hnode.highlighted = true;
@@ -718,7 +800,6 @@ class TopologyPage extends Component {
 
   // show the details dialog for a client or group of clients
   doDialog = (d, type) => {
-    console.log(`doDialog ${type}`);
     this.d = d;
     if (type === "router") {
       this.setState({ showRouterInfo: true });
@@ -766,9 +847,11 @@ class TopologyPage extends Component {
     this.forceData.nodes.clearHighlighted();
   };
 
-  handleLegendOptionsChange = (legendOptions, callback) => {
-    console.log("handleLegendOptionsChange called");
+  saveLegendOptions = legendOptions => {
     localStorage.setItem(TOPOOPTIONSKEY, JSON.stringify(legendOptions));
+  };
+  handleLegendOptionsChange = (legendOptions, callback) => {
+    this.saveLegendOptions(legendOptions);
     this.setState({ legendOptions }, () => {
       if (callback) {
         callback();
@@ -786,7 +869,6 @@ class TopologyPage extends Component {
     this.handleLegendOptionsChange(this.state.legendOptions);
   };
   handleChangeArrows = (checked, event) => {
-    console.log("handleChangeArrows called");
     const { legendOptions } = this.state;
     legendOptions.arrows[event.target.name] = checked;
     this.handleLegendOptionsChange(legendOptions);
@@ -794,7 +876,6 @@ class TopologyPage extends Component {
 
   // checking and unchecking of which traffic animation to show
   handleChangeTrafficAnimation = (checked, event) => {
-    console.log("handleChangeTrafficAnimation called");
     const { legendOptions } = this.state;
     const name = event.target.name;
     legendOptions.traffic[name] = checked;
@@ -811,7 +892,6 @@ class TopologyPage extends Component {
   };
 
   handleChangeTrafficFlowAddress = (address, checked) => {
-    console.log(`changing traffic flow address ${address} to ${checked}`);
     const { legendOptions } = this.state;
     legendOptions.traffic.addresses[address] = checked;
     this.handleLegendOptionsChange(legendOptions, this.addressFilterChanged);
@@ -837,7 +917,6 @@ class TopologyPage extends Component {
       }
     });
     if (changed) {
-      console.log("handleUpdatedAddresses called with changed address");
       this.handleLegendOptionsChange(legendOptions, this.addressFilterChanged);
     }
   };
@@ -859,7 +938,6 @@ class TopologyPage extends Component {
       }
     });
     if (changed) {
-      console.log("handleUpdateAddressColors called with new color");
       this.handleLegendOptionsChange(legendOptions);
     }
   };
@@ -868,7 +946,32 @@ class TopologyPage extends Component {
     this.setState({ mapOptions });
   };
 
+  // the mouse was hovered over one of the addresses in the legend
+  handleHoverAddress = (address, over) => {
+    // this.enterLegend and this.leaveLegend are defined in traffic.js
+    if (over) {
+      this.enterLegend(address);
+    } else {
+      this.leaveLegend();
+    }
+  };
+
+  handleUpdateMapShown = checked => {
+    const { legendOptions } = this.state;
+    legendOptions.map.show = checked;
+    this.setState({ legendOptions }, () => {
+      this.backgroundMap.setMapOpacity(checked);
+      this.backgroundMap.setBackgroundColor();
+      this.saveLegendOptions(legendOptions);
+    });
+  };
+
+  handleContextHide = () => {
+    this.setState({ showContextMenu: false });
+  };
+
   render() {
+    console.log("rendering qdrTopology");
     return (
       <div className="qdrTopology">
         <LegendComponent
@@ -877,6 +980,7 @@ class TopologyPage extends Component {
           trafficOpen={this.state.legendOptions.traffic.open}
           legendOpen={this.state.legendOptions.legend.open}
           mapOpen={this.state.legendOptions.map.open}
+          mapShown={this.state.legendOptions.map.show}
           arrowsOpen={this.state.legendOptions.arrows.open}
           dots={this.state.legendOptions.traffic.dots}
           congestion={this.state.legendOptions.traffic.congestion}
@@ -889,52 +993,28 @@ class TopologyPage extends Component {
           handleChangeTrafficAnimation={this.handleChangeTrafficAnimation}
           handleChangeTrafficFlowAddress={this.handleChangeTrafficFlowAddress}
           handleUpdateMapColor={this.handleUpdateMapColor}
+          handleUpdateMapShown={this.handleUpdateMapShown}
         />
-
         <div className="diagram">
+          {this.state.showContextMenu ? (
+            <ContextMenuComponent
+              ref={el => (this.contextRef = el)}
+              contextEventPosition={this.contextEventPosition}
+              contextEventData={this.contextEventData}
+              handleContextHide={this.handleContextHide}
+              menuItems={this.contextMenuItems}
+            />
+          ) : (
+            <React.Fragment />
+          )}
           <div ref={el => (this.topologyRef = el)} id="topology"></div>
-
-          <div id="node_context_menu" className="contextMenu">
-            <ul>
-              <li
-                className="na"
-                ng-class="{'force-display': !isFixed()}"
-                ng-click="setFixed(true)"
-              >
-                Freeze in place
-              </li>
-              <li
-                className="na"
-                ng-class="{'force-display': isFixed()}"
-                ng-click="setFixed(false)"
-              >
-                Unfreeze
-              </li>
-              <li
-                className="na"
-                ng-class="{'force-display': isSelected()}"
-                ng-if="isSelectable()"
-                ng-click="setSelected(false)"
-              >
-                Unselect
-              </li>
-              <li
-                className="na"
-                ng-class="{'force-display': !isSelected()}"
-                ng-if="isSelectable()"
-                ng-click="setSelected(true)"
-              >
-                Select
-              </li>
-            </ul>
+          <div
+            id="popover-div"
+            className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
+            ref={el => (this.popupRef = el)}
+          >
+            <QDRPopup content={this.state.popupContent}></QDRPopup>
           </div>
-        </div>
-        <div
-          id="popover-div"
-          className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
-          ref={el => (this.popupRef = el)}
-        >
-          <QDRPopup content={this.state.popupContent}></QDRPopup>
         </div>
         {this.state.showRouterInfo ? (
           <RouterInfoComponent

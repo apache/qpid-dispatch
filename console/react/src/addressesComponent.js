@@ -18,6 +18,8 @@ under the License.
 */
 
 import React, { Component } from "react";
+import * as d3 from "d3";
+const FA = require("react-fontawesome");
 
 class AddressesComponent extends Component {
   constructor(props) {
@@ -36,33 +38,27 @@ class AddressesComponent extends Component {
   };
 
   coloredDot = (address, i) => {
+    const color = this.props.addressColors[address];
+    const checkColor = this.props.addresses[address] ? "white" : color;
+    const darker = d3.rgb(color).darker();
+    const bgColor = {
+      backgroundColor: color,
+      border: `1px solid ${darker}`,
+      color: checkColor
+    };
     return (
-      <svg
-        className="address-svg"
+      <span
+        className="colored-dot"
         id={`address-dot-${i}`}
-        width="200"
-        height="20"
-        title="Click to show/hide this address"
+        onClick={() => this.dotClicked(address)}
+        onMouseOver={() => this.dotHover(address, true)}
+        onMouseOut={() => this.dotHover(address, false)}
       >
-        <g
-          transform="translate(10,10)"
-          onClick={() => this.dotClicked(address)}
-          onMouseOver={() => this.dotHover(address, true)}
-          onMouseOut={() => this.dotHover(address, false)}
-        >
-          <circle r="10" fill={this.props.addressColors[address]} />
-          {this.props.addresses[address] ? (
-            <text x="-8" y="5" className="address-checkbox">
-              &#xf00c;
-            </text>
-          ) : (
-            ""
-          )}
-          <text x="20" y="5" className="label">
-            {address}
-          </text>
-        </g>
-      </svg>
+        <span className="colored-dot-dot" style={bgColor}>
+          <FA name="check" />
+        </span>
+        <span className="colored-dot-text">{address}</span>
+      </span>
     );
   };
 

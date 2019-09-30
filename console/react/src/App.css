@@ -619,12 +619,17 @@ div.qdrChord {
 #arrows-expand label,
 #traffic-dots label,
 #traffic-congestion label,
-#options-expand label {
+#options-expand label,
+#map-expand label {
   position: relative;
   top: 4px;
   padding-left: 0.25em;
 }
 
+#map-expand .map-legend {
+  margin-left: 1.5em;
+  margin-top: 0.5em;
+}
 #arrows-expand .pf-c-check {
   padding-top: 0.5em;
 }
@@ -744,4 +749,62 @@ div.qdrChord .legend-text {
 
 .legend ul {
   margin-bottom: 0;
+}
+
+.colored-dot {
+  display: inline-block;
+  margin-bottom: 4px;
+}
+
+.colored-dot span.colored-dot-dot {
+  width: 24px;
+  height: 24px;
+  border: 1px solid black;
+  border-radius: 12px;
+  display: inline-block;
+  color: white;
+  padding-left: 4px;
+  font-weight: bold;
+}
+
+.colored-dot span.colored-dot-text {
+  margin-left: 0.5em;
+  color: black;
+}
+
+.qdrTopology .addresses .legend-line,
+#traffic-congestion-svg {
+  margin-left: 1.5em;
+}
+
+.qdrTopology .pf-c-options-menu__toggle {
+  display: none;
+}
+
+.context-menu {
+  position: absolute;
+  background-color: white;
+  border-top: 1px solid #888;
+  border-left: 1px solid #888;
+  border-right: 1px solid #888;
+}
+
+.context-menu .menu-item {
+  padding: 0.5em 1.5em;
+}
+.context-menu .menu-item.separator {
+  border-bottom: 1px solid #888;
+}
+
+.context-menu .menu-item:hover {
+  background-color: #eaeaea;
+  cursor: default;
+}
+
+.context-menu .menu-item.disabled {
+  color: #777;
+}
+
+.context-menu .menu-item.disabled:hover {
+  background-color: white;
 }

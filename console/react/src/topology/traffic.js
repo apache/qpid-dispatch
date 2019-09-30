@@ -342,7 +342,7 @@ class Dots extends TrafficAnimation {
       self.traffic.stop();
       self.traffic.start();
     };
-    // called by angular when mouse enters one of the address legends
+    // called when mouse enters one of the address legends
     traffic.$scope.enterLegend = function(address) {
       // fade all flows that aren't for this address
       self.fadeOtherAddresses(address);
@@ -359,6 +359,9 @@ class Dots extends TrafficAnimation {
     };
   }
   remove() {
+    d3.select("#SVG_ID")
+      .selectAll("path.traffic")
+      .classed("traffic", false);
     d3.select("#SVG_ID")
       .selectAll("circle.flow")
       .remove();

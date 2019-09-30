@@ -66,6 +66,7 @@ class LegendComponent extends Component {
               handleChangeTrafficFlowAddress={
                 this.props.handleChangeTrafficFlowAddress
               }
+              handleHoverAddress={this.props.handleHoverAddress}
               dots={this.props.dots}
               congestion={this.props.congestion}
             />
@@ -102,9 +103,11 @@ class LegendComponent extends Component {
           >
             <MapLegendComponent
               open={this.props.mapOpen}
+              mapShown={this.props.mapShown}
               areaColor={this.props.areaColor}
               oceanColor={this.props.oceanColor}
               handleUpdateMapColor={this.props.handleUpdateMapColor}
+              handleUpdateMapShown={this.props.handleUpdateMapShown}
             />
           </AccordionContent>
         </AccordionItem>

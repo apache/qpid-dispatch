@@ -27,40 +27,6 @@ class TrafficComponent extends Component {
     this.state = {};
   }
 
-  dotClicked = address => {
-    this.props.handleChangeTrafficFlowAddress(
-      address,
-      !this.props.addresses[address]
-    );
-  };
-  coloredDot = (address, i) => {
-    return (
-      <svg
-        className="address-svg"
-        id={`address-dot-${i}`}
-        width="200"
-        height="20"
-      >
-        <g
-          transform="translate(10,10)"
-          onClick={() => this.dotClicked(address)}
-        >
-          <circle r="10" fill={this.props.addressColors[address]} />
-          {this.props.addresses[address] ? (
-            <text x="-8" y="5" className="address-checkbox">
-              &#xf00c;
-            </text>
-          ) : (
-            ""
-          )}
-          <text x="20" y="5" className="label">
-            {address}
-          </text>
-        </g>
-      </svg>
-    );
-  };
-
   render() {
     return (
       <ul className="options">
@@ -84,6 +50,7 @@ class TrafficComponent extends Component {
                   handleChangeAddress={
                     this.props.handleChangeTrafficFlowAddress
                   }
+                  handleHoverAddress={this.props.handleHoverAddress}
                 />
               </li>
             ) : (

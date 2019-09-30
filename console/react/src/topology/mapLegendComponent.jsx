@@ -18,6 +18,7 @@ under the License.
 */
 
 import React, { Component } from "react";
+import { Checkbox } from "@patternfly/react-core";
 
 class MapLegendComponent extends Component {
   constructor(props) {
@@ -25,68 +26,44 @@ class MapLegendComponent extends Component {
     this.state = {};
   }
 
-  dotClicked = address => {
-    this.props.handleChangeTrafficFlowAddress(
-      address,
-      !this.props.addresses[address]
-    );
-  };
-  coloredDot = (address, i) => {
-    return (
-      <svg
-        className="address-svg"
-        id={`address-dot-${i}`}
-        width="200"
-        height="20"
-      >
-        <g
-          transform="translate(10,10)"
-          onClick={() => this.dotClicked(address)}
-        >
-          <circle r="10" fill={this.props.addressColors[address]} />
-          {this.props.addresses[address] ? (
-            <text x="-8" y="5" className="address-checkbox">
-              &#xf00c;
-            </text>
-          ) : (
-            ""
-          )}
-          <text x="20" y="5" className="label">
-            {address}
-          </text>
-        </g>
-      </svg>
-    );
-  };
-
   handleColorChange = e => {
     this.props.handleUpdateMapColor(e.target.name, e.target.value);
   };
 
   render() {
     return (
-      <ul className="map-legend">
-        <li>
-          <input
-            id="areaColor"
-            name="areaColor"
-            type="color"
-            value={this.props.areaColor}
-            onChange={this.handleColorChange}
-          />{" "}
-          <label htmlFor="areaColor">Land</label>
-        </li>
-        <li>
-          <input
-            id="oceanColor"
-            name="oceanColor"
-            type="color"
-            value={this.props.oceanColor}
-            onChange={this.handleColorChange}
-          />{" "}
-          <label htmlFor="oceanColor">Ocean</label>
-        </li>
-      </ul>
+      <React.Fragment>
+        <Checkbox
+          label="Show background map"
+          isChecked={this.props.mapShown}
+          onChange={this.props.handleUpdateMapShown}
+          aria-label="show background map"
+          id="check-show-map"
+          name="showMap"
+        />
+        <ul className="map-legend">
+          <li>
+            <input
+              id="areaColor"
+              name="areaColor"
+              type="color"
+              value={this.props.areaColor}
+              onChange={this.handleColorChange}
+            />{" "}
+            <label htmlFor="areaColor">Land</label>
+          </li>
+          <li>
+            <input
+              id="oceanColor"
+              name="oceanColor"
+              type="color"
+              value={this.props.oceanColor}
+              onChange={this.handleColorChange}
+            />{" "}
+            <label htmlFor="oceanColor">Ocean</label>
+          </li>
+        </ul>
+      </React.Fragment>
     );
   }
 }

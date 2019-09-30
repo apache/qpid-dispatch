@@ -17,14 +17,14 @@
 import { Nodes } from "./nodes.js";
 import { utils } from "../amqp/utilities.js";
 
-export function updateState(circle, selected_node) {
+export function updateState(circle) {
   circle
     .selectAll("circle")
     .classed("highlighted", function(d) {
       return d.highlighted;
     })
     .classed("selected", function(d) {
-      return d === selected_node;
+      return d.selected;
     })
     .classed("fixed", function(d) {
       return d.fixed ? d.fixed & 1 : false;

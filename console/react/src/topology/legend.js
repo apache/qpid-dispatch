@@ -18,6 +18,7 @@ import { Nodes } from "./nodes.js";
 import { appendCircle, appendContent, appendTitle } from "./svgUtils.js";
 import * as d3 from "d3";
 
+const PADDING = 5;
 const lookFor = [
   {
     role: "_topo",
@@ -97,6 +98,7 @@ export class Legend {
       .select("#topo_svg_legend")
       .append("svg")
       .attr("id", "svglegend")
+      .attr("xmlns", "http://www.w3.org/2000/svg")
       .append("svg:g")
       .attr(
         "transform",
@@ -104,6 +106,14 @@ export class Legend {
       )
       .selectAll("g");
   }
+
+  gap = d => {
+    let g = Nodes.radius(d.nodeType) * 2 + PADDING;
+    if (d.nodeType === "_topo") {
+      g -= Nodes.radius(d.nodeType) / 2;
+    }
+    return g;
+  };
 
   // create or update the legend
   update() {
@@ -139,9 +149,9 @@ export class Legend {
     });
 
     // determine the y coordinate of the last existing node in the legend
-    let cury = 0;
-    lsvg.each(function(d) {
-      cury += Nodes.radius(d.nodeType) * 2 + 5;
+    let cury = 2;
+    lsvg.each((d, i) => {
+      cury += this.gap(d);
     });
 
     // associate the legendNodes with lsvg
@@ -153,9 +163,9 @@ export class Legend {
     let legendEnter = lsvg
       .enter()
       .append("svg:g")
-      .attr("transform", function(d) {
-        let t = `translate(0, ${cury})`;
-        cury += Nodes.radius(d.nodeType) * 2 + 5;
+      .attr("transform", d => {
+        let t = `translate(2, ${cury})`;
+        cury += this.gap(d);
         return t;
       });
     appendCircle(legendEnter, this.urlPrefix);

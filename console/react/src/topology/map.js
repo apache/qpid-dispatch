@@ -47,7 +47,6 @@ export class BackgroundMap {
     };
   }
   updateMapColor(which, color) {
-    console.log(`map received request to update ${which} color to ${color}`);
     if (which === "areaColor") {
       this.updateLandColor(color);
     } else if (which === "oceanColor") {
@@ -63,15 +62,18 @@ export class BackgroundMap {
       .style("stroke", d3.rgb(color).darker());
   }
   updateOceanColor(color) {
+    if (!color) color = this.mapOptions.oceanColor;
     this.mapOptions.oceanColor = color;
     localStorage[MAPOPTIONSKEY] = JSON.stringify(this.mapOptions);
-    if (!color) color = this.mapOptions.oceanColor;
     d3.select("g.geo rect.ocean").style("fill", color);
-    if (this.$scope.state.legendOptions.map.open) {
-      d3.select(".pf-c-page__main").style("background-color", color);
-    } else {
-      d3.select(".pf-c-page__main").style("background-color", "#FFF");
-    }
+    this.setBackgroundColor();
+  }
+
+  setBackgroundColor() {
+    const color = this.$scope.state.legendOptions.map.shown
+      ? this.mapOptions.oceanColor
+      : "#FFF";
+    d3.select(".pf-c-page__main").style("background-color", color);
   }
 
   init($scope, svg, width, height) {
@@ -123,7 +125,10 @@ export class BackgroundMap {
       this.geo = svg
         .append("g")
         .attr("class", "geo")
-        .style("opacity", this.$scope.state.legendOptions.map.open ? "1" : "0");
+        .style(
+          "opacity",
+          this.$scope.state.legendOptions.map.shown ? "1" : "0"
+        );
 
       this.geo
         .append("rect")
@@ -132,7 +137,7 @@ export class BackgroundMap {
         .attr("height", height)
         .attr("fill", "#FFF");
 
-      if (this.$scope.state.legendOptions.map.open) {
+      if (this.$scope.state.legendOptions.map.shown) {
         this.svg.call(this.zoom).on("dblclick.zoom", null);
       }
 
@@ -198,7 +203,7 @@ export class BackgroundMap {
       d3.event &&
       !this.$scope.current_node &&
       !this.$scope.mousedown_node &&
-      this.$scope.state.legendOptions.map.open
+      this.$scope.state.legendOptions.map.shown
     ) {
       let scale = d3.event.scale,
         t = d3.event.translate,
