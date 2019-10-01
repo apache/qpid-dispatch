@@ -2336,33 +2336,16 @@ class ClosestTest ( MessagingHandler ):
         self.addr_check_receiver.flow(100)
         self.addr_check_sender   = event.container.create_sender ( self.cnx_1, "$management" )
 
+        self.m_sent_1 = False
+        self.m_sent_2 = False
+        self.m_sent_3 = False
+
 
     def on_link_opened(self, event):
         if event.receiver == self.addr_check_receiver:
             # my addr-check link has opened: make the addr_checker with the given address.
             self.addr_checker = AddressChecker ( self.addr_check_receiver.remote_source.address )
             self.addr_check()
-
-    def on_sendable ( self, event ):
-        # Fix for DISPATCH-1408 - Make sure that the correct sender  is sending the messages to self.dest
-        if event.sender == self.sender and self.n_sent_1 < self.one_third and self.send_on_sendable:
-            msg = Message ( body     = "Hello, closest.",
-                            address  = self.dest)
-            event.sender.send ( msg )
-            self.n_sent_1 += 1
-
-            if self.n_sent_1 == self.one_third:
-                # Henceforth, we will not be using on_sendable to send messages.
-                # Look at on_link_closed
-                self.send_on_sendable = False
-
-    def send_messages(self):
-        while self.n_sent_1 < self.one_third:
-            msg = Message ( body     = "Hello, closest.",
-                            address  = self.dest)
-            self.sender.send ( msg )
-            self.n_sent_1 += 1
-
 
     def on_message ( self, event ):
         if event.receiver == self.addr_check_receiver:
@@ -2376,6 +2359,14 @@ class ClosestTest ( MessagingHandler ):
                     # "No Path To Destination" error.
                     self.sender = event.container.create_sender ( self.send_cnx, self.dest )
 
+                    if not self.m_sent_1:
+                        self.m_sent_1 = True
+                        while self.n_sent_1 < self.one_third:
+                            msg = Message(body="Hello, closest.",
+                                          address=self.dest)
+                            self.sender.send(msg)
+                            self.n_sent_1 += 1
+
                     # And we can quit checking.
                     if self.addr_check_timer:
                         self.addr_check_timer.cancel()
@@ -2386,7 +2377,14 @@ class ClosestTest ( MessagingHandler ):
                     self.addr_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
             else:
                 if response.status_code == 200 and response.subscriberCount == 0 and response.remoteCount == 1:
-                    self.send_messages()
+                    if not self.m_sent_2:
+                        self.m_sent_2 = True
+                        while self.n_sent_2 < self.one_third:
+                            msg = Message(body="Hello, closest.",
+                                          address=self.dest)
+                            self.sender.send(msg)
+                            self.n_sent_2 += 1
+
                     if self.addr_check_timer:
                         self.addr_check_timer.cancel()
                         self.addr_check_timer = None
@@ -2454,9 +2452,13 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_1_a_closed = True
             if event.receiver == self.recv_1_b:
                 self.recv_1_b_closed = True
-            if self.recv_1_a_closed and self.recv_1_b_closed:
-                self.n_sent_1 = 0
-                self.send_messages()
+            if self.recv_1_a_closed and self.recv_1_b_closed and not self.m_sent_3:
+                self.m_sent_3 = True
+                while self.n_sent_3 < self.one_third:
+                    msg = Message(body="Hello, closest.",
+                                  address=self.dest)
+                    self.sender.send(msg)
+                    self.n_sent_3 += 1
 
         if event.receiver == self.recv_2_a or event.receiver == self.recv_2_b:
             if event.receiver == self.recv_2_a:
@@ -2464,7 +2466,6 @@ class ClosestTest ( MessagingHandler ):
             if event.receiver == self.recv_2_b:
                 self.recv_2_b_closed = True
             if self.recv_2_a_closed and self.recv_2_b_closed:
-                self.n_sent_1 = 0
                 self.first_check = False
                 self.addr_check()
 
