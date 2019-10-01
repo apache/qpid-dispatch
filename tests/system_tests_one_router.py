@@ -1114,7 +1114,7 @@ class PresettledCustomTimeout(object):
             self.parent.bail(None)
         else:
             self.parent.bail("Messages sent to the router is %d, "
-                             "Messages processed by the router is %d",
+                             "Messages processed by the router is %d" %
                              (self.parent.n_messages,
                               ingress_delivery_count - self.parent.begin_ingress_count))
 
