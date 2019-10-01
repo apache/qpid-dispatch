@@ -104,6 +104,7 @@
                       <exclude>**/VERSION.txt</exclude>
                       <exclude>**/v3_ca.ext</exclude>
                       <exclude>**/system_test.dir/**</exclude>
+		      <exclude>**/sasl-password-file.txt</exclude>
                       <exclude>**/server-password-file.txt</exclude>
                       <exclude>**/server-password-file-bad.txt</exclude>
                       <exclude>**/client-password-file.txt</exclude>
