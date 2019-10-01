@@ -363,11 +363,6 @@ class ClientInfoComponent extends Component {
         this.dStart = 0;
         this.dStop = Math.min(this.d.normals.length, 10);
         this.updateTimer = setTimeout(this.doUpdateDetail, 2000);
-
-        console.log(` ------- detail -------`);
-        console.log(this.state.detail);
-        console.log(rows);
-        console.log(` --------------`);
       }
     });
   };
@@ -406,8 +401,6 @@ class ClientInfoComponent extends Component {
         });
         subRows.push({ cells: subCells });
       });
-      console.log(" === subRows ===");
-      console.log(subRows);
 
       newRows.push({
         parent: i * 2,
@@ -427,7 +420,6 @@ class ClientInfoComponent extends Component {
         ]
       });
     }
-    console.log(newRows);
     return newRows;
   };
 

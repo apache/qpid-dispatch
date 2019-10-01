@@ -31,7 +31,6 @@ class ContextMenuComponent extends React.Component {
   };
 
   handleHide = e => {
-    console.log("handleHide called");
     this.unregisterHandlers();
     this.props.handleContextHide();
   };

@@ -843,7 +843,6 @@ class MessageFlowPage extends Component {
 
   // one of the legend sections was opened or closed
   handleOpenChange = (id, isOpen) => {
-    console.log(`handleOpenChange called with ${id} and ${isOpen}`);
     const { legendOptions } = this.state;
     legendOptions[`${id}Open`] = isOpen;
     this.setState({ legendOptions });
