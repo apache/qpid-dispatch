@@ -1,0 +1,19 @@
+github:
+  description: "Mirror of Apache Qpid Dispatch"
+  homepage: https://qpid.apache.org/components/dispatch-router
+  labels:
+    - qpid-dispatch-router
+
+    - qpid
+    - amqp
+    - messaging
+    - network-server
+    - apache
+
+    - amqps
+    - amqp10
+
+    - c
+    - python
+    - python2
+    - python3
