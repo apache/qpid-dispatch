@@ -299,6 +299,8 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
 {
     qd_error_clear();
 
+    qd_connection_manager_t *cm = qd->connection_manager;
+
     bool authenticatePeer   = qd_entity_opt_bool(entity, "authenticatePeer",  false);    CHECK();
     bool verifyHostName     = qd_entity_opt_bool(entity, "verifyHostname",    true);     CHECK();
     bool requireEncryption  = qd_entity_opt_bool(entity, "requireEncryption", false);    CHECK();
@@ -327,6 +329,41 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     }
     config->sasl_username        = qd_entity_opt_string(entity, "saslUsername", 0);   CHECK();
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
+
+    if (config->sasl_password) {
+        qd_log(cm->log_source, QD_LOG_WARNING, "Attribute saslPassword of entity connector has been deprecated. Use saslPasswordFile instead.");
+    }
+    else {
+        // saslPassword not provided. Check if saslPasswordFile property is specified.
+        char *password_file = qd_entity_opt_string(entity, "saslPasswordFile", 0); CHECK();
+
+        if (password_file) {
+            FILE *file = fopen(password_file, "r");
+
+            if (file) {
+                char buffer[200];
+
+                int c;
+                int i=0;
+
+                while (i < 200 - 1) {
+                    c = fgetc(file);
+                    if (c == EOF || c == '\n')
+                        break;
+                    buffer[i++] = c;
+                }
+
+                if (i != 0) {
+                    buffer[i] = '\0';
+                    free(config->sasl_password);
+                    config->sasl_password = strdup(buffer);
+                }
+                fclose(file);
+            }
+        }
+        free(password_file);
+    }
+
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_profile          = qd_entity_opt_string(entity, "sslProfile", 0);     CHECK();
     config->sasl_plugin          = qd_entity_opt_string(entity, "saslPlugin", 0);   CHECK();

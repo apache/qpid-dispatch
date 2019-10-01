@@ -1002,9 +1002,16 @@
                 "saslPassword": {
                     "type": "string",
                     "required": false,
-                    "description": "The password that the connector is using to connect to a peer.",
+                    "description": "(DEPRECATED) The password that the connector is using to connect to a peer.",
                     "create": true,
+                    "deprecated": true,
                     "hidden": true
+                },
+                "saslPasswordFile": {
+                    "type": "string",
+                    "required": false,
+                    "description": "The full path to the file that contains the password that the connector uses to connect to a peer.",
+                    "create": true
                 },
                 "messageLoggingComponents": {
                     "type": "string",
