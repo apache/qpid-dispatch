@@ -413,23 +413,6 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   background-color: #0e0e0e;
 }
 
-.qdrPopup {
-  position: absolute;
-  z-index: 200;
-  border-radius: 4px;
-  border: 1px solid gray;
-  background-color: white;
-  color: black;
-  opacity: 1;
-  padding: 12px;
-  font-size: 14px;
-}
-
-table.popupTable td {
-  padding-right: 5px;
-  font-size: 10px;
-}
-
 g text {
   pointer-events: none;
 }
@@ -687,15 +670,42 @@ path.empty {
   border-color: black;
 }
 
+.qdrPopup {
+  position: absolute;
+  z-index: 200;
+  border-radius: 4px;
+  border: 1px solid gray;
+  background-color: white;
+  color: black;
+  opacity: 1;
+  padding: 12px;
+  font-size: 14px;
+}
+
 #popover-div {
   position: absolute;
   z-index: 200;
   border-radius: 4px;
-  background-color: black;
-  color: white;
+  border: 1px solid gray;
+  background-color: white;
+  color: black;
   opacity: 0.95;
   padding: 12px;
-  font-size: 14px;
+  font-size: 16px;
+}
+
+#popover-div h5 {
+  background-color: #eaeaea;
+  padding: 0.25em 0.125em;
+}
+
+table.popupTable td {
+  padding-right: 5px;
+  font-size: 10px;
+}
+
+table.popupTable tr.header {
+  font-weight: bold;
 }
 
 #chord text {
