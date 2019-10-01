@@ -1010,7 +1010,7 @@
                 "saslPasswordFile": {
                     "type": "string",
                     "required": false,
-                    "description": "The full path to the file that contains the password that the connector uses to connect to a peer.",
+                    "description": "The absolute path to the file that contains the password that the connector uses to connect to a peer.",
                     "create": true
                 },
                 "messageLoggingComponents": {
