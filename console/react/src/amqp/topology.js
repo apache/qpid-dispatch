@@ -29,7 +29,6 @@ class Topology {
     this.filtering = false; // filter out nodes that don't have connection info
     this.timeout = 5000;
     this.updateInterval = interval;
-    console.log(`topology constructed with interval of ${interval}`);
     this._getTimer = null;
     this.updating = false;
     this.counter = 0;
