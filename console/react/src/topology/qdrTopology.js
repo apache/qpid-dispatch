@@ -103,6 +103,7 @@ class TopologyPage extends Component {
     );
     this.backgroundMap = new BackgroundMap(
       this,
+      this.state.legendOptions.map,
       // notify: called each time a pan/zoom is performed
       () => {
         if (this.state.legendOptions.map.show) {
@@ -144,17 +145,45 @@ class TopologyPage extends Component {
 
   // called only once when the component is initialized
   componentDidMount = () => {
-    this.init();
+    window.addEventListener("resize", this.resize);
+    // we only need to update connections during steady-state
+    this.props.service.management.topology.setUpdateEntities(["connection"]);
+    // poll the routers for their latest entities (set to connection above)
     this.props.service.management.topology.startUpdating();
+
+    // create the svg
+    this.init();
+
+    // get notified when a router is added/dropped and when
+    // the number of connections for a router changes
     this.props.service.management.topology.addChangedAction("topology", () => {
       this.init();
     });
   };
 
   componentWillUnmount = () => {
+    this.props.service.management.topology.setUpdateEntities([]);
     this.props.service.management.topology.stopUpdating();
     this.props.service.management.topology.delChangedAction("topology");
+    this.traffic.remove();
+    this.forceData.nodes.savePositions();
+    window.removeEventListener("resize", this.resize);
   };
+
+  resize = () => {
+    if (!this.svg) return;
+    let sizes = getSizes(this.topologyRef, this.QDRLog);
+    this.width = sizes[0];
+    this.height = sizes[1];
+    if (this.width > 0) {
+      // set attrs and 'resume' force
+      this.svg.attr("width", this.width);
+      this.svg.attr("height", this.height);
+      this.force.size(sizes).resume();
+    }
+    this.updateLegend();
+  };
+
   setFixed = (item, data) => {
     data.setFixed(item.title !== "Unfreeze");
   };
@@ -230,20 +259,18 @@ class TopologyPage extends Component {
       .selectAll("g");
 
     this.traffic.remove();
-    if (this.state.legendOptions.traffic.open) {
-      if (this.state.legendOptions.traffic.dots)
-        this.traffic.addAnimationType(
-          "dots",
-          separateAddresses,
-          Nodes.radius("inter-router")
-        );
-      if (this.state.legendOptions.traffic.congestion)
-        this.traffic.addAnimationType(
-          "congestion",
-          separateAddresses,
-          Nodes.radius("inter-router")
-        );
-    }
+    if (this.state.legendOptions.traffic.dots)
+      this.traffic.addAnimationType(
+        "dots",
+        separateAddresses,
+        Nodes.radius("inter-router")
+      );
+    if (this.state.legendOptions.traffic.congestion)
+      this.traffic.addAnimationType(
+        "congestion",
+        separateAddresses,
+        Nodes.radius("inter-router")
+      );
 
     // mouse event vars
     this.mousedown_node = null;
@@ -847,12 +874,14 @@ class TopologyPage extends Component {
       .style("top", event.pageY - top + "px");
     // show popup
     let pwidth = this.popupRef.offsetWidth;
-    this.setState({ showPopup: true });
-    d3.select("#popover-div")
-      .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
-      .on("mouseout", () => {
-        this.setState({ showPopup: false });
-      });
+    this.setState({ showPopup: true }, () =>
+      d3
+        .select("#popover-div")
+        .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
+        .on("mouseout", () => {
+          this.setState({ showPopup: false });
+        })
+    );
   };
 
   clearAllHighlights = () => {

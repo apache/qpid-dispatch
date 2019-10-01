@@ -29,10 +29,11 @@ const defaultOceanColor = "#FFFFFF";
 
 export class BackgroundMap {
   // eslint-disable-line no-unused-vars
-  constructor($scope, notifyFn) {
+  constructor($scope, options, notifyFn) {
     this.$scope = $scope;
     this.initialized = false;
     this.notify = notifyFn;
+    this.options = options;
 
     let savedOptions = localStorage.getItem(MAPOPTIONSKEY);
     this.mapOptions = savedOptions
@@ -70,9 +71,7 @@ export class BackgroundMap {
   }
 
   setBackgroundColor() {
-    const color = this.$scope.state.legendOptions.map.shown
-      ? this.mapOptions.oceanColor
-      : "#FFF";
+    const color = this.options.show ? this.mapOptions.oceanColor : "#FFF";
     d3.select(".pf-c-page__main").style("background-color", color);
   }
 
@@ -120,15 +119,12 @@ export class BackgroundMap {
         .scaleExtent(this.scaleExtent)
         .scale(this.projection.scale())
         .translate([0, 0]) // not linked directly to projection
-        .on("zoom", this.zoomed.bind(this));
+        .on("zoom", this.zoomed);
 
       this.geo = svg
         .append("g")
         .attr("class", "geo")
-        .style(
-          "opacity",
-          this.$scope.state.legendOptions.map.shown ? "1" : "0"
-        );
+        .style("opacity", this.options.show ? "1" : "0");
 
       this.geo
         .append("rect")
@@ -137,7 +133,7 @@ export class BackgroundMap {
         .attr("height", height)
         .attr("fill", "#FFF");
 
-      if (this.$scope.state.legendOptions.map.shown) {
+      if (this.options.show) {
         this.svg.call(this.zoom).on("dblclick.zoom", null);
       }
 
@@ -198,12 +194,12 @@ export class BackgroundMap {
     return this.projection.invert([x, y]);
   }
 
-  zoomed() {
+  zoomed = () => {
     if (
       d3.event &&
       !this.$scope.current_node &&
       !this.$scope.mousedown_node &&
-      this.$scope.state.legendOptions.map.shown
+      this.options.show
     ) {
       let scale = d3.event.scale,
         t = d3.event.translate,
@@ -259,7 +255,7 @@ export class BackgroundMap {
     }
     // update the land path with our current projection
     this.geo.selectAll(".land").attr("d", this.geoPath);
-  }
+  };
   saveProjection() {
     if (this.projection) {
       this.lastProjection.rotate = this.projection.rotate()[0];
