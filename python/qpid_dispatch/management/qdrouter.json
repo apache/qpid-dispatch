@@ -1002,7 +1002,7 @@
                 "saslPassword": {
                     "type": "string",
                     "required": false,
-                    "description": "(DEPRECATED) The password that the connector is using to connect to a peer.",
+                    "description": "(DEPRECATED) The password that the connector is using to connect to a peer. This takes precedence over the saslPasswordFile if both are specified. This attribute has been deprecated because it is unsafe to store plain text passwords in config files. Use the saslPasswordFile instead",
                     "create": true,
                     "deprecated": true,
                     "hidden": true
@@ -1010,7 +1010,7 @@
                 "saslPasswordFile": {
                     "type": "string",
                     "required": false,
-                    "description": "The absolute path to the file that contains the password that the connector uses to connect to a peer.",
+                    "description": "The absolute path to the file that contains the password that the connector uses to connect to a peer. This file should be permission protected to limit access",
                     "create": true
                 },
                 "messageLoggingComponents": {
