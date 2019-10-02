@@ -89,6 +89,38 @@ const char *ALL = "all";
 const char *NONE = "none";
 
 /**
+ * Reads the password from the password_file and populates the contents of the file in password_field.
+ */
+static void set_password_from_file(char *password_file, char **password_field)
+{
+    if (password_file) {
+        FILE *file = fopen(password_file, "r");
+
+        if (file) {
+            char buffer[200];
+
+            int c;
+            int i=0;
+
+            while (i < 200 - 1) {
+                c = fgetc(file);
+                if (c == EOF || c == '\n')
+                    break;
+                buffer[i++] = c;
+            }
+
+            if (i != 0) {
+                buffer[i] = '\0';
+                free(*password_field);
+                *password_field = strdup(buffer);
+            }
+            fclose(file);
+        }
+    }
+}
+
+
+/**
  * Search the list of config_ssl_profiles for an ssl-profile that matches the passed in name
  */
 static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm, char *name)
@@ -336,31 +368,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     else {
         // saslPassword not provided. Check if saslPasswordFile property is specified.
         char *password_file = qd_entity_opt_string(entity, "saslPasswordFile", 0); CHECK();
-
-        if (password_file) {
-            FILE *file = fopen(password_file, "r");
-
-            if (file) {
-                char buffer[200];
-
-                int c;
-                int i=0;
-
-                while (i < 200 - 1) {
-                    c = fgetc(file);
-                    if (c == EOF || c == '\n')
-                        break;
-                    buffer[i++] = c;
-                }
-
-                if (i != 0) {
-                    buffer[i] = '\0';
-                    free(config->sasl_password);
-                    config->sasl_password = strdup(buffer);
-                }
-                fclose(file);
-            }
-        }
+        set_password_from_file(password_file, &config->sasl_password);
         free(password_file);
     }
 
@@ -549,36 +557,10 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     if (ssl_profile->ssl_password) {
         qd_log(cm->log_source, QD_LOG_WARNING, "Attribute password of entity sslProfile has been deprecated. Use passwordFile instead.");
     }
-
-
-    if (!ssl_profile->ssl_password) {
+    else {
         // SSL password not provided. Check if passwordFile property is specified.
         char *password_file = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
-
-        if (password_file) {
-            FILE *file = fopen(password_file, "r");
-
-            if (file) {
-                char buffer[200];
-
-                int c;
-                int i=0;
-
-                while (i < 200 - 1) {
-                    c = fgetc(file);
-                    if (c == EOF || c == '\n')
-                        break;
-                    buffer[i++] = c;
-                }
-
-                if (i != 0) {
-                    buffer[i] = '\0';
-                    free(ssl_profile->ssl_password);
-                    ssl_profile->ssl_password = strdup(buffer);
-                }
-                fclose(file);
-            }
-        }
+        set_password_from_file(password_file, &ssl_profile->ssl_password);
         free(password_file);
     }
     ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
