@@ -107,8 +107,6 @@
 		      <exclude>**/sasl-password-file.txt</exclude>
                       <exclude>**/server-password-file.txt</exclude>
                       <exclude>**/server-password-file-bad.txt</exclude>
-		      <exclude>**/server-password-file-env.txt</exclude>
-		      <exclude>**/server-password-file-literal.txt</exclude>
                       <exclude>**/client-password-file.txt</exclude>
                       <exclude>**/*.pkcs12</exclude>
                       <exclude>**/.idea/**</exclude> <!-- This is for ignoring the intellij idea project files -->

@@ -38,8 +38,6 @@ class QdSSLUseridTest(TestCase):
     def setUpClass(cls):
         super(QdSSLUseridTest, cls).setUpClass()
 
-        os.environ["TLS_SERVER_PASSWORD"] = "server-password"
-
         ssl_profile1_json = os.path.join(DIR, 'displayname_files', 'profile_names1.json')
         ssl_profile2_json = os.path.join(DIR, 'displayname_files', 'profile_names2.json')
 
@@ -125,7 +123,7 @@ class QdSSLUseridTest(TestCase):
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'uidFormat': '1x',
                              'uidNameMappingFile': ssl_profile2_json,
-                             'passwordFile': cls.ssl_file('server-password-file-literal.txt')}),
+                             'password': 'server-password'}),
 
             # All components in the uidFormat are unrecognized, pn_get_transport_user will be returned
             ('sslProfile', {'name': 'server-ssl11',
@@ -133,7 +131,7 @@ class QdSSLUseridTest(TestCase):
                              'certFile': cls.ssl_file('server-certificate.pem'),
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'uidFormat': 'abxd',
-                             'passwordFile': cls.ssl_file('server-password-file-env.txt')}),
+                             'password': 'server-password'}),
 
             ('sslProfile', {'name': 'server-ssl12',
                              'caCertFile': cls.ssl_file('ca-certificate.pem'),
