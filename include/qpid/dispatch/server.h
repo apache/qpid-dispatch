@@ -205,15 +205,8 @@ typedef struct qd_server_config_t {
     char *sasl_username;
 
     /**
-     * The full path of the file that contains the sasl password. Use this instead of sasl_password.
-     */
-    char *sasl_password_file;
-
-    /**
      * If appropriate for the mechanism, the password for authentication
      * (connector only)
-     *
-     * Deprecated - Use sasl_password_file instead.
      */
     char *sasl_password;
 

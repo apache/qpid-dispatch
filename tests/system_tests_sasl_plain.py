@@ -58,9 +58,6 @@ sql_select: dummy select
 """)
 
 class RouterTestPlainSasl(RouterTestPlainSaslCommon):
-    @staticmethod
-    def sasl_password_file(name):
-        return os.path.join(DIR, 'sasl_password', name)
 
     @classmethod
     def setUpClass(cls):
@@ -104,7 +101,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                    'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
-                                    'saslPasswordFile': cls.sasl_password_file('sasl-password-file.txt')}),
+                                    'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),
@@ -197,10 +194,6 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
 
-    @staticmethod
-    def sasl_password_file(name):
-        return os.path.join(DIR, 'sasl_password', name)
-
     @classmethod
     def setUpClass(cls):
         """
@@ -255,7 +248,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
-                                    'saslPasswordFile': cls.sasl_password_file('sasl-password-file.txt')}),
+                                    'saslPassword': 'password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),

@@ -370,7 +370,7 @@ connector {
     ...
     saslMechanisms: _MECHANISMS_
     saslUsername: _USERNAME_
-    saslPasswordFile: _ABSOLUTE PATH_
+    saslPassword: _PASSWORD_
 }
 ----
 
@@ -378,7 +378,7 @@ connector {
 +
 For a full list of supported Cyrus SASL authentication mechanisms, see link:https://www.cyrusimap.org/sasl/sasl/authentication_mechanisms.html[Authentication Mechanisms^].
 `saslUsername`:: If any of the SASL mechanisms uses username/password authentication, then provide the username to connect to the external container.
-`saslPasswordFile`:: If any of the SASL mechanisms uses username/password authentication, then provide the absolute path to the file that contains the password to connect to the external container.
+`saslPassword`:: If any of the SASL mechanisms uses username/password authentication, then provide the password to connect to the external container.
 --
 
 [id='integrating-with-kerberos']
