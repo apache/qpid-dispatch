@@ -206,9 +206,8 @@ class ThreeRouterTest(TestCase):
                               message=message)
         ats.wait()
         self.assertEqual(0, ats.accepted)
-        # BUG DISPATCH-1418: shold be released!
-        # self.assertEqual(1, ats.released)
-        self.assertEqual(1, ats.rejected)
+        self.assertEqual(1, ats.released)
+        self.assertEqual(0, ats.rejected)
 
 
 if __name__ == '__main__':
