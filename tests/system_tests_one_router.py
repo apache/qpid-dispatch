@@ -686,6 +686,7 @@ class SemanticsMulticast(MessagingHandler):
         self.n_received_b = 0
         self.n_received_c = 0
         self.n_accepts = 0
+        self.n_recv_ready = 0
         self.timer = None
         self.conn_1 = None
         self.conn_2 = None
@@ -698,7 +699,6 @@ class SemanticsMulticast(MessagingHandler):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn_1 = event.container.connect(self.address)
         self.conn_2 = event.container.connect(self.address)
-        self.sender = event.container.create_sender(self.conn_1, self.dest)
         self.receiver_a = event.container.create_receiver(self.conn_2, self.dest, name="A")
         self.receiver_b = event.container.create_receiver(self.conn_1, self.dest, name="B")
         self.receiver_c = event.container.create_receiver(self.conn_2, self.dest, name="C")
@@ -719,6 +719,12 @@ class SemanticsMulticast(MessagingHandler):
             self.timer.cancel()
             self.conn_1.close()
             self.conn_2.close()
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.n_recv_ready += 1
+            if self.n_recv_ready == self.count:
+                self.sender = event.container.create_sender(self.conn_1, self.dest)
 
     def on_sendable(self, event):
         if self.n_sent == 0:
