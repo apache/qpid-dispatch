@@ -119,6 +119,11 @@ var utils = {
     if (!isNaN(parseFloat(v)) && isFinite(v)) return formatComma(v);
     return v;
   },
+  strDate: function(date) {
+    return `${(date.getHours() + "").padStart(2, "0")}:${(
+      date.getMinutes() + ""
+    ).padStart(2, "0")}:${(date.getSeconds() + "").padStart(2, "0")}`;
+  },
   isMSIE: function() {
     return document.documentMode || /Edge/.test(navigator.userAgent);
   },

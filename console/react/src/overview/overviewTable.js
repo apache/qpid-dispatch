@@ -1,39 +1,20 @@
 import React from "react";
-import {
-  Table,
-  TableHeader,
-  TableBody,
-  textCenter
-} from "@patternfly/react-table";
+import { Table, TableHeader, TableBody } from "@patternfly/react-table";
 
 import { Pagination, Title } from "@patternfly/react-core";
+import TableToolbar from "./tableToolbar";
 
 class OverviewTable extends React.Component {
-  constructor(props) {
+  constructor(props, helper) {
     super(props);
     this.state = {
-      res: [],
-      perPage: 20,
-      total: 100,
+      sortBy: {},
+      perPage: 10,
+      total: 1,
       page: 1,
-      error: null,
       loading: true,
-      columns: [
-        { title: "Router" },
-        "Area",
-        { title: "Mode" },
-        "Addresses",
-        {
-          title: "Links",
-          transforms: [textCenter],
-          cellTransforms: [textCenter]
-        },
-        {
-          title: "External connections",
-          transforms: [textCenter],
-          cellTransforms: [textCenter]
-        }
-      ],
+      columns: helper.fields,
+      allRows: [],
       rows: [
         {
           cells: ["QDR.A", "0", "interior", "1", "2", "3"]
@@ -66,17 +47,28 @@ class OverviewTable extends React.Component {
     };
   }
 
-  fetch(page, perPage) {
+  fetch = (page, perPage) => {
     this.setState({ loading: true });
-    fetch(
-      `https://jsonplaceholder.typicode.com/posts?_page=${page}&_limit=${perPage}`
-    )
-      .then(resp => resp.json())
-      .then(resp => this.setState({ res: resp, perPage, page, loading: false }))
-      .catch(err => this.setState({ error: err, loading: false }));
-  }
+    this.helper.fetch(perPage, page, this.state.sortBy).then(sliced => {
+      const { rows, page, total, allRows } = sliced;
+      this.setState({
+        rows,
+        loading: false,
+        perPage,
+        page,
+        total,
+        allRows
+      });
+    });
+  };
+
+  onSort = (_event, index, direction) => {
+    const rows = this.helper.sort(this.state.allRows, index, direction);
+    this.setState({ rows, page: 1, sortBy: { index, direction } });
+  };
 
   componentDidMount() {
+    console.log("overviewTable componentDidMount");
     this.fetch(this.state.page, this.state.perPage);
   }
 
@@ -94,17 +86,37 @@ class OverviewTable extends React.Component {
     );
   }
 
+  onSetPage = value => {
+    this.fetch(value, this.state.perPage);
+  };
+  onPerPageSelect = value => {
+    this.fetch(1, value);
+  };
   render() {
+    console.log("OverviewTable rendered");
     const { loading } = this.state;
     return (
       <React.Fragment>
-        {this.renderPagination()}
+        <TableToolbar
+          total={this.state.total}
+          page={this.state.page}
+          perPage={this.state.perPage}
+          onSetPage={this.onSetPage}
+          onPerPageSelect={this.onPerPageSelect}
+        />
         {!loading && (
-          <Table cells={this.state.columns} rows={this.state.rows}>
+          <Table
+            cells={this.state.columns}
+            rows={this.state.rows}
+            aria-label={this.props.entity}
+            sortBy={this.state.sortBy}
+            onSort={this.onSort}
+          >
             <TableHeader />
             <TableBody />
           </Table>
         )}
+        {this.renderPagination("bottom")}
         {loading && (
           <center>
             <Title size="3xl">Please wait while loading data</Title>

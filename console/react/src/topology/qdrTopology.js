@@ -168,6 +168,7 @@ class TopologyPage extends Component {
     this.traffic.remove();
     this.forceData.nodes.savePositions();
     window.removeEventListener("resize", this.resize);
+    d3.select(".pf-c-page__main").style("background-color", "white");
   };
 
   resize = () => {

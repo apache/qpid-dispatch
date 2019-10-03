@@ -8,15 +8,32 @@ import {
   TextVariants
 } from "@patternfly/react-core";
 import { Card, CardBody } from "@patternfly/react-core";
-import OverviewTable from "./overviewTable";
 
-class OverviewChartsPage extends React.Component {
+import RoutersTable from "./routersTable";
+import AddressesTable from "./addressesTable";
+class OverviewTablePage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {};
   }
 
+  whichTable = () => {
+    if (this.props.entity === "routers") {
+      return (
+        <RoutersTable entity={this.props.entity} service={this.props.service} />
+      );
+    }
+    if (this.props.entity === "addresses") {
+      return (
+        <AddressesTable
+          entity={this.props.entity}
+          service={this.props.service}
+        />
+      );
+    }
+  };
   render() {
+    console.log("OverviewTablePage render");
     return (
       <React.Fragment>
         <PageSection
@@ -33,12 +50,7 @@ class OverviewChartsPage extends React.Component {
             </StackItem>
             <StackItem className="overview-table">
               <Card>
-                <CardBody>
-                  <OverviewTable
-                    tableInfo={this.props.tableInfo}
-                    entity={this.props.entity}
-                  />
-                </CardBody>
+                <CardBody>{this.whichTable()}</CardBody>
               </Card>
             </StackItem>
           </Stack>
@@ -48,4 +60,4 @@ class OverviewChartsPage extends React.Component {
   }
 }
 
-export default OverviewChartsPage;
+export default OverviewTablePage;

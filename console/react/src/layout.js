@@ -1,3 +1,22 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
 import React from "react";
 import {
   Avatar,
@@ -20,16 +39,15 @@ import {
   NavList,
   PageSidebar
 } from "@patternfly/react-core";
-// make sure you've installed @patternfly/patternfly
+
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import spacingStyles from "@patternfly/patternfly/utilities/Spacing/spacing.css";
 import { css } from "@patternfly/react-styles";
 import { BellIcon, CogIcon } from "@patternfly/react-icons";
-import ShowD3SVG from "./show-d3-svg";
 import ConnectForm from "./connect-form";
 import ConnectPage from "./connectPage";
-import OverviewChartsPage from "./overviewChartsPage";
-import OverviewTablePage from "./overviewTablePage";
+import DashboardPage from "./overview/dashboard/dashboardPage";
+import OverviewTablePage from "./overview/overviewTablePage";
 import TopologyPage from "./topology/qdrTopology";
 import MessageFlowPage from "./chord/qdrChord";
 import { QDRService } from "./qdrService";
@@ -43,31 +61,50 @@ class PageLayout extends React.Component {
       isDropdownOpen: false,
       isKebabDropdownOpen: false,
       activeGroup: "overview",
-      activeItem: "charts"
+      activeItem: "dashboard"
     };
-    this.tableInfo = {
-      routers: [
-        { fieldName: "name", displayName: "Router" },
-        { name: "role" },
-        { name: "mode" },
-        {
-          fieldName: "addresses",
-          displayName: "Addresses",
-          getter: this.getAddresses
-        }
+    this.tables = ["routers", "addresses", "links", "connections", "logs"];
+
+    /*
+    links: [
+        { title: "name", displayName: "Link" },
+        { title: "linkType" },
+        { title: "linkDir" },
+        { title: "adminStatus" },
+        { title: "operStatus" },
+        { title: "deliveryCount" },
+        { title: "rate" },
+        { title: "delayed1Sec" },
+        { title: "delayed10Sec" },
+        { title: "outstanding" },
+        { title: "address" }
+      ],
+      connections: [
+        { title: "name", displayName: "host" },
+        { title: "container" },
+        { title: "role" },
+        { title: "dir" },
+        { title: "security" },
+        { title: "authentication" },
+        { title: "close" }
+      ],
+      logs: [
+        { title: "Module" },
+        { title: "Notice" },
+        { title: "Info" },
+        { title: "Trace" },
+        { title: "Debug" },
+        { title: "Warning" },
+        { title: "Error" },
+        { title: "Critical" }
       ]
-    };
+      */
     this.hooks = { setLocation: this.setLocation };
     this.service = new QDRService(this.hooks);
   }
 
   setLocation = where => {
     //console.log(`setLocation to ${where}`);
-  };
-  getAddresses = (field, data) => {
-    return new Promise((resolve, reject) => {
-      resolve("2");
-    });
   };
 
   onDropdownToggle = isDropdownOpen => {
@@ -116,6 +153,7 @@ class PageLayout extends React.Component {
       activeGroup: result.groupId
     });
   };
+  icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
   render() {
     const {
@@ -126,7 +164,7 @@ class PageLayout extends React.Component {
     } = this.state;
 
     const PageNav = (
-      <Nav onSelect={this.onNavSelect} aria-label="Nav">
+      <Nav onSelect={this.onNavSelect} aria-label="Nav" className="pf-m-dark">
         <NavList>
           <NavExpandable
             title="Overview"
@@ -136,46 +174,23 @@ class PageLayout extends React.Component {
           >
             <NavItem
               groupId="overview"
-              itemId="charts"
-              isActive={activeItem === "charts"}
+              itemId="dashboard"
+              isActive={activeItem === "dashboard"}
             >
-              Charts
+              Dashboard
             </NavItem>
-            <NavItem
-              groupId="overview"
-              itemId="routers"
-              isActive={activeItem === "routers"}
-            >
-              Routers
-            </NavItem>
-            <NavItem
-              groupId="overview"
-              itemId="addresses"
-              isActive={activeItem === "addresses"}
-            >
-              Addresses
-            </NavItem>
-            <NavItem
-              groupId="overview"
-              itemId="links"
-              isActive={activeItem === "links"}
-            >
-              Links
-            </NavItem>
-            <NavItem
-              groupId="overview"
-              itemId="connections"
-              isActive={activeItem === "connections"}
-            >
-              Connections
-            </NavItem>
-            <NavItem
-              groupId="overview"
-              itemId="logs"
-              isActive={activeItem === "logs"}
-            >
-              Logs
-            </NavItem>
+            {this.tables.map(t => {
+              return (
+                <NavItem
+                  groupId="overview"
+                  itemId={t}
+                  isActive={activeItem === { t }}
+                  key={t}
+                >
+                  {this.icap(t)}
+                </NavItem>
+              );
+            })}
           </NavExpandable>
           <NavExpandable
             title="Visualizations"
@@ -314,39 +329,26 @@ class PageLayout extends React.Component {
     const Header = (
       <PageHeader
         className="topology-header"
-        logo={
-          <React.Fragment>
-            <ShowD3SVG
-              className="topology-logo"
-              topology="ted"
-              routers={6}
-              center={false}
-              dimensions={{ width: 200, height: 75 }}
-              radius={6}
-              thumbNail={true}
-              notifyCurrentRouter={() => {}}
-            />
-            <span className="logo-text">Apache Qpid Dispatch Console</span>
-          </React.Fragment>
-        }
+        logo={<span className="logo-text">Apache Qpid Dispatch Console</span>}
         toolbar={PageToolbar}
         avatar={<Avatar src={avatarImg} alt="Avatar image" />}
+        showNavToggle
       />
     );
-    const Sidebar = <PageSidebar nav={PageNav} className="qdr-sidebar" />;
+    const Sidebar = <PageSidebar nav={PageNav} className="pf-m-dark" />;
     const pageId = "main-content-page-layout-expandable-nav";
     const PageSkipToContent = (
       <SkipToContent href={`#${pageId}`}>Skip to Content</SkipToContent>
     );
     const activeItemToPage = () => {
       if (this.state.activeGroup === "overview") {
-        if (this.state.activeItem === "charts") {
-          return <OverviewChartsPage />;
+        if (this.state.activeItem === "dashboard") {
+          return <DashboardPage service={this.service} />;
         }
         return (
           <OverviewTablePage
             entity={this.state.activeItem}
-            tableInfo={this.tableInfo[this.state.activeItem]}
+            service={this.service}
           />
         );
       } else if (this.state.activeGroup === "visualizations") {
@@ -357,7 +359,7 @@ class PageLayout extends React.Component {
         }
       }
       //console.log("using overview charts page");
-      return <OverviewChartsPage />;
+      return <DashboardPage service={this.service} />;
     };
 
     if (!this.state.connected) {

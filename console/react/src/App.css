@@ -1,5 +1,10 @@
+#root {
+  height: 100vh;
+}
+
 .App {
   text-align: center;
+  height: 100%;
 }
 
 .App-logo {
@@ -256,6 +261,8 @@ table.edge-table td[data-label="State"] svg {
   text-decoration: none;
   color: white;
   font-weight: bold;
+  letter-spacing: 0.2em;
+  font-size: 18px;
 }
 
 .state-copy input {
@@ -726,6 +733,10 @@ table.popupTable tr.header {
   width: auto;
 }
 
+ul.pf-c-nav__list * {
+  text-align: left;
+}
+
 @media (max-width: 768px) {
   .navbar-collapse.page-menu {
     left: 0;
@@ -820,4 +831,80 @@ div.qdrChord .legend-text {
 
 .context-menu .menu-item.disabled:hover {
   background-color: white;
+}
+
+.overview-charts-page .pf-c-card__header.pf-c-title {
+  text-align: left;
+  font-size: 22px;
+}
+
+.overview-charts-page div.time-period {
+  font-size: 18px;
+  color: #888;
+}
+
+.chart-container {
+  display: flex;
+}
+
+.dashboard-chart {
+  flex-grow: 1;
+  padding: 1em 2em 1em 0;
+}
+
+.dashboard-stat {
+  width: 10em;
+  margin-top: auto;
+  text-align: left;
+  margin-right: 2em;
+  padding: 1em 1em 1em 0;
+}
+
+.deliveries-stat {
+  font-size: 30px;
+}
+
+.deliveries-title {
+  white-space: nowrap;
+  font-size: 20px;
+  color: #888;
+}
+
+.duration-tabs {
+  position: absolute;
+  right: 1.5em;
+}
+
+.duration-tabs li {
+  font-weight: bold;
+  padding-bottom: 0.25em;
+}
+
+.duration-tabs li.selected {
+  border-bottom: 4px solid blue;
+}
+
+.overview-charts-page .pf-c-table caption {
+  border-bottom: 1px solid #eaeaea;
+}
+.overview-charts-page .pf-c-table caption .caption {
+  display: inline-block;
+  font-size: 22px;
+  color: black;
+}
+
+.overview-charts-page .pf-c-table caption .updated {
+  font-size: 18px;
+  color: #888;
+  white-space: nowrap;
+  padding-right: 2em;
+}
+
+.toolbar-pagination {
+  margin-left: auto;
+  margin-right: 0 !important;
+}
+
+.table-toolbar {
+  margin-right: 0 !important;
 }
