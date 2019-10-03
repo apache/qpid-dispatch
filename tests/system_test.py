@@ -51,6 +51,7 @@ from proton import Delivery
 from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
 from proton.reactor import AtLeastOnce, Container
+from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
 
@@ -840,12 +841,14 @@ class AsyncTestSender(MessagingHandler):
         def __init__(self, error=None):
             super(AsyncTestSender.TestSenderException, self).__init__(error)
 
-    def __init__(self, address, target, count=1, message=None, container_id=None):
+    def __init__(self, address, target, count=1, message=None,
+                 container_id=None, presettle=False):
         super(AsyncTestSender, self).__init__(auto_accept=False,
                                               auto_settle=False)
         self.address = address
         self.target = target
         self.total = count
+        self.presettle = presettle
         self.accepted = 0
         self.released = 0
         self.modified = 0
@@ -877,19 +880,22 @@ class AsyncTestSender(MessagingHandler):
         self._conn = self._container.connect(self.address)
 
     def on_connection_opened(self, event):
+        option = AtMostOnce if self.presettle else AtLeastOnce
         self._sender = self._container.create_sender(self._conn,
                                                      target=self.target,
-                                                     options=AtLeastOnce())
+                                                     options=option())
 
     def on_sendable(self, event):
         if self.sent < self.total:
             self._sender.send(self._message)
             self.sent += 1
+        self._check_if_done()
 
     def _check_if_done(self):
         done = (self.sent == self.total
-                and (self.accepted + self.released + self.modified
-                     + self.rejected) == self.sent)
+                and (self.presettle
+                     or (self.accepted + self.released + self.modified
+                         + self.rejected == self.sent)))
         if done:
             self._conn.close()
             self._conn = None

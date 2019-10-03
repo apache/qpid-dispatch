@@ -449,11 +449,17 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         qdr_delivery_release_CT(core, dlv);
 
-        if (!link->edge) {
+        //
+        // Credit update: since this is a targeted link to an address for which
+        // there is no consumers then do not replenish credit - drain instead.
+        // However edge and multicast are special snowflakes.  We cannot block
+        // credit on either (see DISPATCH-779 - mcast is effectively a topic)
+        //
+        if (link->edge || qdr_is_addr_treatment_multicast(addr)) {
+            qdr_link_issue_credit_CT(core, link, 1, false);
+        } else {
             qdr_link_issue_credit_CT(core, link, 0, true);  // drain
             link->credit_pending++;
-        } else {
-            qdr_link_issue_credit_CT(core, link, 1, false);
         }
 
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");

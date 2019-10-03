@@ -38,6 +38,7 @@ from proton import Link
 from proton import Message
 from proton import Delivery
 from qpid_dispatch.management.client import Node
+from system_test import AsyncTestSender
 from system_test import TestCase
 from system_test import Qdrouterd
 from system_test import main_module
@@ -46,6 +47,7 @@ from system_test import TestTimeout
 
 
 MAX_FRAME=1023
+LINK_CAPACITY=250
 W_THREADS=2
 LARGE_PAYLOAD = ("X" * MAX_FRAME) * 19
 
@@ -73,7 +75,8 @@ class MulticastLinearTest(TestCase):
                             'workerThreads': W_THREADS}),
                 ('listener', {'role': 'normal',
                               'port': cls.tester.get_port(),
-                              'maxFrameSize': MAX_FRAME}),
+                              'maxFrameSize': MAX_FRAME,
+                              'linkCapacity': LINK_CAPACITY}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
             ]
 
@@ -391,6 +394,25 @@ class MulticastLinearTest(TestCase):
         test = MulticastUnsettled3AckMA(self.config, 10, body)
         test.run()
         self.assertEqual(None, test.error)
+
+    def test_90_no_subscribers(self):
+        # DISPATCH-779: ensure credit is available even if there are no
+        # subscribers
+        tx = AsyncTestSender(address=self.EA1.listener,
+                             target='multicast/no/subscriber',
+                             count=LINK_CAPACITY * 2,
+                             presettle=True,
+                             container_id="test_90_presettled")
+        tx.wait()
+        self.assertEqual(None, tx.error)
+
+        tx = AsyncTestSender(address=self.EA1.listener,
+                             target='multicast/no/subscriber',
+                             count=LINK_CAPACITY * 2,
+                             presettle=False,
+                             container_id="test_90_unsettled")
+        tx.wait()
+        self.assertEqual(500, tx.released)
 
     def test_999_check_for_leaks(self):
         self._check_for_leaks()
@@ -887,6 +909,7 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
             self.done()
             return
         super(MulticastUnsettled3AckMA, self).on_message(event)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
