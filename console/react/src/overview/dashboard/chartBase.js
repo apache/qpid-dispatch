@@ -40,10 +40,12 @@ class ChartBase extends React.Component {
   }
 
   componentDidMount = () => {
+    this.mounted = true;
     this.timer = setInterval(this.updateData, 1000);
   };
 
   componentWillUnmount = () => {
+    this.mounted = false;
     clearInterval(this.timer);
   };
 
@@ -62,6 +64,7 @@ class ChartBase extends React.Component {
     if (!this.initialized) {
       this.init(datum);
     }
+    if (!this.mounted) return;
     const { rates } = this.state;
     this.rawData.push(datum);
     this.rawData.splice(0, 1);

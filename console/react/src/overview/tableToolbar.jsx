@@ -16,32 +16,47 @@ class TableToolbar extends React.Component {
     super(props);
     this.state = {
       isDropDownOpen: false,
-      searchValue: ""
+      searchValue: "",
+      filterBy: this.props.fields[0].title
     };
     this.handleTextInputChange = value => {
-      this.setState({ searchValue: value });
+      this.setState({ searchValue: value }, () => {
+        this.props.handleChangeFilterValue(
+          this.state.filterBy,
+          this.state.searchValue
+        );
+      });
     };
 
-    this.onDropDownToggle = isOpen => {
+    this.onDropDownToggle = isDropDownOpen => {
       this.setState({
-        isDropDownOpen: isOpen
+        isDropDownOpen
       });
     };
 
     this.onDropDownSelect = event => {
-      this.setState({
-        isDropDownOpen: !this.state.isDropDownOpen
-      });
+      this.setState(
+        {
+          isDropDownOpen: !this.state.isDropDownOpen,
+          filterBy: event.target.text,
+          searchValue: ""
+        },
+        () =>
+          this.props.handleChangeFilterValue(
+            this.state.filterBy,
+            this.state.searchValue
+          )
+      );
     };
 
     this.buildSearchBox = () => {
-      let { value } = this.state.searchValue;
       return (
         <TextInput
-          value={value ? value : ""}
+          value={this.state.searchValue}
           type="search"
           onChange={this.handleTextInputChange}
           aria-label="search text input"
+          placeholder="Filter by..."
         />
       );
     };
@@ -54,18 +69,15 @@ class TableToolbar extends React.Component {
           position={DropdownPosition.right}
           toggle={
             <DropdownToggle onToggle={this.onDropDownToggle}>
-              All
+              {this.state.filterBy}
             </DropdownToggle>
           }
           isOpen={isDropDownOpen}
-          dropdownItems={[
-            <DropdownItem key="item-1">Item 1</DropdownItem>,
-            <DropdownItem key="item-2">Item 2</DropdownItem>,
-            <DropdownItem key="item-3">Item 3</DropdownItem>,
-            <DropdownItem isDisabled key="all">
-              All
-            </DropdownItem>
-          ]}
+          dropdownItems={this.props.fields.map(f => {
+            return (
+              <DropdownItem key={`item-${f.title}`}>{f.title}</DropdownItem>
+            );
+          })}
         />
       );
     };

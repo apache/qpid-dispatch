@@ -902,9 +902,12 @@ div.qdrChord .legend-text {
 
 .toolbar-pagination {
   margin-left: auto;
-  margin-right: 0 !important;
 }
 
-.table-toolbar {
+.overview-table .pf-m-footer {
+  padding-right: 2em;
+}
+
+.table-toolbar .pf-l-toolbar__item {
   margin-right: 0 !important;
 }

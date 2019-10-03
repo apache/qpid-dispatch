@@ -24,11 +24,13 @@ class DelayedDeliveriesCard extends React.Component {
   }
 
   componentDidMount = () => {
+    this.mounted = true;
     this.timer = setInterval(this.updateData, UPDATE_INTERVAL);
     this.updateData();
   };
 
   componentWillUnmount = () => {
+    this.mounted = false;
     clearInterval(this.timer);
   };
 
@@ -38,6 +40,7 @@ class DelayedDeliveriesCard extends React.Component {
     this.props.service.management.topology.fetchAllEntities(
       [{ entity: "router.link" }, { entity: "connection" }],
       nodes => {
+        if (!this.mounted) return;
         for (let node in nodes) {
           let response = nodes[node]["router.link"];
           // eslint-disable-next-line no-loop-func

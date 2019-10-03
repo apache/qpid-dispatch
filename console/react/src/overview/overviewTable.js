@@ -5,7 +5,7 @@ import { Pagination, Title } from "@patternfly/react-core";
 import TableToolbar from "./tableToolbar";
 
 class OverviewTable extends React.Component {
-  constructor(props, helper) {
+  constructor(props) {
     super(props);
     this.state = {
       sortBy: {},
@@ -13,7 +13,7 @@ class OverviewTable extends React.Component {
       total: 1,
       page: 1,
       loading: true,
-      columns: helper.fields,
+      columns: [],
       allRows: [],
       rows: [
         {
@@ -45,11 +45,35 @@ class OverviewTable extends React.Component {
         }
       ]
     };
+    this.helper = null; // set in parent class
   }
 
+  componentDidMount() {
+    this.mounted = true;
+    console.log("overviewTable componentDidMount");
+    // initialize the columns and get the data
+    this.setState({ columns: this.helper.fields }, () => {
+      this.update();
+      this.timer = setInterval(this.upate, 5000);
+    });
+  }
+
+  componentWillUnmount = () => {
+    this.mounted = false;
+    clearInterval(this.timer);
+  };
+
+  update = () => {
+    this.fetch(this.state.page, this.state.perPage);
+  };
+
   fetch = (page, perPage) => {
+    if (!this.mounted) return;
     this.setState({ loading: true });
     this.helper.fetch(perPage, page, this.state.sortBy).then(sliced => {
+      // if fetch was called and the component was unmounted before
+      // the results arrived, don't call setState
+      if (!this.mounted) return;
       const { rows, page, total, allRows } = sliced;
       this.setState({
         rows,
@@ -66,11 +90,6 @@ class OverviewTable extends React.Component {
     const rows = this.helper.sort(this.state.allRows, index, direction);
     this.setState({ rows, page: 1, sortBy: { index, direction } });
   };
-
-  componentDidMount() {
-    console.log("overviewTable componentDidMount");
-    this.fetch(this.state.page, this.state.perPage);
-  }
 
   renderPagination(variant = "top") {
     const { page, perPage, total } = this.state;
@@ -92,6 +111,9 @@ class OverviewTable extends React.Component {
   onPerPageSelect = value => {
     this.fetch(1, value);
   };
+  handleChangeFilterValue = (field, value) => {
+    console.log(`handleChangeFilterValue(${field}, ${value})`);
+  };
   render() {
     console.log("OverviewTable rendered");
     const { loading } = this.state;
@@ -103,6 +125,8 @@ class OverviewTable extends React.Component {
           perPage={this.state.perPage}
           onSetPage={this.onSetPage}
           onPerPageSelect={this.onPerPageSelect}
+          fields={this.helper.fields}
+          handleChangeFilterValue={this.handleChangeFilterValue}
         />
         {!loading && (
           <Table

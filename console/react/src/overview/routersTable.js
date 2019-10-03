@@ -22,9 +22,8 @@ import RouterHelper from "./routerHelper";
 
 class RoutersTable extends OverviewTable {
   constructor(props) {
-    const helper = new RouterHelper(props.service);
-    super(props, helper);
-    this.helper = helper;
+    super(props);
+    this.helper = new RouterHelper(this.props.service);
   }
 }
 

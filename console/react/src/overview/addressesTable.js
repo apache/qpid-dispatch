@@ -22,9 +22,8 @@ import AddressHelper from "./addressHelper";
 
 class AddressesTable extends OverviewTable {
   constructor(props) {
-    const helper = new AddressHelper(props.service);
-    super(props, helper);
-    this.helper = helper;
+    super(props);
+    this.helper = new AddressHelper(this.props.service);
   }
 }
 

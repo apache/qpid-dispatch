@@ -15,11 +15,13 @@ class ActiveAddressesCard extends React.Component {
   }
 
   componentDidMount = () => {
+    this.mounted = true;
     this.timer = setInterval(this.updateData, UPDATE_INTERVAL);
     this.updateData();
   };
 
   componentWillUnmount = () => {
+    this.mounted = false;
     clearInterval(this.timer);
   };
 
@@ -30,6 +32,7 @@ class ActiveAddressesCard extends React.Component {
         attrs: ["settleRate", "linkType", "linkDir", "owningAddr"]
       },
       results => {
+        if (!this.mounted) return;
         let active = {};
         for (let id in results) {
           const aresult = results[id]["router.link"];
