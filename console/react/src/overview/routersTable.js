@@ -17,14 +17,51 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import OverviewTable from "./overviewTable";
-import RouterHelper from "./routerHelper";
+import { sortable } from "@patternfly/react-table";
+import OverviewTableBase from "./overviewTableBase";
 
-class RoutersTable extends OverviewTable {
+class RoutersTable extends OverviewTableBase {
   constructor(props) {
     super(props);
-    this.helper = new RouterHelper(this.props.service);
+    this.fields = [
+      { title: "Router", field: "name", transforms: [sortable] },
+      { title: "Area", field: "area" },
+      { title: "Mode", field: "mode" },
+      { title: "Addresses", field: "addrCount" },
+      { title: "Links", field: "linkCount" },
+      { title: "External connections", field: "connections" }
+    ];
   }
+  doFetch = (page, perPage) => {
+    return new Promise(resolve => {
+      this.props.service.management.topology.fetchAllEntities(
+        [{ entity: "connection", attrs: ["role"] }, { entity: "router" }],
+        nodes => {
+          // we have all the data now in the nodes object
+          let allRouterFields = [];
+          for (let node in nodes) {
+            let connections = 0;
+            for (let i = 0; i < nodes[node]["connection"].results.length; ++i) {
+              // we only requested "role" so it will be at [0]
+              if (nodes[node]["connection"].results[i][0] !== "inter-router")
+                ++connections;
+            }
+            let routerRow = {
+              connections: connections,
+              nodeId: node,
+              id: this.props.service.utilities.nameFromId(node)
+            };
+            nodes[node]["router"].attributeNames.forEach((routerAttr, i) => {
+              if (routerAttr !== "routerId" && routerAttr !== "id")
+                routerRow[routerAttr] = nodes[node]["router"].results[0][i];
+            });
+            allRouterFields.push(routerRow);
+          }
+          resolve(this.slice(allRouterFields, page, perPage));
+        }
+      );
+    });
+  };
 }
 
 export default RoutersTable;

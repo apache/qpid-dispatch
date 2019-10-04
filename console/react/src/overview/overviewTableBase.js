@@ -1,14 +1,20 @@
 import React from "react";
-import { Table, TableHeader, TableBody } from "@patternfly/react-table";
-
+import {
+  SortByDirection,
+  Table,
+  TableHeader,
+  TableBody
+} from "@patternfly/react-table";
 import { Pagination, Title } from "@patternfly/react-core";
+
 import TableToolbar from "./tableToolbar";
 
-class OverviewTable extends React.Component {
+class OverviewTableBase extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
       sortBy: {},
+      filterBy: {},
       perPage: 10,
       total: 1,
       page: 1,
@@ -45,14 +51,13 @@ class OverviewTable extends React.Component {
         }
       ]
     };
-    this.helper = null; // set in parent class
   }
 
   componentDidMount() {
     this.mounted = true;
     console.log("overviewTable componentDidMount");
     // initialize the columns and get the data
-    this.setState({ columns: this.helper.fields }, () => {
+    this.setState({ columns: this.fields }, () => {
       this.update();
       this.timer = setInterval(this.upate, 5000);
     });
@@ -68,9 +73,9 @@ class OverviewTable extends React.Component {
   };
 
   fetch = (page, perPage) => {
-    if (!this.mounted) return;
     this.setState({ loading: true });
-    this.helper.fetch(perPage, page, this.state.sortBy).then(sliced => {
+    // doFetch is defined in the derived class
+    this.doFetch(page, perPage).then(sliced => {
       // if fetch was called and the component was unmounted before
       // the results arrived, don't call setState
       if (!this.mounted) return;
@@ -78,8 +83,8 @@ class OverviewTable extends React.Component {
       this.setState({
         rows,
         loading: false,
-        perPage,
         page,
+        perPage,
         total,
         allRows
       });
@@ -87,7 +92,7 @@ class OverviewTable extends React.Component {
   };
 
   onSort = (_event, index, direction) => {
-    const rows = this.helper.sort(this.state.allRows, index, direction);
+    const rows = this.sort(this.state.allRows, index, direction);
     this.setState({ rows, page: 1, sortBy: { index, direction } });
   };
 
@@ -98,8 +103,8 @@ class OverviewTable extends React.Component {
         itemCount={total}
         page={page}
         perPage={perPage}
-        onSetPage={(_evt, value) => this.fetch(value, perPage)}
-        onPerPageSelect={(_evt, value) => this.fetch(1, value)}
+        onSetPage={(_evt, value) => this.onSetPage(value)}
+        onPerPageSelect={(_evt, value) => this.onPerPageSelect(value)}
         variant={variant}
       />
     );
@@ -112,8 +117,63 @@ class OverviewTable extends React.Component {
     this.fetch(1, value);
   };
   handleChangeFilterValue = (field, value) => {
+    this.setState({ filterBy: { field, value } }, this.update);
     console.log(`handleChangeFilterValue(${field}, ${value})`);
   };
+
+  field2Row = field => ({
+    cells: this.fields.map(f => field[f.field])
+  });
+
+  cellIndex = field => {
+    return this.fields.findIndex(f => {
+      return f.title === field;
+    });
+  };
+  slice = (fields, page, perPage) => {
+    const filterField = this.state.filterBy.field;
+    const filterValue = this.state.filterBy.value;
+    let rows = fields.map(f => this.field2Row(f));
+    if (
+      typeof filterField !== "undefined" &&
+      typeof filterValue !== "undefined" &&
+      filterValue !== ""
+    ) {
+      const cellIndex = this.cellIndex(filterField);
+      rows = rows.filter(r => {
+        return r.cells[cellIndex].includes(filterValue);
+      });
+    }
+    rows = this.sort(rows);
+    const total = rows.length;
+    const newPages = Math.ceil(total / perPage);
+    page = Math.min(page, newPages);
+    const start = perPage * (page - 1);
+    const end = Math.min(start + perPage, rows.length);
+    const slicedRows = rows.slice(start, end);
+    return { rows: slicedRows, page, total, allRows: rows };
+  };
+
+  sort = rows => {
+    if (
+      typeof this.state.index === "undefined" ||
+      typeof this.state.direction === "undefined"
+    ) {
+      return rows;
+    }
+    rows.sort((a, b) =>
+      a.cells[this.sate.index] < b.cells[this.sate.index]
+        ? -1
+        : a.cells[this.sate.index] > b.cells[this.sate.index]
+        ? 1
+        : 0
+    );
+    if (this.sate.direction === SortByDirection.desc) {
+      rows = rows.reverse();
+    }
+    return rows;
+  };
+
   render() {
     console.log("OverviewTable rendered");
     const { loading } = this.state;
@@ -125,7 +185,7 @@ class OverviewTable extends React.Component {
           perPage={this.state.perPage}
           onSetPage={this.onSetPage}
           onPerPageSelect={this.onPerPageSelect}
-          fields={this.helper.fields}
+          fields={this.fields}
           handleChangeFilterValue={this.handleChangeFilterValue}
         />
         {!loading && (
@@ -151,4 +211,4 @@ class OverviewTable extends React.Component {
   }
 }
 
-export default OverviewTable;
+export default OverviewTableBase;
