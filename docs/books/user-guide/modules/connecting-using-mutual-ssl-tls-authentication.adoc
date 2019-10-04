@@ -48,6 +48,7 @@ sslProfile {
     certFile: /etc/qpid-dispatch-certs/tls.crt
     privateKeyFile: /etc/qpid-dispatch-certs/tls.key
     caCertFile: /etc/qpid-dispatch-certs/ca.crt
+    password: file:/etc/qpid-dispatch-certs/
     ...
 }
 ----
@@ -55,9 +56,11 @@ sslProfile {
 
 `certFile`:: The absolute path to the file containing the public certificate for this router.
 
+`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
 
-`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+`password`:: The password to unlock the certificate key. Not specified if certificate key has no password. The prefix file: is used to specify the absolute path of the file containing the password.
 --
 
 . Configure the `connector` for this connection to use the `sslProfile` that you created.

@@ -133,7 +133,7 @@ For example:
 privateKeyFile: /qdrouterd/ssl_certs/router-key-pwd.pem
 ----
 
-`passwordFile` or `password`:: If the private key is password-protected, you must provide the password by either specifying the absolute path to a file containing the password that unlocks the certificate key, or entering the password directly in the configuration file.
+`passwordFile` or `password`:: If the private key is password-protected, you must provide the password by either specifying the absolute path to a file containing the password that unlocks the certificate key, or entering the password directly in the configuration file. Entering the password directly in the configuration file is unsafe. passwordFile has been deprecated. Use password.
 +
 For example:
 +

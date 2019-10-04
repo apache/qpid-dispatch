@@ -46,8 +46,9 @@ This `sslProfile` contains the locations of the private key and certificates tha
 sslProfile {
     name: service-tls
     certFile: /etc/qpid-dispatch-certs/normal/tls.crt
-    privateKeyFile: /etc/qpid-dispatch-certs/normal/tls.key
     caCertFile: /etc/qpid-dispatch-certs/client-ca/ca.crt
+    privateKeyFile: /etc/qpid-dispatch-certs/normal/tls.key
+    password: file:/etc/qpid-dispatch-certs/inter-router/password.txt
     ...
 }
 ----
@@ -55,9 +56,11 @@ sslProfile {
 
 `certFile`:: The absolute path to the file containing the public certificate for this router.
 
+`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
 
-`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+`password`:: The password to unlock the certificate key. Not specified if certificate key has no password. The prefix file: is used to specify the absolute path of the file containing the password.
 --
 
 . Configure the `listener` for this connection to use SSL/TLS to encrypt the connection.
