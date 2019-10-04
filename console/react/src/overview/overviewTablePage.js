@@ -11,6 +11,7 @@ import { Card, CardBody } from "@patternfly/react-core";
 
 import RoutersTable from "./routersTable";
 import AddressesTable from "./addressesTable";
+import LinksTable from "./linksTable";
 class OverviewTablePage extends React.Component {
   constructor(props) {
     super(props);
@@ -31,9 +32,13 @@ class OverviewTablePage extends React.Component {
         />
       );
     }
+    if (this.props.entity === "links") {
+      return (
+        <LinksTable entity={this.props.entity} service={this.props.service} />
+      );
+    }
   };
   render() {
-    console.log("OverviewTablePage render");
     return (
       <React.Fragment>
         <PageSection

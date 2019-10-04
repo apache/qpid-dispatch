@@ -66,19 +66,6 @@ class PageLayout extends React.Component {
     this.tables = ["routers", "addresses", "links", "connections", "logs"];
 
     /*
-    links: [
-        { title: "name", displayName: "Link" },
-        { title: "linkType" },
-        { title: "linkDir" },
-        { title: "adminStatus" },
-        { title: "operStatus" },
-        { title: "deliveryCount" },
-        { title: "rate" },
-        { title: "delayed1Sec" },
-        { title: "delayed10Sec" },
-        { title: "outstanding" },
-        { title: "address" }
-      ],
       connections: [
         { title: "name", displayName: "host" },
         { title: "container" },

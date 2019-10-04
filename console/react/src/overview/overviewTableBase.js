@@ -175,7 +175,6 @@ class OverviewTableBase extends React.Component {
   };
 
   render() {
-    console.log("OverviewTable rendered");
     const { loading } = this.state;
     return (
       <React.Fragment>
