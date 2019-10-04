@@ -104,6 +104,38 @@ static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm,
 }
 
 /**
+ * Read the file from the password_file location on the file system and populate password_field with the
+ * contents of the file.
+ */
+static void qd_set_password_from_file(char *password_file, char **password_field)
+{
+    if (password_file) {
+        FILE *file = fopen(password_file, "r");
+
+        if (file) {
+            char buffer[200];
+
+            int c;
+            int i=0;
+
+            while (i < 200 - 1) {
+                c = fgetc(file);
+                if (c == EOF || c == '\n')
+                    break;
+                buffer[i++] = c;
+            }
+
+            if (i != 0) {
+                buffer[i] = '\0';
+                free(*password_field);
+                *password_field = strdup(buffer);
+            }
+            fclose(file);
+        }
+    }
+}
+
+/**
  * Search the list of config_sasl_plugins for an sasl-profile that matches the passed in name
  */
 static qd_config_sasl_plugin_t *qd_find_sasl_plugin(qd_connection_manager_t *cm, char *name)
@@ -210,9 +242,8 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
 }
 
-static void qd_config_ssl_profile_process_password(qd_config_ssl_profile_t* ssl_profile)
+static void qd_config_process_password(char **actual_val, char *pw, bool *is_file, qd_log_source_t *log_source)
 {
-    char *pw = ssl_profile->ssl_password;
     if (!pw)
         return;
 
@@ -230,29 +261,52 @@ static void qd_config_ssl_profile_process_password(qd_config_ssl_profile_t* ssl_
             //
             // Replace the allocated directive with the looked-up password
             //
-            free(ssl_profile->ssl_password);
-            ssl_profile->ssl_password = strdup(passwd);
+            *actual_val = strdup(passwd);
         } else {
             qd_error(QD_ERROR_NOT_FOUND, "Failed to find a password in the environment variable");
         }
     }
 
     //
-    // If the "password" starts with "literal:" then
+    // If the "password" starts with "literal:" or "pass:" then
     // the remaining text is the password and the heading should be
     // stripped off
     //
-    else if (strncmp(pw, "literal:", 8) == 0) {
-        // skip the "literal:" header
-        pw += 8;
+    else if (strncmp(pw, "literal:", 8) == 0 || strncmp(pw, "pass:", 5) == 0) {
+        qd_log(log_source, QD_LOG_WARNING, "It is unsafe to provide plain text passwords in the config file");
 
-        // skip the whitespace if it is there
-        while (*pw == ' ') ++pw;
+        if (strncmp(pw, "l", 1) == 0) {
+            // skip the "literal:" header
+            pw += 8;
+        }
+        else {
+            // skip the "pass:" header
+            pw += 5;
+        }
 
-        // Replace the password with a copy of the string after "literal:"
+        //
+        // Replace the password with a copy of the string after "literal: or "pass:"
+        //
         char *copy = strdup(pw);
-        free(ssl_profile->ssl_password);
-        ssl_profile->ssl_password = copy;
+        *actual_val = copy;
+    }
+    //
+    // If the password starts with a file: literal set the is_file to true.
+    //
+    else if (strncmp(pw, "file:", 5) == 0) {
+        pw += 5;
+
+        // Replace the password with a copy of the string after "file:"
+        char *copy = strdup(pw);
+        *actual_val = copy;
+        *is_file = true;
+    }
+    else {
+        //
+        // THe password field does not have any prefixes. Use it as plain text
+        //
+        qd_log(log_source, QD_LOG_WARNING, "It is unsafe to provide plain text passwords in the config file");
+
     }
 }
 
@@ -508,53 +562,39 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_certificate_file       = qd_entity_opt_string(entity, "certFile", 0); CHECK();
     ssl_profile->ssl_private_key_file       = qd_entity_opt_string(entity, "privateKeyFile", 0); CHECK();
     ssl_profile->ssl_password               = qd_entity_opt_string(entity, "password", 0); CHECK();
+    char *password_file                     = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
 
     if (ssl_profile->ssl_password) {
-        qd_log(cm->log_source, QD_LOG_WARNING, "Attribute password of entity sslProfile has been deprecated. Use passwordFile instead.");
-    }
-
-
-    if (!ssl_profile->ssl_password) {
-        // SSL password not provided. Check if passwordFile property is specified.
-        char *password_file = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
-
-        if (password_file) {
-            FILE *file = fopen(password_file, "r");
-
-            if (file) {
-                char buffer[200];
-
-                int c;
-                int i=0;
-
-                while (i < 200 - 1) {
-                    c = fgetc(file);
-                    if (c == EOF || c == '\n')
-                        break;
-                    buffer[i++] = c;
-                }
-
-                if (i != 0) {
-                    buffer[i] = '\0';
-                    free(ssl_profile->ssl_password);
-                    ssl_profile->ssl_password = strdup(buffer);
-                }
-                fclose(file);
-            }
+        //
+        // Process the password to handle any modifications or lookups needed
+        //
+        char *actual_pass = 0;
+        bool is_file_path = 0;
+        qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, cm->log_source); CHECK();
+        if (actual_pass && is_file_path) {
+            qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password);
         }
-        free(password_file);
+        else if (actual_pass) {
+            free(ssl_profile->ssl_password);
+            ssl_profile->ssl_password = actual_pass;
+        }
     }
+    else if (password_file) {
+        //
+        // Warn the user that the passwordFile attribute has been deprecated.
+        //
+        qd_log(cm->log_source, QD_LOG_WARNING, "Attribute passwordFile of entity sslProfile has been deprecated. Use password field with the file: prefix instead.");
+        qd_set_password_from_file(password_file, &ssl_profile->ssl_password);
+    }
+
+    free(password_file);
+
     ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
     ssl_profile->ssl_protocols = qd_entity_opt_string(entity, "protocols", 0);                 CHECK();
     ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "caCertFile", 0);   CHECK();
     ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCertsFile", 0);   CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0);          CHECK();
     ssl_profile->uid_name_mapping_file      = qd_entity_opt_string(entity, "uidNameMappingFile", 0); CHECK();
-
-    //
-    // Process the password to handle any modifications or lookups needed
-    //
-    qd_config_ssl_profile_process_password(ssl_profile); CHECK();
 
     qd_log(cm->log_source, QD_LOG_INFO, "Created SSL Profile with name %s ", ssl_profile->name);
     return ssl_profile;
