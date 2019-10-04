@@ -494,6 +494,12 @@
                     "required": false,
                     "default": "balanced"
                 },
+                "annotation": {
+                    "type": "string",
+                    "description": "Annotation text for this router, to be used by user or orchestration layers.",
+                    "create": true,
+                    "required": false
+                },
 	            "addrCount": {
 	                "type": "integer",
 	                "description":"Number of addresses known to the router.",

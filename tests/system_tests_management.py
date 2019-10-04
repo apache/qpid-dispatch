@@ -62,7 +62,7 @@ class ManagementTest(system_test.TestCase):
         super(ManagementTest, cls).setUpClass()
         # Stand-alone router
         conf0=Qdrouterd.Config([
-            ('router', { 'mode': 'standalone', 'id': 'solo'}),
+            ('router', { 'mode': 'standalone', 'id': 'solo', 'annotation': 'selftest;solo'}),
             ('listener', {'name': 'l0', 'port':cls.get_port(), 'role':'normal'}),
             # Extra listeners to exercise managment query
             ('listener', {'name': 'l1', 'port':cls.get_port(), 'role':'normal'}),
@@ -127,6 +127,13 @@ class ManagementTest(system_test.TestCase):
         self.assertRaises(BadRequestStatus, self.node.call, self.node.request())
         self.assertRaises(NotImplementedStatus, self.node.call,
                           self.node.request(operation="nosuch", type="org.amqp.management"))
+
+    def test_annotation(self):
+        """Query with type only"""
+        response = self.node.query(type=ROUTER)
+        for attr in ['type', 'annotation']:
+            self.assertTrue(attr in response.attribute_names)
+        self.assertEqual(response.get_entities()[0]['annotation'], 'selftest;solo')
 
     def test_query_type(self):
         """Query with type only"""

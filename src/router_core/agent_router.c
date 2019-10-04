@@ -31,26 +31,27 @@
 #define QDR_ROUTER_MODE                                4
 #define QDR_ROUTER_AREA                                5
 #define QDR_ROUTER_VERSION                             6
-#define QDR_ROUTER_ADDR_COUNT                          7
-#define QDR_ROUTER_LINK_COUNT                          8
-#define QDR_ROUTER_NODE_COUNT                          9
-#define QDR_ROUTER_LINK_ROUTE_COUNT                    10
-#define QDR_ROUTER_AUTO_LINK_COUNT                     11
-#define QDR_ROUTER_CONNECTION_COUNT                    12
-#define QDR_ROUTER_PRESETTLED_DELIVERIES               13
-#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES       14
-#define QDR_ROUTER_ACCEPTED_DELIVERIES                 15
-#define QDR_ROUTER_REJECTED_DELIVERIES                 16
-#define QDR_ROUTER_RELEASED_DELIVERIES                 17
-#define QDR_ROUTER_MODIFIED_DELIVERIES                 18
-#define QDR_ROUTER_DELAYED_1SEC                        19
-#define QDR_ROUTER_DELAYED_10SEC                       20
-#define QDR_ROUTER_DELIVERIES_INGRESS                  21
-#define QDR_ROUTER_DELIVERIES_EGRESS                   22
-#define QDR_ROUTER_DELIVERIES_TRANSIT                  23
-#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  24
-#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   25
-#define QDR_ROUTER_DELIVERIES_REDIRECTED               26
+#define QDR_ROUTER_ANNOTATION                          7
+#define QDR_ROUTER_ADDR_COUNT                          8
+#define QDR_ROUTER_LINK_COUNT                          9
+#define QDR_ROUTER_NODE_COUNT                          10
+#define QDR_ROUTER_LINK_ROUTE_COUNT                    11
+#define QDR_ROUTER_AUTO_LINK_COUNT                     12
+#define QDR_ROUTER_CONNECTION_COUNT                    13
+#define QDR_ROUTER_PRESETTLED_DELIVERIES               14
+#define QDR_ROUTER_DROPPED_PRESETTLED_DELIVERIES       15
+#define QDR_ROUTER_ACCEPTED_DELIVERIES                 16
+#define QDR_ROUTER_REJECTED_DELIVERIES                 17
+#define QDR_ROUTER_RELEASED_DELIVERIES                 18
+#define QDR_ROUTER_MODIFIED_DELIVERIES                 19
+#define QDR_ROUTER_DELAYED_1SEC                        20
+#define QDR_ROUTER_DELAYED_10SEC                       21
+#define QDR_ROUTER_DELIVERIES_INGRESS                  22
+#define QDR_ROUTER_DELIVERIES_EGRESS                   23
+#define QDR_ROUTER_DELIVERIES_TRANSIT                  24
+#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  25
+#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   26
+#define QDR_ROUTER_DELIVERIES_REDIRECTED               27
 
 
 const char *qdr_router_columns[] =
@@ -61,6 +62,7 @@ const char *qdr_router_columns[] =
      "mode",
      "area",
      "version",
+     "annotation",
      "addrCount",
      "linkCount",
      "nodeCount",
@@ -122,6 +124,13 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_VERSION:
         qd_compose_insert_string(body, QPID_DISPATCH_VERSION);
+        break;
+
+    case QDR_ROUTER_ANNOTATION:
+        if (core->qd->annotation)
+            qd_compose_insert_string(body, core->qd->annotation);
+        else
+            qd_compose_insert_null(body);
         break;
 
     case QDR_ROUTER_ADDR_COUNT:
