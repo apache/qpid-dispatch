@@ -20,13 +20,10 @@ import {
   TextInput,
   ActionGroup,
   Button,
-  ButtonVariant,
   TextContent,
   Text,
   TextVariants
 } from "@patternfly/react-core";
-
-import { PowerOffIcon } from "@patternfly/react-icons";
 
 class ConnectForm extends React.Component {
   constructor(props) {
@@ -37,9 +34,7 @@ class ConnectForm extends React.Component {
       value1: "",
       value2: "",
       value3: "",
-      value4: "",
-      formVisible: !this.props.buttonHidden,
-      buttonVisible: this.props.buttonHidden ? false : true
+      value4: ""
     };
     this.handleTextInputChange1 = value1 => {
       this.setState({ value1 });
@@ -57,11 +52,11 @@ class ConnectForm extends React.Component {
 
   handleConnect = () => {
     this.toggleDrawerHide();
-    this.props.handleConnect();
+    this.props.handleConnect(this.props.fromPath);
   };
 
   toggleDrawerHide = () => {
-    this.setState({ formVisible: !this.state.formVisible });
+    this.props.handleConnectCancel();
   };
 
   render() {
@@ -69,20 +64,7 @@ class ConnectForm extends React.Component {
 
     return (
       <div>
-        <Button
-          id="notificationButton"
-          onClick={this.toggleDrawerHide}
-          aria-label="Notifications actions"
-          variant={ButtonVariant.plain}
-          className={this.state.buttonVisible ? "" : "hidden"}
-        >
-          <PowerOffIcon />
-        </Button>
-        <div
-          className={
-            this.state.formVisible ? "connect-modal" : "connect-modal hidden"
-          }
-        >
+        <div className="connect-modal">
           <div className="">
             <Form isHorizontal>
               <TextContent className="connect-title">

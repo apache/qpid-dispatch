@@ -26,7 +26,6 @@ import {
   DropdownToggle,
   DropdownItem,
   DropdownSeparator,
-  KebabToggle,
   Page,
   PageHeader,
   SkipToContent,
@@ -40,14 +39,23 @@ import {
   PageSidebar
 } from "@patternfly/react-core";
 
+import {
+  BrowserRouter as Router,
+  Switch,
+  Route,
+  Link,
+  Redirect
+} from "react-router-dom";
+
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import spacingStyles from "@patternfly/patternfly/utilities/Spacing/spacing.css";
 import { css } from "@patternfly/react-styles";
-import { BellIcon, CogIcon } from "@patternfly/react-icons";
-import ConnectForm from "./connect-form";
+import { BellIcon, CogIcon, PowerOffIcon } from "@patternfly/react-icons";
+//import ConnectForm from "./connect-form";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
 import OverviewTablePage from "./overview/overviewTablePage";
+import DetailsTablePage from "./overview/detailsTablePage";
 import TopologyPage from "./topology/qdrTopology";
 import MessageFlowPage from "./chord/qdrChord";
 import { QDRService } from "./qdrService";
@@ -58,23 +66,16 @@ class PageLayout extends React.Component {
     super(props);
     this.state = {
       connected: false,
+      connectPath: "",
       isDropdownOpen: false,
-      isKebabDropdownOpen: false,
       activeGroup: "overview",
-      activeItem: "dashboard"
+      activeItem: "dashboard",
+      detailInfo: null,
+      detailMeta: null
     };
     this.tables = ["routers", "addresses", "links", "connections", "logs"];
 
     /*
-      connections: [
-        { title: "name", displayName: "host" },
-        { title: "container" },
-        { title: "role" },
-        { title: "dir" },
-        { title: "security" },
-        { title: "authentication" },
-        { title: "close" }
-      ],
       logs: [
         { title: "Module" },
         { title: "Notice" },
@@ -91,7 +92,7 @@ class PageLayout extends React.Component {
   }
 
   setLocation = where => {
-    //console.log(`setLocation to ${where}`);
+    //this.setState({ connectPath: where })
   };
 
   onDropdownToggle = isDropdownOpen => {
@@ -106,49 +107,55 @@ class PageLayout extends React.Component {
     });
   };
 
-  onKebabDropdownToggle = isKebabDropdownOpen => {
-    this.setState({
-      isKebabDropdownOpen
-    });
-  };
-
-  onKebabDropdownSelect = event => {
-    this.setState({
-      isKebabDropdownOpen: !this.state.isKebabDropdownOpen
-    });
-  };
-
-  handleConnect = event => {
+  handleConnect = connectPath => {
     this.service
       .connect({ address: "localhost", port: 5673, reconnect: true })
       .then(
         r => {
-          //console.log(r);
+          this.setState({
+            connected: true,
+            connectPath
+          });
         },
         e => {
           console.log(e);
         }
       );
-    this.setState({
-      connected: true
-    });
   };
 
+  handleConnectCancel = () => {};
   onNavSelect = result => {
     this.setState({
       activeItem: result.itemId,
-      activeGroup: result.groupId
+      activeGroup: result.groupId,
+      connectPath: ""
     });
   };
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  render() {
-    const {
-      isDropdownOpen,
-      isKebabDropdownOpen,
+  showDetailTable = (_value, detailInfo, activeItem, detailMeta) => {
+    this.setState({
+      activeGroup: "detailsTable",
       activeItem,
-      activeGroup
-    } = this.state;
+      detailInfo,
+      detailMeta,
+      connectPath: "/details"
+    });
+  };
+
+  BreadcrumbSelected = connectPath => {
+    this.setState({
+      connectPath
+    });
+  };
+
+  toggleConnectForm = event => {
+    console.log("taggleConnectForm called with event.target");
+    console.log(event.target);
+  };
+
+  render() {
+    const { isDropdownOpen, activeItem, activeGroup } = this.state;
 
     const PageNav = (
       <Nav onSelect={this.onNavSelect} aria-label="Nav" className="pf-m-dark">
@@ -164,7 +171,7 @@ class PageLayout extends React.Component {
               itemId="dashboard"
               isActive={activeItem === "dashboard"}
             >
-              Dashboard
+              <Link to="/dashboard">Dashboard</Link>
             </NavItem>
             {this.tables.map(t => {
               return (
@@ -174,7 +181,7 @@ class PageLayout extends React.Component {
                   isActive={activeItem === { t }}
                   key={t}
                 >
-                  {this.icap(t)}
+                  <Link to={`/overview/${t}`}>{this.icap(t)}</Link>
                 </NavItem>
               );
             })}
@@ -189,62 +196,42 @@ class PageLayout extends React.Component {
               itemId="topology"
               isActive={activeItem === "topology"}
             >
-              Topology
+              <Link to="/topology">Topology</Link>
             </NavItem>
             <NavItem
               groupId="visualizations"
               itemId="flow"
               isActive={activeItem === "flow"}
             >
-              Message flow
+              <Link to="/flow">Message flow</Link>
             </NavItem>
           </NavExpandable>
           <NavExpandable
             title="Details"
-            groupId="grp-3"
-            isActive={activeGroup === "grp-3"}
+            groupId="detailsGroup"
+            isActive={activeGroup === "detailsGroup"}
           >
             <NavItem
-              groupId="grp-3"
-              itemId="grp-3_itm-1"
-              isActive={activeItem === "grp-3_itm-1"}
+              groupId="detailsGroup"
+              itemId="entities"
+              isActive={activeItem === "entities"}
             >
-              Entities
+              <Link to="/entities">Entities</Link>
             </NavItem>
             <NavItem
-              groupId="grp-3"
-              itemId="grp-3_itm-2"
-              isActive={activeItem === "grp-3_itm-2"}
+              groupId="detailsGroup"
+              itemId="schema"
+              isActive={activeItem === "schema"}
             >
-              Schema
+              <Link to="/schema">Schema</Link>
             </NavItem>
           </NavExpandable>
         </NavList>
       </Nav>
     );
-    const kebabDropdownItems = [
-      <DropdownItem key="notif">
-        <BellIcon /> Notifications
-      </DropdownItem>,
-      <DropdownItem key="sett">
-        <CogIcon /> Settings
-      </DropdownItem>
-    ];
     const userDropdownItems = [
-      <DropdownItem key="link">Link</DropdownItem>,
       <DropdownItem component="button" key="action">
-        Action
-      </DropdownItem>,
-      <DropdownItem isDisabled key="dis">
-        Disabled Link
-      </DropdownItem>,
-      <DropdownItem isDisabled component="button" key="button">
-        Disabled Action
-      </DropdownItem>,
-      <DropdownSeparator key="sep0" />,
-      <DropdownItem key="sep">Separated Link</DropdownItem>,
-      <DropdownItem component="button" key="sep1">
-        Separated Action
+        Logout
       </DropdownItem>
     ];
     const PageToolbar = (
@@ -256,7 +243,14 @@ class PageLayout extends React.Component {
           )}
         >
           <ToolbarItem>
-            <ConnectForm prefix="toolbar" handleConnect={this.handleConnect} />
+            <Button
+              id="connectButton"
+              onClick={this.toggleConnectForm}
+              aria-label="Toggle Connect Form"
+              variant={ButtonVariant.plain}
+            >
+              <PowerOffIcon />
+            </Button>
           </ToolbarItem>
           <ToolbarItem>
             <Button
@@ -267,29 +261,8 @@ class PageLayout extends React.Component {
               <BellIcon />
             </Button>
           </ToolbarItem>
-          <ToolbarItem>
-            <Button
-              id="default-example-uid-02"
-              aria-label="Settings actions"
-              variant={ButtonVariant.plain}
-            >
-              <CogIcon />
-            </Button>
-          </ToolbarItem>
         </ToolbarGroup>
         <ToolbarGroup>
-          <ToolbarItem
-            className={css(accessibleStyles.hiddenOnLg, spacingStyles.mr_0)}
-          >
-            <Dropdown
-              isPlain
-              position="right"
-              onSelect={this.onKebabDropdownSelect}
-              toggle={<KebabToggle onToggle={this.onKebabDropdownToggle} />}
-              isOpen={isKebabDropdownOpen}
-              dropdownItems={kebabDropdownItems}
-            />
-          </ToolbarItem>
           <ToolbarItem
             className={css(
               accessibleStyles.screenReader,
@@ -322,54 +295,82 @@ class PageLayout extends React.Component {
         showNavToggle
       />
     );
-    const Sidebar = <PageSidebar nav={PageNav} className="pf-m-dark" />;
     const pageId = "main-content-page-layout-expandable-nav";
     const PageSkipToContent = (
       <SkipToContent href={`#${pageId}`}>Skip to Content</SkipToContent>
     );
-    const activeItemToPage = () => {
-      if (this.state.activeGroup === "overview") {
-        if (this.state.activeItem === "dashboard") {
-          return <DashboardPage service={this.service} />;
-        }
-        return (
-          <OverviewTablePage
-            entity={this.state.activeItem}
-            service={this.service}
-          />
-        );
-      } else if (this.state.activeGroup === "visualizations") {
-        if (this.state.activeItem === "topology") {
-          return <TopologyPage service={this.service} />;
-        } else {
-          return <MessageFlowPage service={this.service} />;
-        }
+
+    const sidebar = PageNav => {
+      if (this.state.connected) {
+        return <PageSidebar nav={PageNav} className="pf-m-dark" />;
       }
-      //console.log("using overview charts page");
-      return <DashboardPage service={this.service} />;
+      return <React.Fragment />;
     };
 
-    if (!this.state.connected) {
-      return (
-        <Page header={Header} skipToContent={PageSkipToContent}>
-          <ConnectPage handleConnect={this.handleConnect} />
-        </Page>
-      );
-    }
+    // don't allow access to this component unless we are logged in
+    const PrivateRoute = ({ component: Component, path: rpath, ...more }) => (
+      <Route
+        path={rpath}
+        {...(more.exact ? "exact" : "")}
+        render={props =>
+          this.state.connected ? (
+            <Component service={this.service} {...props} {...more} />
+          ) : (
+            <Redirect
+              to={{ pathname: "/login", state: { from: props.location } }}
+            />
+          )
+        }
+      />
+    );
+
+    // When we need to display a different component(page),
+    // we render a <Redirect> object
+    const redirectAfterConnect = () => {
+      let { connectPath } = this.state;
+      if (connectPath !== "") {
+        if (connectPath === "/login") connectPath = "/";
+        return <Redirect to={connectPath} />;
+      }
+      return <React.Fragment />;
+    };
 
     return (
-      <React.Fragment>
+      <Router>
+        {redirectAfterConnect()}
         <Page
           header={Header}
-          sidebar={Sidebar}
+          sidebar={sidebar(PageNav)}
           isManagedSidebar
           skipToContent={PageSkipToContent}
         >
-          {activeItemToPage()}
+          <Switch>
+            <PrivateRoute path="/" exact component={DashboardPage} />
+            <PrivateRoute path="/dashboard" exact component={DashboardPage} />
+            <PrivateRoute
+              path="/overview/:entity"
+              component={OverviewTablePage}
+            />
+            <PrivateRoute path="/details" component={DetailsTablePage} />
+            <PrivateRoute path="/topology" component={TopologyPage} />
+            <PrivateRoute path="/flow" component={MessageFlowPage} />
+            <Route
+              path="/login"
+              render={props => (
+                <ConnectPage {...props} handleConnect={this.handleConnect} />
+              )}
+            />
+          </Switch>
         </Page>
-      </React.Fragment>
+      </Router>
     );
   }
 }
 
 export default PageLayout;
+
+/*          <ToolbarItem>
+            <ConnectForm prefix="toolbar" handleConnect={this.handleConnect} />
+          </ToolbarItem>
+
+          */

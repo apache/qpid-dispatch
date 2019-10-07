@@ -19,7 +19,7 @@ var ddd = typeof window === "undefined" ? require("d3") : d3;
 
 var utils = {
   isAConsole: function(properties, connectionId, nodeType, key) {
-    return this.isConsole({
+    return utils.isConsole({
       properties: properties,
       connectionId: connectionId,
       nodeType: nodeType,
@@ -73,7 +73,7 @@ var utils = {
       };
     let results = [];
     for (let i = 0; i < entity.results.length; i++) {
-      let f = filter(this.flatten(entity.attributeNames, entity.results[i]));
+      let f = filter(utils.flatten(entity.attributeNames, entity.results[i]));
       if (f) results.push(f);
     }
     return results;
@@ -235,6 +235,34 @@ var utils = {
     const url = document.createElement("a");
     url.setAttribute("href", fullUrl);
     return url;
+  },
+  Icap: s => s[0].toUpperCase() + s.slice(1, s.length - 1),
+
+  // get last token in string that looks like "/fooo/baaar/baaaz"
+  entityFromProps: props => {
+    if (props && props.location && props.location.pathname) {
+      return props.location.pathname.split("/").slice(-1)[0];
+    }
+    return "";
+  },
+
+  formatAttributes: (record, entityType) => {
+    for (const attrib in record) {
+      const schemaAttrib = entityType.attributes[attrib];
+      if (schemaAttrib) {
+        if (schemaAttrib.type === "integer") {
+          record[attrib] = utils.pretty(record[attrib]);
+        } else if (record[attrib] === null) {
+          record[attrib] = "";
+        } else if (schemaAttrib.type === "map") {
+          record[attrib] = JSON.stringify(record[attrib], null, 2);
+        } else {
+          record[attrib] = String(record[attrib]);
+        }
+      }
+    }
+    return record;
   }
 };
+
 export { utils };

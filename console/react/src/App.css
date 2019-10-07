@@ -378,9 +378,15 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   padding-right: 0 !important;
 }
 .overview-header {
-  padding: 0.5em;
-  font-size: 5em;
+  padding: 2em;
   text-align: left;
+}
+.overview-header.details {
+  padding: 1em 2em;
+}
+.overview-header.details .pf-c-breadcrumb__item {
+  font-size: 1.125em;
+  margin-bottom: 1em;
 }
 .fill-card {
   width: 100%;
@@ -834,13 +840,16 @@ div.qdrChord .legend-text {
 }
 
 .overview-charts-page .pf-c-card__header.pf-c-title {
-  text-align: left;
   font-size: 22px;
 }
 
+.dashboard-header {
+  display: flex;
+}
 .overview-charts-page div.time-period {
   font-size: 18px;
   color: #888;
+  text-align: left;
 }
 
 .chart-container {
@@ -871,8 +880,7 @@ div.qdrChord .legend-text {
 }
 
 .duration-tabs {
-  position: absolute;
-  right: 1.5em;
+  margin-left: auto;
 }
 
 .duration-tabs li {
@@ -910,4 +918,47 @@ div.qdrChord .legend-text {
 
 .table-toolbar .pf-l-toolbar__item {
   margin-right: 0 !important;
+}
+
+.overview-header .pf-c-content {
+  display: flex;
+}
+
+.overview-loading {
+  margin-left: auto;
+  color: #999;
+  border: 0;
+  font-size: 14px;
+  padding: 0;
+  background-color: white;
+}
+
+.pf-c-button.pf-m-primary.link-button,
+.overview-header.details .pf-c-breadcrumb__item.link-button {
+  border: 0;
+  background-color: transparent;
+  color: blue;
+  font-weight: bold;
+  white-space: normal;
+}
+
+.pf-c-button.pf-m-primary.link-button:hover,
+.overview-header.details .pf-c-breadcrumb__item.link-button:hover {
+  text-decoration: underline;
+}
+
+.noWrap {
+  white-space: nowrap;
+}
+
+.link-dir-in,
+.link-dir-out {
+  padding-right: 0.5em;
+}
+.link-dir-in {
+  color: red;
+}
+
+.link-dir-out {
+  color: blue;
 }

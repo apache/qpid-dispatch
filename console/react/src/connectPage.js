@@ -10,40 +10,43 @@ import ConnectForm from "./connect-form";
 class ConnectPage extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {};
+    this.state = { showForm: true };
   }
 
+  handleConnectCancel = () => {
+    this.setState({ showForm: false });
+  };
   render() {
+    const { showForm } = this.state;
+    const { from } = this.props.location.state || { from: { pathname: "/" } };
     return (
-      <React.Fragment>
-        <PageSection
-          variant={PageSectionVariants.light}
-          className="connect-page"
-        >
-          <div className="left-content">
-            <TextContent>
-              <Text component="h1" className="console-banner">
-                Apache Qpid Dispatch Console
-              </Text>
-            </TextContent>
-            <TextContent>
-              <Text component="p">
-                The console provides limited information about the clients that
-                are attached to the router network and is therefore more
-                appropriate for administrators needing to know the layout and
-                health of the router network.
-              </Text>
-            </TextContent>
-          </div>
-        </PageSection>
-        <PageSection>
+      <PageSection variant={PageSectionVariants.light} className="connect-page">
+        {showForm ? (
           <ConnectForm
             prefix="form"
             handleConnect={this.props.handleConnect}
-            buttonHidden={true}
+            handleConnectCancel={this.handleConnectCancel}
+            fromPath={from.pathname}
           />
-        </PageSection>
-      </React.Fragment>
+        ) : (
+          <React.Fragment />
+        )}
+        <div className="left-content">
+          <TextContent>
+            <Text component="h1" className="console-banner">
+              Apache Qpid Dispatch Console
+            </Text>
+          </TextContent>
+          <TextContent>
+            <Text component="p">
+              The console provides limited information about the clients that
+              are attached to the router network and is therefore more
+              appropriate for administrators needing to know the layout and
+              health of the router network.
+            </Text>
+          </TextContent>
+        </div>
+      </PageSection>
     );
   }
 }

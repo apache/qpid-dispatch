@@ -17,24 +17,57 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { sortable } from "@patternfly/react-table";
-import OverviewTableBase from "./overviewTableBase";
-
-class RoutersTable extends OverviewTableBase {
-  constructor(props) {
-    super(props);
+class RouterData {
+  constructor(service) {
+    this.service = service;
     this.fields = [
-      { title: "Router", field: "name", transforms: [sortable] },
+      { title: "Router", field: "name" },
       { title: "Area", field: "area" },
       { title: "Mode", field: "mode" },
-      { title: "Addresses", field: "addrCount" },
-      { title: "Links", field: "linkCount" },
-      { title: "External connections", field: "connections" }
+      {
+        title: "Addresses",
+        field: "addrCount",
+        numeric: true
+      },
+      {
+        title: "Links",
+        field: "linkCount",
+        numeric: true
+      },
+      {
+        title: "External connections",
+        field: "connections",
+        numeric: true
+      }
     ];
+    this.detailEntity = "router";
+    this.detailName = "Router";
   }
+
+  fetchRecord = (currentRecord, schema) => {
+    return new Promise(resolve => {
+      this.service.management.topology.fetchEntities(
+        currentRecord.nodeId,
+        [{ entity: "router" }],
+        results => {
+          const record = results[currentRecord.nodeId].router;
+          let router = this.service.utilities.flatten(
+            record.attributeNames,
+            record.results[0]
+          );
+          router = this.service.utilities.formatAttributes(
+            router,
+            schema.entityTypes.router
+          );
+          resolve(router);
+        }
+      );
+    });
+  };
+
   doFetch = (page, perPage) => {
     return new Promise(resolve => {
-      this.props.service.management.topology.fetchAllEntities(
+      this.service.management.topology.fetchAllEntities(
         [{ entity: "connection", attrs: ["role"] }, { entity: "router" }],
         nodes => {
           // we have all the data now in the nodes object
@@ -42,26 +75,27 @@ class RoutersTable extends OverviewTableBase {
           for (let node in nodes) {
             let connections = 0;
             for (let i = 0; i < nodes[node]["connection"].results.length; ++i) {
-              // we only requested "role" so it will be at [0]
+              // we only requested "role" so it will be at results[0]
               if (nodes[node]["connection"].results[i][0] !== "inter-router")
                 ++connections;
             }
             let routerRow = {
-              connections: connections,
+              connections,
               nodeId: node,
-              id: this.props.service.utilities.nameFromId(node)
+              id: this.service.utilities.nameFromId(node)
             };
             nodes[node]["router"].attributeNames.forEach((routerAttr, i) => {
-              if (routerAttr !== "routerId" && routerAttr !== "id")
+              if (routerAttr !== "id") {
                 routerRow[routerAttr] = nodes[node]["router"].results[0][i];
+              }
             });
             allRouterFields.push(routerRow);
           }
-          resolve(this.slice(allRouterFields, page, perPage));
+          resolve({ data: allRouterFields, page, perPage });
         }
       );
     });
   };
 }
 
-export default RoutersTable;
+export default RouterData;

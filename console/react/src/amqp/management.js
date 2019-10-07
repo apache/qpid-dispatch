@@ -27,6 +27,11 @@ export class Management {
   getSchema(callback) {
     var self = this;
     return new Promise(function(resolve, reject) {
+      if (self.connection.schema) {
+        if (callback) callback(self.connection.schema);
+        resolve(self.connection.schema);
+        return;
+      }
       self.connection.sendMgmtQuery("GET-SCHEMA").then(
         function(responseAndContext) {
           var response = responseAndContext.response;

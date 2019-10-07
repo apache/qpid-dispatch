@@ -51,31 +51,33 @@ class DashboardPage extends React.Component {
           <StackItem>
             <Card>
               <CardHeader>
-                <div>Router network statistics</div>
+                <div className="dashboard-header">
+                  <div>Router network statistics</div>
+                  <div className="duration-tabs">
+                    <nav className="pf-c-nav" aria-label="Local">
+                      <ul className="pf-c-nav__tertiary-list">
+                        <li
+                          onClick={() => this.setTimePeriod(60)}
+                          className={`pf-c-nav__item ${
+                            this.state.timePeriod === 60 ? "selected" : ""
+                          }`}
+                        >
+                          Min
+                        </li>
+                        <li
+                          onClick={() => this.setTimePeriod(60 * 60)}
+                          className={`pf-c-nav__item ${
+                            this.state.timePeriod === 60 ? "" : "selected"
+                          }`}
+                        >
+                          Hour
+                        </li>
+                      </ul>
+                    </nav>
+                  </div>
+                </div>
                 <div className="time-period">
                   For the past {this.timePeriodString()}
-                </div>
-                <div className="duration-tabs">
-                  <nav className="pf-c-nav" aria-label="Local">
-                    <ul className="pf-c-nav__tertiary-list">
-                      <li
-                        onClick={() => this.setTimePeriod(60)}
-                        className={`pf-c-nav__item ${
-                          this.state.timePeriod === 60 ? "selected" : ""
-                        }`}
-                      >
-                        Min
-                      </li>
-                      <li
-                        onClick={() => this.setTimePeriod(60 * 60)}
-                        className={`pf-c-nav__item ${
-                          this.state.timePeriod === 60 ? "" : "selected"
-                        }`}
-                      >
-                        Hour
-                      </li>
-                    </ul>
-                  </nav>
                 </div>
               </CardHeader>
               <CardBody>

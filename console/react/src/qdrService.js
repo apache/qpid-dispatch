@@ -52,8 +52,9 @@ export class QDRService {
             self.onDisconnect.bind(self)
           );
 
-          self.management.getSchema().then(() => {
-            //console.log("got schema after connection");
+          self.management.getSchema().then(schema => {
+            console.log("got schema after connection");
+            console.log(schema);
             self.management.topology.setUpdateEntities([]);
             //console.log("requesting a topology");
             self.management.topology

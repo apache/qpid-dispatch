@@ -17,46 +17,90 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { sortable } from "@patternfly/react-table";
-import OverviewTableBase from "./overviewTableBase";
+import React from "react";
 
-class LinksTable extends OverviewTableBase {
-  constructor(props) {
-    super(props);
+const LinkDir = ({ value }) => (
+  <span>
+    <i
+      className={`link-dir-${value} fa fa-arrow-circle-${
+        value === "in" ? "right" : "left"
+      }`}
+    ></i>
+    {value}
+  </span>
+);
+
+class LinkData {
+  constructor(service) {
+    this.service = service;
     this.fields = [
-      { title: "Link", field: "name" },
-      { title: "Type", field: "linkType", transforms: [sortable] },
-      { title: "Dir", field: "linkDir" },
+      { title: "Link", field: "link", noWrap: true },
+      { title: "Type", field: "linkType", noWrap: true },
+      { title: "Dir", field: "linkDir", formatter: LinkDir },
       { title: "Admin status", field: "adminStatus" },
       { title: "Oper status", field: "operStatus" },
-      { title: "Deliveries", field: "deliveryCount" },
-      { title: "Rate", field: "rate" },
-      { title: "Delayed 1 sec", field: "delayed1Sec" },
-      { title: "Delayed 10 secs", field: "delayed10Sec" },
-      { title: "Outstanding", field: "outstanding" },
-      { title: "Address", field: "owningAddr", transforms: [sortable] }
+      {
+        title: "Deliveries",
+        field: "deliveryCount",
+        noWrap: true,
+        numeric: true
+      },
+      { title: "Rate", field: "rate", numeric: true },
+      {
+        title: "Delayed 1 sec",
+        field: "delayed1Sec",
+        numeric: true
+      },
+      {
+        title: "Delayed 10 secs",
+        field: "delayed10Sec",
+        numeric: true
+      },
+      {
+        title: "Outstanding",
+        field: "outstanding",
+        numeric: true
+      },
+      { title: "Address", field: "owningAddr" }
     ];
+    this.detailEntity = "router.link";
+    this.detailName = "Link";
   }
+
+  fetchRecord = (currentRecord, schema) => {
+    return new Promise(resolve => {
+      this.service.management.topology.fetchEntities(
+        currentRecord.nodeId,
+        [{ entity: "router.link" }],
+        data => {
+          const record = data[currentRecord.nodeId]["router.link"];
+          const identityIndex = record.attributeNames.indexOf("identity");
+          const result = record.results.find(
+            r => r[identityIndex] === currentRecord.identity
+          );
+          let link = this.service.utilities.flatten(
+            record.attributeNames,
+            result
+          );
+          link = this.service.utilities.formatAttributes(
+            link,
+            schema.entityTypes["router.link"]
+          );
+          resolve(link);
+        }
+      );
+    });
+  };
+
   doFetch = (page, perPage) => {
     return new Promise(resolve => {
-      this.props.service.management.topology.fetchAllEntities(
+      this.service.management.topology.fetchAllEntities(
         { entity: "router.link" },
         nodes => {
           // we have all the data now in the nodes object
           let linkFields = [];
-          const now = new Date();
-          var prettyVal = value => {
-            return typeof value === "undefined"
-              ? "-"
-              : this.props.service.utilities.pretty(value);
-          };
-          var uncounts = link => {
-            return this.props.service.utilities.pretty(
-              link.undeliveredCount + link.unsettledCount
-            );
-          };
           var getLinkName = (node, link) => {
-            let namestr = this.props.service.utilities.nameFromId(node);
+            let namestr = this.service.utilities.nameFromId(node);
             return `${namestr}:${link.identity}`;
           };
           var fixAddress = link => {
@@ -100,7 +144,7 @@ class LinksTable extends OverviewTableBase {
             const response = nodes[node]["router.link"];
             for (let i = 0; i < response.results.length; i++) {
               const result = response.results[i];
-              const link = this.props.service.utilities.flatten(
+              const link = this.service.utilities.flatten(
                 response.attributeNames,
                 result
               );
@@ -109,48 +153,37 @@ class LinksTable extends OverviewTableBase {
 
               linkFields.push({
                 link: linkName,
-                title: linkName,
-                outstanding: uncounts(link),
-                operStatus: link.operStatus,
+                linkType: link.linkType,
+                linkDir: link.linkDir,
                 adminStatus: link.adminStatus,
+                operStatus: link.operStatus,
+                deliveryCount: link.deliveryCount,
+                rate: link.settleRate,
+                delayed1Sec: link.deliveriesDelayed1Sec,
+                delayed10Sec: link.deliveriesDelayed10Sec,
+                outstanding: link.undeliveredCount + link.unsettledCount,
                 owningAddr: addresses[0],
 
-                acceptedCount: prettyVal(link.acceptedCount),
-                modifiedCount: prettyVal(link.modifiedCount),
-                presettledCount: prettyVal(link.presettledCount),
-                rejectedCount: prettyVal(link.rejectedCount),
-                releasedCount: prettyVal(link.releasedCount),
-                deliveryCount: prettyVal(link.deliveryCount),
-
-                rate: prettyVal(link.settleRate),
-                deliveriesDelayed10Sec: prettyVal(link.deliveriesDelayed10Sec),
-                deliveriesDelayed1Sec: prettyVal(link.deliveriesDelayed1Sec),
                 capacity: link.capacity,
                 undeliveredCount: link.undeliveredCount,
                 unsettledCount: link.unsettledCount,
 
                 rawAddress: addresses[1],
-                rawDeliveryCount: link.deliveryCount,
                 name: link.name,
-                linkName: link.linkName,
                 connectionId: link.connectionId,
-                linkDir: link.linkDir,
-                linkType: link.linkType,
                 peer: link.peer,
                 type: link.type,
 
-                uid: linkName,
-                timestamp: now,
                 nodeId: node,
                 identity: link.identity
               });
             }
           }
-          resolve(this.slice(linkFields, page, perPage));
+          resolve({ data: linkFields, page, perPage });
         }
       );
     });
   };
 }
 
-export default LinksTable;
+export default LinkData;
