@@ -23,11 +23,11 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import unittest2 as unittest
 import json
 from threading import Timer
 from proton import Message
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from subprocess import PIPE, STDOUT

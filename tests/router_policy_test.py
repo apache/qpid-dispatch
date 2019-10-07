@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
+from system_test import unittest
 
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
 from qpid_dispatch_internal.policy.policy_util import HostStruct

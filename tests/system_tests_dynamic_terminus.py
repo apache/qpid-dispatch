@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from proton import Message, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, LinkOption
+from system_test import unittest
 
 
 class RouterTest(TestCase):

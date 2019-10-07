@@ -17,11 +17,11 @@
 # under the License.
 #
 
-import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import unittest
 
 from proton import Message
 from proton.handlers import MessagingHandler

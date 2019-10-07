@@ -65,23 +65,33 @@ elseif(PYTHON_VERSION_MAJOR STREQUAL 2)
     set(PY_STRING "python")
 endif()
 
-# Find python-unittest2
-execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
-			RESULT_VARIABLE UNITTEST2_MISSING
-			ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
 enable_testing()
-if(UNITTEST2_MISSING)
-  message(STATUS "WARNING: python-unittest2 is not installed. ***unit tests cannot be run***" )
-  # add bogus test for folk who may have missed the cmake warning
-  add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
-else(UNITTEST2_MISSING)
-  if    (NOT DEFINED DISPATCH_TEST_TIMEOUT)
-    set             (DISPATCH_TEST_TIMEOUT "360")
+
+# python unittest
+# For versions < 2.7 the developer needs to install the python-unittest2
+# module (available via 'pip install python-unittest2'
+#
+if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+  set(PYTHON_TEST_COMMAND "unit2")
+  execute_process(COMMAND "${PYTHON_EXECUTABLE}" "-c" "import unittest2"
+                  RESULT_VARIABLE UNITTEST_MISSING
+                  ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if(UNITTEST_MISSING)
+    message(WARNING "python-unittest2 is not installed. ***unit tests cannot be run***\ntry 'pip install python-unittest2' to install python-unittest2")
+    # add bogus test for folk who may have missed the cmake warning
+    add_test(WARNING_python_unittest2_module_NOT_INSTALLED false)
+  endif(UNITTEST_MISSING)
+else(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+  set(PYTHON_TEST_COMMAND "-m" "unittest")
+endif(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
+
+if(NOT UNITTEST_MISSING)
+  if (NOT DEFINED DISPATCH_TEST_TIMEOUT)
+    set(DISPATCH_TEST_TIMEOUT "360")
   endif (NOT DEFINED DISPATCH_TEST_TIMEOUT)
   SET(DART_TESTING_TIMEOUT ${DISPATCH_TEST_TIMEOUT} CACHE STRING "Default CTest timeout in seconds")
   include (CTest)
-endif(UNITTEST2_MISSING)
-
+endif(NOT UNITTEST_MISSING)
 
 set (SO_VERSION_MAJOR 2)
 set (SO_VERSION_MINOR 0)
@@ -216,11 +226,11 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_authz_service_plug
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_handle_failover.py.in ${CMAKE_CURRENT_SOURCE_DIR}/tests/system_tests_handle_failover.py)
 execute_process(COMMAND ${RUN} --sh OUTPUT_FILE config.sh)
 
-if (NOT UNITTEST2_MISSING)
+if (NOT UNITTEST_MISSING)
   file(GLOB SCRAPER_SRC ${CMAKE_CURRENT_SOURCE_DIR}/tools/scraper/*.py)
   file(COPY ${SCRAPER_SRC} DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/tests/scraper/)
   add_subdirectory(tests)
-endif(NOT UNITTEST2_MISSING)
+endif(NOT UNITTEST_MISSING)
 add_subdirectory(python)
 add_subdirectory(router)
 add_subdirectory(docs)

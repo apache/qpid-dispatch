@@ -28,7 +28,6 @@ from __future__ import print_function
 
 import sys
 from time import sleep
-import unittest2 as unittest
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -44,6 +43,7 @@ from system_test import Qdrouterd
 from system_test import main_module
 from system_test import TIMEOUT
 from system_test import TestTimeout
+from system_test import unittest
 
 
 MAX_FRAME=1023

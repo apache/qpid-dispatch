@@ -23,10 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import unittest2 as unittest
 import os
 from subprocess import PIPE, Popen
 from system_test import TestCase, Qdrouterd, main_module, SkipIfNeeded
+from system_test import unittest
 from proton import SASL
 from proton.handlers import MessagingHandler
 from proton.reactor import Container

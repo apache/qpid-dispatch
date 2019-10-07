@@ -28,9 +28,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
-import unittest2 as unittest
 import system_test
 from system_test import Qdrouterd, message, MISSING_REQUIREMENTS
+from system_test import unittest
 from itertools import cycle
 
 
@@ -84,7 +84,7 @@ class DistributedQueueTest(system_test.TestCase): # pylint: disable=too-many-pub
             qs = [q.management.getQueue(self.testq) for q in self.qpidds]
             enq = sum(q.msgTotalEnqueues for q in qs)
             deq = sum(q.msgTotalDequeues for q in qs)
-            self.assertEquals((enq, deq), (len(r), len(r)))
+            self.assertEqual((enq, deq), (len(r), len(r)))
             # Verify each broker handled a reasonable share of the messages.
             self.assert_fair([q.msgTotalEnqueues for q in qs])
 

@@ -24,13 +24,13 @@ from __future__ import print_function
 
 from time import sleep
 import json, os
-import unittest2 as unittest
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
 from proton import Message, Timeout, Delivery
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import AsyncTestReceiver
+from system_test import unittest
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce

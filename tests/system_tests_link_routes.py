@@ -22,7 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
@@ -32,6 +31,7 @@ from system_test import AsyncTestSender
 from system_test import AsyncTestReceiver
 from system_test import QdManager
 from system_test import MgmtMsgProxy
+from system_test import unittest
 from test_broker import FakeBroker
 
 from proton import Delivery
@@ -337,7 +337,7 @@ class LinkRouteTest(TestCase):
         # 3. inbound link to the $management
         # 4. outbound link to $management
         # self.assertEqual(4, len()
-        self.assertEquals(4, len(local_node.query(type='org.apache.qpid.dispatch.router.link').results))
+        self.assertEqual(4, len(local_node.query(type='org.apache.qpid.dispatch.router.link').results))
 
         blocking_connection.close()
 
@@ -610,7 +610,7 @@ class LinkRouteTest(TestCase):
 
         cmd = 'QUERY --type=linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        self.assertEquals(out.rstrip(), '[]')
+        self.assertEqual(out.rstrip(), '[]')
 
         # linkRoutes now gone on QDR.B but remember that it still exist on QDR.C
         # We will now try to create a receiver on address org.apache.dev on QDR.C.
@@ -632,7 +632,7 @@ class LinkRouteTest(TestCase):
 
         cmd = 'QUERY --type=linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=addr)
-        self.assertEquals(out.rstrip(), '[]')
+        self.assertEqual(out.rstrip(), '[]')
 
         res = local_node.query(type='org.apache.qpid.dispatch.router')
         results = res.results[0]

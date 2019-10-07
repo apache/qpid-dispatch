@@ -45,6 +45,20 @@ from threading import Event
 import json
 import uuid
 
+is_python2 = sys.version_info[0] == 2
+
+# DISPATCH-1443: for python < 2.7 use unittest2 since the default unittest for
+# older versions lacks features we need:
+#
+if is_python2 and sys.version_info[1] < 7:
+    # python < 2.7:
+    try:
+        import unittest2 as unittest
+    except ImportError:
+        raise Exception("Python unittest2 not installed - see README")
+else:
+    import unittest
+
 import proton
 from proton import Message
 from proton import Delivery
@@ -54,8 +68,6 @@ from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
 from qpid_dispatch_internal.compat import dict_iteritems
-
-is_python2 = sys.version_info[0] == 2
 
 # Optional modules
 MISSING_MODULES = []
@@ -162,15 +174,16 @@ def get_local_host_socket(protocol_family='IPv4'):
 def port_available(port, protocol_family='IPv4'):
     """Return true if connecting to host:port gives 'connection refused'."""
     s, host = get_local_host_socket(protocol_family)
-
+    available = False
     try:
         s.connect((host, port))
-        s.close()
     except socket.error as e:
-        return e.errno == errno.ECONNREFUSED
+        available = e.errno == errno.ECONNREFUSED
     except:
         pass
-    return False
+
+    s.close()
+    return available
 
 def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     """Wait up to timeout for port (on host) to be connectable.

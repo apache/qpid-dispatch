@@ -24,10 +24,10 @@ from __future__ import print_function
 
 import os
 from threading import Timer
-import unittest2 as unittest
 import json, re
 from system_test import main_module, TIMEOUT
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
+from system_test import unittest
 from subprocess import PIPE, STDOUT
 
 

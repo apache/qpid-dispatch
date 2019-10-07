@@ -32,8 +32,8 @@ from __future__ import print_function
 import os
 import signal
 from subprocess import PIPE, STDOUT
-import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, main_module, Process, wait_port
+from system_test import unittest
 
 class CommandLineTest(TestCase):
     """

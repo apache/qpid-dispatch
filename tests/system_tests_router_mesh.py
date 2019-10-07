@@ -25,7 +25,6 @@ from __future__ import print_function
 import os
 import sys
 from time import sleep
-import unittest2 as unittest
 from signal import SIGINT
 from subprocess import PIPE
 
@@ -38,6 +37,7 @@ from system_test import main_module
 from system_test import TIMEOUT
 from system_test import Process
 from system_test import AsyncTestSender
+from system_test import unittest
 
 
 class ThreeRouterTest(TestCase):

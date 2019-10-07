@@ -22,10 +22,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 import json
 from proton import Message, symbol
 from system_test import TestCase, Qdrouterd, Process, TIMEOUT
+from system_test import unittest
 from subprocess import PIPE, STDOUT
 from proton.handlers import MessagingHandler
 from proton.reactor import Container

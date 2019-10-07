@@ -26,12 +26,12 @@ from time import sleep
 from threading import Event
 from threading import Timer
 
-import unittest2 as unittest
 from proton import Message, Timeout, symbol
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
 from system_test import QdManager
+from system_test import unittest
 from system_tests_link_routes import ConnLinkRouteService
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties

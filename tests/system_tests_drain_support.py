@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message, Endpoint
 from system_test import main_module, TIMEOUT
+from system_test import unittest
 
 class Timeout(object):
     def __init__(self, parent):

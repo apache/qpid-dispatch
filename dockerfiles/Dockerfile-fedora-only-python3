@@ -34,7 +34,7 @@ RUN dnf -y install gcc cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-
 
 # Remove python2 if it is already there. We want this environment to contain only python3
 RUN dnf -y remove python2
-RUN dnf -y install  python3-devel python3-unittest2
+RUN dnf -y install  python3-devel
 RUN dnf clean all -y
 
 RUN alternatives --install /usr/bin/python python /usr/bin/python3 1
