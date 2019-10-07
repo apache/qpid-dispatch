@@ -640,7 +640,7 @@
                 },
                 "password": {
                     "type": "string",
-                    "description": "Password that unlocks the certificate key. Supports three openssl style prefixes namely - env:, file: pass:. Also supports the legacy literal: prefix. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or literal:password or password with no prefix is used to directly specify the password and should only be used where security is not important. If both password and passwordFile are provided, the passwordFile is ignored",
+                    "description": "Password that unlocks the certificate key. Supports three prefixes namely - env:, file: pass:. Also supports the legacy literal: prefix. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or literal:password or password with no prefix is used to directly specify the password and should only be used where security is not important. If both password and passwordFile are provided, the passwordFile is ignored",
                     "create": true
 
                 },

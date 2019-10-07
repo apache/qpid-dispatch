@@ -56,8 +56,9 @@ This `sslProfile` contains the locations of the private key and certificates tha
 sslProfile {
     name: inter-router-tls
     certFile: /etc/qpid-dispatch-certs/inter-router/tls.crt
-    privateKeyFile: /etc/qpid-dispatch-certs/inter-router/tls.key
     caCertFile: /etc/qpid-dispatch-certs/inter-router/ca.crt
+    privateKeyFile: /etc/qpid-dispatch-certs/inter-router/tls.key
+    password: file:/etc/qpid-dispatch-certs/inter-router/password.txt
     ...
 }
 ----
@@ -65,9 +66,11 @@ sslProfile {
 
 `certFile`:: The absolute path to the file containing the public certificate for this router.
 
+`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
 
-`caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
+`password`:: The absolute path to the file that contains the password to unlock the certificate key. Not specified if certificate key has no password.
 --
 
 .. Configure the inter-router `connector` for this connection to use the `sslProfile` that you created.

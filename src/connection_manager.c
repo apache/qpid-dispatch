@@ -107,31 +107,39 @@ static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm,
  * Read the file from the password_file location on the file system and populate password_field with the
  * contents of the file.
  */
-static void qd_set_password_from_file(char *password_file, char **password_field)
+static void qd_set_password_from_file(char *password_file, char **password_field, qd_log_source_t *log_source)
 {
     if (password_file) {
         FILE *file = fopen(password_file, "r");
 
-        if (file) {
-            char buffer[200];
-
-            int c;
-            int i=0;
-
-            while (i < 200 - 1) {
-                c = fgetc(file);
-                if (c == EOF || c == '\n')
-                    break;
-                buffer[i++] = c;
-            }
-
-            if (i != 0) {
-                buffer[i] = '\0';
-                free(*password_field);
-                *password_field = strdup(buffer);
-            }
-            fclose(file);
+        if (file == NULL) {
+            //
+            // The global variable errno (found in <errno.h>) contains information about what went wrong; you can use perror() to print that information as a readable string
+            //
+            qd_log(log_source, QD_LOG_WARNING, "Unable to open password file  %s", password_file);
+            // writes to stderr
+            perror("Error opening file: ");
+            return;
         }
+
+        char buffer[200];
+
+        int c;
+        int i=0;
+
+        while (i < 200 - 1) {
+            c = fgetc(file);
+            if (c == EOF || c == '\n')
+                break;
+            buffer[i++] = c;
+        }
+
+        if (i != 0) {
+            buffer[i] = '\0';
+            free(*password_field);
+            *password_field = strdup(buffer);
+        }
+        fclose(file);
     }
 }
 
@@ -572,7 +580,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         bool is_file_path = 0;
         qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, cm->log_source); CHECK();
         if (actual_pass && is_file_path) {
-            qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password);
+            qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password, cm->log_source);
         }
         else if (actual_pass) {
             free(ssl_profile->ssl_password);
@@ -584,7 +592,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         // Warn the user that the passwordFile attribute has been deprecated.
         //
         qd_log(cm->log_source, QD_LOG_WARNING, "Attribute passwordFile of entity sslProfile has been deprecated. Use password field with the file: prefix instead.");
-        qd_set_password_from_file(password_file, &ssl_profile->ssl_password);
+        qd_set_password_from_file(password_file, &ssl_profile->ssl_password, cm->log_source);
     }
 
     free(password_file);
