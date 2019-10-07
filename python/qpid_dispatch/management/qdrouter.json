@@ -496,7 +496,7 @@
                 },
                 "annotation": {
                     "type": "string",
-                    "description": "Annotation text for this router, to be used by user or orchestration layers.",
+                    "description": "Optional annotation text to describe or label this router. This text does not affect the function of the router, but it can be used by external tools (such as the console or orchestration software) to control how the router is displayed.",
                     "create": true,
                     "required": false
                 },
