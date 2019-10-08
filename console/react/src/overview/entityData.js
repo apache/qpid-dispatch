@@ -21,12 +21,14 @@ import RouterData from "./dataSources/routerData";
 import AddressData from "./dataSources/addressData";
 import LinkData from "./dataSources/linkData";
 import ConnectionData from "./dataSources/connectionData";
+import LogsData from "./dataSources/logsData";
 
 const dataMap = {
   routers: RouterData,
   connections: ConnectionData,
   links: LinkData,
-  addresses: AddressData
+  addresses: AddressData,
+  logs: LogsData
 };
 
-export { RouterData, AddressData, LinkData, ConnectionData, dataMap };
+export { dataMap };

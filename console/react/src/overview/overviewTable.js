@@ -72,8 +72,9 @@ class OverviewTable extends React.Component {
     if (!this.dataSource) return;
     // initialize the columns and get the data
     this.dataSource.fields.forEach(f => {
-      if (!f.noSort) f.transforms = [sortable];
+      f.transforms = [];
       f.cellFormatters = [];
+      if (!f.noSort) f.transforms.push(sortable);
       if (f.numeric) {
         f.cellFormatters.push(this.prettier);
       }
@@ -86,8 +87,6 @@ class OverviewTable extends React.Component {
         );
       }
     });
-    if (!this.dataSource.fields[0].cellFormatters)
-      this.dataSource.fields[0].cellFormatters = [];
     this.dataSource.fields[0].cellFormatters.push(this.detailLink);
 
     this.setState({ columns: this.dataSource.fields }, () => {
@@ -136,26 +135,6 @@ class OverviewTable extends React.Component {
     );
   };
 
-  noWrap = (value, extraInfo) => {
-    return <span className="noWrap">{value}</span>;
-  };
-
-  prettier = (value, extraInfo) => {
-    return typeof value === "undefined"
-      ? "-"
-      : this.props.service.utilities.pretty(value);
-  };
-
-  formatter = (Component, value, extraInfo) => {
-    return (
-      <Component
-        value={value}
-        extraInfo={extraInfo}
-        service={this.props.service}
-      />
-    );
-  };
-
   detailClick = (value, extraInfo) => {
     this.setState({
       redirect: true,
@@ -169,6 +148,29 @@ class OverviewTable extends React.Component {
         perPage: this.state.perPage
       }
     });
+  };
+
+  // cell formatter
+  noWrap = (value, extraInfo) => {
+    return <span className="noWrap">{value}</span>;
+  };
+
+  // cell formatter
+  prettier = (value, extraInfo) => {
+    return typeof value === "undefined"
+      ? "-"
+      : this.props.service.utilities.pretty(value);
+  };
+
+  // cell formatter, display a component instead of this cell's data
+  formatter = (Component, value, extraInfo) => {
+    return (
+      <Component
+        value={value}
+        extraInfo={extraInfo}
+        service={this.props.service}
+      />
+    );
   };
 
   onSort = (_event, index, direction) => {
@@ -255,24 +257,18 @@ class OverviewTable extends React.Component {
       return rows;
     }
 
-    if (this.dataSource.fields[index].numeric) {
-      rows.sort((a, b) => {
-        if (direction === SortByDirection.desc)
-          return a > b ? -1 : a < b ? 1 : 0;
-        return a < b ? -1 : a > b ? 1 : 0;
-      });
-    } else {
-      rows.sort((a, b) => {
-        return a.cells[index] < b.cells[index]
-          ? -1
-          : a.cells[index] > b.cells[index]
-          ? 1
-          : 0;
-      });
-      if (direction === SortByDirection.desc) {
-        rows = rows.reverse();
+    const less = direction === SortByDirection.desc ? 1 : -1;
+    const more = -1 * less;
+    rows.sort((a, b) => {
+      if (a.cells[index] < b.cells[index]) return less;
+      if (a.cells[index] > b.cells[index]) return more;
+      // the values matched, sort by 1st column
+      if (index !== 0) {
+        if (a.cells[0] < b.cells[0]) return less;
+        if (a.cells[0] > b.cells[0]) return more;
       }
-    }
+      return 0;
+    });
     return rows;
   };
 
@@ -281,7 +277,7 @@ class OverviewTable extends React.Component {
       return (
         <Redirect
           to={{
-            pathname: "/details",
+            pathname: this.dataSource.detailPath || "/details",
             state: this.state.redirectState
           }}
         />

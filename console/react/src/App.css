@@ -954,6 +954,7 @@ div.qdrChord .legend-text {
 .link-dir-in,
 .link-dir-out {
   padding-right: 0.5em;
+  font-size: 16px;
 }
 .link-dir-in {
   color: red;
@@ -961,4 +962,8 @@ div.qdrChord .legend-text {
 
 .link-dir-out {
   color: blue;
+}
+
+.overview-table tr {
+  border-bottom-color: #eaeaea !important;
 }

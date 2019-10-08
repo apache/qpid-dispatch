@@ -19,6 +19,15 @@ under the License.
 
 import React from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
+
+import {
+  DataList,
+  DataListItem,
+  DataListItemRow,
+  DataListItemCells,
+  DataListCell,
+  DataListContent
+} from "@patternfly/react-core";
 import {
   Stack,
   StackItem,
@@ -29,32 +38,14 @@ import {
   BreadcrumbItem
 } from "@patternfly/react-core";
 
-import {
-  cellWidth,
-  Table,
-  TableHeader,
-  TableBody,
-  TableVariant
-} from "@patternfly/react-table";
-import { Card, CardBody } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import { dataMap } from "./entityData";
 
-class DetailTablesPage extends React.Component {
+class LogDetails extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      columns: [
-        { title: "Attribute", transforms: [cellWidth(20)] },
-        {
-          title: "Value",
-          transforms: [cellWidth("max")],
-          props: { className: "pf-u-text-align-left" }
-        }
-      ],
-      rows: [],
       redirect: false,
-      redirectState: { page: 1 },
       redirectPath: "/dashboard",
       lastUpdated: new Date()
     };
@@ -66,20 +57,14 @@ class DetailTablesPage extends React.Component {
       this.props.location &&
       this.props.location.state &&
       this.props.location.state.entity;
-    console.log(`detailsTablePage entity is ${this.entity}`);
-    if (!dataMap[this.entity]) {
+    if (!this.entity) {
       this.state.redirect = true;
-    } else {
-      this.dataSource = new dataMap[this.entity](this.props.service);
     }
   }
 
   componentDidMount = () => {
-    this.props.service.management.getSchema().then(schema => {
-      this.schema = schema;
-      this.timer = setInterval(this.update, 5000);
-      this.update();
-    });
+    this.timer = setInterval(this.update, 5000);
+    this.update();
   };
 
   componentWillUnmount = () => {
@@ -88,68 +73,13 @@ class DetailTablesPage extends React.Component {
     }
   };
 
-  update = () => {
-    this.mapRows().then(
-      rows => {
-        this.setState({ rows, lastUpdated: new Date() });
-      },
-      error => {
-        console.log(`detailsTablePage: ${error}`);
-        if (this.timer) clearInterval(this.timer);
-      }
-    );
-  };
-
-  toString = val => {
-    return val === null ? "" : String(val);
-  };
-
-  mapRows = () => {
-    return new Promise((resolve, reject) => {
-      const rows = [];
-      if (!this.dataSource) {
-        reject("no data source");
-      }
-      this.dataSource
-        .fetchRecord(this.props.location.state.currentRecord, this.schema)
-        .then(data => {
-          for (const attribute in data) {
-            if (
-              !this.dataSource.hideFields ||
-              this.dataSource.hideFields.indexOf(attribute) === -1
-            ) {
-              rows.push({
-                cells: [attribute, this.toString(data[attribute])]
-              });
-            }
-          }
-          resolve(rows);
-        });
-    });
-  };
-
+  update = () => {};
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
   parentItem = () => {
-    // if we have a specific field that should be used
-    // as the record's title, return it
-    if (this.dataSource.detailField) {
-      return this.props.location.state.currentRecord[
-        this.dataSource.detailField
-      ];
-    }
     // otherwise return the 1st field
     return this.props.location.state.value;
   };
-
-  breadcrumbSelected = () => {
-    this.setState({
-      redirect: true,
-      redirectPath: `/overview/${this.entity}`,
-      redirectState: this.props.location.state
-    });
-  };
-
   render() {
     if (this.state.redirect) {
       return (
@@ -168,6 +98,7 @@ class DetailTablesPage extends React.Component {
           variant={PageSectionVariants.light}
           className="overview-table-page"
         >
+          {" "}
           <Stack>
             <StackItem className="overview-header details">
               <Breadcrumb>
@@ -184,9 +115,7 @@ class DetailTablesPage extends React.Component {
 
               <TextContent>
                 <Text className="overview-title" component={TextVariants.h1}>
-                  {`${
-                    this.dataSource.detailName
-                  } ${this.parentItem()} attributes`}
+                  {`Logs ${this.parentItem()} attributes`}
                 </Text>
                 <Text className="overview-loading" component={TextVariants.pre}>
                   {`Updated ${this.props.service.utilities.strDate(
@@ -195,20 +124,47 @@ class DetailTablesPage extends React.Component {
                 </Text>
               </TextContent>
             </StackItem>
+
             <StackItem className="overview-table">
-              <Card>
-                <CardBody>
-                  <Table
-                    cells={this.state.columns}
-                    rows={this.state.rows}
-                    variant={TableVariant.compact}
-                    aria-label={this.entity}
-                  >
-                    <TableHeader />
-                    <TableBody />
-                  </Table>
-                </CardBody>
-              </Card>
+              <DataList aria-label="Simple data list example">
+                <DataListItem aria-labelledby="simple-item1">
+                  <DataListItemRow>
+                    <DataListItemCells
+                      dataListCells={[
+                        <DataListCell key="primary content">
+                          <span id="simple-item1">Primary content</span>
+                        </DataListCell>,
+                        <DataListCell key="secondary content">
+                          Secondary content
+                        </DataListCell>
+                      ]}
+                    />
+                  </DataListItemRow>
+                </DataListItem>
+                <DataListItem aria-labelledby="simple-item2">
+                  <DataListItemRow>
+                    <DataListItemCells
+                      dataListCells={[
+                        <DataListCell
+                          isFilled={false}
+                          key="secondary content fill"
+                        >
+                          <span id="simple-item2">
+                            Secondary content (pf-m-no-fill)
+                          </span>
+                        </DataListCell>,
+                        <DataListCell
+                          isFilled={false}
+                          alignRight
+                          key="secondary content align"
+                        >
+                          Secondary content (pf-m-align-right pf-m-no-fill)
+                        </DataListCell>
+                      ]}
+                    />
+                  </DataListItemRow>
+                </DataListItem>
+              </DataList>
             </StackItem>
           </Stack>
         </PageSection>
@@ -217,4 +173,4 @@ class DetailTablesPage extends React.Component {
   }
 }
 
-export default DetailTablesPage;
+export default LogDetails;

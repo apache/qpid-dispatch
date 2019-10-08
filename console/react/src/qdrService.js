@@ -53,25 +53,16 @@ export class QDRService {
           );
 
           self.management.getSchema().then(schema => {
-            console.log("got schema after connection");
-            console.log(schema);
+            //console.log("got schema after connection");
+            //console.log(schema);
             self.management.topology.setUpdateEntities([]);
             //console.log("requesting a topology");
             self.management.topology
               .get() // gets the list of routers
               .then(t => {
-                //console.log("got topology");
-                const url = utils.getUrlParts(window.location);
-                let curPath = url.pathname;
-                let parts = curPath.split("/");
-                let org = parts[parts.length - 1];
-                if (org === "" || org === "connect") {
-                  org = localStorage[QDR_LAST_LOCATION] || "/overview";
-                }
-                self.hooks.setLocation(org);
+                resolve(r);
               });
           });
-          resolve(r);
         },
         e => {
           reject(e);

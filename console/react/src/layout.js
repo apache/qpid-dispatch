@@ -25,7 +25,6 @@ import {
   Dropdown,
   DropdownToggle,
   DropdownItem,
-  DropdownSeparator,
   Page,
   PageHeader,
   SkipToContent,
@@ -48,9 +47,8 @@ import {
 } from "react-router-dom";
 
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
-import spacingStyles from "@patternfly/patternfly/utilities/Spacing/spacing.css";
 import { css } from "@patternfly/react-styles";
-import { BellIcon, CogIcon, PowerOffIcon } from "@patternfly/react-icons";
+import { BellIcon, PowerOffIcon } from "@patternfly/react-icons";
 //import ConnectForm from "./connect-form";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
@@ -58,7 +56,9 @@ import OverviewTablePage from "./overview/overviewTablePage";
 import DetailsTablePage from "./overview/detailsTablePage";
 import TopologyPage from "./topology/qdrTopology";
 import MessageFlowPage from "./chord/qdrChord";
+import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
+import ConnectForm from "./connect-form";
 const avatarImg = require("./assets/img_avatar.svg");
 
 class PageLayout extends React.Component {
@@ -70,23 +70,9 @@ class PageLayout extends React.Component {
       isDropdownOpen: false,
       activeGroup: "overview",
       activeItem: "dashboard",
-      detailInfo: null,
-      detailMeta: null
+      isConnectFormOpen: false
     };
     this.tables = ["routers", "addresses", "links", "connections", "logs"];
-
-    /*
-      logs: [
-        { title: "Module" },
-        { title: "Notice" },
-        { title: "Info" },
-        { title: "Trace" },
-        { title: "Debug" },
-        { title: "Warning" },
-        { title: "Error" },
-        { title: "Critical" }
-      ]
-      */
     this.hooks = { setLocation: this.setLocation };
     this.service = new QDRService(this.hooks);
   }
@@ -108,22 +94,26 @@ class PageLayout extends React.Component {
   };
 
   handleConnect = connectPath => {
-    this.service
-      .connect({ address: "localhost", port: 5673, reconnect: true })
-      .then(
-        r => {
-          this.setState({
-            connected: true,
-            connectPath
-          });
-        },
-        e => {
-          console.log(e);
-        }
-      );
+    if (this.state.connected) {
+      this.service.disconnect();
+      this.setState({ connected: false });
+    } else {
+      this.service
+        .connect({ address: "localhost", port: 5673, reconnect: true })
+        .then(
+          r => {
+            this.setState({
+              connected: true,
+              connectPath
+            });
+          },
+          e => {
+            console.log(e);
+          }
+        );
+    }
   };
 
-  handleConnectCancel = () => {};
   onNavSelect = result => {
     this.setState({
       activeItem: result.itemId,
@@ -133,25 +123,12 @@ class PageLayout extends React.Component {
   };
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  showDetailTable = (_value, detailInfo, activeItem, detailMeta) => {
-    this.setState({
-      activeGroup: "detailsTable",
-      activeItem,
-      detailInfo,
-      detailMeta,
-      connectPath: "/details"
-    });
-  };
-
-  BreadcrumbSelected = connectPath => {
-    this.setState({
-      connectPath
-    });
-  };
-
   toggleConnectForm = event => {
-    console.log("taggleConnectForm called with event.target");
-    console.log(event.target);
+    this.setState({ isConnectFormOpen: !this.state.isConnectFormOpen });
+  };
+
+  handleConnectCancel = () => {
+    this.setState({ isConnectFormOpen: false });
   };
 
   render() {
@@ -335,6 +312,19 @@ class PageLayout extends React.Component {
       return <React.Fragment />;
     };
 
+    const connectForm = () => {
+      if (this.state.isConnectFormOpen) {
+        return (
+          <ConnectForm
+            handleConnect={this.handleConnect}
+            handleConnectCancel={this.handleConnectCancel}
+            isConnected={this.state.connected}
+          />
+        );
+      }
+      return <React.Fragment />;
+    };
+
     return (
       <Router>
         {redirectAfterConnect()}
@@ -344,9 +334,10 @@ class PageLayout extends React.Component {
           isManagedSidebar
           skipToContent={PageSkipToContent}
         >
+          {connectForm()}
           <Switch>
             <PrivateRoute path="/" exact component={DashboardPage} />
-            <PrivateRoute path="/dashboard" exact component={DashboardPage} />
+            <PrivateRoute path="/dashboard" component={DashboardPage} />
             <PrivateRoute
               path="/overview/:entity"
               component={OverviewTablePage}
@@ -354,6 +345,7 @@ class PageLayout extends React.Component {
             <PrivateRoute path="/details" component={DetailsTablePage} />
             <PrivateRoute path="/topology" component={TopologyPage} />
             <PrivateRoute path="/flow" component={MessageFlowPage} />
+            <PrivateRoute path="/logs" component={LogDetails} />
             <Route
               path="/login"
               render={props => (

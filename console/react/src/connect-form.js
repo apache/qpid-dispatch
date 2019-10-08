@@ -129,7 +129,7 @@ class ConnectForm extends React.Component {
               </FormGroup>
               <ActionGroup>
                 <Button variant="primary" onClick={this.handleConnect}>
-                  Connect
+                  {this.props.isConnected ? "Disconnect" : "Connect"}
                 </Button>
                 <Button variant="secondary" onClick={this.toggleDrawerHide}>
                   Cancel
