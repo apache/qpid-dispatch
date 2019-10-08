@@ -32,6 +32,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <inttypes.h>
+#include <errno.h>
 
 struct qd_config_ssl_profile_t {
     DEQ_LINKS(qd_config_ssl_profile_t);
@@ -116,9 +117,7 @@ static void qd_set_password_from_file(char *password_file, char **password_field
             //
             // The global variable errno (found in <errno.h>) contains information about what went wrong; you can use perror() to print that information as a readable string
             //
-            qd_log(log_source, QD_LOG_WARNING, "Unable to open password file  %s", password_file);
-            // writes to stderr
-            perror("Error opening file: ");
+            qd_log(log_source, QD_LOG_ERROR, "Unable to open password file %s, error: %s", password_file, strerror(errno));
             return;
         }
 
