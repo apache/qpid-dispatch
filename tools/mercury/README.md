@@ -79,7 +79,7 @@ When Mercury starts up a router, it saves all the information you need to reprod
 
 Here is an example:
 
-    /home/mick/mercury/mercury/sessions/session\_2019\_03\_05\_2115/config/
+    /home/your_name/mercury/mercury/sessions/session\_2019\_03\_05\_2115/config/
         |-- A.conf
         |-- B.conf
         |-- command_line
@@ -117,8 +117,8 @@ You can define a version in one of two different ways
 To define a version with roots, use the 'version\_roots' command something like this:  (Here we define two different versions.)
 
 
-    version_roots name latest dispatch /home/mick/latest/install/dispatch proton /home/mick/latest/install/proton
-    version_roots name later  dispatch /home/mick/later/install/dispatch  proton /home/mick/later/install/proton
+    version_roots name latest dispatch /home/your_name/latest/install/dispatch proton /home/your_name/latest/install/proton
+    version_roots name later  dispatch /home/your_name/later/install/dispatch  proton /home/your_name/later/install/proton
 
 
 After defining those two versions, you can define a two-router network using those two different versions this way:

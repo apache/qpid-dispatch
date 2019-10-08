@@ -876,6 +876,16 @@ func main ( ) {
                 "10",
                 "How long to pause, in seconds, after killing and before restarting." )
 
+  // set_results_path command -------------------------------------------------------
+  cmd = merc.add_command ( "set_results_path",
+                            set_results_path,
+                           "Set the dir path that will be used by all clients to store their results." )
+  cmd.add_arg ( "path",
+                true,   // unlabelable
+                "string",
+                "",
+                "The dir in which clients will write their results files." )
+
   // sleep command -------------------------------------------------------
   cmd = merc.add_command ( "sleep",
                             sleep,
@@ -912,14 +922,6 @@ func main ( ) {
   cmd = merc.add_command ( "wait_for_network",
                             wait_for_network,
                            "Wait for the network to settle down after being created or changed." )
-
-
-  // example_test_1 command -------------------------------------------------------
-  cmd = merc.add_command ( "example_test_1",
-                            example_test_1,
-                           "Macro: perform a small example test." )
-
-
 
   // reset command -------------------------------------------------------
   cmd = merc.add_command ( "reset",

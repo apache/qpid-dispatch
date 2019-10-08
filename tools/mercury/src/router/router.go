@@ -412,6 +412,7 @@ func ( r * Router ) write_config_file ( ) error {
   //fp ( f, "  enable        : none\n" )
   fp ( f, "  includeSource : true\n" )
   fp ( f, "  module        : DEFAULT\n" )
+  // fp ( f, "  enable        : trace+\n" )   TODO 
   fp ( f, "}\n" )
 
   // The Client Listener -----------------

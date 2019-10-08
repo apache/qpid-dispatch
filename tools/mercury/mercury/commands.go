@@ -1283,6 +1283,18 @@ func kill_and_restart ( merc * Merc, command_line * lisp.List, _ string ) {
 
 
 
+func set_results_path ( merc * Merc, command_line * lisp.List, _ string ) {
+  cmd  := merc.commands [ "set_results_path" ]
+  parse_command_line ( merc, cmd, command_line )
+  path := cmd.unlabelable_string.string_value
+
+  merc.network.Set_results_path ( path )
+}
+
+
+
+
+
 func help ( merc * Merc, command_line * lisp.List, _ string ) {
   // Get a sorted list of command names, 
   // and find the longest one.
@@ -1425,80 +1437,6 @@ func reset ( merc * Merc, command_line * lisp.List, _ string ) {
   merc.default_version = nil
 
   merc.network.Reset ( )
-}
-
-
-
-
-
-func example_test_1 ( merc * Merc, command_line * lisp.List, _ string ) {
-  // cmd := merc.commands [ "example_test_1" ]
-  var command_lines [] string
-
-  command_lines = append ( command_lines, "seed PID" )
-  command_lines = append ( command_lines, "verbose" )
-  command_lines = append ( command_lines, "version_roots name latest dispatch /home/mick/latest/install/dispatch proton /home/mick/latest/install/proton" )
-  command_lines = append ( command_lines, "routers 1" )
-  command_lines = append ( command_lines, "send 1 A" )
-  command_lines = append ( command_lines, "recv A 1" )
-  command_lines = append ( command_lines, "run"      )
-  command_lines = append ( command_lines, "sleep 60" )
-  command_lines = append ( command_lines, "reset" )
-
-  // utils.Set_Top_Freq ( merc.cpu_freqs )
-
-  n_tests := 5
-  for test_number := 1; test_number <= n_tests; test_number ++ {
-    merc.network.Set_results_path ( merc.session.name + fmt.Sprintf ( "/results/iteration_%.3d", test_number ) )
-
-    fp ( os.Stdout, "===================================================\n" )
-    fp ( os.Stdout, "                    Test %d                        \n", test_number )
-    fp ( os.Stdout, "===================================================\n" )
-
-    for _, line := range command_lines {
-      process_line ( merc, line )
-    }
-  }
-}
-
-
-
-
-
-func latency_test_1 ( merc * Merc, command_line * lisp.List, _ string ) {
-  // cmd := merc.commands [ "latency_test_1" ]
-  var command_lines [] string
-
-  command_lines = append ( command_lines, "seed PID" )
-  command_lines = append ( command_lines, "verbose" )
-  command_lines = append ( command_lines, "version_roots name latest dispatch /home/mick/latest/install/dispatch proton /home/mick/latest/install/proton" )
-  command_lines = append ( command_lines, "routers 1" )
-  //command_lines = append ( command_lines, "recv A 100" )
-  command_lines = append ( command_lines, "run"      )
-  //command_lines = append ( command_lines, "sleep 10" )
-  //command_lines = append ( command_lines, "send 100 A" )
-  //command_lines = append ( command_lines, "run"      )
-  //command_lines = append ( command_lines, "sleep 60" )
-  //command_lines = append ( command_lines, "reset" )
-
-  n_tests := 1
-  for test_number := 1; test_number <= n_tests; test_number ++ {
-    merc.network.Set_results_path ( merc.session.name + fmt.Sprintf ( "/results/iteration_%.3d", test_number ) )
-
-    fp ( os.Stdout, "===================================================\n" )
-    fp ( os.Stdout, "                    Test %d                        \n", test_number )
-    fp ( os.Stdout, "===================================================\n" )
-
-    for _, line := range command_lines {
-      process_line ( merc, line )
-    }
-
-
-    // At this point the network should be running.
-    first_router_name := merc.network.First_router_name ( )
-    last_router_name  := merc.network.Last_router_name  ( )
-    fmt.Fprintf ( os.Stdout, "first |%s|   last |%s|\n", first_router_name, last_router_name )
-  }
 }
 
 

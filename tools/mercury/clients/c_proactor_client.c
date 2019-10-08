@@ -43,6 +43,10 @@
 #include <unistd.h>
 
 
+
+#define BUGALERT_MESSAGE_LENGTHS   100
+
+
 static
 double
 get_timestamp ( void )
@@ -57,7 +61,7 @@ get_timestamp ( void )
 
 #define MAX_NAME   100
 #define MAX_ADDRS  1000
-#define MAX_MESSAGE 1000000
+#define MAX_MESSAGE 2000000
 
 
 typedef
@@ -130,7 +134,6 @@ struct context_s
                     send_start_time,
                     stop_time;
 
-  bool              doing_throughput;
   bool              dumped_flight_times;
   bool              soak;
 
@@ -298,7 +301,7 @@ make_timestamped_message ( context_p context )
 {
   double ts = get_timestamp();
 
-  context->message_length = 100;
+  context->message_length = BUGALERT_MESSAGE_LENGTHS;  
   memset ( context->outgoing_buffer, 'x', context->message_length );
   sprintf ( context->outgoing_buffer, "%.7lf", ts );
 }
@@ -423,7 +426,7 @@ decode_message ( context_p context, pn_delivery_t * delivery )
   }
   else
   {
-    char temp[1000];
+    char temp[200000];
     char * dst = temp;
     pn_string_t *s = pn_string ( NULL );
     pn_inspect ( pn_message_body(msg), s );
@@ -432,6 +435,9 @@ decode_message ( context_p context, pn_delivery_t * delivery )
     const char * message_content = pn_string_get(s);
     const char * src = message_content + 1; // first char is a double-quote!
 
+    // log ( context, "received %d bytes.\n", strlen(message_content) );
+
+    // BUGALERT
     while ( *src != 'x' && *src != '\\' )
       * dst ++ = * src ++;
     * dst = 0;
@@ -506,6 +512,8 @@ send_message ( context_p context )
     pn_data_exit ( body );
     size_t outgoing_size = encode_outgoing_message ( context );
 
+    // log ( context, "sending %d bytes.\n", outgoing_size );
+
     pn_delivery ( link, 
                   pn_dtag ( (const char *) & context->sent, sizeof(context->sent) ) 
                 );
@@ -522,10 +530,8 @@ send_message ( context_p context )
     context->sent       ++;
     context->total_sent ++;
 
-    if ( ! ( context->total_sent % context->report_frequency ) )
-    {
-      log ( context, "%d messages sent.\n", context->total_sent );
-    }
+    // log ( context, "%d messages sent.\n", context->total_sent );
+
 
     pn_link_advance ( link );
   }
@@ -628,7 +634,7 @@ process_event ( context_p context, pn_event_t * event )
 
         if ( context->sent >= context->total_expected_messages )
         {
-          log ( context, "%d messages sent.\n", context->total_sent );
+          // log ( context, "%d messages sent.\n", context->total_sent );
           reset_stats ( context );
         }
       }
@@ -695,9 +701,13 @@ process_event ( context_p context, pn_event_t * event )
             context->accepted ++;
             context->total_accepted ++;
 
-            if ( context->accepted >= context->total_expected_messages && (! context->soak) )
+            if ( context->total_accepted >= context->total_expected_messages && (! context->soak) )
             {
-              log ( context, "%d messages accepted. sender halting.\n", context->accepted );
+              double send_stop_time = get_timestamp();
+              double total_time = send_stop_time - context->send_start_time;
+              double throughput = context->total_accepted / total_time;
+              log ( context, "%d messages accepted. sender halting.\n", context->total_accepted );
+              log ( context, "throughput %.3lf\n", throughput );
               halt ( context );
             }
           break;
@@ -736,7 +746,7 @@ process_event ( context_p context, pn_event_t * event )
         context->received ++;
         context->total_received ++;
 
-        if ( ! ( context->total_received % context->report_frequency ) )
+        if ( ! ( context->total_received % 10 ) )
         {
           log ( context, "%d messages received.\n", context->total_received );
         }
@@ -760,7 +770,8 @@ process_event ( context_p context, pn_event_t * event )
           dump_flight_times ( context );
           if ( ! context->soak )
           {
-            log ( context, "%d messages received. receiver halting.\n", context->received );
+            log ( context, "%d messages received. receiver halting.\n", context->total_received );
+            log ( context, "%d total expected.\n", context->total_expected_messages );
             halt ( context );
             break;
           }
@@ -847,7 +858,6 @@ init_context ( context_p context, int argc, char ** argv )
 
   context->grand_start_time        = get_timestamp();
 
-  context->doing_throughput        = false;
   context->dumped_flight_times     = false;
   context->soak                    = false;
   context->report_frequency        = 10000;
@@ -965,12 +975,6 @@ init_context ( context_p context, int argc, char ** argv )
       // is still used -- but it only controls how many flight times are
       // stored until they are dumped. Then the array starts to fill again.
     }
-    // throughput ----------------------------------------------
-    else
-    if ( ! strcmp ( "--throughput", argv[i] ) )
-    {
-      context->doing_throughput = true;
-    }
     // unknown ----------------------------------------------
     else
     {
@@ -1003,7 +1007,6 @@ log_context ( context_p context )
   log_no_timestamp ( context, "  log                : %s\n", context->log_file_name );
   log_no_timestamp ( context, "  messages           : %d\n", context->expected_messages );
   log_no_timestamp ( context, "  soak               : %s\n", context->soak ? "true" : "false" );
-  log_no_timestamp ( context, "  throughput         : %s\n", context->doing_throughput ? "true" : "false" );
   log_no_timestamp ( context, "}\n" );
 }
 
@@ -1043,10 +1046,12 @@ main ( int argc, char ** argv )
   context.max_flight_times = context.total_expected_messages;
   context.n_flight_times   = 0;
 
+  log ( & context, "BUGALERT !  using fixed message lengths of size %d\n", BUGALERT_MESSAGE_LENGTHS );
+
   // Make the max send length larger than the max receive length 
   // to account for the extra header bytes.
-  context.max_receive_length   = 1000;
-  context.outgoing_buffer_size = 1000;
+  context.max_receive_length   = 2000000;
+  context.outgoing_buffer_size = 2000000;
   context.outgoing_buffer = (char *) malloc ( context.outgoing_buffer_size );
 
   context.message = pn_message();
