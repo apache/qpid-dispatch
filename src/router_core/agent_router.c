@@ -31,7 +31,7 @@
 #define QDR_ROUTER_MODE                                4
 #define QDR_ROUTER_AREA                                5
 #define QDR_ROUTER_VERSION                             6
-#define QDR_ROUTER_ANNOTATION                          7
+#define QDR_ROUTER_METADATA                            7
 #define QDR_ROUTER_ADDR_COUNT                          8
 #define QDR_ROUTER_LINK_COUNT                          9
 #define QDR_ROUTER_NODE_COUNT                          10
@@ -62,7 +62,7 @@ const char *qdr_router_columns[] =
      "mode",
      "area",
      "version",
-     "annotation",
+     "metadata",
      "addrCount",
      "linkCount",
      "nodeCount",
@@ -126,9 +126,9 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         qd_compose_insert_string(body, QPID_DISPATCH_VERSION);
         break;
 
-    case QDR_ROUTER_ANNOTATION:
-        if (core->qd->annotation)
-            qd_compose_insert_string(body, core->qd->annotation);
+    case QDR_ROUTER_METADATA:
+        if (core->qd->metadata)
+            qd_compose_insert_string(body, core->qd->metadata);
         else
             qd_compose_insert_null(body);
         break;

@@ -60,7 +60,7 @@ struct qd_dispatch_t {
     bool   test_hooks;
     bool   timestamps_in_utc;
     char  *timestamp_format;
-    char  *annotation;
+    char  *metadata;
 };
 
 /**
