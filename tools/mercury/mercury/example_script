@@ -1,0 +1,25 @@
+echo
+echo ==============================================
+echo test: example script
+echo ==============================================
+echo
+echo
+
+seed PID
+
+verbose
+
+
+
+routers 1
+
+recv 10 A n_messages 1000 address addr_%d delay 10
+
+run
+
+sleep 5
+
+send 10 A n_messages 1000 address addr_%d delay 10 
+
+run
+

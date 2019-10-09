@@ -3,7 +3,7 @@
 
 # NOTE -- change MERCURY_ROOT to suit your installation.
 
-export MERCURY_ROOT=${HOME}/mercurys_big_day/qpid-dispatch/tools/mercury
+export MERCURY_ROOT=${HOME}/qpid-dispatch/tools/mercury
 export GOPATH=${MERCURY_ROOT}
 
 
