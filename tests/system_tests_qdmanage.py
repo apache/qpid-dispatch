@@ -230,11 +230,13 @@ class QdmanageTest(TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 3)
 
-
     def test_get_log(self):
-        log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
-        self.assertEquals(['AGENT', 'debug'], log[0:2])
-        self.assertRegexpMatches(log[2], 'get-log')
+        logs = json.loads(self.run_qdmanage("get-log limit=20"))
+        found = False
+        for log in logs:
+            if u'get-log' in log[2] and ['AGENT', 'debug'] == log[0:2]:
+                found = True
+        self.assertTrue(found)
 
     def test_get_logstats(self):
         query_command = 'QUERY --type=logStats'
