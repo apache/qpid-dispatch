@@ -1235,18 +1235,21 @@ class MulticastUnsettled ( MessagingHandler ) :
 
 
     def on_start ( self, event ):
-        self.send_conn = event.container.connect ( self.addr )
         self.recv_conn = event.container.connect ( self.addr )
-
-        self.sender = event.container.create_sender   ( self.send_conn, self.addr )
         for i in range ( self.n_receivers ) :
             rcvr = event.container.create_receiver ( self.recv_conn, self.addr, name = "receiver_" + str(i) )
-            self.receivers.append ( rcvr )
             rcvr.flow ( self.n_messages )
-            self.n_received.append ( 0 )
 
         self.test_timer = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
 
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.receivers.append(event.receiver)
+            self.n_received.append(0)
+            # start the sender once all receivers links are up
+            if len(self.receivers) == self.n_receivers:
+                self.send_conn = event.container.connect(self.addr)
+                self.sender = event.container.create_sender(self.send_conn, self.addr)
 
     def on_sendable ( self, event ) :
         while self.n_sent < self.n_messages :
@@ -1254,11 +1257,10 @@ class MulticastUnsettled ( MessagingHandler ) :
                 break
             for i in range ( self.n_messages ) :
                 msg = Message ( body = i )
-                # The sender does not settle, but the 
+                # The sender does not settle, but the
                 # receivers will..
                 self.sender.send ( msg )
                 self.n_sent += 1
-
 
     def on_message ( self, event ) :
         if self.bailing :
@@ -2398,6 +2400,7 @@ class MulticastUnsettledTest(MessagingHandler):
         self.n_sent     = 0
         self.n_received = 0
         self.n_accepted = 0
+        self.n_receivers = 0
 
     def check_if_done(self):
         if self.n_received == self.count * 2 and self.n_accepted == self.count:
@@ -2411,8 +2414,6 @@ class MulticastUnsettledTest(MessagingHandler):
     def on_start(self, event):
         self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
-        self.sender    = event.container.create_sender(self.conn, self.dest,
-                                                       options=AtLeastOnce())
         self.receiver1 = event.container.create_receiver(self.conn, self.dest,
                                                          name="A",
                                                          options=AtLeastOnce())
@@ -2421,6 +2422,14 @@ class MulticastUnsettledTest(MessagingHandler):
                                                          options=AtLeastOnce());
         self.receiver1.flow(self.count)
         self.receiver2.flow(self.count)
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.n_receivers += 1
+            # start the sender once all receivers links are up
+            if self.n_receivers == 2:
+                self.sender = event.container.create_sender(self.conn, self.dest,
+                                                            options=AtLeastOnce())
 
     def on_sendable(self, event):
         for i in range(self.count - self.n_sent):
