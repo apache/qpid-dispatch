@@ -23,7 +23,7 @@ under the License
 :doctype: article
 :experimental:
 :idprefix:
-:imagesdir: _images
+:imagesdir: images
 :numbered:
 :sectanchors!:
 :sectnums:
