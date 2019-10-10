@@ -34,11 +34,11 @@ This procedure describes the workflow required to add a router to the router net
 
 .Procedure
 
-. xref:configuring-router-properties-router[Configure essential router properties].
+. xref:configuring-router-properties-{context}[Configure essential router properties].
 +
 To participate in a router network, a router must be configured with a unique ID and an operating mode.
 
-. xref:configuring-network-connections-router[Configure network connections].
+. xref:configuring-network-connections-{context}[Configure network connections].
 
 .. Connect the router to any other routers in the router network.
 +
@@ -48,7 +48,7 @@ Repeat this step for each additional router to which you want to connect this ro
 
 .. If the router should connect to an external AMQP container (such as a message broker), configure the connection.
 
-. xref:securing-network-connections-router[Secure each of the connections that you configured in the previous step].
+. xref:securing-network-connections-{context}[Secure each of the connections that you configured in the previous step].
 
 . (Optional) Configure any additional properties.
 +

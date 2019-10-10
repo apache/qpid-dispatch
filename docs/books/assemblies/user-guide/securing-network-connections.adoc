@@ -31,12 +31,12 @@ You can configure {RouterName} to communicate with clients, routers, and brokers
 
 To secure the router network, you configure SSL/TLS, SASL (or a combination of both) to secure each of the following types of connections:
 
-* xref:securing-connections-between-routers-router[Connections between routers]
-* xref:securing-incoming-client-connections-router[Incoming client connections]
-* xref:securing-outgoing-connections-router[Outgoing connections]
+* xref:securing-connections-between-routers-{context}[Connections between routers]
+* xref:securing-incoming-client-connections-{context}[Incoming client connections]
+* xref:securing-outgoing-connections-{context}[Outgoing connections]
 
 // Securing connections between routers
-include::modules/securing-connections-between-routers.adoc[leveloffset=+1]
+include::../../modules/user-guide/securing-connections-between-routers.adoc[leveloffset=+1]
 
 // Securing incoming client connections
 include::securing-incoming-client-connections.adoc[leveloffset=+1]

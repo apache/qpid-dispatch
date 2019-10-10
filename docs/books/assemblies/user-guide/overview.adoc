@@ -21,27 +21,15 @@ under the License
 //
 // book.adoc
 
-[id='configuring-router-{context}']
-= Configuring a router
+[id='overview-{context}']
+= Overview
 
-Each {RouterName} router contains a `qdrouterd.conf` configuration file. You edit this file to define how the router should operate.
+{RouterName} is a lightweight AMQP message router for building scalable, available, and performant messaging networks.
 
-You can configure the following entities:
+include::../../modules/user-guide/key-features.adoc[leveloffset=+1]
 
-* Essential router properties
-* Network connections
-* Security settings (authentication and authorization)
-* Routing (message routing and link routing)
-* Logging
+include::../../modules/user-guide/supported-standards-protocols.adoc[leveloffset=+1]
 
-// Configuring router properties
-include::modules/configuring-router-properties.adoc[leveloffset=+1]
+include::important-terms-concepts.adoc[leveloffset=+1]
 
-// Configuring network connections
-include::configuring-network-connections.adoc[leveloffset=+1]
-
-// Securing network connections
-include::securing-network-connections.adoc[leveloffset=+1]
-
-// Authorizing access to messaging resources
-include::../authorization.adoc[leveloffset=+1]
+include::../../common/document_conventions.adoc[leveloffset=+1]

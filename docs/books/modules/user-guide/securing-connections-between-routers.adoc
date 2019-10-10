@@ -38,7 +38,7 @@ This procedure describes how to secure a connection between two interior routers
 
 * An inter-router connection must exist between the routers.
 +
-For more information, see xref:connecting-routers-router[].
+For more information, see xref:connecting-routers-{context}[].
 
 .Procedure
 

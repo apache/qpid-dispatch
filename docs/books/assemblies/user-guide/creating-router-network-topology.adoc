@@ -30,11 +30,11 @@ With {RouterName}, the router network topology is independent from the message r
 
 To create the router network topology, complete the following:
 
-. xref:planning-router-network-router[Plan the router network].
+. xref:planning-router-network-{context}[Plan the router network].
 +
 You should understand the different router operating modes you can deploy in your topology, and be aware of security requirements for the interior portion of the router network.
 
-. xref:adding-routers-router-network-router[Build the router network by adding routers one at a time].
+. xref:adding-routers-router-network-{context}[Build the router network by adding routers one at a time].
 +
 For each router, you must configure the following:
 
@@ -46,4 +46,4 @@ For each router, you must configure the following:
 include::planning-router-network.adoc[leveloffset=+1]
 
 // Adding routers to the router network
-include::modules/adding-routers-router-network.adoc[leveloffset=+1]
+include::../../modules/user-guide/adding-routers-router-network.adoc[leveloffset=+1]

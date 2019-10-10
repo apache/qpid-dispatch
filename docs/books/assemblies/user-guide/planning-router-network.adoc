@@ -27,10 +27,10 @@ under the License
 To plan your router network and design the network topology, you must first understand the different router modes and how you can use them to create different types of networks.
 
 // Router operating modes
-include::modules/router-operating-modes.adoc[leveloffset=+1]
+include::../../modules/user-guide/router-operating-modes.adoc[leveloffset=+1]
 
 // Security considerations
-include::modules/router-network-security-considerations.adoc[leveloffset=+1]
+include::../../modules/user-guide/router-network-security-considerations.adoc[leveloffset=+1]
 
 // Example router network topologies
 // include::modules/example-router-network-topologies.adoc[leveloffset=+1]
