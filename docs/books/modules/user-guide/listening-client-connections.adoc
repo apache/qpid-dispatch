@@ -57,5 +57,5 @@ listener {
 +
 `[(amqp|amqps|ws|wss)://](__HOST__|__IP ADDRESS__)[:port]`
 +
-For more information, see xref:connection-failover-router[].
+For more information, see xref:connection-failover-{context}[].
 --

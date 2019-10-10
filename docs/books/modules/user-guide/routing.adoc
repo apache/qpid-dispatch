@@ -563,7 +563,7 @@ it receives the messages stored at the fallback destination.
 
 * The router is connected to a broker.
 +
-For more information, see xref:connecting-to-external-amqp-containers-router[].
+For more information, see xref:connecting-to-external-amqp-containers-{context}[].
 
 .Procedure
 

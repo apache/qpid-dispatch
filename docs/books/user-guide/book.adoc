@@ -17,37 +17,37 @@ specific language governing permissions and limitations
 under the License
 ////
 
-include::_common/attributes.adoc[]
+include::common/attributes.adoc[]
 
-:context: router
+:context: qdr
 
 = {RouterBook}
 
 // Overview
-include::assemblies/overview.adoc[leveloffset=+1]
+include::assemblies/user-guide/overview.adoc[leveloffset=+1]
 
 // Getting started
-include::assemblies/getting-started.adoc[leveloffset=+1]
+include::assemblies/user-guide/getting-started.adoc[leveloffset=+1]
 
 // Configuring a router network topology
-include::assemblies/creating-router-network-topology.adoc[leveloffset=+1]
+include::assemblies/user-guide/creating-router-network-topology.adoc[leveloffset=+1]
 
 // Configuring a router
-include::assemblies/configuring-router.adoc[leveloffset=+1]
+include::assemblies/user-guide/configuring-router.adoc[leveloffset=+1]
 
 // Routing messages through the router network
-include::routing.adoc[leveloffset=+1]
+include::modules/user-guide/routing.adoc[leveloffset=+1]
 
 [id="monitoring-managing-router-network"]
 == Monitoring and managing the router network
-include::modules/starting-routers.adoc[leveloffset=+2]
-include::logging.adoc[leveloffset=+2]
-include::using-console.adoc[leveloffset=+2]
-include::monitoring-using-qdstat.adoc[leveloffset=+2]
-include::managing-using-qdmanage.adoc[leveloffset=+2]
+include::modules/user-guide/starting-routers.adoc[leveloffset=+2]
+include::modules/user-guide/logging.adoc[leveloffset=+2]
+include::modules/user-guide/using-console.adoc[leveloffset=+2]
+include::modules/user-guide/monitoring-using-qdstat.adoc[leveloffset=+2]
+include::modules/user-guide/managing-using-qdmanage.adoc[leveloffset=+2]
 
 // Technical Details and Specifications
-include::technical-details-specifications.adoc[leveloffset=+1]
+include::modules/user-guide/technical-details-specifications.adoc[leveloffset=+1]
 
 // Revision information
 include::revision-info.adoc[]

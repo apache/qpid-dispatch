@@ -17,8 +17,23 @@ specific language governing permissions and limitations
 under the License
 ////
 
-= Management Entities
+// This assembly is included in the following assemblies:
+//
+// overview.adoc
 
-The {RouterName} management schema provides a set of management entities that you can use to configure and operate a router.
+[id='important-terms-concepts-{context}']
+= Important terms and concepts
 
-For details about the management entities, see {ManagementEntitiesLink}.
+Before using {RouterName}, you should be familiar with AMQP and understand some key concepts about {RouterName}.
+
+include::../../modules/user-guide/overview-of-amqp.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/what-routers-are.adoc[leveloffset=+1]
+
+// include::modules/how-routers-connect-endpoints.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/how-routers-route-messages.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/router-security.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/router-management.adoc[leveloffset=+1]

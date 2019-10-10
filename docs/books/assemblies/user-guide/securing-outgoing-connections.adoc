@@ -28,15 +28,15 @@ If a router is configured to create connections to external AMQP containers (suc
 
 You can configure a router to create outgoing connections using:
 
-* xref:connecting-using-one-way-ssl-tls-authentication-router[SSL/TLS encryption (one-way authentication)]
-* xref:connecting-using-mutual-ssl-tls-authentication-router[SSL/TLS mutual authentication]
-* xref:connecting-using-username-password-authentication-router[User name and password authentication (with or without SSL/TLS encryption)]
+* xref:connecting-using-one-way-ssl-tls-authentication-{context}[SSL/TLS encryption (one-way authentication)]
+* xref:connecting-using-mutual-ssl-tls-authentication-{context}[SSL/TLS mutual authentication]
+* xref:connecting-using-username-password-authentication-{context}[User name and password authentication (with or without SSL/TLS encryption)]
 
 // Connecting using SSL/TLS encryption
-include::modules/connecting-using-one-way-ssl-tls-authentication.adoc[leveloffset=+1]
+include::../../modules/user-guide/connecting-using-one-way-ssl-tls-authentication.adoc[leveloffset=+1]
 
 // Connecting using SSL/TLS mutual authentication
-include::modules/connecting-using-mutual-ssl-tls-authentication.adoc[leveloffset=+1]
+include::../../modules/user-guide/connecting-using-mutual-ssl-tls-authentication.adoc[leveloffset=+1]
 
 // Connecting using user name and password authentication
-include::modules/connecting-using-username-password-authentication.adoc[leveloffset=+1]
+include::../../modules/user-guide/connecting-using-username-password-authentication.adoc[leveloffset=+1]

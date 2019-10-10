@@ -34,13 +34,13 @@ You can configure the following types of connections:
 `route-container`:: The connection is for a broker or other resource that holds known addresses.
 
 // Connecting routers
-include::modules/connecting-routers.adoc[leveloffset=+1]
+include::../../modules/user-guide/connecting-routers.adoc[leveloffset=+1]
 
 // Listening for client connections
-include::modules/listening-client-connections.adoc[leveloffset=+1]
+include::../../modules/user-guide/listening-client-connections.adoc[leveloffset=+1]
 
 // Creating a connection to an external AMQP container
-include::modules/connecting-routers-external-amqp-containers.adoc[leveloffset=+1]
+include::../../modules/user-guide/connecting-routers-external-amqp-containers.adoc[leveloffset=+1]
 
 // Connection failover
-include::modules/connection-failover.adoc[leveloffset=+1]
+include::../../modules/user-guide/connection-failover.adoc[leveloffset=+1]

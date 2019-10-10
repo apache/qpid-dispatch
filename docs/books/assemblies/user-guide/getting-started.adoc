@@ -19,21 +19,24 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// overview.adoc
+// book.adoc
 
-[id='important-terms-concepts-{context}']
-= Important terms and concepts
+[id='getting-started-{context}']
+= Getting started
 
-Before using {RouterName}, you should be familiar with AMQP and understand some key concepts about {RouterName}.
+This section shows you how to install {RouterName} on a single host, start the router with the default configuration settings, and distribute messages between two clients.
 
-include::modules/overview-of-amqp.adoc[leveloffset=+1]
+// Installing Dispatch Router
+include::../../modules/user-guide/installing-router.adoc[leveloffset=+1]
 
-include::modules/what-routers-are.adoc[leveloffset=+1]
+// Viewing the default router configuration file
+include::../../modules/user-guide/viewing-default-router-configuration-file.adoc[leveloffset=+1]
 
-// include::modules/how-routers-connect-endpoints.adoc[leveloffset=+1]
+// Starting the router
+include::../../modules/user-guide/starting-router-getting-started.adoc[leveloffset=+1]
 
-include::modules/how-routers-route-messages.adoc[leveloffset=+1]
+// Sending some test messages
+include::../../modules/user-guide/sending-test-messages.adoc[leveloffset=+1]
 
-include::modules/router-security.adoc[leveloffset=+1]
-
-include::modules/router-management.adoc[leveloffset=+1]
+// Next steps
+include::../../modules/user-guide/next-steps.adoc[leveloffset=+1]

@@ -30,7 +30,7 @@ In addition to SSL/TLS encryption, you can also use SSL/TLS to authenticate an i
 
 * SSL/TLS encryption must be configured.
 +
-For more information, see xref:enabling-ssl-tls-encryption-router[].
+For more information, see xref:enabling-ssl-tls-encryption-{context}[].
 
 * The client must have an X.509 certificate that it can use to authenticate to the router.
 

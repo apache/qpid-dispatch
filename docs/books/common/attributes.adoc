@@ -39,7 +39,7 @@ under the License
 :RouterLongName: {ProductName} Dispatch Router
 :ClientAmqpPythonName: {ProductName} Proton Python
 :ConsoleName: {RouterLongName} Console
-:FragmentDir: _common
+:FragmentDir: ../../common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book
 :RouterConfigFile: /etc/qpid-dispatch/qdrouterd.conf
