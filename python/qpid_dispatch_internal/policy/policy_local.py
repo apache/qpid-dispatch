@@ -83,6 +83,8 @@ class PolicyKeys(object):
     KW_CONNECTIONS_APPROVED     = "connectionsApproved"
     KW_CONNECTIONS_DENIED       = "connectionsDenied"
     KW_CONNECTIONS_CURRENT      = "connectionsCurrent"
+    KW_LINKS_DENIED             = "linksDenied"
+    KW_TOTAL_DENIALS            = "totalDenials"
     KW_PER_USER_STATE           = "perUserState"
     KW_PER_HOST_STATE           = "perHostState"
 
