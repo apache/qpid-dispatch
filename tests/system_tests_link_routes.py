@@ -272,11 +272,11 @@ class LinkRouteTest(TestCase):
         self.assertEqual(out_list.count('out'), 4)
 
         parts = out.split("\n")
-        self.assertEqual(len(parts), 12)
+        self.assertEqual(len(parts), 15)
 
         out = self.run_qdstat_linkRoute(self.routers[1].addresses[0], args=['--limit=1'])
         parts = out.split("\n")
-        self.assertEqual(len(parts), 5)
+        self.assertEqual(len(parts), 8)
 
     def test_ccc_qdstat_link_routes_routerC(self):
         """

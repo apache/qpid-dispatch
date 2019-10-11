@@ -107,7 +107,19 @@ class BusManager(Node):
             return text[:-1]
         return text
 
-    def displayEdges(self):
+    def displayRouterId(self):
+        objects = self.query('org.apache.qpid.dispatch.router')
+        router = objects[0]
+        if router:
+            print(router.id)
+
+    def display_datetime_router_id(self):
+        print(str(datetime.utcnow()) + " UTC")
+        self.displayRouterId()
+        print("")
+
+
+    def displayEdges(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("id"))
@@ -123,8 +135,14 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
         
         if not objects:
+            if show_date_id:
+                self.display_datetime_router_id()
             print("No Edge Router Connections")
             return
+
+        if show_date_id:
+            self.display_datetime_router_id()
+
         has_active = False
         
         first = objects[0]
@@ -139,7 +157,6 @@ class BusManager(Node):
             heads.append(Header("active"))
         
         for conn in objects:
-            #print (conn)
             if conn.role == "edge":
                row = []
                row.append(conn.identity)
@@ -165,7 +182,7 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)            
         
-    def displayConnections(self):
+    def displayConnections(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("id"))
@@ -179,6 +196,9 @@ class BusManager(Node):
 
         rows = []
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         for conn in objects:
             row = []
@@ -255,7 +275,7 @@ class BusManager(Node):
             outlist.append(str(i))
         return outlist
 
-    def displayGeneral(self):
+    def displayGeneral(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("attr"))
@@ -265,6 +285,9 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
+        if show_date_id:
+            self.display_datetime_router_id()
+
         rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Router Id',     router.id))
@@ -304,7 +327,7 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
-    def displayRouterLinks(self):
+    def displayRouterLinks(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("type"))
@@ -330,6 +353,9 @@ class BusManager(Node):
         has_dropped_presettled_count = False
         has_priority = False
         has_delayed  = False
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         if objects:
             first_row = objects[0]
@@ -398,7 +424,7 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
-    def displayRouterNodes(self):
+    def displayRouterNodes(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("router-id"))
@@ -414,6 +440,9 @@ class BusManager(Node):
 
         # Find the most recent topo change in this neighborhood.
         lastTopoChange = 0.0
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         for node in objects:
             row = []
@@ -446,7 +475,7 @@ class BusManager(Node):
         else:
             print("Router is Standalone - No Router List")
 
-    def displayAddresses(self):
+    def displayAddresses(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("class"))
@@ -462,6 +491,9 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
         has_priority = False
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         if objects:
             first_row = objects[0]
@@ -511,7 +543,7 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayAutolinks(self):
+    def displayAutolinks(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("addr"))
@@ -526,6 +558,14 @@ class BusManager(Node):
 
         objects = self.query('org.apache.qpid.dispatch.router.config.autoLink', cols, limit=self.opts.limit)
 
+        if show_date_id:
+            self.display_datetime_router_id()
+
+        if not objects:
+            print("AutoLinks")
+            print("No AutoLinks found")
+            return
+
         for al in objects:
             row = []
             row.append(al.address)
@@ -536,12 +576,13 @@ class BusManager(Node):
             row.append(al.operStatus)
             row.append(al.lastError)
             rows.append(row)
+
         title = "AutoLinks"
         sorter = Sorter(heads, rows, 'addr', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayLinkRoutes(self):
+    def displayLinkRoutes(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("address"))
@@ -554,6 +595,17 @@ class BusManager(Node):
         link_routes = self.query('org.apache.qpid.dispatch.router.config.linkRoute', cols, limit=self.opts.limit)
 
         have_add_del_prefix = False
+
+        if not link_routes:
+            if show_date_id:
+                self.display_datetime_router_id()
+            print("Link Routes")
+            print("No Link Routes found")
+            return
+
+        if show_date_id:
+            self.display_datetime_router_id()
+
         for link_route in link_routes:
             row = []
             row.append(link_route.prefix if link_route.prefix else link_route.pattern)
@@ -576,7 +628,7 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayMemory(self):
+    def displayMemory(self, show_date_id=True):
         disp = Display(prefix="  ")
         heads = []
         heads.append(Header("type"))
@@ -593,6 +645,9 @@ class BusManager(Node):
                 'batchesRebalancedToGlobal')
 
         objects = self.query('org.apache.qpid.dispatch.allocator', cols)
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         for t in objects:
             row = []
@@ -619,14 +674,38 @@ class BusManager(Node):
         for line in log:
             print("%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2]))
 
-    def show_all(self):
-        self.displayRouterLinks()
-        self.displayAddresses()
-        self.displayConnections()
-        self.displayAutolinks()
-        self.displayLinkRoutes()
-        self.displayGeneral()
-        self.displayMemory()
+    def show_all(self, show_summary=True):
+        if show_summary:
+            # print the datetime and router id
+            print(str(datetime.utcnow())  + " UTC")
+            self.displayRouterId()
+            print("")
+
+        self.displayRouterLinks(show_date_id=False)
+        print("")
+        self.displayAddresses(show_date_id=False)
+        print("")
+        self.displayConnections(show_date_id=False)
+        print("")
+        self.displayAutolinks(show_date_id=False)
+        print("")
+        self.displayLinkRoutes(show_date_id=False)
+        print("")
+        self.displayGeneral(show_date_id=False)
+        print("")
+        self.displayMemory(show_date_id=False)
+        print("")
+
+    def has_nodes(self):
+        all_nodes = super(BusManager, self).get_mgmt_nodes()
+        has_nodes = True
+        if all_nodes:
+            if len(all_nodes) < 2:
+                has_nodes = False
+        else:
+           has_nodes = False
+
+        return has_nodes, all_nodes
 
     def has_nodes(self):
         all_nodes = super(BusManager, self).get_mgmt_nodes()
@@ -642,12 +721,16 @@ class BusManager(Node):
     def display(self):
         has_nodes, nodes = self.has_nodes()
         if self.opts.all_routers and has_nodes:
-            print (str(datetime.now()))
+            print(str(datetime.utcnow()) + " UTC")
             for node in nodes:
                 super(BusManager, self).set_client(node[6:])
                 parts = node.split("/")
                 print ("Router ", parts[3])
-                self.show()
+                print("")
+                if self.show.__name__ == 'show_all':
+                    self.show(show_summary=False)
+                else:
+                    self.show(show_date_id=False)
                 print("")
         else:
             self.show()
