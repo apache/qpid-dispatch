@@ -71,28 +71,32 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("Link Routes                      0" in out)
         self.assertTrue("Router Id                        QDR.A" in out)
         self.assertTrue("Mode                             standalone" in out)
+        self.assertEqual(out.count("QDR.A"), 2)
 
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')
-        self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'QDR.A')
 
     def test_links(self):
+        self.run_qdstat(['--links'], r'QDR.A')
         out = self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
         parts = out.split("\n")
-        self.assertEqual(len(parts), 6)
+        self.assertEqual(len(parts), 9)
 
     def test_links_with_limit(self):
         out = self.run_qdstat(['--links', '--limit=1'])
         parts = out.split("\n")
-        self.assertEqual(len(parts), 5)
+        self.assertEqual(len(parts), 8)
 
     def test_nodes(self):
         self.run_qdstat(['--nodes'], r'No Router List')
 
     def test_address(self):
+        out = self.run_qdstat(['--address'], r'QDR.A')
         out = self.run_qdstat(['--address'], r'\$management')
         parts = out.split("\n")
-        self.assertEqual(len(parts), 8)
+        self.assertEqual(len(parts), 11)
 
     def test_qdstat_no_args(self):
         outs = self.run_qdstat(args=None)
@@ -115,11 +119,11 @@ class QdstatTest(system_test.TestCase):
 
         # see if the header line has the word priority in it
         priorityregexp = r'pri'
-        priority_column = re.search(priorityregexp, lines[1]).start()
+        priority_column = re.search(priorityregexp, lines[4]).start()
         self.assertTrue(priority_column > -1)
 
         # extract the number in the priority column of every address
-        for i in range(3, len(lines) - 1):
+        for i in range(6, len(lines) - 1):
             pri = re.findall('\d+', lines[i][priority_column:])
             # make sure the priority found is a number
             self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
@@ -131,13 +135,15 @@ class QdstatTest(system_test.TestCase):
     def test_address_with_limit(self):
         out = self.run_qdstat(['--address', '--limit=1'])
         parts = out.split("\n")
-        self.assertEqual(len(parts), 5)
+        self.assertEqual(len(parts), 8)
 
     def test_memory(self):
         out = self.run_qdstat(['--memory'])
         if out.strip() == "No memory statistics available":
             # router built w/o memory pools enabled]
             return self.skipTest("Router's memory pools disabled")
+        self.assertTrue("QDR.A" in out)
+        self.assertTrue("UTC" in out)
         regexp = r'qdr_address_t\s+[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
@@ -296,12 +302,12 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
         # see if the header line has the word priority in it
         priorityregexp = r'pri'
-        priority_column = re.search(priorityregexp, lines[1]).start()
+        priority_column = re.search(priorityregexp, lines[4]).start()
         self.assertTrue(priority_column > -1)
 
         # extract the number in the priority column of every inter-router link
         priorities = {}
-        for i in range(3, len(lines) - 1):
+        for i in range(6, len(lines) - 1):
             if re.search(r'inter-router', lines[i]):
                 pri = re.findall('\d+', lines[i][priority_column:])
                 # make sure the priority found is a number
