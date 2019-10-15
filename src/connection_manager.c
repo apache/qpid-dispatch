@@ -249,7 +249,7 @@ static void set_config_host(qd_server_config_t *config, qd_entity_t* entity)
     snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
 }
 
-static void qd_config_process_password(char **actual_val, char *pw, bool *is_file, qd_log_source_t *log_source)
+static void qd_config_process_password(char **actual_val, char *pw, bool *is_file, bool allow_literal_prefix, qd_log_source_t *log_source)
 {
     if (!pw)
         return;
@@ -279,7 +279,7 @@ static void qd_config_process_password(char **actual_val, char *pw, bool *is_fil
     // the remaining text is the password and the heading should be
     // stripped off
     //
-    else if (strncmp(pw, "literal:", 8) == 0 || strncmp(pw, "pass:", 5) == 0) {
+    else if ( (strncmp(pw, "literal:", 8) == 0 && allow_literal_prefix) || strncmp(pw, "pass:", 5) == 0) {
         qd_log(log_source, QD_LOG_WARNING, "It is unsafe to provide plain text passwords in the config file");
 
         if (strncmp(pw, "l", 1) == 0) {
@@ -395,6 +395,23 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->multi_tenant         = qd_entity_opt_bool(entity, "multiTenant", false);  CHECK();
     config->policy_vhost         = qd_entity_opt_string(entity, "policyVhost", 0);    CHECK();
     set_config_host(config, entity);
+
+    if (config->sasl_password) {
+        //
+        //Process the sasl password field and set the right values based on prefixes.
+        //
+        char *actual_pass = 0;
+        bool is_file_path = 0;
+        qd_config_process_password(&actual_pass, config->sasl_password, &is_file_path, false, qd->connection_manager->log_source);
+        if (actual_pass && is_file_path) {
+            qd_set_password_from_file(actual_pass, &config->sasl_password, qd->connection_manager->log_source);
+
+        }
+        else if (actual_pass) {
+            free(config->sasl_password);
+            config->sasl_password = actual_pass;
+        }
+    }
 
     //
     // Handle the defaults for various settings
@@ -577,7 +594,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         //
         char *actual_pass = 0;
         bool is_file_path = 0;
-        qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, cm->log_source); CHECK();
+        qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, true, cm->log_source); CHECK();
         if (actual_pass && is_file_path) {
             qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password, cm->log_source);
         }
