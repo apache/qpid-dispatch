@@ -144,7 +144,7 @@ Establishes an outgoing connection from the router.
 * *_linkCapacity_* (integer) : The capacity of links within this connection, in terms of message deliveries. The capacity is the number of messages that can be in-flight concurrently for each link.
 * *_verifyHostname_* (boolean, default=True) : yes: Ensures that when initiating a connection (as a client) the hostname in the URL to which this connector connects to matches the hostname in the digital certificate that the peer sends back as part of the SSL/TLS connection; no: Does not perform hostname verification
 * *_saslUsername_* (string) : The username that the connector is using to connect to a peer.
-* *_saslPassword_* (string) : The password that the connector is using to connect to a peer.
+* *_saslPassword_* (string) : The password that the connector is using to connect to a peer. Supports three prefixes namely - env:, file:, pass:. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or password with no prefix is used to directly specify the password and should only be used where security is not important 
 * *_sslProfile_* (string) : The name of the _sslProfile_ entity to use in order to have SSL/TLS configuration.
 
 [id='router-configuration-file-log']

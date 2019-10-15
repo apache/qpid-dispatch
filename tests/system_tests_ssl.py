@@ -576,6 +576,8 @@ class RouterTestSslInterRouter(RouterTestSslBase):
         if not SASL.extended():
             return
 
+        os.environ["ENV_SASL_PASSWORD"] = "password"
+
         # Generate authentication DB
         super(RouterTestSslInterRouter, cls).create_sasl_files()
 
@@ -649,7 +651,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to All TLS versions allowed listener
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
                            'sslProfile': 'ssl-profile-tls-all'}),
             # SSL Profile for all TLS versions (protocols element not defined)
             ('sslProfile', {'name': 'ssl-profile-tls-all',
@@ -668,7 +670,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to listener that allows TLSv1.2 only
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS12,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'env:ENV_SASL_PASSWORD',
                            'sslProfile': 'ssl-profile-tls12'}),
             # SSL Profile for TLSv1.2
             ('sslProfile', {'name': 'ssl-profile-tls12',
@@ -688,7 +690,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to listener that allows TLSv1 and TLSv1.2 only
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS1_TLS12,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
                            'sslProfile': 'ssl-profile-tls1'}),
             # SSL Profile for TLSv1
             ('sslProfile', {'name': 'ssl-profile-tls1',

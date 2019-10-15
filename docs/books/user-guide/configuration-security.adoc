@@ -378,7 +378,7 @@ connector {
 +
 For a full list of supported Cyrus SASL authentication mechanisms, see link:https://www.cyrusimap.org/sasl/sasl/authentication_mechanisms.html[Authentication Mechanisms^].
 `saslUsername`:: If any of the SASL mechanisms uses username/password authentication, then provide the username to connect to the external container.
-`saslPassword`:: If any of the SASL mechanisms uses username/password authentication, then provide the password to connect to the external container.
+`saslPassword`:: If any of the SASL mechanisms uses username/password authentication, then provide the password to connect to the external container. Supports three prefixes namely - env:, file:, pass:. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or password with no prefix is used to directly specify the password and should only be used where security is not important.
 --
 
 [id='integrating-with-kerberos']

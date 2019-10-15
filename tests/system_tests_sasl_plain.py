@@ -22,14 +22,30 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import os
-from subprocess import PIPE, Popen
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded
+import os, json
+from subprocess import PIPE, STDOUT, Popen
+from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded, Process
 from system_test import unittest
 from qpid_dispatch.management.client import Node
 from proton import SASL
 
 class RouterTestPlainSaslCommon(TestCase):
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK,
+                     address=None):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus',
+                                             address,
+                                             '--indent=-1', '--timeout',
+                                             str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
 
     @classmethod
     def router(cls, name, connection):
@@ -58,6 +74,192 @@ mech_list: ANONYMOUS DIGEST-MD5 EXTERNAL PLAIN
 sql_select: dummy select
 """)
 
+
+class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
+    @staticmethod
+    def sasl_file(name):
+        return os.path.join(DIR, 'sasl_files', name)
+
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Tests the sasl_username, sasl_password property of the dispatch router.
+
+        Creates two routers (QDR.X and QDR.Y) and sets up PLAIN authentication on QDR.X.
+        QDR.Y connects to QDR.X by providing a sasl_username and a bad sasl_password
+        as a non-existent file.
+
+        """
+        super(RouterTestPlainSaslFailure, cls).setUpClass()
+
+        if not SASL.extended():
+            return
+
+        super(RouterTestPlainSaslFailure, cls).createSaslFiles()
+
+        cls.routers = []
+
+        x_listener_port = cls.tester.get_port()
+        y_listener_port = cls.tester.get_port()
+
+        super(RouterTestPlainSaslFailure, cls).router('X', [
+                     ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
+                     # This unauthenticated listener is for qdstat to connect to it.
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'authenticatePeer': 'no'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
+                     ('router', {'workerThreads': 1,
+                                 'id': 'QDR.X',
+                                 'mode': 'interior',
+                                 'saslConfigName': 'tests-mech-PLAIN',
+                                 # Leave as saslConfigPath for testing backward compatibility
+                                 'saslConfigPath': os.getcwd()}),
+        ])
+
+        super(RouterTestPlainSaslFailure, cls).router('Y', [
+                     ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                                    # Provide a sasl user name and password to connect to QDR.X
+                                   'saslMechanisms': 'PLAIN',
+                                    'saslUsername': 'test@domain.com',
+                                    # Provide a non-existen file.
+                                    'saslPassword': 'file:' + cls.sasl_file('non-existent-password-file.txt')}),
+                     ('router', {'workerThreads': 1,
+                                 'mode': 'interior',
+                                 'id': 'QDR.Y'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
+        ])
+
+        cls.routers[0].wait_ports()
+        cls.routers[1].wait_ports()
+        try:
+            # This will time out in 5 seconds because there is no inter-router connection
+            cls.routers[1].wait_connectors(timeout=5)
+        except:
+            pass
+
+    def test_inter_router_sasl_fail(self):
+        passed = False
+        long_type = 'org.apache.qpid.dispatch.connection'
+        query_command = 'QUERY --type=' + long_type
+        outs = self.run_qdmanage(query_command, address=self.routers[1].addresses[0])
+        connections = json.loads(outs)
+        for connection in connections:
+            if connection['role'] == 'inter-router':
+                passed = True
+                break
+
+        # There was no inter-router connection established.
+        self.assertFalse(passed)
+        outs = self.run_qdmanage("get-log",
+                                 address=self.routers[1].addresses[0])
+        logs = json.loads(outs)
+
+        sasl_failed = False
+        file_open_failed = False
+        for log in logs:
+            if log[0] == 'SERVER' and log[1] == "info" and "amqp:unauthorized-access Authentication failed [mech=PLAIN]" in log[2]:
+                sasl_failed = True
+            if log[0] == "CONN_MGR" and log[1] == "error" and "Unable to open password file" in log[2] and "error: No such file or directory" in log[2]:
+                file_open_failed = True
+
+        self.assertTrue(sasl_failed)
+        self.assertTrue(file_open_failed)
+
+
+class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
+    @staticmethod
+    def sasl_file(name):
+        return os.path.join(DIR, 'sasl_files', name)
+
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Tests the sasl_username, sasl_password property of the dispatch router.
+
+        Creates two routers (QDR.X and QDR.Y) and sets up PLAIN authentication on QDR.X.
+        QDR.Y connects to QDR.X by providing a sasl_username and a bad sasl_password
+        using the literal: prefix.
+
+        """
+        super(RouterTestPlainSaslFailureUsingLiteral, cls).setUpClass()
+
+        if not SASL.extended():
+            return
+
+        super(RouterTestPlainSaslFailureUsingLiteral, cls).createSaslFiles()
+
+        cls.routers = []
+
+        x_listener_port = cls.tester.get_port()
+        y_listener_port = cls.tester.get_port()
+
+        super(RouterTestPlainSaslFailureUsingLiteral, cls).router('X', [
+                     ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
+                     # This unauthenticated listener is for qdstat to connect to it.
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'authenticatePeer': 'no'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
+                                   'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
+                     ('router', {'workerThreads': 1,
+                                 'id': 'QDR.X',
+                                 'mode': 'interior',
+                                 'saslConfigName': 'tests-mech-PLAIN',
+                                 # Leave as saslConfigPath for testing backward compatibility
+                                 'saslConfigPath': os.getcwd()}),
+        ])
+
+        super(RouterTestPlainSaslFailureUsingLiteral, cls).router('Y', [
+                     ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                                    # Provide a sasl user name and password to connect to QDR.X
+                                   'saslMechanisms': 'PLAIN',
+                                    'saslUsername': 'test@domain.com',
+                                    # Provide the password with a prefix of literal. This should fail..
+                                    'saslPassword': 'literal:password'}),
+                     ('router', {'workerThreads': 1,
+                                 'mode': 'interior',
+                                 'id': 'QDR.Y'}),
+                     ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
+        ])
+
+        cls.routers[0].wait_ports()
+        cls.routers[1].wait_ports()
+        try:
+            # This will time out in 5 seconds because there is no inter-router connection
+            cls.routers[1].wait_connectors(timeout=5)
+        except:
+            pass
+
+    def test_inter_router_sasl_fail(self):
+        passed = False
+        long_type = 'org.apache.qpid.dispatch.connection'
+        query_command = 'QUERY --type=' + long_type
+        outs = self.run_qdmanage(query_command, address=self.routers[1].addresses[0])
+        connections = json.loads(outs)
+        for connection in connections:
+            if connection['role'] == 'inter-router':
+                passed = True
+                break
+
+        # There was no inter-router connection established.
+        self.assertFalse(passed)
+        outs = self.run_qdmanage("get-log",
+                                 address=self.routers[1].addresses[0])
+        logs = json.loads(outs)
+
+        sasl_failed = False
+        for log in logs:
+            print (log)
+            if log[0] == 'SERVER' and log[1] == "info" and "amqp:unauthorized-access Authentication failed [mech=PLAIN]" in log[2]:
+                sasl_failed = True
+
+        self.assertTrue(sasl_failed)
+
+
 class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
     @classmethod
@@ -73,6 +275,8 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
 
         if not SASL.extended():
             return
+
+        os.environ["ENV_SASL_PASSWORD"] = "password"
 
         super(RouterTestPlainSasl, cls).createSaslFiles()
 
@@ -102,7 +306,7 @@ class RouterTestPlainSasl(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                    'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
-                                    'saslPassword': 'password'}),
+                                    'saslPassword': 'env:ENV_SASL_PASSWORD'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),
@@ -195,6 +399,10 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
 
+    @staticmethod
+    def sasl_file(name):
+        return os.path.join(DIR, 'sasl_files', name)
+
     @classmethod
     def setUpClass(cls):
         """
@@ -249,7 +457,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
-                                    'saslPassword': 'password'}),
+                                    'saslPassword': 'file:' + cls.sasl_file('password.txt')}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),
@@ -328,6 +536,10 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
     def ssl_file(name):
         return os.path.join(DIR, 'ssl_certs', name)
 
+    @staticmethod
+    def sasl_file(name):
+        return os.path.join(DIR, 'sasl_files', name)
+
     @classmethod
     def setUpClass(cls):
         """
@@ -375,7 +587,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                     'verifyHostName': 'yes',
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
-                                    'saslPassword': 'password'}),
+                                    'saslPassword': 'file:' + cls.sasl_file('password.txt')}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),
@@ -473,7 +685,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'verifyHostname': 'no',
-                                    'saslUsername': 'test@domain.com', 'saslPassword': 'password'}),
+                                    'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password'}),
                      ('router', {'workerThreads': 1,
                                  'mode': 'interior',
                                  'id': 'QDR.Y'}),
