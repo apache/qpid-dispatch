@@ -611,8 +611,8 @@ class BusManager(Node):
             self.display_datetime_router_id()
 
         if not objects:
-            print ("AutoLinks")
-            print ("No AutoLinks found")
+            print("AutoLinks")
+            print("No AutoLinks found")
             return
 
         for al in objects:
@@ -648,8 +648,8 @@ class BusManager(Node):
         if not link_routes:
             if show_date_id:
                 self.display_datetime_router_id()
-            print ("Link Routes")
-            print ("No Link Routes found")
+            print("Link Routes")
+            print("No Link Routes found")
             return
 
         if show_date_id:
@@ -726,24 +726,24 @@ class BusManager(Node):
     def show_all(self, show_summary=True):
         if show_summary:
             # print the datetime and router id
-            print (str(datetime.utcnow())  + " UTC")
+            print(str(datetime.utcnow())  + " UTC")
             self.displayRouterId()
-            print ("")
+            print("")
 
         self.displayRouterLinks(show_date_id=False)
-        print ("")
+        print("")
         self.displayAddresses(show_date_id=False)
-        print ("")
+        print("")
         self.displayConnections(show_date_id=False)
-        print ("")
+        print("")
         self.displayAutolinks(show_date_id=False)
-        print ("")
+        print("")
         self.displayLinkRoutes(show_date_id=False)
-        print ("")
+        print("")
         self.displayGeneral(show_date_id=False)
-        print ("")
+        print("")
         self.displayMemory(show_date_id=False)
-        print ("")
+        print("")
 
     def has_nodes(self):
         all_nodes = super(BusManager, self).get_mgmt_nodes()
@@ -777,9 +777,9 @@ class BusManager(Node):
                 # router id here instead of asking the router for it.
                 super(BusManager, self).set_client(node[6:])
                 parts = node.split("/")
-                print (str(datetime.utcnow()) + " UTC")
+                print(str(datetime.utcnow()) + " UTC")
                 print(parts[3])
-                print ("")
+                print("")
 
                 # print the router id before printing all the details about
                 # the router
@@ -792,7 +792,7 @@ class BusManager(Node):
     def displayMain(self, identitys, opts):
         main = opts.show
         if opts.all_routers and main:
-            print (str(datetime.utcnow()) + " UTC")
+            print(str(datetime.utcnow()) + " UTC")
             has_nodes, nodes = self.has_nodes()
             if has_nodes:
                 # We already have more than one node, just print the
@@ -800,7 +800,7 @@ class BusManager(Node):
                 for node in nodes:
                     super(BusManager, self).set_client(node[6:])
                     parts = node.split("/")
-                    print (parts[3])
+                    print(parts[3])
                     print("")
                     self.show_entity(main, show_date_id=False)
                     print("")
