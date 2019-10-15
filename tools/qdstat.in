@@ -159,12 +159,12 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
         router = objects[0]
         if router:
-            print (router.id)
+            print(router.id)
 
     def display_datetime_router_id(self):
-        print (str(datetime.utcnow()) + " UTC")
+        print(str(datetime.utcnow()) + " UTC")
         self.displayRouterId()
-        print ("")
+        print("")
 
 
     def displayEdges(self, show_date_id=True):
@@ -205,7 +205,6 @@ class BusManager(Node):
             heads.append(Header("active"))
         
         for conn in objects:
-            #print (conn)
             if conn.role == "edge":
                row = []
                row.append(conn.identity)
@@ -792,9 +791,9 @@ class BusManager(Node):
     def displayMain(self, identitys, opts):
         main = opts.show
         if opts.all_routers and main:
-            print(str(datetime.utcnow()) + " UTC")
             has_nodes, nodes = self.has_nodes()
             if has_nodes:
+                print(str(datetime.utcnow()) + " UTC")
                 # We already have more than one node, just print the
                 # router id here instead of asking the router for it.
                 for node in nodes:
@@ -805,6 +804,7 @@ class BusManager(Node):
                     self.show_entity(main, show_date_id=False)
                     print("")
             else:
+
                 self.show_entity(main)
         elif opts.all_routers and opts.all_entities:
             self.all_routers_entities()
