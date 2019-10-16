@@ -108,8 +108,6 @@ class ConnectorStatusTest(TestCase):
         conn_status = output[0].get('connectionStatus')
         conn_msg = output[0].get('connectionMsg')
 
-        print (conn_status)
-
         if conn_status == 'CONNECTING' and "Connection" in conn_msg and "failed" in conn_msg:
             self.success = True
         else:
@@ -131,8 +129,9 @@ class ConnectorStatusTest(TestCase):
         self.assertEqual(True, conn_opened)
 
         # Now tear down Router QDR.A. On doing this, router QDR.B will lose connectivity to
-        # QDR.a. QDR.b will continually attempy to connect to QDR.A but will be unsuccessful.
-        # The status of the connector of B must now be CONNECTING.
+        # QDR.A.
+        # QDR.B will continually attempy to connect to QDR.A but will be unsuccessful.
+        # The status of the connector of B must now be 'CONNECTING'.
         ConnectorStatusTest.routers[0].teardown()
 
         self.schedule_B_connector_test()
@@ -142,8 +141,10 @@ class ConnectorStatusTest(TestCase):
 
         self.assertTrue(self.success)
 
-        # NOTE: Since the router continually tries the re-establish a connection if it is lost, the router connection status goes between FAILED and
-        # SUCCESS. There is no good way to test if the connection status ever reaches the FAILED state because the router immediately tries to
+        # NOTE: Since the router continually tries the re-establish a connection
+        # if it is lost, the router connection status goes between FAILED and
+        # SUCCESS. There is no good way to test if the connection status ever
+        # reaches the FAILED state because the router immediately tries to
         # re-connect thus setting the status to CONNECTING in the process.
 
 
