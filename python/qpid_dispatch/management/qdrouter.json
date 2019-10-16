@@ -1008,7 +1008,7 @@
                 "saslPassword": {
                     "type": "string",
                     "required": false,
-                    "description": "The password that the connector is using to connect to a peer. Supports three prefixes namely - env:, file:, pass:. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or password with no prefix is used to directly specify the password and should only be used where security is not important",
+                    "description": "The password that the connector is using to connect to a peer. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'saslPassword: env:'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'saslPassword: file:'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'saslPassword: pass:' or 'saslPassword: '. This option is insecure, so it should only be used if security is not a concern",
                     "create": true,
                     "hidden": true
                 },
