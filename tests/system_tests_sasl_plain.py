@@ -25,28 +25,11 @@ from __future__ import print_function
 import os, json
 from subprocess import PIPE, STDOUT, Popen
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded, Process
-from system_test import unittest
+from system_test import unittest, QdManager
 from qpid_dispatch.management.client import Node
 from proton import SASL
 
 class RouterTestPlainSaslCommon(TestCase):
-
-    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK,
-                     address=None):
-        p = self.popen(
-            ['qdmanage'] + cmd.split(' ') + ['--bus',
-                                             address,
-                                             '--indent=-1', '--timeout',
-                                             str(TIMEOUT)],
-            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
-            universal_newlines=True)
-        out = p.communicate(input)[0]
-        try:
-            p.teardown()
-        except Exception as e:
-            raise Exception("%s\n%s" % (e, out))
-        return out
-
     @classmethod
     def router(cls, name, connection):
 
@@ -143,9 +126,8 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
     def test_inter_router_sasl_fail(self):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
-        query_command = 'QUERY --type=' + long_type
-        outs = self.run_qdmanage(query_command, address=self.routers[1].addresses[0])
-        connections = json.loads(outs)
+        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        connections = qd_manager.query(long_type)
         for connection in connections:
             if connection['role'] == 'inter-router':
                 passed = True
@@ -153,9 +135,9 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
 
         # There was no inter-router connection established.
         self.assertFalse(passed)
-        outs = self.run_qdmanage("get-log",
-                                 address=self.routers[1].addresses[0])
-        logs = json.loads(outs)
+
+        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        logs = qd_manager.get_log()
 
         sasl_failed = False
         file_open_failed = False
@@ -237,9 +219,10 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
     def test_inter_router_sasl_fail(self):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
-        query_command = 'QUERY --type=' + long_type
-        outs = self.run_qdmanage(query_command, address=self.routers[1].addresses[0])
-        connections = json.loads(outs)
+
+        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+        connections = qd_manager.query(long_type)
+
         for connection in connections:
             if connection['role'] == 'inter-router':
                 passed = True
@@ -247,13 +230,10 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
 
         # There was no inter-router connection established.
         self.assertFalse(passed)
-        outs = self.run_qdmanage("get-log",
-                                 address=self.routers[1].addresses[0])
-        logs = json.loads(outs)
+        logs = qd_manager.get_log()
 
         sasl_failed = False
         for log in logs:
-            print (log)
             if log[0] == 'SERVER' and log[1] == "info" and "amqp:unauthorized-access Authentication failed [mech=PLAIN]" in log[2]:
                 sasl_failed = True
 
