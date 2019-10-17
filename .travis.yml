@@ -25,6 +25,23 @@ matrix:
   allow_failures:
     - os: osx
   include:
+  - name: "apache-rat:check"
+    os: linux
+    sudo: false
+    env: []
+    language: java
+    addons:
+      apt:
+        packages: []
+    cache:
+      directories:
+        - $HOME/.m2/repository
+      before_cache:
+        - rm -rf $HOME/.m2/repository/org/apache/qpid/*
+    install: []
+    before_script: []
+    script:
+    - mvn apache-rat:check
   # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
   - os: linux
     env:
@@ -61,8 +78,6 @@ addons:
     - python2.7-dev
     - sasl2-bin
     - swig
-    # For apache RAT tool
-    - maven
     # documentation
     - asciidoc
     - asciidoctor
@@ -98,15 +113,7 @@ script:
 # Workaround on macOS for PROTON-808 Binaries have their library locations stripped
 - if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
 - ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
-- popd
-- mvn apache-rat:check
 
 after_success:
-- pushd build
+- cd ${TRAVIS_BUILD_DIR}/build
 - if [ "$BUILD_TYPE" = "Coverage" ]; then bash <(curl -s https://codecov.io/bash); fi
-
-cache:
-  directories:
-  - $HOME/.m2/repository
-  before_cache:
-  - rm -rf $HOME/.m2/repository/org/apache/qpid/*
