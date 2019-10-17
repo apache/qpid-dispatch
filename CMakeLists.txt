@@ -191,9 +191,13 @@ if (CMAKE_C_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wno-gnu-statement-expression)
 endif()
 
-if (NOT (APPLE OR USE_SANITIZERS OR USE_TSAN))
+if (APPLE)
+  set(CATCH_UNDEFINED "-Wl,-flat_namespace")
+elseif(NOT (USE_SANITIZERS OR USE_TSAN))
   set(CATCH_UNDEFINED "-Wl,-z,defs")
-endif ()
+else(APPLE)
+  set(CATCH_UNDEFINED "")
+endif(APPLE)
 
 ##
 ## Header file installation
