@@ -875,7 +875,7 @@
                 },
                 "httpRootDir": {
                     "type": "path",
-                    "description": "Absolute path to a directory from which to serve static HTML files. For example, /usr/share/qpid-dispatch/console.",
+                    "description": "Absolute path to a directory from which to serve static HTML files. Defaults to the stand-alone console installation directory (typically /usr/share/qpid-dispatch/console).",
                     "deprecationName": "httpRoot",
                     "create": true
                 },

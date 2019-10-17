@@ -55,7 +55,7 @@ listener {
 
 `http`:: Set this attribute to `true` to specify that this `listener` should accept HTTP connections instead of plain AMQP connections.
 
-`httpRootDir`:: Specify the absolute path to the directory that contains the web console HTML files. The default directory is `/usr/share/qpid-dispatch/console`.
+`httpRootDir`:: Specify the absolute path to the directory that contains the web console HTML files. The default directory is the stand-alone console installation directory, usually `/usr/share/qpid-dispatch/console`.
 --
 
 . If you want to secure access to the console, secure the `listener`.
