@@ -3,8 +3,8 @@ name: Java CI
 on: [push, pull_request]
 
 jobs:
-  'apache-rat:check':
-
+  'apache-rat_check':
+    name: 'apache-rat:check'
     runs-on: ubuntu-latest
 
     steps:
