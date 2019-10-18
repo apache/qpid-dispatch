@@ -15,5 +15,6 @@ jobs:
         java-version: 11
     - name: Build with Maven
       run: mvn --no-transfer-progress apache-rat:check
-    - name: Print Rat report
+    - name: Print Rat report if Rat failed
+      if: failure()
       run: cat target/rat.txt
