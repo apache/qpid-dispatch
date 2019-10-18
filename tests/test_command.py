@@ -27,6 +27,8 @@ from qpid_dispatch_internal.tools.command import (main,
                                                   _qdmanage_parser,
                                                   _qdstat_parser)
 
+from qpid_dispatch_internal.tools.command import QdstatArgumentParser
+
 def mock_error(self, message):
     raise ValueError(message)
 
@@ -57,18 +59,22 @@ class TestParseArgsQdstat(unittest.TestCase):
         self.parser.print_help()
 
     def test_parse_args_qdstat_mutually_exclusive(self):
-        options1 = ["-g", "-c",
-                    "-l","-n","-e","-a","-m","--autolinks","--linkroutes","--log",
-                    "--all-entities"]
-        options2 = ["-r", "--all-routers"]
+        def _call(options):
+            try:
+                self.parser.parse_args(options)
+            except ValueError as e:
+                self.assertIn("not allowed with", str(e))
+            except Exception as e:
+                self.fail("Not expected exception.")
+            else:
+                self.fail("ValueError exception expected.")
 
         def _call_pairs(options):
             for options_pair in combinations(options, 2):
-                with self.assertRaises(ValueError):
-                    self.parser.parse_args(options_pair)
+                _call(list(options_pair))
 
-        _call_pairs(options1)
-        _call_pairs(options2)
+        _call_pairs(QdstatArgumentParser.display_group_options)
+        _call(QdstatArgumentParser.target_group_options + ["some"]) # "some" complements -r
 
     def test_parse_args_qdstat_default(self):
         args = parse_args_qdstat(FBM, argv = [])

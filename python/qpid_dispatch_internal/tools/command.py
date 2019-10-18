@@ -25,7 +25,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import sys, json, argparse, os
+import sys, argparse, os
+from itertools import combinations
 try:
     from collections.abc import Mapping, Sequence
 except ImportError:
@@ -86,10 +87,36 @@ common_parser.add_argument('--version', action='version', version=VERSION)
 common_parser.add_argument("-v", "--verbose", help="Show maximum detail",
                            action="count") # support -vvv
 
-def _custom_optional_arguments_parser(*args, **kwargs):
-    parser = argparse.ArgumentParser(*args, **kwargs)
-    parser._optionals.title = "Optional Arguments"
-    return parser
+class CustomOptionalArgumentsParser(argparse.ArgumentParser):
+    def __init__(self, *args, **kwargs):
+        super(CustomOptionalArgumentsParser, self).__init__(*args, **kwargs)
+        self._optionals.title = "Optional Arguments"
+
+class QdstatArgumentParser(CustomOptionalArgumentsParser):
+    display_group_options = ["-g", "-c",
+                "-l","-n","-e","-a","-m","--autolinks","--linkroutes","--log",
+                "--all-entities"]
+    target_group_options = ["--all-routers", "-r"]
+
+    def parse_args(self, args=None, namespace=None):
+        #copy = args[:]
+        parsed_args = super(QdstatArgumentParser, self).parse_args(args, namespace)
+        if (sys.version_info[0] == 2 and sys.version_info[1] < 7):
+            self.verify_mutually_exclusive_args(args)
+        return parsed_args
+
+    def verify_mutually_exclusive_args(self, args):
+        if args is None:
+            args = sys.argv[1:]
+
+        def _check(exclusive_list):
+            for j, k in combinations(args, 2):
+                if j in exclusive_list and k in exclusive_list:
+                    self.error('argument %s: not allowed with argument %s' % (j, k))
+
+        _check(self.display_group_options)
+        _check(self.target_group_options)
+
 
 def add_connection_options(parser):
     group = parser.add_argument_group('Connection Options')
@@ -163,7 +190,7 @@ def _qdstat_add_display_args(parser, BusManager):
     display.set_defaults(show=BusManager.displayGeneral.__name__)
 
 def _qdstat_parser(BusManager):
-    parser = _custom_optional_arguments_parser(prog="qdstat", parents=[common_parser])
+    parser = QdstatArgumentParser(prog="qdstat", parents=[common_parser])
     _qdstat_add_display_args(parser, BusManager)
 
     _group = parser.add_argument_group('Target', 'Choose destination router to \
@@ -200,7 +227,7 @@ def _qdmanage_add_args(parser):
 
 def _qdmanage_parser(operations):
     description = "Standard operations: %s. Use GET-OPERATIONS to find additional operations." % (", ".join(operations))
-    parser = _custom_optional_arguments_parser(prog="qdmanage <operation>",
+    parser = CustomOptionalArgumentsParser(prog="qdmanage <operation>",
                                      parents=[common_parser],
                                      description=description)
     _qdmanage_add_args(parser)
