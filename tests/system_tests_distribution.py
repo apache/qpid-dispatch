@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import sys
 from proton          import Message, Timeout
 from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded
 from system_test     import unittest
@@ -2289,6 +2290,7 @@ class ClosestTest ( MessagingHandler ):
         self.print_debug = print_debug
 
     def timeout ( self ):
+        sys.stdout.flush()
         self.bail ( "Timeout Expired " )
 
 
