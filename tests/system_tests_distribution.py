@@ -2421,8 +2421,12 @@ class ClosestTest ( MessagingHandler ):
                 self.count_2_b += 1
             elif event.receiver == self.recv_3_a:
                 self.count_3_a += 1
+                if self.print_debug:
+                    print ("self.count_3_a", self.count_3_a)
             elif event.receiver == self.recv_3_b:
                 self.count_3_b += 1
+                if self.print_debug:
+                    print("self.count_3_b", self.count_3_b)
 
             if self.n_received == self.one_third:
                 if self.print_debug:
