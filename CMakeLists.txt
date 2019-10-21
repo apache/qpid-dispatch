@@ -73,8 +73,8 @@ endif()
 enable_testing()
 
 # python unittest
-# For versions < 2.7 the developer needs to install the python-unittest2
-# module (available via 'pip install python-unittest2'
+# For versions < 2.7 the developer needs to install the unittest2
+# module (available via 'yum install python-unittest2' or 'pip install unittest2'
 #
 if(PYTHON_VERSION_MAJOR EQUAL 2 AND PYTHON_VERSION_MINOR LESS 7)
   set(PYTHON_TEST_COMMAND "unit2")
