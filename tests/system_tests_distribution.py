@@ -606,7 +606,8 @@ class DistributionTests ( TestCase ):
                              self.A_addr,
                              self.B_addr,
                              self.C_addr,
-                             "addr_09"
+                             "addr_09",
+                             print_debug=True
                            )
         test.run()
         self.assertEqual ( None, test.error )
@@ -2241,7 +2242,8 @@ class ClosestTest ( MessagingHandler ):
     router_1, and then 2 receivers each on all 3 routers.
 
     """
-    def __init__ ( self, test_name, router_1, router_2, router_3, addr_suffix ):
+    def __init__ ( self, test_name, router_1, router_2, router_3, addr_suffix,
+                   print_debug=False ):
         super ( ClosestTest, self ).__init__(prefetch=0)
         self.error       = None
         self.router_1    = router_1
@@ -2283,6 +2285,8 @@ class ClosestTest ( MessagingHandler ):
 
         self.first_check = True
         self.send_on_sendable = True
+
+        self.print_debug = print_debug
 
     def timeout ( self ):
         self.bail ( "Timeout Expired " )
@@ -2366,6 +2370,8 @@ class ClosestTest ( MessagingHandler ):
                                           address=self.dest)
                             self.sender.send(msg)
                             self.n_sent_1 += 1
+                        if self.print_debug:
+                            print ("First hundred sent")
 
                     # And we can quit checking.
                     if self.addr_check_timer:
@@ -2377,13 +2383,16 @@ class ClosestTest ( MessagingHandler ):
                     self.addr_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
             else:
                 if response.status_code == 200 and response.subscriberCount == 0 and response.remoteCount == 1:
-                    if not self.m_sent_2:
-                        self.m_sent_2 = True
+                    if not self.m_sent_3:
+                        self.m_sent_3 = True
                         while self.n_sent_2 < self.one_third:
                             msg = Message(body="Hello, closest.",
                                           address=self.dest)
                             self.sender.send(msg)
                             self.n_sent_2 += 1
+
+                        if self.print_debug:
+                            print("Third hundred sent")
 
                     if self.addr_check_timer:
                         self.addr_check_timer.cancel()
@@ -2414,6 +2423,8 @@ class ClosestTest ( MessagingHandler ):
                 self.count_3_b += 1
 
             if self.n_received == self.one_third:
+                if self.print_debug:
+                    print("First one third received")
                 # The first one-third of messages should have gone exclusively
                 # to the near receivers.  At this point we should have
                 # no messages in the mid or far receivers.
@@ -2426,6 +2437,8 @@ class ClosestTest ( MessagingHandler ):
                     self.bail ( "error: recv_1_a and  recv_1_b did not get equal number of messages" )
 
             elif self.n_received == 2 * self.one_third:
+                if self.print_debug:
+                    print("Second one third received")
                 # The next one-third of messages should have gone exclusively
                 # to the router_2 receivers.  At this point we should have
                 # no messages in the far receivers.
@@ -2441,6 +2454,8 @@ class ClosestTest ( MessagingHandler ):
             # we have closed the router_1 and router_2 receivers.  If the
             # router_3 receivers are empty at this point, something is wrong.
             if self.n_received >= self.n_expected :
+                if self.print_debug:
+                    print("Third one third received")
                 if (self.count_3_a < self.one_third/2 or  self.count_3_b < self.one_third/2) or (self.count_3_b != self.count_3_a):
                     self.bail ( "error: recv_3_a and  recv_3_b did not get equal number of messages" )
                 else:
@@ -2452,13 +2467,18 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_1_a_closed = True
             if event.receiver == self.recv_1_b:
                 self.recv_1_b_closed = True
-            if self.recv_1_a_closed and self.recv_1_b_closed and not self.m_sent_3:
-                self.m_sent_3 = True
+            if self.recv_1_a_closed and self.recv_1_b_closed and not self.m_sent_2:
+                if self.print_debug:
+                    print ("self.recv_1_a_closed and self.recv_1_b_closed")
+
+                self.m_sent_2 = True
                 while self.n_sent_3 < self.one_third:
                     msg = Message(body="Hello, closest.",
                                   address=self.dest)
                     self.sender.send(msg)
                     self.n_sent_3 += 1
+                if self.print_debug:
+                    print("Second hundred sent")
 
         if event.receiver == self.recv_2_a or event.receiver == self.recv_2_b:
             if event.receiver == self.recv_2_a:
@@ -2467,6 +2487,8 @@ class ClosestTest ( MessagingHandler ):
                 self.recv_2_b_closed = True
             if self.recv_2_a_closed and self.recv_2_b_closed:
                 self.first_check = False
+                if self.print_debug:
+                    print ("self.recv_2_a_closed and self.recv_2_b_closed")
                 self.addr_check()
 
     def addr_check ( self ):
