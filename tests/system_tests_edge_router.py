@@ -39,9 +39,9 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from proton.utils import BlockingConnection
 from qpid_dispatch.management.client import Node
+from qpid_dispatch_internal.tools.command import version_supports_mutually_exclusive_arguments
 from subprocess import PIPE, STDOUT
 import re
-
 
 class AddrTimer(object):
     def __init__(self, parent):
@@ -1307,17 +1307,6 @@ class RouterTest(TestCase):
         self.assertEqual(outs.count("INT.A"), 5)
         self.assertEqual(outs.count("INT.B"), 5)
 
-        has_error = False
-        try:
-            # You cannot combine --all-entities  with -c
-            outs = self.run_qdstat(['-c', '--all-entities'],
-                               address=self.routers[0].addresses[0])
-        except Exception as e:
-            if "error: argument --all-entities: not allowed with argument -c/--connections" in str(e):
-                has_error=True
-
-        self.assertTrue(has_error)
-
         outs = self.run_qdstat(['-c', '--all-routers'],
                                address=self.routers[0].addresses[0])
         self.assertEqual(outs.count("INT.A"), 2)
@@ -1329,16 +1318,6 @@ class RouterTest(TestCase):
         # Two edge-downlinks from each interior to the two edges, 4 in total.
         self.assertEqual(outs.count("edge-downlink"), 4)
 
-        has_error = False
-        try:
-            outs = self.run_qdstat(['-r', 'INT.A', '--all-routers'],
-                                   address=self.routers[0].addresses[0])
-        except Exception as e:
-            if "error: argument --all-routers: not allowed with argument -r/--router" in str(e):
-                has_error=True
-
-        self.assertTrue(has_error)
-
         # Gets all entity information of the interior router
         outs = self.run_qdstat(['--all-entities'],
                        address=self.routers[0].addresses[0])
@@ -1348,6 +1327,28 @@ class RouterTest(TestCase):
         self.assertEqual(outs.count("Auto Links"), 1)
         self.assertEqual(outs.count("Router Statistics"), 1)
         self.assertEqual(outs.count("Link Routes"), 2)
+
+        if version_supports_mutually_exclusive_arguments():
+            has_error = False
+            try:
+                # You cannot combine --all-entities  with -c
+                outs = self.run_qdstat(['-c', '--all-entities'],
+                                   address=self.routers[0].addresses[0])
+            except Exception as e:
+                if "error: argument --all-entities: not allowed with argument -c/--connections" in str(e):
+                    has_error=True
+
+            self.assertTrue(has_error)
+
+            has_error = False
+            try:
+                outs = self.run_qdstat(['-r', 'INT.A', '--all-routers'],
+                                       address=self.routers[0].addresses[0])
+            except Exception as e:
+                if "error: argument --all-routers: not allowed with argument -r/--router" in str(e):
+                    has_error=True
+
+            self.assertTrue(has_error)
 
 
 class LinkRouteProxyTest(TestCase):
