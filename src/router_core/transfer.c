@@ -620,7 +620,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             // deliveries because it increases the risk of credit starvation if there
             // are many addresses sharing the link.
             //
-            if (link->link_type == QD_LINK_ROUTER || link->edge)
+            if (link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER || link->edge)
                 qdr_link_issue_credit_CT(core, link, 1, false);
         }
     }
