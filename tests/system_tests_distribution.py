@@ -2382,7 +2382,7 @@ class ClosestTest ( MessagingHandler ):
                 else:
                     # If the latest check did not find the link-attack route ready,
                     # schedule another check a little while from now.
-                    self.addr_check_timer = event.reactor.schedule(0.25, AddressCheckerTimeout(self))
+                    self.addr_check_timer = event.reactor.schedule(3, AddressCheckerTimeout(self))
             else:
                 if response.status_code == 200 and response.subscriberCount == 0 and response.remoteCount == 1:
                     if not self.m_sent_3:
@@ -2402,7 +2402,7 @@ class ClosestTest ( MessagingHandler ):
                 else:
                     # If the latest check did not find the link-attack route ready,
                     # schedule another check a little while from now.
-                    self.addr_check_timer = event.reactor.schedule(0.25,
+                    self.addr_check_timer = event.reactor.schedule(3,
                                                                    AddressCheckerTimeout(
                                                                        self))
         else :
