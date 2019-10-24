@@ -1372,6 +1372,14 @@ static void CORE_link_first_attach(void             *context,
     pn_link_open(qd_link_pn(qlink));
 
     //
+    // All links on the inter router or edge connection have unbounded q2 limit.
+    // Blocking control messages can lead to various failures
+    //
+    if (qdr_connection_role(conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(conn) == QDR_ROLE_INTER_ROUTER) {
+        qd_link_set_q2_limit_unbounded(qlink, true);
+    }
+
+    //
     // Mark the link as stalled and waiting for initial credit.
     //
     if (qdr_link_direction(link) == QD_OUTGOING)
