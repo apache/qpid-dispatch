@@ -63,6 +63,7 @@ struct qdr_delivery_t {
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
     bool                    multicast;         /// True if this delivery is targeted for a multicast address.
     bool                    via_edge;          /// True if this delivery arrived via an edge-connection.
+    bool                    stuck;             /// True if this delivery was counted as stuck.
 };
 
 ALLOC_DECLARE(qdr_delivery_t);

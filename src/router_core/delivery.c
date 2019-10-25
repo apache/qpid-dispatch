@@ -379,6 +379,14 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
                 core->deliveries_delayed_1sec++;
         }
 
+        //
+        // If this delivery was marked as stuck, decrement the currently-stuck counters in the link and router.
+        //
+        if (delivery->stuck) {
+            link->deliveries_stuck--;
+            core->deliveries_stuck--;
+        }
+
         if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
             link->ingress_histogram[delivery->ingress_index]++;
 
