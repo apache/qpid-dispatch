@@ -570,6 +570,11 @@
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
                 },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
+                },
                 "deliveriesIngress": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to it by a sender that is directly attached to the router.",
@@ -1523,6 +1528,11 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
+                },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
                 },
                 "settleRate": {
                     "type": "integer",

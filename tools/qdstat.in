@@ -310,9 +310,10 @@ class BusManager(Node):
             rows.append(('Released Count', router.releasedDeliveries))
             rows.append(('Modified Count', router.modifiedDeliveries))
             try:
-                rows.append(('Deliveries Delayed > 1sec', router.deliveriesDelayed1Sec))
+                rows.append(('Deliveries Delayed > 1sec',  router.deliveriesDelayed1Sec))
                 rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
-                rows.append(('Deliveries to Fallback', router.deliveriesRedirectedToFallback))
+                rows.append(('Deliveries Stuck > 10sec',   router.deliveriesStuck))
+                rows.append(('Deliveries to Fallback',     router.deliveriesRedirectedToFallback))
             except:
                 pass
             rows.append(('Ingress Count', router.deliveriesIngress))
@@ -345,14 +346,15 @@ class BusManager(Node):
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'adminStatus', 'operStatus',
-                'linkName', 'priority', 'settleRate')
+                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'deliveriesStuck',
+                'adminStatus', 'operStatus', 'linkName', 'priority', 'settleRate')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         has_dropped_presettled_count = False
         has_priority = False
         has_delayed  = False
+        has_stuck    = False
 
         if show_date_id:
             self.display_datetime_router_id()
@@ -366,6 +368,8 @@ class BusManager(Node):
                     has_priority = True
                 if hasattr(first_row, 'deliveriesDelayed1Sec'):
                     has_delayed = True
+                if hasattr(first_row, 'deliveriesStuck'):
+                    has_stuck = True
 
         if has_priority:
             heads.append(Header("pri"))
@@ -384,6 +388,8 @@ class BusManager(Node):
         if has_delayed:
             heads.append(Header("delay"))
             heads.append(Header("rate"))
+        if has_stuck:
+            heads.append(Header("stuck"))
         if self.opts.verbose:
             heads.append(Header("admin"))
             heads.append(Header("oper"))
@@ -415,6 +421,8 @@ class BusManager(Node):
             if has_delayed:
                 row.append(link.deliveriesDelayed1Sec + link.deliveriesDelayed10Sec)
                 row.append(link.settleRate)
+            if has_stuck:
+                row.append(link.deliveriesStuck)
             if self.opts.verbose:
                 row.append(link.adminStatus)
                 row.append(link.operStatus)

@@ -65,6 +65,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->action_lock = sys_mutex();
     core->running     = true;
     DEQ_INIT(core->action_list);
+    DEQ_INIT(core->action_list_background);
 
     core->work_lock = sys_mutex();
     DEQ_INIT(core->work_list);

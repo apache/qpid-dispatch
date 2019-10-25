@@ -458,6 +458,7 @@ struct qdr_link_t {
     uint64_t  modified_deliveries;
     uint64_t  deliveries_delayed_1sec;
     uint64_t  deliveries_delayed_10sec;
+    uint64_t  deliveries_stuck;
     uint64_t  settled_deliveries[QDR_LINK_RATE_DEPTH];
     uint64_t *ingress_histogram;
     uint8_t   priority;
@@ -864,6 +865,7 @@ struct qdr_core_t {
     uint64_t deliveries_ingress_route_container;
     uint64_t deliveries_delayed_1sec;
     uint64_t deliveries_delayed_10sec;
+    uint64_t deliveries_stuck;
     uint64_t deliveries_redirected;
 
     qdr_edge_conn_addr_t          edge_conn_addr;
