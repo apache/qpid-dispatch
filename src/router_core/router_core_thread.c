@@ -127,8 +127,9 @@ void qdr_modules_finalize(qdr_core_t *core)
  * router_core_process_background_action_LH
  *
  * Process up to one available background action.
+ * Return true iff an action was processed.
  */
-static void router_core_process_background_action_LH(qdr_core_t *core)
+static bool router_core_process_background_action_LH(qdr_core_t *core)
 {
     qdr_action_t *action = DEQ_HEAD(core->action_list_background);
 
@@ -142,7 +143,10 @@ static void router_core_process_background_action_LH(qdr_core_t *core)
         sys_mutex_lock(core->action_lock);
 
         free_qdr_action_t(action);
+        return true;
     }
+
+    return false;
 }
 
 
@@ -169,8 +173,8 @@ void *router_core_thread(void *arg)
         // Block on the condition variable when there is no action to do
         //
         while (core->running && DEQ_IS_EMPTY(core->action_list)) {
-            router_core_process_background_action_LH(core);
-            sys_cond_wait(core->action_cond, core->action_lock);
+            if (!router_core_process_background_action_LH(core))
+                sys_cond_wait(core->action_cond, core->action_lock);
         }
 
         //
