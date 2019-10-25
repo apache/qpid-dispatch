@@ -329,6 +329,15 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 }
 
 
+void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action)
+{
+    sys_mutex_lock(core->action_lock);
+    DEQ_INSERT_TAIL(core->action_list_background, action);
+    sys_cond_signal(core->action_cond);
+    sys_mutex_unlock(core->action_lock);
+}
+
+
 qdr_address_t *qdr_address_CT(qdr_core_t *core, qd_address_treatment_t treatment, qdr_address_config_t *config)
 {
     if (treatment == QD_TREATMENT_UNAVAILABLE)

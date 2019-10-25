@@ -756,6 +756,7 @@ struct qdr_core_t {
     sys_thread_t      *thread;
     bool               running;
     qdr_action_list_t  action_list;
+    qdr_action_list_t  action_list_background;  /// Actions processed only when the action_list is empty
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
 
@@ -893,6 +894,7 @@ void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
+void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
 void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
