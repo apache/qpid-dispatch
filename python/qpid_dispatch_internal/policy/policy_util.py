@@ -41,6 +41,7 @@ def is_ipv6_enabled():
     try:
         sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         sock.bind(('::1', 0))
+        sock.close()
     except Exception as e:
         ipv6_enabled = False
 
