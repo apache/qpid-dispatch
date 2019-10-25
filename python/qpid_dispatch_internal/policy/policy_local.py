@@ -284,7 +284,8 @@ class PolicyCompiler(object):
                            (vhostname, usergroup, key, cerror[0]))
                     errors.append(msg)
                     return False
-            if key in [PolicyKeys.KW_MAX_FRAME_SIZE,
+                policy_out[key] = int(val)
+            elif key in [PolicyKeys.KW_MAX_FRAME_SIZE,
                        PolicyKeys.KW_MAX_MESSAGE_SIZE,
                        PolicyKeys.KW_MAX_RECEIVERS,
                        PolicyKeys.KW_MAX_SENDERS,
