@@ -518,8 +518,8 @@ class AppStats(object):
         self._manager.get_agent().qd.qd_dispatch_policy_c_counts_refresh(self._cstats, entitymap)
         attributes.update(entitymap)
 
-    def can_connect(self, conn_id, user, host, diags):
-        return self.conn_mgr.can_connect(conn_id, user, host, diags)
+    def can_connect(self, conn_id, user, host, diags, group_max_conn_user, group_max_conn_host):
+        return self.conn_mgr.can_connect(conn_id, user, host, diags, group_max_conn_user, group_max_conn_host)
 
     def disconnect(self, conn_id, user, host):
         self.conn_mgr.disconnect(conn_id, user, host)
@@ -753,8 +753,11 @@ class PolicyLocal(object):
 
             # This user passes administrative approval.
             # Now check live connection counts
+            # Extract optional usergroup connection counts
+            group_max_conn_user = groupsettings.get(PolicyKeys.KW_MAXCONNPERUSER)
+            group_max_conn_host = groupsettings.get(PolicyKeys.KW_MAXCONNPERHOST)
             diags = []
-            if not stats.can_connect(conn_name, user, rhost, diags):
+            if not stats.can_connect(conn_name, user, rhost, diags, group_max_conn_user, group_max_conn_host):
                 for diag in diags:
                     self._manager.log_info(
                         "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
