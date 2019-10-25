@@ -140,6 +140,8 @@ class PolicyCompiler(object):
     allowed_settings_options = [
         PolicyKeys.KW_USERS,
         PolicyKeys.KW_REMOTE_HOSTS,
+        PolicyKeys.KW_MAXCONNPERHOST,
+        PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_MAX_FRAME_SIZE,
         PolicyKeys.KW_MAX_MESSAGE_SIZE,
         PolicyKeys.KW_MAX_SESSION_WINDOW,
@@ -262,6 +264,8 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_TARGETS] = ''
         policy_out[PolicyKeys.KW_SOURCE_PATTERN] = ''
         policy_out[PolicyKeys.KW_TARGET_PATTERN] = ''
+        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = None # optional group limit
+        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = None
 
         cerror = []
         user_sources = False
@@ -272,6 +276,14 @@ class PolicyCompiler(object):
             if key not in self.allowed_settings_options:
                 warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
                                 (vhostname, usergroup, key))
+            if key in [PolicyKeys.KW_MAXCONNPERHOST,
+                       PolicyKeys.KW_MAXCONNPERUSER
+                       ]:
+                if not self.validateNumber(val, 0, 65535, cerror):
+                    msg = ("Policy vhost '%s' user group '%s' option '%s' has error '%s'." % 
+                           (vhostname, usergroup, key, cerror[0]))
+                    errors.append(msg)
+                    return False
             if key in [PolicyKeys.KW_MAX_FRAME_SIZE,
                        PolicyKeys.KW_MAX_MESSAGE_SIZE,
                        PolicyKeys.KW_MAX_RECEIVERS,
