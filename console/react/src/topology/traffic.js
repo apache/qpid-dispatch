@@ -220,6 +220,7 @@ class Congestion extends TrafficAnimation {
               color: congestion,
               small: small
             };
+            /*
             path
               .classed("traffic", true)
               .attr("marker-start", function() {
@@ -228,6 +229,7 @@ class Congestion extends TrafficAnimation {
               .attr("marker-end", function() {
                 return null;
               });
+              */
             path
               .transition()
               .duration(1000)

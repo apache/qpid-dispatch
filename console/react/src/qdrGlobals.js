@@ -53,7 +53,6 @@ export class QDRLogger {
 }
 
 export const QDRTemplatePath = "html/";
-export const QDR_SETTINGS_KEY = "QDRSettings";
 export const QDR_LAST_LOCATION = "QDRLastLocation";
 export const QDR_INTERVAL = "QDRInterval";
 

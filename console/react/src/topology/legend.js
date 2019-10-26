@@ -89,7 +89,6 @@ const lookFor = [
 export class Legend {
   constructor(nodes, QDRLog) {
     this.nodes = nodes;
-    this.log = QDRLog;
   }
 
   // create a new legend container svg
@@ -124,7 +123,7 @@ export class Legend {
       lsvg = d3.select("#topo_svg_legend svg g").selectAll("g");
     }
     // add a node to legendNodes for each node type that is currently in the svg
-    let legendNodes = new Nodes(this.log);
+    let legendNodes = new Nodes();
     this.nodes.nodes.forEach((n, i) => {
       let node = lookFor.find(lf => lf.cmp(n));
       if (node) {

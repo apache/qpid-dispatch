@@ -8,6 +8,8 @@ class ContextMenuComponent extends React.Component {
 
   componentDidMount = () => {
     this.registerHandlers();
+    console.log(`contextMenuComponent mounted with`);
+    console.log(this.props.contextEventPosition);
   };
 
   componentWillUnmount = () => {

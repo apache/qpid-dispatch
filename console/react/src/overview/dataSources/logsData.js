@@ -17,6 +17,28 @@ specific language governing permissions and limitations
 under the License.
 */
 
+import React from "react";
+import { Button } from "@patternfly/react-core";
+class LogRecords extends React.Component {
+  detailClick = () => {
+    this.props.detailClick(this.props.value, this.props.extraInfo);
+  };
+  render() {
+    if (
+      this.props.extraInfo.rowData.enable.title !== "" &&
+      this.props.value !== "0"
+    ) {
+      return (
+        <Button className="link-button" onClick={this.detailClick}>
+          {this.props.value}
+        </Button>
+      );
+    } else {
+      return this.props.value;
+    }
+  }
+}
+
 class LogsData {
   constructor(service) {
     this.service = service;
@@ -24,17 +46,53 @@ class LogsData {
       { title: "Router", field: "node" },
       { title: "Enable", field: "enable" },
       { title: "Module", field: "name" },
-      { title: "Trace", field: "traceCount", numeric: true },
-      { title: "Info", field: "infoCount", numeric: true },
-      { title: "Debug", field: "debugCount", numeric: true },
-      { title: "Notice", field: "noticeCount", numeric: true },
-      { title: "Warning", field: "warningCount", numeric: true },
-      { title: "Error", field: "errorCount", numeric: true },
-      { title: "Critical", field: "criticalCount", numeric: true }
+      {
+        title: "Info",
+        field: "infoCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Trace",
+        field: "traceCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Debug",
+        field: "debugCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Notice",
+        field: "noticeCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Warning",
+        field: "warningCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Error",
+        field: "errorCount",
+        numeric: true,
+        formatter: LogRecords
+      },
+      {
+        title: "Critical",
+        field: "criticalCount",
+        numeric: true,
+        formatter: LogRecords
+      }
     ];
     this.detailEntity = "log";
     this.detailName = "Log";
     this.detailPath = "/logs";
+    this.detailFormatter = true;
   }
 
   fetchRecord = (currentRecord, schema) => {

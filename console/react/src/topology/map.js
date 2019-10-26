@@ -21,7 +21,7 @@ import * as d3 from "d3";
 import * as topojson from "topojson-client";
 
 const maxnorth = 84;
-const maxsouth = 60;
+const maxsouth = 74;
 const MAPOPTIONSKEY = "QDRMapOptions";
 const MAPPOSITIONKEY = "QDRMapPosition";
 const defaultLandColor = "#A3D3E0";
@@ -75,7 +75,56 @@ export class BackgroundMap {
     d3.select(".pf-c-page__main").style("background-color", color);
   }
 
-  init($scope, svg, width, height) {
+  setWidthHeight(width, height) {
+    if (!this.initialized) return;
+    this.width = width;
+    this.height = height;
+    // track last translation and scale event we processed
+    this.rotate = 20;
+    this.scaleExtent = [1, 10];
+
+    // setup the projection with some defaults
+    this.projection = d3.geo
+      .mercator()
+      .rotate([this.rotate, 0])
+      .scale(1)
+      .translate([width / 2, height / 2]);
+
+    // this path will hold the land coordinates once they are loaded
+    this.geoPath = d3.geo.path().projection(this.projection);
+
+    // set up the scale extent and initial scale for the projection
+    var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
+      s = width / (b[1][0] - b[0][0]);
+    this.scaleExtent = [s, 15 * s];
+
+    this.projection.scale(this.scaleExtent[0]);
+
+    this.zoom = d3.behavior
+      .zoom()
+      .scaleExtent(this.scaleExtent)
+      .scale(this.projection.scale())
+      .translate([0, 0]) // not linked directly to projection
+      .on("zoom", this.zoomed);
+
+    this.geo
+      .select("rect.ocean")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("fill", "#FFF");
+
+    if (this.options.show) {
+      this.svg.call(this.zoom).on("dblclick.zoom", null);
+    }
+
+    // restore map rotate, scale, translate
+    this.restoreState();
+
+    // draw with current positions
+    this.geo.selectAll(".land").attr("d", this.geoPath);
+  }
+
+  init(_unused, svg, width, height) {
     return new Promise((resolve, reject) => {
       if (this.initialized) {
         resolve();
@@ -109,7 +158,7 @@ export class BackgroundMap {
       this.lastProjection = savedOptions
         ? JSON.parse(savedOptions)
         : {
-            rotate: 20,
+            rotate: -10.884378033730373,
             scale: this.scaleExtent[0],
             translate: [width / 2, height / 2]
           };

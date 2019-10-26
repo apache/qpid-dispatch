@@ -87,7 +87,10 @@ class OverviewTable extends React.Component {
         );
       }
     });
-    this.dataSource.fields[0].cellFormatters.push(this.detailLink);
+    // if the dataSource did not provide its own cell formatter for details
+    if (!this.dataSource.detailFormatter) {
+      this.dataSource.fields[0].cellFormatters.push(this.detailLink);
+    }
 
     this.setState({ columns: this.dataSource.fields }, () => {
       this.update();
@@ -139,13 +142,14 @@ class OverviewTable extends React.Component {
     this.setState({
       redirect: true,
       redirectState: {
-        value: extraInfo.rowData.cells[0],
+        value: extraInfo.rowData.cells[extraInfo.columnIndex],
         currentRecord: extraInfo.rowData.data,
         entity: this.entity,
         page: this.state.page,
         sortBy: this.state.sortBy,
         filterBy: this.state.filterBy,
-        perPage: this.state.perPage
+        perPage: this.state.perPage,
+        property: extraInfo.property
       }
     });
   };
@@ -169,6 +173,7 @@ class OverviewTable extends React.Component {
         value={value}
         extraInfo={extraInfo}
         service={this.props.service}
+        detailClick={this.detailClick}
       />
     );
   };

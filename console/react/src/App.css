@@ -130,6 +130,13 @@ g.selected line {
   stroke: #fff;
 }
 
+#topologyPage {
+  padding: 0;
+}
+
+#topologyPage .pf-l-stack__item {
+  border-bottom: 1px solid #aaa;
+}
 path.hittarget {
   stroke-width: 15px;
   stroke: transparent;
@@ -370,9 +377,14 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
 .overview-charts-page,
 .overview-table {
   background-color: #eaeaea !important;
-  padding: 3em;
+  padding: 1.5em;
 }
-
+.overview-table {
+  height: 100%;
+}
+.overview-table .pf-c-card__body {
+  padding-left: 1em;
+}
 .overview-table-page {
   padding-left: 0 !important;
   padding-right: 0 !important;
@@ -392,11 +404,18 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   width: 100%;
 }
 
+.qdrTopology {
+  width: 100%;
+  height: 100%;
+  background-color: white;
+}
 .qdrTopology dl.pf-c-accordion,
 .qdrChord dl.pf-c-accordion {
+  /*
   position: absolute;
   width: 20em;
   right: 1em;
+  */
   padding-top: 0;
   padding-bottom: 0;
   margin-top: 1em;
@@ -683,6 +702,14 @@ path.empty {
   border-color: black;
 }
 
+.topology-toolbar-item .pf-c-popover__content > button,
+.topology-toolbar-item .pf-c-popover__content .pf-c-title.pf-m-xl {
+  display: none;
+}
+
+.topology-toolbar-item .pf-c-popover__content {
+  padding: 2em 2em 0.5em;
+}
 .qdrPopup {
   position: absolute;
   z-index: 200;
@@ -696,7 +723,7 @@ path.empty {
 }
 
 #popover-div {
-  position: absolute;
+  position: fixed;
   z-index: 200;
   border-radius: 4px;
   border: 1px solid gray;
@@ -797,9 +824,14 @@ div.qdrChord .legend-text {
   font-weight: bold;
 }
 
+.colored-dot span.colored-dot-dot > span {
+  padding-top: 5px;
+}
+
 .colored-dot span.colored-dot-text {
   margin-left: 0.5em;
   color: black;
+  font-size: 16px;
 }
 
 .qdrTopology .addresses .legend-line,
@@ -807,12 +839,31 @@ div.qdrChord .legend-text {
   margin-left: 1.5em;
 }
 
-.qdrTopology .pf-c-options-menu__toggle {
-  display: none;
+@media (min-width: 768px) {
+  div.qdrTopology .pf-topology-side-bar.shown {
+    width: calc(100% - 330px);
+    max-width: 330px;
+  }
+  div.qdrTopology .pf-topology-container__with-sidebar .pf-topology-content {
+    /*
+      width: 180px;
+    min-width: calc(100% - 330px);
+    */
+    width: 100%;
+    height: 100%;
+    background-color: white;
+  }
+}
+
+.diagram {
+  width: 100%;
+  position: absolute;
+  top: 0;
+  height: 100%;
 }
 
 .context-menu {
-  position: absolute;
+  position: fixed;
   background-color: white;
   border-top: 1px solid #888;
   border-left: 1px solid #888;
@@ -931,6 +982,7 @@ div.qdrChord .legend-text {
   font-size: 14px;
   padding: 0;
   background-color: white;
+  overflow: hidden;
 }
 
 .pf-c-button.pf-m-primary.link-button,
@@ -940,6 +992,7 @@ div.qdrChord .legend-text {
   color: blue;
   font-weight: bold;
   white-space: normal;
+  padding-left: 0;
 }
 
 .pf-c-button.pf-m-primary.link-button:hover,
@@ -966,4 +1019,57 @@ div.qdrChord .legend-text {
 
 .overview-table tr {
   border-bottom-color: #eaeaea !important;
+}
+
+.log-record {
+  display: flex;
+  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.log-message {
+  background-color: #eaeaea;
+  width: 100%;
+}
+
+div#topologyLegend {
+  position: absolute;
+  bottom: 2em;
+  right: 1em;
+  padding: 0;
+  width: 14em;
+}
+
+div#topologyLegend header {
+  padding: 0.5em 1em;
+  background-color: #efefef;
+  display: flex;
+  justify-content: space-between;
+}
+
+div#topologyLegend .pf-c-modal-box__body {
+  padding: 1em;
+}
+
+div#topologyLegend .pf-c-title {
+  font-size: unset;
+  padding-top: 0.25em;
+}
+
+div.qdrTopology .topology-toolbar-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  color: black;
+
+  background-color: rgba(0, 0, 0, 0);
+  border: 1px solid #eaeaea;
+  border-bottom: 1px solid #212121;
+}
+
+div.qdrTopology .topology-toolbar-button i {
+  margin-left: 16px;
+  margin-right: 8px;
 }

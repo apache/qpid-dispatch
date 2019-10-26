@@ -268,17 +268,15 @@ export function connectionPopupHTML(d, nodeInfo) {
   return HTML;
 }
 
-export function getSizes(topologyRef, log) {
+export function getSizes(topologyRef) {
   const gap = 5;
-  let legendWidth = 194;
   let topoWidth = topologyRef.offsetWidth;
-  if (topoWidth < 768) legendWidth = 0;
-  let width = topoWidth - gap - legendWidth;
+  let width = topoWidth - gap;
   let top = topologyRef.offsetTop;
   let height = window.innerHeight - top - gap;
   if (width < 10 || height < 10) {
-    log.log(`page width and height are abnormal w: ${width} h: ${height}`);
+    console.log(`page width and height are abnormal w: ${width} h: ${height}`);
     return [0, 0];
   }
-  return [width, height];
+  return { width, height };
 }

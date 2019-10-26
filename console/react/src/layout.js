@@ -54,7 +54,7 @@ import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
 import OverviewTablePage from "./overview/overviewTablePage";
 import DetailsTablePage from "./overview/detailsTablePage";
-import TopologyPage from "./topology/qdrTopology";
+import TopologyPage from "./topology/topologyPage";
 import MessageFlowPage from "./chord/qdrChord";
 import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
@@ -70,11 +70,28 @@ class PageLayout extends React.Component {
       isDropdownOpen: false,
       activeGroup: "overview",
       activeItem: "dashboard",
-      isConnectFormOpen: false
+      isConnectFormOpen: false,
+      isNavOpenDesktop: true,
+      isNavOpenMobile: false,
+      isMobileView: false
     };
-    this.tables = ["routers", "addresses", "links", "connections", "logs"];
     this.hooks = { setLocation: this.setLocation };
     this.service = new QDRService(this.hooks);
+    this.nav = {
+      overview: [
+        { name: "dashboard" },
+        { name: "routers", pre: true },
+        { name: "addresses", pre: true },
+        { name: "links", pre: true },
+        { name: "connections", pre: true },
+        { name: "logs", pre: true }
+      ],
+      visualizations: [
+        { name: "topology" },
+        { name: "flow", title: "Message flow" }
+      ],
+      details: [{ name: "entities" }, { name: "schema" }]
+    };
   }
 
   setLocation = where => {
@@ -93,24 +110,45 @@ class PageLayout extends React.Component {
     });
   };
 
-  handleConnect = connectPath => {
+  handleConnect = (connectPath, connectInfo) => {
     if (this.state.connected) {
-      this.service.disconnect();
-      this.setState({ connected: false });
+      this.setState(
+        { connectPath: "", connected: false, isConnectFormOpen: false },
+        () => {
+          this.service.disconnect();
+        }
+      );
     } else {
-      this.service
-        .connect({ address: "localhost", port: 5673, reconnect: true })
-        .then(
-          r => {
-            this.setState({
-              connected: true,
-              connectPath
-            });
-          },
-          e => {
-            console.log(e);
+      const connectOptions = JSON.parse(JSON.stringify(connectInfo));
+      if (connectOptions.username === "") connectOptions.username = undefined;
+      if (connectOptions.password === "") connectOptions.password = undefined;
+      connectOptions.reconnect = true;
+
+      this.service.connect(connectOptions).then(
+        r => {
+          if (connectPath === "/") connectPath = "/dashboard";
+          const activeItem = connectPath.split("/").pop();
+          // find the active group for this item
+          let activeGroup = "overview";
+          for (const group in this.nav) {
+            if (this.nav[group].some(item => item.name === activeItem)) {
+              activeGroup = group;
+              break;
+            }
           }
-        );
+
+          this.setState({
+            isConnectFormOpen: false,
+            activeItem,
+            activeGroup,
+            connected: true,
+            connectPath
+          });
+        },
+        e => {
+          console.log(e);
+        }
+      );
     }
   };
 
@@ -131,78 +169,59 @@ class PageLayout extends React.Component {
     this.setState({ isConnectFormOpen: false });
   };
 
+  onNavToggleDesktop = () => {
+    this.setState({
+      isNavOpenDesktop: !this.state.isNavOpenDesktop
+    });
+  };
+
+  onNavToggleMobile = () => {
+    this.setState({
+      isNavOpenMobile: !this.state.isNavOpenMobile
+    });
+  };
+
+  onPageResize = ({ mobileView, windowSize }) => {
+    this.setState({
+      isMobileView: mobileView
+    });
+  };
+
   render() {
     const { isDropdownOpen, activeItem, activeGroup } = this.state;
+    const { isNavOpenDesktop, isNavOpenMobile, isMobileView } = this.state;
 
     const PageNav = (
       <Nav onSelect={this.onNavSelect} aria-label="Nav" className="pf-m-dark">
         <NavList>
-          <NavExpandable
-            title="Overview"
-            groupId="overview"
-            isActive={activeGroup === "overview"}
-            isExpanded
-          >
-            <NavItem
-              groupId="overview"
-              itemId="dashboard"
-              isActive={activeItem === "dashboard"}
-            >
-              <Link to="/dashboard">Dashboard</Link>
-            </NavItem>
-            {this.tables.map(t => {
-              return (
-                <NavItem
-                  groupId="overview"
-                  itemId={t}
-                  isActive={activeItem === { t }}
-                  key={t}
-                >
-                  <Link to={`/overview/${t}`}>{this.icap(t)}</Link>
-                </NavItem>
-              );
-            })}
-          </NavExpandable>
-          <NavExpandable
-            title="Visualizations"
-            groupId="visualizations"
-            isActive={activeGroup === "visualizations"}
-          >
-            <NavItem
-              groupId="visualizations"
-              itemId="topology"
-              isActive={activeItem === "topology"}
-            >
-              <Link to="/topology">Topology</Link>
-            </NavItem>
-            <NavItem
-              groupId="visualizations"
-              itemId="flow"
-              isActive={activeItem === "flow"}
-            >
-              <Link to="/flow">Message flow</Link>
-            </NavItem>
-          </NavExpandable>
-          <NavExpandable
-            title="Details"
-            groupId="detailsGroup"
-            isActive={activeGroup === "detailsGroup"}
-          >
-            <NavItem
-              groupId="detailsGroup"
-              itemId="entities"
-              isActive={activeItem === "entities"}
-            >
-              <Link to="/entities">Entities</Link>
-            </NavItem>
-            <NavItem
-              groupId="detailsGroup"
-              itemId="schema"
-              isActive={activeItem === "schema"}
-            >
-              <Link to="/schema">Schema</Link>
-            </NavItem>
-          </NavExpandable>
+          {Object.keys(this.nav).map(section => {
+            const Section = this.icap(section);
+            return (
+              <NavExpandable
+                title={Section}
+                groupId={section}
+                isActive={activeGroup === section}
+                isExpanded
+                key={section}
+              >
+                {this.nav[section].map(item => {
+                  const key = item.name;
+                  return (
+                    <NavItem
+                      groupId={section}
+                      itemId={key}
+                      isActive={activeItem === key}
+                      key={key}
+                    >
+                      <Link to={`/${item.pre ? section + "/" : ""}${key}`}>
+                        {item.title ? item.title : this.icap(key)}
+                      </Link>
+                    </NavItem>
+                  );
+                })}
+              </NavExpandable>
+            );
+          })}
         </NavList>
       </Nav>
     );
@@ -270,16 +289,26 @@ class PageLayout extends React.Component {
         toolbar={PageToolbar}
         avatar={<Avatar src={avatarImg} alt="Avatar image" />}
         showNavToggle
+        onNavToggle={
+          isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop
+        }
+        isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}
       />
     );
-    const pageId = "main-content-page-layout-expandable-nav";
+    const pageId = "main-content-page-layout-manual-nav";
     const PageSkipToContent = (
       <SkipToContent href={`#${pageId}`}>Skip to Content</SkipToContent>
     );
 
     const sidebar = PageNav => {
       if (this.state.connected) {
-        return <PageSidebar nav={PageNav} className="pf-m-dark" />;
+        return (
+          <PageSidebar
+            nav={PageNav}
+            isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}
+            theme="dark"
+          />
+        );
       }
       return <React.Fragment />;
     };
@@ -316,6 +345,7 @@ class PageLayout extends React.Component {
       if (this.state.isConnectFormOpen) {
         return (
           <ConnectForm
+            fromPath={"/"}
             handleConnect={this.handleConnect}
             handleConnectCancel={this.handleConnectCancel}
             isConnected={this.state.connected}
@@ -331,8 +361,9 @@ class PageLayout extends React.Component {
         <Page
           header={Header}
           sidebar={sidebar(PageNav)}
-          isManagedSidebar
+          onPageResize={this.onPageResize}
           skipToContent={PageSkipToContent}
+          mainContainerId={pageId}
         >
           {connectForm()}
           <Switch>

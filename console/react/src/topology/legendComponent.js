@@ -18,120 +18,46 @@ under the License.
 */
 
 import React, { Component } from "react";
-import {
-  Accordion,
-  AccordionItem,
-  AccordionContent,
-  AccordionToggle
-} from "@patternfly/react-core";
-
-import ArrowsComponent from "./arrowsComponent";
-import TrafficComponent from "./trafficComponent";
-import MapLegendComponent from "./mapLegendComponent";
+import { Legend } from "./legend.js";
 
 class LegendComponent extends Component {
   constructor(props) {
     super(props);
     this.state = {};
+    this.legend = new Legend(this.props.nodes);
   }
 
-  render() {
-    const toggle = id => {
-      const idOpen = this.props[`${id}Open`];
-      this.props.handleOpenChange(id, !idOpen);
-    };
+  componentDidMount = () => {
+    this.legend.update();
+  };
 
+  render() {
     return (
-      <Accordion>
-        <AccordionItem>
-          <AccordionToggle
-            onClick={() => toggle("traffic")}
-            isExpanded={this.props.trafficOpen}
-            id="traffic"
+      <div
+        id="topologyLegend"
+        className="pf-c-modal-box pf-u-box-shadow-md pf-m-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-lg-title"
+        aria-describedby="modal-lg-description"
+      >
+        <header>
+          <h1 className="pf-c-title pf-m-xl" id="modal-lg-title">
+            Topology Legend
+          </h1>
+          <button
+            className="pf-c-button pf-m-plain"
+            type="button"
+            aria-label="Close"
+            onClick={this.props.handleCloseLegend}
           >
-            Traffic
-          </AccordionToggle>
-          <AccordionContent
-            id="traffic-expand"
-            isHidden={!this.props.trafficOpen}
-            isFixed
-          >
-            <TrafficComponent
-              addresses={this.props.addresses}
-              addressColors={this.props.addressColors}
-              open={this.props.trafficOpen}
-              handleChangeTrafficAnimation={
-                this.props.handleChangeTrafficAnimation
-              }
-              handleChangeTrafficFlowAddress={
-                this.props.handleChangeTrafficFlowAddress
-              }
-              handleHoverAddress={this.props.handleHoverAddress}
-              dots={this.props.dots}
-              congestion={this.props.congestion}
-            />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem>
-          <AccordionToggle
-            onClick={() => toggle("legend")}
-            isExpanded={this.props.legendOpen}
-            id="legend"
-          >
-            Legend
-          </AccordionToggle>
-          <AccordionContent
-            id="legend-expand"
-            isHidden={!this.props.legendOpen}
-            isFixed
-          >
-            <div id="topo_svg_legend"></div>
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem>
-          <AccordionToggle
-            onClick={() => toggle("map")}
-            isExpanded={this.props.mapOpen}
-            id="map"
-          >
-            Background map
-          </AccordionToggle>
-          <AccordionContent
-            id="map-expand"
-            isHidden={!this.props.mapOpen}
-            isFixed
-          >
-            <MapLegendComponent
-              open={this.props.mapOpen}
-              mapShown={this.props.mapShown}
-              areaColor={this.props.areaColor}
-              oceanColor={this.props.oceanColor}
-              handleUpdateMapColor={this.props.handleUpdateMapColor}
-              handleUpdateMapShown={this.props.handleUpdateMapShown}
-            />
-          </AccordionContent>
-        </AccordionItem>
-        <AccordionItem>
-          <AccordionToggle
-            onClick={() => toggle("arrows")}
-            isExpanded={this.props.arrowsOpen}
-            id="arrows"
-          >
-            Arrows
-          </AccordionToggle>
-          <AccordionContent
-            id="arrows-expand"
-            isHidden={!this.props.arrowsOpen}
-            isFixed
-          >
-            <ArrowsComponent
-              handleChangeArrows={this.props.handleChangeArrows}
-              routerArrows={this.props.routerArrows}
-              clientArrows={this.props.clientArrows}
-            />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+            <i className="fas fa-times" aria-hidden="true"></i>
+          </button>
+        </header>
+        <div className="pf-c-modal-box__body" id="modal-lg-description">
+          <div id="topo_svg_legend"></div>{" "}
+        </div>
+      </div>
     );
   }
 }

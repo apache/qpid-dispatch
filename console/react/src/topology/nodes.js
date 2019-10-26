@@ -224,7 +224,6 @@ nodeProperties["route-container"] = nodeProperties["normal"];
 export class Nodes {
   constructor(logger) {
     this.nodes = [];
-    this.logger = logger;
   }
   static radius(type) {
     if (nodeProperties[type].radius) return nodeProperties[type].radius;
@@ -232,7 +231,7 @@ export class Nodes {
   }
   static textOffset(type) {
     let r = Nodes.radius(type);
-    let ret = type === "inter-router" || type === "_topo" ? r + 30 : 0;
+    let ret = type === "inter-router" || type === "_topo" ? r + 10 : 0;
     return ret;
   }
   static maxRadius() {
@@ -291,7 +290,7 @@ export class Nodes {
     if (index < this.getLength()) {
       return this.nodes[index];
     }
-    this.logger.error(
+    console.log(
       `Attempted to get node[${index}] but there were only ${this.getLength()} nodes`
     );
     return undefined;

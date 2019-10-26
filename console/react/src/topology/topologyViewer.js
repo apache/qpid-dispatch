@@ -19,6 +19,13 @@ under the License.
 
 import React, { Component } from "react";
 import * as d3 from "d3";
+import {
+  TopologyView,
+  TopologyControlBar,
+  createTopologyControlButtons,
+  TopologySideBar
+} from "@patternfly/react-topology";
+
 import QDRPopup from "../qdrPopup";
 import { Traffic } from "./traffic.js";
 import { separateAddresses } from "../chord/filters.js";
@@ -28,10 +35,11 @@ import { nextHop, connectionPopupHTML, getSizes } from "./topoUtils.js";
 import { BackgroundMap } from "./map.js";
 import { utils } from "../amqp/utilities.js";
 import { Legend } from "./legend.js";
-import LegendComponent from "./legendComponent";
 import RouterInfoComponent from "./routerInfoComponent";
 import ClientInfoComponent from "./clientInfoComponent";
-import ContextMenuComponent from "../contextMenuComponent";
+import ContextMenu from "./contextMenu";
+import TopologyToolbar from "./topologyToolbar";
+import LegendComponent from "./legendComponent";
 import {
   appendCircle,
   appendContent,
@@ -80,7 +88,8 @@ class TopologyPage extends Component {
       legendOptions: savedOptions,
       showRouterInfo: false,
       showClientInfo: false,
-      showContextMenu: false
+      showContextMenu: false,
+      showLegend: false
     };
     this.QDRLog = new QDRLogger(console, "Topology");
     this.popupCancelled = true;
@@ -117,30 +126,6 @@ class TopologyPage extends Component {
       }
     );
     this.state.mapOptions = this.backgroundMap.mapOptions;
-
-    this.contextMenuItems = [
-      {
-        title: "Freeze in place",
-        action: this.setFixed,
-        enabled: data => !this.isFixed(data)
-      },
-      {
-        title: "Unfreeze",
-        action: this.setFixed,
-        enabled: this.isFixed,
-        endGroup: true
-      },
-      {
-        title: "Unselect",
-        action: this.setSelected,
-        enabled: this.isSelected
-      },
-      {
-        title: "Select",
-        action: this.setSelected,
-        enabled: data => !this.isSelected(data)
-      }
-    ];
   }
 
   // called only once when the component is initialized
@@ -156,9 +141,10 @@ class TopologyPage extends Component {
 
     // get notified when a router is added/dropped and when
     // the number of connections for a router changes
-    this.props.service.management.topology.addChangedAction("topology", () => {
-      this.init();
-    });
+    this.props.service.management.topology.addChangedAction(
+      "topology",
+      this.init
+    );
   };
 
   componentWillUnmount = () => {
@@ -173,24 +159,16 @@ class TopologyPage extends Component {
 
   resize = () => {
     if (!this.svg) return;
-    let sizes = getSizes(this.topologyRef, this.QDRLog);
-    this.width = sizes[0];
-    this.height = sizes[1];
+    const { width, height } = getSizes(this.topologyRef);
+    this.width = width;
+    this.height = height;
     if (this.width > 0) {
       // set attrs and 'resume' force
       this.svg.attr("width", this.width);
       this.svg.attr("height", this.height);
-      this.force.size(sizes).resume();
+      this.backgroundMap.setWidthHeight(width, height);
+      this.force.size([width, height]).resume();
     }
-    this.updateLegend();
-  };
-
-  setFixed = (item, data) => {
-    data.setFixed(item.title !== "Unfreeze");
-  };
-
-  isFixed = data => {
-    return data.isFixed();
   };
 
   setSelected = (item, data) => {
@@ -203,9 +181,7 @@ class TopologyPage extends Component {
     this.selected_node = data.selected ? data : null;
     this.restart();
   };
-  isSelected = data => {
-    return data.selected ? true : false;
-  };
+
   updateLegend = () => {
     this.legend.update();
   };
@@ -213,9 +189,9 @@ class TopologyPage extends Component {
 
   // initialize the nodes and links array from the QDRService.topology._nodeInfo object
   init = () => {
-    let sizes = getSizes(this.topologyRef, this.QDRLog);
-    this.width = sizes[0];
-    this.height = sizes[1];
+    const { width, height } = getSizes(this.topologyRef);
+    this.width = width;
+    this.height = height;
     if (this.width < 768) {
       const legendOptions = this.state.legendOptions;
       legendOptions.map.open = false;
@@ -455,41 +431,10 @@ class TopologyPage extends Component {
     // path is a selection of all g elements under the g.links svg:group
     // here we associate the links.links array with the {g.links g} selection
     // based on the link.uid
-    this.path = this.path.data(this.forceData.links.links, function(d) {
+    this.path = this.path.data(this.forceData.links.links, d => {
       return d.uid;
     });
 
-    // update each existing {g.links g.link} element
-    this.path
-      .select(".link")
-      .classed("selected", function(d) {
-        return d.selected;
-      })
-      .classed("highlighted", function(d) {
-        return d.highlighted;
-      })
-      .classed("unknown", function(d) {
-        return !d.right && !d.left;
-      });
-
-    // reset the markers based on current highlighted/selected
-    if (
-      !this.state.legendOptions.traffic.open ||
-      !this.state.legendOptions.traffic.congestion
-    ) {
-      this.path
-        .select(".link")
-        .attr("marker-end", d => {
-          if (!this.showMarker(d)) return null;
-          return d.right ? `url(#end${d.markerId("end")})` : null;
-        })
-        .attr("marker-start", d => {
-          if (!this.showMarker(d)) return null;
-          return d.left || (!d.left && !d.right)
-            ? `url(#start${d.markerId("start")})`
-            : null;
-        });
-    }
     // add new links. if a link with a new uid is found in the data, add a new path
     let enterpath = this.path
       .enter()
@@ -548,23 +493,10 @@ class TopologyPage extends Component {
     enterpath
       .append("path")
       .attr("class", "link")
-      .attr("marker-end", d => {
-        if (!this.showMarker(d)) return null;
-        return d.right ? `url(#end${d.markerId("end")})` : null;
-      })
-      .attr("marker-start", d => {
-        if (!this.showMarker(d)) return null;
-        return d.left || (!d.left && !d.right)
-          ? `url(#start${d.markerId("start")})`
-          : null;
-      })
       .attr("id", function(d) {
         const si = d.source.uid();
         const ti = d.target.uid();
         return ["path", si, ti].join("-");
-      })
-      .classed("unknown", function(d) {
-        return !d.right && !d.left;
       });
 
     enterpath
@@ -575,6 +507,24 @@ class TopologyPage extends Component {
     // remove old links
     this.path.exit().remove();
 
+    // update each {g.links g.link} element
+    this.path
+      .select(".link")
+      .classed("selected", d => d.selected)
+      .classed("highlighted", d => d.highlighted)
+      .classed("unknown", d => !d.right && !d.left)
+      // reset the markers based on current highlighted/selected
+      .attr("marker-end", d => {
+        if (!this.showMarker(d)) return null;
+        return d.right ? `url(#end${d.markerId("end")})` : null;
+      })
+      .attr("marker-start", d => {
+        if (!this.showMarker(d)) return null;
+        return d.left || (!d.left && !d.right)
+          ? `url(#start${d.markerId("start")})`
+          : null;
+      });
+
     // circle (node) group
     this.circle = d3
       .select("g.nodes")
@@ -583,16 +533,10 @@ class TopologyPage extends Component {
         return d.uid();
       });
 
-    // update existing nodes visual states
-    updateState(this.circle);
-
     // add new circle nodes
     let enterCircle = this.circle
       .enter()
       .append("g")
-      .classed("multiple", function(d) {
-        return d.normals && d.normals.length > 1;
-      })
       .attr("id", function(d) {
         return (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index;
       });
@@ -656,9 +600,7 @@ class TopologyPage extends Component {
         }
         this.mousedown_node = d;
         // mouse position relative to svg
-        this.initial_mouse_down_position = d3
-          .mouse(this.topologyRef.parentNode.parentNode.parentNode)
-          .slice();
+        this.initial_mouse_down_position = d3.mouse(this.svg.node());
       })
       .on("mouseup", function(d) {
         // mouse up for circle
@@ -678,10 +620,10 @@ class TopologyPage extends Component {
           cur_mouse[1] !== self.initial_mouse_down_position[1]
         ) {
           self.forceData.nodes.setFixed(d, true);
+          self.forceData.nodes.saveLonLat(self.backgroundMap);
           self.forceData.nodes.savePositions();
-          self.forceData.nodes.saveLonLat(this.backgroundMap);
-          self.resetMouseVars();
           self.restart();
+          self.resetMouseVars();
           return;
         }
 
@@ -736,6 +678,9 @@ class TopologyPage extends Component {
 
     // remove old nodes
     this.circle.exit().remove();
+
+    // update all nodes visual states
+    updateState(this.circle);
 
     // add text to client circles if there are any that represent multiple clients
     this.svg.selectAll(".subtext").remove();
@@ -866,19 +811,15 @@ class TopologyPage extends Component {
       this.setState({ showPopup: false });
       return;
     }
-    let width = this.topologyRef.offsetWidth;
-    let top = this.topologyRef.offsetTop - 5;
-
     // position the popup
     d3.select("#popover-div")
       .style("left", event.pageX + 5 + "px")
-      .style("top", event.pageY - top + "px");
+      .style("top", `${event.pageY}px`);
     // show popup
-    let pwidth = this.popupRef.offsetWidth;
     this.setState({ showPopup: true }, () =>
       d3
         .select("#popover-div")
-        .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
+        //.style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
         .on("mouseout", () => {
           this.setState({ showPopup: false });
         })
@@ -1015,51 +956,65 @@ class TopologyPage extends Component {
     this.setState({ showContextMenu: false });
   };
 
+  // clicked on the Legend button in the control bar
+  handleLegendClick = id => {
+    this.setState({ showLegend: !this.state.showLegend });
+  };
+
+  // clicked on the x button on the legend
+  handleCloseLegend = () => {
+    this.setState({ showLegend: false });
+  };
+
   render() {
+    const controlButtons = createTopologyControlButtons({
+      legendCallback: this.handleLegendClick
+    });
     return (
-      <div className="qdrTopology">
-        <LegendComponent
-          addresses={this.state.legendOptions.traffic.addresses}
-          addressColors={this.state.legendOptions.traffic.addressColors}
-          trafficOpen={this.state.legendOptions.traffic.open}
-          legendOpen={this.state.legendOptions.legend.open}
-          mapOpen={this.state.legendOptions.map.open}
-          mapShown={this.state.legendOptions.map.show}
-          arrowsOpen={this.state.legendOptions.arrows.open}
-          dots={this.state.legendOptions.traffic.dots}
-          congestion={this.state.legendOptions.traffic.congestion}
-          routerArrows={this.state.legendOptions.arrows.routerArrows}
-          clientArrows={this.state.legendOptions.arrows.clientArrows}
-          areaColor={this.state.mapOptions.areaColor}
-          oceanColor={this.state.mapOptions.oceanColor}
-          handleOpenChange={this.handleOpenChange}
-          handleChangeArrows={this.handleChangeArrows}
-          handleChangeTrafficAnimation={this.handleChangeTrafficAnimation}
-          handleChangeTrafficFlowAddress={this.handleChangeTrafficFlowAddress}
-          handleUpdateMapColor={this.handleUpdateMapColor}
-          handleUpdateMapShown={this.handleUpdateMapShown}
-        />
+      <TopologyView
+        viewToolbar={
+          <TopologyToolbar
+            legendOptions={this.state.legendOptions}
+            mapOptions={this.state.mapOptions}
+            handleOpenChange={this.handleOpenChange}
+            handleChangeArrows={this.handleChangeArrows}
+            handleChangeTrafficAnimation={this.handleChangeTrafficAnimation}
+            handleChangeTrafficFlowAddress={this.handleChangeTrafficFlowAddress}
+            handleUpdateMapColor={this.handleUpdateMapColor}
+            handleUpdateMapShown={this.handleUpdateMapShown}
+          />
+        }
+        controlBar={<TopologyControlBar controlButtons={controlButtons} />}
+        sideBar={<TopologySideBar show={false}></TopologySideBar>}
+        sideBarOpen={false}
+        className="qdrTopology"
+      >
         <div className="diagram">
-          {this.state.showContextMenu ? (
-            <ContextMenuComponent
-              ref={el => (this.contextRef = el)}
-              contextEventPosition={this.contextEventPosition}
-              contextEventData={this.contextEventData}
-              handleContextHide={this.handleContextHide}
-              menuItems={this.contextMenuItems}
-            />
-          ) : (
-            <React.Fragment />
-          )}
           <div ref={el => (this.topologyRef = el)} id="topology"></div>
-          <div
-            id="popover-div"
-            className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
-            ref={el => (this.popupRef = el)}
-          >
-            <QDRPopup content={this.state.popupContent}></QDRPopup>
-          </div>
         </div>
+        {this.state.showContextMenu && (
+          <ContextMenu
+            contextEventPosition={this.contextEventPosition}
+            contextEventData={this.contextEventData}
+            handleContextHide={this.handleContextHide}
+            setSelected={this.setSelected}
+          />
+        )}
+        {this.state.showLegend && (
+          <LegendComponent
+            nodes={this.forceData.nodes}
+            handleCloseLegend={this.handleCloseLegend}
+          />
+        )}
+
+        <div
+          id="popover-div"
+          className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
+          ref={el => (this.popupRef = el)}
+        >
+          <QDRPopup content={this.state.popupContent}></QDRPopup>
+        </div>
+
         {this.state.showRouterInfo ? (
           <RouterInfoComponent
             d={this.d}
@@ -1078,7 +1033,7 @@ class TopologyPage extends Component {
         ) : (
           <div />
         )}
-      </div>
+      </TopologyView>
     );
   }
 }

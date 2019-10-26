@@ -25,8 +25,7 @@ import {
   DataListItem,
   DataListItemRow,
   DataListItemCells,
-  DataListCell,
-  DataListContent
+  DataListCell
 } from "@patternfly/react-core";
 import {
   Stack,
@@ -39,7 +38,6 @@ import {
 } from "@patternfly/react-core";
 
 import { Redirect } from "react-router-dom";
-import { dataMap } from "./entityData";
 
 class LogDetails extends React.Component {
   constructor(props) {
@@ -47,7 +45,8 @@ class LogDetails extends React.Component {
     this.state = {
       redirect: false,
       redirectPath: "/dashboard",
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
+      logRecords: []
     };
     // if we get to this page and we don't have a props.location.state.entity
     // then redirect back to the dashboard.
@@ -59,6 +58,8 @@ class LogDetails extends React.Component {
       this.props.location.state.entity;
     if (!this.entity) {
       this.state.redirect = true;
+    } else {
+      this.info = props.location.state;
     }
   }
 
@@ -73,13 +74,57 @@ class LogDetails extends React.Component {
     }
   };
 
-  update = () => {};
+  update = () => {
+    if (!this.info) return;
+    const nodeId = this.info.currentRecord.nodeId;
+    var gotLogInfo = (nodeId, response, context) => {
+      let statusCode = context.message.application_properties.statusCode;
+      if (statusCode < 200 || statusCode >= 300) {
+        console.log("Error " + context.message.statusDescription);
+      } else {
+        let levelLogs = response.filter(result => {
+          if (result[1] == null) result[1] = "error";
+          return (
+            result[1].toUpperCase() === this.info.property.toUpperCase() &&
+            result[0] === this.info.currentRecord.name
+          );
+        });
+        levelLogs.length = Math.min(levelLogs.length, 100);
+        let logRecords = levelLogs.map((result, i) => {
+          return [
+            <DataListCell key={`log-message-${i}`}>
+              <div className="log-record">
+                <div className="log-date">{Date(result[5]).toString()}</div>
+                <div className="log-source">{result[3]}</div>
+                <div className="log-message">{result[2]}</div>
+              </div>
+            </DataListCell>
+          ];
+        });
+        this.setState({ logRecords, lastUpdated: new Date() });
+      }
+    };
+    this.props.service.management.connection
+      .sendMethod(nodeId, undefined, {}, "GET-LOG", {
+        module: this.info.currentRecord.name
+      })
+      .then(response => {
+        gotLogInfo(nodeId, response.response, response.context);
+      });
+  };
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
   parentItem = () => {
-    // otherwise return the 1st field
-    return this.props.location.state.value;
+    return `${this.info.currentRecord.node} ${this.info.currentRecord.name} ${this.info.property}`;
   };
+  breadcrumbSelected = () => {
+    this.setState({
+      redirect: true,
+      redirectPath: `/overview/${this.entity}`,
+      redirectState: this.props.location.state
+    });
+  };
+
   render() {
     if (this.state.redirect) {
       return (
@@ -104,9 +149,7 @@ class LogDetails extends React.Component {
               <Breadcrumb>
                 <BreadcrumbItem
                   className="link-button"
-                  onClick={() =>
-                    this.breadcrumbSelected(`/overview/${this.entity}`)
-                  }
+                  onClick={this.breadcrumbSelected}
                 >
                   {this.icap(this.entity)}
                 </BreadcrumbItem>
@@ -115,7 +158,7 @@ class LogDetails extends React.Component {
 
               <TextContent>
                 <Text className="overview-title" component={TextVariants.h1}>
-                  {`Logs ${this.parentItem()} attributes`}
+                  {`${this.parentItem()} log records`}
                 </Text>
                 <Text className="overview-loading" component={TextVariants.pre}>
                   {`Updated ${this.props.service.utilities.strDate(
@@ -127,6 +170,30 @@ class LogDetails extends React.Component {
 
             <StackItem className="overview-table">
               <DataList aria-label="Simple data list example">
+                {this.state.logRecords.map((rec, i) => {
+                  return (
+                    <DataListItem
+                      key={`log-item-${i}`}
+                      aria-labelledby={`simple-item1-${i}`}
+                    >
+                      <DataListItemRow>
+                        <DataListItemCells dataListCells={rec} />
+                      </DataListItemRow>
+                    </DataListItem>
+                  );
+                })}
+              </DataList>
+            </StackItem>
+          </Stack>
+        </PageSection>
+      </React.Fragment>
+    );
+  }
+}
+
+export default LogDetails;
+
+/*
                 <DataListItem aria-labelledby="simple-item1">
                   <DataListItemRow>
                     <DataListItemCells
@@ -164,13 +231,4 @@ class LogDetails extends React.Component {
                     />
                   </DataListItemRow>
                 </DataListItem>
-              </DataList>
-            </StackItem>
-          </Stack>
-        </PageSection>
-      </React.Fragment>
-    );
-  }
-}
-
-export default LogDetails;
+*/

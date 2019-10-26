@@ -141,10 +141,6 @@ class Topology {
   }
 
   get() {
-    if (typeof this.getCounter === "undefined") {
-      this.getCounter = 0;
-    }
-    console.log(`topology: get - ${this.getCounter++}`);
     return new Promise(
       function(resolve, reject) {
         this.connection.sendMgmtQuery("GET-MGMT-NODES").then(

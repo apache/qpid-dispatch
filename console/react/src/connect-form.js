@@ -25,34 +25,47 @@ import {
   TextVariants
 } from "@patternfly/react-core";
 
+const CONNECT_KEY = "QDRSettings";
+
 class ConnectForm extends React.Component {
   constructor(props) {
     super(props);
 
     this.state = {
-      value: "please choose",
-      value1: "",
-      value2: "",
-      value3: "",
-      value4: ""
-    };
-    this.handleTextInputChange1 = value1 => {
-      this.setState({ value1 });
-    };
-    this.handleTextInputChange2 = value2 => {
-      this.setState({ value2 });
-    };
-    this.handleTextInputChange3 = value3 => {
-      this.setState({ value3 });
-    };
-    this.handleTextInputChange4 = value4 => {
-      this.setState({ value4 });
+      address: "",
+      port: "",
+      username: "",
+      password: ""
     };
   }
 
+  componentDidMount = () => {
+    let savedValues = localStorage.getItem(CONNECT_KEY);
+    if (!savedValues) {
+      savedValues = {
+        address: "localhost",
+        port: "5673",
+        username: "",
+        password: ""
+      };
+    } else {
+      savedValues = JSON.parse(savedValues);
+    }
+    this.setState(savedValues);
+  };
+  handleTextInputChange = (field, value) => {
+    const formValues = Object.assign(this.state);
+    formValues[field] = value;
+    this.setState(formValues, () => {
+      const state2Save = JSON.parse(JSON.stringify(formValues));
+      // don't save the password
+      state2Save.password = "";
+      localStorage.setItem(CONNECT_KEY, JSON.stringify(state2Save));
+    });
+  };
+
   handleConnect = () => {
-    this.toggleDrawerHide();
-    this.props.handleConnect(this.props.fromPath);
+    this.props.handleConnect(this.props.fromPath, this.state);
   };
 
   toggleDrawerHide = () => {
@@ -60,7 +73,7 @@ class ConnectForm extends React.Component {
   };
 
   render() {
-    const { value1, value2, value3, value4 } = this.state;
+    const { address, port, username, password } = this.state;
 
     return (
       <div>
@@ -80,13 +93,15 @@ class ConnectForm extends React.Component {
                 fieldId={`form-address-${this.props.prefix}`}
               >
                 <TextInput
-                  value={value1}
+                  value={address}
                   isRequired
                   type="text"
                   id={`form-address-${this.props.prefix}`}
                   aria-describedby="horizontal-form-address-helper"
                   name="form-address"
-                  onChange={this.handleTextInputChange1}
+                  onChange={value =>
+                    this.handleTextInputChange("address", value)
+                  }
                 />
               </FormGroup>
               <FormGroup
@@ -95,8 +110,8 @@ class ConnectForm extends React.Component {
                 fieldId={`form-port-${this.props.prefix}`}
               >
                 <TextInput
-                  value={value2}
-                  onChange={this.handleTextInputChange2}
+                  value={port}
+                  onChange={value => this.handleTextInputChange("port", value)}
                   isRequired
                   type="number"
                   id={`form-port-${this.props.prefix}`}
@@ -108,8 +123,10 @@ class ConnectForm extends React.Component {
                 fieldId={`form-user-${this.props.prefix}`}
               >
                 <TextInput
-                  value={value3}
-                  onChange={this.handleTextInputChange3}
+                  value={username}
+                  onChange={value =>
+                    this.handleTextInputChange("username", value)
+                  }
                   isRequired
                   id={`form-user-${this.props.prefix}`}
                   name="form-user"
@@ -120,8 +137,10 @@ class ConnectForm extends React.Component {
                 fieldId={`form-password-${this.props.prefix}`}
               >
                 <TextInput
-                  value={value4}
-                  onChange={this.handleTextInputChange4}
+                  value={password}
+                  onChange={value =>
+                    this.handleTextInputChange("password", value)
+                  }
                   type="password"
                   id={`form-password-${this.props.prefix}`}
                   name="form-password"

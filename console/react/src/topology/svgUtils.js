@@ -17,6 +17,7 @@
 import { Nodes } from "./nodes.js";
 import { utils } from "../amqp/utilities.js";
 
+// update the node's classes based on the node's data
 export function updateState(circle) {
   circle
     .selectAll("circle")
@@ -36,61 +37,61 @@ export function updateState(circle) {
 
 export function appendCircle(g) {
   // add new circles and set their attr/class/behavior
-  return g
-    .append("svg:circle")
-    .attr("class", "node")
-    .attr("r", function(d) {
-      return Nodes.radius(d.nodeType);
-    })
-    .attr("fill", function(d) {
-      if (d.cdir === "both" && !utils.isConsole(d)) {
-        return "url(#half-circle)";
-      }
-      return null;
-    })
-    .classed("fixed", function(d) {
-      return d.fixed ? d.fixed & 1 : false;
-    })
-    .classed("normal", function(d) {
-      return d.nodeType === "normal" || utils.isConsole(d);
-    })
-    .classed("in", function(d) {
-      return d.cdir === "in";
-    })
-    .classed("out", function(d) {
-      return d.cdir === "out";
-    })
-    .classed("inout", function(d) {
-      return d.cdir === "both";
-    })
-    .classed("inter-router", function(d) {
-      return d.nodeType === "inter-router" || d.nodeType === "_topo";
-    })
-    .classed("on-demand", function(d) {
-      return d.nodeType === "on-demand";
-    })
-    .classed("edge", function(d) {
-      return d.nodeType === "edge" || d.nodeType === "_edge";
-    })
-    .classed("console", function(d) {
-      return utils.isConsole(d);
-    })
-    .classed("artemis", function(d) {
-      return utils.isArtemis(d);
-    })
-    .classed("qpid-cpp", function(d) {
-      return utils.isQpid(d);
-    })
-    .classed("route-container", function(d) {
-      return (
-        !utils.isArtemis(d) &&
-        !utils.isQpid(d) &&
-        d.nodeType === "route-container"
-      );
-    })
-    .classed("client", function(d) {
-      return d.nodeType === "normal" && !d.properties.console_identifier;
-    });
+  return (
+    g
+      .append("svg:circle")
+      .attr("class", "node")
+      // the following attrs and classes won't change after the node is created
+      .attr("r", function(d) {
+        return Nodes.radius(d.nodeType);
+      })
+      .attr("fill", function(d) {
+        if (d.cdir === "both" && !utils.isConsole(d)) {
+          return "url(#half-circle)";
+        }
+        return null;
+      })
+      .classed("normal", function(d) {
+        return d.nodeType === "normal" || utils.isConsole(d);
+      })
+      .classed("in", function(d) {
+        return d.cdir === "in";
+      })
+      .classed("out", function(d) {
+        return d.cdir === "out";
+      })
+      .classed("inout", function(d) {
+        return d.cdir === "both";
+      })
+      .classed("inter-router", function(d) {
+        return d.nodeType === "inter-router" || d.nodeType === "_topo";
+      })
+      .classed("on-demand", function(d) {
+        return d.nodeType === "on-demand";
+      })
+      .classed("edge", function(d) {
+        return d.nodeType === "edge" || d.nodeType === "_edge";
+      })
+      .classed("console", function(d) {
+        return utils.isConsole(d);
+      })
+      .classed("artemis", function(d) {
+        return utils.isArtemis(d);
+      })
+      .classed("qpid-cpp", function(d) {
+        return utils.isQpid(d);
+      })
+      .classed("route-container", function(d) {
+        return (
+          !utils.isArtemis(d) &&
+          !utils.isQpid(d) &&
+          d.nodeType === "route-container"
+        );
+      })
+      .classed("client", function(d) {
+        return d.nodeType === "normal" && !d.properties.console_identifier;
+      })
+  );
 }
 
 export function appendContent(g) {

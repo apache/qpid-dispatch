@@ -39,10 +39,8 @@ class ConnectPage extends React.Component {
           </TextContent>
           <TextContent>
             <Text component="p">
-              The console provides limited information about the clients that
-              are attached to the router network and is therefore more
-              appropriate for administrators needing to know the layout and
-              health of the router network.
+              This console provides information about routers and their
+              connected clients.
             </Text>
           </TextContent>
         </div>

@@ -12,7 +12,7 @@ class App extends Component {
 
   render() {
     return (
-      <div className="App">
+      <div className="App pf-m-redhat-font">
         <PageLayout />
       </div>
     );
