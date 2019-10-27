@@ -870,6 +870,10 @@ div.qdrChord .legend-text {
   border-right: 1px solid #888;
 }
 
+.context-menu.layout-dropdown li {
+  color: black;
+}
+
 .context-menu .menu-item {
   padding: 0.5em 1.5em;
 }

@@ -49,7 +49,7 @@ import {
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import { css } from "@patternfly/react-styles";
 import { BellIcon, PowerOffIcon } from "@patternfly/react-icons";
-//import ConnectForm from "./connect-form";
+import DropdownMenu from "./DropdownMenu";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
 import OverviewTablePage from "./overview/overviewTablePage";
@@ -59,6 +59,7 @@ import MessageFlowPage from "./chord/qdrChord";
 import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
 import ConnectForm from "./connect-form";
+import { isDeepStrictEqual } from "util";
 const avatarImg = require("./assets/img_avatar.svg");
 
 class PageLayout extends React.Component {
@@ -67,14 +68,15 @@ class PageLayout extends React.Component {
     this.state = {
       connected: false,
       connectPath: "",
-      isDropdownOpen: false,
       activeGroup: "overview",
       activeItem: "dashboard",
-      isConnectFormOpen: false,
       isNavOpenDesktop: true,
       isNavOpenMobile: false,
-      isMobileView: false
+      isMobileView: false,
+      user: "anonymous"
     };
+    this.isDropdownOpen = false;
+
     this.hooks = { setLocation: this.setLocation };
     this.service = new QDRService(this.hooks);
     this.nav = {
@@ -98,26 +100,26 @@ class PageLayout extends React.Component {
     //this.setState({ connectPath: where })
   };
 
-  onDropdownToggle = isDropdownOpen => {
-    this.setState({
-      isDropdownOpen
-    });
+  onDropdownToggle = () => {
+    this.isDropdownOpen = !this.isDropdownOpen;
+    this.dropdownRef.show(this.isDropdownOpen);
   };
 
-  onDropdownSelect = event => {
-    this.setState({
-      isDropdownOpen: !this.state.isDropdownOpen
-    });
+  handleDropdownLogout = () => {
+    // called from the user dropdown menu
+    // The only menu item is logout
+    // We must have been connected to get here
+    this.handleConnect();
+    this.dropdownRef.show(false);
+    this.isDropdownOpen = false;
   };
 
   handleConnect = (connectPath, connectInfo) => {
     if (this.state.connected) {
-      this.setState(
-        { connectPath: "", connected: false, isConnectFormOpen: false },
-        () => {
-          this.service.disconnect();
-        }
-      );
+      this.setState({ connectPath: "", connected: false }, () => {
+        this.handleConnectCancel();
+        this.service.disconnect();
+      });
     } else {
       const connectOptions = JSON.parse(JSON.stringify(connectInfo));
       if (connectOptions.username === "") connectOptions.username = undefined;
@@ -136,9 +138,9 @@ class PageLayout extends React.Component {
               break;
             }
           }
+          this.handleConnectCancel();
 
           this.setState({
-            isConnectFormOpen: false,
             activeItem,
             activeGroup,
             connected: true,
@@ -161,12 +163,14 @@ class PageLayout extends React.Component {
   };
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  toggleConnectForm = event => {
-    this.setState({ isConnectFormOpen: !this.state.isConnectFormOpen });
+  toggleConnectForm = () => {
+    this.isConnectFormOpen = !this.isConnectFormOpen;
+    this.connectFormRef.show(this.isConnectFormOpen);
   };
 
   handleConnectCancel = () => {
-    this.setState({ isConnectFormOpen: false });
+    this.connectFormRef.show(false);
+    this.isConnectFormOpen = false;
   };
 
   onNavToggleDesktop = () => {
@@ -187,8 +191,17 @@ class PageLayout extends React.Component {
     });
   };
 
+  handleUserMenuHide = () => {
+    this.isDropdownOpen = false;
+    this.dropdownRef.show(false);
+  };
+
+  isConnected = () => {
+    return this.state.connected;
+  };
+
   render() {
-    const { isDropdownOpen, activeItem, activeGroup } = this.state;
+    const { activeItem, activeGroup } = this.state;
     const { isNavOpenDesktop, isNavOpenMobile, isMobileView } = this.state;
 
     const PageNav = (
@@ -225,11 +238,6 @@ class PageLayout extends React.Component {
         </NavList>
       </Nav>
     );
-    const userDropdownItems = [
-      <DropdownItem component="button" key="action">
-        Logout
-      </DropdownItem>
-    ];
     const PageToolbar = (
       <Toolbar>
         <ToolbarGroup
@@ -265,17 +273,18 @@ class PageLayout extends React.Component {
               accessibleStyles.visibleOnMd
             )}
           >
-            <Dropdown
-              isPlain
-              position="right"
-              onSelect={this.onDropdownSelect}
-              isOpen={isDropdownOpen}
-              toggle={
-                <DropdownToggle onToggle={this.onDropdownToggle}>
-                  anonymous
-                </DropdownToggle>
-              }
-              dropdownItems={userDropdownItems}
+            <DropdownToggle
+              className="user-button"
+              onToggle={this.onDropdownToggle}
+            >
+              {this.state.user}
+            </DropdownToggle>
+            <DropdownMenu
+              ref={el => (this.dropdownRef = el)}
+              handleContextHide={this.handleUserMenuHide}
+              handleDropdownLogout={this.handleDropdownLogout}
+              isConnected={this.isConnected}
+              parentClass="user-button"
             />
           </ToolbarItem>
         </ToolbarGroup>
@@ -342,17 +351,16 @@ class PageLayout extends React.Component {
     };
 
     const connectForm = () => {
-      if (this.state.isConnectFormOpen) {
-        return (
-          <ConnectForm
-            fromPath={"/"}
-            handleConnect={this.handleConnect}
-            handleConnectCancel={this.handleConnectCancel}
-            isConnected={this.state.connected}
-          />
-        );
-      }
-      return <React.Fragment />;
+      return (
+        <ConnectForm
+          ref={el => (this.connectFormRef = el)}
+          isConnectFormOpen={this.isConnectFormOpen}
+          fromPath={"/"}
+          handleConnect={this.handleConnect}
+          handleConnectCancel={this.handleConnectCancel}
+          isConnected={this.state.connected}
+        />
+      );
     };
 
     return (
@@ -396,4 +404,18 @@ export default PageLayout;
             <ConnectForm prefix="toolbar" handleConnect={this.handleConnect} />
           </ToolbarItem>
 
+
+
+            <Dropdown
+              isPlain
+              position="right"
+              onSelect={this.onDropdownSelect}
+              isOpen={isDropdownOpen}
+              toggle={
+                <DropdownToggle onToggle={this.onDropdownToggle}>
+                  anonymous
+                </DropdownToggle>
+              }
+              dropdownItems={userDropdownItems}
+            />
           */

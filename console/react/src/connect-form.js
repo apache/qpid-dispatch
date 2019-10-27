@@ -35,9 +35,14 @@ class ConnectForm extends React.Component {
       address: "",
       port: "",
       username: "",
-      password: ""
+      password: "",
+      isShown: this.props.isConnectFormOpen
     };
   }
+
+  show = isShown => {
+    this.setState({ isShown });
+  };
 
   componentDidMount = () => {
     let savedValues = localStorage.getItem(CONNECT_KEY);
@@ -73,9 +78,9 @@ class ConnectForm extends React.Component {
   };
 
   render() {
-    const { address, port, username, password } = this.state;
+    const { isShown, address, port, username, password } = this.state;
 
-    return (
+    return isShown ? (
       <div>
         <div className="connect-modal">
           <div className="">
@@ -158,7 +163,7 @@ class ConnectForm extends React.Component {
           </div>
         </div>
       </div>
-    );
+    ) : null;
   }
 }
 

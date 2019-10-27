@@ -16,6 +16,25 @@ class ConnectPage extends React.Component {
   handleConnectCancel = () => {
     this.setState({ showForm: false });
   };
+
+  shouldComponentUpdate = (nextProps, nextState) => {
+    if (nextState.showForm !== this.state.showForm) return true;
+    const nextPathname =
+      nextProps.location &&
+      nextProps.location.state &&
+      nextProps.location.state.pathname
+        ? nextProps.location.state.pathname
+        : undefined;
+    const currentPathname =
+      this.props.location &&
+      this.props.location.state &&
+      this.props.location.state.pathname
+        ? this.props.location.state.pathname
+        : undefined;
+
+    return nextPathname !== currentPathname;
+  };
+
   render() {
     const { showForm } = this.state;
     const { from } = this.props.location.state || { from: { pathname: "/" } };
@@ -27,6 +46,7 @@ class ConnectPage extends React.Component {
             handleConnect={this.props.handleConnect}
             handleConnectCancel={this.handleConnectCancel}
             fromPath={from.pathname}
+            isConnectFormOpen={true}
           />
         ) : (
           <React.Fragment />

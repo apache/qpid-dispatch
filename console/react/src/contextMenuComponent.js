@@ -8,8 +8,6 @@ class ContextMenuComponent extends React.Component {
 
   componentDidMount = () => {
     this.registerHandlers();
-    console.log(`contextMenuComponent mounted with`);
-    console.log(this.props.contextEventPosition);
   };
 
   componentWillUnmount = () => {
@@ -45,7 +43,10 @@ class ContextMenuComponent extends React.Component {
   };
 
   handleOutsideClick = e => {
-    if (e.target.nodeName !== "LI") {
+    if (
+      e.target.nodeName !== "LI" &&
+      !e.target.className.includes(this.props.parentClass)
+    ) {
       this.handleHide(e);
     }
   };
@@ -78,12 +79,18 @@ class ContextMenuComponent extends React.Component {
       );
     });
 
-    const style = {
-      left: `${this.props.contextEventPosition[0]}px`,
-      top: `${this.props.contextEventPosition[1]}px`
-    };
+    const style =
+      this.props.contextEventPosition[0] >= 0
+        ? {
+            left: `${this.props.contextEventPosition[0]}px`,
+            top: `${this.props.contextEventPosition[1]}px`
+          }
+        : {};
     return (
-      <ul className="context-menu" style={style}>
+      <ul
+        className={`context-menu ${this.props.className || ""}`}
+        style={style}
+      >
         {menuItems}
       </ul>
     );
