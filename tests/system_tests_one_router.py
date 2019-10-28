@@ -24,7 +24,7 @@ from __future__ import print_function
 
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
-from system_test import unittest
+from system_test import unittest, QdManager
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils import BlockingConnection, SyncRequestResponse
@@ -501,7 +501,6 @@ class OneRouterTest(TestCase):
         test = Q2HoldoffDropTest(self.router)
         test.run()
         self.assertEqual(None, test.error)
-
 
 
 class Entity(object):
@@ -3159,6 +3158,86 @@ class UnsettledLargeMessageTest(MessagingHandler):
             # Receiver bails after receiving max_receive messages.
             self.receiver.close()
             self.recv_conn.close()
+
+class OneRouterUnavailableCoordinatorTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(OneRouterUnavailableCoordinatorTest, cls).setUpClass()
+        name = "test-router"
+        OneRouterTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR',  'defaultDistribution': 'unavailable'}),
+            ('listener', {'port': cls.tester.get_port() }),
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def test_46_coordinator_linkroute_unavailable_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We try to connect a tx sender
+        # to make sure a good detailed message saying "the link route to a coordinator must be
+        # configured" is sent back.
+        test = RejectCoordinatorGoodMessageTest(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
+    def test_47_coordinator_linkroute_available_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We create a link route with $coordinator address
+        # The link route is not attached to any broker. When the attach comes in, the reject message must be
+        # condition=:"qd:no-route-to-dest", description="No route to the destination node"
+        COORDINATOR = "$coordinator"
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        qd_manager = QdManager(self, address=self.address)
+        args = {"prefix": COORDINATOR, "connection": "broker", "dir": "in"}
+        qd_manager.create(long_type, args)
+        link_route_created = False
+
+        # Verify that the link route was created by querying for it.
+        outs = qd_manager.query(long_type)[0]
+        if outs:
+            try:
+                if outs['prefix'] == COORDINATOR:
+                    link_route_created = True
+            except:
+                pass
+
+        self.assertTrue(link_route_created)
+
+        # We have verified that the link route has been created but there is no broker connections.
+        # Now let's try to open a transaction. We should get a no route to destination error
+        test = RejectCoordinatorGoodMessageTest(self.address, link_route_present=True)
+        test.run()
+        self.assertTrue(test.passed)
+
+
+class RejectCoordinatorGoodMessageTest(RejectCoordinatorTest):
+    def __init__(self, url, link_route_present=False):
+        super(RejectCoordinatorGoodMessageTest, self).__init__(url)
+        self.link_route_present = link_route_present
+        self.error_with_link_route = "No route to the destination node"
+
+    def on_link_error(self, event):
+        link = event.link
+
+    def on_link_error(self, event):
+        link = event.link
+        # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
+        # that the router has rejected the link because it cannot coordinate transactions itself
+        if link.name == "txn-ctrl":
+            if self.link_route_present:
+                if link.remote_condition.description == self.error_with_link_route and link.remote_condition.name == 'qd:no-route-to-dest':
+                    self.link_error = True
+            else:
+                if link.remote_condition.description == self.error and link.remote_condition.name == 'amqp:precondition-failed':
+                    self.link_error = True
+
+            self.check_if_done()
+
+    def run(self):
+        Container(self).run()
 
 
 class Q2HoldoffDropTest(MessagingHandler):
