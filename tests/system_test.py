@@ -1034,6 +1034,10 @@ class MgmtMsgProxy(object):
         ap = msg.properties
         return self._Response(ap['statusCode'], ap['statusDescription'], msg.body)
 
+    def query_router(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router'}
+        return Message(properties=ap, reply_to=self.reply_addr)
+
     def query_connections(self):
         ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.connection'}
         return Message(properties=ap, reply_to=self.reply_addr)

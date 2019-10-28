@@ -23,8 +23,14 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-#define TIMER_INTERVAL 30
-#define STUCK_AGE      10
+#define PROD_TIMER_INTERVAL 30
+#define PROD_STUCK_AGE      10
+
+#define TEST_TIMER_INTERVAL 5
+#define TEST_STUCK_AGE      3
+
+static int timer_interval = PROD_TIMER_INTERVAL;
+static int stuck_age      = PROD_STUCK_AGE;
 
 static void action_handler_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
@@ -39,22 +45,21 @@ struct tracker_t {
 
 static void check_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
-    if (!dlv->stuck && ((core->uptime_ticks - link->core_ticks) > STUCK_AGE)) {
+    if (!dlv->stuck && ((core->uptime_ticks - link->core_ticks) > stuck_age)) {
         dlv->stuck = true;
         link->deliveries_stuck++;
         core->deliveries_stuck++;
         if (link->deliveries_stuck == 1)
-            qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] Stuck delivery detected on this link",
-                   link->conn ? link->conn->identity : 0, link->identity);
+            qd_log(core->log, QD_LOG_INFO,
+                   "[C%"PRIu64"][L%"PRIu64"] "
+                   "Stuck delivery: At least one delivery on this link has been undelivered/unsettled for more than %d seconds",
+                   link->conn ? link->conn->identity : 0, link->identity, stuck_age);
     }
 }
 
 
 static void process_link_CT(qdr_core_t *core, qdr_link_t *link)
 {
-    qd_log(core->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Checking link for stuck deliveries",
-           link->conn ? link->conn->identity : 0, link->identity);
-
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
     while (dlv) {
         check_delivery_CT(core, link, dlv);
@@ -82,7 +87,7 @@ static void timer_handler_CT(qdr_core_t *core, void *context)
         action->args.general.context_1 = tracker;
         qdr_action_background_enqueue(core, action);
     } else
-        qdr_core_timer_schedule_CT(core, tracker->timer, TIMER_INTERVAL);
+        qdr_core_timer_schedule_CT(core, tracker->timer, timer_interval);
 }
 
 
@@ -98,19 +103,39 @@ static void action_handler_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         process_link_CT(core, link);
         qdr_link_t *next = DEQ_NEXT(link);
         if (!!next) {
+            //
+            // There is another link on the list.  Schedule another background action to process
+            // the next link.
+            //
             set_safe_ptr_qdr_link_t(next, &tracker->next_link);
             action = qdr_action(action_handler_CT, "detect_stuck_deliveries");
             action->args.general.context_1 = tracker;
             qdr_action_background_enqueue(core, action);
         } else
-            qdr_core_timer_schedule_CT(core, tracker->timer, TIMER_INTERVAL);
+            //
+            // We've come to the end of the list of open links.  Set the timer to start a new sweep
+            // after the interval.
+            //
+            qdr_core_timer_schedule_CT(core, tracker->timer, timer_interval);
     } else
-        qdr_core_timer_schedule_CT(core, tracker->timer, TIMER_INTERVAL);
+        //
+        // The link we were provided is not valid.  It was probably closed since the last time we
+        // came through this path.  Abort the sweep and set the timer for a new one after the interval.
+        //
+        qdr_core_timer_schedule_CT(core, tracker->timer, timer_interval);
 }
 
 
 static bool qdrc_delivery_tracker_enable_CT(qdr_core_t *core)
 {
+    if (core->qd->test_hooks) {
+        //
+        // Test hooks are enabled, override the timing constants with the test values
+        //
+        timer_interval = TEST_TIMER_INTERVAL;
+        stuck_age      = TEST_STUCK_AGE;
+    }
+
     return true;
 }
 
@@ -121,8 +146,12 @@ static void qdrc_delivery_tracker_init_CT(qdr_core_t *core, void **module_contex
     ZERO(tracker);
     tracker->core  = core;
     tracker->timer = qdr_core_timer_CT(core, timer_handler_CT, tracker);
-    qdr_core_timer_schedule_CT(core, tracker->timer, TIMER_INTERVAL);
+    qdr_core_timer_schedule_CT(core, tracker->timer, timer_interval);
     *module_context = tracker;
+
+    qd_log(core->log, QD_LOG_INFO,
+           "Stuck delivery detection: Scan interval: %d seconds, Delivery age threshold: %d seconds",
+           timer_interval, stuck_age);
 }
 
 
