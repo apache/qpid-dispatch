@@ -135,10 +135,9 @@ static bool router_core_process_background_action_LH(qdr_core_t *core)
 
     if (!!action) {
         DEQ_REMOVE_HEAD(core->action_list_background);
+        sys_mutex_unlock(core->action_lock);
         if (action->label)
             qd_log(core->log, QD_LOG_TRACE, "Core background action '%s'%s", action->label, core->running ? "" : " (discard)");
-
-        sys_mutex_unlock(core->action_lock);
         action->action_handler(core, action, !core->running);
         sys_mutex_lock(core->action_lock);
 
