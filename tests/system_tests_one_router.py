@@ -3221,9 +3221,6 @@ class RejectCoordinatorGoodMessageTest(RejectCoordinatorTest):
 
     def on_link_error(self, event):
         link = event.link
-
-    def on_link_error(self, event):
-        link = event.link
         # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
         # that the router has rejected the link because it cannot coordinate transactions itself
         if link.name == "txn-ctrl":
