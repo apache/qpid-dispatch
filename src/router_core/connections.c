@@ -223,6 +223,32 @@ const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *l
 }
 
 
+void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
+{
+    //
+    // Get Proton's view of this link's available credit.
+    //
+    int pn_credit = core->get_credit_handler(core->user_context, link);
+
+    if (link->credit_reported > 0 && pn_credit == 0) {
+        //
+        // The link has transitioned from positive credit to zero credit.
+        // Mark it as eligible for logging and record the time.
+        //
+        link->reported_as_blocked = false;
+        link->zero_credit_time = core->uptime_ticks;
+    } else if (link->credit_reported == 0 && pn_credit > 0)
+        //
+        // The link has transitioned from zero credit to positive credit.
+        // Clear the recorded time.
+        //
+        link->zero_credit_time = 0;
+
+    link->credit_reported = pn_credit;
+}
+
+
+
 int qdr_connection_process(qdr_connection_t *conn)
 {
     qdr_connection_work_list_t  work_list;
@@ -365,7 +391,8 @@ int qdr_connection_process(qdr_connection_t *conn)
             if (detach_sent) {
                 // let the core thread know so it can clean up
                 qdr_link_detach_sent(link);
-            }
+            } else
+                qdr_record_link_credit(core, link);
 
             ref = DEQ_NEXT(ref);
         }
@@ -506,6 +533,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
     link->core_ticks     = conn->core->uptime_ticks;
+    link->zero_credit_time = conn->core->uptime_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
 
     link->strip_annotations_in  = conn->strip_annotations_in;
@@ -591,6 +619,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_drain_t           drain,
                              qdr_link_push_t            push,
                              qdr_link_deliver_t         deliver,
+                             qdr_link_get_credit_t      get_credit,
                              qdr_delivery_update_t      delivery_update,
                              qdr_connection_close_t     conn_close)
 {
@@ -604,6 +633,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
     core->drain_handler           = drain;
     core->push_handler            = push;
     core->deliver_handler         = deliver;
+    core->get_credit_handler      = get_credit;
     core->delivery_update_handler = delivery_update;
     core->conn_close_handler      = conn_close;
 }
@@ -1022,6 +1052,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->strip_prefix   = 0;
     link->attach_count   = 1;
     link->core_ticks     = core->uptime_ticks;
+    link->zero_credit_time = core->uptime_ticks;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;

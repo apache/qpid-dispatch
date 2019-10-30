@@ -71,6 +71,16 @@ static void process_link_CT(qdr_core_t *core, qdr_link_t *link)
         check_delivery_CT(core, link, dlv);
         dlv = DEQ_NEXT(dlv);
     }
+
+    if (!link->reported_as_blocked && link->zero_credit_time > 0 &&
+        (core->uptime_ticks - link->zero_credit_time > stuck_age)) {
+        link->reported_as_blocked = true;
+        qd_log(core->log, QD_LOG_INFO,
+               "[C%"PRIu64"][L%"PRIu64"] "
+               "Link blocked with zero credit for %d seconds",
+               link->conn ? link->conn->identity : 0, link->identity,
+               core->uptime_ticks - link->zero_credit_time);
+    }
 }
 
 

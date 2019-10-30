@@ -1534,6 +1534,15 @@
                     "graph": true,
                     "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
                 },
+                "creditAvailable": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of credits available on this link."
+                },
+                "zeroCreditSeconds": {
+                    "type": "integer",
+                    "description": "The number of seconds that the link's available credit has remained zero."
+                },
                 "settleRate": {
                     "type": "integer",
                     "graph": true,

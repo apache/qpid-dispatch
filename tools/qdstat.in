@@ -34,7 +34,7 @@ from time import ctime, strftime, gmtime
 import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort
 from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_ssl_domain, opts_sasl,
                                                   opts_url)
@@ -347,6 +347,7 @@ class BusManager(Node):
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
                 'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'deliveriesStuck',
+                'creditAvailable', 'zeroCreditSeconds',
                 'adminStatus', 'operStatus', 'linkName', 'priority', 'settleRate')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
@@ -355,6 +356,7 @@ class BusManager(Node):
         has_priority = False
         has_delayed  = False
         has_stuck    = False
+        has_credit   = False
 
         if show_date_id:
             self.display_datetime_router_id()
@@ -370,6 +372,8 @@ class BusManager(Node):
                     has_delayed = True
                 if hasattr(first_row, 'deliveriesStuck'):
                     has_stuck = True
+                if hasattr(first_row, 'creditAvailable'):
+                    has_credit = True
 
         if has_priority:
             heads.append(Header("pri"))
@@ -390,6 +394,9 @@ class BusManager(Node):
             heads.append(Header("rate"))
         if has_stuck:
             heads.append(Header("stuck"))
+        if has_credit:
+            heads.append(Header("cred"))
+            heads.append(Header("blkd"))
         if self.opts.verbose:
             heads.append(Header("admin"))
             heads.append(Header("oper"))
@@ -423,6 +430,12 @@ class BusManager(Node):
                 row.append(link.settleRate)
             if has_stuck:
                 row.append(link.deliveriesStuck)
+            if has_credit:
+                row.append(link.creditAvailable)
+                if link.zeroCreditSeconds > 0:
+                    row.append(TimeShort(link.zeroCreditSeconds * 1000000000))
+                else:
+                    row.append('-')
             if self.opts.verbose:
                 row.append(link.adminStatus)
                 row.append(link.operStatus)

@@ -431,9 +431,12 @@ struct qdr_link_t {
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
     qdr_link_oper_status_t   oper_status;
     int                      capacity;
-    int                      credit_to_core; ///< Number of the available credits incrementally given to the core
-    int                      credit_pending; ///< Number of credits to be issued once consumers are available
-    int                      credit_stored;  ///< Number of credits given to the link before it was ready to process them.
+    int                      credit_to_core;    ///< Number of the available credits incrementally given to the core
+    int                      credit_pending;    ///< Number of credits to be issued once consumers are available
+    int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them.
+    int                      credit_reported;   ///< Number of credits to expose to management
+    uint32_t                 zero_credit_time;  ///< Number of core ticks when credit last went to zero
+    bool                     reported_as_blocked; ///< The fact that this link has been blocked with zero credit has been logged
     bool                     admin_enabled;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
@@ -806,6 +809,7 @@ struct qdr_core_t {
     qdr_link_drain_t          drain_handler;
     qdr_link_push_t           push_handler;
     qdr_link_deliver_t        deliver_handler;
+    qdr_link_get_credit_t     get_credit_handler;
     qdr_delivery_update_t     delivery_update_handler;
     qdr_connection_close_t    conn_close_handler;
 
@@ -996,5 +1000,13 @@ void qdr_core_timer_free_CT(qdr_core_t *core, qdr_core_timer_t *timer);
  * @param n uint8_t index for the sheaf to be reset prior to re-use.
  */
 void qdr_reset_sheaf(qdr_core_t *core, uint8_t n);
+
+/**
+ * Run in an IO thread.
+ *
+ * Records Proton's view of the link's available credit and tracks it for management and
+ * logging.
+ */
+void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link);
 
 #endif
