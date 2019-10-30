@@ -237,6 +237,7 @@ void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
         //
         link->reported_as_blocked = false;
         link->zero_credit_time = core->uptime_ticks;
+        core->links_blocked--;
     } else if (link->credit_reported == 0 && pn_credit > 0)
         //
         // The link has transitioned from zero credit to positive credit.
@@ -995,11 +996,14 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // Log the link closure
     //
     qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] %s: del=%"PRIu64" presett=%"PRIu64" psdrop=%"PRIu64
-           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64,
+           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64" blocked=%s",
            conn->identity, link->identity, log_text, link->total_deliveries, link->presettled_deliveries,
            link->dropped_presettled_deliveries, link->accepted_deliveries, link->rejected_deliveries,
            link->released_deliveries, link->modified_deliveries, link->deliveries_delayed_1sec,
-           link->deliveries_delayed_10sec);
+           link->deliveries_delayed_10sec, link->reported_as_blocked ? "yes" : "no");
+
+    if (link->reported_as_blocked)
+        core->links_blocked--;
 
     free_qdr_link_t(link);
 }

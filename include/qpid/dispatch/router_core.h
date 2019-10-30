@@ -857,6 +857,7 @@ typedef struct {
     size_t deliveries_delayed_1sec;
     size_t deliveries_delayed_10sec;
     size_t deliveries_stuck;
+    size_t links_blocked;
     size_t deliveries_redirected_to_fallback;
 }  qdr_global_stats_t;
 ALLOC_DECLARE(qdr_global_stats_t);

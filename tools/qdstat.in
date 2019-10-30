@@ -314,6 +314,10 @@ class BusManager(Node):
                 rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
                 rows.append(('Deliveries Stuck > 10sec',   router.deliveriesStuck))
                 rows.append(('Deliveries to Fallback',     router.deliveriesRedirectedToFallback))
+                try:
+                    rows.append(('Links Blocked', router.linksBlocked))
+                except:
+                    pass
             except:
                 pass
             rows.append(('Ingress Count', router.deliveriesIngress))

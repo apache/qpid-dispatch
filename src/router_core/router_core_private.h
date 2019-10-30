@@ -871,6 +871,7 @@ struct qdr_core_t {
     uint64_t deliveries_delayed_10sec;
     uint64_t deliveries_stuck;
     uint64_t deliveries_redirected;
+    uint32_t links_blocked;
 
     qdr_edge_conn_addr_t          edge_conn_addr;
     void                         *edge_context;

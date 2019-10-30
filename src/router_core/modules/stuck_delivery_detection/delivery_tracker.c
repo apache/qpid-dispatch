@@ -75,6 +75,7 @@ static void process_link_CT(qdr_core_t *core, qdr_link_t *link)
     if (!link->reported_as_blocked && link->zero_credit_time > 0 &&
         (core->uptime_ticks - link->zero_credit_time > stuck_age)) {
         link->reported_as_blocked = true;
+        core->links_blocked++;
         qd_log(core->log, QD_LOG_INFO,
                "[C%"PRIu64"][L%"PRIu64"] "
                "Link blocked with zero credit for %d seconds",
