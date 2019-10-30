@@ -18,13 +18,14 @@ under the License.
 */
 
 import React, { Component } from "react";
+import { TopologyView, TopologySideBar } from "@patternfly/react-topology";
 import * as d3 from "d3";
-//import { QDRRedirectWhenConnected } from "../qdrGlobals.js";
+import { getSizes } from "../topology/topoUtils";
 import { separateAddresses, aggregateAddresses } from "./filters.js";
 import { ChordData } from "./data.js";
 import { qdrRibbon } from "./ribbon/ribbon.js";
 import { qdrlayoutChord } from "./layout/layout.js";
-import LegendComponent from "./legendComponent";
+import ChordToolbar from "./chordToolbar";
 import QDRPopup from "../qdrPopup";
 
 const CHORDOPTIONSKEY = "chordOptions";
@@ -36,7 +37,7 @@ const SMALL_OFFSET = 210;
 const MIN_RADIUS = 200;
 const TRANSITION_DURATION = 1000;
 
-class MessageFlowPage extends Component {
+class ChordViewer extends Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -174,7 +175,7 @@ class MessageFlowPage extends Component {
       matrix => {
         // now that we have the routers and addresses, move the legend
         this.windowResized();
-        this.renderChord(matrix);
+        //this.renderChord(matrix);
       },
       e => {
         console.log(ERROR_RENDERING + e);
@@ -201,13 +202,11 @@ class MessageFlowPage extends Component {
 
   // size the diagram based on the browser window size
   getRadius = () => {
-    let w = window,
-      d = document,
-      e = d.documentElement,
-      b = d.getElementsByTagName("body")[0],
-      x = w.innerWidth || e.clientWidth || b.clientWidth,
-      y = w.innerHeight || e.clientHeight || b.clientHeight;
-    return Math.max(Math.floor((Math.min(x, y) * 0.9) / 2), MIN_RADIUS);
+    const { width, height } = getSizes(this.chordRef);
+    return Math.max(
+      Math.floor((Math.min(width, height) * 0.9) / 2),
+      MIN_RADIUS
+    );
   };
 
   // diagram sizes that change when browser is resized
@@ -383,8 +382,7 @@ class MessageFlowPage extends Component {
 
   // create and/or update the chord diagram
   renderChord = matrix => {
-    this.setState(
-      { addresses: this.chordData.getAddresses() },
+    this.setState({ addresses: this.chordData.getAddresses() }, () =>
       this.doRenderChord(matrix)
     );
   };
@@ -398,7 +396,9 @@ class MessageFlowPage extends Component {
     if (addressLen > 0 && this.excludedAddresses.length === addressLen) {
       this.allAddressesFiltered = true;
     }
-
+    console.log(
+      `doRenderChord allAddressesFiltered ${this.allAddressesFiltered}`
+    );
     this.noValues = false;
     let matrixMessages,
       duration = TRANSITION_DURATION;
@@ -598,14 +598,9 @@ class MessageFlowPage extends Component {
       this.setState({ showPopup: false });
       return;
     }
-    let width = this.chordRef.offsetWidth;
-    let top = this.chordRef.offsetTop - 5;
-
-    // position the popup
-    let pwidth = this.popupRef.offsetWidth;
     d3.select("#popover-div")
-      .style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
-      .style("top", event.pageY - top + "px");
+      .style("left", `${event.pageX + 5}px`)
+      .style("top", `${event.pageY}px`);
     // show popup
     this.setState({ showPopup: true, popupContent: content });
   };
@@ -950,38 +945,46 @@ class MessageFlowPage extends Component {
 
   render() {
     return (
-      <div ref={el => (this.chordRef = el)} className="qdrChord">
-        <div id="chord"></div>
-        <div
-          id="popover-div"
-          className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
-          ref={el => (this.popupRef = el)}
-        >
-          <QDRPopup content={this.state.popupContent}></QDRPopup>
+      <TopologyView
+        viewToolbar={
+          <ChordToolbar
+            handleOpenChange={this.handleOpenChange}
+            handleChangeOption={this.handleChangeOption}
+            handleChangeAddress={this.handleChangeAddress}
+            handleHoverAddress={this.handleHoverAddress}
+            handleHoverRouter={this.handleHoverRouter}
+            optionsOpen={this.state.legendOptions.optionsOpen}
+            routersOpen={this.state.legendOptions.routersOpen}
+            addressesOpen={this.state.legendOptions.addressesOpen}
+            isRate={this.state.legendOptions.isRate}
+            byAddress={this.state.legendOptions.byAddress}
+            arcColors={this.arcColors}
+            chordColors={this.chordColors}
+            addresses={this.state.addresses}
+          />
+        }
+        sideBar={<TopologySideBar show={false}></TopologySideBar>}
+        sideBarOpen={false}
+        className="qdrTopology"
+      >
+        <div ref={el => (this.chordRef = el)} className="qdrChord">
+          {this.state.showEmpty ? (
+            <div id="noTraffic">{this.state.emptyText}</div>
+          ) : (
+            <React.Fragment />
+          )}
+          <div id="chord"></div>
+          <div
+            id="popover-div"
+            className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
+            ref={el => (this.popupRef = el)}
+          >
+            <QDRPopup content={this.state.popupContent}></QDRPopup>
+          </div>
         </div>
-        {this.state.showEmpty ? (
-          <div id="noTraffic">{this.state.emptyText}</div>
-        ) : (
-          <React.Fragment />
-        )}
-        <LegendComponent
-          handleOpenChange={this.handleOpenChange}
-          handleChangeOption={this.handleChangeOption}
-          handleChangeAddress={this.handleChangeAddress}
-          handleHoverAddress={this.handleHoverAddress}
-          handleHoverRouter={this.handleHoverRouter}
-          optionsOpen={this.state.legendOptions.optionsOpen}
-          routersOpen={this.state.legendOptions.routersOpen}
-          addressesOpen={this.state.legendOptions.addressesOpen}
-          isRate={this.state.legendOptions.isRate}
-          byAddress={this.state.legendOptions.byAddress}
-          arcColors={this.arcColors}
-          chordColors={this.chordColors}
-          addresses={this.state.addresses}
-        />
-      </div>
+      </TopologyView>
     );
   }
 }
 
-export default MessageFlowPage;
+export default ChordViewer;

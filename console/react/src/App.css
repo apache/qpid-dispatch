@@ -2,6 +2,9 @@
   height: 100vh;
 }
 
+#main-content-page-layout-manual-nav {
+  overflow-y: hidden;
+}
 .App {
   text-align: center;
   height: 100%;
@@ -130,11 +133,13 @@ g.selected line {
   stroke: #fff;
 }
 
-#topologyPage {
+#topologyPage,
+#messageFlowPage {
   padding: 0;
 }
 
-#topologyPage .pf-l-stack__item {
+#topologyPage .pf-l-stack__item,
+#messageFlowPage .pf-l-stack__item {
   border-bottom: 1px solid #aaa;
 }
 path.hittarget {
@@ -349,8 +354,8 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
 }
 
 .connect-page {
-  background-color: black !important;
-  height: 100vh;
+  background-image: url(/assets/images/pfbg_1200.jpg);
+  background-size: cover;
 }
 
 .connect-page * {
@@ -374,13 +379,15 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
 .overview-title::first-letter {
   text-transform: uppercase;
 }
-.overview-charts-page,
-.overview-table {
+
+.overview-charts-page {
   background-color: #eaeaea !important;
   padding: 1.5em;
 }
+
 .overview-table {
   height: 100%;
+  background-color: #eaeaea;
 }
 .overview-table .pf-c-card__body {
   padding-left: 1em;
@@ -392,6 +399,7 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
 .overview-header {
   padding: 2em;
   text-align: left;
+  border-bottom: 1px solid #eaeaea;
 }
 .overview-header.details {
   padding: 1em 2em;
@@ -404,18 +412,14 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   width: 100%;
 }
 
-.qdrTopology {
+.qdrTopology,
+.qdrChord {
   width: 100%;
   height: 100%;
   background-color: white;
 }
 .qdrTopology dl.pf-c-accordion,
 .qdrChord dl.pf-c-accordion {
-  /*
-  position: absolute;
-  width: 20em;
-  right: 1em;
-  */
   padding-top: 0;
   padding-bottom: 0;
   margin-top: 1em;
@@ -631,7 +635,7 @@ svg#svglegend {
 
 div.qdrTopology,
 div.qdrChord {
-  text-align: left;
+  text-align: center;
 }
 
 #arrows-expand label,
@@ -685,9 +689,6 @@ path.fade {
 g.arc text {
   fill: black;
   stroke-width: 0;
-}
-#chord {
-  position: absolute;
 }
 
 path.empty {
@@ -747,6 +748,9 @@ table.popupTable td {
 table.popupTable tr.header {
   font-weight: bold;
 }
+#chord {
+  height: 100%;
+}
 
 #chord text {
   pointer-events: all;
@@ -755,7 +759,6 @@ table.popupTable tr.header {
 #noTraffic {
   position: relative;
   top: 3em;
-  left: 5em;
 }
 
 .page-menu {
@@ -804,6 +807,10 @@ div.qdrChord .legend-text {
   font-size: 16px;
 }
 
+.qdrChord .legend {
+  position: absolute;
+  right: 1em;
+}
 .legend ul {
   margin-bottom: 0;
 }
@@ -845,10 +852,6 @@ div.qdrChord .legend-text {
     max-width: 330px;
   }
   div.qdrTopology .pf-topology-container__with-sidebar .pf-topology-content {
-    /*
-      width: 180px;
-    min-width: calc(100% - 330px);
-    */
     width: 100%;
     height: 100%;
     background-color: white;
@@ -1076,4 +1079,77 @@ div.qdrTopology .topology-toolbar-button {
 div.qdrTopology .topology-toolbar-button i {
   margin-left: 16px;
   margin-right: 8px;
+}
+
+.chord-addresses ul {
+  margin-left: 2em;
+  margin-top: 0.5em;
+}
+
+.topology-toolbar-item .pf-c-popover__content {
+  padding-bottom: 1em;
+}
+
+/* entities/details pages */
+.details-table-page {
+  padding-left: 0 !important;
+}
+
+div.details-table ul.entities-list {
+  list-style: none;
+  text-align: left;
+  padding-left: 0;
+  border-right: 1px solid #eaeaea;
+  overflow-y: auto;
+  max-height: 100%;
+}
+
+.entities-list li {
+  padding: 0.25em 2em;
+  border-left: 2px solid white;
+}
+.entities-list li:hover {
+  background-color: #eaeaea;
+}
+
+.entities-list li.selected {
+  border-left: 2px solid blue;
+  background-color: #eaeaea;
+}
+
+#entityList {
+  max-height: calc(100vh - 140px);
+  padding-top: 0.5em;
+}
+
+.split-left {
+  text-align: left;
+  padding-left: 2em;
+  padding-bottom: 0.5em;
+}
+
+.prompt {
+  font-weight: bold;
+}
+span.entity-type i {
+  padding-right: 1em;
+  font-style: normal;
+}
+span.entity-type i:before {
+  font-family: FontAwesome;
+  content: "\f0ac";
+}
+span.entity-type i.address-mobile:before {
+  font-family: FontAwesome;
+  content: "\f109";
+}
+span.entity-type i.address-router:before {
+  font-family: FontAwesome;
+  content: "\f047";
+}
+
+.details-table .pf-l-toolbar {
+  margin: 0 !important;
+  padding: 1em 1em;
+  border-bottom: 1px solid #eaeaea;
 }

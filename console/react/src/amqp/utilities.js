@@ -236,7 +236,7 @@ var utils = {
     url.setAttribute("href", fullUrl);
     return url;
   },
-  Icap: s => s[0].toUpperCase() + s.slice(1, s.length - 1),
+  Icap: s => s[0].toUpperCase() + s.slice(1),
 
   // get last token in string that looks like "/fooo/baaar/baaaz"
   entityFromProps: props => {

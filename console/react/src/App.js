@@ -6,7 +6,6 @@ import "patternfly/dist/css/patternfly.css";
 import "@patternfly/patternfly/components/Nav/nav.css";
 import "./App.css";
 import PageLayout from "./layout";
-
 class App extends Component {
   state = {};
 

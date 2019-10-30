@@ -20,8 +20,6 @@ Licensed to the Apache Software Foundation (ASF) under one
 import { Management as dm } from "./amqp/management.js";
 import { utils } from "./amqp/utilities.js";
 
-import { QDR_LAST_LOCATION } from "./qdrGlobals.js";
-
 // number of milliseconds between topology updates
 const DEFAULT_INTERVAL = 5000;
 export class QDRService {
@@ -34,11 +32,10 @@ export class QDRService {
 
   onReconnect() {
     this.management.connection.on("disconnected", this.onDisconnect.bind(this));
-    let org = localStorage[QDR_LAST_LOCATION] || "charts";
-    this.hooks.setLocation(org);
+    this.hooks.setLocation("reconnect");
   }
   onDisconnect() {
-    this.hooks.setLocation("connect");
+    this.hooks.setLocation("disconnect");
     this.management.connection.on("connected", this.onReconnect.bind(this));
   }
   connect(connectOptions) {
@@ -49,7 +46,7 @@ export class QDRService {
           // if we are ever disconnected, show the connect page and wait for a reconnect
           self.management.connection.on(
             "disconnected",
-            self.onDisconnect.bind(self)
+            this.onDisconnect.bind(this)
           );
 
           self.management.getSchema().then(schema => {

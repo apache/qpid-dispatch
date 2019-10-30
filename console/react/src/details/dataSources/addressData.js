@@ -17,33 +17,28 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import ChartBase from "./chartBase";
+import React from "react";
+import DefaultData from "./defaultData";
+import { utils } from "../../amqp/utilities";
 
-class ThroughputChart extends ChartBase {
-  constructor(props) {
-    super(props);
-    this.title = "Deliveries per sec";
-    this.color = "#99C2EB"; //ChartThemeColor.blue;
-    this.setStyle(this.color);
-    this.isRate = true;
+const AddressType = ({ value, extraInfo }) => {
+  const data = extraInfo.rowData.data;
+  const identity = utils.identity_clean(data.identity);
+  const cls = utils.addr_class(identity);
+
+  return (
+    <span className="entity-type">
+      <i className={`address-${cls}`}></i>
+      {cls}
+    </span>
+  );
+};
+
+class AddressData extends DefaultData {
+  constructor(service, schema) {
+    super(service, schema);
+    this.typeFormatter = AddressType;
   }
-
-  updateData = () => {
-    this.props.service.management.topology.fetchAllEntities(
-      {
-        entity: "router",
-        attrs: ["deliveriesEgress"]
-      },
-      results => {
-        let deliveries = 0;
-        for (let id in results) {
-          const aresult = results[id]["router"];
-          deliveries += parseInt(aresult.results[0]);
-        }
-        this.addData(deliveries);
-      }
-    );
-  };
 }
 
-export default ThroughputChart;
+export default AddressData;

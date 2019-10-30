@@ -19,12 +19,14 @@ under the License.
 
 import { ChartThemeColor } from "@patternfly/react-charts";
 import ChartBase from "./chartBase";
+import * as d3 from "d3";
 
 class InflightChart extends ChartBase {
   constructor(props) {
     super(props);
     this.title = "Deliveries in flight";
-    this.color = ChartThemeColor.green;
+    this.color = d3.rgb(ChartThemeColor.green);
+    this.setStyle(this.color, 0.3);
     this.isRate = false;
   }
 

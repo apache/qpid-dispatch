@@ -22,9 +22,7 @@ import {
   Avatar,
   Button,
   ButtonVariant,
-  Dropdown,
   DropdownToggle,
-  DropdownItem,
   Page,
   PageHeader,
   SkipToContent,
@@ -54,12 +52,13 @@ import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
 import OverviewTablePage from "./overview/overviewTablePage";
 import DetailsTablePage from "./overview/detailsTablePage";
+import EntitiesPage from "./details/enitiesPage";
 import TopologyPage from "./topology/topologyPage";
-import MessageFlowPage from "./chord/qdrChord";
+import MessageFlowPage from "./chord/chordPage";
 import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
 import ConnectForm from "./connect-form";
-import { isDeepStrictEqual } from "util";
+import { utils } from "./amqp/utilities";
 const avatarImg = require("./assets/img_avatar.svg");
 
 class PageLayout extends React.Component {
@@ -96,8 +95,18 @@ class PageLayout extends React.Component {
     };
   }
 
-  setLocation = where => {
-    //this.setState({ connectPath: where })
+  setLocation = whatHappened => {
+    if (whatHappened === "disconnect") {
+      this.setState({ connected: false });
+    } else if (whatHappened === "reconnect") {
+      this.handleConnectCancel();
+      const connectPath = this.lastConnectPath || "/";
+      this.lastConnectPath = connectPath;
+      this.setState({
+        connectPath,
+        connected: true
+      });
+    }
   };
 
   onDropdownToggle = () => {
@@ -154,14 +163,14 @@ class PageLayout extends React.Component {
     }
   };
 
-  onNavSelect = result => {
+  onNavSelect = (result, connectPath) => {
+    this.lastConnectPath = connectPath || this.state.connectPath;
     this.setState({
       activeItem: result.itemId,
       activeGroup: result.groupId,
       connectPath: ""
     });
   };
-  icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
   toggleConnectForm = () => {
     this.isConnectFormOpen = !this.isConnectFormOpen;
@@ -208,7 +217,7 @@ class PageLayout extends React.Component {
       <Nav onSelect={this.onNavSelect} aria-label="Nav" className="pf-m-dark">
         <NavList>
           {Object.keys(this.nav).map(section => {
-            const Section = this.icap(section);
+            const Section = utils.Icap(section);
             return (
               <NavExpandable
                 title={Section}
@@ -227,7 +236,7 @@ class PageLayout extends React.Component {
                       key={key}
                     >
                       <Link to={`/${item.pre ? section + "/" : ""}${key}`}>
-                        {item.title ? item.title : this.icap(key)}
+                        {item.title ? item.title : utils.Icap(key)}
                       </Link>
                     </NavItem>
                   );
@@ -345,6 +354,7 @@ class PageLayout extends React.Component {
       let { connectPath } = this.state;
       if (connectPath !== "") {
         if (connectPath === "/login") connectPath = "/";
+        this.lastConnectPath = connectPath;
         return <Redirect to={connectPath} />;
       }
       return <React.Fragment />;
@@ -385,6 +395,7 @@ class PageLayout extends React.Component {
             <PrivateRoute path="/topology" component={TopologyPage} />
             <PrivateRoute path="/flow" component={MessageFlowPage} />
             <PrivateRoute path="/logs" component={LogDetails} />
+            <PrivateRoute path="/entities" component={EntitiesPage} />
             <Route
               path="/login"
               render={props => (

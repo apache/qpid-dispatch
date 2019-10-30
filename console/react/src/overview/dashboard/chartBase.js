@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { ChartThemeColor } from "@patternfly/react-charts";
+import * as d3 from "d3";
 
 import OverviewChart from "./overviewChart";
 
@@ -35,7 +35,6 @@ class ChartBase extends React.Component {
       this.state.rates.push(0);
     }
     this.title = "Override me";
-    this.color = ChartThemeColor.blue;
     this.isRate = false;
   }
 
@@ -49,6 +48,13 @@ class ChartBase extends React.Component {
     clearInterval(this.timer);
   };
 
+  setStyle = (color, opacity) => {
+    this.style = {
+      fill: color,
+      fillOpacity: opacity || 1,
+      stroke: d3.rgb(color).darker(2)
+    };
+  };
   updateData = () => {
     console.log("updateData should be overridden");
   };
@@ -92,7 +98,7 @@ class ChartBase extends React.Component {
 
   render() {
     return (
-      <OverviewChart data={this.data()} title={this.title} color={this.color} />
+      <OverviewChart data={this.data()} title={this.title} style={this.style} />
     );
   }
 }

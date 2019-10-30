@@ -26,10 +26,10 @@ import {
   TableBody,
   TableVariant
 } from "@patternfly/react-table";
-import { Button, Pagination } from "@patternfly/react-core";
+import { Button, Checkbox, Pagination } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import TableToolbar from "../tableToolbar";
-import { dataMap } from "./entityData";
+import { dataMap, defaultData } from "./entityData";
 
 // If the breadcrumb on the details page was used to return to this page,
 // we will have saved state info in props.location.state
@@ -41,7 +41,7 @@ const propFromLocation = (props, which, defaultValue) =>
     ? props.location.state[which]
     : defaultValue;
 
-class OverviewTable extends React.Component {
+class EntityListTable extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -53,23 +53,51 @@ class OverviewTable extends React.Component {
       perPage: propFromLocation(props, "perPage", 10),
       total: 1,
       page: propFromLocation(props, "page", 1),
-      columns: [],
       allRows: [],
       rows: [],
       redirect: false,
       redirectState: {}
     };
-    this.entity = this.props.service.utilities.entityFromProps(props);
-    if (!dataMap[this.entity]) {
-      this.state.redirect = true;
-    } else {
-      this.dataSource = new dataMap[this.entity](this.props.service);
-    }
+    this.initDataSource();
+    this.columns = [];
   }
 
   componentDidMount = () => {
     this.mounted = true;
-    if (!this.dataSource) return;
+    this.setupFields();
+    this.timer = setInterval(this.update, 5000);
+  };
+
+  componentDidUpdate = prevProps => {
+    if (
+      prevProps.entity !== this.props.entity ||
+      prevProps.routerId !== this.props.routerId
+    ) {
+      this.setupFields();
+    }
+  };
+  componentWillUnmount = () => {
+    this.mounted = false;
+    clearInterval(this.timer);
+  };
+
+  initDataSource = () => {
+    this.dataSource = dataMap[this.props.entity]
+      ? new dataMap[this.props.entity](this.props.service, this.props.schema)
+      : new defaultData(this.props.service, this.props.schema);
+    this.dataSource.fields = [{ title: "Name", field: "name" }];
+    if (this.dataSource.typeFormatter) {
+      this.dataSource.fields.push({
+        title: "Type",
+        field: "type",
+        formatter: this.dataSource.typeFormatter
+      });
+    }
+  };
+
+  setupFields = () => {
+    this.initDataSource();
+    this.columns = [];
     // initialize the columns and get the data
     this.dataSource.fields.forEach(f => {
       f.transforms = [];
@@ -91,26 +119,25 @@ class OverviewTable extends React.Component {
     if (!this.dataSource.detailFormatter) {
       this.dataSource.fields[0].cellFormatters.push(this.detailLink);
     }
-
-    this.setState({ columns: this.dataSource.fields }, () => {
-      this.update();
-      this.timer = setInterval(this.update, 5000);
-    });
-  };
-
-  componentWillUnmount = () => {
-    this.mounted = false;
-    clearInterval(this.timer);
+    this.columns = this.dataSource.fields;
+    this.update();
   };
 
   update = () => {
-    this.fetch(this.state.page, this.state.perPage);
+    if (this.props.entity && this.props.routerId) {
+      this.fetch(
+        this.state.page,
+        this.state.perPage,
+        this.props.routerId,
+        this.props.entity
+      );
+    }
   };
 
-  fetch = (page, perPage) => {
+  fetch = (page, perPage, routerId, entity) => {
     // get the data. Note: The current page number might change if
     // the number of rows is less than before
-    this.dataSource.doFetch(page, perPage).then(results => {
+    this.dataSource.doFetch(page, perPage, routerId, entity).then(results => {
       const sliced = this.slice(results.data, results.page, results.perPage);
       // if fetch was called and the component was unmounted before
       // the results arrived, don't call setState
@@ -144,7 +171,7 @@ class OverviewTable extends React.Component {
       redirectState: {
         value: extraInfo.rowData.cells[extraInfo.columnIndex],
         currentRecord: extraInfo.rowData.data,
-        entity: this.entity,
+        entity: this.props.entity,
         page: this.state.page,
         sortBy: this.state.sortBy,
         filterBy: this.state.filterBy,
@@ -277,7 +304,36 @@ class OverviewTable extends React.Component {
     return rows;
   };
 
+  onSelect = (event, isSelected, rowId) => {
+    let rows;
+    if (rowId === -1) {
+      rows = this.state.rows.map(oneRow => {
+        oneRow.selected = isSelected;
+        return oneRow;
+      });
+    } else {
+      rows = [...this.state.rows];
+      rows[rowId].selected = isSelected;
+    }
+    this.setState({
+      rows
+    });
+  };
+
   render() {
+    const tableProps = {
+      cells: this.columns,
+      rows: this.state.rows,
+      "aria-label": this.props.entity,
+      sortBy: this.state.sortBy,
+      onSort: this.onSort,
+      variant: TableVariant.compact
+    };
+    if (this.dataSource.actions(this.props.entity).includes("DELETE") > 0) {
+      tableProps.onSelect = this.onSelect;
+      tableProps.canSelectAll = true;
+    }
+
     if (this.state.redirect) {
       return (
         <Redirect
@@ -288,6 +344,7 @@ class OverviewTable extends React.Component {
         />
       );
     }
+
     return (
       <React.Fragment>
         <TableToolbar
@@ -298,15 +355,10 @@ class OverviewTable extends React.Component {
           onPerPageSelect={this.onPerPageSelect}
           fields={this.dataSource.fields}
           handleChangeFilterValue={this.handleChangeFilterValue}
+          hidePagination={true}
+          actions={this.dataSource.actions(this.props.entity)}
         />
-        <Table
-          cells={this.state.columns}
-          rows={this.state.rows}
-          aria-label={this.entity}
-          sortBy={this.state.sortBy}
-          onSort={this.onSort}
-          variant={TableVariant.compact}
-        >
+        <Table {...tableProps}>
           <TableHeader />
           <TableBody />
         </Table>
@@ -316,4 +368,4 @@ class OverviewTable extends React.Component {
   }
 }
 
-export default OverviewTable;
+export default EntityListTable;

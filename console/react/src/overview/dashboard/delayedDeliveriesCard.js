@@ -1,5 +1,6 @@
 import React from "react";
 import { Table, TableHeader, TableBody } from "@patternfly/react-table";
+import ConnectionClose from "../../connectionClose";
 
 // update the table every 5 seconds
 const UPDATE_INTERVAL = 1000 * 5;
@@ -16,12 +17,18 @@ class DelayedDeliveriesCard extends React.Component {
         "10 sec rate",
         "Capacity",
         "Unsettled",
-        ""
+        { title: "", cellFormatters: [this.closeButton] }
       ],
       rows: []
     };
     this.rates = {};
   }
+
+  closeButton = (value, extraInfo) => {
+    return (
+      <ConnectionClose extraInfo={extraInfo} service={this.props.service} />
+    );
+  };
 
   componentDidMount = () => {
     this.mounted = true;
@@ -51,6 +58,7 @@ class DelayedDeliveriesCard extends React.Component {
             );
             if (link.linkType === "endpoint") {
               link.router = this.props.service.utilities.nameFromId(node);
+              link.role = "normal";
               let connections = nodes[node]["connection"];
               connections.results.some(connection => {
                 let conn = this.props.service.utilities.flatten(
@@ -112,15 +120,18 @@ class DelayedDeliveriesCard extends React.Component {
         // take top 5 records
         links.splice(5);
         let rows = links.map(link => {
-          return [
-            link.router,
-            link.connection,
-            link.deliveriesDelayed1SecRate.toLocaleString(),
-            link.deliveriesDelayed10SecRate.toLocaleString(),
-            link.capacity.toLocaleString(),
-            link.unsettledCount.toLocaleString(),
-            ""
-          ];
+          return {
+            cells: [
+              link.router,
+              link.connection,
+              link.deliveriesDelayed1SecRate.toLocaleString(),
+              link.deliveriesDelayed10SecRate.toLocaleString(),
+              link.capacity.toLocaleString(),
+              link.unsettledCount.toLocaleString(),
+              ""
+            ],
+            data: link
+          };
         });
         this.setState({ rows, lastUpdate: new Date() });
       }

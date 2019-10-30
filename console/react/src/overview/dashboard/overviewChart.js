@@ -58,7 +58,12 @@ class OverviewChart extends React.Component {
               width={width}
               themeColor={this.props.color}
             >
-              <ChartArea data={this.props.data} />
+              <ChartArea
+                data={this.props.data}
+                style={{
+                  data: this.props.style
+                }}
+              />
             </ChartGroup>
           )}
         </div>

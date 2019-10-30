@@ -39,32 +39,41 @@ class ConnectPage extends React.Component {
     const { showForm } = this.state;
     const { from } = this.props.location.state || { from: { pathname: "/" } };
     return (
-      <PageSection variant={PageSectionVariants.light} className="connect-page">
-        {showForm ? (
-          <ConnectForm
-            prefix="form"
-            handleConnect={this.props.handleConnect}
-            handleConnectCancel={this.handleConnectCancel}
-            fromPath={from.pathname}
-            isConnectFormOpen={true}
-          />
-        ) : (
-          <React.Fragment />
-        )}
-        <div className="left-content">
-          <TextContent>
-            <Text component="h1" className="console-banner">
-              Apache Qpid Dispatch Console
-            </Text>
-          </TextContent>
-          <TextContent>
-            <Text component="p">
-              This console provides information about routers and their
-              connected clients.
-            </Text>
-          </TextContent>
-        </div>
-      </PageSection>
+      <React.Fragment>
+        <PageSection
+          variant={PageSectionVariants.light}
+          className="connect-page"
+        >
+          {showForm ? (
+            <ConnectForm
+              prefix="form"
+              handleConnect={this.props.handleConnect}
+              handleConnectCancel={this.handleConnectCancel}
+              fromPath={from.pathname}
+              isConnectFormOpen={true}
+            />
+          ) : (
+            <React.Fragment />
+          )}
+          <div className="left-content">
+            <TextContent>
+              <Text component="h1" className="console-banner">
+                Apache Qpid Dispatch Console
+              </Text>
+            </TextContent>
+            <TextContent>
+              <Text component="p">
+                The console is an HTML based web site that displays information
+                about a qpid dispatch router network. The console only provides
+                limited information about the clients that are attached to the
+                router network and is therfore more appropriate for
+                administrators needing to know the layout and health of the
+                router network.
+              </Text>
+            </TextContent>
+          </div>
+        </PageSection>
+      </React.Fragment>
     );
   }
 }

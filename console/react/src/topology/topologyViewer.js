@@ -126,6 +126,7 @@ class TopologyPage extends Component {
       }
     );
     this.state.mapOptions = this.backgroundMap.mapOptions;
+    this.currentScale = 1;
   }
 
   // called only once when the component is initialized
@@ -876,6 +877,15 @@ class TopologyPage extends Component {
     this.handleLegendOptionsChange(legendOptions);
   };
 
+  addressFilterChanged = () => {
+    this.traffic.remove("dots");
+    this.traffic.addAnimationType(
+      "dots",
+      separateAddresses,
+      Nodes.radius("inter-router")
+    );
+  };
+
   handleChangeTrafficFlowAddress = (address, checked) => {
     const { legendOptions } = this.state;
     legendOptions.traffic.addresses[address] = checked;
@@ -948,6 +958,11 @@ class TopologyPage extends Component {
     this.setState({ legendOptions }, () => {
       this.backgroundMap.setMapOpacity(checked);
       this.backgroundMap.setBackgroundColor();
+      if (checked) {
+        this.backgroundMap.restartZoom();
+      } else {
+        this.backgroundMap.cancelZoom();
+      }
       this.saveLegendOptions(legendOptions);
     });
   };
@@ -966,8 +981,30 @@ class TopologyPage extends Component {
     this.setState({ showLegend: false });
   };
 
+  scaleSVG = () => {
+    this.svg.attr("transform", `scale(${this.currentScale})`);
+  };
+  zoomInCallback = () => {
+    this.currentScale += 0.1;
+    this.scaleSVG();
+  };
+
+  zoomOutCallback = () => {
+    this.currentScale -= 0.1;
+    this.scaleSVG();
+  };
+
+  resetViewCallback = () => {
+    this.currentScale = 1;
+    this.scaleSVG();
+  };
+
   render() {
     const controlButtons = createTopologyControlButtons({
+      zoomInCallback: this.zoomInCallback,
+      zoomOutCallback: this.zoomOutCallback,
+      resetViewCallback: this.resetViewCallback,
+      fitToScreenHidden: true,
       legendCallback: this.handleLegendClick
     });
     return (

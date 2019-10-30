@@ -17,33 +17,23 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import ChartBase from "./chartBase";
+import React, { Component } from "react";
 
-class ThroughputChart extends ChartBase {
+class Updated extends Component {
   constructor(props) {
     super(props);
-    this.title = "Deliveries per sec";
-    this.color = "#99C2EB"; //ChartThemeColor.blue;
-    this.setStyle(this.color);
-    this.isRate = true;
+    this.state = {};
   }
 
-  updateData = () => {
-    this.props.service.management.topology.fetchAllEntities(
-      {
-        entity: "router",
-        attrs: ["deliveriesEgress"]
-      },
-      results => {
-        let deliveries = 0;
-        for (let id in results) {
-          const aresult = results[id]["router"];
-          deliveries += parseInt(aresult.results[0]);
-        }
-        this.addData(deliveries);
-      }
+  render() {
+    return (
+      <pre data-pf-content="true" className="overview-loading">
+        {`Updated ${this.props.service.utilities.strDate(
+          this.props.lastUpdated
+        )}`}
+      </pre>
     );
-  };
+  }
 }
 
-export default ThroughputChart;
+export default Updated;

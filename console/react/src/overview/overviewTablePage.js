@@ -29,6 +29,7 @@ import {
 import { Card, CardBody } from "@patternfly/react-core";
 
 import OverviewTable from "./overviewTable";
+import Updated from "../updated";
 
 class OverviewTablePage extends React.Component {
   constructor(props) {
@@ -51,11 +52,10 @@ class OverviewTablePage extends React.Component {
               <Text className="overview-title" component={TextVariants.h1}>
                 {this.props.service.utilities.entityFromProps(this.props)}
               </Text>
-              <Text className="overview-loading" component={TextVariants.pre}>
-                {`Updated ${this.props.service.utilities.strDate(
-                  this.state.lastUpdated
-                )}`}
-              </Text>
+              <Updated
+                service={this.props.service}
+                lastUpdated={this.state.lastUpdated}
+              />
             </TextContent>
           </StackItem>
           <StackItem className="overview-table">

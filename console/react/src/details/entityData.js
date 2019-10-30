@@ -17,33 +17,17 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import ChartBase from "./chartBase";
+//import RouterData from "./dataSources/routerData";
+import AddressData from "./dataSources/addressData";
+//import LinkData from "./dataSources/linkData";
+//import ConnectionData from "./dataSources/connectionData";
+//import LogsData from "./dataSources/logsData";
 
-class ThroughputChart extends ChartBase {
-  constructor(props) {
-    super(props);
-    this.title = "Deliveries per sec";
-    this.color = "#99C2EB"; //ChartThemeColor.blue;
-    this.setStyle(this.color);
-    this.isRate = true;
-  }
+import DefaultData from "./dataSources/defaultData";
 
-  updateData = () => {
-    this.props.service.management.topology.fetchAllEntities(
-      {
-        entity: "router",
-        attrs: ["deliveriesEgress"]
-      },
-      results => {
-        let deliveries = 0;
-        for (let id in results) {
-          const aresult = results[id]["router"];
-          deliveries += parseInt(aresult.results[0]);
-        }
-        this.addData(deliveries);
-      }
-    );
-  };
-}
+const dataMap = {
+  "router.address": AddressData
+};
 
-export default ThroughputChart;
+const defaultData = DefaultData;
+export { dataMap, defaultData };

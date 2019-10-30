@@ -119,18 +119,6 @@ class Congestion extends TrafficAnimation {
     super(traffic);
     this.type = "congestion";
     this.stopped = false;
-    this.init_markerDef();
-  }
-  init_markerDef() {
-    this.custom_markers_def = d3
-      .select("#SVG_ID")
-      .select("defs.custom-markers");
-    if (this.custom_markers_def.empty()) {
-      this.custom_markers_def = d3
-        .select("#SVG_ID")
-        .append("svg:defs")
-        .attr("class", "custom-markers");
-    }
   }
   findResult(node, entity, attribute, value) {
     let attrIndex = node[entity].attributeNames.indexOf(attribute);
@@ -206,68 +194,22 @@ class Congestion extends TrafficAnimation {
           }
         }
         // accumulate the colors/directions to be used
-        let colors = {};
         for (let key in links) {
           let congestion = self.congestion(links[key]);
           let pathId = key.replace(/\./g, "\\.").replace(/ /g, "\\ ");
           let path = d3.select(pathId);
           if (path && !path.empty()) {
-            let dir = path.attr("marker-end") === "" ? "start" : "end";
-            let small = path.attr("class").indexOf("small") > -1;
-            let id = dir + "-" + congestion.substr(1) + (small ? "-s" : "");
-            colors[id] = {
-              dir: dir,
-              color: congestion,
-              small: small
-            };
-            /*
-            path
-              .classed("traffic", true)
-              .attr("marker-start", function() {
-                return null;
-              })
-              .attr("marker-end", function() {
-                return null;
-              });
-              */
             path
               .transition()
               .duration(1000)
-              .attr("stroke", congestion);
+              .style("stroke", congestion)
+              .each("end", function(d) {
+                if (self.stopped) {
+                  d3.select(this).style("stroke", "black");
+                }
+              });
           }
         }
-        // create the svg:def that holds the custom markers
-        self.init_markerDef();
-        let colorKeys = Object.keys(colors);
-        let custom_markers = self.custom_markers_def
-          .selectAll("marker")
-          .data(colorKeys, function(d) {
-            return d;
-          });
-        custom_markers
-          .enter()
-          .append("svg:marker")
-          .attr("id", function(d) {
-            return d;
-          })
-          .attr("viewBox", "0 -5 10 10")
-          .attr("refX", function(d) {
-            return colors[d].dir === "end" ? 24 : colors[d].small ? -24 : -14;
-          })
-          .attr("markerWidth", 14)
-          .attr("markerHeight", 14)
-          .attr("markerUnits", "userSpaceOnUse")
-          .attr("orient", "auto")
-          .style("fill", function(d) {
-            return colors[d].color;
-          })
-          .append("svg:path")
-          .attr("d", function(d) {
-            return colors[d].dir === "end"
-              ? "M 0 -5 L 10 0 L 0 5 z"
-              : "M 10 -5 L 0 0 L 10 5 z";
-          });
-        custom_markers.exit().remove();
       }
     );
   }
@@ -277,10 +219,9 @@ class Congestion extends TrafficAnimation {
       let link = links[l];
       v = Math.max(
         v,
-        (link.undeliveredCount + link.unsettledCount) / link.capacity
+        (3 * (link.undeliveredCount + link.unsettledCount)) / link.capacity
       );
-      if (link.deliveriesDelayed1Sec) v += link.deliveriesDelayed1Sec * 0.5;
-      if (link.deliveriesDelayed10Sec) v = 3;
+      if (link.deliveriesDelayed1Sec || link.deliveriesDelayed10Sec) v = 3;
       v = Math.min(3, v);
     }
     return this.fillColor(v);
@@ -303,6 +244,9 @@ class Congestion extends TrafficAnimation {
     d3.select("#SVG_ID")
       .selectAll("path.traffic")
       .classed("traffic", false);
+    d3.select("#SVG_ID")
+      .selectAll("path.link")
+      .style("stroke", "black");
     d3.select("#SVG_ID")
       .select("defs.custom-markers")
       .selectAll("marker")
@@ -331,6 +275,7 @@ class Dots extends TrafficAnimation {
       for (let address in addresses) {
         this.fillColor(address, addressColors);
       }
+      traffic.updateAddresses = this.updateAddresses;
       this.traffic.$scope.handleUpdatedAddresses(addresses);
       this.traffic.$scope.handleUpdateAddressColors(addressColors);
       // set excludedAddresses
@@ -550,7 +495,7 @@ class Dots extends TrafficAnimation {
       .append("circle")
       .attr("class", "flow flow" + id)
       .attr("fill", this.fillColor(address, this.traffic.addressColors))
-      .attr("r", 5);
+      .attr("r", 4);
     this.animateFlow(circles, path, dots.length, back, rate);
     flow.exit().remove();
   }

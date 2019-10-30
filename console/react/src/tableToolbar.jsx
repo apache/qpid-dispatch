@@ -19,6 +19,7 @@ under the License.
 
 import React from "react";
 import {
+  Button,
   Dropdown,
   DropdownPosition,
   DropdownToggle,
@@ -103,6 +104,12 @@ class TableToolbar extends React.Component {
   }
 
   render() {
+    const actions = this.props.actions.map(action => (
+      <ToolbarItem className="pf-u-mx-md">
+        <Button aria-label={action}>{action}</Button>
+      </ToolbarItem>
+    ));
+
     return (
       <Toolbar className="pf-l-toolbar pf-u-mx-xl pf-u-my-md table-toolbar">
         <ToolbarGroup>
@@ -113,20 +120,23 @@ class TableToolbar extends React.Component {
             {this.buildSearchBox()}
           </ToolbarItem>
         </ToolbarGroup>
-        <ToolbarGroup className="toolbar-pagination">
-          <ToolbarItem>
-            <Pagination
-              itemCount={this.props.total}
-              page={this.props.page}
-              perPage={this.props.perPage}
-              onSetPage={(_evt, value) => this.props.onSetPage(value)}
-              onPerPageSelect={(_evt, value) =>
-                this.props.onPerPageSelect(value)
-              }
-              variant={"top"}
-            />
-          </ToolbarItem>
-        </ToolbarGroup>
+        {this.props.actions && <ToolbarGroup>{actions}</ToolbarGroup>}
+        {!this.props.hidePagination && (
+          <ToolbarGroup className="toolbar-pagination">
+            <ToolbarItem>
+              <Pagination
+                itemCount={this.props.total}
+                page={this.props.page}
+                perPage={this.props.perPage}
+                onSetPage={(_evt, value) => this.props.onSetPage(value)}
+                onPerPageSelect={(_evt, value) =>
+                  this.props.onPerPageSelect(value)
+                }
+                variant={"top"}
+              />
+            </ToolbarItem>
+          </ToolbarGroup>
+        )}
       </Toolbar>
     );
   }

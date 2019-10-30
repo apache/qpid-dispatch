@@ -17,8 +17,6 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import ConnectionClose from "../../connectionClose";
-
 class ConnectionData {
   constructor(service) {
     this.service = service;
@@ -37,13 +35,16 @@ class ConnectionData {
       },
       {
         title: "",
-        noSort: true,
-        formatter: ConnectionClose
+        noSort: true
       }
     ];
     this.detailEntity = "connection";
     this.detailName = "Connection";
   }
+
+  hasType = () => {
+    return true;
+  };
 
   fetchRecord = (currentRecord, schema) => {
     return new Promise(resolve => {

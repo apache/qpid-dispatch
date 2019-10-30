@@ -89,7 +89,7 @@ class ConnectionManager {
     this.connectActions = [];
   }
   executeDisconnectActions(message) {
-    this.disconnectActions.forEach(function(action) {
+    this.disconnectActions.forEach(action => {
       try {
         action(message);
       } catch (e) {

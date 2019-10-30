@@ -39,6 +39,7 @@ import {
 import { Card, CardBody } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import { dataMap } from "./entityData";
+import Updated from "../updated";
 
 class DetailTablesPage extends React.Component {
   constructor(props) {
@@ -66,7 +67,6 @@ class DetailTablesPage extends React.Component {
       this.props.location &&
       this.props.location.state &&
       this.props.location.state.entity;
-    console.log(`detailsTablePage entity is ${this.entity}`);
     if (!dataMap[this.entity]) {
       this.state.redirect = true;
     } else {
@@ -188,11 +188,10 @@ class DetailTablesPage extends React.Component {
                     this.dataSource.detailName
                   } ${this.parentItem()} attributes`}
                 </Text>
-                <Text className="overview-loading" component={TextVariants.pre}>
-                  {`Updated ${this.props.service.utilities.strDate(
-                    this.state.lastUpdated
-                  )}`}
-                </Text>
+                <Updated
+                  service={this.props.service}
+                  lastUpdated={this.state.lastUpdated}
+                />
               </TextContent>
             </StackItem>
             <StackItem className="overview-table">

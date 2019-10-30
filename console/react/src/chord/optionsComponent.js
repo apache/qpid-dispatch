@@ -19,6 +19,7 @@ under the License.
 
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
+import AddressesComponent from "../addressesComponent";
 
 class OptionsComponent extends Component {
   constructor(props) {
@@ -45,6 +46,16 @@ class OptionsComponent extends Component {
           id="check-address"
           name="byAddress"
         />
+        {this.props.byAddress && (
+          <div className="chord-addresses">
+            <AddressesComponent
+              addresses={this.props.addresses}
+              addressColors={this.props.addressColors}
+              handleChangeAddress={this.props.handleChangeAddress}
+              handleHoverAddress={this.props.handleHoverAddress}
+            />
+          </div>
+        )}
       </React.Fragment>
     );
   }
