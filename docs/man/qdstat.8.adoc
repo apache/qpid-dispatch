@@ -152,6 +152,15 @@ The number of settled deliveries on this link that were unsettled for more than 
 rate::
 The average rate (over a period of five seconds) at which deliveries have been settled on this link.
 
+stuck::
+The number of deliveries on this link that are flagged as "stuck".  A delivery is considered stuck if it has been either undelivered or unsettled for more than 10 seconds.
+
+cred::
+The number of flow credits currently available on this link.
+
+blkd::
+The time elapsed since the available credit for this link became zero and has remained zero.
+
 admin::
 The administrative status of the link:
   - 'enabled' - The link is enabled for normal operation.

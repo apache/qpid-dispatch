@@ -472,6 +472,7 @@ static int stats_get_deliveries_egress_route_container(qdr_global_stats_t *stats
 static int stats_get_deliveries_delayed_1sec(qdr_global_stats_t *stats) { return stats->deliveries_delayed_1sec; }
 static int stats_get_deliveries_delayed_10sec(qdr_global_stats_t *stats) { return stats->deliveries_delayed_10sec; }
 static int stats_get_deliveries_stuck(qdr_global_stats_t *stats) { return stats->deliveries_stuck; }
+static int stats_get_links_blocked(qdr_global_stats_t *stats) { return stats->links_blocked; }
 static int stats_get_deliveries_redirected_to_fallback(qdr_global_stats_t *stats) { return stats->deliveries_redirected_to_fallback; }
 
 static struct metric_definition metrics[] = {
@@ -494,7 +495,8 @@ static struct metric_definition metrics[] = {
     {"deliveries_egress_route_container", "counter", stats_get_deliveries_egress_route_container},
     {"deliveries_delayed_1sec", "counter", stats_get_deliveries_delayed_1sec},
     {"deliveries_delayed_10sec", "counter", stats_get_deliveries_delayed_10sec},
-    {"deliveries_stuck", "counter", stats_get_deliveries_stuck},
+    {"deliveries_stuck", "gauge", stats_get_deliveries_stuck},
+    {"links_blocked", "gauge", stats_get_links_blocked},
     {"deliveries_redirected_to_fallback", "counter", stats_get_deliveries_redirected_to_fallback}
 };
 static size_t metrics_length = sizeof(metrics)/sizeof(metrics[0]);

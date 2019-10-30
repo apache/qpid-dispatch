@@ -510,6 +510,11 @@
 	                "description":"Number of links attached to the router node.",
 	                "graph": true
 	            },
+                "blockedLinkCount": {
+                    "type": "integer",
+                    "description": "The number of links that are flagged as blocked.  A blocked link is one in which the available credit has remained zero for more than 10 seconds.",
+                    "graph": true
+                },
 	            "nodeCount": {
 	                "type": "integer",
 	                "description":"Number of known peer router nodes.",

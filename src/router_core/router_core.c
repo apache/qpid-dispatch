@@ -859,6 +859,7 @@ static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, 
         stats->deliveries_delayed_1sec = core->deliveries_delayed_1sec;
         stats->deliveries_delayed_10sec = core->deliveries_delayed_10sec;
         stats->deliveries_stuck = core->deliveries_stuck;
+        stats->links_blocked = core->links_blocked;
         stats->deliveries_redirected_to_fallback = core->deliveries_redirected;
     }
     qdr_general_work_t *work = qdr_general_work(qdr_post_global_stats_response);
