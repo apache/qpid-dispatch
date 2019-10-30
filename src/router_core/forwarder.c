@@ -888,6 +888,8 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
     out_link->admin_enabled  = true;
     out_link->attach_count   = 1;
+    out_link->core_ticks     = conn->core->uptime_ticks;
+    out_link->zero_credit_time = core->uptime_ticks;
 
     if (strip) {
         out_link->strip_prefix = strip;

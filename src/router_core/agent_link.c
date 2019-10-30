@@ -48,6 +48,8 @@
 #define QDR_LINK_INGRESS_HISTOGRAM        24
 #define QDR_LINK_PRIORITY                 25
 #define QDR_LINK_SETTLE_RATE              26
+#define QDR_LINK_CREDIT_AVAILABLE         27
+#define QDR_LINK_ZERO_CREDIT_SECONDS      28
 
 const char *qdr_link_columns[] =
     {"name",
@@ -77,6 +79,8 @@ const char *qdr_link_columns[] =
      "ingressHistogram",
      "priority",
      "settleRate",
+     "creditAvailable",
+     "zeroCreditSeconds",
      0};
 
 static const char *qd_link_type_name(qd_link_type_t lt)
@@ -267,6 +271,17 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
             total += link->settled_deliveries[i];
         qd_compose_insert_uint(body, total / QDR_LINK_RATE_DEPTH);
     }
+        break;
+
+    case QDR_LINK_CREDIT_AVAILABLE:
+        qd_compose_insert_uint(body, link->credit_reported);
+        break;
+
+    case QDR_LINK_ZERO_CREDIT_SECONDS:
+        if (link->zero_credit_time == 0)
+            qd_compose_insert_uint(body, 0);
+        else
+            qd_compose_insert_uint(body, core->uptime_ticks - link->zero_credit_time);
         break;
 
     default:

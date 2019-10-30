@@ -262,6 +262,7 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     action->args.connection.drain  = drain_mode;
 
     qdr_action_enqueue(core, action);
+    qdr_record_link_credit(core, link);
 }
 
 
