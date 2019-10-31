@@ -2126,7 +2126,7 @@ class Dispatch1428(TestCase):
         long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
         qd_manager = QdManager(self, address=self.routers[1].addresses[0])
 
-        for i in xrange(5):
+        for i in range(5):
             all_link_routes_activated = True
             link_routes = qd_manager.query(long_type)
             for link_route in link_routes:
