@@ -233,17 +233,19 @@ void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
     if (link->credit_reported > 0 && pn_credit == 0) {
         //
         // The link has transitioned from positive credit to zero credit.
-        // Mark it as eligible for logging and record the time.
         //
-        link->reported_as_blocked = false;
         link->zero_credit_time = core->uptime_ticks;
-        core->links_blocked--;
-    } else if (link->credit_reported == 0 && pn_credit > 0)
+    } else if (link->credit_reported == 0 && pn_credit > 0) {
         //
         // The link has transitioned from zero credit to positive credit.
         // Clear the recorded time.
         //
         link->zero_credit_time = 0;
+        if (link->reported_as_blocked) {
+            link->reported_as_blocked = false;
+            core->links_blocked--;
+        }
+    }
 
     link->credit_reported = pn_credit;
 }
