@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import unittest as unittest
 import os, json, re, signal
+import sys
 import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
@@ -327,10 +328,23 @@ class SenderReceiverLimits(TestCase):
         bs1.close()
 
     def test_verify_z_connection_stats(self):
-        with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
-            self.assertTrue(len(close_lines) == 1, msg='Policy did not log sender and receiver denials.')
+        # This test relies on being executed after test_verify_n_receivers and test_verify_n_senders.
+        # This test is named to follow those tests alphabetically.
+        # It also relies on executing after the router log file has written the policy logs.
+        # In some emulated environments the router log file writes may lag test execution.
+        # To accomodate the file lag this test may retry reading the log file.
+        verified = False
+        for tries in range(5):
+            with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+                log_lines = router_log.read().split("\n")
+                close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
+                verified = len(close_lines) == 1
+            if verified:
+                break;
+            print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
+            sys.stdout.flush()
+            time.sleep(1)
+        self.assertTrue(verified, msg='Policy did not log sender and receiver denials.')
 
 
 class PolicyVhostOverride(TestCase):
