@@ -84,7 +84,9 @@ env_vars = {
     'QPID_DISPATCH_RUNNER': qdrouterd_runner,
     'MALLOC_CHECK_': "3",      # 3 = print error and abort
     'MALLOC_PERTURB_': "153",  # 153 = 0x99 freed memory pattern
-    'TSAN_OPTIONS': "${RUNTIME_TSAN_ENV_OPTIONS}"
+    'TSAN_OPTIONS': "${RUNTIME_TSAN_ENV_OPTIONS}",
+    'ASAN_OPTIONS': "${RUNTIME_ASAN_ENV_OPTIONS}",
+    'LSAN_OPTIONS': "${RUNTIME_LSAN_ENV_OPTIONS}",
 }
 os.environ.update(env_vars)
 

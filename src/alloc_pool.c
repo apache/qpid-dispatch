@@ -46,7 +46,7 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 #define PATTERN_BACK  0xbabecafe
 
 struct qd_alloc_item_t {
-    uint32_t              sequence;
+    uintmax_t             sequence;  // uintmax_t ensures proper alignment of following data
 #ifdef QD_MEMORY_DEBUG
     qd_alloc_type_desc_t *desc;
     uint32_t              header;
