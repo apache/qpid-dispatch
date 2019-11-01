@@ -1171,6 +1171,80 @@ class VhostPolicyFromRouterConfig(TestCase):
                             msg="source address must not be allowed, but it was [%s]" % source_addr)
 
 
+class VhostPolicyConnLimit(TestCase):
+    """
+    Verify that connections beyond the vhost limit are allowed
+    if override specified in vhost.group.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyConnLimit, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('vhost', {
+                'hostname': '0.0.0.0', 'maxConnections': 100,
+                'maxConnectionsPerUser': 2,
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                ), (
+                    'anonymous', {
+                        'users': 'anonymous', 'remoteHosts': '*',
+                        'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
+                        'targets': 'addr/*, simpleaddress, queue.${user}',
+                        'allowDynamicSource': 'true',
+                        'allowAnonymousSender': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-policy-conn-limit', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_vhost_maximum_connections_override(self):
+        addr = "%s/$management" % self.address()
+        timeout = 5
+
+        # three connections should be ok
+        denied = False
+        try:
+            bc1 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc2 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc3 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertFalse(denied)  # assert connections were opened
+
+        # fourth connection should be denied
+        denied = False
+        try:
+            bc4 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertTrue(denied)  # assert if connection that should not open did open
+
+        bc1.connection.close()
+        bc2.connection.close()
+        bc3.connection.close()
+
 class ClientAddressValidator(MessagingHandler):
     """
     Base client class used to validate vhost policies through
