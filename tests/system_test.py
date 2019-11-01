@@ -205,7 +205,7 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     try:
         retry_exception(connect, exception_test=check, **retry_kwargs)
     except Exception as e:
-        raise Exception("wait_port timeout on host %s port %s: %s"%(host, port, e))
+        raise Exception("wait_port timeout on port %s: %s" % (port, e))
 
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
