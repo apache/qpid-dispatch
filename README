@@ -144,7 +144,7 @@ GCC/Clang Thread Sanitizer (TSAN)
 ---------------------------------
 This option turns on extra run time threading verification.
 
-Applicable only to GCC versions >= 4.8 and Clang versions >= 4.1.
+Applicable only to GCC versions >= 7.4 and Clang versions >= 6.0.
 
 To enable the thread sanitizer set the RUNTIME_CHECK build flag to "tsan":
 
@@ -159,3 +159,23 @@ displayed in the CTest output. For example:
 
 RuntimeError: Errors during teardown:
 Process XXXX error: exit code 66, expected 0
+
+False positives can be suppressed via the tsan.supp file in the tests
+directory.
+
+GCC/Clang Address Sanitizer (ASAN)
+----------------------------------
+This option turns on extra run time memory verification, including
+leak checks.
+
+Applicable only to GCC versions >= 5.4 and Clang versions >= 6.0.
+
+To enable the address sanitizer set the RUNTIME_CHECK build flag to "asan":
+
+cmake .. -DRUNTIME_CHECK=asan
+
+The ASAN (libasan) and UBSAN (libubsan) libraries must be installed in
+order to use this option.
+
+False positive leak errors can be suppressed via the lsan.supp file in
+the tests directory.
