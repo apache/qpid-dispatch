@@ -193,6 +193,8 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
         if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
             raise
 
+    host = None
+
     def connect():
         # macOS gives EINVAL for all connection attempts after a ECONNREFUSED
         # man 3 connect: "If connect() fails, the state of the socket is unspecified. [...]"
