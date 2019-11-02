@@ -51,7 +51,7 @@ import DropdownMenu from "./DropdownMenu";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
 import OverviewTablePage from "./overview/overviewTablePage";
-import DetailsTablePage from "./overview/detailsTablePage";
+import DetailsTablePage from "./detailsTablePage";
 import EntitiesPage from "./details/enitiesPage";
 import TopologyPage from "./topology/topologyPage";
 import MessageFlowPage from "./chord/chordPage";
@@ -95,6 +95,7 @@ class PageLayout extends React.Component {
     };
   }
 
+  // the connection to the routers was lost
   setLocation = whatHappened => {
     if (whatHappened === "disconnect") {
       this.setState({ connected: false });
@@ -137,6 +138,7 @@ class PageLayout extends React.Component {
 
       this.service.connect(connectOptions).then(
         r => {
+          this.schema = this.service.schema;
           if (connectPath === "/") connectPath = "/dashboard";
           const activeItem = connectPath.split("/").pop();
           // find the active group for this item
@@ -391,7 +393,11 @@ class PageLayout extends React.Component {
               path="/overview/:entity"
               component={OverviewTablePage}
             />
-            <PrivateRoute path="/details" component={DetailsTablePage} />
+            <PrivateRoute
+              path="/details"
+              schema={this.schema}
+              component={DetailsTablePage}
+            />
             <PrivateRoute path="/topology" component={TopologyPage} />
             <PrivateRoute path="/flow" component={MessageFlowPage} />
             <PrivateRoute path="/logs" component={LogDetails} />

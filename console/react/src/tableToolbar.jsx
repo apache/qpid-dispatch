@@ -36,13 +36,17 @@ class TableToolbar extends React.Component {
     super(props);
     this.state = {
       isDropDownOpen: false,
-      searchValue: "",
-      filterBy: this.props.fields[0].title
+      searchValue:
+        this.props.filterBy && this.props.filterBy.value
+          ? this.props.filterBy.value
+          : "",
+      filterField: this.props.fields[0].title
     };
+
     this.handleTextInputChange = value => {
       this.setState({ searchValue: value }, () => {
         this.props.handleChangeFilterValue(
-          this.state.filterBy,
+          this.state.filterField,
           this.state.searchValue
         );
       });
@@ -58,12 +62,12 @@ class TableToolbar extends React.Component {
       this.setState(
         {
           isDropDownOpen: !this.state.isDropDownOpen,
-          filterBy: event.target.text,
+          filterField: event.target.text,
           searchValue: ""
         },
         () =>
           this.props.handleChangeFilterValue(
-            this.state.filterBy,
+            this.state.filterField,
             this.state.searchValue
           )
       );
@@ -89,7 +93,7 @@ class TableToolbar extends React.Component {
           position={DropdownPosition.right}
           toggle={
             <DropdownToggle onToggle={this.onDropDownToggle}>
-              {this.state.filterBy}
+              {this.state.filterField}
             </DropdownToggle>
           }
           isOpen={isDropDownOpen}
@@ -103,12 +107,37 @@ class TableToolbar extends React.Component {
     };
   }
 
+  reset = () => {
+    this.setState({
+      isDropDownOpen: false,
+      searchValue: "",
+      filterField: this.props.fields[0].title
+    });
+  };
+
   render() {
-    const actions = this.props.actions.map(action => (
-      <ToolbarItem className="pf-u-mx-md">
-        <Button aria-label={action}>{action}</Button>
-      </ToolbarItem>
-    ));
+    const actions =
+      this.props.actions &&
+      this.props.actions.map(action => {
+        let variant = "primary";
+        let isDisabled = false;
+        if (action === "DELETE" && !this.props.hasChecked) {
+          variant = "tertiary";
+          isDisabled = true;
+        }
+        return (
+          <ToolbarItem className="pf-u-mx-md" key={action}>
+            <Button
+              aria-label={action}
+              onClick={() => this.props.handleAction(action)}
+              variant={variant}
+              isDisabled={isDisabled}
+            >
+              {action}
+            </Button>
+          </ToolbarItem>
+        );
+      });
 
     return (
       <Toolbar className="pf-l-toolbar pf-u-mx-xl pf-u-my-md table-toolbar">

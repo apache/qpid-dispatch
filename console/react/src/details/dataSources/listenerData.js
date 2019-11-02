@@ -19,27 +19,33 @@ under the License.
 
 import React from "react";
 import DefaultData from "./defaultData";
-import { utils } from "../../amqp/utilities";
 
-const AddressType = ({ value, extraInfo }) => {
-  const data = extraInfo.rowData.data;
-  const identity = utils.identity_clean(data.identity);
-  const cls = utils.addr_class(identity);
-
-  return (
-    <span className="entity-type">
-      <i className={`address-${cls}`}></i>
-      {cls}
-    </span>
-  );
+const HostPort = ({ value, extraInfo }) => {
+  const host = extraInfo.rowData.data.host;
+  const port = extraInfo.rowData.data.port;
+  return <span className="entity-type">{`${host}:${port}`}</span>;
 };
 
-class AddressData extends DefaultData {
+class ListenerData extends DefaultData {
   constructor(service, schema) {
     super(service, schema);
-    this.typeFormatter = AddressType;
-    this.detailName = "router.address";
+    this.service = service;
+    this.extraFields = [
+      { title: "Role", field: "role" },
+      {
+        title: "Host:Port",
+        field: "host",
+        formatter: HostPort,
+        filter: this.hostPortFilter
+      }
+    ];
+    this.detailEntity = "listener";
   }
+
+  hostPortFilter = (data, filterValue) => {
+    const hostport = `${data.host}${data.port}`;
+    return hostport.includes(filterValue);
+  };
 }
 
-export default AddressData;
+export default ListenerData;

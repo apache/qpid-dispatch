@@ -282,7 +282,8 @@ class OverviewTable extends React.Component {
       return (
         <Redirect
           to={{
-            pathname: this.dataSource.detailPath || "/details",
+            pathname:
+              (this.dataSource && this.dataSource.detailPath) || "/details",
             state: this.state.redirectState
           }}
         />

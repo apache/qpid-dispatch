@@ -17,16 +17,16 @@ specific language governing permissions and limitations
 under the License.
 */
 
-//import RouterData from "./dataSources/routerData";
 import AddressData from "./dataSources/addressData";
-//import LinkData from "./dataSources/linkData";
-//import ConnectionData from "./dataSources/connectionData";
-//import LogsData from "./dataSources/logsData";
+import LinkData from "./dataSources/linkData";
+import ListenerData from "./dataSources/listenerData";
 
 import DefaultData from "./dataSources/defaultData";
 
 const dataMap = {
-  "router.address": AddressData
+  "router.address": AddressData,
+  "router.link": LinkData,
+  listener: ListenerData
 };
 
 const defaultData = DefaultData;

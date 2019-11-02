@@ -26,20 +26,20 @@ import {
   TableBody,
   TableVariant
 } from "@patternfly/react-table";
-import { Button, Checkbox, Pagination } from "@patternfly/react-core";
+import { Button, Pagination } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import TableToolbar from "../tableToolbar";
 import { dataMap, defaultData } from "./entityData";
 
 // If the breadcrumb on the details page was used to return to this page,
 // we will have saved state info in props.location.state
-const propFromLocation = (props, which, defaultValue) =>
-  props &&
-  props.location &&
-  props.location.state &&
-  typeof props.location.state[which] !== "undefined"
-    ? props.location.state[which]
+const propFromLocation = (props, which, defaultValue) => {
+  return props &&
+    props.detailsState &&
+    typeof props.detailsState[which] !== "undefined"
+    ? props.detailsState[which]
     : defaultValue;
+};
 
 class EntityListTable extends React.Component {
   constructor(props) {
@@ -56,7 +56,8 @@ class EntityListTable extends React.Component {
       allRows: [],
       rows: [],
       redirect: false,
-      redirectState: {}
+      redirectState: {},
+      hasChecked: false
     };
     this.initDataSource();
     this.columns = [];
@@ -93,6 +94,9 @@ class EntityListTable extends React.Component {
         formatter: this.dataSource.typeFormatter
       });
     }
+    if (this.dataSource.extraFields) {
+      this.dataSource.fields.push(...this.dataSource.extraFields);
+    }
   };
 
   setupFields = () => {
@@ -125,24 +129,29 @@ class EntityListTable extends React.Component {
 
   update = () => {
     if (this.props.entity && this.props.routerId) {
-      this.fetch(
-        this.state.page,
-        this.state.perPage,
-        this.props.routerId,
-        this.props.entity
-      );
+      this.fetch(this.state.page, this.state.perPage);
     }
   };
 
-  fetch = (page, perPage, routerId, entity) => {
+  fetch = (page, perPage) => {
     // get the data. Note: The current page number might change if
     // the number of rows is less than before
+    const routerId = this.props.routerId;
+    const entity = this.props.entity;
     this.dataSource.doFetch(page, perPage, routerId, entity).then(results => {
       const sliced = this.slice(results.data, results.page, results.perPage);
       // if fetch was called and the component was unmounted before
       // the results arrived, don't call setState
       if (!this.mounted) return;
       const { rows, page, total, allRows } = sliced;
+      allRows.forEach(row => {
+        const prevRow = this.state.allRows.find(
+          r => r.data.name === row.data.name
+        );
+        if (prevRow && prevRow.selected) {
+          row.selected = true;
+        }
+      });
       this.setState({
         rows,
         page,
@@ -166,19 +175,14 @@ class EntityListTable extends React.Component {
   };
 
   detailClick = (value, extraInfo) => {
-    this.setState({
-      redirect: true,
-      redirectState: {
-        value: extraInfo.rowData.cells[extraInfo.columnIndex],
-        currentRecord: extraInfo.rowData.data,
-        entity: this.props.entity,
-        page: this.state.page,
-        sortBy: this.state.sortBy,
-        filterBy: this.state.filterBy,
-        perPage: this.state.perPage,
-        property: extraInfo.property
-      }
-    });
+    const stateInfo = {
+      page: this.state.page,
+      perPage: this.state.perPage,
+      routerId: this.props.routerId,
+      entity: this.props.entity,
+      filterBy: this.state.filterBy
+    };
+    this.props.handleDetailClick(value, extraInfo, stateInfo);
   };
 
   // cell formatter
@@ -260,6 +264,9 @@ class EntityListTable extends React.Component {
     ) {
       const cellIndex = this.cellIndex(filterField);
       rows = rows.filter(r => {
+        if (this.dataSource.fields[cellIndex].filter) {
+          return this.dataSource.fields[cellIndex].filter(r.data, filterValue);
+        }
         return r.cells[cellIndex].includes(filterValue);
       });
     }
@@ -315,10 +322,31 @@ class EntityListTable extends React.Component {
       rows = [...this.state.rows];
       rows[rowId].selected = isSelected;
     }
+    const hasChecked = this.state.rows.some(row => row.selected);
     this.setState({
-      rows
+      rows,
+      hasChecked
     });
   };
+
+  // called from entitiesPage when a new entity is selected from the list.
+  // we need to reset the page, sortBy, and filterBy for the new entity
+  reset = () => {
+    this.setState(
+      {
+        page: 1,
+        sortBy: { index: 0, direction: SortByDirection.asc },
+        filterBy: {}
+      },
+      () => {
+        if (this.toolbarRef) {
+          this.toolbarRef.reset();
+        }
+      }
+    );
+  };
+
+  handleAction = action => {};
 
   render() {
     const tableProps = {
@@ -329,7 +357,7 @@ class EntityListTable extends React.Component {
       onSort: this.onSort,
       variant: TableVariant.compact
     };
-    if (this.dataSource.actions(this.props.entity).includes("DELETE") > 0) {
+    if (this.dataSource.actions(this.props.entity).includes("DELETE")) {
       tableProps.onSelect = this.onSelect;
       tableProps.canSelectAll = true;
     }
@@ -348,15 +376,19 @@ class EntityListTable extends React.Component {
     return (
       <React.Fragment>
         <TableToolbar
+          ref={el => (this.toolbarRef = el)}
           total={this.state.total}
           page={this.state.page}
           perPage={this.state.perPage}
           onSetPage={this.onSetPage}
           onPerPageSelect={this.onPerPageSelect}
           fields={this.dataSource.fields}
+          filterBy={this.state.filterBy}
           handleChangeFilterValue={this.handleChangeFilterValue}
           hidePagination={true}
           actions={this.dataSource.actions(this.props.entity)}
+          hasChecked={this.state.hasChecked}
+          handleAction={this.handleAction}
         />
         <Table {...tableProps}>
           <TableHeader />

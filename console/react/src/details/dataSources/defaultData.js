@@ -31,23 +31,47 @@ class DefaultData {
 
   actions = entity => {
     return this.schema.entityTypes[entity].operations.filter(
-      action => action !== "READ"
+      action => action !== "READ" && action !== "UPDATE"
     );
   };
 
-  fetchRecord = (currentRecord, schema) => {
+  // called by detailsTablePage to display a single record
+  fetchRecord = (currentRecord, schema, entity) => {
     return new Promise(resolve => {
-      resolve(null);
+      this.service.management.topology.fetchEntities(
+        currentRecord.routerId,
+        [{ entity: entity }],
+        data => {
+          const record = data[currentRecord.routerId][entity];
+          const identityIndex = record.attributeNames.indexOf("identity");
+          const result = record.results.find(
+            r => r[identityIndex] === currentRecord.identity
+          );
+          let object = this.service.utilities.flatten(
+            record.attributeNames,
+            result
+          );
+          object = this.service.utilities.formatAttributes(
+            object,
+            schema.entityTypes[entity]
+          );
+          resolve(object);
+        }
+      );
     });
   };
 
+  // called by entityListTable to get the list of records
   doFetch = (page, perPage, routerId, entity) => {
     return new Promise(resolve => {
       this.service.management.topology.fetchEntities(
         routerId,
         { entity },
         results => {
-          const data = utils.flattenAll(results[routerId][entity]);
+          const data = utils.flattenAll(results[routerId][entity], f => {
+            f.routerId = routerId;
+            return f;
+          });
           resolve({ data, page, perPage });
         }
       );

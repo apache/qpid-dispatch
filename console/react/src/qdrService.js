@@ -28,6 +28,7 @@ export class QDRService {
     this.management = new dm(url.protocol, DEFAULT_INTERVAL);
     this.utilities = utils;
     this.hooks = hooks;
+    this.schema = null;
   }
 
   onReconnect() {
@@ -50,6 +51,7 @@ export class QDRService {
           );
 
           self.management.getSchema().then(schema => {
+            self.schema = schema;
             //console.log("got schema after connection");
             //console.log(schema);
             self.management.topology.setUpdateEntities([]);

@@ -2,9 +2,12 @@
   height: 100vh;
 }
 
+/*
 #main-content-page-layout-manual-nav {
   overflow-y: hidden;
 }
+*/
+
 .App {
   text-align: center;
   height: 100%;
@@ -1107,6 +1110,7 @@ div.details-table ul.entities-list {
 .entities-list li {
   padding: 0.25em 2em;
   border-left: 2px solid white;
+  margin-top: 8px;
 }
 .entities-list li:hover {
   background-color: #eaeaea;
@@ -1117,10 +1121,12 @@ div.details-table ul.entities-list {
   background-color: #eaeaea;
 }
 
+/*
 #entityList {
   max-height: calc(100vh - 140px);
   padding-top: 0.5em;
 }
+  */
 
 .split-left {
   text-align: left;
@@ -1135,7 +1141,7 @@ span.entity-type i {
   padding-right: 1em;
   font-style: normal;
 }
-span.entity-type i:before {
+span.entity-type i.address-local:before {
   font-family: FontAwesome;
   content: "\f0ac";
 }
@@ -1148,8 +1154,25 @@ span.entity-type i.address-router:before {
   content: "\f047";
 }
 
+span.entity-type i.link-type-endpoint:before {
+  content: "\f109";
+}
+span.entity-type i.link-type-inter-router:before {
+  content: "\f07e";
+}
+span.entity-type i.link-type-router-control:before {
+  content: "\f013";
+}
+
 .details-table .pf-l-toolbar {
   margin: 0 !important;
   padding: 1em 1em;
+  border-bottom: 1px solid #eaeaea;
+}
+
+.details-table table {
+  margin-left: 0.25em;
+}
+.details-header {
   border-bottom: 1px solid #eaeaea;
 }

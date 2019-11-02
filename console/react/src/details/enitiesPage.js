@@ -22,6 +22,7 @@ import { PageSection, PageSectionVariants } from "@patternfly/react-core";
 import { Stack, StackItem } from "@patternfly/react-core";
 import { Split, SplitItem } from "@patternfly/react-core";
 
+import DetailsTablePage from "../detailsTablePage";
 import EntityListTable from "./entityListTable";
 import EntityList from "./entityList";
 import RouterSelect from "./routerSelect";
@@ -43,22 +44,78 @@ class EntitiesPage extends React.Component {
     this.setState({ lastUpdated });
   };
 
+  // called from entityList to change entity summary
+  handleSwitchEntity = entity => {
+    if (this.listTableRef) this.listTableRef.reset();
+    this.setState({ entity, showDetails: false, detailsState: {} });
+  };
+
+  // called from breadcrumb on entityListTable to return to current entity summary
   handleSelectEntity = entity => {
-    this.setState({ entity });
+    this.setState({ entity, showDetails: false });
   };
 
   handleRouterSelected = routerId => {
-    this.setState({ routerId });
+    this.setState({ routerId, showDetails: false });
+  };
+
+  handleDetailClick = (value, extraInfo, stateInfo) => {
+    this.setState({
+      detailsState: {
+        value: extraInfo.rowData.cells[extraInfo.columnIndex],
+        currentRecord: extraInfo.rowData.data,
+        entity: this.props.entity,
+        page: stateInfo.page,
+        sortBy: stateInfo.sortBy,
+        filterBy: stateInfo.filterBy,
+        perPage: stateInfo.perPage,
+        property: extraInfo.property
+      },
+      showDetails: true
+    });
   };
 
   render() {
+    const entityTable = () => {
+      if (this.state.entity) {
+        if (!this.state.showDetails) {
+          return (
+            <EntityListTable
+              ref={el => (this.listTableRef = el)}
+              service={this.props.service}
+              entity={this.state.entity}
+              schema={this.schema}
+              routerId={this.state.routerId}
+              lastUpdated={this.lastUpdated}
+              handleDetailClick={this.handleDetailClick}
+              detailsState={this.state.detailsState}
+            />
+          );
+        } else {
+          return (
+            <DetailsTablePage
+              details={true}
+              locationState={this.state.detailsState}
+              entity={this.state.entity}
+              service={this.props.service}
+              lastUpdated={this.lastUpdated}
+              schema={this.schema}
+              handleSelectEntity={this.handleSelectEntity}
+            />
+          );
+        }
+      } else {
+        return null;
+      }
+    };
+
     return (
       <PageSection
         variant={PageSectionVariants.light}
         className="details-table-page"
       >
         <Stack>
-          <StackItem className="details-header pf-u-box-shadow-sm-bottom">
+          <StackItem className="details-header">
             <Split>
               <SplitItem isFilled className="split-left">
                 <span className="prompt">Router</span>{" "}
@@ -80,22 +137,10 @@ class EntitiesPage extends React.Component {
               <SplitItem id="entityList">
                 <EntityList
                   schema={this.schema}
-                  handleSelectEntity={this.handleSelectEntity}
+                  handleSelectEntity={this.handleSwitchEntity}
                 />
               </SplitItem>
-              <SplitItem isFilled>
-                {this.state.entity ? (
-                  <EntityListTable
-                    {...this.props}
-                    entity={this.state.entity}
-                    schema={this.schema}
-                    routerId={this.state.routerId}
-                    lastUpdated={this.lastUpdated}
-                  />
-                ) : (
-                  <React.Fragment />
-                )}
-              </SplitItem>
+              <SplitItem isFilled>{entityTable()}</SplitItem>
             </Split>
           </StackItem>
         </Stack>

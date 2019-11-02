@@ -38,8 +38,9 @@ import {
 } from "@patternfly/react-table";
 import { Card, CardBody } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
-import { dataMap } from "./entityData";
-import Updated from "../updated";
+import { dataMap } from "./overview/entityData";
+import { dataMap as detailsDataMap, defaultData } from "./details/entityData";
+import Updated from "./updated";
 
 class DetailTablesPage extends React.Component {
   constructor(props) {
@@ -63,23 +64,36 @@ class DetailTablesPage extends React.Component {
     // then redirect back to the dashboard.
     // this can happen if we get here from a bookmark or browser refresh
     this.entity =
-      this.props &&
-      this.props.location &&
-      this.props.location.state &&
-      this.props.location.state.entity;
-    if (!dataMap[this.entity]) {
+      this.props.entity ||
+      (this.props &&
+        this.props.location &&
+        this.props.location.state &&
+        this.props.location.state.entity);
+
+    if (!this.entity) {
       this.state.redirect = true;
     } else {
-      this.dataSource = new dataMap[this.entity](this.props.service);
+      if (this.props.details) {
+        this.dataSource = !detailsDataMap[this.entity]
+          ? new defaultData(this.props.service, this.props.schema)
+          : new detailsDataMap[this.entity](
+              this.props.service,
+              this.props.schema
+            );
+        this.locationState = this.props.locationState;
+      } else {
+        this.dataSource = new dataMap[this.entity](
+          this.props.service,
+          this.props.schema
+        );
+        this.locationState = this.props.location.state;
+      }
     }
   }
 
   componentDidMount = () => {
-    this.props.service.management.getSchema().then(schema => {
-      this.schema = schema;
-      this.timer = setInterval(this.update, 5000);
-      this.update();
-    });
+    this.timer = setInterval(this.update, 5000);
+    this.update();
   };
 
   componentWillUnmount = () => {
@@ -91,7 +105,11 @@ class DetailTablesPage extends React.Component {
   update = () => {
     this.mapRows().then(
       rows => {
-        this.setState({ rows, lastUpdated: new Date() });
+        this.setState({ rows, lastUpdated: new Date() }, () => {
+          if (this.props.details) {
+            this.props.lastUpdated(this.state.lastUpdated);
+          }
+        });
       },
       error => {
         console.log(`detailsTablePage: ${error}`);
@@ -111,7 +129,11 @@ class DetailTablesPage extends React.Component {
         reject("no data source");
       }
       this.dataSource
-        .fetchRecord(this.props.location.state.currentRecord, this.schema)
+        .fetchRecord(
+          this.locationState.currentRecord,
+          this.props.schema,
+          this.entity
+        )
         .then(data => {
           for (const attribute in data) {
             if (
@@ -130,24 +152,19 @@ class DetailTablesPage extends React.Component {
 
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  parentItem = () => {
-    // if we have a specific field that should be used
-    // as the record's title, return it
-    if (this.dataSource.detailField) {
-      return this.props.location.state.currentRecord[
-        this.dataSource.detailField
-      ];
-    }
-    // otherwise return the 1st field
-    return this.props.location.state.value;
-  };
+  parentItem = () =>
+    this.locationState.currentRecord[this.locationState.property];
 
   breadcrumbSelected = () => {
-    this.setState({
-      redirect: true,
-      redirectPath: `/overview/${this.entity}`,
-      redirectState: this.props.location.state
-    });
+    if (this.props.details) {
+      this.props.handleSelectEntity(this.entity);
+    } else {
+      this.setState({
+        redirect: true,
+        redirectPath: `/overview/${this.entity}`,
+        redirectState: this.locationState
+      });
+    }
   };
 
   render() {
@@ -173,25 +190,22 @@ class DetailTablesPage extends React.Component {
               <Breadcrumb>
                 <BreadcrumbItem
                   className="link-button"
-                  onClick={() =>
-                    this.breadcrumbSelected(`/overview/${this.entity}`)
-                  }
+                  onClick={this.breadcrumbSelected}
                 >
                   {this.icap(this.entity)}
                 </BreadcrumbItem>
-                <BreadcrumbItem isActive>{this.parentItem()}</BreadcrumbItem>
               </Breadcrumb>
 
               <TextContent>
                 <Text className="overview-title" component={TextVariants.h1}>
-                  {`${
-                    this.dataSource.detailName
-                  } ${this.parentItem()} attributes`}
+                  {this.parentItem()}
                 </Text>
-                <Updated
-                  service={this.props.service}
-                  lastUpdated={this.state.lastUpdated}
-                />
+                {!this.props.details && (
+                  <Updated
+                    service={this.props.service}
+                    lastUpdated={this.state.lastUpdated}
+                  />
+                )}
               </TextContent>
             </StackItem>
             <StackItem className="overview-table">
