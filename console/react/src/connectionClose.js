@@ -18,40 +18,106 @@ under the License.
 */
 
 import React from "react";
-import { Button } from "@patternfly/react-core";
+import { Button, Modal } from "@patternfly/react-core";
 
 class ConnectionClose extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {
+      isModalOpen: false,
+      closing: false
+    };
+  }
+
+  handleModalToggle = () => {
+    this.setState(({ isModalOpen }) => ({
+      isModalOpen: !isModalOpen
+    }));
+  };
+
   closeConnection = () => {
-    const record = this.props.extraInfo.rowData.data;
-    this.props.service.management.connection
-      .sendMethod(
-        record.nodeId || record.routerId,
-        "connection",
-        { adminStatus: "deleted", identity: record.identity },
-        "UPDATE",
-        { adminStatus: "deleted" }
-      )
-      .then(results => {
-        let statusCode =
-          results.context.message.application_properties.statusCode;
-        if (statusCode < 200 || statusCode >= 300) {
-          console.log(
-            `error ${record.name} ${results.context.message.application_properties.statusDescription}`
-          );
-        } else {
-          console.log(
-            `success ${record.name} ${results.context.message.application_properties.statusDescription}`
-          );
-        }
-      });
+    this.setState({ closing: true }, () => {
+      const record = this.props.extraInfo.rowData.data;
+      this.props.service.management.connection
+        .sendMethod(
+          record.nodeId || record.routerId,
+          "connection",
+          { adminStatus: "deleted", identity: record.identity },
+          "UPDATE",
+          { adminStatus: "deleted" }
+        )
+        .then(results => {
+          let statusCode =
+            results.context.message.application_properties.statusCode;
+          if (statusCode < 200 || statusCode >= 300) {
+            console.log(
+              `error ${record.name} ${results.context.message.application_properties.statusDescription}`
+            );
+            this.props.handleAddNotification(
+              "action",
+              `Close connection ${record.name} failed with message: ${results.context.message.application_properties.statusDescription}`,
+              new Date(),
+              "error"
+            );
+          } else {
+            this.props.handleAddNotification(
+              "action",
+              `Closed connection ${record.name}`,
+              new Date(),
+              "success"
+            );
+            console.log(
+              `success ${record.name} ${results.context.message.application_properties.statusDescription}`
+            );
+          }
+          this.setState({ isModalOpen: false, closing: false }, () => {
+            if (this.props.notifyClick) {
+              this.props.notifyClick();
+            }
+          });
+        });
+    });
   };
 
   render() {
-    if (this.props.extraInfo.rowData.data.role === "normal") {
+    const { isModalOpen, closing } = this.state;
+    const record = this.props.extraInfo.rowData.data;
+    if (record.role === "normal") {
       return (
-        <Button className="link-button" onClick={this.closeConnection}>
-          Close
-        </Button>
+        <React.Fragment>
+          <Button className="link-button" onClick={this.handleModalToggle}>
+            Close
+          </Button>
+          <Modal
+            isSmall
+            title="Close conection"
+            isOpen={isModalOpen}
+            onClose={this.handleModalToggle}
+            actions={[
+              <Button
+                key="confirm"
+                variant="primary"
+                onClick={this.closeConnection}
+                isDisabled={closing}
+              >
+                Confirm
+              </Button>,
+              <Button
+                key="cancel"
+                variant="link"
+                onClick={this.handleModalToggle}
+                isDisabled={closing}
+              >
+                Cancel
+              </Button>
+            ]}
+            isFooterLeftAligned
+          >
+            {closing
+              ? `Closing connection ${record.name}`
+              : `Close connection ${record.name}?`}
+          </Modal>
+        </React.Fragment>
       );
     } else {
       return <React.Fragment />;

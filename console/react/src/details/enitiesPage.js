@@ -82,7 +82,7 @@ class EntitiesPage extends React.Component {
           return (
             <EntityListTable
               ref={el => (this.listTableRef = el)}
-              service={this.props.service}
+              {...this.props}
               entity={this.state.entity}
               schema={this.schema}
               routerId={this.state.routerId}
@@ -97,7 +97,7 @@ class EntitiesPage extends React.Component {
               details={true}
               locationState={this.state.detailsState}
               entity={this.state.entity}
-              service={this.props.service}
+              {...this.props}
               lastUpdated={this.lastUpdated}
               schema={this.schema}
               handleSelectEntity={this.handleSelectEntity}

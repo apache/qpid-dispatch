@@ -31,7 +31,7 @@ import { Redirect } from "react-router-dom";
 import TableToolbar from "../tableToolbar";
 import { dataMap, defaultData } from "./entityData";
 
-// If the breadcrumb on the details page was used to return to this page,
+// If the breadcrumb on the detailsTablePage was used to return to this page,
 // we will have saved state info in props.location.state
 const propFromLocation = (props, which, defaultValue) => {
   return props &&
@@ -203,10 +203,15 @@ class EntityListTable extends React.Component {
       <Component
         value={value}
         extraInfo={extraInfo}
-        service={this.props.service}
         detailClick={this.detailClick}
+        notifyClick={this.notifyClick}
+        {...this.props}
       />
     );
+  };
+
+  notifyClick = () => {
+    this.update();
   };
 
   onSort = (_event, index, direction) => {

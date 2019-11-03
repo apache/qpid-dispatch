@@ -46,7 +46,7 @@ import {
 
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import { css } from "@patternfly/react-styles";
-import { BellIcon, PowerOffIcon } from "@patternfly/react-icons";
+import { PowerOffIcon } from "@patternfly/react-icons";
 import DropdownMenu from "./DropdownMenu";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
@@ -58,6 +58,7 @@ import MessageFlowPage from "./chord/chordPage";
 import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
 import ConnectForm from "./connect-form";
+import NotificationDrawer from "./notificationDrawer";
 import { utils } from "./amqp/utilities";
 const avatarImg = require("./assets/img_avatar.svg");
 
@@ -129,6 +130,12 @@ class PageLayout extends React.Component {
       this.setState({ connectPath: "", connected: false }, () => {
         this.handleConnectCancel();
         this.service.disconnect();
+        this.handleAddNotification(
+          "event",
+          "Manually disconnected",
+          new Date(),
+          "info"
+        );
       });
     } else {
       const connectOptions = JSON.parse(JSON.stringify(connectInfo));
@@ -150,6 +157,7 @@ class PageLayout extends React.Component {
             }
           }
           this.handleConnectCancel();
+          this.handleAddNotification("event", "Connected", new Date(), "info");
 
           this.setState({
             activeItem,
@@ -211,6 +219,17 @@ class PageLayout extends React.Component {
     return this.state.connected;
   };
 
+  handleAddNotification = (section, message, timestamp, severity) => {
+    if (this.notificationRef) {
+      this.notificationRef.addNotification({
+        section,
+        message,
+        timestamp,
+        severity
+      });
+    }
+  };
+
   render() {
     const { activeItem, activeGroup } = this.state;
     const { isNavOpenDesktop, isNavOpenMobile, isMobileView } = this.state;
@@ -267,14 +286,8 @@ class PageLayout extends React.Component {
               <PowerOffIcon />
             </Button>
           </ToolbarItem>
-          <ToolbarItem>
-            <Button
-              id="default-example-uid-01"
-              aria-label="Notifications actions"
-              variant={ButtonVariant.plain}
-            >
-              <BellIcon />
-            </Button>
+          <ToolbarItem className="notification-button">
+            <NotificationDrawer ref={el => (this.notificationRef = el)} />
           </ToolbarItem>
         </ToolbarGroup>
         <ToolbarGroup>
@@ -340,7 +353,12 @@ class PageLayout extends React.Component {
         {...(more.exact ? "exact" : "")}
         render={props =>
           this.state.connected ? (
-            <Component service={this.service} {...props} {...more} />
+            <Component
+              service={this.service}
+              handleAddNotification={this.handleAddNotification}
+              {...props}
+              {...more}
+            />
           ) : (
             <Redirect
               to={{ pathname: "/login", state: { from: props.location } }}

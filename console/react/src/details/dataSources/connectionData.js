@@ -17,19 +17,23 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import AddressData from "./dataSources/addressData";
-import LinkData from "./dataSources/linkData";
-import ListenerData from "./dataSources/listenerData";
-import ConnectionData from "./dataSources/connectionData";
+import DefaultData from "./defaultData";
+import ConnectionClose from "../../connectionClose";
 
-import DefaultData from "./dataSources/defaultData";
+class ConnectionData extends DefaultData {
+  constructor(service, schema) {
+    super(service, schema);
+    this.extraFields = [
+      {
+        title: "",
+        field: "connection",
+        noSort: true,
+        formatter: ConnectionClose
+      }
+    ];
+    this.detailEntity = "router.link";
+    this.detailName = "Link";
+  }
+}
 
-const dataMap = {
-  "router.address": AddressData,
-  "router.link": LinkData,
-  listener: ListenerData,
-  connection: ConnectionData
-};
-
-const defaultData = DefaultData;
-export { dataMap, defaultData };
+export default ConnectionData;

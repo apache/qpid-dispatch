@@ -1176,3 +1176,124 @@ span.entity-type i.link-type-router-control:before {
 .details-header {
   border-bottom: 1px solid #eaeaea;
 }
+
+#NotificationDrawer {
+  position: absolute;
+  top: 4.8em;
+  color: black;
+  right: 0em;
+}
+
+.drawer-pf-title {
+  display: flex;
+  border: 1px solid lightgray;
+  background-color: #f3f3f3;
+  height: 2em;
+  justify-content: space-between;
+  position: unset;
+}
+
+#NotificationDrawer.compact {
+  transition: width 0.25s ease;
+  width: 20em;
+}
+
+#NotificationDrawer.expanded {
+  transition: width 0.25s ease;
+  width: 50em;
+}
+
+.drawer-pf-title h3 {
+  margin: 0.5em 0;
+}
+
+.drawer-pf-title svg {
+  fill: #333333;
+}
+
+.notification-button dl.pf-c-accordion {
+  padding-top: 0;
+  padding-bottom: 0;
+}
+
+.notification-button dl.pf-c-accordion * {
+  border-left-color: transparent;
+}
+
+.notification-button dl.pf-c-accordion dt {
+  background-image: linear-gradient(to bottom, #fafafa 0, #ededed 100%);
+  background-repeat: repeat-x;
+}
+
+.notification-button dl.pf-c-accordion h3 {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.notification-button button.pf-c-accordion__toggle span {
+  font-weight: normal;
+  display: block;
+  font-size: 14px;
+  line-height: normal;
+}
+
+.notification-button button.pf-c-accordion__toggle {
+  display: flex;
+}
+
+.notification-button .pf-c-accordion__toggle svg {
+  position: absolute;
+  left: 0.5em;
+}
+
+.notification-button button.pf-c-accordion__toggle {
+  text-align: center;
+}
+
+.notification-button .pf-c-accordion__toggle-text {
+  margin: auto;
+}
+
+.drawer-pf-notification {
+  display: flex;
+  justify-content: space-between;
+}
+
+.drawer-pf-notification-info,
+.drawer-pf-notification-message {
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.drawer-pf-notification-content {
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+}
+
+#NotificationDrawer .pf-c-accordion__expanded-content-body {
+  padding: 0;
+}
+
+#NotificationDrawer .drawer-pf-action-link {
+  border-left: 1px solid #d1d1d1;
+}
+
+#NotificationDrawer button.pf-m-expanded,
+#NotificationDrawer dd.pf-m-expanded {
+  border-left-color: blue;
+}
+
+#NotificationDrawer .panel-body {
+  padding-left: 0;
+}
+
+#NotificationDrawer .drawer-pf-notification {
+  padding-left: 15px;
+  font-size: 16px;
+}
+
+#NotificationDrawer .drawer-pf-notification.unread {
+  font-weight: bold;
+  color: black;
+}
