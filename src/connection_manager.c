@@ -725,7 +725,7 @@ qd_error_t qd_entity_refresh_listener(qd_entity_t* entity, void *impl)
 /**
  * Calculates the total length of the failover  list string.
  * For example, the failover list string can look like this - "amqp://0.0.0.0:62616, amqp://0.0.0.0:61616"
- * This function calculates the length of the above string by adding up the scheme (amqp or qmqps) and host_port for each failover item.
+ * This function calculates the length of the above string by adding up the scheme (amqp or amqps) and host_port for each failover item.
  * It also assumes that there will be a comma and a space between each failover item.
  *
  */
@@ -782,8 +782,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 
     // This is the string that will contain the comma separated failover list
     char failover_info[arr_length];
-
-    memset(failover_info, 0, sizeof(failover_info));
+    failover_info[0] = 0;
 
     while(item) {
 
@@ -828,29 +827,24 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
             item = DEQ_HEAD(conn_info_list);
     }
 
-    int state_length = 0;
-    char *state = 0;
-
-    if (ct->state == CXTR_STATE_CONNECTING) {
-        state_length = 13;
-        state = "CONNECTING\0";
+    const char *state_info = 0;
+    switch (ct->state) {
+    case CXTR_STATE_CONNECTING:
+      state_info = "CONNECTING";
+      break;
+    case CXTR_STATE_OPEN:
+      state_info = "SUCCESS";
+      break;
+    case CXTR_STATE_FAILED:
+      state_info = "FAILED";
+      break;
+    case CXTR_STATE_INIT:
+      state_info = "INITIALIZING";
+      break;
+    default:
+      state_info = "UNKNOWN";
+      break;
     }
-    else if (ct->state == CXTR_STATE_OPEN) {
-        state_length = 12;
-        state = "SUCCESS\0";
-    }
-    else if (ct->state == CXTR_STATE_FAILED) {
-        state_length = 9;
-        state = "FAILED\0";
-    }
-    else if (ct->state == CXTR_STATE_INIT) {
-        state_length = 15;
-        state = "INITIALIZING\0";
-    }
-
-    char state_info[state_length];
-    memset(state_info, 0, sizeof(state_length));;
-    strcat(state_info, state);
 
     if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0
             && qd_entity_set_string(entity, "connectionStatus", state_info) == 0
