@@ -195,6 +195,12 @@ A list of authenticated users for this user group. Use commas to separate multip
 `remoteHosts`::
 A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard `*`. To deny access from all remote hosts, leave this attribute blank.
 
+`maxConnectionsPerUser`::
+The maximum number of connections that may be created by users in this user group. This value, if specified, overrides the vhost `maxConnectionsPerUser` value.
+
+`maxConnectionsPerHost`::
+The maximum number of concurrent connections that may be created by users in this user group from any of the permitted remote hosts. This value, if specified, overrides the vhost `maxConnectionsPerUser` value.
+
 `allowDynamicSource`::
 If true, connections from users in this group are permitted to attach receivers to dynamic sources.  This permits creation of listners to temporary addresses or termporary queues.  If false, use of dynamic sources is forbidden.
 
