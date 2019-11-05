@@ -594,12 +594,12 @@
                     "type": "integer",
                     "description":"Number of deliveries that were sent to another router in the network.",
                     "graph": true
-                },                
+                },
                 "deliveriesIngressRouteContainer": {
                     "type": "integer",
                     "description":"Number of deliveries that were received from router container connections.",
                     "graph": true
-                },                
+                },
                 "deliveriesEgressRouteContainer": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to route container connections.",
@@ -611,7 +611,7 @@
                     "graph": true
                 }
             }
-        },       
+        },
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "referential": true,
@@ -622,12 +622,12 @@
                     "type": "string",
                     "description": "Specifies the enabled ciphers so the SSL Ciphers can be hardened. In other words, use this field to disable weak ciphers. The ciphers are specified in the format understood by the OpenSSL library. For example, ciphers can be set to ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP; -- The full list of allowed ciphers can be viewed using the openssl ciphers command",
                     "create": true
-                },      
+                },
                 "protocols": {
                     "type": "string",
                     "description": "The TLS protocols that this sslProfile can use. You can specify a list of one or more of TLSv1, TLSv1.1, or TLSv1.2. To specify multiple protocols, separate the protocols with a space. For example, to permit the sslProfile to use TLS v1.1 and TLS v1.2 only, you would set the value to TLSv1.1 TLSv1.2. If you do not specify a value, the sslProfile uses the TLS protocol specified by the system-wide configuration.",
                     "create": true
-                },                            
+                },
                 "caCertFile": {
                     "type": "path",
                     "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
@@ -656,7 +656,7 @@
                 },
                 "password": {
                     "type": "string",
-                    "description": "Password that unlocks the certificate key. Supports three prefixes namely - env:, file: pass:. Also supports the legacy literal: prefix. env:var obtains the password from the environment variable var. Since the environment of other processes is visible on certain platforms (e.g. ps under certain Unix OSes) this option should be used with caution. file:absolutepath obtains the password from the  absolute path of the file containing the password. This option is the safest since permissions can be set on the file. pass:password or literal:password or password with no prefix is used to directly specify the password and should only be used where security is not important. If both password and passwordFile are provided, the passwordFile is ignored",
+                    "description": "The password that unlocks the certificate key. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'password: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'password: file:<absolute-path-to-file>'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'password: pass:<password>', or 'password: literal:<password>', or 'password: <password>'. This option is insecure, so it should only be used if security is not a concern. If both password and passwordFile are provided, the passwordFile is ignored.",
                     "create": true
 
                 },
@@ -698,7 +698,7 @@
                     "default": "amqp",
                     "create": true
 
-                },                
+                },
                 "realm": {
                     "type": "string",
                     "description": "Value to set for hostname field on sasl-init",
@@ -1018,7 +1018,7 @@
                 "saslPassword": {
                     "type": "string",
                     "required": false,
-                    "description": "The password that the connector is using to connect to a peer. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'saslPassword: env:'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'saslPassword: file:'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'saslPassword: pass:' or 'saslPassword: '. This option is insecure, so it should only be used if security is not a concern",
+                    "description": "The password that the connector is using to connect to a peer. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'saslPassword: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'saslPassword: file:<absolute-path-to-file>'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'saslPassword: pass:<password>' or 'saslPassword: <password>'. This option is insecure, so it should only be used if security is not a concern.",
                     "create": true,
                     "hidden": true
                 },
@@ -1034,18 +1034,18 @@
                     "description": "A read-only, comma-separated list of failover urls. ",
                     "deprecationName": "failoverList",
                     "create": false
-                    
+
                 },
                 "connectionStatus": {
                     "type": "string",
                     "description": "A read-only status of the connection. Could be one of CONNECTING, SUCCESS, FAILED",
-                    "create": false  
+                    "create": false
                 },
                 "connectionMsg": {
                     "type": "string",
                     "description": "A read-only connection message. Contains the connection message",
-                    "create": false  
-                },                                   
+                    "create": false
+                },
                 "policyVhost": {
                     "type": "string",
                     "required": false,
@@ -1718,7 +1718,7 @@
                 },
                 "operStatus": {
                     "type": ["up", "closing"]
-                },            
+                },
                 "container": {
                     "description": "The container for this connection",
                     "type": "string"
@@ -2041,14 +2041,14 @@
                     "default": true,
                     "required": false,
                     "create": true
-                },                
+                },
                 "allowFallbackLinks": {
                     "type": "boolean",
                     "description": "Whether this connection is allowed to claim 'qd.fallback' capability for attached links.  This allows endpoints to act as fallback destinations for addresses that have fallback capability enabled.",
                     "default": true,
                     "required": false,
                     "create": true
-                },                
+                },
                 "sources": {
                     "type": "string",
                     "description": "A list of source addresses from which users in this group may receive messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses. You can use the substitution token '${user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name. You may specify attributes 'sources' or 'sourcePattern' but not both at the same time.",
@@ -2105,7 +2105,7 @@
                 "receiverDenied": {"type": "integer", "graph": true}
             }
         },
-        
+
         "dummy": {
             "description": "Dummy entity for test purposes.",
             "extends": "entity",
