@@ -70,7 +70,8 @@ sslProfile {
 
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
 
-`password`:: The password to unlock the certificate key. Not specified if certificate key has no password. The prefix file: is used to specify the absolute path of the file containing the password.
+//`password`
+include::{FragmentDir}/fragment-password-description.adoc[]
 --
 
 .. Configure the inter-router `connector` for this connection to use the `sslProfile` that you created.
