@@ -475,7 +475,13 @@ class TopologyDispositionTests ( TestCase ):
         except Exception as e:
             error = str(e)
 
-        self.assertEqual ( None, error )
+        if str(None) != error:
+            print("Error text: ", error)
+            sys.stdout.flush()
+        self.assertEqual ( str(None), error )
+        if not '</body>' in out:
+            print("out: ", out)
+            sys.stdout.flush()
         self.assertTrue( '</body>' in out )
 
 
