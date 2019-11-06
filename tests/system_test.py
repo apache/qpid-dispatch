@@ -659,6 +659,7 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     @classmethod
     def setUpClass(cls):
+        cls.maxDiff = None
         cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setUpClass']))
         cls.tester.rmtree()
         cls.tester.setup()
