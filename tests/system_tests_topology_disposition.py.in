@@ -134,7 +134,6 @@ class TopologyDispositionTests ( TestCase ):
     def setUpClass(cls):
         super(TopologyDispositionTests, cls).setUpClass()
 
-        self.maxDiff = None
         cls.routers = []
 
 
@@ -436,6 +435,7 @@ class TopologyDispositionTests ( TestCase ):
 
 
     def test_04_scraper_tool ( self ):
+        self.maxDiff = None
         name = 'test_04'
         error = str(None)
         if self.skip [ name ] :
