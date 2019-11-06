@@ -21,7 +21,7 @@ under the License
 
 ** Download and build the {RouterName} source.
 +
-To download the source, see {DispatchRouterDownloadLink}. For instructions on building the source, see the {QpidDispatchReadmeLink}.
+To download the source, see the {DispatchRouterDownloadLink}. For instructions on building the source, see the {QpidDispatchReadmeLink}.
 ** Install the {RouterName} packages.
 +
 Packages are available for `yum`/`dnf`-based Linux distributions. For more information, see the {DispatchRouterPackagesLink}.
