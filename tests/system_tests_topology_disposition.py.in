@@ -134,7 +134,7 @@ class TopologyDispositionTests ( TestCase ):
     def setUpClass(cls):
         super(TopologyDispositionTests, cls).setUpClass()
 
-
+        self.maxDiff = None
         cls.routers = []
 
 
@@ -437,7 +437,7 @@ class TopologyDispositionTests ( TestCase ):
 
     def test_04_scraper_tool ( self ):
         name = 'test_04'
-        error = None
+        error = str(None)
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
 
@@ -456,7 +456,13 @@ class TopologyDispositionTests ( TestCase ):
         except Exception as e:
             error = str(e)
 
-        self.assertEqual ( None, error )
+        if str(None) != error:
+            print("Error text: ", error)
+            sys.stdout.flush()
+        self.assertEqual ( str(None), error )
+        if not '</body>' in out:
+            print("out: ", out)
+            sys.stdout.flush()
         self.assertTrue( '</body>' in out )
 
         # split A.log
