@@ -36,6 +36,7 @@ import time
 import datetime
 import pdb
 import inspect
+import sys
 
 
 #================================================
@@ -435,12 +436,17 @@ class TopologyDispositionTests ( TestCase ):
 
 
     def test_04_scraper_tool ( self ):
-        self.maxDiff = None
         name = 'test_04'
         error = str(None)
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
 
+        try:
+            import ast
+        except ImportError:
+            # scraper requires ast which is not installed by default on all platforms
+            self.skipTest ( "Python ast module is not available on this platform." )
+        
         scraper_path = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
 
         # aggregate all the log files
@@ -460,9 +466,6 @@ class TopologyDispositionTests ( TestCase ):
             print("Error text: ", error)
             sys.stdout.flush()
         self.assertEqual ( str(None), error )
-        if not '</body>' in out:
-            print("out: ", out)
-            sys.stdout.flush()
         self.assertTrue( '</body>' in out )
 
         # split A.log
@@ -479,9 +482,6 @@ class TopologyDispositionTests ( TestCase ):
             print("Error text: ", error)
             sys.stdout.flush()
         self.assertEqual ( str(None), error )
-        if not '</body>' in out:
-            print("out: ", out)
-            sys.stdout.flush()
         self.assertTrue( '</body>' in out )
 
 
