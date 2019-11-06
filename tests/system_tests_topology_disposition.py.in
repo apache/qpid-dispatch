@@ -454,7 +454,7 @@ class TopologyDispositionTests ( TestCase ):
         files = []
         for letter in ['A', 'B', 'C', 'D']:
             files.append('../setUpClass/%s.log' % letter)
-        p = self.popen(['/usr/bin/env', 'python3', scraper_path, '-f'] + files,
+        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '-f'] + files,
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]
@@ -470,7 +470,7 @@ class TopologyDispositionTests ( TestCase ):
         self.assertTrue( '</body>' in out )
 
         # split A.log
-        p = self.popen(['/usr/bin/env', 'python3', scraper_path, '--split', '-f', '../setUpClass/A.log'],
+        p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '--split', '-f', '../setUpClass/A.log'],
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]
