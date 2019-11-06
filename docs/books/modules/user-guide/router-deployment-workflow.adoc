@@ -21,12 +21,10 @@ under the License
 //
 // creating-router-network-topology.adoc
 
-[id='adding-routers-router-network-{context}']
-= Adding routers to the router network
+[id='router-deployment-workflow-{context}']
+= {RouterName} deployment workflow
 
-After planning the router network topology, you implement it by adding each router to the router network. You add routers one at a time.
-
-This procedure describes the workflow required to add a router to the router network.
+This workflow describes the basic workflow for deploying a {RouterName} router. To create a router network, complete this workflow for each router in the network.
 
 .Prerequisites
 
@@ -66,4 +64,6 @@ If necessary, configure policies to control which messaging resources clients ar
 +
 You can set the default logging configuration to ensure that events are logged at the correct level for your environment.
 
-. Start the router.
+. xref:starting-router-{context}[Start the router].
+
+. Repeat this workflow for each additional router that you want to add to the router network.

@@ -55,3 +55,9 @@ connector {
 `port`:: The port number or symbolic service name to which the router will connect.
 `role`:: The role of the connection. Specify `route-container` to indicate that this connection is for an AMQP container that holds known addresses.
 --
+
+.Additional resources
+
+* After enabling a router to connect to an external AMQP container, configure any necessary security credentials.
++
+For more information, see xref:securing-outgoing-connections-{context}[].

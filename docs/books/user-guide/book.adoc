@@ -26,6 +26,9 @@ include::common/attributes.adoc[]
 // Overview
 include::assemblies/user-guide/overview.adoc[leveloffset=+1]
 
+// Installing
+include::modules/user-guide/installing-router.adoc[leveloffset=+1]
+
 // Getting started
 include::assemblies/user-guide/getting-started.adoc[leveloffset=+1]
 

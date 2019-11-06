@@ -19,18 +19,18 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// creating-router-networks.adoc
+// creating-router-network-topology.adoc
 
-[id='planning-router-network-{context}']
-= Planning a router network
+[id='router-deployment-guidelines-{context}']
+= {RouterName} deployment guidelines
 
 To plan your router network and design the network topology, you must first understand the different router modes and how you can use them to create different types of networks.
 
 // Router operating modes
 include::../../modules/user-guide/router-operating-modes.adoc[leveloffset=+1]
 
-// Security considerations
-include::../../modules/user-guide/router-network-security-considerations.adoc[leveloffset=+1]
+// Security guidelines
+include::../../modules/user-guide/security-guidelines.adoc[leveloffset=+1]
 
-// Example router network topologies
-// include::modules/example-router-network-topologies.adoc[leveloffset=+1]
+// Router connection guidelines
+include::../../modules/user-guide/router-connection-guidelines.adoc[leveloffset=+1]

@@ -22,17 +22,17 @@ under the License
 // book.adoc
 
 [id='configuring-router-{context}']
-= Configuring a router
+= Configuring {RouterName}
 
 Each {RouterName} router contains a `qdrouterd.conf` configuration file. You edit this file to define how the router should operate.
 
-You can configure the following entities:
+You can do the following:
 
-* Essential router properties
-* Network connections
-* Security settings (authentication and authorization)
-* Routing (message routing and link routing)
-* Logging
+* xref:configuring-router-properties-{context}[Configure essential router properties]
+* xref:configuring-network-connections-{context}[Configure network connections]
+* xref:securing-network-connections-{context}[Secure network connections]
+* xref:authorizing-access-to-messaging-resources[Authorize access to messaging resources]
+* xref:logging[Configure logging]
 
 // Configuring router properties
 include::../../modules/user-guide/configuring-router-properties.adoc[leveloffset=+1]

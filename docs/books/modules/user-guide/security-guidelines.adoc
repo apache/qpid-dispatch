@@ -17,12 +17,12 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// planning-router-network.adoc
+// router-deployment-guidelines.adoc
 
-[id='router-network-security-considerations-{context}']
-= Router network security considerations
+[id='security-guidelines-{context}']
+= Security guidelines
 
 In the router network, the interior routers should be secured with a strong authentication mechanism in which they identify themselves to each other. You should choose and plan this authentication mechanism before creating the router network.
 

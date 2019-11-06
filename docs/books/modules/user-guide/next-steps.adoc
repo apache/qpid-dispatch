@@ -24,18 +24,13 @@ under the License
 [id='next-steps-{context}']
 = Next steps
 
-After you successfully install a standalone router and use it to distribute messages between two clients, you can configure a router network topology and route messages.
+After using {RouterName} to distribute messages between two clients, you can use the following sections to learn more about {RouterName} configuration, deployment, and management.
 
-Configure a router network topology::
-After configuring a single router, you can deploy additional routers and connect them together to form a router network. Router networks can be any arbitrary topology.
+xref:configuring-router-{context}[Configure non-default settings for the router]::
+{RouterName} ships with default settings that are suitable for many basic use cases. You can configure the router's essential properties, network connections, security settings, logging, and routing mechanisms.
 
-Route messages through the router network::
-Regardless of the underlying router network topology, you can configure how you want messages to be routed through the router network.
-+
---
-* Configure addresses to specify routing patterns for direct-routed (brokerless) messaging
-* Connect the router to a message broker to enable clients to exchange messages with a broker queue.
-* Create link routes to define private messaging paths between endpoints.
---
-+
-For more information, see xref:routing[].
+xref:creating-router-network-topology-{context}[Plan a {RouterName} deployment]::
+{RouterName} is typically deployed in router networks. You can design a router network of any arbitrary topology to interconnect the endpoints in your messaging network.
+
+xref:monitoring-managing-router-network[Monitor and manage {RouterName}]::
+You can use the web console and command-line management tools to monitor the status and performance of the routers in your router network.

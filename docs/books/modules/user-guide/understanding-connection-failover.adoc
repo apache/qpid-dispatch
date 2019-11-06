@@ -20,8 +20,8 @@ under the License
 // Module included in the following assemblies:
 // configuring-network-connections.adoc
 
-[id='connection-failover-{context}']
-= Connection failover
+[id='understanding-connection-failover-{context}']
+= Understanding connection failover
 
 If a connection between a router and a remote host fails, connection failover enables the connection to be reestablished automatically on an alternate URL.
 

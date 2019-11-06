@@ -24,10 +24,13 @@ under the License
 [id='getting-started-{context}']
 = Getting started
 
-This section shows you how to install {RouterName} on a single host, start the router with the default configuration settings, and distribute messages between two clients.
+This section shows you how to start the {RouterName} with the default configuration settings, and distribute messages between two clients.
 
-// Installing Dispatch Router
-include::../../modules/user-guide/installing-router.adoc[leveloffset=+1]
+.Prerequisites
+
+* {RouterName} must be installed.
++
+For more information, see xref:installing-router-{context}[].
 
 // Viewing the default router configuration file
 include::../../modules/user-guide/viewing-default-router-configuration-file.adoc[leveloffset=+1]

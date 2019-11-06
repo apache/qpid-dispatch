@@ -26,10 +26,10 @@ under the License
 
 You can use SSL/TLS and SASL to provide the appropriate level of security for client traffic into the router network. You can use the following methods to secure incoming connections to a router from AMQP clients, external containers, or edge routers:
 
-* xref:enabling-ssl-tls-encryption-{context}[Enabling SSL/TLS encryption]
-* xref:enabling-ssl-tls-client-authentication-{context}[Enabling SSL/TLS client authentication]
-* xref:enabling-username-password-authentication-{context}[Enabling user name and password authentication]
-* xref:integrating-with-kerberos-{context}[Integrating with Kerberos]
+* xref:enabling-ssl-tls-encryption-{context}[Enable SSL/TLS encryption]
+* xref:enabling-ssl-tls-client-authentication-{context}[Enable SSL/TLS client authentication]
+* xref:enabling-username-password-authentication-{context}[Enable user name and password authentication]
+* xref:integrating-with-kerberos-{context}[Integrate with Kerberos]
 
 // Enabling SSL/TLS encryption
 include::../../modules/user-guide/enabling-ssl-tls-encryption.adoc[leveloffset=+1]
