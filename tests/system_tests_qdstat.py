@@ -109,6 +109,7 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("Deliveries to Fallback" in outs)
         self.assertTrue("Egress Count" in outs)
         self.assertTrue("Ingress Count" in outs)
+        self.assertTrue("Uptime" in outs)
 
     def test_address_priority(self):
         out = self.run_qdstat(['--address'])
@@ -256,7 +257,24 @@ class QdstatTest(system_test.TestCase):
         self.assertEqual(sender_addresses, COUNT)
         self.assertEqual(receiver_addresses, COUNT)
 
+        # Test if there is a non-zero uptime for the router in the output of
+        # qdstat -g
+        non_zero_seconds = False
+        outs = self.run_qdstat(args=None)
+        parts = outs.split("\n")
+        for part in parts:
+            if "Uptime" in part:
+                uptime_parts = part.split(" ")
+                for uptime_part in uptime_parts:
+                    if uptime_part.startswith("000"):
+                        time_parts = uptime_part.split(":")
+                        if int(time_parts[3]) > 0:
+                            non_zero_seconds = True
+        self.assertTrue(non_zero_seconds)
+
         c.close()
+
+
 
 
 class QdstatLinkPriorityTest(system_test.TestCase):

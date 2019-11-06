@@ -502,6 +502,11 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_48_connection_uptime_last_dlv(self):
+        test = ConnectionUptimeLastDlvTest(self.address, "test_48")
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -2683,6 +2688,102 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+
+class UptimeLastDlvChecker(object):
+    def __init__(self, parent, lastDlv=None, uptime=0):
+        self.parent = parent
+        self.uptime = uptime
+        self.lastDlv = lastDlv
+        self.expected_num_connections = 2
+        self.num_connections = 0
+
+    def on_timer_task(self, event):
+        local_node = Node.connect(self.parent.address, timeout=TIMEOUT)
+        result = local_node.query('org.apache.qpid.dispatch.connection')
+        container_id_index = result.attribute_names.index('container')
+        uptime_seconds_index = result.attribute_names.index('uptimeSeconds')
+        last_dlv_seconds_index = result.attribute_names.index('lastDlvSeconds')
+
+        for res in result.results:
+            container_id = res[container_id_index]
+
+            # We only care if the container_id is "UPTIME-TEST"
+            if container_id == self.parent.container_id:
+                uptime_seconds = res[uptime_seconds_index]
+                if self.uptime != 0 and uptime_seconds < self.uptime:
+                    self.parent.error = "The connection uptime should be greater than or equal to %d seconds but instead is %d seconds" % (self.uptime, uptime_seconds)
+                last_dlv_seconds = res[last_dlv_seconds_index]
+                if self.lastDlv == '-':
+                    if last_dlv_seconds != self.lastDlv:
+                        self.parent.error = "Expected lastDlvSeconds to be empty"
+                else:
+                    if not last_dlv_seconds >= self.lastDlv:
+                        self.parent.error = "Connection lastDeliverySeconds must be greater than or equal to $d but is %d" % (self.lastDlv, last_dlv_seconds)
+                    else:
+                        self.parent.success = True
+                self.num_connections += 1
+
+        if self.expected_num_connections != self.num_connections:
+            self.parent.error = "Number of client connections expected=%d, but got %d" % (self.expected_num_connections, self.num_connections)
+
+        self.parent.cancel_custom()
+
+
+class ConnectionUptimeLastDlvTest(MessagingHandler):
+    def __init__(self, address, dest):
+        super(ConnectionUptimeLastDlvTest, self).__init__()
+        self.timer = None
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.address = address
+        self.sender = None
+        self.receiver = None
+        self.error = None
+        self.custom_timer = None
+        self.container_id = "UPTIME-TEST"
+        self.dest = dest
+        self.reactor = None
+        self.success = False
+
+    def cancel_custom(self):
+        self.custom_timer.cancel()
+        if self.error or self.success:
+            self.timer.cancel()
+            self.sender_conn.close()
+            self.receiver_conn.close()
+        else:
+            msg = Message(body=self.container_id)
+            self.sender.send(msg)
+
+            # We have now sent a message that the router must have sent to the
+            # receiver. We will wait for 2 seconds and once again check
+            # uptime and lastDlv
+            self.custom_timer = self.reactor.schedule(2, UptimeLastDlvChecker(self, uptime=7, lastDlv=2))
+
+    def timeout(self):
+        self.error = "Timeout Expired:, Test took too long to execute. "
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
+
+        # Let's create a sender and receiver but not send any messages.
+        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+
+        # Execute a management query for connections after 5 seconds
+        # This will help us check the uptime and lastDlv time
+        # No deliveries were sent on any link yet, so the lastDlv must be "-"
+        self.reactor = event.reactor
+        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv='-'))
+
+    def run(self):
+        container = Container(self)
+        container.container_id = self.container_id
+        container.run()
 
 class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
     def __init__(self, address):

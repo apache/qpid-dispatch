@@ -116,6 +116,10 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
 {
     qdr_delivery_t *out_dlv = new_qdr_delivery_t();
     uint64_t       *tag = (uint64_t*) out_dlv->tag;
+    if (link->conn) {
+        link->conn->is_delivery_sent = true;
+        link->conn->last_delivery_time = core->uptime_ticks;
+    }
 
     ZERO(out_dlv);
     set_safe_ptr_qdr_link_t(link, &out_dlv->link_sp);

@@ -54,6 +54,7 @@
 #define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   27
 #define QDR_ROUTER_DELIVERIES_REDIRECTED               28
 #define QDR_ROUTER_LINKS_BLOCKED                       29
+#define QDR_ROUTER_UPTIME_SECONDS                      30
 
 
 const char *qdr_router_columns[] =
@@ -87,6 +88,7 @@ const char *qdr_router_columns[] =
      "deliveriesEgressRouteContainer",
      "deliveriesRedirectedToFallback",
      "linksBlocked",
+     "uptimeSeconds",
      0};
 
 
@@ -231,6 +233,13 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_LINKS_BLOCKED:
         qd_compose_insert_uint(body, core->links_blocked);
+        break;
+
+    case QDR_ROUTER_UPTIME_SECONDS:
+        if (core->uptime_ticks== 0)
+            qd_compose_insert_uint(body, 0);
+        else
+            qd_compose_insert_uint(body, core->uptime_ticks);
         break;
 
     default:

@@ -609,7 +609,12 @@
                     "type": "integer",
                     "description": "Number of deliveries that were sent to the fallback destination due to the primary destination being unreachable.",
                     "graph": true
-                }
+                },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the router was started."
+                }                
             }
         },       
         "sslProfile": {
@@ -1772,10 +1777,20 @@
                     "description": "If multi-tenancy is on for this connection, the tenant space in effect",
                     "type": "string"
                 },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the connection was created."
+                },                                
                 "properties": {
                     "description": "Connection properties supplied by the peer.",
                     "type": "map"
-                }
+                },
+                "lastDlvSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since a delivery was sent on this connection. Will display a - (dash) if no deliveries have been sent on the connection."
+                }                
             }
         },
 

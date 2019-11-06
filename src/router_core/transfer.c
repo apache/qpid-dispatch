@@ -639,6 +639,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     if (!link)
         return;
+    if (link->conn) {
+        link->conn->is_delivery_sent = true;
+        link->conn->last_delivery_time = core->uptime_ticks;
+    }
 
     //
     // Record the ingress time so we can track the age of this delivery.

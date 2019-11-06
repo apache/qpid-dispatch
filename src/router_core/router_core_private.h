@@ -659,6 +659,9 @@ struct qdr_connection_t {
     qdr_conn_admin_status_t     admin_status;
     qdr_error_t                *error;
     bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
+    uint32_t                    conn_uptime; // The number of seconds that this connection has been up and running.
+    uint32_t                    last_delivery_time; // The number of seconds since the last delivery arrived on this connection.
+    bool                        is_delivery_sent;
 };
 
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);

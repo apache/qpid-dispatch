@@ -73,6 +73,13 @@ The authentication method and user ID of the connection's authenticated user.
 tenant::
 If the connection is to a listener using multi-tenancy, this column displays the tenant namespace for the connection.
 
+last dlv::
+Time since the last delivery showed up on this connection. Displayed in the days:hours:minutes:seconds format.
+
+uptime::
+Time this connection has been up. Displayed in the days:hours:minutes:seconds format.
+
+
 qdstat -l
 ~~~~~~~~~
 type::

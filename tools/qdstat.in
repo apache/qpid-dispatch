@@ -200,6 +200,28 @@ class BusManager(Node):
         if show_date_id:
             self.display_datetime_router_id()
 
+        has_uptime = False
+        has_last_dlv = False
+
+        if objects:
+            first_conn = objects[0]
+            try:
+                lastDlvSeconds = first_conn.lastDlvSeconds
+                has_last_dlv = True
+            except:
+                pass
+            try:
+                uptime = first_conn.uptimeSeconds
+                has_uptime = True
+            except:
+                pass
+
+        # This is so that, this qdstat can be used against older routers without Python keyerrors
+        if has_last_dlv:
+            heads.append(Header("last dlv"))
+        if has_uptime:
+            heads.append(Header("uptime"))
+
         for conn in objects:
             row = []
             row.append(conn.identity)
@@ -210,6 +232,13 @@ class BusManager(Node):
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
             row.append(self.noTrailingSlash(get(conn, 'tenant')))
+            if has_last_dlv:
+                if str(conn.lastDlvSeconds) == '-':
+                    row.append('-')
+                else:
+                    row.append(TimeLong(conn.lastDlvSeconds))
+            if has_uptime:
+                row.append(TimeLong(conn.uptimeSeconds))
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -291,6 +320,10 @@ class BusManager(Node):
         rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Router Id',     router.id))
+        try:
+            rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
+        except:
+            pass
         rows.append(('Area',          router.area))
         rows.append(('Link Routes',   router.linkRouteCount))
         rows.append(('Auto Links',    router.autoLinkCount))
