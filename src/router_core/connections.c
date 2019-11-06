@@ -106,6 +106,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->connection_info->role = conn->role;
     conn->work_lock = sys_mutex();
+    conn->conn_uptime = core->uptime_ticks;
 
     if (vhost) {
         conn->tenant_space_len = strlen(vhost) + 1;

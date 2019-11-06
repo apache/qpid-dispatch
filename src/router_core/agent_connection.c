@@ -43,6 +43,8 @@
 #define QDR_CONNECTION_ACTIVE           18
 #define QDR_CONNECTION_ADMIN_STATUS     19
 #define QDR_CONNECTION_OPER_STATUS      20
+#define QDR_CONNECTION_UPTIME_SECONDS   21
+#define QDR_CONNECTION_LAST_DLV_SECONDS 22
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
 const char * const QDR_CONNECTION_DIR_OUT = "out";
@@ -83,6 +85,9 @@ const char *qdr_connection_columns[] =
      "active",
      "adminStatus",
      "operStatus",
+     "uptimeSeconds",
+     "lastDlvSeconds",
+
      0};
 
 const char *CONNECTION_TYPE = "org.apache.qpid.dispatch.connection";
@@ -238,6 +243,17 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
     case QDR_CONNECTION_OPER_STATUS:
         text = conn->closed ? QDR_CONNECTION_OPER_STATUS_CLOSING : QDR_CONNECTION_OPER_STATUS_UP;
         qd_compose_insert_string(body, text);
+        break;
+
+    case QDR_CONNECTION_UPTIME_SECONDS:
+        qd_compose_insert_uint(body, core->uptime_ticks - conn->conn_uptime);
+        break;
+
+    case QDR_CONNECTION_LAST_DLV_SECONDS:
+        if (conn->last_delivery_time==0)
+            qd_compose_insert_null(body);
+        else
+            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_delivery_time);
         break;
 
     case QDR_CONNECTION_PROPERTIES: {
