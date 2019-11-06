@@ -36,6 +36,7 @@ import time
 import datetime
 import pdb
 import inspect
+import sys
 
 
 #================================================
@@ -437,17 +438,23 @@ class TopologyDispositionTests ( TestCase ):
 
     def test_04_scraper_tool ( self ):
         name = 'test_04'
-        error = None
+        error = str(None)
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
 
+        try:
+            import ast
+        except ImportError:
+            # scraper requires ast which is not installed by default on all platforms
+            self.skipTest ( "Python ast module is not available on this platform." )
+        
         scraper_path = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
 
         # aggregate all the log files
         files = []
         for letter in ['A', 'B', 'C', 'D']:
             files.append('../setUpClass/%s.log' % letter)
-        p = self.popen(['/usr/bin/env', 'python', scraper_path, '-f'] + files,
+        p = self.popen(['/usr/bin/env', 'python3', scraper_path, '-f'] + files,
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]
@@ -456,11 +463,14 @@ class TopologyDispositionTests ( TestCase ):
         except Exception as e:
             error = str(e)
 
-        self.assertEqual ( None, error )
+        if str(None) != error:
+            print("Error text: ", error)
+            sys.stdout.flush()
+        self.assertEqual ( str(None), error )
         self.assertTrue( '</body>' in out )
 
         # split A.log
-        p = self.popen(['/usr/bin/env', 'python', scraper_path, '--split', '-f', '../setUpClass/A.log'],
+        p = self.popen(['/usr/bin/env', 'python3', scraper_path, '--split', '-f', '../setUpClass/A.log'],
                        stdin=PIPE, stdout=PIPE, stderr=STDOUT,
                        universal_newlines=True)
         out = p.communicate(None)[0]
@@ -469,7 +479,10 @@ class TopologyDispositionTests ( TestCase ):
         except Exception as e:
             error = str(e)
 
-        self.assertEqual ( None, error )
+        if str(None) != error:
+            print("Error text: ", error)
+            sys.stdout.flush()
+        self.assertEqual ( str(None), error )
         self.assertTrue( '</body>' in out )
 
 
