@@ -784,13 +784,16 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.sender_conn = event.container.connect(self.sender_addr)
 
-        # Note that there are no receivers. All messages sent to this address will be dropped
-        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        # Note that this is an anonymous link which will be granted credit w/o
+        # blocking for consumers.  Therefore all messages sent to this address
+        # will be dropped
+        self.sender = event.container.create_sender(self.sender_conn)
 
     def on_sendable(self, event):
         # We are sending a total of 20 deliveries. 10 unsettled and 10 pre-settled to a multicast address
         if self.n_sent < self.num_messages:
             msg = Message(body={'number': self.n_sent})
+            msg.address = self.dest
             dlv = self.sender.send(msg)
             if self.n_sent < 10:
                 dlv.settle()

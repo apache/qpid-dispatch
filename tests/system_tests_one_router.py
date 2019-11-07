@@ -306,11 +306,6 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_26_multicast_no_receiver(self):
-        test = MulticastUnsettledNoReceiverTest(self.address)
-        test.run()
-        self.assertEqual(None, test.error)
-
     def test_27_released_vs_modified(self):
         test = ReleasedVsModifiedTest(self.address)
         test.run()
@@ -2611,84 +2606,6 @@ class MultiframePresettledTest(MessagingHandler):
         Container(self).run()
 
 
-class MulticastUnsettledNoReceiverTest(MessagingHandler):
-    """
-    Creates a sender to a multicast address. Router provides a credit of 'linkCapacity' to this sender even
-    if there are no receivers (The sender should be able to send messages to multicast addresses even when no receiver
-    is connected). The router will send a disposition of released back to the sender and will end up dropping
-    these messages since there is no receiver.
-    """
-    def __init__(self, address):
-        super(MulticastUnsettledNoReceiverTest, self).__init__()
-        self.address = address
-        self.dest = "multicast.MulticastNoReceiverTest"
-        self.error = None
-        self.n_sent = 0
-        self.max_send = 250
-        self.n_released = 0
-        self.n_accepted = 0
-        self.timer = None
-        self.conn = None
-        self.sender = None
-        self.query_sent = False
-
-    def timeout(self):
-        self.error = "Timeout expired: n_sent=%d n_released=%d n_accepted=%d" % \
-                     (self.n_sent, self.n_released, self.n_accepted)
-        self.conn.close()
-
-    def check_if_done(self):
-        if self.n_accepted > 0:
-            self.error = "Messages should not be accepted as there are no receivers"
-            self.timer.cancel()
-            self.conn.close()
-        elif self.max_send == self.n_released and not self.query_sent:
-            self.mgmt_tx.send(self.proxy.query_links())
-            self.query_sent = True
-
-    def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn = event.container.connect(self.address)
-        self.mgmt_rx = event.container.create_receiver(self.conn, dynamic=True)
-        self.mgmt_tx = event.container.create_sender(self.conn, '$management')
-
-    def on_link_opened(self, event):
-        if event.receiver == self.mgmt_rx:
-            self.proxy  = RouterProxy(self.mgmt_rx.remote_source.address)
-            self.sender = event.container.create_sender(self.conn, self.dest)
-
-    def on_message(self, event):
-        if event.receiver == self.mgmt_rx:
-            results = self.proxy.response(event.message)
-            for link in results:
-                if link.linkDir == 'in' and link.owningAddr == 'M0' + self.dest:
-                    if link.releasedCount != self.max_send:
-                        self.error = "Released count expected %d, got %d" % (self.max_send, link.droppedPresettledCount)
-            self.timer.cancel()
-            self.conn.close()
-
-    def on_sendable(self, event):
-        if event.sender == self.sender:
-            if self.n_sent >= self.max_send:
-                return
-            self.n_sent += 1
-            msg = Message(body=self.n_sent)
-            event.sender.send(msg)
-
-    def on_accepted(self, event):
-        if event.sender == self.sender:
-            self.n_accepted += 1
-        self.check_if_done()
-
-    def on_released(self, event):
-        if event.sender == self.sender:
-            self.n_released += 1
-        self.check_if_done()
-
-    def run(self):
-        Container(self).run()
-
-
 class UptimeLastDlvChecker(object):
     def __init__(self, parent, lastDlv=None, uptime=0):
         self.parent = parent
@@ -2783,6 +2700,7 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         container = Container(self)
         container.container_id = self.container_id
         container.run()
+
 
 class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
     def __init__(self, address):

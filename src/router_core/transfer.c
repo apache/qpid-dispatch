@@ -453,10 +453,9 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         // Credit update: since this is a targeted link to an address for which
         // there is no consumers then do not replenish credit - drain instead.
-        // However edge and multicast are special snowflakes.  We cannot block
-        // credit on either (see DISPATCH-779 - mcast is effectively a topic)
+        // However edge is a special snowflake which always has credit available.
         //
-        if (link->edge || qdr_is_addr_treatment_multicast(addr)) {
+        if (link->edge) {
             qdr_link_issue_credit_CT(core, link, 1, false);
         } else {
             qdr_link_issue_credit_CT(core, link, 0, true);  // drain
@@ -573,6 +572,11 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         if (!dlv->settled)
             qdr_delivery_release_CT(core, dlv);
+        else {
+            link->dropped_presettled_deliveries++;
+            if (dlv_link->link_type == QD_LINK_ENDPOINT)
+                core->dropped_presettled_deliveries++;
+        }
 
         //
         // Decrementing the delivery ref count for the action
