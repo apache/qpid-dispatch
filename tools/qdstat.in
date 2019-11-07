@@ -233,7 +233,7 @@ class BusManager(Node):
             row.append(self.connAuth(conn))
             row.append(self.noTrailingSlash(get(conn, 'tenant')))
             if has_last_dlv:
-                if str(conn.lastDlvSeconds) == '-':
+                if conn.lastDlvSeconds is None:
                     row.append('-')
                 else:
                     row.append(TimeLong(conn.lastDlvSeconds))

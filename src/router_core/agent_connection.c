@@ -250,10 +250,10 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
         break;
 
     case QDR_CONNECTION_LAST_DLV_SECONDS:
-        if (conn->is_delivery_sent)
-            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_delivery_time);
+        if (conn->last_delivery_time==0)
+            qd_compose_insert_null(body);
         else
-            qd_compose_insert_string(body, "-");
+            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_delivery_time);
         break;
 
     case QDR_CONNECTION_PROPERTIES: {

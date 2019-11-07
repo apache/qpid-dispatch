@@ -2778,7 +2778,7 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         # This will help us check the uptime and lastDlv time
         # No deliveries were sent on any link yet, so the lastDlv must be "-"
         self.reactor = event.reactor
-        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv='-'))
+        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv=None))
 
     def run(self):
         container = Container(self)
