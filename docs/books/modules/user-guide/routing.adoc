@@ -116,6 +116,14 @@ This involves configuring an address with a routing pattern. All messages sent t
 +
 This involves configuring a waypoint address to identify the broker queue and then connecting the router to the broker. All messages sent to the waypoint address will be routed to the broker queue.
 
+=== Message Routing Flow Control
+
+{RouterName} uses a _credit-based_ flow control mechanism to ensure that producers can only send messages to a router if at least one consumer is available to receive them. Because {RouterName} does not store messages, this credit-based flow control prevents producers from sending messages when there are no consumers present.
+
+A client wishing to send a message to the router must wait until the router has provided it with credit. Attempting to publish a message without credit available will cause the client to block. Once credit is made available, the client will unblock, and the message will be sent to the router.
+
+NOTE: Most AMQP client libraries enable you to determine the amount of credit available to a producer. For more information, consult your client's documentation.
+
 === Addresses
 
 Addresses determine how messages flow through your router network. An address designates an endpoint in your messaging network, such as:
