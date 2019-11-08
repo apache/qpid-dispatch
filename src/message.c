@@ -928,6 +928,8 @@ qd_message_t *qd_message()
     if (!msg)
         return 0;
 
+    ZERO (msg);
+
     msg->cursor.buffer = 0;
     msg->cursor.cursor = 0;
     msg->sent_depth    = QD_DEPTH_NONE;
@@ -938,6 +940,8 @@ qd_message_t *qd_message()
     msg->send_complete = false;
     msg->tag_sent      = false;
     msg->is_fanout     = false;
+    msg->strip_annotations_in = false;
+
 
     msg->content = new_qd_message_content_t();
 
