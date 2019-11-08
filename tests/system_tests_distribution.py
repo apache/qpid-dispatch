@@ -608,7 +608,7 @@ class DistributionTests ( TestCase ):
                              self.B_addr,
                              self.C_addr,
                              "addr_09",
-                             print_debug=True
+                             print_debug=False
                            )
         test.run()
         self.assertEqual ( None, test.error )
