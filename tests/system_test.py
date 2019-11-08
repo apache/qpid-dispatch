@@ -399,7 +399,8 @@ class Qdrouterd(Process):
         if not name: name = self.config.router_id
         assert name
         # setup log and debug dump files
-        self.config.sections('router')[0]['debugDumpFile'] = '%s-qddebug.txt' % name
+        self.dumpfile = os.path.abspath('%s-qddebug.txt' % name)
+        self.config.sections('router')[0]['debugDumpFile'] = self.dumpfile
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
             config.append(
@@ -434,6 +435,20 @@ class Qdrouterd(Process):
             return
 
         super(Qdrouterd, self).teardown()
+
+        # check router's debug dump file for anything interesting (should be
+        # empty) and dump it to stderr for perusal by organic lifeforms
+        try:
+            if os.stat(self.dumpfile).st_size > 0:
+                with open(self.dumpfile) as f:
+                    sys.stderr.write("\nRouter %s debug dump file:\n" % self.config.router_id)
+                    sys.stderr.write(f.read())
+                    sys.stderr.flush()
+        except OSError:
+            # failed to open file.  This can happen when an individual test
+            # spawns a temporary router (i.e. not created as part of the
+            # TestCase setUpClass method) that gets cleaned up by the test.
+            pass
 
     @property
     def ports_family(self):
