@@ -930,19 +930,6 @@ qd_message_t *qd_message()
 
     ZERO (msg);
 
-    msg->cursor.buffer = 0;
-    msg->cursor.cursor = 0;
-    msg->sent_depth    = QD_DEPTH_NONE;
-    DEQ_INIT(msg->ma_to_override);
-    DEQ_INIT(msg->ma_trace);
-    DEQ_INIT(msg->ma_ingress);
-    msg->ma_phase      = 0;
-    msg->send_complete = false;
-    msg->tag_sent      = false;
-    msg->is_fanout     = false;
-    msg->strip_annotations_in = false;
-
-
     msg->content = new_qd_message_content_t();
 
     if (msg->content == 0) {
