@@ -2703,7 +2703,6 @@ class UptimeLastDlvChecker(object):
         container_id_index = result.attribute_names.index('container')
         uptime_seconds_index = result.attribute_names.index('uptimeSeconds')
         last_dlv_seconds_index = result.attribute_names.index('lastDlvSeconds')
-
         for res in result.results:
             container_id = res[container_id_index]
 
@@ -2713,8 +2712,8 @@ class UptimeLastDlvChecker(object):
                 if self.uptime != 0 and uptime_seconds < self.uptime:
                     self.parent.error = "The connection uptime should be greater than or equal to %d seconds but instead is %d seconds" % (self.uptime, uptime_seconds)
                 last_dlv_seconds = res[last_dlv_seconds_index]
-                if self.lastDlv == '-':
-                    if last_dlv_seconds != self.lastDlv:
+                if self.lastDlv is None:
+                    if last_dlv_seconds is not None:
                         self.parent.error = "Expected lastDlvSeconds to be empty"
                 else:
                     if not last_dlv_seconds >= self.lastDlv:
