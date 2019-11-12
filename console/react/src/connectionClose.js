@@ -57,7 +57,7 @@ class ConnectionClose extends React.Component {
               "action",
               `Close connection ${record.name} failed with message: ${results.context.message.application_properties.statusDescription}`,
               new Date(),
-              "error"
+              "danger"
             );
           } else {
             this.props.handleAddNotification(
@@ -85,7 +85,10 @@ class ConnectionClose extends React.Component {
     if (record.role === "normal") {
       return (
         <React.Fragment>
-          <Button className="link-button" onClick={this.handleModalToggle}>
+          <Button
+            className={`${this.props.asButton ? "" : "link-button"}`}
+            onClick={this.handleModalToggle}
+          >
             Close
           </Button>
           <Modal

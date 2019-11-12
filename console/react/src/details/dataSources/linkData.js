@@ -47,7 +47,13 @@ const LinkType = ({ value, extraInfo }) => {
 class LinkData extends DefaultData {
   constructor(service, schema) {
     super(service, schema);
-    this.service = service;
+
+    this.updateMetaData = {
+      peer: { readOnly: true },
+      linkName: { readOnly: true },
+      owningAddr: { readOnly: true }
+    };
+
     this.extraFields = [{ title: "Dir", field: "linkDir", formatter: LinkDir }];
     this.detailEntity = "router.link";
     this.detailName = "Link";

@@ -19,8 +19,10 @@ under the License.
 
 import AddressData from "./dataSources/addressData";
 import LinkData from "./dataSources/linkData";
+import AutoLinkData from "./dataSources/autoLink";
 import ListenerData from "./dataSources/listenerData";
 import ConnectionData from "./dataSources/connectionData";
+import LogsData from "./dataSources/logsData";
 
 import DefaultData from "./dataSources/defaultData";
 
@@ -28,7 +30,9 @@ const dataMap = {
   "router.address": AddressData,
   "router.link": LinkData,
   listener: ListenerData,
-  connection: ConnectionData
+  connection: ConnectionData,
+  log: LogsData,
+  autoLink: AutoLinkData
 };
 
 const defaultData = DefaultData;

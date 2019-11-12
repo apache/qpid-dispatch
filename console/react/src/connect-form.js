@@ -24,7 +24,7 @@ import {
   Text,
   TextVariants
 } from "@patternfly/react-core";
-
+import PleaseWait from "./pleaseWait";
 const CONNECT_KEY = "QDRSettings";
 
 class ConnectForm extends React.Component {
@@ -36,7 +36,9 @@ class ConnectForm extends React.Component {
       port: "",
       username: "",
       password: "",
-      isShown: this.props.isConnectFormOpen
+      isShown: this.props.isConnectFormOpen,
+      connecting: false,
+      connectError: null
     };
   }
 
@@ -70,7 +72,28 @@ class ConnectForm extends React.Component {
   };
 
   handleConnect = () => {
-    this.props.handleConnect(this.props.fromPath, this.state);
+    if (this.props.isConnected) {
+      // handle disconnects from the main page
+      this.props.handleConnect(this.props.fromPath);
+    } else {
+      const connectOptions = JSON.parse(JSON.stringify(this.state));
+      if (connectOptions.username === "") connectOptions.username = undefined;
+      if (connectOptions.password === "") connectOptions.password = undefined;
+      connectOptions.reconnect = true;
+
+      this.setState({ connecting: true }, () => {
+        this.props.service.connect(connectOptions).then(
+          r => {
+            this.setState({ connecting: false });
+            this.props.handleConnect(this.props.fromPath, r);
+          },
+          e => {
+            console.log(e);
+            this.setState({ connecting: false, connectError: e.msg });
+          }
+        );
+      });
+    }
   };
 
   toggleDrawerHide = () => {
@@ -78,12 +101,19 @@ class ConnectForm extends React.Component {
   };
 
   render() {
-    const { isShown, address, port, username, password } = this.state;
+    const {
+      isShown,
+      address,
+      port,
+      username,
+      password,
+      connecting
+    } = this.state;
 
     return isShown ? (
       <div>
         <div className="connect-modal">
-          <div className="">
+          <div className={connecting ? "connecting" : ""}>
             <Form isHorizontal>
               <TextContent className="connect-title">
                 <Text component={TextVariants.h1}>Connect</Text>
@@ -161,6 +191,11 @@ class ConnectForm extends React.Component {
               </ActionGroup>
             </Form>
           </div>
+          <PleaseWait
+            isOpen={connecting}
+            title="Connecting"
+            message="Connecting to the router, please wait..."
+          />
         </div>
       </div>
     ) : null;

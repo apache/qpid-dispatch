@@ -98,7 +98,10 @@ class DashboardPage extends React.Component {
                 <ActiveAddressesCard service={this.props.service} />
               </SplitItem>
               <SplitItem className="fill-card">
-                <DelayedDeliveriesCard service={this.props.service} />
+                <DelayedDeliveriesCard
+                  {...this.props}
+                  service={this.props.service}
+                />
               </SplitItem>
             </Split>
           </StackItem>

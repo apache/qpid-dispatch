@@ -17,34 +17,16 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import React from "react";
 import DefaultData from "./defaultData";
-import ConnectionClose from "../../connectionClose";
 
-class ConnectionData extends DefaultData {
+class AutoLinkData extends DefaultData {
   constructor(service, schema) {
     super(service, schema);
-    this.extraFields = [
-      {
-        title: "",
-        field: "connection",
-        noSort: true,
-        formatter: ConnectionClose
-      }
-    ];
-    this.detailEntity = "router.link";
-    this.detailName = "Link";
-  }
 
-  detailActions = (entity, props, record) => {
-    return (
-      <ConnectionClose
-        asButton={true}
-        extraInfo={{ rowData: { data: record } }}
-        {...props}
-      />
-    );
-  };
+    this.updateMetaData = {
+      operStatus: { readOnly: true }
+    };
+  }
 }
 
-export default ConnectionData;
+export default AutoLinkData;

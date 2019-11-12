@@ -17,8 +17,6 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import config from "./config.json";
-/* globals Promise */
 export var QDRFolder = (function() {
   function Folder(title) {
     this.title = title;
@@ -55,14 +53,6 @@ export class QDRLogger {
 export const QDRTemplatePath = "html/";
 export const QDR_LAST_LOCATION = "QDRLastLocation";
 export const QDR_INTERVAL = "QDRInterval";
-
-export var getConfigVars = () =>
-  new Promise(resolve => {
-    const s = {};
-    s.QDR_CONSOLE_TITLE = config.title;
-    document.title = s.QDR_CONSOLE_TITLE;
-    resolve(s);
-  });
 
 export const safePlural = (count, str) => {
   if (count === 1) return str;

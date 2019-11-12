@@ -18,33 +18,23 @@ under the License.
 */
 
 import React from "react";
-import DefaultData from "./defaultData";
-import ConnectionClose from "../../connectionClose";
+import { Button } from "@patternfly/react-core";
 
-class ConnectionData extends DefaultData {
-  constructor(service, schema) {
-    super(service, schema);
-    this.extraFields = [
-      {
-        title: "",
-        field: "connection",
-        noSort: true,
-        formatter: ConnectionClose
-      }
-    ];
-    this.detailEntity = "router.link";
-    this.detailName = "Link";
+class UpdateEntity extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
   }
 
-  detailActions = (entity, props, record) => {
-    return (
-      <ConnectionClose
-        asButton={true}
-        extraInfo={{ rowData: { data: record } }}
-        {...props}
-      />
-    );
+  handleClick = () => {
+    this.props.handleEntityAction("update", this.props.record);
   };
+
+  render() {
+    console.log("rendering update button");
+    console.log(this.props);
+    return <Button onClick={this.handleClick}>Update</Button>;
+  }
 }
 
-export default ConnectionData;
+export default UpdateEntity;

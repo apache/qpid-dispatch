@@ -55,6 +55,7 @@ import DetailsTablePage from "./detailsTablePage";
 import EntitiesPage from "./details/enitiesPage";
 import TopologyPage from "./topology/topologyPage";
 import MessageFlowPage from "./chord/chordPage";
+import SchemaPage from "./details/schema/schemaPage";
 import LogDetails from "./overview/logDetails";
 import { QDRService } from "./qdrService";
 import ConnectForm from "./connect-form";
@@ -125,7 +126,7 @@ class PageLayout extends React.Component {
     this.isDropdownOpen = false;
   };
 
-  handleConnect = (connectPath, connectInfo) => {
+  handleConnect = (connectPath, result) => {
     if (this.state.connected) {
       this.setState({ connectPath: "", connected: false }, () => {
         this.handleConnectCancel();
@@ -138,38 +139,31 @@ class PageLayout extends React.Component {
         );
       });
     } else {
-      const connectOptions = JSON.parse(JSON.stringify(connectInfo));
-      if (connectOptions.username === "") connectOptions.username = undefined;
-      if (connectOptions.password === "") connectOptions.password = undefined;
-      connectOptions.reconnect = true;
-
-      this.service.connect(connectOptions).then(
-        r => {
-          this.schema = this.service.schema;
-          if (connectPath === "/") connectPath = "/dashboard";
-          const activeItem = connectPath.split("/").pop();
-          // find the active group for this item
-          let activeGroup = "overview";
-          for (const group in this.nav) {
-            if (this.nav[group].some(item => item.name === activeItem)) {
-              activeGroup = group;
-              break;
-            }
-          }
-          this.handleConnectCancel();
-          this.handleAddNotification("event", "Connected", new Date(), "info");
-
-          this.setState({
-            activeItem,
-            activeGroup,
-            connected: true,
-            connectPath
-          });
-        },
-        e => {
-          console.log(e);
+      this.schema = this.service.schema;
+      if (connectPath === "/") connectPath = "/dashboard";
+      const activeItem = connectPath.split("/").pop();
+      // find the active group for this item
+      let activeGroup = "overview";
+      for (const group in this.nav) {
+        if (this.nav[group].some(item => item.name === activeItem)) {
+          activeGroup = group;
+          break;
         }
+      }
+      this.handleConnectCancel();
+      this.handleAddNotification(
+        "event",
+        `Console connected to router`,
+        new Date(),
+        "success"
       );
+
+      this.setState({
+        activeItem,
+        activeGroup,
+        connected: true,
+        connectPath
+      });
     }
   };
 
@@ -318,7 +312,7 @@ class PageLayout extends React.Component {
     const Header = (
       <PageHeader
         className="topology-header"
-        logo={<span className="logo-text">Apache Qpid Dispatch Console</span>}
+        logo={<span className="logo-text">{this.props.config.title}</span>}
         toolbar={PageToolbar}
         avatar={<Avatar src={avatarImg} alt="Avatar image" />}
         showNavToggle
@@ -384,6 +378,7 @@ class PageLayout extends React.Component {
       return (
         <ConnectForm
           ref={el => (this.connectFormRef = el)}
+          service={this.service}
           isConnectFormOpen={this.isConnectFormOpen}
           fromPath={"/"}
           handleConnect={this.handleConnect}
@@ -420,10 +415,20 @@ class PageLayout extends React.Component {
             <PrivateRoute path="/flow" component={MessageFlowPage} />
             <PrivateRoute path="/logs" component={LogDetails} />
             <PrivateRoute path="/entities" component={EntitiesPage} />
+            <PrivateRoute
+              path="/schema"
+              schema={this.schema}
+              component={SchemaPage}
+            />
             <Route
               path="/login"
               render={props => (
-                <ConnectPage {...props} handleConnect={this.handleConnect} />
+                <ConnectPage
+                  {...props}
+                  service={this.service}
+                  config={this.props.config}
+                  handleConnect={this.handleConnect}
+                />
               )}
             />
           </Switch>
@@ -434,23 +439,3 @@ class PageLayout extends React.Component {
 }
 
 export default PageLayout;
-
-/*          <ToolbarItem>
-            <ConnectForm prefix="toolbar" handleConnect={this.handleConnect} />
-          </ToolbarItem>
-
-
-
-            <Dropdown
-              isPlain
-              position="right"
-              onSelect={this.onDropdownSelect}
-              isOpen={isDropdownOpen}
-              toggle={
-                <DropdownToggle onToggle={this.onDropdownToggle}>
-                  anonymous
-                </DropdownToggle>
-              }
-              dropdownItems={userDropdownItems}
-            />
-          */

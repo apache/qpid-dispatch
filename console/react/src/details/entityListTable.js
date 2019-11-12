@@ -57,7 +57,8 @@ class EntityListTable extends React.Component {
       rows: [],
       redirect: false,
       redirectState: {},
-      hasChecked: false
+      action: null,
+      data: null
     };
     this.initDataSource();
     this.columns = [];
@@ -96,6 +97,9 @@ class EntityListTable extends React.Component {
     }
     if (this.dataSource.extraFields) {
       this.dataSource.fields.push(...this.dataSource.extraFields);
+    }
+    if (this.dataSource.actionColumn) {
+      this.dataSource.fields.push(this.dataSource.actionColumn);
     }
   };
 
@@ -164,6 +168,9 @@ class EntityListTable extends React.Component {
   };
 
   detailLink = (value, extraInfo) => {
+    if (value === null) {
+      value = `${this.props.entity}/${extraInfo.rowData.data.identity}`;
+    }
     return (
       <Button
         className="link-button"
@@ -327,10 +334,8 @@ class EntityListTable extends React.Component {
       rows = [...this.state.rows];
       rows[rowId].selected = isSelected;
     }
-    const hasChecked = this.state.rows.some(row => row.selected);
     this.setState({
-      rows,
-      hasChecked
+      rows
     });
   };
 
@@ -351,21 +356,57 @@ class EntityListTable extends React.Component {
     );
   };
 
-  handleAction = action => {};
+  // an action was clicked on a row's kebab menu
+  handleAction = ({ action, rowData }) => {
+    console.log(`handleActions ${action}`);
+    console.log(rowData);
+
+    if (action === "UPDATE") {
+      this.props.handleEntityAction(action, rowData.data);
+    } else {
+      this.setState({ action, data: rowData.data });
+    }
+  };
+
+  cancelledAction = () => {
+    this.setState({ action: null });
+  };
+
+  // show the confirmation modal for an action
+  doAction = () => {
+    const props = {
+      showNow: true,
+      cancelledAction: this.cancelledAction,
+      ...this.props
+    };
+    return this.dataSource.actionButton({
+      action: this.state.action,
+      props: props,
+      click: this.didAction,
+      record: this.state.data,
+      i: 0,
+      asButton: false
+    });
+  };
+
+  // called by action modal after action is performed or cancelled
+  didAction = () => {
+    this.setState({ action: null, data: null }, this.update);
+  };
 
   render() {
     const tableProps = {
       cells: this.columns,
       rows: this.state.rows,
+      actions: this.dataSource.actionMenuItems(
+        this.props.entity,
+        this.handleAction
+      ),
       "aria-label": this.props.entity,
       sortBy: this.state.sortBy,
       onSort: this.onSort,
       variant: TableVariant.compact
     };
-    if (this.dataSource.actions(this.props.entity).includes("DELETE")) {
-      tableProps.onSelect = this.onSelect;
-      tableProps.canSelectAll = true;
-    }
 
     if (this.state.redirect) {
       return (
@@ -377,6 +418,25 @@ class EntityListTable extends React.Component {
         />
       );
     }
+
+    // map of actions to buttons for the table toolbar
+    const actionButtons = () => {
+      // don't show UPDATE or DELETE for the entire list of records
+      const actions = this.dataSource
+        .actions(this.props.entity)
+        .filter(action => action !== "UPDATE" && action !== "DELETE");
+      const buttons = {};
+      actions.forEach((action, i) => {
+        buttons[action] = this.dataSource.actionButton({
+          action,
+          props: this.props,
+          click: this.handleAction,
+          i,
+          asButton: true
+        });
+      });
+      return buttons;
+    };
 
     return (
       <React.Fragment>
@@ -391,15 +451,14 @@ class EntityListTable extends React.Component {
           filterBy={this.state.filterBy}
           handleChangeFilterValue={this.handleChangeFilterValue}
           hidePagination={true}
-          actions={this.dataSource.actions(this.props.entity)}
-          hasChecked={this.state.hasChecked}
-          handleAction={this.handleAction}
+          actionButtons={actionButtons()}
         />
         <Table {...tableProps}>
           <TableHeader />
           <TableBody />
         </Table>
         {this.renderPagination("bottom")}
+        {this.state.action && this.doAction()}
       </React.Fragment>
     );
   }

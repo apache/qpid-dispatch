@@ -47,6 +47,7 @@ class ConnectPage extends React.Component {
           {showForm ? (
             <ConnectForm
               prefix="form"
+              service={this.props.service}
               handleConnect={this.props.handleConnect}
               handleConnectCancel={this.handleConnectCancel}
               fromPath={from.pathname}
@@ -58,7 +59,7 @@ class ConnectPage extends React.Component {
           <div className="left-content">
             <TextContent>
               <Text component="h1" className="console-banner">
-                Apache Qpid Dispatch Console
+                {this.props.config.title}
               </Text>
             </TextContent>
             <TextContent>

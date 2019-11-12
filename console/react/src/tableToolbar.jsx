@@ -19,7 +19,6 @@ under the License.
 
 import React from "react";
 import {
-  Button,
   Dropdown,
   DropdownPosition,
   DropdownToggle,
@@ -116,28 +115,13 @@ class TableToolbar extends React.Component {
   };
 
   render() {
-    const actions =
-      this.props.actions &&
-      this.props.actions.map(action => {
-        let variant = "primary";
-        let isDisabled = false;
-        if (action === "DELETE" && !this.props.hasChecked) {
-          variant = "tertiary";
-          isDisabled = true;
-        }
-        return (
-          <ToolbarItem className="pf-u-mx-md" key={action}>
-            <Button
-              aria-label={action}
-              onClick={() => this.props.handleAction(action)}
-              variant={variant}
-              isDisabled={isDisabled}
-            >
-              {action}
-            </Button>
-          </ToolbarItem>
-        );
-      });
+    const actionsButtons =
+      this.props.actionButtons &&
+      Object.keys(this.props.actionButtons).map(action => (
+        <ToolbarItem className="pf-u-mx-md" key={`toolbar-item-${action}`}>
+          {this.props.actionButtons[action]}
+        </ToolbarItem>
+      ));
 
     return (
       <Toolbar className="pf-l-toolbar pf-u-mx-xl pf-u-my-md table-toolbar">
@@ -149,7 +133,9 @@ class TableToolbar extends React.Component {
             {this.buildSearchBox()}
           </ToolbarItem>
         </ToolbarGroup>
-        {this.props.actions && <ToolbarGroup>{actions}</ToolbarGroup>}
+        {this.props.actionButtons && (
+          <ToolbarGroup>{actionsButtons}</ToolbarGroup>
+        )}
         {!this.props.hidePagination && (
           <ToolbarGroup className="toolbar-pagination">
             <ToolbarItem>

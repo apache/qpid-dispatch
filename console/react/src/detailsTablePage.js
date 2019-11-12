@@ -80,13 +80,11 @@ class DetailTablesPage extends React.Component {
               this.props.service,
               this.props.schema
             );
-        this.locationState = this.props.locationState;
       } else {
         this.dataSource = new dataMap[this.entity](
           this.props.service,
           this.props.schema
         );
-        this.locationState = this.props.location.state;
       }
     }
   }
@@ -100,6 +98,12 @@ class DetailTablesPage extends React.Component {
     if (this.timer) {
       clearInterval(this.timer);
     }
+  };
+
+  locationState = () => {
+    return this.props.details
+      ? this.props.locationState
+      : this.props.location.state;
   };
 
   update = () => {
@@ -130,7 +134,7 @@ class DetailTablesPage extends React.Component {
       }
       this.dataSource
         .fetchRecord(
-          this.locationState.currentRecord,
+          this.locationState().currentRecord,
           this.props.schema,
           this.entity
         )
@@ -152,8 +156,7 @@ class DetailTablesPage extends React.Component {
 
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  parentItem = () =>
-    this.locationState.currentRecord[this.locationState.property];
+  parentItem = () => this.locationState().currentRecord.name;
 
   breadcrumbSelected = () => {
     if (this.props.details) {
@@ -162,9 +165,13 @@ class DetailTablesPage extends React.Component {
       this.setState({
         redirect: true,
         redirectPath: `/overview/${this.entity}`,
-        redirectState: this.locationState
+        redirectState: this.locationState()
       });
     }
+  };
+
+  handleActionClicked = (action, record) => {
+    this.props.handleEntityAction(action, record);
   };
 
   render() {
@@ -178,6 +185,18 @@ class DetailTablesPage extends React.Component {
         />
       );
     }
+
+    const actionsButtons = () => {
+      console.log("generating actionButtons for detailsTablePage");
+      console.log(this.locationState().currentRecord);
+      return this.dataSource.detailActions(
+        this.entity,
+        this.props,
+        this.locationState().currentRecord,
+        event =>
+          this.handleActionClicked(event, this.locationState().currentRecord)
+      );
+    };
 
     return (
       <React.Fragment>
@@ -196,7 +215,7 @@ class DetailTablesPage extends React.Component {
                 </BreadcrumbItem>
               </Breadcrumb>
 
-              <TextContent>
+              <TextContent className="details-table-header">
                 <Text className="overview-title" component={TextVariants.h1}>
                   {this.parentItem()}
                 </Text>
@@ -206,6 +225,7 @@ class DetailTablesPage extends React.Component {
                     lastUpdated={this.state.lastUpdated}
                   />
                 )}
+                {this.props.details && actionsButtons()}
               </TextContent>
             </StackItem>
             <StackItem className="overview-table">

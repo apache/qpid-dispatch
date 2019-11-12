@@ -6,55 +6,25 @@ class ContextMenuComponent extends React.Component {
     this.state = {};
   }
 
-  componentDidMount = () => {
-    this.registerHandlers();
-  };
+  componentDidMount() {
+    document.addEventListener("mousedown", this.handleClickOutside);
+  }
 
-  componentWillUnmount = () => {
-    this.unregisterHandlers();
-  };
+  componentWillUnmount() {
+    document.removeEventListener("mousedown", this.handleClickOutside);
+  }
 
-  registerHandlers = () => {
-    document.addEventListener("mousedown", this.handleOutsideClick);
-    document.addEventListener("touchstart", this.handleOutsideClick);
-    document.addEventListener("scroll", this.handleHide);
-    document.addEventListener("contextmenu", this.handleContextMenuEvent);
-    window.addEventListener("resize", this.handleHide);
-  };
-
-  unregisterHandlers = () => {
-    document.removeEventListener("mousedown", this.handleOutsideClick);
-    document.removeEventListener("touchstart", this.handleOutsideClick);
-    document.removeEventListener("scroll", this.handleHide);
-    document.removeEventListener("contextmenu", this.handleContextMenuEvent);
-    window.removeEventListener("resize", this.handleHide);
-  };
-
-  handleHide = e => {
-    this.unregisterHandlers();
+  handleClickOutside = event => {
+    if (this.listRef && this.listRef.contains(event.target)) {
+      return;
+    }
     this.props.handleContextHide();
-  };
-
-  handleContextMenuEvent = e => {
-    // if the event happened to an svg circle, don't hide the context menu
-    if (!e.target || e.target.nodeName !== "circle") {
-      this.handleHide(e);
-    }
-  };
-
-  handleOutsideClick = e => {
-    if (
-      e.target.nodeName !== "LI" &&
-      !e.target.className.includes(this.props.parentClass)
-    ) {
-      this.handleHide(e);
-    }
   };
 
   proxyClick = (item, e) => {
     if (item.action && item.enabled(this.props.contextEventData)) {
       item.action(item, this.props.contextEventData, e);
-      this.handleHide(e);
+      this.props.handleContextHide();
     }
   };
 
@@ -90,6 +60,7 @@ class ContextMenuComponent extends React.Component {
       <ul
         className={`context-menu ${this.props.className || ""}`}
         style={style}
+        ref={el => (this.listRef = el)}
       >
         {menuItems}
       </ul>

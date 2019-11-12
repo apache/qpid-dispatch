@@ -18,13 +18,13 @@ under the License.
 */
 
 import React from "react";
-import { NotificationBadge } from "@patternfly/react-core";
-import { Button } from "@patternfly/react-core";
 import {
   Accordion,
   AccordionItem,
   AccordionContent,
-  AccordionToggle
+  AccordionToggle,
+  Button,
+  NotificationBadge
 } from "@patternfly/react-core";
 
 import {
@@ -33,7 +33,7 @@ import {
   BellIcon,
   TimesIcon
 } from "@patternfly/react-icons";
-
+import AlertList from "./alertList";
 import { safePlural } from "./qdrGlobals";
 
 class NotificationDrawer extends React.Component {
@@ -55,6 +55,7 @@ class NotificationDrawer extends React.Component {
     this.severityToIcon = {
       info: { icon: "pficon-info", color: "#313131" },
       error: { icon: "pficon-error-circle-o", color: "red" },
+      danger: { icon: "pficon-error-circle-o", color: "red" },
       warning: { icon: "pficon-warning-triangle-o", color: "yellow" },
       success: { icon: "pficon-ok", color: "green" }
     };
@@ -92,7 +93,13 @@ class NotificationDrawer extends React.Component {
     });
     event.isRead = false;
     accordionSections[section].events.unshift(event);
-    this.setState({ accordionSections, isAnyUnread: true });
+    if (this.alertListRef) {
+      this.alertListRef.addAlert(severity, message);
+    }
+    this.setState({
+      accordionSections,
+      isAnyUnread: true
+    });
   };
 
   close = () => {
@@ -183,6 +190,7 @@ class NotificationDrawer extends React.Component {
             <BellIcon />
           </NotificationBadge>
         </div>
+        {<AlertList ref={el => (this.alertListRef = el)} />}
         {this.state.isShown && (
           <div
             ref={el => (this.notificationRef = el)}

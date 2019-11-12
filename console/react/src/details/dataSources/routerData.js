@@ -43,9 +43,6 @@ class RouterData {
     this.detailEntity = "router";
     this.detailName = "Router";
   }
-  hasType = () => {
-    return true;
-  };
 
   fetchRecord = (currentRecord, schema) => {
     return new Promise(resolve => {

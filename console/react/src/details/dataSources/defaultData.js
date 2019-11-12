@@ -17,23 +17,61 @@ specific language governing permissions and limitations
 under the License.
 */
 
+import React from "react";
 import { utils } from "../../amqp/utilities";
+import DeleteEntity from "../deleteEntity";
+import UpdateEntity from "../updateEntity";
+import CreateEntity from "../createEntity";
 
 class DefaultData {
   constructor(service, schema) {
     this.service = service;
     this.schema = schema;
+    this.actionMap = {
+      DELETE: DeleteEntity,
+      UPDATE: UpdateEntity,
+      CREATE: CreateEntity
+    };
   }
 
-  hasType = () => {
-    return false;
-  };
+  schemaAttributes = entity => this.schema.entityTypes[entity].attributes;
+  schemaOperations = entity => this.schema.entityTypes[entity].operations;
 
-  actions = entity => {
-    return this.schema.entityTypes[entity].operations.filter(
-      action => action !== "READ" && action !== "UPDATE"
-    );
-  };
+  // emit a single button/component
+  entityAction = ({
+    component: Component,
+    props,
+    record,
+    click,
+    i,
+    asButton
+  }) => (
+    <Component
+      key={`action-${i}`}
+      record={record}
+      notifyClick={click}
+      {...props}
+      asButton={asButton}
+    />
+  );
+
+  // action buttons for the detailsTablePage for a single record
+  detailActions = (entity, props, record, click) => (
+    <>
+      {this.actions(entity)
+        .filter(action => action !== "CREATE")
+        .map((action, i) =>
+          this.entityAction({
+            component: this.actionMap[action],
+            props,
+            record,
+            click,
+            i,
+            asButton: true
+          })
+        )}
+    </>
+  );
 
   // called by detailsTablePage to display a single record
   fetchRecord = (currentRecord, schema, entity) => {
@@ -59,6 +97,34 @@ class DefaultData {
         }
       );
     });
+  };
+
+  // return a list of operations allowed for this entity
+  actions = entity =>
+    this.schema.entityTypes[entity].operations.filter(
+      action => action !== "READ"
+    );
+
+  // action button for the entityListTable
+  actionButton = ({ action, props, click, record, i, asButton }) =>
+    this.entityAction({
+      component: this.actionMap[action],
+      props,
+      click,
+      record,
+      i,
+      asButton
+    });
+
+  // actions menu on entityListTable for each record
+  actionMenuItems = (entity, click) => {
+    const actions = this.actions(entity).filter(action => action !== "CREATE");
+    return actions.map(action => ({
+      title: action,
+      onClick: (event, rowId, rowData, extra) => {
+        click({ action, entity, event, rowId, rowData, extra });
+      }
+    }));
   };
 
   // called by entityListTable to get the list of records

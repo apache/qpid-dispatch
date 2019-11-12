@@ -26,7 +26,11 @@ class DelayedDeliveriesCard extends React.Component {
 
   closeButton = (value, extraInfo) => {
     return (
-      <ConnectionClose extraInfo={extraInfo} service={this.props.service} />
+      <ConnectionClose
+        extraInfo={extraInfo}
+        {...this.props}
+        service={this.props.service}
+      />
     );
   };
 

@@ -23,6 +23,8 @@ import { Stack, StackItem } from "@patternfly/react-core";
 import { Split, SplitItem } from "@patternfly/react-core";
 
 import DetailsTablePage from "../detailsTablePage";
+import UpdateTablePage from "./updateTablePage";
+import CreateTablePage from "./createTablePage";
 import EntityListTable from "./entityListTable";
 import EntityList from "./entityList";
 import RouterSelect from "./routerSelect";
@@ -35,7 +37,8 @@ class EntitiesPage extends React.Component {
       loading: false,
       lastUpdated: new Date(),
       entity: null,
-      routerId: null
+      routerId: null,
+      showTable: "entities"
     };
     this.schema = this.props.service.management.schema();
   }
@@ -47,22 +50,57 @@ class EntitiesPage extends React.Component {
   // called from entityList to change entity summary
   handleSwitchEntity = entity => {
     if (this.listTableRef) this.listTableRef.reset();
-    this.setState({ entity, showDetails: false, detailsState: {} });
+    this.setState({ entity, showTable: "entities", detailsState: {} });
   };
 
-  // called from breadcrumb on entityListTable to return to current entity summary
+  // called from breadcrumb on detailsTablePage to return to current entity summary
   handleSelectEntity = entity => {
-    this.setState({ entity, showDetails: false });
+    this.setState({ entity, showTable: "entities" });
+  };
+
+  handleEntityAction = (action, record) => {
+    if (action === "Done") action = "entities";
+    this.setState({
+      actionState: {
+        currentRecord: record,
+        entity: this.props.entity
+      },
+      showTable: action
+    });
+  };
+
+  handleActionCancel = props => {
+    const { detailsState } = this.state;
+    const { page, sortBy, filterBy, perPage } = detailsState;
+    const extraInfo = { rowData: { data: props.locationState.currentRecord } };
+    if (!props.locationState.currentRecord) {
+      this.handleSwitchEntity(this.state.entity);
+    } else {
+      this.handleDetailClick(
+        props.locationState.currentRecord.name,
+        extraInfo,
+        {
+          page,
+          sortBy,
+          filterBy,
+          perPage
+        }
+      );
+    }
   };
 
   handleRouterSelected = routerId => {
-    this.setState({ routerId, showDetails: false });
+    this.setState({ routerId, showTable: "entities" });
   };
 
+  // clicked on 1st column in the entityTable
+  // show the details page for this record
   handleDetailClick = (value, extraInfo, stateInfo) => {
+    // pass along the current state of the entity table
+    // so we can restore it if the breadcrumb on the details page is clicked
     this.setState({
       detailsState: {
-        value: extraInfo.rowData.cells[extraInfo.columnIndex],
+        value: value,
         currentRecord: extraInfo.rowData.data,
         entity: this.props.entity,
         page: stateInfo.page,
@@ -71,14 +109,15 @@ class EntitiesPage extends React.Component {
         perPage: stateInfo.perPage,
         property: extraInfo.property
       },
-      showDetails: true
+      showTable: "details"
     });
   };
 
   render() {
+    const TABLE = this.state.showTable.toUpperCase();
     const entityTable = () => {
       if (this.state.entity) {
-        if (!this.state.showDetails) {
+        if (TABLE === "ENTITIES") {
           return (
             <EntityListTable
               ref={el => (this.listTableRef = el)}
@@ -89,9 +128,10 @@ class EntitiesPage extends React.Component {
               lastUpdated={this.lastUpdated}
               handleDetailClick={this.handleDetailClick}
               detailsState={this.state.detailsState}
+              handleEntityAction={this.handleEntityAction}
             />
           );
-        } else {
+        } else if (TABLE === "DETAILS") {
           return (
             <DetailsTablePage
               details={true}
@@ -101,6 +141,31 @@ class EntitiesPage extends React.Component {
               lastUpdated={this.lastUpdated}
               schema={this.schema}
               handleSelectEntity={this.handleSelectEntity}
+              handleEntityAction={this.handleEntityAction}
+            />
+          );
+        } else if (TABLE === "UPDATE") {
+          return (
+            <UpdateTablePage
+              entity={this.state.entity}
+              {...this.props}
+              schema={this.schema}
+              locationState={this.state.actionState}
+              handleSelectEntity={this.handleSelectEntity}
+              handleActionCancel={this.handleActionCancel}
+              handleEntityAction={this.handleEntityAction}
+            />
+          );
+        } else if (TABLE === "CREATE") {
+          return (
+            <CreateTablePage
+              entity={this.state.entity}
+              routerId={this.state.routerId}
+              {...this.props}
+              schema={this.schema}
+              locationState={this.state.actionState}
+              handleSelectEntity={this.handleSelectEntity}
+              handleActionCancel={this.handleActionCancel}
             />
           );
         }
