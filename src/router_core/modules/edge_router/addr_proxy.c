@@ -424,6 +424,7 @@ static void on_transfer(void           *link_context,
                         qd_message_t   *msg)
 {
     qcm_edge_addr_proxy_t *ap = (qcm_edge_addr_proxy_t*) link_context;
+    uint64_t dispo = PN_ACCEPTED;
 
     //
     // Validate the message
@@ -460,7 +461,13 @@ static void on_transfer(void           *link_context,
 
         qd_parse_free(body);
         qd_iterator_free(iter);
+    } else {
+        qd_log(ap->core->log, QD_LOG_ERROR,
+               "Edge Address Proxy: received an invalid message body, rejecting");
+        dispo = PN_REJECTED;
     }
+
+    qdrc_endpoint_settle_CT(ap->core, dlv, dispo);
 
     //
     // Replenish the credit for this delivery
