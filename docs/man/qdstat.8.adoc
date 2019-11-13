@@ -48,7 +48,10 @@ Version::
 The version of Dispatch Router.
 
 Mode::
-The router's operating mode. The router can run in either interior mode or edge mode.
+The router's operating mode:
+- `standalone` - The router operates as a single, standalone network node.
+- `interior` - The router operates in cooperation with other interior routers in an interconnected network.
+- `edge` - The router operates at the edge of the router network. It maintains an uplink connection to an interior router.
 
 Router Id::
 The router's ID.
