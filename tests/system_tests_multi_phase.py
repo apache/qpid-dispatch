@@ -363,7 +363,7 @@ class MultiPhaseTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.sender         = event.container.create_sender(self.sender_conn, self.addr)
