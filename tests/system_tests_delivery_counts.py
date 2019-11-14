@@ -21,9 +21,32 @@ from time import sleep
 
 from proton import Condition, Message, Delivery,  Timeout
 from system_test import TestCase, Qdrouterd, TIMEOUT
+from system_test import get_link_info
+from system_test import PollTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch.management.client import Node
+
+
+_LINK_STATISTIC_KEYS = set(['unsettledCount',
+                            'undeliveredCount',
+                            'releasedCount',
+                            'presettledCount',
+                            'acceptedCount',
+                            'droppedPresettledCount',
+                            'rejectedCount',
+                            'deliveryCount',
+                            'modifiedCount'])
+
+
+def _link_stats_are_zero(statistics, keys):
+    """
+    Verify that all statistics whose keys are present are zero
+    """
+    for key in keys:
+        if statistics.get(key) != 0:
+            return False
+    return True;
 
 
 class OneRouterModifiedTest(TestCase):
@@ -42,7 +65,7 @@ class OneRouterModifiedTest(TestCase):
     def test_one_router_modified_counts(self):
         address = self.router.addresses[0]
 
-        test = ModifieddDeliveriesTest(address)
+        test = ModifiedDeliveriesTest(address)
         test.run()
 
         local_node = Node.connect(address, timeout=TIMEOUT)
@@ -53,6 +76,21 @@ class OneRouterModifiedTest(TestCase):
         results = outs.results[0]
 
         self.assertEqual(results[deliveries_modified_index], 10)
+
+        # check link statistics
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'modifiedCount'])))
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['modifiedCount'], 10)
+
+        # receiver just drops the link, so these are not counted as modified
+        # but unsettled instead
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['unsettledCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'unsettledCount'])))
 
 
 class OneRouterRejectedTest(TestCase):
@@ -82,6 +120,19 @@ class OneRouterRejectedTest(TestCase):
         results = outs.results[0]
 
         self.assertEqual(results[deliveries_rejected_index], 10)
+
+        # check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['rejectedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'rejectedCount'])))
+
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['rejectedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'rejectedCount'])))
 
 
 class OneRouterReleasedDroppedPresettledTest(TestCase):
@@ -116,6 +167,15 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(results[deliveries_dropped_presettled_index], 10)
         self.assertEqual(results[deliveries_released_index], 10)
         self.assertEqual(results[deliveries_presettled_index], 10)
+
+        # check link statistics
+        self.assertEqual(test.sender_stats['releasedCount'], 10)
+        self.assertEqual(test.sender_stats['presettledCount'], 10)
+        self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['releasedCount',
+                                                                         'presettledCount',
+                                                                         'droppedPresettledCount'])))
 
 
 class TwoRouterReleasedDroppedPresettledTest(TestCase):
@@ -167,6 +227,15 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(results[deliveries_dropped_presettled_index], 10)
         self.assertEqual(results[deliveries_released_index], 10)
         self.assertEqual(results[deliveries_presettled_index], 10)
+
+        # check link statistics
+        self.assertEqual(test.sender_stats['releasedCount'], 10)
+        self.assertEqual(test.sender_stats['presettledCount'], 10)
+        self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['releasedCount',
+                                                                         'presettledCount',
+                                                                         'droppedPresettledCount'])))
 
 
 class LinkRouteIngressEgressTransitTest(TestCase):
@@ -261,14 +330,27 @@ class LinkRouteIngressEgressTransitTest(TestCase):
         post_egress_count = results[deliveries_egress_index]
         post_transit_count = results[deliveries_transit_index]
 
-        # 10 messages entered the router, and 10 messages were echoed by router A and one mgmt request
-        self.assertEqual(post_ingress_count - pre_ingress_count, 21)
+        # 10 messages entered the router, and 10 messages were echoed by router A and 3 mgmt requests
+        self.assertEqual(post_ingress_count - pre_ingress_count, 23)
 
-        # 10 messages + 1 mgmt request
-        self.assertEqual(post_egress_count - pre_egress_count, 11)
+        # 10 messages + 3 mgmt request
+        self.assertEqual(post_egress_count - pre_egress_count, 13)
 
         # 10 messages went out this router
         self.assertEqual(post_transit_count - pre_transit_count, 10)
+
+        # Check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
 
 
 class TwoRouterIngressEgressTest(TestCase):
@@ -299,19 +381,19 @@ class TwoRouterIngressEgressTest(TestCase):
         cls.routers[1].wait_router_connected('A')
 
     def test_two_router_ingress_egress_counts(self):
-        address1 = self.routers[0].addresses[0]
-        address2 = self.routers[1].addresses[0]
+        in_router_addr = self.routers[0].addresses[0]
+        out_router_addr = self.routers[1].addresses[0]
 
         # Gather the values for deliveries_ingress and deliveries_egress before running the test.
 
-        local_node = Node.connect(address1, timeout=TIMEOUT)
+        local_node = Node.connect(in_router_addr, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_ingress_index = outs.attribute_names.index('deliveriesIngress')
         results = outs.results[0]
 
         pre_deliveries_ingresss = results[deliveries_ingress_index]
 
-        local_node = Node.connect(address2, timeout=TIMEOUT)
+        local_node = Node.connect(out_router_addr, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_egress_index = outs.attribute_names.index('deliveriesEgress')
         deliveries_accepted_index = outs.attribute_names.index('acceptedDeliveries')
@@ -320,19 +402,20 @@ class TwoRouterIngressEgressTest(TestCase):
         pre_deliveries_egress = results[deliveries_egress_index]
         pre_deliveries_accepted = results[deliveries_accepted_index]
 
-        # Now run the test.
-        test = IngressEgressTwoRouterTest(address1, address2)
+        # Now run the test.  At the end of the test each router will be queried
+        # for the per-link stats
+        test = IngressEgressTwoRouterTest(in_router_addr, out_router_addr)
         test.run()
 
         # Gather the values for deliveries_ingress and deliveries_egress after running the test.
-        local_node = Node.connect(address1, timeout=TIMEOUT)
+        local_node = Node.connect(in_router_addr, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_ingress_index = outs.attribute_names.index('deliveriesIngress')
         results = outs.results[0]
 
         post_deliveries_ingresss = results[deliveries_ingress_index]
 
-        local_node = Node.connect(address2, timeout=TIMEOUT)
+        local_node = Node.connect(out_router_addr, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router')
         deliveries_egress_index = outs.attribute_names.index('deliveriesEgress')
         deliveries_accepted_index = outs.attribute_names.index('acceptedDeliveries')
@@ -343,8 +426,23 @@ class TwoRouterIngressEgressTest(TestCase):
 
         accepted_deliveries_diff = post_deliveries_accepted - pre_deliveries_accepted
 
-        self.assertEqual(post_deliveries_ingresss - pre_deliveries_ingresss, 11)
-        self.assertEqual(post_deliveries_egress - pre_deliveries_egress, 11)
+        # 12 = 10 msgs + 2 mgmt requests
+        self.assertEqual(post_deliveries_ingresss - pre_deliveries_ingresss, 12)
+        self.assertEqual(post_deliveries_egress - pre_deliveries_egress, 12)
+
+        # check the link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+
+
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
 
         # The management requests are counted in the acceptedDeliveries, so it is difficult to measure the
         # exact number of accepted deliveries at this point in time. But it must at least be 10 since
@@ -380,8 +478,23 @@ class OneRouterIngressEgressTest(TestCase):
 
         results = outs.results[0]
 
-        self.assertEqual(results[deliveries_ingress_index], 11)
-        self.assertEqual(results[deliveries_egress_index], 10)
+        # 13 = ten msgs + 3 mgmt requests
+        self.assertEqual(results[deliveries_ingress_index], 13)
+        # 12 = ten msgs + 2 mgmt requests
+        self.assertEqual(results[deliveries_egress_index], 12)
+
+        # check the link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
 
 
 class RouteContainerEgressCount(TestCase):
@@ -422,7 +535,261 @@ class RouteContainerEgressCount(TestCase):
         deliveries_egress_route_container_index = outs.attribute_names.index('deliveriesEgressRouteContainer')
 
         results = outs.results[0]
-        self.assertEqual(results[deliveries_egress_route_container_index], 10)
+        # 11 = 10 msgs + 1 mgmt msg
+        self.assertEqual(results[deliveries_egress_route_container_index], 11)
+
+        # check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+
+        self.assertEqual(test.receiver_stats['deliveryCount'], 10)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+
+
+class OneRouterLinkCountersTest(TestCase):
+    """
+    A set of tests that validate link-level counters
+    """
+    CREDIT = 20  # default issued by test receiver client
+    COUNT  = 40  # default total msgs the sender client generates
+
+    @classmethod
+    def setUpClass(cls):
+        # create one router
+        super(OneRouterLinkCountersTest, cls).setUpClass()
+
+        listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'LinkCounters'}),
+            ('listener', {'port': listen_port,
+                          'authenticatePeer': False,
+                          'saslMechanisms': 'ANONYMOUS',
+                          'linkCapacity': cls.CREDIT})])
+
+        cls.router = cls.tester.qdrouterd(name="LinkCounters", config=config, wait=True)
+
+
+    class LinkCountersTest(MessagingHandler):
+        """
+        Create 1 sender and 1 receiver to router_addr.  Send count messages.
+        The test ends when the receivers deliveryCount reaches rx_limit.
+        Explicitly set the receiver credit and whether to sender sends
+        presettled or unsettled messages.
+        """
+        def __init__(self, router_addr, count=None, rx_limit=None,
+                     credit=None, presettled=False, outcome=None):
+            super(OneRouterLinkCountersTest.LinkCountersTest,
+                  self).__init__(auto_accept=False,
+                                 auto_settle=False,
+                                 prefetch=0)
+            self.router_addr = router_addr
+            self.presettled = presettled
+            self.outcome = outcome
+            self.count = OneRouterLinkCountersTest.COUNT \
+                if count is None else count
+            self.credit = OneRouterLinkCountersTest.COUNT \
+                if credit is None else credit
+            self.rx_limit = OneRouterLinkCountersTest.COUNT \
+                if rx_limit is None else rx_limit
+
+            self.sent = 0
+            self.timer = 0
+            self.poll_timer = None
+            self.conn = None
+            self.sender_stats = None
+            self.receiver_stats = None
+
+        def timeout(self):
+            self._cleanup()
+
+        def _cleanup(self):
+            if self.conn:
+                self.conn.close()
+                self.conn = None
+            if self.poll_timer:
+                self.poll_timer.cancel()
+                self.poll_timer = None
+            if self.timer:
+                self.timer.cancel()
+                self.timer = None
+
+        def poll_timeout(self):
+            """
+            Periodically check the deliveryCount on the receiver.  Once it
+            reaches rx_limit the test is complete: gather link statistics
+            before closing the clients
+            """
+            li = get_link_info("Rx_Test01", self.router_addr)
+            if li and li['deliveryCount'] == self.rx_limit:
+                self.receiver_stats = li
+                self.sender_stats = get_link_info("Tx_Test01", self.router_addr)
+                self._cleanup()
+            else:
+                self.poll_timer = self.reactor.schedule(0.5, PollTimeout(self))
+
+        def on_start(self, event):
+            self.reactor = event.reactor
+            self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+            self.poll_timer = event.reactor.schedule(0.5, PollTimeout(self))
+            self.conn = event.container.connect(self.router_addr)
+            self.receiver = event.container.create_receiver(self.conn,
+                                                            source="Test01",
+                                                            name='Rx_Test01')
+            self.receiver.flow(self.credit)
+            self.sender = event.container.create_sender(self.conn,
+                                                        target="Test01",
+                                                        name="Tx_Test01")
+        def on_sendable(self, event):
+            if self.sent < self.count:
+                dlv = self.sender.send(Message(body="Test01"))
+                if self.presettled:
+                    dlv.settle()
+                self.sent += 1
+
+        def on_message(self, event):
+            if self.outcome:
+                event.delivery.update(self.outcome)
+                event.delivery.settle()
+                # otherwise just drop it
+
+        def run(self):
+            Container(self).run()
+
+
+    def test_01_presettled(self):
+        """
+        Verify the presettled dropped count link counter by exhausting credit
+        before sending is complete
+        """
+        limit = self.CREDIT/2  # 1/2 the capacity given the sender
+        test = self.LinkCountersTest(self.router.addresses[0],
+                                     presettled=True,
+                                     count=self.COUNT,
+                                     rx_limit=limit,
+                                     credit=limit)
+        test.run()
+
+        # since these are presettled the sender should have credit
+        # replenished by the router after each message.
+        self.assertEqual(test.sender_stats['deliveryCount'], self.COUNT)
+        self.assertEqual(test.sender_stats['presettledCount'], self.COUNT)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'presettledCount'])))
+
+        # since credit is fixed at limit, exactly that number of msgs can be received
+        self.assertEqual(test.receiver_stats['deliveryCount'], limit)
+
+        # verify that some messages were dropped and some are stuck on the
+        # undelivered list
+        self.assertTrue(test.receiver_stats['undeliveredCount'] > 0)
+        self.assertTrue(test.receiver_stats['droppedPresettledCount'] > 0)
+
+        # expect that whatever was not dropped was delivered
+        self.assertEqual(test.receiver_stats['deliveryCount'],
+                         (test.receiver_stats['presettledCount']
+                          - test.receiver_stats['droppedPresettledCount']))
+
+        # expect the sum of dropped+delivered+undelivered accounts for all
+        # messages sent
+        self.assertEqual(self.COUNT,
+                         (test.receiver_stats['deliveryCount']
+                          + test.receiver_stats['undeliveredCount']
+                          + test.receiver_stats['droppedPresettledCount']))
+
+        # all other counters must be zero
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'undeliveredCount',
+                                                    'droppedPresettledCount',
+                                                    'presettledCount'])))
+
+    def test_02_unsettled(self):
+        """
+        Verify the link unsettled count by granting less credit than required
+        by the sender
+        """
+        test = self.LinkCountersTest(self.router.addresses[0],
+                                     presettled=False,
+                                     count=self.COUNT,
+                                     rx_limit=self.CREDIT,
+                                     credit=self.CREDIT)
+        test.run()
+
+        # expect the receiver to get rx_limit worth of unsettled deliveries
+        self.assertEqual(test.receiver_stats['deliveryCount'], self.CREDIT)
+        self.assertEqual(test.receiver_stats['unsettledCount'], self.CREDIT)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'unsettledCount'])))
+
+        # expect sender only to be able to send as much as credit
+        self.assertEqual(test.sender_stats['deliveryCount'], self.CREDIT)
+        self.assertEqual(test.sender_stats['unsettledCount'], self.CREDIT)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'unsettledCount'])))
+
+    def test_03_released(self):
+        """
+        Verify the link released count by releasing all received messages
+        """
+        test = self.LinkCountersTest(self.router.addresses[0],
+                                     outcome=Delivery.RELEASED)
+        test.run()
+        self.assertEqual(test.receiver_stats['deliveryCount'], self.COUNT)
+        self.assertEqual(test.receiver_stats['releasedCount'], self.COUNT)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'releasedCount'])))
+
+        self.assertEqual(test.sender_stats['deliveryCount'], self.COUNT)
+        self.assertEqual(test.sender_stats['releasedCount'], self.COUNT)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'releasedCount'])))
+
+    def test_04_one_credit_accepted(self):
+        """
+        Verify counters on a credit-blocked link
+        """
+        test = self.LinkCountersTest(self.router.addresses[0],
+                                     outcome=Delivery.ACCEPTED,
+                                     rx_limit=1,
+                                     credit=1)
+        test.run()
+        # expect only 1 delivery, an link credit worth of queued up messages
+        self.assertEqual(test.receiver_stats['deliveryCount'], 1)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 1)
+        self.assertEqual(test.receiver_stats['undeliveredCount'], self.CREDIT)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'undeliveredCount',
+                                                    'acceptedCount'])))
+
+        # expect that one message will be delivered, then link capacity
+        # messages will be enqueued internally
+        self.assertEqual(test.sender_stats['unsettledCount'], self.CREDIT)
+        self.assertEqual(test.sender_stats['deliveryCount'], self.CREDIT + 1)
+        self.assertEqual(test.sender_stats['acceptedCount'], 1)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS
+                                             - set(['deliveryCount',
+                                                    'unsettledCount',
+                                                    'acceptedCount'])))
 
 
 class RouteContainerIngressCount(TestCase):
@@ -463,11 +830,29 @@ class RouteContainerIngressCount(TestCase):
         deliveries_ingress_route_container_index = outs.attribute_names.index('deliveriesIngressRouteContainer')
 
         results = outs.results[0]
-        self.assertEqual(results[deliveries_ingress_route_container_index], 20)
+        # 22 = 20 msgs + 2 mgmt msgs
+        self.assertEqual(results[deliveries_ingress_route_container_index], 22)
+
+        # check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+        self.assertEqual(test.sender1_stats['deliveryCount'], 10)
+        self.assertEqual(test.sender1_stats['acceptedCount'], 10)
+        self.assertTrue(_link_stats_are_zero(test.sender1_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
+        self.assertEqual(test.receiver_stats['deliveryCount'], 20)
+        self.assertEqual(test.receiver_stats['acceptedCount'], 20)
+        self.assertTrue(_link_stats_are_zero(test.receiver_stats,
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'acceptedCount'])))
 
 
 class IngressEgressTwoRouterTest(MessagingHandler):
-    def __init__(self, address1, address2):
+    def __init__(self, sender_address, receiver_address):
         super(IngressEgressTwoRouterTest, self).__init__()
         self.sender = None
         self.receiver = None
@@ -475,28 +860,38 @@ class IngressEgressTwoRouterTest(MessagingHandler):
         self.conn_recv = None
         self.timer = None
         self.dest = 'examples'
-        self.address1 = address1
-        self.address2 = address2
+        self.sender_address = sender_address
+        self.receiver_address = receiver_address
         self.n_sent = 0
         self.n_received = 0
         self.num_messages = 10
         self.start = False
         self.n_accept = 0
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def timeout(self):
         self.conn_sender.close()
         self.conn_recv.close()
 
     def check_if_done(self):
-        if self.num_messages == self.n_received and self.n_accept == self.num_messages:
+        if not self.done and self.num_messages == self.n_received and self.n_accept == self.num_messages:
+            self.done = True
+            self.sender_stats = get_link_info('Tx_IngressEgressTwoRouterTest',
+                                               self.sender_address)
+            self.receiver_stats = get_link_info('Rx_IngressEgressTwoRouterTest',
+                                                 self.receiver_address)
             self.conn_sender.close()
             self.conn_recv.close()
             self.timer.cancel()
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn_recv = event.container.connect(self.address2)
-        self.receiver = event.container.create_receiver(self.conn_recv, self.dest)
+        self.conn_recv = event.container.connect(self.receiver_address)
+        self.receiver = event.container.create_receiver(self.conn_recv,
+                                                        source=self.dest,
+                                                        name='Rx_IngressEgressTwoRouterTest')
 
     def on_sendable(self, event):
         if not self.start:
@@ -510,9 +905,10 @@ class IngressEgressTwoRouterTest(MessagingHandler):
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
             self.start = True
-            self.conn_sender = event.container.connect(self.address1)
+            self.conn_sender = event.container.connect(self.sender_address)
             self.sender = event.container.create_sender(self.conn_sender,
-                                                        self.dest)
+                                                        target=self.dest,
+                                                        name='Tx_IngressEgressTwoRouterTest')
 
     def on_message(self, event):
         if event.receiver == self.receiver:
@@ -538,21 +934,33 @@ class IngressEgressOneRouterTest(MessagingHandler):
         self.address = address
         self.n_sent = 0
         self.n_received = 0
+        self.n_accepted = 0
         self.num_messages = 10
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def timeout(self):
         self.conn.close()
 
     def check_if_done(self):
-        if self.n_sent == self.n_received:
+        if not self.done and (self.n_sent == self.n_received
+                              and self.n_sent == self.n_accepted):
+            self.done = True
+            self.sender_stats = get_link_info('Tx_IngressEgressOneRouterTest', self.address)
+            self.receiver_stats = get_link_info('Rx_IngressEgressOneRouterTest', self.address)
             self.conn.close()
             self.timer.cancel()
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn = event.container.connect(self.address)
-        self.sender = event.container.create_sender(self.conn, self.dest)
-        self.receiver = event.container.create_receiver(self.conn, self.dest)
+        self.sender = event.container.create_sender(self.conn,
+                                                    target=self.dest,
+                                                    name='Tx_IngressEgressOneRouterTest')
+        self.receiver = event.container.create_receiver(self.conn,
+                                                        source=self.dest,
+                                                        name='Rx_IngressEgressOneRouterTest')
 
     def on_sendable(self, event):
         if self.n_sent < self.num_messages:
@@ -565,6 +973,7 @@ class IngressEgressOneRouterTest(MessagingHandler):
             self.n_received += 1
 
     def on_accepted(self, event):
+        self.n_accepted += 1
         self.check_if_done()
 
     def run(self):
@@ -586,10 +995,18 @@ class RouteContainerEgressTest(MessagingHandler):
         self.start = False
         self.n_sent = 0
         self.n_received = 0
+        self.n_accepted = 0
         self.num_messages = 10
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def check_if_done(self):
-        if self.n_sent == self.n_received:
+        if not self.done and (self.n_sent == self.n_received
+                              and self.n_sent == self.n_accepted):
+            self.done = True
+            self.sender_stats = get_link_info('Tx_RouteContainerEgressTest', self.sender_addr)
+            self.receiver_stats = get_link_info('Rx_RouteContainerEgressTest', self.route_container_addr)
             self.receiver_conn.close()
             self.sender_conn.close()
             self.timer.cancel()
@@ -597,7 +1014,9 @@ class RouteContainerEgressTest(MessagingHandler):
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_conn = event.container.connect(self.route_container_addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        source=self.dest,
+                                                        name='Rx_RouteContainerEgressTest')
 
     def timeout(self):
         self.error = "Timeout Expired: self.n_sent=%d self.n_received=%d" % (self.n_sent, self.self.n_received)
@@ -618,13 +1037,16 @@ class RouteContainerEgressTest(MessagingHandler):
             self.n_received += 1
 
     def on_accepted(self, event):
+        self.n_accepted += 1
         self.check_if_done()
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
             self.start = True
             self.sender_conn = event.container.connect(self.sender_addr)
-            self.sender = event.container.create_sender(self.sender_conn, self.dest)
+            self.sender = event.container.create_sender(self.sender_conn,
+                                                        target=self.dest,
+                                                        name='Tx_RouteContainerEgressTest')
 
     def run(self):
         Container(self).run()
@@ -646,10 +1068,20 @@ class RouteContainerIngressTest(MessagingHandler):
         self.start = False
         self.n_sent = 0
         self.n_received = 0
+        self.n_accepted = 0
         self.num_messages = 20
+        self.sender_stats = None
+        self.sender1_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def check_if_done(self):
-        if self.n_sent == self.n_received:
+        if not self.done and (self.n_sent == self.n_received
+                              and self.n_sent == self.n_accepted):
+            self.done = True
+            self.sender_stats = get_link_info('A', self.route_container_addr)
+            self.sender1_stats = get_link_info('B', self.route_container_addr)
+            self.receiver_stats = get_link_info('Rx_RouteContainerIngressTest', self.receiver_addr)
             self.receiver_conn.close()
             self.sender_conn.close()
             self.timer.cancel()
@@ -657,7 +1089,9 @@ class RouteContainerIngressTest(MessagingHandler):
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_conn = event.container.connect(self.receiver_addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        source=self.dest,
+                                                        name='Rx_RouteContainerIngressTest')
         self.sender_conn = event.container.connect(self.route_container_addr)
 
     def timeout(self):
@@ -682,6 +1116,7 @@ class RouteContainerIngressTest(MessagingHandler):
             self.n_received += 1
 
     def on_accepted(self, event):
+        self.n_accepted += 1
         self.check_if_done()
 
     def on_link_opened(self, event):
@@ -708,9 +1143,13 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
         self.n_sent = 0
         self.num_messages = 10
         self.n_received = 0
+        self.n_accepted = 0
         self.sender_addr = sender_addr
         self.receiver_addr = receiver_addr
         self.error = None
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def timeout(self):
         self.error = "Timeout Expired: self.n_sent=%d self.n_received=%d" % (self.n_sent, self.self.n_received)
@@ -718,7 +1157,13 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
         self.receiver_conn.close()
 
     def check_if_done(self):
-        if self.n_sent == self.n_received:
+        if not self.done and (self.n_sent == self.n_received
+                              and self.n_sent == self.n_accepted):
+            self.done = True
+            self.sender_stats = get_link_info('Tx_IngressEgressTransitLinkRouteTest',
+                                               self.sender_addr)
+            self.receiver_stats = get_link_info('Rx_IngressEgressTransitLinkRouteTest',
+                                                 self.receiver_addr)
             self.receiver_conn.close()
             self.sender_conn.close()
             self.timer.cancel()
@@ -726,13 +1171,16 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.receiver_conn = event.container.connect(self.receiver_addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        source=self.dest,
+                                                        name='Rx_IngressEgressTransitLinkRouteTest')
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
             self.sender_conn = event.container.connect(self.sender_addr)
             self.sender = event.container.create_sender(self.sender_conn,
-                                                        self.dest)
+                                                        target=self.dest,
+                                                        name='Tx_IngressEgressTransitLinkRouteTest')
             self.start = True
 
     def on_sendable(self, event):
@@ -749,6 +1197,7 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
             self.n_received += 1
 
     def on_accepted(self, event):
+        self.n_accepted += 1
         self.check_if_done()
 
     def run(self):
@@ -765,14 +1214,19 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         self.n_sent = 0
         self.num_messages = 20
         self.sender_addr = sender_addr
+        self.sender_stats = None
 
         # We are sending to a multicast address
         self.dest = "multicast"
         self.n_released = 0
         self.expect_released = 10
+        self.done = False
 
     def check_if_done(self):
-        if self.expect_released == self.n_released:
+        if not self.done and self.expect_released == self.n_released:
+            self.done = True
+            self.sender_stats = get_link_info('ReleasedDroppedPresettledCountTest',
+                                               self.sender_addr)
             self.sender_conn.close()
             self.timer.cancel()
 
@@ -787,8 +1241,8 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         # Note that this is an anonymous link which will be granted credit w/o
         # blocking for consumers.  Therefore all messages sent to this address
         # will be dropped
-        self.sender = event.container.create_sender(self.sender_conn)
-
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    name='ReleasedDroppedPresettledCountTest')
     def on_sendable(self, event):
         # We are sending a total of 20 deliveries. 10 unsettled and 10 pre-settled to a multicast address
         if self.n_sent < self.num_messages:
@@ -821,9 +1275,15 @@ class RejectedDeliveriesTest(MessagingHandler):
         self.timer = None
         self.sender = None
         self.receiver = None
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def check_if_done(self):
-        if self.n_rejected == self.num_messages:
+        if not self.done and self.n_rejected == self.num_messages:
+            self.done = True
+            self.sender_stats = get_link_info('Tx_RejectedDeliveriesTest', self.addr)
+            self.receiver_stats = get_link_info('Rx_RejectedDeliveriesTest', self.addr)
             self.sender_conn.close()
             self.receiver_conn.close()
             self.timer.cancel()
@@ -836,9 +1296,13 @@ class RejectedDeliveriesTest(MessagingHandler):
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.sender_conn = event.container.connect(self.addr)
-        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    target=self.dest,
+                                                    name='Tx_RejectedDeliveriesTest')
         self.receiver_conn = event.container.connect(self.addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        source=self.dest,
+                                                        name='Rx_RejectedDeliveriesTest')
 
     def on_rejected(self, event):
         self.n_rejected += 1
@@ -858,9 +1322,9 @@ class RejectedDeliveriesTest(MessagingHandler):
         Container(self).run()
 
 
-class ModifieddDeliveriesTest(MessagingHandler):
+class ModifiedDeliveriesTest(MessagingHandler):
     def __init__(self, addr):
-        super(ModifieddDeliveriesTest, self).__init__(auto_accept=False)
+        super(ModifiedDeliveriesTest, self).__init__(auto_accept=False)
         self.addr = addr
         self.dest = "someaddress"
         self.error = None
@@ -873,9 +1337,14 @@ class ModifieddDeliveriesTest(MessagingHandler):
         self.sender = None
         self.receiver = None
         self.n_received = 0
+        self.sender_stats = None
+        self.receiver_stats = None
+        self.done = False
 
     def check_if_done(self):
-        if self.n_modified == self.num_messages:
+        if not self.done and self.n_modified == self.num_messages:
+            self.done = True
+            self.sender_stats = get_link_info('Tx_ModifiedDeliveriesTest', self.addr)
             self.sender_conn.close()
             self.receiver_conn.close()
             self.timer.cancel()
@@ -888,9 +1357,13 @@ class ModifieddDeliveriesTest(MessagingHandler):
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.sender_conn = event.container.connect(self.addr)
-        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.sender = event.container.create_sender(self.sender_conn,
+                                                    target=self.dest,
+                                                    name='Tx_ModifiedDeliveriesTest')
         self.receiver_conn = event.container.connect(self.addr)
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        source=self.dest,
+                                                        name='Rx_ModifiedDeliveriesTest')
 
     def on_released(self, event):
         if event.delivery.remote_state == Delivery.MODIFIED:
@@ -904,6 +1377,7 @@ class ModifieddDeliveriesTest(MessagingHandler):
         self.n_received += 1
         # After 10 messages are received, simply close the receiver connection without acknowledging the messages
         if self.n_received == self.num_messages:
+            self.receiver_stats = get_link_info('Rx_ModifiedDeliveriesTest', self.addr)
             self.receiver_conn.close()
 
     def on_sendable(self, event):

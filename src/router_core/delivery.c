@@ -339,30 +339,36 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
     if (link) {
         bool do_rate = false;
 
+        // router sets the disposition for incoming links, outgoing is set by
+        // the remote
+        const uint64_t outcome = (link->link_direction == QD_INCOMING)
+            ? delivery->disposition   // local
+            : delivery->remote_disposition;
+
         if (delivery->presettled) {
-            do_rate = delivery->disposition != PN_RELEASED;
+            do_rate = outcome != PN_RELEASED;
             link->presettled_deliveries++;
             if (link->link_direction ==  QD_INCOMING && link->link_type == QD_LINK_ENDPOINT)
                 core->presettled_deliveries++;
         }
-        else if (delivery->disposition == PN_ACCEPTED) {
+        else if (outcome == PN_ACCEPTED) {
             do_rate = true;
             link->accepted_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->accepted_deliveries++;
         }
-        else if (delivery->disposition == PN_REJECTED) {
+        else if (outcome == PN_REJECTED) {
             do_rate = true;
             link->rejected_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->rejected_deliveries++;
         }
-        else if (delivery->disposition == PN_RELEASED && !delivery->presettled) {
+        else if (outcome == PN_RELEASED && !delivery->presettled) {
             link->released_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->released_deliveries++;
         }
-        else if (delivery->disposition == PN_MODIFIED) {
+        else if (outcome == PN_MODIFIED) {
             link->modified_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->modified_deliveries++;
