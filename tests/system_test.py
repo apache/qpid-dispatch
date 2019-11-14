@@ -268,7 +268,7 @@ class Process(subprocess.Popen):
                                 (args, kwargs, type(e).__name__, e))
 
     def assert_running(self):
-        """Assert that the proces is still running"""
+        """Assert that the process is still running"""
         assert self.poll() is None, "%s: exited" % ' '.join(self.args)
 
     def teardown(self):
@@ -586,17 +586,19 @@ class Tester(object):
         """
         @param id: module.class.method or False if no directory should be created
         """
-        self.directory = os.path.join(self.root_dir, *id.split('.'))
+        self.directory = os.path.join(self.root_dir, *id.split('.')) if id else None
         self.cleanup_list = []
 
     def rmtree(self):
         """Remove old test class results directory"""
-        shutil.rmtree(os.path.dirname(self.directory), ignore_errors=True)
+        if self.directory:
+            shutil.rmtree(os.path.dirname(self.directory), ignore_errors=True)
 
     def setup(self):
         """Called from test setup and class setup."""
-        os.makedirs(self.directory)
-        os.chdir(self.directory)
+        if self.directory:
+            os.makedirs(self.directory)
+            os.chdir(self.directory)
 
     def teardown(self):
         """Clean up (tear-down, stop or close) objects recorded via cleanup()"""
@@ -877,11 +879,13 @@ class AsyncTestSender(MessagingHandler):
         self.rejected = 0
         self.sent = 0
         self.error = None
+        self.link_stats = None
 
         self._message = message or Message(body="test")
         self._container = Container(self)
         cid = container_id or "ATS-%s:%s" % (target, uuid.uuid4())
         self._container.container_id = cid
+        self._link_name = "%s-%s" % (cid, "tx")
         self._thread = Thread(target=self._main)
         self._thread.daemon = True
         self._thread.start()
@@ -889,7 +893,7 @@ class AsyncTestSender(MessagingHandler):
     def _main(self):
         self._container.start()
         while self._container.process():
-            pass
+            self._check_if_done()
 
     def wait(self):
         # don't stop it - wait until everything is sent
@@ -905,27 +909,28 @@ class AsyncTestSender(MessagingHandler):
         option = AtMostOnce if self.presettle else AtLeastOnce
         self._sender = self._container.create_sender(self._conn,
                                                      target=self.target,
-                                                     options=option())
+                                                     options=option(),
+                                                     name=self._link_name)
 
     def on_sendable(self, event):
         if self.sent < self.total:
             self._sender.send(self._message)
             self.sent += 1
-        self._check_if_done()
 
     def _check_if_done(self):
         done = (self.sent == self.total
                 and (self.presettle
                      or (self.accepted + self.released + self.modified
                          + self.rejected == self.sent)))
-        if done:
+        if done and self._conn:
+            self.link_stats = get_link_info(self._link_name,
+                                            self.address)
             self._conn.close()
             self._conn = None
 
     def on_accepted(self, event):
         self.accepted += 1;
         event.delivery.settle()
-        self._check_if_done()
 
     def on_released(self, event):
         # for some reason Proton 'helpfully' calls on_released even though the
@@ -934,17 +939,14 @@ class AsyncTestSender(MessagingHandler):
             return self.on_modified(event)
         self.released += 1
         event.delivery.settle()
-        self._check_if_done()
 
     def on_modified(self, event):
         self.modified += 1
         event.delivery.settle()
-        self._check_if_done()
 
     def on_rejected(self, event):
         self.rejected += 1
         event.delivery.settle()
-        self._check_if_done()
 
     def on_link_error(self, event):
         self.error = "link error:%s" % str(event.link.remote_condition)
@@ -956,10 +958,10 @@ class QdManager(object):
     """
     A means to invoke qdmanage during a testcase
     """
-    def __init__(self, tester, address=None, timeout=TIMEOUT):
+    def __init__(self, tester=None, address=None, timeout=TIMEOUT):
         # 'tester' - can be 'self' when called in a test,
         # or an instance any class derived from Process (like Qdrouterd)
-        self._tester = tester
+        self._tester = tester or Tester(None)
         self._timeout = timeout
         self._address = address
 
@@ -1120,3 +1122,27 @@ class TestTimeout(object):
 
     def on_timer_task(self, event):
         self.parent.timeout()
+
+
+class PollTimeout(object):
+    """
+    A callback object for MessagingHandler scheduled timers
+    parent: A MessagingHandler with a poll_timeout() method
+    """
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.poll_timeout()
+
+
+def get_link_info(name, address):
+    """
+    Query the router at address for the status and statistics of the named link
+    """
+    qdm = QdManager(address=address)
+    rc = qdm.query('org.apache.qpid.dispatch.router.link')
+    for item in rc:
+        if item.get('name') == name:
+            return item
+    return None
