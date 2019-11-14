@@ -34,7 +34,7 @@ from time import ctime, strftime, gmtime
 import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort
 from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_ssl_domain, opts_sasl,
                                                   opts_url)
@@ -200,6 +200,28 @@ class BusManager(Node):
         if show_date_id:
             self.display_datetime_router_id()
 
+        has_uptime = False
+        has_last_dlv = False
+
+        if objects:
+            first_conn = objects[0]
+            try:
+                lastDlvSeconds = first_conn.lastDlvSeconds
+                has_last_dlv = True
+            except:
+                pass
+            try:
+                uptime = first_conn.uptimeSeconds
+                has_uptime = True
+            except:
+                pass
+
+        # This is so that, this qdstat can be used against older routers without Python keyerrors
+        if has_last_dlv:
+            heads.append(Header("last dlv"))
+        if has_uptime:
+            heads.append(Header("uptime"))
+
         for conn in objects:
             row = []
             row.append(conn.identity)
@@ -210,6 +232,13 @@ class BusManager(Node):
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
             row.append(self.noTrailingSlash(get(conn, 'tenant')))
+            if has_last_dlv:
+                if conn.lastDlvSeconds is None:
+                    row.append('-')
+                else:
+                    row.append(TimeLong(conn.lastDlvSeconds))
+            if has_uptime:
+                row.append(TimeLong(conn.uptimeSeconds))
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -291,6 +320,10 @@ class BusManager(Node):
         rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Router Id',     router.id))
+        try:
+            rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
+        except:
+            pass
         rows.append(('Area',          router.area))
         rows.append(('Link Routes',   router.linkRouteCount))
         rows.append(('Auto Links',    router.autoLinkCount))
@@ -310,9 +343,14 @@ class BusManager(Node):
             rows.append(('Released Count', router.releasedDeliveries))
             rows.append(('Modified Count', router.modifiedDeliveries))
             try:
-                rows.append(('Deliveries Delayed > 1sec', router.deliveriesDelayed1Sec))
+                rows.append(('Deliveries Delayed > 1sec',  router.deliveriesDelayed1Sec))
                 rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
-                rows.append(('Deliveries to Fallback', router.deliveriesRedirectedToFallback))
+                rows.append(('Deliveries Stuck > 10sec',   router.deliveriesStuck))
+                rows.append(('Deliveries to Fallback',     router.deliveriesRedirectedToFallback))
+                try:
+                    rows.append(('Links Blocked', router.linksBlocked))
+                except:
+                    pass
             except:
                 pass
             rows.append(('Ingress Count', router.deliveriesIngress))
@@ -345,14 +383,17 @@ class BusManager(Node):
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'adminStatus', 'operStatus',
-                'linkName', 'priority', 'settleRate')
+                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'deliveriesStuck',
+                'creditAvailable', 'zeroCreditSeconds',
+                'adminStatus', 'operStatus', 'linkName', 'priority', 'settleRate')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         has_dropped_presettled_count = False
         has_priority = False
         has_delayed  = False
+        has_stuck    = False
+        has_credit   = False
 
         if show_date_id:
             self.display_datetime_router_id()
@@ -366,6 +407,10 @@ class BusManager(Node):
                     has_priority = True
                 if hasattr(first_row, 'deliveriesDelayed1Sec'):
                     has_delayed = True
+                if hasattr(first_row, 'deliveriesStuck'):
+                    has_stuck = True
+                if hasattr(first_row, 'creditAvailable'):
+                    has_credit = True
 
         if has_priority:
             heads.append(Header("pri"))
@@ -384,6 +429,11 @@ class BusManager(Node):
         if has_delayed:
             heads.append(Header("delay"))
             heads.append(Header("rate"))
+        if has_stuck:
+            heads.append(Header("stuck"))
+        if has_credit:
+            heads.append(Header("cred"))
+            heads.append(Header("blkd"))
         if self.opts.verbose:
             heads.append(Header("admin"))
             heads.append(Header("oper"))
@@ -415,6 +465,14 @@ class BusManager(Node):
             if has_delayed:
                 row.append(link.deliveriesDelayed1Sec + link.deliveriesDelayed10Sec)
                 row.append(link.settleRate)
+            if has_stuck:
+                row.append(link.deliveriesStuck)
+            if has_credit:
+                row.append(link.creditAvailable)
+                if link.zeroCreditSeconds > 0:
+                    row.append(TimeShort(link.zeroCreditSeconds * 1000000000))
+                else:
+                    row.append('-')
             if self.opts.verbose:
                 row.append(link.adminStatus)
                 row.append(link.operStatus)

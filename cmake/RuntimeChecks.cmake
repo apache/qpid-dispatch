@@ -22,16 +22,14 @@
 # The RUNTIME_CHECK variable enables run-time checking when running
 # the CTest test suite. The following tools are supported
 #
-# -DRUNTIME_CHECK=memcheck   # runs qdrouter under valgrind's leak checker
-# -DRUNTIME_CHECK=tsan       # turns on thread sanitizer
+# -DRUNTIME_CHECK=tsan      # turns on thread sanitizer
+# -DRUNTIME_CHECK=asan      # address and undefined behavior sanitizer
+# -DRUNTIME_CHECK=memcheck  # valgrind memcheck (in progress)
+# -DRUNTIME_CHECK=helgrind  # valgrind helgrind (in progress)
 #
 # This file updates the QDROUTERD_RUNNER and CMAKE_C_FLAGS
 # appropriately for use when running the ctest suite.
 
-
-# Valid options for RUNTIME_CHECK
-#
-set(runtime_checks OFF tsan memcheck helgrind)
 
 # Valgrind configuration
 #
@@ -46,12 +44,12 @@ macro(assert_has_valgrind)
 endmacro()
 
 # Check for compiler's support of sanitizers.
-# Currently have tested back to gcc 7.4.0 and clang 6.0.0, older
+# Currently have tested back to gcc 5.4.0 and clang 6.0.0, older
 # versions may require more work
 #
 if((CMAKE_C_COMPILER_ID MATCHES "GNU"
-      AND (CMAKE_C_COMPILER_VERSION VERSION_GREATER 7.4
-        OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 7.4))
+      AND (CMAKE_C_COMPILER_VERSION VERSION_GREATER 5.4
+        OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 5.4))
     OR (CMAKE_C_COMPILER_ID MATCHES "Clang"
       AND (CMAKE_C_COMPILER_VERSION VERSION_GREATER 6.0
         OR CMAKE_C_COMPILER_VERSION VERSION_EQUAL 6.0)))
@@ -63,9 +61,14 @@ macro(assert_has_sanitizers)
   endif()
 endmacro()
 
+# Valid options for RUNTIME_CHECK
+#
+set(runtime_checks OFF tsan asan memcheck helgrind)
+
 # Set RUNTIME_CHECK value and deal with the older cmake flags for
 # valgrind and TSAN
 #
+set(RUNTIME_CHECK_DEFAULT OFF)
 macro(deprecated_enable_check old new doc)
   if (${old})
     message("WARNING: option ${old} is deprecated, use -DRUNTIME_CHECK=${new} instead")
@@ -92,11 +95,20 @@ elseif(RUNTIME_CHECK STREQUAL "helgrind")
   message(STATUS "Runtime race checker: valgrind helgrind")
   set(QDROUTERD_RUNNER "${VALGRIND_EXECUTABLE} --tool=helgrind ${VALGRIND_COMMON_ARGS}")
 
-#elseif(RUNTIME_CHECK STREQUAL "asan")
-#  assert_has_sanitizers()
-#  message(STATUS "Runtime memory checker: gcc/clang memory sanitizers")
-#  set(SANITIZE_FLAGS "-g -fno-omit-frame-pointer -fsanitize=address,undefined")
-#  set(TEST_WRAP_PREFIX "${CMAKE_SOURCE_DIR}/tests/preload_asan.sh $<TARGET_FILE:qpid-proton-core>")
+elseif(RUNTIME_CHECK STREQUAL "asan")
+  assert_has_sanitizers()
+  find_library(ASAN_LIBRARY NAME asan libasan)
+  if(ASAN_LIBRARY-NOTFOUND)
+    message(FATAL_ERROR "libasan not installed - address sanitizer not available")
+  endif(ASAN_LIBRARY-NOTFOUND)
+  find_library(UBSAN_LIBRARY NAME ubsan libubsan)
+  if(UBSAN_LIBRARY-NOTFOUND)
+    message(FATAL_ERROR "libubsan not installed - address sanitizer not available")
+  endif(UBSAN_LIBRARY-NOTFOUND)
+  message(STATUS "Runtime memory checker: gcc/clang address sanitizers")
+  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -fsanitize=address,undefined")
+  set(RUNTIME_ASAN_ENV_OPTIONS "detect_leaks=true suppressions=${CMAKE_SOURCE_DIR}/tests/asan.supp")
+  set(RUNTIME_LSAN_ENV_OPTIONS "suppressions=${CMAKE_SOURCE_DIR}/tests/lsan.supp")
 
 elseif(RUNTIME_CHECK STREQUAL "tsan")
   assert_has_sanitizers()
@@ -108,6 +120,6 @@ elseif(RUNTIME_CHECK STREQUAL "tsan")
   set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -g -fno-omit-frame-pointer -fsanitize=thread")
   set(RUNTIME_TSAN_ENV_OPTIONS "second_deadlock_stack=1 suppressions=${CMAKE_SOURCE_DIR}/tests/tsan.supp")
 
-elseif(NOT RUNTIME_CHECK STREQUAL "")
+elseif(RUNTIME_CHECK)
   message(FATAL_ERROR "'RUNTIME_CHECK=${RUNTIME_CHECK}' is invalid, valid values: ${runtime_checks}")
 endif()

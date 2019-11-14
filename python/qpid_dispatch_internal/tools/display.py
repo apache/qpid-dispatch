@@ -45,7 +45,14 @@ def Commas(value):
     sval = left
 
 def TimeLong(value):
-  return strftime("%c", gmtime(value / 1000000000))
+  day = value // (24 * 3600)
+  time = value % (24 * 3600)
+  hour = time // 3600
+  time %= 3600
+  minutes = time // 60
+  time %= 60
+  seconds = time
+  return "%03d:%02d:%02d:%02d" % (day, hour, minutes, seconds)
 
 def TimeShort(value):
   return strftime("%X", gmtime(value / 1000000000))

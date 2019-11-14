@@ -137,6 +137,7 @@ foreach(py_test_module
     system_tests_multicast
     system_tests_fallback_dest
     system_tests_router_mesh
+    system_tests_stuck_deliveries
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})

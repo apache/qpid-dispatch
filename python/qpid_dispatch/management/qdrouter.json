@@ -510,6 +510,11 @@
 	                "description":"Number of links attached to the router node.",
 	                "graph": true
 	            },
+                "blockedLinkCount": {
+                    "type": "integer",
+                    "description": "The number of links that are flagged as blocked.  A blocked link is one in which the available credit has remained zero for more than 10 seconds.",
+                    "graph": true
+                },
 	            "nodeCount": {
 	                "type": "integer",
 	                "description":"Number of known peer router nodes.",
@@ -570,6 +575,11 @@
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
                 },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
+                },
                 "deliveriesIngress": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to it by a sender that is directly attached to the router.",
@@ -599,7 +609,12 @@
                     "type": "integer",
                     "description": "Number of deliveries that were sent to the fallback destination due to the primary destination being unreachable.",
                     "graph": true
-                }
+                },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the router was started."
+                }                
             }
         },       
         "sslProfile": {
@@ -1524,6 +1539,20 @@
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
                 },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
+                },
+                "creditAvailable": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of credits available on this link."
+                },
+                "zeroCreditSeconds": {
+                    "type": "integer",
+                    "description": "The number of seconds that the link's available credit has remained zero."
+                },
                 "settleRate": {
                     "type": "integer",
                     "graph": true,
@@ -1748,10 +1777,20 @@
                     "description": "If multi-tenancy is on for this connection, the tenant space in effect",
                     "type": "string"
                 },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the connection was created."
+                },                                
                 "properties": {
                     "description": "Connection properties supplied by the peer.",
                     "type": "map"
-                }
+                },
+                "lastDlvSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since a delivery was sent on this connection. Will display a - (dash) if no deliveries have been sent on the connection."
+                }                
             }
         },
 
@@ -1928,6 +1967,18 @@
                     "type": "string",
                     "description": "A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard '*'. To deny access from all remote hosts, leave this attribute blank.",
                     "required": true
+                },
+                "maxConnectionsPerUser": {
+                    "type": "integer",
+                    "description": "Optional maximum number of connections that may be created by users in this group. This value, if specified, overrides the vhost maxConnectionsPerUser value",
+                    "required": false,
+                    "create": false
+                },
+                "maxConnectionsPerHost": {
+                    "type": "integer",
+                    "description": "Optional maximum number of concurrent connections allowed for any remote host by users in this group. This value, if specified, overrides the vhost maxConnectionsPerHost value",
+                    "required": false,
+                    "create": false
                 },
                 "maxFrameSize": {
                     "type": "integer",

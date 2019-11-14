@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import unittest as unittest
 import os, json, re, signal
+import sys
 import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
@@ -327,10 +328,23 @@ class SenderReceiverLimits(TestCase):
         bs1.close()
 
     def test_verify_z_connection_stats(self):
-        with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
-            log_lines = router_log.read().split("\n")
-            close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
-            self.assertTrue(len(close_lines) == 1, msg='Policy did not log sender and receiver denials.')
+        # This test relies on being executed after test_verify_n_receivers and test_verify_n_senders.
+        # This test is named to follow those tests alphabetically.
+        # It also relies on executing after the router log file has written the policy logs.
+        # In some emulated environments the router log file writes may lag test execution.
+        # To accomodate the file lag this test may retry reading the log file.
+        verified = False
+        for tries in range(5):
+            with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+                log_lines = router_log.read().split("\n")
+                close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
+                verified = len(close_lines) == 1
+            if verified:
+                break;
+            print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
+            sys.stdout.flush()
+            time.sleep(1)
+        self.assertTrue(verified, msg='Policy did not log sender and receiver denials.')
 
 
 class PolicyVhostOverride(TestCase):
@@ -1170,6 +1184,80 @@ class VhostPolicyFromRouterConfig(TestCase):
             self.assertTrue(receiver.link_error,
                             msg="source address must not be allowed, but it was [%s]" % source_addr)
 
+
+class VhostPolicyConnLimit(TestCase):
+    """
+    Verify that connections beyond the vhost limit are allowed
+    if override specified in vhost.group.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyConnLimit, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('vhost', {
+                'hostname': '0.0.0.0', 'maxConnections': 100,
+                'maxConnectionsPerUser': 2,
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                ), (
+                    'anonymous', {
+                        'users': 'anonymous', 'remoteHosts': '*',
+                        'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
+                        'targets': 'addr/*, simpleaddress, queue.${user}',
+                        'allowDynamicSource': 'true',
+                        'allowAnonymousSender': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-policy-conn-limit', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_vhost_maximum_connections_override(self):
+        addr = "%s/$management" % self.address()
+        timeout = 5
+
+        # three connections should be ok
+        denied = False
+        try:
+            bc1 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc2 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc3 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertFalse(denied)  # assert connections were opened
+
+        # fourth connection should be denied
+        denied = False
+        try:
+            bc4 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertTrue(denied)  # assert if connection that should not open did open
+
+        bc1.connection.close()
+        bc2.connection.close()
+        bc3.connection.close()
 
 class ClientAddressValidator(MessagingHandler):
     """

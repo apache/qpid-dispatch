@@ -41,6 +41,92 @@ include::{generated_man}/qdstat_help.adoc[]
 OUTPUT COLUMNS
 --------------
 
+qdstat -g
+~~~~~~~~~
+
+Version::
+The version of Dispatch Router.
+
+Mode::
+The router's operating mode:
+- `standalone` - The router operates as a single, standalone network node.
+- `interior` - The router operates in cooperation with other interior routers in an interconnected network.
+- `edge` - The router operates at the edge of the router network. It maintains an uplink connection to an interior router.
+
+Router Id::
+The router's ID.
+
+Uptime::
+Time this router has been up. Displayed in the days:hours:minutes:seconds format.
+
+// Area::
+
+Link Routes::
+The number of active and inactive link routes configured for this router.
+
+Auto Links::
+The number of incoming and outgoing auto links configured for this router.
+
+Links::
+The number of incoming and outgoing links attached to the router.
+
+Nodes::
+The number of peer routers connected to this router.
+
+Addresses::
+The number of addresses with links attached to this router.
+
+Connections::
+The number of connections to the router. This includes connections from and to any AMQP route container.
+
+Presettled Count::
+The number of presettled deliveries forwarded by this router.
+
+Dropped Presettled Count::
+The number of presettled deliveries that this router dropped due to congestion.
+
+Accepted Count::
+The number of deliveries forwarded by this router that were accepted.
+
+Rejected Count::
+The number of deliveries forwarded by this router that were rejected.
+
+Released Count::
+The number of deliveries forwarded by this router that were released.
+
+Modified Count::
+The number of deliveries forwarded by this router that were modified.
+
+Deliveries Delayed > 1sec::
+The number of deliveries forwarded by this router that were unsettled for more than one second.
+
+Deliveries Delayed > 10sec::
+The number of deliveries forwarded by this router that were unsettled for more than ten seconds.
+
+Deliveries Stuck > 10sec::
+The number of deliveries forwarded by this router that were stuck for more than ten seconds.
+
+Deliveries to Fallback::
+The number of deliveries that were forwarded to a fallback destination.
+
+Links Blocked::
+The number of links that are blocked. A blocked link is one in which the available credit has remained zero for more than 10 seconds.
+
+Ingress Count::
+The number of messages sent to this router.
+
+Egress Count::
+The number of messages sent from this router.
+
+Transit Count::
+The number of deliveries sent to another router in the network.
+
+Deliveries from Route Container::
+The number of deliveries this router has received from AMQP route containers.
+
+Deliveries to Route Container::
+The number of deliveries this router has sent to AMQP route containers.
+
 qdstat -c
 ~~~~~~~~~
 id::
@@ -72,6 +158,13 @@ The authentication method and user ID of the connection's authenticated user.
 
 tenant::
 If the connection is to a listener using multi-tenancy, this column displays the tenant namespace for the connection.
+
+last dlv::
+Time since the last delivery arrived on this connection. Displayed in the days:hours:minutes:seconds format.
+
+uptime::
+Time this connection has been up. Displayed in the days:hours:minutes:seconds format.
+
 
 qdstat -l
 ~~~~~~~~~
@@ -151,6 +244,15 @@ The number of settled deliveries on this link that were unsettled for more than 
 
 rate::
 The average rate (over a period of five seconds) at which deliveries have been settled on this link.
+
+stuck::
+The number of deliveries on this link that are flagged as "stuck".  A delivery is considered stuck if it has been either undelivered or unsettled for more than 10 seconds.
+
+cred::
+The number of flow credits currently available on this link.
+
+blkd::
+The time elapsed since the available credit for this link became zero and has remained zero.
 
 admin::
 The administrative status of the link:

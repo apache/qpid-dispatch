@@ -193,6 +193,8 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
         if not isinstance(e, socket.error) or not e.errno == errno.ECONNREFUSED:
             raise
 
+    host = None
+
     def connect():
         # macOS gives EINVAL for all connection attempts after a ECONNREFUSED
         # man 3 connect: "If connect() fails, the state of the socket is unspecified. [...]"
@@ -205,7 +207,7 @@ def wait_port(port, protocol_family='IPv4', **retry_kwargs):
     try:
         retry_exception(connect, exception_test=check, **retry_kwargs)
     except Exception as e:
-        raise Exception("wait_port timeout on host %s port %s: %s"%(host, port, e))
+        raise Exception("wait_port timeout on host %s port %s: %s" % (host, port, e))
 
 def wait_ports(ports, **retry_kwargs):
     """Wait up to timeout for all ports (on host) to be connectable.
@@ -657,6 +659,7 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
 
     @classmethod
     def setUpClass(cls):
+        cls.maxDiff = None
         cls.tester = Tester('.'.join([cls.__module__, cls.__name__, 'setUpClass']))
         cls.tester.rmtree()
         cls.tester.setup()
@@ -1033,6 +1036,10 @@ class MgmtMsgProxy(object):
     def response(self, msg):
         ap = msg.properties
         return self._Response(ap['statusCode'], ap['statusDescription'], msg.body)
+
+    def query_router(self):
+        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router'}
+        return Message(properties=ap, reply_to=self.reply_addr)
 
     def query_connections(self):
         ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.connection'}

@@ -24,7 +24,7 @@ from __future__ import print_function
 
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
-from system_test import unittest
+from system_test import unittest, QdManager
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils import BlockingConnection, SyncRequestResponse
@@ -502,6 +502,10 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_48_connection_uptime_last_dlv(self):
+        test = ConnectionUptimeLastDlvTest(self.address, "test_48")
+        test.run()
+        self.assertEqual(None, test.error)
 
 
 class Entity(object):
@@ -2685,6 +2689,101 @@ class MulticastUnsettledNoReceiverTest(MessagingHandler):
         Container(self).run()
 
 
+class UptimeLastDlvChecker(object):
+    def __init__(self, parent, lastDlv=None, uptime=0):
+        self.parent = parent
+        self.uptime = uptime
+        self.lastDlv = lastDlv
+        self.expected_num_connections = 2
+        self.num_connections = 0
+
+    def on_timer_task(self, event):
+        local_node = Node.connect(self.parent.address, timeout=TIMEOUT)
+        result = local_node.query('org.apache.qpid.dispatch.connection')
+        container_id_index = result.attribute_names.index('container')
+        uptime_seconds_index = result.attribute_names.index('uptimeSeconds')
+        last_dlv_seconds_index = result.attribute_names.index('lastDlvSeconds')
+        for res in result.results:
+            container_id = res[container_id_index]
+
+            # We only care if the container_id is "UPTIME-TEST"
+            if container_id == self.parent.container_id:
+                uptime_seconds = res[uptime_seconds_index]
+                if self.uptime != 0 and uptime_seconds < self.uptime:
+                    self.parent.error = "The connection uptime should be greater than or equal to %d seconds but instead is %d seconds" % (self.uptime, uptime_seconds)
+                last_dlv_seconds = res[last_dlv_seconds_index]
+                if self.lastDlv is None:
+                    if last_dlv_seconds is not None:
+                        self.parent.error = "Expected lastDlvSeconds to be empty"
+                else:
+                    if not last_dlv_seconds >= self.lastDlv:
+                        self.parent.error = "Connection lastDeliverySeconds must be greater than or equal to $d but is %d" % (self.lastDlv, last_dlv_seconds)
+                    else:
+                        self.parent.success = True
+                self.num_connections += 1
+
+        if self.expected_num_connections != self.num_connections:
+            self.parent.error = "Number of client connections expected=%d, but got %d" % (self.expected_num_connections, self.num_connections)
+
+        self.parent.cancel_custom()
+
+
+class ConnectionUptimeLastDlvTest(MessagingHandler):
+    def __init__(self, address, dest):
+        super(ConnectionUptimeLastDlvTest, self).__init__()
+        self.timer = None
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.address = address
+        self.sender = None
+        self.receiver = None
+        self.error = None
+        self.custom_timer = None
+        self.container_id = "UPTIME-TEST"
+        self.dest = dest
+        self.reactor = None
+        self.success = False
+
+    def cancel_custom(self):
+        self.custom_timer.cancel()
+        if self.error or self.success:
+            self.timer.cancel()
+            self.sender_conn.close()
+            self.receiver_conn.close()
+        else:
+            msg = Message(body=self.container_id)
+            self.sender.send(msg)
+
+            # We have now sent a message that the router must have sent to the
+            # receiver. We will wait for 2 seconds and once again check
+            # uptime and lastDlv
+            self.custom_timer = self.reactor.schedule(2, UptimeLastDlvChecker(self, uptime=7, lastDlv=2))
+
+    def timeout(self):
+        self.error = "Timeout Expired:, Test took too long to execute. "
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
+
+        # Let's create a sender and receiver but not send any messages.
+        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+
+        # Execute a management query for connections after 5 seconds
+        # This will help us check the uptime and lastDlv time
+        # No deliveries were sent on any link yet, so the lastDlv must be "-"
+        self.reactor = event.reactor
+        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv=None))
+
+    def run(self):
+        container = Container(self)
+        container.container_id = self.container_id
+        container.run()
+
 class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
     def __init__(self, address):
         super(AnonymousSenderNoRecvLargeMessagedTest, self).__init__(auto_accept=False)
@@ -3159,6 +3258,83 @@ class UnsettledLargeMessageTest(MessagingHandler):
             # Receiver bails after receiving max_receive messages.
             self.receiver.close()
             self.recv_conn.close()
+
+class OneRouterUnavailableCoordinatorTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(OneRouterUnavailableCoordinatorTest, cls).setUpClass()
+        name = "test-router"
+        OneRouterTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR',  'defaultDistribution': 'unavailable'}),
+            ('listener', {'port': cls.tester.get_port() }),
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def test_46_coordinator_linkroute_unavailable_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We try to connect a tx sender
+        # to make sure a good detailed message saying "the link route to a coordinator must be
+        # configured" is sent back.
+        test = RejectCoordinatorGoodMessageTest(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
+    def test_47_coordinator_linkroute_available_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We create a link route with $coordinator address
+        # The link route is not attached to any broker. When the attach comes in, the reject message must be
+        # condition=:"qd:no-route-to-dest", description="No route to the destination node"
+        COORDINATOR = "$coordinator"
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        qd_manager = QdManager(self, address=self.address)
+        args = {"prefix": COORDINATOR, "connection": "broker", "dir": "in"}
+        qd_manager.create(long_type, args)
+        link_route_created = False
+
+        # Verify that the link route was created by querying for it.
+        outs = qd_manager.query(long_type)[0]
+        if outs:
+            try:
+                if outs['prefix'] == COORDINATOR:
+                    link_route_created = True
+            except:
+                pass
+
+        self.assertTrue(link_route_created)
+
+        # We have verified that the link route has been created but there is no broker connections.
+        # Now let's try to open a transaction. We should get a no route to destination error
+        test = RejectCoordinatorGoodMessageTest(self.address, link_route_present=True)
+        test.run()
+        self.assertTrue(test.passed)
+
+
+class RejectCoordinatorGoodMessageTest(RejectCoordinatorTest):
+    def __init__(self, url, link_route_present=False):
+        super(RejectCoordinatorGoodMessageTest, self).__init__(url)
+        self.link_route_present = link_route_present
+        self.error_with_link_route = "No route to the destination node"
+
+    def on_link_error(self, event):
+        link = event.link
+        # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
+        # that the router has rejected the link because it cannot coordinate transactions itself
+        if link.name == "txn-ctrl":
+            if self.link_route_present:
+                if link.remote_condition.description == self.error_with_link_route and link.remote_condition.name == 'qd:no-route-to-dest':
+                    self.link_error = True
+            else:
+                if link.remote_condition.description == self.error and link.remote_condition.name == 'amqp:precondition-failed':
+                    self.link_error = True
+
+            self.check_if_done()
+
+    def run(self):
+        Container(self).run()
 
 
 class Q2HoldoffDropTest(MessagingHandler):

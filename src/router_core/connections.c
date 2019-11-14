@@ -106,6 +106,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
     DEQ_INIT(conn->work_list);
     conn->connection_info->role = conn->role;
     conn->work_lock = sys_mutex();
+    conn->conn_uptime = core->uptime_ticks;
 
     if (vhost) {
         conn->tenant_space_len = strlen(vhost) + 1;
@@ -221,6 +222,35 @@ const char *qdr_connection_get_tenant_space(const qdr_connection_t *conn, int *l
     *len = conn ? conn->tenant_space_len : 0;
     return conn ? conn->tenant_space : 0;
 }
+
+
+void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
+{
+    //
+    // Get Proton's view of this link's available credit.
+    //
+    int pn_credit = core->get_credit_handler(core->user_context, link);
+
+    if (link->credit_reported > 0 && pn_credit == 0) {
+        //
+        // The link has transitioned from positive credit to zero credit.
+        //
+        link->zero_credit_time = core->uptime_ticks;
+    } else if (link->credit_reported == 0 && pn_credit > 0) {
+        //
+        // The link has transitioned from zero credit to positive credit.
+        // Clear the recorded time.
+        //
+        link->zero_credit_time = 0;
+        if (link->reported_as_blocked) {
+            link->reported_as_blocked = false;
+            core->links_blocked--;
+        }
+    }
+
+    link->credit_reported = pn_credit;
+}
+
 
 
 int qdr_connection_process(qdr_connection_t *conn)
@@ -365,7 +395,8 @@ int qdr_connection_process(qdr_connection_t *conn)
             if (detach_sent) {
                 // let the core thread know so it can clean up
                 qdr_link_detach_sent(link);
-            }
+            } else
+                qdr_record_link_credit(core, link);
 
             ref = DEQ_NEXT(ref);
         }
@@ -506,6 +537,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
     link->core_ticks     = conn->core->uptime_ticks;
+    link->zero_credit_time = conn->core->uptime_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
 
     link->strip_annotations_in  = conn->strip_annotations_in;
@@ -591,6 +623,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_drain_t           drain,
                              qdr_link_push_t            push,
                              qdr_link_deliver_t         deliver,
+                             qdr_link_get_credit_t      get_credit,
                              qdr_delivery_update_t      delivery_update,
                              qdr_connection_close_t     conn_close)
 {
@@ -604,6 +637,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
     core->drain_handler           = drain;
     core->push_handler            = push;
     core->deliver_handler         = deliver;
+    core->get_credit_handler      = get_credit;
     core->delivery_update_handler = delivery_update;
     core->conn_close_handler      = conn_close;
 }
@@ -965,11 +999,14 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     // Log the link closure
     //
     qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"][L%"PRIu64"] %s: del=%"PRIu64" presett=%"PRIu64" psdrop=%"PRIu64
-           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64,
+           " acc=%"PRIu64" rej=%"PRIu64" rel=%"PRIu64" mod=%"PRIu64" delay1=%"PRIu64" delay10=%"PRIu64" blocked=%s",
            conn->identity, link->identity, log_text, link->total_deliveries, link->presettled_deliveries,
            link->dropped_presettled_deliveries, link->accepted_deliveries, link->rejected_deliveries,
            link->released_deliveries, link->modified_deliveries, link->deliveries_delayed_1sec,
-           link->deliveries_delayed_10sec);
+           link->deliveries_delayed_10sec, link->reported_as_blocked ? "yes" : "no");
+
+    if (link->reported_as_blocked)
+        core->links_blocked--;
 
     free_qdr_link_t(link);
 }
@@ -1022,6 +1059,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     link->strip_prefix   = 0;
     link->attach_count   = 1;
     link->core_ticks     = core->uptime_ticks;
+    link->zero_credit_time = core->uptime_ticks;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;

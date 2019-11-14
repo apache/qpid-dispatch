@@ -65,6 +65,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->action_lock = sys_mutex();
     core->running     = true;
     DEQ_INIT(core->action_list);
+    DEQ_INIT(core->action_list_background);
 
     core->work_lock = sys_mutex();
     DEQ_INIT(core->work_list);
@@ -324,6 +325,15 @@ void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action)
 {
     sys_mutex_lock(core->action_lock);
     DEQ_INSERT_TAIL(core->action_list, action);
+    sys_cond_signal(core->action_cond);
+    sys_mutex_unlock(core->action_lock);
+}
+
+
+void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action)
+{
+    sys_mutex_lock(core->action_lock);
+    DEQ_INSERT_TAIL(core->action_list_background, action);
     sys_cond_signal(core->action_cond);
     sys_mutex_unlock(core->action_lock);
 }
@@ -848,6 +858,8 @@ static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, 
         stats->deliveries_egress_route_container = core->deliveries_egress_route_container;
         stats->deliveries_delayed_1sec = core->deliveries_delayed_1sec;
         stats->deliveries_delayed_10sec = core->deliveries_delayed_10sec;
+        stats->deliveries_stuck = core->deliveries_stuck;
+        stats->links_blocked = core->links_blocked;
         stats->deliveries_redirected_to_fallback = core->deliveries_redirected;
     }
     qdr_general_work_t *work = qdr_general_work(qdr_post_global_stats_response);

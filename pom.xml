@@ -98,6 +98,8 @@
                       <exclude>**/MANIFEST.in</exclude>
                       <exclude>**/valgrind.supp</exclude>
                       <exclude>**/tsan.supp</exclude>
+                      <exclude>**/asan.supp</exclude>
+                      <exclude>**/lsan.supp</exclude>
                       <exclude>**/*.json.in</exclude>
                       <exclude>**/*.json</exclude>
                       <exclude>**/*.svg</exclude>

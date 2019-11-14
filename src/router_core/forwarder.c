@@ -116,6 +116,8 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
 {
     qdr_delivery_t *out_dlv = new_qdr_delivery_t();
     uint64_t       *tag = (uint64_t*) out_dlv->tag;
+    if (link->conn)
+        link->conn->last_delivery_time = core->uptime_ticks;
 
     ZERO(out_dlv);
     set_safe_ptr_qdr_link_t(link, &out_dlv->link_sp);
@@ -888,6 +890,8 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
     out_link->admin_enabled  = true;
     out_link->attach_count   = 1;
+    out_link->core_ticks     = conn->core->uptime_ticks;
+    out_link->zero_credit_time = core->uptime_ticks;
 
     if (strip) {
         out_link->strip_prefix = strip;

@@ -262,6 +262,7 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     action->args.connection.drain  = drain_mode;
 
     qdr_action_enqueue(core, action);
+    qdr_record_link_credit(core, link);
 }
 
 
@@ -638,6 +639,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     if (!link)
         return;
+    if (link->conn)
+        link->conn->last_delivery_time = core->uptime_ticks;
 
     //
     // Record the ingress time so we can track the age of this delivery.

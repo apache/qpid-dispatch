@@ -1669,6 +1669,18 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 }
 
 
+static int CORE_link_get_credit(void *context, qdr_link_t *link)
+{
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t *plink = !!qlink ? qd_link_pn(qlink) : 0;
+
+    if (!plink)
+        return 0;
+
+    return pn_link_remote_credit(plink);
+}
+
+
 static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
     qd_router_t   *router = (qd_router_t*) context;
@@ -1780,6 +1792,7 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             CORE_link_drain,
                             CORE_link_push,
                             CORE_link_deliver,
+                            CORE_link_get_credit,
                             CORE_delivery_update,
                             CORE_close_connection);
 
