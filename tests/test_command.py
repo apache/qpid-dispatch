@@ -143,7 +143,7 @@ class TestMain(unittest.TestCase):
         def run_raises_KeyboardInterrupt(argv):
             run_raises(argv, KeyboardInterrupt)
 
-        self.assertEqual(0, main(run_success))
+        self.assertEqual(1, main(run_success))
         failed_runs = [
             #run_raises_UsageError, ##uncomment this exposes bug
             run_raises_Exception,
