@@ -85,65 +85,6 @@ if(CONSOLE_INSTALL)
   set(CONSOLE_TEST system_tests_console)
 endif(CONSOLE_INSTALL)
 
-# System test python modules
-foreach(py_test_module
-#   system_tests_broker
-    system_tests_link_routes
-    system_tests_link_routes_add_external_prefix
-    system_tests_link_route_credit
-    system_tests_autolinks
-    system_tests_drain
-    system_tests_management
-    system_tests_one_router
-    system_tests_handle_failover
-    system_tests_default_distribution
-    system_tests_deprecated
-    system_tests_policy
-    system_tests_protocol_family
-    system_tests_protocol_settings
-    system_tests_qdmanage
-    system_tests_qdstat
-    system_tests_sasl_plain
-    system_tests_user_id
-    system_tests_user_id_proxy
-    system_tests_two_routers
-    system_tests_interior_sync_up
-    system_tests_distribution
-    system_tests_multi_tenancy
-    system_tests_dynamic_terminus
-    system_tests_log_message_components
-    system_tests_failover_list
-    system_tests_auth_service_plugin
-    system_tests_authz_service_plugin
-    system_tests_delivery_abort
-    system_tests_topology
-    system_tests_topology_disposition
-    system_tests_topology_addition
-    system_tests_disallow_link_resumable_link_route
-    system_tests_global_delivery_counts
-    system_tests_exchange_bindings
-    system_tests_cmdline_parsing
-    system_tests_bad_configuration
-    system_tests_ssl
-    system_tests_edge_router
-    system_tests_connector_status
-    system_tests_core_endpoint
-    ${SYSTEM_TESTS_HTTP}
-    ${CONSOLE_TEST}
-    system_tests_priority
-    system_tests_core_client
-    system_tests_address_lookup
-    system_tests_multi_phase
-    system_tests_multicast
-    system_tests_fallback_dest
-    system_tests_router_mesh
-    system_tests_stuck_deliveries
-    )
-
-  add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
-  list(APPEND SYSTEM_TEST_FILES ${CMAKE_CURRENT_SOURCE_DIR}/${py_test_module}.py)
-endforeach()
-
 # Use tox to run the flake8 python linter tool on all the python
 # sources. Highly recommended if you're hacking the python code.
 # Unfortunately this can only be done for versions of tox >= 1.9.0
