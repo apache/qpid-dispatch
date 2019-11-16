@@ -36,15 +36,10 @@ class ConnectForm extends React.Component {
       port: "",
       username: "",
       password: "",
-      isShown: this.props.isConnectFormOpen,
       connecting: false,
       connectError: null
     };
   }
-
-  show = isShown => {
-    this.setState({ isShown });
-  };
 
   componentDidMount = () => {
     let savedValues = localStorage.getItem(CONNECT_KEY);
@@ -62,6 +57,7 @@ class ConnectForm extends React.Component {
     }
     this.setState(savedValues);
   };
+
   handleTextInputChange = (field, value) => {
     const formValues = Object.assign(this.state);
     formValues[field] = value;
@@ -93,9 +89,12 @@ class ConnectForm extends React.Component {
           e => {
             console.log(e);
             this.setState({ connecting: false, connectError: e.message });
-            this.props.handleAddNotification("action", `Connect failed with message: ${e.message}`,
+            this.props.handleAddNotification(
+              "action",
+              `Connect failed with message: ${e.message}`,
               new Date(),
-              "danger")
+              "danger"
+            );
           }
         );
       });
@@ -107,17 +106,8 @@ class ConnectForm extends React.Component {
   };
 
   render() {
-    const {
-      isShown,
-      address,
-      port,
-      username,
-      password,
-      connecting,
-      connectError
-    } = this.state;
-
-    return isShown ? (
+    const { address, port, username, password, connecting, connectError } = this.state;
+    return this.props.isConnectFormOpen ? (
       <div>
         <div className="connect-modal">
           <div className={connecting ? "connecting" : ""}>
@@ -125,15 +115,10 @@ class ConnectForm extends React.Component {
               <TextContent className="connect-title">
                 <Text component={TextVariants.h1}>Connect</Text>
                 <Text component={TextVariants.p}>
-                  Enter the address and an HTTP-enabled port of a qpid dispatch
-                  router.
+                  Enter the address and an HTTP-enabled port of a qpid dispatch router.
                 </Text>
               </TextContent>
-              <FormGroup
-                label="Address"
-                isRequired
-                fieldId={`form-address-${this.props.prefix}`}
-              >
+              <FormGroup label="Address" isRequired fieldId={`form-address-${this.props.prefix}`}>
                 <TextInput
                   value={address}
                   isRequired
@@ -141,16 +126,10 @@ class ConnectForm extends React.Component {
                   id={`form-address-${this.props.prefix}`}
                   aria-describedby="horizontal-form-address-helper"
                   name="form-address"
-                  onChange={value =>
-                    this.handleTextInputChange("address", value)
-                  }
+                  onChange={value => this.handleTextInputChange("address", value)}
                 />
               </FormGroup>
-              <FormGroup
-                label="Port"
-                isRequired
-                fieldId={`form-port-${this.props.prefix}`}
-              >
+              <FormGroup label="Port" isRequired fieldId={`form-port-${this.props.prefix}`}>
                 <TextInput
                   value={port}
                   onChange={value => this.handleTextInputChange("port", value)}
@@ -160,29 +139,19 @@ class ConnectForm extends React.Component {
                   name="form-port"
                 />
               </FormGroup>
-              <FormGroup
-                label="User name"
-                fieldId={`form-user-${this.props.prefix}`}
-              >
+              <FormGroup label="User name" fieldId={`form-user-${this.props.prefix}`}>
                 <TextInput
                   value={username}
-                  onChange={value =>
-                    this.handleTextInputChange("username", value)
-                  }
+                  onChange={value => this.handleTextInputChange("username", value)}
                   isRequired
                   id={`form-user-${this.props.prefix}`}
                   name="form-user"
                 />
               </FormGroup>
-              <FormGroup
-                label="Password"
-                fieldId={`form-password-${this.props.prefix}`}
-              >
+              <FormGroup label="Password" fieldId={`form-password-${this.props.prefix}`}>
                 <TextInput
                   value={password}
-                  onChange={value =>
-                    this.handleTextInputChange("password", value)
-                  }
+                  onChange={value => this.handleTextInputChange("password", value)}
                   type="password"
                   id={`form-password-${this.props.prefix}`}
                   name="form-password"
@@ -190,9 +159,7 @@ class ConnectForm extends React.Component {
               </FormGroup>
               {connectError && (
                 <TextContent className="connect-error">
-                  <Text component={TextVariants.p}>
-                    {connectError}
-                  </Text>
+                  <Text component={TextVariants.p}>{connectError}</Text>
                 </TextContent>
               )}
               <ActionGroup>

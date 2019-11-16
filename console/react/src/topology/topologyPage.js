@@ -31,7 +31,11 @@ class TopologyPage extends Component {
 
   render() {
     return (
-      <PageSection variant={PageSectionVariants.light} id="topologyPage">
+      <PageSection
+        data-testid="topology-page"
+        variant={PageSectionVariants.light}
+        id="topologyPage"
+      >
         <TopologyViewer service={this.props.service} />
       </PageSection>
     );

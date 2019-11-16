@@ -80,10 +80,7 @@ class ClientInfoComponent extends Component {
           cells: [
             {
               title: (
-                <DetailsTable
-                  rows={[1, 2, 3, 4, 5, 6]}
-                  id="compound-expansion-table-1"
-                />
+                <DetailsTable rows={[1, 2, 3, 4, 5, 6]} id="compound-expansion-table-1" />
               ),
               props: { colSpan: 4, className: "pf-m-no-padding" }
             }
@@ -130,14 +127,7 @@ class ClientInfoComponent extends Component {
           "unsettledCount",
           "capacity"
         ],
-        cols: [
-          "linkType",
-          "addr",
-          "settleRate",
-          "delayed1",
-          "delayed10",
-          "usage"
-        ],
+        cols: ["linkType", "addr", "settleRate", "delayed1", "delayed10", "usage"],
         calc: {
           addr: link => {
             return utils.addr_text(link.owningAddr);
@@ -207,9 +197,7 @@ class ClientInfoComponent extends Component {
       results => {
         // save the results for each entity requested
         if (infoPerId[id]) {
-          infoPerId[id].linkRoutes = utils.flattenAll(
-            results[nodeId].linkRoute
-          );
+          infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute);
           infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink);
           infoPerId[id].addresses = utils.flattenAll(results[nodeId].address);
         }
@@ -227,10 +215,7 @@ class ClientInfoComponent extends Component {
         [{ entity: "router", attrs: [] }],
         results => {
           let r = results[nodeId].router;
-          infoPerId[n.container] = utils.flatten(
-            r.attributeNames,
-            r.results[0]
-          );
+          infoPerId[n.container] = utils.flatten(r.attributeNames, r.results[0]);
           let rates = utils.rates(
             infoPerId[n.container],
             ["acceptedDeliveries"],
@@ -313,11 +298,7 @@ class ClientInfoComponent extends Component {
             let count = this.d.normals.length;
             let verb = count > 1 ? "are" : "is";
             let preposition =
-              this.d.cdir === "in"
-                ? "to"
-                : this.d.cdir === "both"
-                ? "for"
-                : "from";
+              this.d.cdir === "in" ? "to" : this.d.cdir === "both" ? "for" : "from";
             let plural = count > 1 ? "s" : "";
             this.setState({
               detail: { template: "clients", title: "client" }
@@ -423,56 +404,6 @@ class ClientInfoComponent extends Component {
     return newRows;
   };
 
-  /*
-  {
-    isOpen: false,
-    cells: [
-      {
-        title: <span>container</span>,
-        props: { component: "th" }
-      },
-      {
-        title: <span>False</span>
-      },
-      {
-        title: <span>host</span>
-      },
-      {
-        title: (
-          <React.Fragment>
-            <CodeBranchIcon key="icon" /> 1
-          </React.Fragment>
-        ),
-        props: {
-          isOpen: false,
-          ariaControls: "compound-expansion-table-1"
-        }
-      }
-    ]
-  },
-  {
-    parent: 0,
-    compoundParent: 3,
-    cells: [
-      {
-        title: (
-          <DetailsTable
-            firstColumnRows={[
-              "parent-0",
-              "compound-1",
-              "three",
-              "four",
-              "five"
-            ]}
-            id="compound-expansion-table-1"
-          />
-        ),
-        props: { colSpan: 4, className: "pf-m-no-padding" }
-      }
-    ]
-  }
-*/
-
   onExpand = (event, rowIndex, colIndex, isOpen, rowData, extraData) => {
     const { rows } = this.state;
     if (!isOpen) {
@@ -511,6 +442,7 @@ class ClientInfoComponent extends Component {
             borders={false}
             rows={rows}
             cells={columns}
+            aria-label="client-info-table"
           >
             <TableHeader />
             <TableBody />

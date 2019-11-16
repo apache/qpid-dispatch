@@ -51,6 +51,9 @@ export function appendCircle(g) {
         }
         return null;
       })
+      .attr("data-testid", function(d) {
+        return (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index;
+      })
       .classed("normal", function(d) {
         return d.nodeType === "normal" || utils.isConsole(d);
       })
@@ -83,9 +86,7 @@ export function appendCircle(g) {
       })
       .classed("route-container", function(d) {
         return (
-          !utils.isArtemis(d) &&
-          !utils.isQpid(d) &&
-          d.nodeType === "route-container"
+          !utils.isArtemis(d) && !utils.isQpid(d) && d.nodeType === "route-container"
         );
       })
       .classed("client", function(d) {
@@ -137,9 +138,7 @@ export function appendContent(g) {
       } else if (utils.isQpid(d)) {
         return "\ue901"; // custom font character
       } else if (d.nodeType === "route-container") {
-        return d.properties.product
-          ? d.properties.product[0].toUpperCase()
-          : "S";
+        return d.properties.product ? d.properties.product[0].toUpperCase() : "S";
       } else if (d.nodeType === "normal") {
         return "\uf109"; // icon-laptop for clients
       } else if (d.nodeType === "edge" || d.nodeType === "_edge") {
@@ -195,9 +194,7 @@ export function addDefs(svg) {
     .attr("orient", "auto")
     .append("svg:path")
     .attr("d", function(d) {
-      return d.sten === "end"
-        ? "M 0 -5 L 10 0 L 0 5 z"
-        : "M 10 -5 L 0 0 L 10 5 z";
+      return d.sten === "end" ? "M 0 -5 L 10 0 L 0 5 z" : "M 10 -5 L 0 0 L 10 5 z";
     });
   addStyles(
     sten,

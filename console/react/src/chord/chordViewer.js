@@ -19,7 +19,6 @@ under the License.
 
 import React, { Component } from "react";
 import { TopologyView, TopologySideBar } from "@patternfly/react-topology";
-import * as d3 from "d3";
 import { getSizes } from "../topology/topoUtils";
 import { separateAddresses, aggregateAddresses } from "./filters.js";
 import { ChordData } from "./data.js";
@@ -27,6 +26,7 @@ import { qdrRibbon } from "./ribbon/ribbon.js";
 import { qdrlayoutChord } from "./layout/layout.js";
 import ChordToolbar from "./chordToolbar";
 import QDRPopup from "../qdrPopup";
+import * as d3 from "d3";
 
 const CHORDOPTIONSKEY = "chordOptions";
 const CHORDFILTERKEY = "chordFilter";
@@ -53,23 +53,13 @@ class ChordViewer extends Component {
     this.state.legendOptions = savedOptions
       ? JSON.parse(savedOptions)
       : {
-        isRate: true,
-        byAddress: true,
-        optionsOpen: true,
-        routersOpen: true,
-        addressesOpen: true
-      };
-    if (typeof this.state.legendOptions.optionsOpen === "undefined") {
-      this.state.legendOptions["optionsOpen"] = true;
-      this.state.legendOptions["routersOpen"] = true;
-      this.state.legendOptions["addressesOpen"] = true;
-    }
+          isRate: true,
+          byAddress: true
+        };
     this.chordData = new ChordData(
       this.props.service,
       this.state.legendOptions.isRate,
-      this.state.legendOptions.byAddress
-        ? separateAddresses
-        : aggregateAddresses
+      this.state.legendOptions.byAddress ? separateAddresses : aggregateAddresses
     );
     this.chordData.setFilter(this.excludedAddresses);
     this.chordColors = {};
@@ -139,8 +129,7 @@ class ChordViewer extends Component {
 
     d3.select("#chord svg").remove();
 
-    let xtrans =
-      this.outerRadius === MIN_RADIUS ? SMALL_OFFSET : this.outerRadius;
+    let xtrans = this.outerRadius === MIN_RADIUS ? SMALL_OFFSET : this.outerRadius;
     this.svg = d3
       .select("#chord")
       .append("svg")
@@ -199,15 +188,12 @@ class ChordViewer extends Component {
   //startOver();
   //};
   //d3.select(window).on('resize.updatesvg', updateWindow);
-  windowResized = () => { };
+  windowResized = () => {};
 
   // size the diagram based on the browser window size
   getRadius = () => {
     const { width, height } = getSizes(this.chordRef);
-    return Math.max(
-      Math.floor((Math.min(width, height) * 0.9) / 2),
-      MIN_RADIUS
-    );
+    return Math.max(Math.floor((Math.min(width, height) * 0.9) / 2), MIN_RADIUS);
   };
 
   // diagram sizes that change when browser is resized
@@ -337,11 +323,9 @@ class ChordViewer extends Component {
     if (!matrix.aggregate) {
       address += "<br/>";
     }
-    let title =
-      address + from + " → " + to + ": " + this.formatNumber(d.source.value);
+    let title = address + from + " → " + to + ": " + this.formatNumber(d.source.value);
     if (d.target.value > 0 && to !== from) {
-      title +=
-        "<br/>" + to + " → " + from + ": " + this.formatNumber(d.target.value);
+      title += "<br/>" + to + " → " + from + ": " + this.formatNumber(d.target.value);
     }
     return title;
   };
@@ -397,9 +381,6 @@ class ChordViewer extends Component {
     if (addressLen > 0 && this.excludedAddresses.length === addressLen) {
       this.allAddressesFiltered = true;
     }
-    console.log(
-      `doRenderChord allAddressesFiltered ${this.allAddressesFiltered}`
-    );
     this.noValues = false;
     let matrixMessages,
       duration = TRANSITION_DURATION;
@@ -410,7 +391,9 @@ class ChordViewer extends Component {
       if (!this.theyveBeenWarned) {
         this.theyveBeenWarned = true;
         let msg = "There is no message traffic";
-        if (addressLen !== 0) msg += " for the selected addresses";
+        if (addressLen !== 0) {
+          msg += " for the selected addresses";
+        }
         this.setState({ showEmpty: true, emptyText: msg });
       }
       this.emptyCircle();
@@ -442,7 +425,8 @@ class ChordViewer extends Component {
     let newArcs = arcsGroup
       .enter()
       .append("svg:g")
-      .attr("class", "arc");
+      .attr("class", "arc")
+      .attr("aria-label", d => d.key);
 
     // each new arc is an svg:path that has a fixed color
     newArcs
@@ -505,7 +489,7 @@ class ChordViewer extends Component {
       .transition()
       .duration(duration / 2)
       .attrTween("d", this.arcTweenExit)
-      .each("end", function () {
+      .each("end", function() {
         d3.select(this)
           .node()
           .parentNode.remove();
@@ -513,9 +497,7 @@ class ChordViewer extends Component {
 
     // decorate the chord layout's .chord() data with key, color, and orgIndex
     rechord.chordData = this.decorateChordData(rechord, matrix);
-    let chordPaths = this.svg
-      .selectAll("path.chord")
-      .data(rechord.chordData, d => d.key);
+    let chordPaths = this.svg.selectAll("path.chord").data(rechord.chordData, d => d.key);
 
     // new chords are paths
     chordPaths
@@ -678,7 +660,7 @@ class ChordViewer extends Component {
       });
     }
     let self = this;
-    chords.each(function (d) {
+    chords.each(function(d) {
       let chord = d3.select(this);
       // This version of d3 doesn't support multiple concurrent transitions on the same selection.
       // Since we want to animate the chord's path as well as its color, we create a dummy selection
@@ -725,12 +707,12 @@ class ChordViewer extends Component {
         oldChords[d.key] = d;
       });
     }
-    chords.each(function (d) {
+    chords.each(function(d) {
       let chord = d3.select(this);
       d3.select({})
         .transition()
         .duration(duration)
-        .tween("style:" + style, function () {
+        .tween("style:" + style, function() {
           let old = oldChords[d.key],
             interpolate;
           let oldColor = "#CCCCCC",
@@ -774,24 +756,13 @@ class ChordViewer extends Component {
       let same = start === angle(d);
       let tsame = startTranslate === this.textRadius;
 
-      let transTween = d3.interpolateNumber(
-        startTranslate,
-        this.textRadius + 10
-      );
+      let transTween = d3.interpolateNumber(startTranslate, this.textRadius + 10);
 
       return t => {
         let rot = same ? start : tween(t);
         if (isNaN(rot)) rot = 0;
         let tra = tsame ? this.textRadius + 10 : transTween(t);
-        return (
-          "rotate(" +
-          ((rot * 180) / Math.PI - 90) +
-          ") " +
-          "translate(" +
-          tra +
-          ",0)" +
-          orient
-        );
+        return `rotate(${(rot * 180) / Math.PI - 90}) translate(${tra},0) ${orient}`;
       };
     };
   };
@@ -831,7 +802,7 @@ class ChordViewer extends Component {
 
   updateNow = () => {
     clearInterval(this.interval);
-    this.chordData.getMatrix().then(this.renderChord, function (e) {
+    this.chordData.getMatrix().then(this.renderChord, function(e) {
       console.log(ERROR_RENDERING + e);
     });
     this.interval = setInterval(this.doUpdate, TRANSITION_DURATION);
@@ -859,9 +830,7 @@ class ChordViewer extends Component {
       } else {
         d3.select("#legend").classed("byAddress", checked);
         this.chordData.setConverter(
-          this.state.legendOptions.byAddress
-            ? separateAddresses
-            : aggregateAddresses
+          this.state.legendOptions.byAddress ? separateAddresses : aggregateAddresses
         );
         this.switchedByAddress = true;
       }
@@ -879,8 +848,7 @@ class ChordViewer extends Component {
 
       this.excludedAddresses = [];
       for (let address in this.state.addresses) {
-        if (!this.state.addresses[address])
-          this.excludedAddresses.push(address);
+        if (!this.state.addresses[address]) this.excludedAddresses.push(address);
       }
       localStorage[CHORDFILTERKEY] = JSON.stringify(this.excludedAddresses);
       if (this.chordData) this.chordData.setFilter(this.excludedAddresses);
@@ -916,8 +884,7 @@ class ChordViewer extends Component {
     d3.selectAll("path.chord").classed(
       "fade",
       p =>
-        indexes.indexOf(p.source.orgindex) < 0 &&
-        indexes.indexOf(p.target.orgindex) < 0
+        indexes.indexOf(p.source.orgindex) < 0 && indexes.indexOf(p.target.orgindex) < 0
     );
   };
 
@@ -936,8 +903,7 @@ class ChordViewer extends Component {
     d3.selectAll("path.chord").classed(
       "fade",
       p =>
-        indexes.indexOf(p.source.orgindex) < 0 &&
-        indexes.indexOf(p.target.orgindex) < 0
+        indexes.indexOf(p.source.orgindex) < 0 && indexes.indexOf(p.target.orgindex) < 0
     );
   };
   leaveLegend = () => {
@@ -955,9 +921,6 @@ class ChordViewer extends Component {
             handleChangeAddress={this.handleChangeAddress}
             handleHoverAddress={this.handleHoverAddress}
             handleHoverRouter={this.handleHoverRouter}
-            optionsOpen={this.state.legendOptions.optionsOpen}
-            routersOpen={this.state.legendOptions.routersOpen}
-            addressesOpen={this.state.legendOptions.addressesOpen}
             isRate={this.state.legendOptions.isRate}
             byAddress={this.state.legendOptions.byAddress}
             arcColors={this.arcColors}
@@ -971,10 +934,12 @@ class ChordViewer extends Component {
       >
         <div ref={el => (this.chordRef = el)} className="qdrChord">
           {this.state.showEmpty ? (
-            <div aria-label="chord-no-traffic" id="noTraffic">{this.state.emptyText}</div>
+            <div aria-label="chord-no-traffic" id="noTraffic">
+              {this.state.emptyText}
+            </div>
           ) : (
-              <React.Fragment />
-            )}
+            <div aria-label="chord-traffic" />
+          )}
           <div aria-label="chord-diagram" id="chord"></div>
           <div
             id="popover-div"

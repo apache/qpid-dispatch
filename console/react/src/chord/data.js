@@ -105,19 +105,17 @@ class ChordData {
               continue;
             }
             let idIndex = routerNode.attributeNames.indexOf("id");
-            // ingressRouters is an array of router names in the same order that the ingressHistogram values will be in
+            // ingressRouters is an array of router names in the same order
+            // that the ingressHistogram values will be in
             for (let i = 0; i < routerNode.results.length; i++) {
               ingressRouters.push(routerNode.results[i][idIndex]);
             }
             // the name of the router we are working on
             let egressRouter = self.QDRService.utilities.nameFromId(nodeId);
-            // loop through the router links for this router looking for out/endpoint/non-console links
+            // loop through the router links for this router looking for
+            // out/endpoint/non-console links
             let routerLinks = results[nodeId]["router.link"];
-            for (
-              let i = 0;
-              routerLinks && i < routerLinks.results.length;
-              i++
-            ) {
+            for (let i = 0; routerLinks && i < routerLinks.results.length; i++) {
               let link = self.QDRService.utilities.flatten(
                 routerLinks.attributeNames,
                 routerLinks.results[i]
@@ -126,22 +124,19 @@ class ChordData {
               if (
                 link.linkType === "endpoint" &&
                 link.linkDir === "out" &&
-                (link.owningAddr &&
-                  !link.owningAddr.startsWith("Ltemp.") &&
-                  !link.owningAddr.startsWith("M0$"))
+                link.owningAddr &&
+                !link.owningAddr.startsWith("Ltemp.") &&
+                !link.owningAddr.startsWith("M0$")
               ) {
-                // keep track of the raw egress values as well as their ingress and egress routers and the address
+                // keep track of the raw egress values as well as their
+                // ingress and egress routers and the address
                 for (let j = 0; j < ingressRouters.length; j++) {
-                  let messages = link.ingressHistogram
-                    ? link.ingressHistogram[j]
-                    : 0;
+                  let messages = link.ingressHistogram ? link.ingressHistogram[j] : 0;
                   if (messages) {
                     values.push({
                       ingress: ingressRouters[j],
                       egress: egressRouter,
-                      address: self.QDRService.utilities.addr_text(
-                        link.owningAddr
-                      ),
+                      address: self.QDRService.utilities.addr_text(link.owningAddr),
                       messages: messages
                     });
                   }
@@ -237,11 +232,7 @@ let convert = function(self, values) {
   self.last_values.values = JSON.parse(JSON.stringify(values));
   self.last_values.timestamp = Date.now();
   if (self.isRate) {
-    self.rateValues = values = calcRate(
-      values,
-      self.last_values,
-      self.snapshots
-    );
+    self.rateValues = values = calcRate(values, self.last_values, self.snapshots);
   }
   // convert the raw data to a matrix
   let matrix = self.converter(values, self.filter);

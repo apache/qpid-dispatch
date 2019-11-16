@@ -61,7 +61,7 @@ class DashboardPage extends React.Component {
                           onClick={() => this.setTimePeriod(60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "selected" : ""
-                            }`}
+                          }`}
                         >
                           Min
                         </li>
@@ -69,7 +69,7 @@ class DashboardPage extends React.Component {
                           onClick={() => this.setTimePeriod(60 * 60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "" : "selected"
-                            }`}
+                          }`}
                         >
                           Hour
                         </li>
@@ -77,19 +77,11 @@ class DashboardPage extends React.Component {
                     </nav>
                   </div>
                 </div>
-                <div className="time-period">
-                  For the past {this.timePeriodString()}
-                </div>
+                <div className="time-period">For the past {this.timePeriodString()}</div>
               </CardHeader>
               <CardBody>
-                <ThroughputChart
-                  period={this.state.timePeriod}
-                  service={this.props.service}
-                />
-                <InflightChart
-                  period={this.state.timePeriod}
-                  service={this.props.service}
-                />
+                <ThroughputChart period={this.state.timePeriod} service={this.props.service} />
+                <InflightChart period={this.state.timePeriod} service={this.props.service} />
               </CardBody>
             </Card>
           </StackItem>
@@ -99,10 +91,7 @@ class DashboardPage extends React.Component {
                 <ActiveAddressesCard service={this.props.service} />
               </SplitItem>
               <SplitItem className="fill-card">
-                <DelayedDeliveriesCard
-                  {...this.props}
-                  service={this.props.service}
-                />
+                <DelayedDeliveriesCard {...this.props} service={this.props.service} />
               </SplitItem>
             </Split>
           </StackItem>

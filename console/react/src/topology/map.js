@@ -186,28 +186,31 @@ export class BackgroundMap {
         this.svg.call(this.zoom).on("dblclick.zoom", null);
       }
 
-      // async load of data file. calls resolve when this completes to let caller know
-      d3.json("data/countries.json", (error, world) => {
-        if (error) reject(error);
-        this.geo
-          .append("path")
-          .datum(topojson.feature(world, world.objects.countries))
-          .attr("class", "land")
-          .attr("d", this.geoPath)
-          .style("stroke", d3.rgb(this.mapOptions.areaColor).darker());
+      fetch("data/countries.json")
+        .then(res => res.json())
+        .then(world => {
+          this.geo
+            .append("path")
+            .datum(topojson.feature(world, world.objects.countries))
+            .attr("class", "land")
+            .attr("d", this.geoPath)
+            .style("stroke", d3.rgb(this.mapOptions.areaColor).darker());
 
-        this.updateLandColor(this.mapOptions.areaColor);
-        this.updateOceanColor(this.mapOptions.oceanColor);
+          this.updateLandColor(this.mapOptions.areaColor);
+          this.updateOceanColor(this.mapOptions.oceanColor);
 
-        // restore map rotate, scale, translate
-        this.restoreState();
+          // restore map rotate, scale, translate
+          this.restoreState();
 
-        // draw with current positions
-        this.geo.selectAll(".land").attr("d", this.geoPath);
+          // draw with current positions
+          this.geo.selectAll(".land").attr("d", this.geoPath);
 
-        this.initialized = true;
-        resolve();
-      });
+          this.initialized = true;
+          resolve();
+        })
+        .catch(error => {
+          reject(error);
+        });
     });
   }
 
@@ -293,8 +296,7 @@ export class BackgroundMap {
         var bnorth = getMapBounds(this.projection, maxnorth),
           bsouth = getMapBounds(this.projection, maxsouth);
         if (bnorth[0][1] + dy > 0) dy = -bnorth[0][1];
-        else if (bsouth[1][1] + dy < this.height)
-          dy = this.height - bsouth[1][1];
+        else if (bsouth[1][1] + dy < this.height) dy = this.height - bsouth[1][1];
         this.projection.translate([tp[0], tp[1] + dy]);
       }
       this.last.scale = scale;

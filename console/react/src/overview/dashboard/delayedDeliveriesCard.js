@@ -25,13 +25,7 @@ class DelayedDeliveriesCard extends React.Component {
   }
 
   closeButton = (value, extraInfo) => {
-    return (
-      <ConnectionClose
-        extraInfo={extraInfo}
-        {...this.props}
-        service={this.props.service}
-      />
-    );
+    return <ConnectionClose extraInfo={extraInfo} {...this.props} service={this.props.service} />;
   };
 
   componentDidMount = () => {
@@ -56,10 +50,7 @@ class DelayedDeliveriesCard extends React.Component {
           let response = nodes[node]["router.link"];
           // eslint-disable-next-line no-loop-func
           response.results.forEach(result => {
-            let link = this.props.service.utilities.flatten(
-              response.attributeNames,
-              result
-            );
+            let link = this.props.service.utilities.flatten(response.attributeNames, result);
             if (link.linkType === "endpoint") {
               link.router = this.props.service.utilities.nameFromId(node);
               link.role = "normal";
@@ -70,9 +61,7 @@ class DelayedDeliveriesCard extends React.Component {
                   connection
                 );
                 if (link.connectionId === conn.identity) {
-                  link.connection = this.props.service.utilities.clientName(
-                    conn
-                  );
+                  link.connection = this.props.service.utilities.clientName(conn);
                   return true;
                 }
                 return false;
@@ -84,14 +73,8 @@ class DelayedDeliveriesCard extends React.Component {
                 link.name,
                 12 // average over 12 snapshots (each snapshot is 5 seconds apart)
               );
-              link.deliveriesDelayed1SecRate = Math.round(
-                delayedRates.deliveriesDelayed1Sec,
-                1
-              );
-              link.deliveriesDelayed10SecRate = Math.round(
-                delayedRates.deliveriesDelayed10Sec,
-                1
-              );
+              link.deliveriesDelayed1SecRate = Math.round(delayedRates.deliveriesDelayed1Sec, 1);
+              link.deliveriesDelayed10SecRate = Math.round(delayedRates.deliveriesDelayed10Sec, 1);
               /* The killConnection event handler (in qdrOverview.js) expects
                  a row object with a routerId and the identity of a connection. 
                  Here we set those attributes so that when killConnection is 
@@ -107,16 +90,11 @@ class DelayedDeliveriesCard extends React.Component {
         if (links.length === 0) return;
         // update the grid's data
         links = links.filter(link => {
-          return (
-            link.deliveriesDelayed1SecRate > 0 ||
-            link.deliveriesDelayed10SecRate > 0
-          );
+          return link.deliveriesDelayed1SecRate > 0 || link.deliveriesDelayed10SecRate > 0;
         });
         links.sort((a, b) => {
-          if (a.deliveriesDelayed1SecRate > b.deliveriesDelayed1SecRate)
-            return -1;
-          else if (a.deliveriesDelayed1SecRate < b.deliveriesDelayed1SecRate)
-            return 1;
+          if (a.deliveriesDelayed1SecRate > b.deliveriesDelayed1SecRate) return -1;
+          else if (a.deliveriesDelayed1SecRate < b.deliveriesDelayed1SecRate) return 1;
           else if (a.unsettledCount > b.unsettledCount) return -1;
           else if (a.unsettledCount < b.unsettledCount) return 1;
           else return 0;
@@ -143,9 +121,7 @@ class DelayedDeliveriesCard extends React.Component {
   };
 
   nextUpdateString = () => {
-    const nextUpdate = new Date(
-      this.state.lastUpdate.getTime() + UPDATE_INTERVAL
-    );
+    const nextUpdate = new Date(this.state.lastUpdate.getTime() + UPDATE_INTERVAL);
     return this.props.service.utilities.strDate(nextUpdate);
   };
 

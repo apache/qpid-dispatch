@@ -51,12 +51,10 @@ export class Node {
   }
   title(hide) {
     let x = "";
-    if (this.normals && this.normals.length > 1 && !hide)
-      x = " x " + this.normals.length;
+    if (this.normals && this.normals.length > 1 && !hide) x = " x " + this.normals.length;
     if (this.isConsole) return "Dispatch console" + x;
     else if (this.isArtemis) return "Broker - Artemis" + x;
-    else if (this.properties.product === "qpid-cpp")
-      return "Broker - qpid-cpp" + x;
+    else if (this.properties.product === "qpid-cpp") return "Broker - qpid-cpp" + x;
     else if (this.nodeType === "edge") return "Edge Router";
     else if (this.cdir === "in") return "Sender" + x;
     else if (this.cdir === "out") return "Receiver" + x;
@@ -71,11 +69,11 @@ export class Node {
   }
   toolTip(topology, verbose) {
     return new Promise(
-      function (resolve) {
+      function(resolve) {
         if (this.nodeType === "normal" || this.nodeType === "edge") {
           resolve(this.clientTooltip());
         } else
-          this.routerTooltip(topology, verbose).then(function (toolTip) {
+          this.routerTooltip(topology, verbose).then(function(toolTip) {
             resolve(toolTip);
           });
       }.bind(this)
@@ -99,7 +97,7 @@ export class Node {
 
   routerTooltip(topology, verbose) {
     return new Promise(
-      function (resolve) {
+      function(resolve) {
         topology.ensureEntities(
           this.key,
           [
@@ -111,7 +109,7 @@ export class Node {
               entity: "router"
             }
           ],
-          function (foo, nodes) {
+          function(foo, nodes) {
             // update all the router title text
             let node = nodes[this.key];
             const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${this.key}</td></tr></table>`;
@@ -142,24 +140,15 @@ export class Node {
               }
             }
             if (ports.length > 0) {
-              title +=
-                "<tr><td>Ports</td><td>" + ports.join(", ") + "</td></tr>";
+              title += "<tr><td>Ports</td><td>" + ports.join(", ") + "</td></tr>";
             }
             // add verbose rows
             if (verbose) {
-              title +=
-                "<tr><td>Addresses</td><td>" + r.addrCount + "</td></tr>";
-              title +=
-                "<tr><td>Connections</td><td>" +
-                r.connectionCount +
-                "</td></tr>";
+              title += "<tr><td>Addresses</td><td>" + r.addrCount + "</td></tr>";
+              title += "<tr><td>Connections</td><td>" + r.connectionCount + "</td></tr>";
               title += "<tr><td>Links</td><td>" + r.linkCount + "</td></tr>";
-              title +=
-                "<tr><td>Auto links</td><td>" + r.autoLinkCount + "</td></tr>";
-              title +=
-                "<tr><td>Link routes</td><td>" +
-                r.linkRouteCount +
-                "</td></tr>";
+              title += "<tr><td>Auto links</td><td>" + r.autoLinkCount + "</td></tr>";
+              title += "<tr><td>Link routes</td><td>" + r.linkRouteCount + "</td></tr>";
             }
             title += "</table>";
             resolve(title);
@@ -302,7 +291,7 @@ export class Nodes {
     return null;
   }
   nodeExists(connectionContainer) {
-    return this.nodes.findIndex(function (node) {
+    return this.nodes.findIndex(function(node) {
       return node.container === connectionContainer;
     });
   }
@@ -332,7 +321,7 @@ export class Nodes {
     if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
-    this.nodes.forEach(function (d) {
+    this.nodes.forEach(function(d) {
       localStorage[d.name] = JSON.stringify({
         x: Math.round(d.x),
         y: Math.round(d.y),
@@ -466,18 +455,13 @@ export class Nodes {
     for (let id in nodeInfo) {
       let name = utils.nameFromId(id);
       // if we have any new nodes, animate the force graph to position them
-      let position = localStorage[name]
-        ? JSON.parse(localStorage[name])
-        : undefined;
+      let position = localStorage[name] ? JSON.parse(localStorage[name]) : undefined;
       if (!position) {
         animate = true;
         position = {
-          x: Math.round(
-            width / 4 + (width / 2 / nodeCount) * this.nodes.length
-          ),
+          x: Math.round(width / 4 + (width / 2 / nodeCount) * this.nodes.length),
           y: Math.round(
-            height / 2 +
-            (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
+            height / 2 + (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
           ),
           fixed: false
         };

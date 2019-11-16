@@ -36,13 +36,7 @@ import {
   PageSidebar
 } from "@patternfly/react-core";
 
-import {
-  BrowserRouter as Router,
-  Switch,
-  Route,
-  Link,
-  Redirect
-} from "react-router-dom";
+import { BrowserRouter as Router, Switch, Route, Link, Redirect } from "react-router-dom";
 
 import accessibleStyles from "@patternfly/patternfly/utilities/Accessibility/accessibility.css";
 import { css } from "@patternfly/react-styles";
@@ -72,10 +66,10 @@ class PageLayout extends React.Component {
       isNavOpenDesktop: true,
       isNavOpenMobile: false,
       isMobileView: false,
-      user: "anonymous"
+      user: "anonymous",
+      isConnectFormOpen: false
     };
     this.isDropdownOpen = false;
-    this.isConnectFormOpen = false;
 
     this.service = this.props.service;
     this.service.setHooks({ setLocation: this.setLocation });
@@ -88,10 +82,7 @@ class PageLayout extends React.Component {
         { name: "connections", pre: true },
         { name: "logs", pre: true }
       ],
-      visualizations: [
-        { name: "topology" },
-        { name: "flow", title: "Message flow" }
-      ],
+      visualizations: [{ name: "topology" }, { name: "flow", title: "Message flow" }],
       details: [{ name: "entities" }, { name: "schema" }]
     };
   }
@@ -130,12 +121,7 @@ class PageLayout extends React.Component {
       this.setState({ connectPath: "", connected: false }, () => {
         this.handleConnectCancel();
         this.service.disconnect();
-        this.handleAddNotification(
-          "event",
-          "Manually disconnected",
-          new Date(),
-          "info"
-        );
+        this.handleAddNotification("event", "Manually disconnected", new Date(), "info");
       });
     } else {
       this.schema = this.service.schema;
@@ -150,12 +136,7 @@ class PageLayout extends React.Component {
         }
       }
       this.handleConnectCancel();
-      this.handleAddNotification(
-        "event",
-        `Console connected to router`,
-        new Date(),
-        "success"
-      );
+      this.handleAddNotification("event", `Console connected to router`, new Date(), "success");
 
       this.setState({
         activeItem,
@@ -176,14 +157,11 @@ class PageLayout extends React.Component {
   };
 
   toggleConnectForm = () => {
-    this.isConnectFormOpen = !this.isConnectFormOpen;
-    this.connectFormRef.show(this.isConnectFormOpen);
+    this.setState({ isConnectFormOpen: !this.state.isConnectFormOpen });
   };
 
   handleConnectCancel = () => {
-    if (this.connectFormRef)
-      this.connectFormRef.show(false);
-    this.isConnectFormOpen = false;
+    this.setState({ isConnectFormOpen: false });
   };
 
   onNavToggleDesktop = () => {
@@ -244,12 +222,7 @@ class PageLayout extends React.Component {
                 {this.nav[section].map(item => {
                   const key = item.name;
                   return (
-                    <NavItem
-                      groupId={section}
-                      itemId={key}
-                      isActive={activeItem === key}
-                      key={key}
-                    >
+                    <NavItem groupId={section} itemId={key} isActive={activeItem === key} key={key}>
                       <Link to={`/${item.pre ? section + "/" : ""}${key}`}>
                         {item.title ? item.title : utils.Icap(key)}
                       </Link>
@@ -264,12 +237,7 @@ class PageLayout extends React.Component {
     );
     const PageToolbar = (
       <Toolbar>
-        <ToolbarGroup
-          className={css(
-            accessibleStyles.screenReader,
-            accessibleStyles.visibleOnLg
-          )}
-        >
+        <ToolbarGroup className={css(accessibleStyles.screenReader, accessibleStyles.visibleOnLg)}>
           <ToolbarItem>
             <Button
               id="connectButton"
@@ -285,16 +253,8 @@ class PageLayout extends React.Component {
           </ToolbarItem>
         </ToolbarGroup>
         <ToolbarGroup>
-          <ToolbarItem
-            className={css(
-              accessibleStyles.screenReader,
-              accessibleStyles.visibleOnMd
-            )}
-          >
-            <DropdownToggle
-              className="user-button"
-              onToggle={this.onDropdownToggle}
-            >
+          <ToolbarItem className={css(accessibleStyles.screenReader, accessibleStyles.visibleOnMd)}>
+            <DropdownToggle className="user-button" onToggle={this.onDropdownToggle}>
               {this.state.user}
             </DropdownToggle>
             <DropdownMenu
@@ -316,28 +276,26 @@ class PageLayout extends React.Component {
         toolbar={PageToolbar}
         avatar={<Avatar src="./assets/img_avatar.svg" alt="Avatar image" />}
         showNavToggle
-        onNavToggle={
-          isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop
-        }
+        onNavToggle={isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop}
         isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}
       />
     );
     const pageId = "main-content-page-layout-manual-nav";
-    const PageSkipToContent = (
-      <SkipToContent href={`#${pageId}`}>Skip to Content</SkipToContent>
-    );
+    const PageSkipToContent = <SkipToContent href={`#${pageId}`}>Skip to Content</SkipToContent>;
 
     const sidebar = PageNav => {
       if (this.state.connected) {
         return (
           <PageSidebar
+            id="page-sidebar"
             nav={PageNav}
             isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}
             theme="dark"
           />
         );
       }
-      return <React.Fragment />;
+      // this is required to prevent an axe error
+      return <div id="page-sidebar" />;
     };
 
     // don't allow access to this component unless we are logged in
@@ -354,10 +312,8 @@ class PageLayout extends React.Component {
               {...more}
             />
           ) : (
-              <Redirect
-                to={{ pathname: "/login", state: { from: props.location } }}
-              />
-            )
+            <Redirect to={{ pathname: "/login", state: { from: props.location } }} />
+          )
         }
       />
     );
@@ -377,13 +333,13 @@ class PageLayout extends React.Component {
     const connectForm = () => {
       return (
         <ConnectForm
-          ref={el => (this.connectFormRef = el)}
           service={this.service}
-          isConnectFormOpen={this.isConnectFormOpen}
+          isConnectFormOpen={this.state.isConnectFormOpen}
           fromPath={"/"}
           handleConnect={this.handleConnect}
           handleConnectCancel={this.handleConnectCancel}
           isConnected={this.state.connected}
+          fromLayout={true}
         />
       );
     };
@@ -398,28 +354,17 @@ class PageLayout extends React.Component {
           skipToContent={PageSkipToContent}
           mainContainerId={pageId}
         >
-          {this.isConnectFormOpen && connectForm()}
+          {connectForm()}
           <Switch>
             <PrivateRoute path="/" exact component={DashboardPage} />
             <PrivateRoute path="/dashboard" component={DashboardPage} />
-            <PrivateRoute
-              path="/overview/:entity"
-              component={OverviewPage}
-            />
-            <PrivateRoute
-              path="/details"
-              schema={this.schema}
-              component={DetailsTablePage}
-            />
+            <PrivateRoute path="/overview/:entity" component={OverviewPage} />
+            <PrivateRoute path="/details" schema={this.schema} component={DetailsTablePage} />
             <PrivateRoute path="/topology" component={TopologyPage} />
             <PrivateRoute path="/flow" component={MessageFlowPage} />
             <PrivateRoute path="/logs" component={LogDetails} />
             <PrivateRoute path="/entities" component={EntitiesPage} />
-            <PrivateRoute
-              path="/schema"
-              schema={this.schema}
-              component={SchemaPage}
-            />
+            <PrivateRoute path="/schema" schema={this.schema} component={SchemaPage} />
             <Route
               path="/login"
               render={props => (

@@ -19,13 +19,7 @@ under the License.
 
 import React from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
-import {
-  Stack,
-  StackItem,
-  TextContent,
-  Text,
-  TextVariants
-} from "@patternfly/react-core";
+import { Stack, StackItem, TextContent, Text, TextVariants } from "@patternfly/react-core";
 import { Card, CardBody } from "@patternfly/react-core";
 
 class SchemaPage extends React.Component {
@@ -36,8 +30,7 @@ class SchemaPage extends React.Component {
       root: {
         key: "entities",
         title: "Schema entities",
-        description:
-          "List of management entities. Click on an entity to view its attributes.",
+        description: "List of management entities. Click on an entity to view its attributes.",
         hidden: false
       }
     };
@@ -90,8 +83,7 @@ class SchemaPage extends React.Component {
     if (obj.type) {
       child.attributes.push({
         key: "type",
-        value:
-          obj.type.constructor === Array ? `[${obj.type.join(", ")}]` : obj.type
+        value: obj.type.constructor === Array ? `[${obj.type.join(", ")}]` : obj.type
       });
     }
     if (obj.default) {
@@ -154,23 +146,15 @@ class SchemaPage extends React.Component {
                 <div className="list-view-pf-main-info">
                   <div className="list-view-pf-left">
                     <span
-                      className={`pficon ${this.folderIconClass(
-                        itemInfo
-                      )} list-view-pf-icon-sm`}
+                      className={`pficon ${this.folderIconClass(itemInfo)} list-view-pf-icon-sm`}
                     ></span>
                   </div>
                   <div className="list-view-pf-body">
                     <div className="list-view-pf-description">
-                      <div className="list-group-item-heading">
-                        {itemInfo.title}
-                      </div>
+                      <div className="list-group-item-heading">{itemInfo.title}</div>
                       <div className="list-group-item-text">
                         {itemInfo.description}
-                        {itemInfo.fqt && (
-                          <div className="list-group-item-fqt">
-                            {itemInfo.fqt}
-                          </div>
-                        )}
+                        {itemInfo.fqt && <div className="list-group-item-fqt">{itemInfo.fqt}</div>}
                       </div>
                     </div>
                     <div className="list-view-pf-additional-info">
@@ -189,8 +173,7 @@ class SchemaPage extends React.Component {
                   </div>
                 </div>
               </div>
-              {itemInfo.children &&
-                itemInfo.children.map(childInfo => TreeItem(childInfo))}
+              {itemInfo.children && itemInfo.children.map(childInfo => TreeItem(childInfo))}
             </div>
           </div>
         )

@@ -1,21 +1,40 @@
 import React from "react";
-import { render } from '@testing-library/react';
-import ChordViewer from "./chordViewer";
+import { render, fireEvent, waitForElement } from "@testing-library/react";
 import { mockService } from "../qdrService.mock";
+import ChordViewer from "./chordViewer";
+import { LocalStorageMock } from "@react-mock/localstorage";
 
-it("renders the TopologyViewer component", () => {
+it("renders the ChordViewer component", async () => {
   const props = {
     service: mockService({})
-  }
+  };
   const { getByLabelText } = render(
-    <ChordViewer {...props} />
-  )
+    <LocalStorageMock
+      items={{
+        chordOptions: JSON.stringify({
+          isRate: false,
+          byAddress: true
+        })
+      }}
+    >
+      <ChordViewer {...props} />
+    </LocalStorageMock>
+  );
 
   // make sure it rendered the component
   const pfTopologyView = getByLabelText("chord-viewer");
   expect(pfTopologyView).toBeInTheDocument();
 
-  // make sure it created the svg. Note: this will be the empty circle
-  // since there is no traffic
+  // make sure it created the svg
   expect(getByLabelText("chord-svg")).toBeInTheDocument();
+
+  const optionsButton = getByLabelText("button-for-Options");
+  fireEvent.click(optionsButton);
+
+  // turn on show by address
+  const addressButton = getByLabelText("show by address");
+  fireEvent.click(addressButton);
+
+  // after 1 update period, the B chord should be in the svg
+  await waitForElement(() => getByLabelText("B"));
 });
