@@ -46,6 +46,7 @@ class DashboardPage extends React.Component {
       <PageSection
         variant={PageSectionVariants.light}
         className="overview-charts-page"
+        aria-label="dashboard-page"
       >
         <Stack gutter="md">
           <StackItem>
@@ -60,7 +61,7 @@ class DashboardPage extends React.Component {
                           onClick={() => this.setTimePeriod(60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "selected" : ""
-                          }`}
+                            }`}
                         >
                           Min
                         </li>
@@ -68,7 +69,7 @@ class DashboardPage extends React.Component {
                           onClick={() => this.setTimePeriod(60 * 60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "" : "selected"
-                          }`}
+                            }`}
                         >
                           Hour
                         </li>

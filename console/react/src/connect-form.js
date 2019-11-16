@@ -53,10 +53,12 @@ class ConnectForm extends React.Component {
         address: "localhost",
         port: "5673",
         username: "",
-        password: ""
+        password: "",
+        connectError: null
       };
     } else {
       savedValues = JSON.parse(savedValues);
+      savedValues.connectError = null;
     }
     this.setState(savedValues);
   };
@@ -67,6 +69,7 @@ class ConnectForm extends React.Component {
       const state2Save = JSON.parse(JSON.stringify(formValues));
       // don't save the password
       state2Save.password = "";
+      state2Save.connectError = null;
       localStorage.setItem(CONNECT_KEY, JSON.stringify(state2Save));
     });
   };
@@ -89,7 +92,10 @@ class ConnectForm extends React.Component {
           },
           e => {
             console.log(e);
-            this.setState({ connecting: false, connectError: e.msg });
+            this.setState({ connecting: false, connectError: e.message });
+            this.props.handleAddNotification("action", `Connect failed with message: ${e.message}`,
+              new Date(),
+              "danger")
           }
         );
       });
@@ -107,7 +113,8 @@ class ConnectForm extends React.Component {
       port,
       username,
       password,
-      connecting
+      connecting,
+      connectError
     } = this.state;
 
     return isShown ? (
@@ -181,8 +188,15 @@ class ConnectForm extends React.Component {
                   name="form-password"
                 />
               </FormGroup>
+              {connectError && (
+                <TextContent className="connect-error">
+                  <Text component={TextVariants.p}>
+                    {connectError}
+                  </Text>
+                </TextContent>
+              )}
               <ActionGroup>
-                <Button variant="primary" onClick={this.handleConnect}>
+                <Button variant="primary" data-testid="connect-button" onClick={this.handleConnect}>
                   {this.props.isConnected ? "Disconnect" : "Connect"}
                 </Button>
                 <Button variant="secondary" onClick={this.toggleDrawerHide}>

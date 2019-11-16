@@ -31,7 +31,6 @@ class DeleteEntity extends React.Component {
   }
 
   handleModalShow = () => {
-    console.log("handleModalShow DELETE");
     this.setState({ isModalOpen: true, closed: false });
   };
 

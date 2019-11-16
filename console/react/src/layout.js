@@ -50,18 +50,16 @@ import { PowerOffIcon } from "@patternfly/react-icons";
 import DropdownMenu from "./DropdownMenu";
 import ConnectPage from "./connectPage";
 import DashboardPage from "./overview/dashboard/dashboardPage";
-import OverviewTablePage from "./overview/overviewTablePage";
+import OverviewPage from "./overview/overviewPage";
 import DetailsTablePage from "./detailsTablePage";
 import EntitiesPage from "./details/enitiesPage";
 import TopologyPage from "./topology/topologyPage";
 import MessageFlowPage from "./chord/chordPage";
 import SchemaPage from "./details/schema/schemaPage";
 import LogDetails from "./overview/logDetails";
-import { QDRService } from "./qdrService";
 import ConnectForm from "./connect-form";
 import NotificationDrawer from "./notificationDrawer";
 import { utils } from "./amqp/utilities";
-const avatarImg = require("./assets/img_avatar.svg");
 
 class PageLayout extends React.Component {
   constructor(props) {
@@ -77,9 +75,10 @@ class PageLayout extends React.Component {
       user: "anonymous"
     };
     this.isDropdownOpen = false;
+    this.isConnectFormOpen = false;
 
-    this.hooks = { setLocation: this.setLocation };
-    this.service = new QDRService(this.hooks);
+    this.service = this.props.service;
+    this.service.setHooks({ setLocation: this.setLocation });
     this.nav = {
       overview: [
         { name: "dashboard" },
@@ -182,7 +181,8 @@ class PageLayout extends React.Component {
   };
 
   handleConnectCancel = () => {
-    this.connectFormRef.show(false);
+    if (this.connectFormRef)
+      this.connectFormRef.show(false);
     this.isConnectFormOpen = false;
   };
 
@@ -314,7 +314,7 @@ class PageLayout extends React.Component {
         className="topology-header"
         logo={<span className="logo-text">{this.props.config.title}</span>}
         toolbar={PageToolbar}
-        avatar={<Avatar src={avatarImg} alt="Avatar image" />}
+        avatar={<Avatar src="./assets/img_avatar.svg" alt="Avatar image" />}
         showNavToggle
         onNavToggle={
           isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop
@@ -354,10 +354,10 @@ class PageLayout extends React.Component {
               {...more}
             />
           ) : (
-            <Redirect
-              to={{ pathname: "/login", state: { from: props.location } }}
-            />
-          )
+              <Redirect
+                to={{ pathname: "/login", state: { from: props.location } }}
+              />
+            )
         }
       />
     );
@@ -398,13 +398,13 @@ class PageLayout extends React.Component {
           skipToContent={PageSkipToContent}
           mainContainerId={pageId}
         >
-          {connectForm()}
+          {this.isConnectFormOpen && connectForm()}
           <Switch>
             <PrivateRoute path="/" exact component={DashboardPage} />
             <PrivateRoute path="/dashboard" component={DashboardPage} />
             <PrivateRoute
               path="/overview/:entity"
-              component={OverviewTablePage}
+              component={OverviewPage}
             />
             <PrivateRoute
               path="/details"
@@ -425,9 +425,11 @@ class PageLayout extends React.Component {
               render={props => (
                 <ConnectPage
                   {...props}
+                  fromPath={"/"}
                   service={this.service}
                   config={this.props.config}
                   handleConnect={this.handleConnect}
+                  handleAddNotification={this.handleAddNotification}
                 />
               )}
             />

@@ -145,6 +145,7 @@ class SchemaPage extends React.Component {
         !itemInfo.hidden && (
           <div
             key={itemInfo.key}
+            data-testid={itemInfo.key}
             className={`list-group-item-container container-fluid`}
             onClick={event => this.toggleChildren(event, itemInfo)}
           >
@@ -210,7 +211,7 @@ class SchemaPage extends React.Component {
             <Card>
               <CardBody>
                 <div className="container-fluid">
-                  <div className="list-group tree-list-view-pf">
+                  <div className="list-group tree-list-view-pf" data-testid="root">
                     {TreeItem(this.state.root)}
                   </div>
                 </div>

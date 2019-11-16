@@ -35,6 +35,7 @@ class ChartBase extends React.Component {
       this.state.rates.push(0);
     }
     this.title = "Override me";
+    this.ariaLabel = "base-chart";
     this.isRate = false;
   }
 
@@ -98,7 +99,7 @@ class ChartBase extends React.Component {
 
   render() {
     return (
-      <OverviewChart data={this.data()} title={this.title} style={this.style} />
+      <OverviewChart ariaLabel={this.ariaLabel} data={this.data()} title={this.title} style={this.style} />
     );
   }
 }

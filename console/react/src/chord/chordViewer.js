@@ -53,12 +53,12 @@ class ChordViewer extends Component {
     this.state.legendOptions = savedOptions
       ? JSON.parse(savedOptions)
       : {
-          isRate: true,
-          byAddress: true,
-          optionsOpen: true,
-          routersOpen: true,
-          addressesOpen: true
-        };
+        isRate: true,
+        byAddress: true,
+        optionsOpen: true,
+        routersOpen: true,
+        addressesOpen: true
+      };
     if (typeof this.state.legendOptions.optionsOpen === "undefined") {
       this.state.legendOptions["optionsOpen"] = true;
       this.state.legendOptions["routersOpen"] = true;
@@ -146,6 +146,7 @@ class ChordViewer extends Component {
       .append("svg")
       .attr("width", this.outerRadius * 2)
       .attr("height", this.outerRadius * 2)
+      .attr("aria-label", "chord-svg")
       .append("g")
       .attr("id", "circle")
       .attr("transform", `translate(${xtrans},${this.outerRadius})`);
@@ -198,7 +199,7 @@ class ChordViewer extends Component {
   //startOver();
   //};
   //d3.select(window).on('resize.updatesvg', updateWindow);
-  windowResized = () => {};
+  windowResized = () => { };
 
   // size the diagram based on the browser window size
   getRadius = () => {
@@ -504,7 +505,7 @@ class ChordViewer extends Component {
       .transition()
       .duration(duration / 2)
       .attrTween("d", this.arcTweenExit)
-      .each("end", function() {
+      .each("end", function () {
         d3.select(this)
           .node()
           .parentNode.remove();
@@ -677,7 +678,7 @@ class ChordViewer extends Component {
       });
     }
     let self = this;
-    chords.each(function(d) {
+    chords.each(function (d) {
       let chord = d3.select(this);
       // This version of d3 doesn't support multiple concurrent transitions on the same selection.
       // Since we want to animate the chord's path as well as its color, we create a dummy selection
@@ -724,12 +725,12 @@ class ChordViewer extends Component {
         oldChords[d.key] = d;
       });
     }
-    chords.each(function(d) {
+    chords.each(function (d) {
       let chord = d3.select(this);
       d3.select({})
         .transition()
         .duration(duration)
-        .tween("style:" + style, function() {
+        .tween("style:" + style, function () {
           let old = oldChords[d.key],
             interpolate;
           let oldColor = "#CCCCCC",
@@ -830,7 +831,7 @@ class ChordViewer extends Component {
 
   updateNow = () => {
     clearInterval(this.interval);
-    this.chordData.getMatrix().then(this.renderChord, function(e) {
+    this.chordData.getMatrix().then(this.renderChord, function (e) {
       console.log(ERROR_RENDERING + e);
     });
     this.interval = setInterval(this.doUpdate, TRANSITION_DURATION);
@@ -946,6 +947,7 @@ class ChordViewer extends Component {
   render() {
     return (
       <TopologyView
+        aria-label="chord-viewer"
         viewToolbar={
           <ChordToolbar
             handleOpenChange={this.handleOpenChange}
@@ -969,11 +971,11 @@ class ChordViewer extends Component {
       >
         <div ref={el => (this.chordRef = el)} className="qdrChord">
           {this.state.showEmpty ? (
-            <div id="noTraffic">{this.state.emptyText}</div>
+            <div aria-label="chord-no-traffic" id="noTraffic">{this.state.emptyText}</div>
           ) : (
-            <React.Fragment />
-          )}
-          <div id="chord"></div>
+              <React.Fragment />
+            )}
+          <div aria-label="chord-diagram" id="chord"></div>
           <div
             id="popover-div"
             className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}

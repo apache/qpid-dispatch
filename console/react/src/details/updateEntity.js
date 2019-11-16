@@ -31,8 +31,6 @@ class UpdateEntity extends React.Component {
   };
 
   render() {
-    console.log("rendering update button");
-    console.log(this.props);
     return <Button onClick={this.handleClick}>Update</Button>;
   }
 }

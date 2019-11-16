@@ -50,22 +50,23 @@ class OverviewChart extends React.Component {
           {width === 0 ? (
             <React.Fragment />
           ) : (
-            <ChartGroup
-              ariaDesc="overview chart"
-              ariaTitle={this.props.title}
-              height={100}
-              padding={0}
-              width={width}
-              themeColor={this.props.color}
-            >
-              <ChartArea
-                data={this.props.data}
-                style={{
-                  data: this.props.style
-                }}
-              />
-            </ChartGroup>
-          )}
+              <ChartGroup
+                aria-label={this.props.ariaLabel}
+                ariaDesc="overview chart"
+                ariaTitle={this.props.title}
+                height={100}
+                padding={0}
+                width={width}
+                themeColor={this.props.color}
+              >
+                <ChartArea
+                  data={this.props.data}
+                  style={{
+                    data: this.props.style
+                  }}
+                />
+              </ChartGroup>
+            )}
         </div>
         <div className="dashboard-stat">
           <div className="deliveries-stat">

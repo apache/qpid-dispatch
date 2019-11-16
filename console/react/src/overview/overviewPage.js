@@ -31,7 +31,7 @@ import { Card, CardBody } from "@patternfly/react-core";
 import OverviewTable from "./overviewTable";
 import Updated from "../updated";
 
-class OverviewTablePage extends React.Component {
+class OverviewPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = { loading: false, lastUpdated: new Date() };
@@ -45,6 +45,7 @@ class OverviewTablePage extends React.Component {
       <PageSection
         variant={PageSectionVariants.light}
         className="overview-table-page"
+        data-testid="overview-page"
       >
         <Stack>
           <StackItem className="overview-header">
@@ -71,4 +72,4 @@ class OverviewTablePage extends React.Component {
   }
 }
 
-export default OverviewTablePage;
+export default OverviewPage;

@@ -5,7 +5,7 @@
     "amd": true,
     "jquery": true
   },
-  "extends": "eslint:recommended",
+  "extends": ["eslint:recommended", "plugin:patternfly-react/recommended"],
   "parserOptions": {
     "ecmaVersion": 6,
     "sourceType": "module",
@@ -14,9 +14,19 @@
     }
   },
   "rules": {
-    "indent": ["error", 2],
-    "linebreak-style": ["error", "unix"],
-    "semi": ["error", "always"],
-    "no-console": "off"
+    "indent": [
+      "error",
+      2
+    ],
+    "linebreak-style": [
+      "error",
+      "unix"
+    ],
+    "semi": [
+      "error",
+      "always"
+    ],
+    "no-console": "on",
+    "no-debugger": 1
   }
 }

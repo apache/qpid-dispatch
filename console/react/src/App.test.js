@@ -1,9 +1,14 @@
-import React from 'react';
-import ReactDOM from 'react-dom';
-import App from './App';
+import React from "react";
+import { render } from '@testing-library/react';
+import App from "./App";
 
-it('renders without crashing', () => {
-  const div = document.createElement('div');
-  ReactDOM.render(<App />, div);
-  ReactDOM.unmountComponentAtNode(div);
+const title = "Apache Qpid Dispatch Console"
+const config = { title };
+it("renders without crashing", () => {
+  render(<App config={config} />);
+});
+
+it('renders the correct title', () => {
+  const { getAllByText } = render(<App config={config} />);
+  expect(getAllByText(title));
 });

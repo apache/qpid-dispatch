@@ -50,6 +50,7 @@ class AddressesComponent extends Component {
       <span
         className="colored-dot"
         id={`address-dot-${i}`}
+        aria-label="colored dot"
         onClick={() => this.dotClicked(address)}
         onMouseOver={() => this.dotHover(address, true)}
         onMouseOut={() => this.dotHover(address, false)}

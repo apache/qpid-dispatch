@@ -58,11 +58,20 @@ class EntitiesPage extends React.Component {
     this.setState({ entity, showTable: "entities" });
   };
 
+  fixNull = rec => {
+    for (const attr in rec) {
+      if (rec[attr] === null) {
+        rec[attr] = "";
+      }
+      return rec;
+    };
+  }
+
   handleEntityAction = (action, record) => {
     if (action === "Done") action = "entities";
     this.setState({
       actionState: {
-        currentRecord: record,
+        currentRecord: this.fixNull(record),
         entity: this.props.entity
       },
       showTable: action

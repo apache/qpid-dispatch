@@ -40,7 +40,7 @@ class NotificationDrawer extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      isShown: false, // is the drawer shown
+      isShown: false,  // is the drawer shown
       expanded: false, // is the drawer wide
       isAnyUnread: false,
       accordionSections: {
@@ -108,8 +108,7 @@ class NotificationDrawer extends React.Component {
 
   toggleDrawer = sectionKey => {
     const { accordionSections } = this.state;
-    accordionSections[sectionKey].isOpen = !accordionSections[sectionKey]
-      .isOpen;
+    accordionSections[sectionKey].isOpen = !accordionSections[sectionKey].isOpen;
     this.setState(accordionSections);
   };
 
@@ -160,8 +159,8 @@ class NotificationDrawer extends React.Component {
           {this.state.expanded ? (
             <AngleDoubleRightIcon />
           ) : (
-            <AngleDoubleLeftIcon />
-          )}
+              <AngleDoubleLeftIcon />
+            )}
         </Button>
         <h3 className="text-center">Notifications Drawer</h3>
         <Button variant="plain" aria-label="close" onClick={this.close}>
@@ -203,7 +202,7 @@ class NotificationDrawer extends React.Component {
               {Object.keys(this.state.accordionSections).map(sectionKey => {
                 const section = this.state.accordionSections[sectionKey];
                 return (
-                  <AccordionItem key={`${sectionKey}-item`}>
+                  <AccordionItem aria-label="notification-item" key={`${sectionKey}-item`}>
                     <AccordionToggle
                       onClick={() => this.toggleDrawer(sectionKey)}
                       isExpanded={section.isOpen}
@@ -213,10 +212,10 @@ class NotificationDrawer extends React.Component {
                       {section.title}
                       <span className="panel-counter">{`${
                         section.events.filter(e => !e.isRead).length
-                      } new ${safePlural(
-                        section.events.filter(e => !e.isRead).length,
-                        "event"
-                      )}`}</span>
+                        } new ${safePlural(
+                          section.events.filter(e => !e.isRead).length,
+                          "event"
+                        )}`}</span>
                     </AccordionToggle>
                     <AccordionContent
                       key={`${sectionKey}-content`}
@@ -226,7 +225,7 @@ class NotificationDrawer extends React.Component {
                       <div
                         className={`panel-body ${
                           section.events.length === 0 ? "hidden" : ""
-                        }`}
+                          }`}
                       >
                         {section.events.map((event, i) => {
                           return (
@@ -234,7 +233,7 @@ class NotificationDrawer extends React.Component {
                               key={`${sectionKey}-event-${i}`}
                               className={`drawer-pf-notification ${
                                 event.isRead ? "" : "unread"
-                              }`}
+                                }`}
                               onClick={() => this.markAsRead(event)}
                             >
                               {severityIcon(event)}
@@ -254,7 +253,7 @@ class NotificationDrawer extends React.Component {
                       <div
                         className={`blank-slate-pf ${
                           section.events.length === 0 ? "" : "hidden"
-                        }`}
+                          }`}
                       >
                         <div className="blank-slate-pf-icon">
                           <span className="pficon pficon-info"></span>
@@ -264,13 +263,13 @@ class NotificationDrawer extends React.Component {
                       <div
                         className={`drawer-pf-action ${
                           section.events.length > 0 ? "" : "hidden"
-                        }`}
+                          }`}
                       >
                         <div className="drawer-pf-action-link">
                           <button
                             className={`btn btn-link ${
                               this.hasUnread(section) ? "" : "disabled"
-                            }`}
+                              }`}
                             onClick={() => this.markAllRead(sectionKey)}
                           >
                             Mark All Read

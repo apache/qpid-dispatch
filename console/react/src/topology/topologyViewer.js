@@ -48,7 +48,7 @@ import {
   updateState
 } from "./svgUtils.js";
 import { QDRLogger } from "../qdrGlobals";
-const TOPOOPTIONSKEY = "topoLegendOptions";
+const TOPOOPTIONSKEY = "topologyLegendOptions";
 
 class TopologyPage extends Component {
   constructor(props) {
@@ -58,26 +58,26 @@ class TopologyPage extends Component {
     savedOptions = savedOptions
       ? JSON.parse(savedOptions)
       : {
-          traffic: {
-            open: false,
-            dots: false,
-            congestion: false,
-            addresses: [],
-            addressColors: []
-          },
-          legend: {
-            open: true
-          },
-          map: {
-            open: false,
-            show: false
-          },
-          arrows: {
-            open: false,
-            routerArrows: false,
-            clientArrows: true
-          }
-        };
+        traffic: {
+          open: false,
+          dots: false,
+          congestion: false,
+          addresses: [],
+          addressColors: []
+        },
+        legend: {
+          open: true
+        },
+        map: {
+          open: false,
+          show: false
+        },
+        arrows: {
+          open: false,
+          routerArrows: false,
+          clientArrows: true
+        }
+      };
     // previous version read from storage didn't have show attribute
     if (typeof savedOptions.map.show === "undefined") {
       savedOptions.map.show = false;
@@ -174,7 +174,7 @@ class TopologyPage extends Component {
 
   setSelected = (item, data) => {
     // remove the selected attr from each node
-    this.circle.each(function(d) {
+    this.circle.each(function (d) {
       d.selected = false;
     });
     // set the selected attr for this node
@@ -186,7 +186,7 @@ class TopologyPage extends Component {
   updateLegend = () => {
     this.legend.update();
   };
-  clearPopups = () => {};
+  clearPopups = () => { };
 
   // initialize the nodes and links array from the QDRService.topology._nodeInfo object
   init = () => {
@@ -215,6 +215,7 @@ class TopologyPage extends Component {
         .attr("id", "SVG_ID")
         .attr("width", this.width)
         .attr("height", this.height)
+        .attr("aria-label", "topology-svg")
         .on("click", this.clearPopups);
       // read the map data from the data file and build the map layer
       this.backgroundMap
@@ -306,7 +307,7 @@ class TopologyPage extends Component {
     this.updateLegend();
 
     if (this.oldSelectedNode) {
-      d3.selectAll("circle.inter-router").classed("selected", function(d) {
+      d3.selectAll("circle.inter-router").classed("selected", function (d) {
         if (d.key === this.oldSelectedNode.key) {
           this.selected_node = d;
           return true;
@@ -315,7 +316,7 @@ class TopologyPage extends Component {
       });
     }
     if (this.oldMouseoverNode && this.selected_node) {
-      d3.selectAll("circle.inter-router").each(function(d) {
+      d3.selectAll("circle.inter-router").each(function (d) {
         if (d.key === this.oldMouseoverNode.key) {
           this.mouseover_node = d;
           this.props.service.management.topology.ensureAllEntities(
@@ -325,7 +326,7 @@ class TopologyPage extends Component {
                 attrs: ["id", "nextHop"]
               }
             ],
-            function() {
+            function () {
               this.nextHopHighlight(this.selected_node, d);
               this.restart();
             }
@@ -337,7 +338,7 @@ class TopologyPage extends Component {
     if (unknowns.length > 0)
       setTimeout(this.resolveUnknowns, 10, nodeInfo, unknowns);
 
-    var continueForce = function(extra) {
+    var continueForce = function (extra) {
       if (extra > 0) {
         --extra;
         this.force.start();
@@ -494,7 +495,7 @@ class TopologyPage extends Component {
     enterpath
       .append("path")
       .attr("class", "link")
-      .attr("id", function(d) {
+      .attr("id", function (d) {
         const si = d.source.uid();
         const ti = d.target.uid();
         return ["path", si, ti].join("-");
@@ -530,7 +531,7 @@ class TopologyPage extends Component {
     this.circle = d3
       .select("g.nodes")
       .selectAll("g")
-      .data(this.forceData.nodes.nodes, function(d) {
+      .data(this.forceData.nodes.nodes, function (d) {
         return d.uid();
       });
 
@@ -538,13 +539,13 @@ class TopologyPage extends Component {
     let enterCircle = this.circle
       .enter()
       .append("g")
-      .attr("id", function(d) {
+      .attr("id", function (d) {
         return (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index;
       });
 
     let self = this;
     appendCircle(enterCircle)
-      .on("mouseover", function(d) {
+      .on("mouseover", function (d) {
         // mouseover a circle
         self.current_node = d;
         self.props.service.management.topology.delUpdatedAction(
@@ -552,7 +553,7 @@ class TopologyPage extends Component {
         );
         let e = d3.event;
         self.popupCancelled = false;
-        d.toolTip(self.props.service.management.topology).then(function(
+        d.toolTip(self.props.service.management.topology).then(function (
           toolTip
         ) {
           self.showToolTip(toolTip, e);
@@ -573,14 +574,14 @@ class TopologyPage extends Component {
               attrs: ["id", "nextHop"]
             }
           ],
-          function() {
+          function () {
             self.mouseover_node = d; // save this node in case the topology changes so we can restore the highlights
             self.nextHopHighlight(self.selected_node, d);
             self.restart();
           }
         );
       })
-      .on("mouseout", function() {
+      .on("mouseout", function () {
         // mouse out for a circle
         self.current_node = null;
         // unenlarge target node
@@ -603,7 +604,7 @@ class TopologyPage extends Component {
         // mouse position relative to svg
         this.initial_mouse_down_position = d3.mouse(this.svg.node());
       })
-      .on("mouseup", function(d) {
+      .on("mouseup", function (d) {
         // mouse up for circle
         self.backgroundMap.restartZoom();
         if (!self.mousedown_node) return;
@@ -686,7 +687,7 @@ class TopologyPage extends Component {
     // add text to client circles if there are any that represent multiple clients
     this.svg.selectAll(".subtext").remove();
     let multiples = this.svg.selectAll(".multiple");
-    multiples.each(function(d) {
+    multiples.each(function (d) {
       let g = d3.select(this);
       let r = Nodes.radius(d.nodeType);
       g.append("svg:text")
@@ -718,7 +719,7 @@ class TopologyPage extends Component {
     });
 
     // draw lines from node centers
-    this.path.selectAll("path").attr("d", function(d) {
+    this.path.selectAll("path").attr("d", function (d) {
       return `M${d.source.x},${d.source.y}L${d.target.x},${d.target.y}`;
     });
   };
@@ -1009,6 +1010,7 @@ class TopologyPage extends Component {
     });
     return (
       <TopologyView
+        aria-label="topology-viewer"
         viewToolbar={
           <TopologyToolbar
             legendOptions={this.state.legendOptions}
@@ -1027,7 +1029,7 @@ class TopologyPage extends Component {
         className="qdrTopology"
       >
         <div className="diagram">
-          <div ref={el => (this.topologyRef = el)} id="topology"></div>
+          <div aria-label="topology-diagram" ref={el => (this.topologyRef = el)} id="topology"></div>
         </div>
         {this.state.showContextMenu && (
           <ContextMenu
@@ -1059,8 +1061,8 @@ class TopologyPage extends Component {
             handleCloseRouterInfo={this.handleCloseRouterInfo}
           />
         ) : (
-          <div />
-        )}
+            <div />
+          )}
         {this.state.showClientInfo ? (
           <ClientInfoComponent
             d={this.d}
@@ -1068,8 +1070,8 @@ class TopologyPage extends Component {
             handleCloseClientInfo={this.handleCloseClientInfo}
           />
         ) : (
-          <div />
-        )}
+            <div />
+          )}
       </TopologyView>
     );
   }

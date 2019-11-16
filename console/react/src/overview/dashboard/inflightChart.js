@@ -28,6 +28,7 @@ class InflightChart extends ChartBase {
     this.color = d3.rgb(ChartThemeColor.green);
     this.setStyle(this.color, 0.3);
     this.isRate = false;
+    this.ariaLabel = "inflight-chart";
   }
 
   updateData = () => {
@@ -48,7 +49,7 @@ class InflightChart extends ChartBase {
             inflight +=
               result.linkType === "endpoint" && result.linkDir === "out"
                 ? parseInt(result.unsettledCount) +
-                  parseInt(result.undeliveredCount)
+                parseInt(result.undeliveredCount)
                 : 0;
           }
         }

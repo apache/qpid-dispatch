@@ -28,7 +28,7 @@ class ArrowsComponent extends Component {
 
   render() {
     return (
-      <React.Fragment>
+      <div id="arrows-expand">
         <Checkbox
           label="Show arrows between routers"
           isChecked={this.props.routerArrows}
@@ -45,7 +45,7 @@ class ArrowsComponent extends Component {
           id="check-client-arrows"
           name="clientArrows"
         />
-      </React.Fragment>
+      </div>
     );
   }
 }

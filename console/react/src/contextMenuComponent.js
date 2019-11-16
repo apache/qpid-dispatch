@@ -34,10 +34,11 @@ class ContextMenuComponent extends React.Component {
         item.endGroup || i === this.props.menuItems.length - 1
           ? " separator"
           : ""
-      } ${item.enabled(this.props.contextEventData) ? "" : " disabled"}`;
+        } ${item.enabled(this.props.contextEventData) ? "" : " disabled"}`;
 
       return (
         <li
+          aria-label={"context-menu-item"}
           key={`menu-item-${i}`}
           className={className}
           onClick={e => {
@@ -52,9 +53,9 @@ class ContextMenuComponent extends React.Component {
     const style =
       this.props.contextEventPosition[0] >= 0
         ? {
-            left: `${this.props.contextEventPosition[0]}px`,
-            top: `${this.props.contextEventPosition[1]}px`
-          }
+          left: `${this.props.contextEventPosition[0]}px`,
+          top: `${this.props.contextEventPosition[1]}px`
+        }
         : {};
     return (
       <ul

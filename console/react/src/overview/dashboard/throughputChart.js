@@ -26,6 +26,7 @@ class ThroughputChart extends ChartBase {
     this.color = "#99C2EB"; //ChartThemeColor.blue;
     this.setStyle(this.color);
     this.isRate = true;
+    this.ariaLabel = "throughput-chart";
   }
 
   updateData = () => {

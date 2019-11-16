@@ -27,7 +27,7 @@ class Updated extends Component {
 
   render() {
     return (
-      <pre data-pf-content="true" className="overview-loading">
+      <pre aria-label="last-updated" data-pf-content="true" className="overview-loading">
         {`Updated ${this.props.service.utilities.strDate(
           this.props.lastUpdated
         )}`}

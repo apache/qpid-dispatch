@@ -47,7 +47,7 @@ class AlertList extends React.Component {
 
   render() {
     return (
-      <div id="alert-list-container">
+      <div id="alert-list-container" aria-label="alert-list">
         {this.state.alerts.map((alert, i) => (
           <Alert
             key={`alert-${i}`}
@@ -55,7 +55,7 @@ class AlertList extends React.Component {
             title={alert.type}
             isInline
             action={
-              <AlertActionCloseButton onClose={() => this.hideAlert(alert)} />
+              <AlertActionCloseButton aria-label="alert-close-button" onClose={() => this.hideAlert(alert)} />
             }
           >
             {alert.message.length > 40

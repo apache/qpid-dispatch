@@ -1,6 +1,6 @@
 {
-  "name": "network-creator",
-  "version": "0.1.0",
+  "name": "dispatch-console",
+  "version": "0.2.0",
   "private": true,
   "dependencies": {
     "@patternfly/patternfly": "^2.13.0",
@@ -10,8 +10,11 @@
     "@patternfly/react-styles": "^3.3.3",
     "@patternfly/react-table": "^2.11.1",
     "@patternfly/react-topology": "^2.7.31",
+    "@testing-library/jest-dom": "^4.2.3",
+    "@testing-library/react": "^9.3.2",
     "body-parser": "^1.19.0",
     "d3-queue": "^3.0.7",
+    "eslint-plugin-patternfly-react": "^0.2.3",
     "express": "^4.17.1",
     "lodash-es": "^4.17.11",
     "patternfly-react": "^2.36.1",

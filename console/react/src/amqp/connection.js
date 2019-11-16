@@ -31,14 +31,14 @@ class ConnectionManager {
     this.connectActions = [];
     this.disconnectActions = [];
     this.correlator = new Correlator();
-    this.on_message = function(context) {
+    this.on_message = function (context) {
       this.correlator.resolve(context);
     }.bind(this);
-    this.on_disconnected = function() {
+    this.on_disconnected = function () {
       this.errorText = "Disconnected";
       this.executeDisconnectActions(this.errorText);
     }.bind(this);
-    this.on_connection_open = function() {
+    this.on_connection_open = function () {
       this.executeConnectActions();
     }.bind(this);
   }
@@ -79,7 +79,7 @@ class ConnectionManager {
     }
   }
   executeConnectActions() {
-    this.connectActions.forEach(function(action) {
+    this.connectActions.forEach(function (action) {
       try {
         action();
       } catch (e) {
@@ -129,10 +129,10 @@ class ConnectionManager {
   }
   createSenderReceiver(options) {
     return new Promise(
-      function(resolve, reject) {
+      function (resolve, reject) {
         var timeout = options.timeout || 10000;
         // set a timer in case the setup takes too long
-        var giveUp = function() {
+        var giveUp = function () {
           this.connection.removeListener("receiver_open", receiver_open);
           this.connection.removeListener("sendable", sendable);
           this.errorText = "timed out creating senders and receivers";
@@ -140,7 +140,7 @@ class ConnectionManager {
         }.bind(this);
         var timer = setTimeout(giveUp, timeout);
         // register an event hander for when the setup is complete
-        var sendable = function(context) {
+        var sendable = function (context) {
           clearTimeout(timer);
           this.version = this.connection.properties
             ? this.connection.properties.version
@@ -156,7 +156,7 @@ class ConnectionManager {
         this.connection.once("sendable", sendable);
         // Now actually createt the sender and receiver.
         // register an event handler for when the receiver opens
-        var receiver_open = function() {
+        var receiver_open = function () {
           // once the receiver is open, create the sender
           if (options.sender_address)
             this.sender = this.connection.open_sender(options.sender_address);
@@ -172,13 +172,13 @@ class ConnectionManager {
   }
   connect(options) {
     return new Promise(
-      function(resolve, reject) {
-        var finishConnecting = function() {
+      function (resolve, reject) {
+        var finishConnecting = function () {
           this.createSenderReceiver(options).then(
-            function(results) {
+            function (results) {
               resolve(results);
             },
-            function(error) {
+            function (error) {
               reject(error);
             }
           );
@@ -186,12 +186,12 @@ class ConnectionManager {
         if (!this.connection) {
           options.test = false; // if you didn't want a connection, you should have called testConnect() and not connect()
           this.testConnect(options).then(
-            function() {
+            function () {
               finishConnecting.call(this);
             }.bind(this),
-            function() {
+            function () {
               // connect failed or timed out
-              this.errorText = "Unable to connect";
+              this.errorText = `Unable to connect to ${options.address}:${options.port}`;
               this.executeDisconnectActions(this.errorText);
               reject(Error(this.errorText));
             }.bind(this)
@@ -210,7 +210,7 @@ class ConnectionManager {
   // if the connection attempt fails or times out, reject the promise regardless of options.test
   testConnect(options, callback) {
     return new Promise(
-      function(resolve, reject) {
+      function (resolve, reject) {
         var timeout = options.timeout || 10000;
         var reconnect = options.reconnect || false; // in case options.reconnect is undefined
         var baseAddress = options.address + ":" + options.port;
@@ -240,7 +240,7 @@ class ConnectionManager {
           c.password = options.password;
         }
         // set a timeout
-        var disconnected = function() {
+        var disconnected = function () {
           clearTimeout(timer);
           rhea.removeListener("disconnected", disconnected);
           rhea.removeListener("connection_open", connection_open);
@@ -251,7 +251,7 @@ class ConnectionManager {
         }.bind(this);
         var timer = setTimeout(disconnected, timeout);
         // the event handler for when the connection opens
-        var connection_open = function(context) {
+        var connection_open = function (context) {
           clearTimeout(timer);
           // prevent future disconnects from calling reject
           rhea.removeListener("disconnected", disconnected);
@@ -319,7 +319,7 @@ class ConnectionManager {
   _send(body, to, application_properties) {
     var _correlationId = this.correlator.corr();
     var self = this;
-    return new Promise(function(resolve, reject) {
+    return new Promise(function (resolve, reject) {
       self.correlator.register(_correlationId, resolve, reject);
       self.sender.send({
         body: body,

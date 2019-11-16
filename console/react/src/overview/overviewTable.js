@@ -35,9 +35,9 @@ import { dataMap } from "./entityData";
 // we will have saved state info in props.location.state
 const propFromLocation = (props, which, defaultValue) =>
   props &&
-  props.location &&
-  props.location.state &&
-  typeof props.location.state[which] !== "undefined"
+    props.location &&
+    props.location.state &&
+    typeof props.location.state[which] !== "undefined"
     ? props.location.state[which]
     : defaultValue;
 

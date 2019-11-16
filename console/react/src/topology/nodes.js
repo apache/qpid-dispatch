@@ -18,8 +18,8 @@ under the License.
 */
 
 import { utils } from "../amqp/utilities.js";
+import * as d3 from "d3";
 
-/* global d3 Promise */
 export class Node {
   constructor(
     id,
@@ -71,11 +71,11 @@ export class Node {
   }
   toolTip(topology, verbose) {
     return new Promise(
-      function(resolve) {
+      function (resolve) {
         if (this.nodeType === "normal" || this.nodeType === "edge") {
           resolve(this.clientTooltip());
         } else
-          this.routerTooltip(topology, verbose).then(function(toolTip) {
+          this.routerTooltip(topology, verbose).then(function (toolTip) {
             resolve(toolTip);
           });
       }.bind(this)
@@ -99,7 +99,7 @@ export class Node {
 
   routerTooltip(topology, verbose) {
     return new Promise(
-      function(resolve) {
+      function (resolve) {
         topology.ensureEntities(
           this.key,
           [
@@ -111,7 +111,7 @@ export class Node {
               entity: "router"
             }
           ],
-          function(foo, nodes) {
+          function (foo, nodes) {
             // update all the router title text
             let node = nodes[this.key];
             const err = `<table class="popupTable"><tr><td>Error</td><td>Unable to get router info for ${this.key}</td></tr></table>`;
@@ -302,7 +302,7 @@ export class Nodes {
     return null;
   }
   nodeExists(connectionContainer) {
-    return this.nodes.findIndex(function(node) {
+    return this.nodes.findIndex(function (node) {
       return node.container === connectionContainer;
     });
   }
@@ -332,7 +332,7 @@ export class Nodes {
     if (Object.prototype.toString.call(nodes) !== "[object Array]") {
       nodes = [nodes];
     }
-    this.nodes.forEach(function(d) {
+    this.nodes.forEach(function (d) {
       localStorage[d.name] = JSON.stringify({
         x: Math.round(d.x),
         y: Math.round(d.y),
@@ -477,7 +477,7 @@ export class Nodes {
           ),
           y: Math.round(
             height / 2 +
-              (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
+            (Math.sin(this.nodes.length / (Math.PI * 2.0)) * height) / 4
           ),
           fixed: false
         };

@@ -7,7 +7,7 @@ class QDRPopup extends React.Component {
   }
 
   render() {
-    return <div dangerouslySetInnerHTML={{ __html: this.props.content }} />;
+    return <div aria-label="popup" dangerouslySetInnerHTML={{ __html: this.props.content }} />;
   }
 }
 

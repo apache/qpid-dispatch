@@ -81,9 +81,9 @@ class CreateTablePage extends React.Component {
       this.dataSource = !detailsDataMap[this.entity]
         ? new defaultData(this.props.service, this.props.schema)
         : new detailsDataMap[this.entity](
-            this.props.service,
-            this.props.schema
-          );
+          this.props.service,
+          this.props.schema
+        );
       this.locationState = this.props.locationState;
 
       const attributes = this.dataSource.schemaAttributes(this.entity);
@@ -96,7 +96,6 @@ class CreateTablePage extends React.Component {
   }
 
   handleTextInputChange = (value, key) => {
-    console.log(`handleTextInputChange was passed ${value} ${key}`);
     const { record } = this.state;
     record[key] = value;
     this.setState({ record });
@@ -244,8 +243,6 @@ class CreateTablePage extends React.Component {
       )
         attributes[attr] = record[attr];
     }
-    console.log(`creating ${this.entity}`);
-    console.log(attributes);
 
     // call update
     this.props.service.management.connection
@@ -322,7 +319,7 @@ class CreateTablePage extends React.Component {
             <StackItem id="update-form">
               <Card>
                 <CardBody>
-                  <Form isHorizontal>{this.schemaToForm()}</Form>
+                  <Form isHorizontal aria-label="create-entity-form">{this.schemaToForm()}</Form>
                 </CardBody>
               </Card>
             </StackItem>

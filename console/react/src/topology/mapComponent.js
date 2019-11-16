@@ -32,7 +32,7 @@ class MapLegendComponent extends Component {
 
   render() {
     return (
-      <React.Fragment>
+      <div id="map-expand">
         <Checkbox
           label="Show background map"
           isChecked={this.props.mapShown}
@@ -63,7 +63,7 @@ class MapLegendComponent extends Component {
             <label htmlFor="oceanColor">Ocean</label>
           </li>
         </ul>
-      </React.Fragment>
+      </div>
     );
   }
 }

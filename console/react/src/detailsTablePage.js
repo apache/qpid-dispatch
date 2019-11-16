@@ -77,9 +77,9 @@ class DetailTablesPage extends React.Component {
         this.dataSource = !detailsDataMap[this.entity]
           ? new defaultData(this.props.service, this.props.schema)
           : new detailsDataMap[this.entity](
-              this.props.service,
-              this.props.schema
-            );
+            this.props.service,
+            this.props.schema
+          );
       } else {
         this.dataSource = new dataMap[this.entity](
           this.props.service,
@@ -187,8 +187,6 @@ class DetailTablesPage extends React.Component {
     }
 
     const actionsButtons = () => {
-      console.log("generating actionButtons for detailsTablePage");
-      console.log(this.locationState().currentRecord);
       return this.dataSource.detailActions(
         this.entity,
         this.props,

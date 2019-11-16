@@ -88,16 +88,19 @@ class ConnectionClose extends React.Component {
           <Button
             className={`${this.props.asButton ? "" : "link-button"}`}
             onClick={this.handleModalToggle}
+            aria-label="connection-close-button"
           >
             Close
           </Button>
           <Modal
             isSmall
+            aria-label="connection-close-modal"
             title="Close conection"
             isOpen={isModalOpen}
             onClose={this.handleModalToggle}
             actions={[
               <Button
+                aria-label="connection-close-confirm"
                 key="confirm"
                 variant="primary"
                 onClick={this.closeConnection}

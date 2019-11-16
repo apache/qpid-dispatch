@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-/* global d3 Uint8Array */
-var ddd = typeof window === "undefined" ? require("d3") : d3;
+import * as d3 from "d3";
 
 var utils = {
   isAConsole: function(properties, connectionId, nodeType, key) {
@@ -115,7 +114,7 @@ var utils = {
     return t.replace(".", " ");
   },
   pretty: function(v, format = ",") {
-    var formatComma = ddd.format(format);
+    var formatComma = d3.format(format);
     if (!isNaN(parseFloat(v)) && isFinite(v)) return formatComma(v);
     return v;
   },

@@ -140,6 +140,7 @@ class TableToolbar extends React.Component {
           <ToolbarGroup className="toolbar-pagination">
             <ToolbarItem>
               <Pagination
+                aria-label="toolbar-pagination"
                 itemCount={this.props.total}
                 page={this.props.page}
                 perPage={this.props.perPage}

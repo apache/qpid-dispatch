@@ -65,9 +65,9 @@ class UpdateTablePage extends React.Component {
       this.dataSource = !detailsDataMap[this.entity]
         ? new defaultData(this.props.service, this.props.schema)
         : new detailsDataMap[this.entity](
-            this.props.service,
-            this.props.schema
-          );
+          this.props.service,
+          this.props.schema
+        );
     }
 
     this.state = {
@@ -85,25 +85,10 @@ class UpdateTablePage extends React.Component {
       redirectPath: "/dashboard",
       lastUpdated: new Date(),
       changes: false,
-      record: this.fixNull(this.props.locationState.currentRecord)
+      record: this.props.locationState.currentRecord
     };
     this.originalRecord = utils.copy(this.state.record);
   }
-
-  fixNull = rec => {
-    const record = utils.copy(rec);
-    const attributes = this.dataSource.schemaAttributes(this.entity);
-    for (const attr in record) {
-      if (record[attr] === null) {
-        if (attributes[attr].type === "string") {
-          record[attr] = "";
-        } else if (attributes[attr].type === "integer") {
-          record[attr] = 0;
-        }
-      }
-    }
-    return record;
-  };
 
   handleTextInputChange = (value, key) => {
     const { record } = this.state;
@@ -127,6 +112,14 @@ class UpdateTablePage extends React.Component {
       if (type === "list") readOnly = true;
       if (type === "integer" && attribute.graph) readOnly = true;
       let required = attribute.required;
+      if (record[attributeKey] === null) {
+        if (attribute.type === "string")
+          record[attributeKey] = "";
+        if (attribute.type === "boolean")
+          record[attributeKey] = false;
+        if (attribute.type === "integer")
+          record[attributeKey] = 0;
+      }
       const value = record[attributeKey];
       if (
         this.dataSource.updateMetaData &&
@@ -236,9 +229,11 @@ class UpdateTablePage extends React.Component {
     for (const attr in record) {
       if (record[attr] !== this.originalRecord[attr]) {
         attributes[attr] = record[attr];
-      } else if (attr === "outputFile")
+      }
+      if (attr === "outputFile") {
         attributes["outputFile"] =
           record.outputFile === "" ? null : record.outputFile;
+      }
     }
     // call update
     this.props.service.management.connection
@@ -323,7 +318,7 @@ class UpdateTablePage extends React.Component {
             <StackItem id="update-form">
               <Card>
                 <CardBody>
-                  <Form isHorizontal>{this.schemaToForm()}</Form>
+                  <Form isHorizontal aria-label="update-entity-form">{this.schemaToForm()}</Form>
                 </CardBody>
               </Card>
             </StackItem>

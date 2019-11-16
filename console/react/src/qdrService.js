@@ -31,6 +31,10 @@ export class QDRService {
     this.schema = null;
   }
 
+  setHooks = (hooks) => {
+    this.hooks = hooks;
+  }
+
   onReconnect() {
     this.management.connection.on("disconnected", this.onDisconnect.bind(this));
     this.hooks.setLocation("reconnect");
@@ -77,8 +81,8 @@ export class QDRService {
   }
 }
 
-(function() {
-  console.dump = function(o) {
+(function () {
+  console.dump = function (o) {
     if (window.JSON && window.JSON.stringify)
       console.log(JSON.stringify(o, undefined, 2));
     else console.log(o);

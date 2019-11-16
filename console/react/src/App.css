@@ -636,6 +636,9 @@ svg#svglegend {
   max-height: 23em;
 }
 
+#arrows-expand {
+  padding-bottom: 1em;
+}
 div.qdrTopology,
 div.qdrChord {
   text-align: center;
@@ -834,9 +837,11 @@ div.qdrChord .legend-text {
   font-weight: bold;
 }
 
+/*
 .colored-dot span.colored-dot-dot > span {
   padding-top: 5px;
 }
+*/
 
 .colored-dot span.colored-dot-text {
   margin-left: 0.5em;
@@ -1082,11 +1087,6 @@ div.qdrTopology .topology-toolbar-button {
 div.qdrTopology .topology-toolbar-button i {
   margin-left: 16px;
   margin-right: 8px;
-}
-
-.chord-addresses ul {
-  margin-left: 2em;
-  margin-top: 0.5em;
 }
 
 .topology-toolbar-item .pf-c-popover__content {
@@ -1406,6 +1406,10 @@ div.connecting {
   opacity: 0.2;
 }
 
+.connect-error p {
+  color: red !important;
+}
+
 /* schema page */
 
 .list-group-item-heading {
@@ -1427,4 +1431,51 @@ div.connecting {
 
 #schema-page .pficon.list-view-pf-icon-sm {
   border: 0;
+}
+
+/* other */
+.options-panel {
+  min-width: 8.7em;
+  max-width: 25em;
+  padding: 0.5em 1em 0.25em;
+  text-align: left;
+  margin-top: 0.5em;
+}
+
+.chord-addresses {
+  text-align: left;
+}
+
+.chord-addresses ul {
+  margin-top: 0.5em;
+}
+
+.qdrTopology .pf-c-accordion__expanded-content-body {
+  position: absolute;
+  z-index: 100;
+  background: white;
+  padding: 0;
+}
+
+.pf-c-accordion__expanded-content.pf-m-expanded {
+  --pf-c-accordion__expanded-content--BorderLeftColor: white !important;
+}
+
+button.dropdown-panel-toggle.pf-c-accordion__toggle {
+  padding: 0.5em 1em;
+}
+
+button.dropdown-panel-toggle.pf-c-accordion__toggle span.pf-c-accordion__toggle-text {
+  max-width: 10em;
+  padding-right: 1em;
+}
+
+.qdrTopology dl.pf-c-accordion dt {
+  background-image: none;
+}
+
+.dropdown-panel-accordion.pf-c-accordion {
+  box-shadow: none;
+  border: 1px solid #eaeaea;
+  border-bottom: 1px solid black;
 }

@@ -358,9 +358,6 @@ class EntityListTable extends React.Component {
 
   // an action was clicked on a row's kebab menu
   handleAction = ({ action, rowData }) => {
-    console.log(`handleActions ${action}`);
-    console.log(rowData);
-
     if (action === "UPDATE") {
       this.props.handleEntityAction(action, rowData.data);
     } else {

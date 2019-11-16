@@ -21,14 +21,14 @@ class ConnectPage extends React.Component {
     if (nextState.showForm !== this.state.showForm) return true;
     const nextPathname =
       nextProps.location &&
-      nextProps.location.state &&
-      nextProps.location.state.pathname
+        nextProps.location.state &&
+        nextProps.location.state.pathname
         ? nextProps.location.state.pathname
         : undefined;
     const currentPathname =
       this.props.location &&
-      this.props.location.state &&
-      this.props.location.state.pathname
+        this.props.location.state &&
+        this.props.location.state.pathname
         ? this.props.location.state.pathname
         : undefined;
 
@@ -50,12 +50,13 @@ class ConnectPage extends React.Component {
               service={this.props.service}
               handleConnect={this.props.handleConnect}
               handleConnectCancel={this.handleConnectCancel}
+              handleAddNotification={this.props.handleAddNotification}
               fromPath={from.pathname}
               isConnectFormOpen={true}
             />
           ) : (
-            <React.Fragment />
-          )}
+              <React.Fragment />
+            )}
           <div className="left-content">
             <TextContent>
               <Text component="h1" className="console-banner">
