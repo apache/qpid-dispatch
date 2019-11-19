@@ -244,7 +244,7 @@ class Node(object):
         if offset is None:
             offset = 0
 
-        if count is None:
+        if count is None or count==0:
             # count has not been specified. For each request the
             # maximum number of rows we can get without proton
             # failing is MAX_ALLOWED_COUNT_PER_REQUEST

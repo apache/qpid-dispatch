@@ -241,6 +241,17 @@ class QdstatTest(system_test.TestCase):
 
         self.assertEqual(links, 500)
 
+        # DISPATCH-1485. Try to run qdstat with a limit=0. Without the fix for DISPATCH-1485
+        # this following command will hang and the test will fail.
+        outs = self.run_qdstat(['--links', '--limit=0'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+        self.assertEqual(links, COUNT*2)
+
 
         # This test would fail without the fix for DISPATCH-974
         outs = self.run_qdstat(['--address'])
