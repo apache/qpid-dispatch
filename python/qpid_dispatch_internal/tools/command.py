@@ -182,7 +182,7 @@ def _qdstat_parser(BusManager):
     # can be used in conjunction with options
     # like -c, -l, -a, --autolinks, --linkroutes and --log.
     # By default, the limit is not set, which means the limit is unlimited.
-    parser.add_argument("--limit", help="Limit number of output rows", type=int, default=None)
+    parser.add_argument("--limit", help="Limit number of output rows. Unlimited if limit is zero or if limit not specified", type=int, default=None)
 
     add_connection_options(parser)
     return parser
