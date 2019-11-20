@@ -47,7 +47,7 @@ struct qdr_delivery_t {
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
     uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
     uint32_t                ingress_time;
-    pn_data_t              *extension_state;
+    pn_data_t              *extension_state;     ///< delivery-state in disposition performative
     qdr_error_t            *error;
     bool                    settled;
     bool                    presettled;
@@ -97,9 +97,9 @@ bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
 
-void qdr_delivery_read_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition);
+pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *dlv);
+void qdr_delivery_set_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition);
 void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition);
-void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest, bool update_diposition);
 
 
 //

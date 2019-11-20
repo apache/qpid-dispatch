@@ -110,7 +110,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->error        = 0;
     dlv->disposition  = 0;
 
-    qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
+    qdr_delivery_set_extension_state(dlv, disposition, disposition_data, true);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - protect returned value");
 
@@ -673,8 +673,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         // If this is an attach-routed link, put the delivery directly onto the peer link
         //
         qdr_delivery_t *peer = qdr_forward_new_delivery_CT(core, dlv, link->connected_link, dlv->msg);
-
-        qdr_delivery_copy_extension_state(dlv, peer, true);
+        qdr_delivery_set_extension_state(peer,
+                                         dlv->remote_disposition,
+                                         qdr_delivery_extension_state(dlv),
+                                         true);
 
         //
         // Copy the delivery tag.  For link-routing, the delivery tag must be preserved.
