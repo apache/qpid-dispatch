@@ -138,14 +138,33 @@ class Header:
     value /= 1000
     return self.numCell(value, 'g')
 
+class BodyFormat:
+  """
+  Display body format chooses between:
+   CLASSIC - original variable-width, unquoted, text delimited by white space
+   CSV     - quoted text delimited by commas
+  """
+  CLASSIC = 1
+  CSV = 2
+
+class CSV_CONFIG:
+  """ """
+  SEPERATOR = u','
+  STRING_QUOTE = u'"'
 
 class Display:
   """ Display formatting """
   
-  def __init__(self, spacing=2, prefix="    "):
+  def __init__(self, spacing=2, prefix="    ", bodyFormat=BodyFormat.CLASSIC):
     self.tableSpacing    = spacing
     self.tablePrefix     = prefix
     self.timestampFormat = "%X"
+    if bodyFormat == BodyFormat.CLASSIC:
+      self.printTable = self.table
+    elif bodyFormat == BodyFormat.CSV:
+      self.printTable = self.tableCsv
+    else:
+      raise Exception("Table body format must be CLASSIC or CSV.")
 
   def formattedTable(self, title, heads, rows):
     fRows = []
@@ -159,7 +178,7 @@ class Display:
     headtext = []
     for head in heads:
       headtext.append(head.text)
-    self.table(title, headtext, fRows)
+    self.printTable(title, headtext, fRows)
 
   def table(self, title, heads, rows):
     """ Print a table with autosized columns """
@@ -207,6 +226,31 @@ class Display:
             line = line + " "
         col = col + 1
       print(line)
+
+  def tableCsv(self, title, heads, rows):
+    """
+    Print a table with CSV format.
+    """
+
+    def csvEscape(text):
+      """
+      Given a unicode text field, return the quoted CSV format for it
+      :param text: a header field or a table row field
+      :return:
+      """
+      if len(text) == 0:
+        return ""
+      else:
+        text = text.replace(CSV_CONFIG.STRING_QUOTE, CSV_CONFIG.STRING_QUOTE*2)
+        return CSV_CONFIG.STRING_QUOTE + text + CSV_CONFIG.STRING_QUOTE
+
+    print("%s" % title)
+    if len (rows) == 0:
+      return
+
+    print(','.join([csvEscape(UNICODE(head)) for head in heads]))
+    for row in rows:
+      print(','.join([csvEscape(UNICODE(item)) for item in row]))
 
   def do_setTimeFormat (self, fmt):
     """ Select timestamp format """

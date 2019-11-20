@@ -73,8 +73,23 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("Mode                             standalone" in out)
         self.assertEqual(out.count("QDR.A"), 2)
 
+    def test_general_csv(self):
+        out = self.run_qdstat(['--general', '--csv'], r'(?s)Router Statistics.*Mode","Standalone')
+        self.assertTrue("Connections","1" in out)
+        self.assertTrue("Nodes","0" in out)
+        self.assertTrue("Auto Links","0" in out)
+        self.assertTrue("Link Routes","0" in out)
+        self.assertTrue("Router Id","QDR.A" in out)
+        self.assertTrue("Mode","standalone" in out)
+        self.assertEqual(out.count("QDR.A"), 2)
+
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')
+        outs = self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'QDR.A')
+
+    def test_connections_csv(self):
+        self.run_qdstat(['--connections', "--csv"], r'host.*container.*role')
         outs = self.run_qdstat(['--connections'], 'no-auth')
         outs = self.run_qdstat(['--connections'], 'QDR.A')
 
@@ -84,13 +99,27 @@ class QdstatTest(system_test.TestCase):
         parts = out.split("\n")
         self.assertEqual(len(parts), 9)
 
+    def test_links_csv(self):
+        self.run_qdstat(['--links', "--csv"], r'QDR.A')
+        out = self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 9)
+
     def test_links_with_limit(self):
         out = self.run_qdstat(['--links', '--limit=1'])
         parts = out.split("\n")
         self.assertEqual(len(parts), 8)
 
+    def test_links_with_limit_csv(self):
+        out = self.run_qdstat(['--links', '--limit=1', "--csv"])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 7)
+
     def test_nodes(self):
         self.run_qdstat(['--nodes'], r'No Router List')
+
+    def test_nodes_csv(self):
+        self.run_qdstat(['--nodes', "--csv"], r'No Router List')
 
     def test_address(self):
         out = self.run_qdstat(['--address'], r'QDR.A')
