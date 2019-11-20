@@ -23,7 +23,7 @@
   },
   "homepage": "https://github.com/apache/qpid-dispatch#readme",
   "dependencies": {
-    "angular": "1.5.11",
+    "angular": "1.7.9",
     "angular-animate": "1.5.11",
     "angular-bootstrap-checkbox": "^0.5.0",
     "angular-resource": "1.5.11",
