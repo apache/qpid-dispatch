@@ -62,8 +62,7 @@ class MobileAddressEngine(object):
 
             self.container.send('amqp:/_topo/0/all/qdrouter.ma', msg)
             self.container.log_ma(LOG_TRACE, "SENT: %r" % msg)
-            for addr in self.added_addrs:
-                self.local_addrs.add(addr)
+            self.local_addrs.update(self.added_addrs)
             for addr in self.deleted_addrs:
                 self.local_addrs.remove(addr)
             self.added_addrs.clear()
