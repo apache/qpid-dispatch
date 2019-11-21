@@ -85,8 +85,8 @@ class FakeBroker(MessagingHandler):
             except IndexError: # no more messages
                 return 0
 
-    def __init__(self, url, container_id=None):
-        super(FakeBroker, self).__init__()
+    def __init__(self, url, container_id=None, **handler_kwargs):
+        super(FakeBroker, self).__init__(**handler_kwargs)
         self.url = url
         self.queues = {}
         self.acceptor = None
