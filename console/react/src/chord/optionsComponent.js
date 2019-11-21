@@ -19,7 +19,7 @@ under the License.
 
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
-import AddressesComponent from "../addressesComponent";
+import AddressesComponent from "../common/addressesComponent";
 
 class OptionsComponent extends Component {
   constructor(props) {

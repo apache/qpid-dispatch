@@ -4,32 +4,24 @@
   "private": true,
   "dependencies": {
     "@patternfly/patternfly": "^2.13.0",
-    "@patternfly/react-charts": "^4.1.5",
+    "@patternfly/react-charts": "^5.1.6",
     "@patternfly/react-core": "^3.38.1",
     "@patternfly/react-icons": "^3.10.4",
     "@patternfly/react-styles": "^3.3.3",
     "@patternfly/react-table": "^2.11.1",
     "@patternfly/react-topology": "^2.7.31",
-    "@react-mock/localstorage": "^0.1.2",
-    "@testing-library/jest-dom": "^4.2.3",
-    "@testing-library/react": "^9.3.2",
-    "body-parser": "^1.19.0",
+    "d3": "^3.5.17",
     "d3-queue": "^3.0.7",
-    "eslint-plugin-patternfly-react": "^0.2.3",
     "express": "^4.17.1",
-    "jest-axe": "^3.2.0",
-    "lodash-es": "^4.17.11",
-    "patternfly-react": "^2.36.1",
-    "prettier": "^1.18.2",
+    "patternfly": "^3.59.4",
     "prop-types": "^15.7.2",
-    "react": "^16.8.6",
-    "react-dom": "^16.8.6",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0",
+    "react-fontawesome": "^1.7.1",
     "react-router-dom": "^5.0.1",
-    "react-scripts": "3.0.1",
-    "redux": "^4.0.1",
+    "react-scripts": "^3.2.0",
     "rhea": "^1.0.8",
-    "topojson-client": "^3.0.1",
-    "typescript": "^3.5.2"
+    "topojson-client": "^3.0.1"
   },
   "scripts": {
     "start": "react-scripts start",
@@ -51,5 +43,14 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "jest-axe": "^3.2.0",
+    "eslint-plugin-patternfly-react": "^0.2.3",
+    "@react-mock/localstorage": "^0.1.2",
+    "@testing-library/jest-dom": "^4.2.3",
+    "@testing-library/react": "^9.3.2",
+    "body-parser": "^1.19.0",
+    "prettier": "^1.19.1"
   }
 }

@@ -29,7 +29,7 @@ import {
 import { Card, CardBody } from "@patternfly/react-core";
 
 import OverviewTable from "./overviewTable";
-import Updated from "../updated";
+import Updated from "../common/updated";
 
 class OverviewPage extends React.Component {
   constructor(props) {

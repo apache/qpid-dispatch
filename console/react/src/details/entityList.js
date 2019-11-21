@@ -36,7 +36,7 @@ class EntityList extends React.Component {
       li => !this.exclude.includes(li)
     );
 
-    this.cleanList.sort((a, b) => (a > b ? 1 : a < b ? -1 : 0));
+    this.cleanList.sort();
   }
 
   handleSelectEntity = event => {
@@ -50,6 +50,7 @@ class EntityList extends React.Component {
       <List className="entities-list pf-u-box-shadow-sm-right">
         {this.cleanList.map(entity => (
           <ListItem
+            data-testid={entity}
             key={entity}
             onClick={this.handleSelectEntity}
             className={entity === this.state.entity ? "selected" : ""}

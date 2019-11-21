@@ -21,7 +21,7 @@ import * as d3 from "d3";
 import { ChordData } from "../chord/data.js";
 import { MIN_CHORD_THRESHOLD } from "../chord/matrix.js";
 import { nextHop } from "./topoUtils.js";
-import { utils } from "../amqp/utilities.js";
+import { utils } from "../common/amqp/utilities.js";
 
 const transitionDuration = 1000;
 //const CHORDFILTERKEY = "chordFilter";
@@ -76,9 +76,7 @@ export class Traffic {
   addAnimationType(type, converter, radius) {
     if (!this.viss.some(v => v.type === type)) {
       this.viss.push(
-        type === "dots"
-          ? new Dots(this, converter, radius)
-          : new Congestion(this)
+        type === "dots" ? new Dots(this, converter, radius) : new Congestion(this)
       );
     }
     this.start();
@@ -125,10 +123,7 @@ class Congestion extends TrafficAnimation {
     if (attrIndex >= 0) {
       for (let i = 0; i < node[entity].results.length; i++) {
         if (node[entity].results[i][attrIndex] === value) {
-          return utils.flatten(
-            node[entity].attributeNames,
-            node[entity].results[i]
-          );
+          return utils.flatten(node[entity].attributeNames, node[entity].results[i]);
         }
       }
     }
@@ -166,10 +161,7 @@ class Congestion extends TrafficAnimation {
               nodeLinks.results[n]
             );
             if (link.linkType !== "router-control") {
-              let f = self.nodeIndexFor(
-                nodes,
-                srv.utilities.nameFromId(nodeId)
-              );
+              let f = self.nodeIndexFor(nodes, srv.utilities.nameFromId(nodeId));
               let connection = self.findResult(
                 node,
                 "connection",
@@ -181,11 +173,9 @@ class Congestion extends TrafficAnimation {
                 let little = Math.min(f, t);
                 let big = Math.max(f, t);
                 if (little >= 0) {
-                  let key = [
-                    "#path",
-                    nodes[little].uid(srv),
-                    nodes[big].uid(srv)
-                  ].join("-");
+                  let key = ["#path", nodes[little].uid(srv), nodes[big].uid(srv)].join(
+                    "-"
+                  );
                   if (!links[key]) links[key] = [];
                   links[key].push(link);
                 }
@@ -295,8 +285,7 @@ class Dots extends TrafficAnimation {
   updateAddresses() {
     this.excludedAddresses = [];
     for (const address in this.traffic.addresses) {
-      if (!this.traffic.addresses[address])
-        this.excludedAddresses.push(address);
+      if (!this.traffic.addresses[address]) this.excludedAddresses.push(address);
     }
     if (this.chordData) {
       this.chordData.setFilter(this.excludedAddresses);
@@ -423,8 +412,10 @@ class Dots extends TrafficAnimation {
             this.addressIndex(this, ahop.address) +
             (ahop.back ? "b" : "");
           let path = d3.select("#path" + pathId);
-          // start the animation. If the animation is already running, this will have no effect
-          this.startAnimation(path, flowId, ahop, flowScale(ahop.val));
+          if (!path.empty()) {
+            // start the animation. If the animation is already running, this will have no effect
+            this.startAnimation(path, flowId, ahop, flowScale(ahop.val));
+          }
           keep[flowId] = true;
         }
       }
@@ -446,10 +437,7 @@ class Dots extends TrafficAnimation {
       .transition()
       .ease("easeLinear")
       .duration((l * 10) / rate)
-      .attrTween(
-        "transform",
-        this.translateDots(this.radius, path, count, back)
-      )
+      .attrTween("transform", this.translateDots(this.radius, path, count, back))
       .each("end", () => {
         if (this.stopped === false) {
           this.animateFlow(flow, path, count, back, rate);
@@ -465,6 +453,7 @@ class Dots extends TrafficAnimation {
     let back = hop.back,
       address = hop.address;
     // the density of dots is determined by the rate of this traffic relative to the other traffic
+    if (!path.node().getTotalLength) return;
     let len = Math.max(Math.floor(path.node().getTotalLength() / 50), 1);
     let dots = [];
     for (let i = 0, offset = this.addressIndex(this, address); i < len; ++i) {
@@ -494,6 +483,7 @@ class Dots extends TrafficAnimation {
       .enter()
       .append("circle")
       .attr("class", "flow flow" + id)
+      .attr("data-testid", (d, i) => `flow${id}-${i}`)
       .attr("fill", this.fillColor(address, this.traffic.addressColors))
       .attr("r", 4);
     this.animateFlow(circles, path, dots.length, back, rate);

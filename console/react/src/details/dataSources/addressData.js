@@ -19,7 +19,7 @@ under the License.
 
 import React from "react";
 import DefaultData from "./defaultData";
-import { utils } from "../../amqp/utilities";
+import { utils } from "../../common/amqp/utilities";
 
 const AddressType = ({ value, extraInfo }) => {
   const data = extraInfo.rowData.data;

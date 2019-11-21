@@ -26,7 +26,7 @@ import {
 } from "@patternfly/react-core";
 import OptionsComponent from "./optionsComponent";
 import RoutersComponent from "./routersComponent";
-import AddressesComponent from "../addressesComponent";
+import AddressesComponent from "../common/addressesComponent";
 
 class LegendComponent extends Component {
   constructor(props) {

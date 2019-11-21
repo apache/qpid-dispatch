@@ -28,16 +28,16 @@ import {
 } from "@patternfly/react-table";
 import { Button, Pagination } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
-import TableToolbar from "../tableToolbar";
+import TableToolbar from "../common/tableToolbar";
 import { dataMap } from "./entityData";
 
 // If the breadcrumb on the details page was used to return to this page,
 // we will have saved state info in props.location.state
 const propFromLocation = (props, which, defaultValue) =>
   props &&
-    props.location &&
-    props.location.state &&
-    typeof props.location.state[which] !== "undefined"
+  props.location &&
+  props.location.state &&
+  typeof props.location.state[which] !== "undefined"
     ? props.location.state[which]
     : defaultValue;
 
@@ -129,10 +129,7 @@ class OverviewTable extends React.Component {
 
   detailLink = (value, extraInfo) => {
     return (
-      <Button
-        className="link-button"
-        onClick={() => this.detailClick(value, extraInfo)}
-      >
+      <Button className="link-button" onClick={() => this.detailClick(value, extraInfo)}>
         {value}
       </Button>
     );
@@ -282,8 +279,7 @@ class OverviewTable extends React.Component {
       return (
         <Redirect
           to={{
-            pathname:
-              (this.dataSource && this.dataSource.detailPath) || "/details",
+            pathname: (this.dataSource && this.dataSource.detailPath) || "/details",
             state: this.state.redirectState
           }}
         />

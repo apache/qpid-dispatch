@@ -1,6 +1,25 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
 import React from "react";
 import { render, fireEvent, waitForElement } from "@testing-library/react";
-import { mockService } from "../qdrService.mock";
+import { service, login } from "../serviceTest";
 import TopologyViewer from "./topologyViewer";
 import * as world from "../../public/data/countries.json";
 
@@ -11,8 +30,11 @@ it("renders the TopologyViewer component", async () => {
     });
   });
   const props = {
-    service: mockService({})
+    service
   };
+
+  await login();
+
   const { getByLabelText, getByText, getByTestId } = render(
     <TopologyViewer {...props} />
   );
@@ -49,12 +71,24 @@ it("renders the TopologyViewer component", async () => {
   // close the modal
   fireEvent.click(getByLabelText("Close"));
 
+  // make sure the legend opens
   const legendButton = getByText("topology-legend");
   expect(legendButton).toBeInTheDocument();
-
   fireEvent.click(legendButton);
   fireEvent.click(getByLabelText("Close"));
 
+  // turn on the traffic animation
+
+  // dropdown the traffic panel
   fireEvent.contextMenu(client);
   fireEvent.click(pfTopologyView);
+  const trafficButton = getByLabelText("button-for-Traffic");
+  expect(trafficButton).toBeInTheDocument();
+  fireEvent.click(trafficButton);
+
+  // click on the show traffic checkbox
+  const trafficCheckbox = getByLabelText("show traffic by address");
+  fireEvent.click(trafficCheckbox);
+  // the address dot should be there
+  await waitForElement(() => getByText("toB"));
 });

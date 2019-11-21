@@ -80,8 +80,14 @@ class DashboardPage extends React.Component {
                 <div className="time-period">For the past {this.timePeriodString()}</div>
               </CardHeader>
               <CardBody>
-                <ThroughputChart period={this.state.timePeriod} service={this.props.service} />
-                <InflightChart period={this.state.timePeriod} service={this.props.service} />
+                <ThroughputChart
+                  period={this.state.timePeriod}
+                  chartData={this.props.throughputChartData}
+                />
+                <InflightChart
+                  period={this.state.timePeriod}
+                  chartData={this.props.inflightChartData}
+                />
               </CardBody>
             </Card>
           </StackItem>

@@ -18,7 +18,7 @@ under the License.
 */
 
 /* global Set */
-import { utils } from "../amqp/utilities.js";
+import { utils } from "../common/amqp/utilities.js";
 
 // highlight the paths between the selected node and the hovered node
 function findNextHopNode(from, d, nodeInfo, selected_node, nodes) {
@@ -43,15 +43,7 @@ function findNextHopNode(from, d, nodeInfo, selected_node, nodes) {
   }
   return null;
 }
-export function nextHop(
-  thisNode,
-  d,
-  nodes,
-  links,
-  nodeInfo,
-  selected_node,
-  cb
-) {
+export function nextHop(thisNode, d, nodes, links, nodeInfo, selected_node, cb) {
   if (thisNode && thisNode !== d) {
     let target = findNextHopNode(thisNode, d, nodeInfo, selected_node, nodes);
     if (target) {
@@ -74,7 +66,7 @@ export function connectionPopupHTML(d, nodeInfo) {
     return;
   }
   // return all of onode's connections that connecto to right
-  let getConnsArray = function (onode, key, right) {
+  let getConnsArray = function(onode, key, right) {
     if (right.normals) {
       // if we want connections between a router and a client[s]
       let connIds = new Set();
@@ -84,16 +76,16 @@ export function connectionPopupHTML(d, nodeInfo) {
         if (normal.key === key) {
           connIds.add(normal.connectionId);
         } else if (normal.alsoConnectsTo) {
-          normal.alsoConnectsTo.forEach(function (ac2) {
+          normal.alsoConnectsTo.forEach(function(ac2) {
             if (ac2.key === key) connIds.add(ac2.connectionId);
           });
         }
       }
       return onode.connection.results
-        .filter(function (result) {
+        .filter(function(result) {
           return connIds.has(result[connIndex]);
         })
-        .map(function (c) {
+        .map(function(c) {
           return utils.flatten(onode.connection.attributeNames, c);
         });
     } else {
@@ -102,20 +94,17 @@ export function connectionPopupHTML(d, nodeInfo) {
       let containerIndex = onode.connection.attributeNames.indexOf("container");
       let roleIndex = onode.connection.attributeNames.indexOf("role");
       return onode.connection.results
-        .filter(function (conn) {
-          return (
-            conn[containerIndex] === container &&
-            conn[roleIndex] === "inter-router"
-          );
+        .filter(function(conn) {
+          return conn[containerIndex] === container && conn[roleIndex] === "inter-router";
         })
-        .map(function (c) {
+        .map(function(c) {
           return utils.flatten(onode.connection.attributeNames, c);
         });
     }
   };
   // construct HTML to be used in a popup when the mouse is moved over a link.
   // The HTML is sanitized elsewhere before it is displayed
-  let linksHTML = function (onode, conns) {
+  let linksHTML = function(onode, conns) {
     const max_links = 10;
     const fields = [
       "deliveryCount",
@@ -126,13 +115,13 @@ export function connectionPopupHTML(d, nodeInfo) {
       "modifiedCount"
     ];
     // local function to determine if a link's connectionId is in any of the connections
-    let isLinkFor = function (connectionId, conns) {
+    let isLinkFor = function(connectionId, conns) {
       for (let c = 0; c < conns.length; c++) {
         if (conns[c].identity === connectionId) return true;
       }
       return false;
     };
-    let fnJoin = function (ar, sepfn) {
+    let fnJoin = function(ar, sepfn) {
       let out = "";
       out = ar[0];
       for (let i = 1; i < ar.length; i++) {
@@ -154,13 +143,7 @@ export function connectionPopupHTML(d, nodeInfo) {
         if (isLinkFor(link.connectionId, conns)) {
           if (link.owningAddr) hasAddress = true;
           if (link.name) {
-            let rates = utils.rates(
-              link,
-              fields,
-              linkRateHistory,
-              link.name,
-              1
-            );
+            let rates = utils.rates(link, fields, linkRateHistory, link.name, 1);
             // replace the raw value with the rate
             for (let i = 0; i < fields.length; i++) {
               if (rates[fields[i]] > 0) allZero = false;
@@ -172,14 +155,14 @@ export function connectionPopupHTML(d, nodeInfo) {
       }
     }
     // we may need to limit the number of links displayed, so sort descending by the sum of the field values
-    let sum = function (a) {
+    let sum = function(a) {
       let s = 0;
       for (let i = 0; i < fields.length; i++) {
         s += a[fields[i]];
       }
       return s;
     };
-    links.sort(function (a, b) {
+    links.sort(function(a, b) {
       let asum = sum(a);
       let bsum = sum(b);
       return asum < bsum ? 1 : asum > bsum ? -1 : 0;
@@ -200,15 +183,14 @@ export function connectionPopupHTML(d, nodeInfo) {
       td.unshift("owningAddr");
     }
 
-    let rate_th = function (th) {
-      let rth = th.map(function (t) {
+    let rate_th = function(th) {
+      let rth = th.map(function(t) {
         if (t.endsWith("Count")) t = t.replace("Count", "Rate");
         return utils.humanify(t);
       });
       return rth;
     };
-    HTML +=
-      '<tr class="header"><td>' + rate_th(th).join("</td><td>") + "</td></tr>";
+    HTML += '<tr class="header"><td>' + rate_th(th).join("</td><td>") + "</td></tr>";
     // add rows to the table for each link
     for (let l = 0; l < links.length; l++) {
       if (l >= max_links) {
@@ -216,14 +198,14 @@ export function connectionPopupHTML(d, nodeInfo) {
         break;
       }
       let link = links[l];
-      let vals = td.map(function (f) {
+      let vals = td.map(function(f) {
         if (f === "owningAddr") {
           let identity = utils.identity_clean(link.owningAddr);
           return utils.addr_text(identity);
         }
         return link[f];
       });
-      let joinedVals = fnJoin(vals, function (v1, last) {
+      let joinedVals = fnJoin(vals, function(v1, last) {
         return [
           `</td><td${isNaN(+v1) ? "" : ' align="right"'}>`,
           last ? v1 : utils.pretty(v1 || "0", ",.2f")
@@ -270,7 +252,8 @@ export function connectionPopupHTML(d, nodeInfo) {
 
 export function getSizes(topologyRef) {
   const gap = 5;
-  let topoWidth = topologyRef.offsetWidth > 0 ? topologyRef.offsetWidth : window.innerWidth;
+  let topoWidth =
+    topologyRef.offsetWidth > 0 ? topologyRef.offsetWidth : window.innerWidth;
   let width = topoWidth - gap;
   let top = topologyRef.offsetTop;
   let height = window.innerHeight - top - gap;

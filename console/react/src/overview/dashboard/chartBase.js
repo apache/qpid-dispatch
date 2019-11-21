@@ -25,28 +25,27 @@ import OverviewChart from "./overviewChart";
 class ChartBase extends React.Component {
   constructor(props) {
     super(props);
-    this.state = {
-      rates: []
-    };
-    this.rawData = [];
-    this.rateStorage = {};
-    this.initialized = false;
-    for (let i = 0; i < 60 * 60; i++) {
-      this.state.rates.push(0);
-    }
     this.title = "Override me";
     this.ariaLabel = "base-chart";
     this.isRate = false;
+    this.style = { fill: "#EBAEBA", fillOpacity: 1, stroke: "#EAEAEA" };
+    this.state = {
+      data: this.props.chartData.data(this.props.period)
+    };
   }
 
   componentDidMount = () => {
-    this.mounted = true;
-    this.timer = setInterval(this.updateData, 1000);
+    this.timer = setInterval(this.setData, 1000);
   };
 
   componentWillUnmount = () => {
-    this.mounted = false;
-    clearInterval(this.timer);
+    if (this.timer) {
+      clearInterval(this.timer);
+    }
+  };
+
+  setData = () => {
+    this.setState({ data: this.props.chartData.data(this.props.period) });
   };
 
   setStyle = (color, opacity) => {
@@ -56,50 +55,15 @@ class ChartBase extends React.Component {
       stroke: d3.rgb(color).darker(2)
     };
   };
-  updateData = () => {
-    console.log("updateData should be overridden");
-  };
-
-  init = datum => {
-    for (let i = 0; i < 60 * 60; i++) {
-      this.rawData.push(datum);
-    }
-    this.initialized = true;
-  };
-
-  addData = datum => {
-    if (!this.initialized) {
-      this.init(datum);
-    }
-    if (!this.mounted) return;
-    const { rates } = this.state;
-    this.rawData.push(datum);
-    this.rawData.splice(0, 1);
-    if (this.isRate) {
-      // get the average rate of change for the last three values
-      const avg = this.props.service.utilities.rates(
-        { val: datum },
-        ["val"],
-        this.rateStorage,
-        "val",
-        3
-      );
-      datum = Math.round(avg.val);
-    }
-    rates.push(datum);
-    rates.splice(0, 1);
-    this.setState({ rates });
-  };
-
-  data = () => {
-    const start = Math.max(this.state.rates.length - this.props.period, 0);
-    const end = this.state.rates.length - 1;
-    return this.state.rates.slice(start, end);
-  };
 
   render() {
     return (
-      <OverviewChart ariaLabel={this.ariaLabel} data={this.data()} title={this.title} style={this.style} />
+      <OverviewChart
+        ariaLabel={this.ariaLabel}
+        data={this.state.data}
+        title={this.title}
+        style={this.style}
+      />
     );
   }
 }

@@ -25,7 +25,7 @@ import { ChordData } from "./data.js";
 import { qdrRibbon } from "./ribbon/ribbon.js";
 import { qdrlayoutChord } from "./layout/layout.js";
 import ChordToolbar from "./chordToolbar";
-import QDRPopup from "../qdrPopup";
+import QDRPopup from "../common/qdrPopup";
 import * as d3 from "d3";
 
 const CHORDOPTIONSKEY = "chordOptions";

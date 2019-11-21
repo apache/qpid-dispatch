@@ -18,7 +18,7 @@ under the License.
 */
 
 import React, { Component } from "react";
-import ContextMenuComponent from "../contextMenuComponent";
+import ContextMenuComponent from "../common/contextMenuComponent";
 
 class ContextMenu extends Component {
   constructor(props) {

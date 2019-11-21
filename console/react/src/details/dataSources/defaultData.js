@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { utils } from "../../amqp/utilities";
+import { utils } from "../../common/amqp/utilities";
 import DeleteEntity from "../deleteEntity";
 import UpdateEntity from "../updateEntity";
 import CreateEntity from "../createEntity";
@@ -38,14 +38,7 @@ class DefaultData {
   schemaOperations = entity => this.schema.entityTypes[entity].operations;
 
   // emit a single button/component
-  entityAction = ({
-    component: Component,
-    props,
-    record,
-    click,
-    i,
-    asButton
-  }) => (
+  entityAction = ({ component: Component, props, record, click, i, asButton }) => (
     <Component
       key={`action-${i}`}
       record={record}
@@ -85,10 +78,7 @@ class DefaultData {
           const result = record.results.find(
             r => r[identityIndex] === currentRecord.identity
           );
-          let object = this.service.utilities.flatten(
-            record.attributeNames,
-            result
-          );
+          let object = this.service.utilities.flatten(record.attributeNames, result);
           object = this.service.utilities.formatAttributes(
             object,
             schema.entityTypes[entity]
@@ -101,9 +91,7 @@ class DefaultData {
 
   // return a list of operations allowed for this entity
   actions = entity =>
-    this.schema.entityTypes[entity].operations.filter(
-      action => action !== "READ"
-    );
+    this.schema.entityTypes[entity].operations.filter(action => action !== "READ");
 
   // action button for the entityListTable
   actionButton = ({ action, props, click, record, i, asButton }) =>
@@ -130,17 +118,13 @@ class DefaultData {
   // called by entityListTable to get the list of records
   doFetch = (page, perPage, routerId, entity) => {
     return new Promise(resolve => {
-      this.service.management.topology.fetchEntities(
-        routerId,
-        { entity },
-        results => {
-          const data = utils.flattenAll(results[routerId][entity], f => {
-            f.routerId = routerId;
-            return f;
-          });
-          resolve({ data, page, perPage });
-        }
-      );
+      this.service.management.topology.fetchEntities(routerId, { entity }, results => {
+        const data = utils.flattenAll(results[routerId][entity], f => {
+          f.routerId = routerId;
+          return f;
+        });
+        resolve({ data, page, perPage });
+      });
     });
   };
 }

@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import ConnectionClose from "../../connectionClose";
+import ConnectionClose from "../../common/connectionClose";
 
 class ConnectionData {
   constructor(service) {
@@ -56,10 +56,7 @@ class ConnectionData {
           const result = record.results.find(
             r => r[identityIndex] === currentRecord.identity
           );
-          let connection = this.service.utilities.flatten(
-            record.attributeNames,
-            result
-          );
+          let connection = this.service.utilities.flatten(record.attributeNames, result);
           connection = this.service.utilities.formatAttributes(
             connection,
             schema.entityTypes["connection"]
@@ -100,8 +97,7 @@ class ConnectionData {
               let sec = "no-security";
               if (connection.isEncrypted) {
                 if (sasl === "GSSAPI") sec = "Kerberos";
-                else
-                  sec = connection.sslProto + "(" + connection.sslCipher + ")";
+                else sec = connection.sslProto + "(" + connection.sslCipher + ")";
               }
 
               let host = connection.host;

@@ -44,7 +44,7 @@ import { cellWidth } from "@patternfly/react-table";
 import { Card, CardBody } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import { dataMap as detailsDataMap, defaultData } from "./entityData";
-import { utils } from "../amqp/utilities";
+import { utils } from "../common/amqp/utilities";
 
 class UpdateTablePage extends React.Component {
   constructor(props) {
@@ -64,10 +64,7 @@ class UpdateTablePage extends React.Component {
     } else {
       this.dataSource = !detailsDataMap[this.entity]
         ? new defaultData(this.props.service, this.props.schema)
-        : new detailsDataMap[this.entity](
-          this.props.service,
-          this.props.schema
-        );
+        : new detailsDataMap[this.entity](this.props.service, this.props.schema);
     }
 
     this.state = {
@@ -85,10 +82,25 @@ class UpdateTablePage extends React.Component {
       redirectPath: "/dashboard",
       lastUpdated: new Date(),
       changes: false,
-      record: this.props.locationState.currentRecord
+      record: this.fixNull(this.props.locationState.currentRecord)
     };
     this.originalRecord = utils.copy(this.state.record);
   }
+
+  fixNull = rec => {
+    const record = utils.copy(rec);
+    const attributes = this.dataSource.schemaAttributes(this.entity);
+    for (const attr in record) {
+      if (record[attr] === null) {
+        if (attributes[attr].type === "string") {
+          record[attr] = "";
+        } else if (attributes[attr].type === "integer") {
+          record[attr] = 0;
+        }
+      }
+    }
+    return record;
+  };
 
   handleTextInputChange = (value, key) => {
     const { record } = this.state;
@@ -112,14 +124,6 @@ class UpdateTablePage extends React.Component {
       if (type === "list") readOnly = true;
       if (type === "integer" && attribute.graph) readOnly = true;
       let required = attribute.required;
-      if (record[attributeKey] === null) {
-        if (attribute.type === "string")
-          record[attributeKey] = "";
-        if (attribute.type === "boolean")
-          record[attributeKey] = false;
-        if (attribute.type === "integer")
-          record[attributeKey] = 0;
-      }
       const value = record[attributeKey];
       if (
         this.dataSource.updateMetaData &&
@@ -154,9 +158,7 @@ class UpdateTablePage extends React.Component {
                 aria-describedby="entiy-form-field"
                 name={attributeKey}
                 isDisabled={readOnly}
-                onChange={value =>
-                  this.handleTextInputChange(value, attributeKey)
-                }
+                onChange={value => this.handleTextInputChange(value, attributeKey)}
               />
             </FormGroup>
           );
@@ -165,9 +167,7 @@ class UpdateTablePage extends React.Component {
             <FormGroup {...formGroupProps} key={attributeKey}>
               <FormSelect
                 value={value}
-                onChange={value =>
-                  this.handleTextInputChange(value, attributeKey)
-                }
+                onChange={value => this.handleTextInputChange(value, attributeKey)}
                 id={id}
                 name={attributeKey}
               >
@@ -186,12 +186,8 @@ class UpdateTablePage extends React.Component {
           formGroups.push(
             <FormGroup {...formGroupProps} key={attributeKey}>
               <Checkbox
-                isChecked={
-                  record[attributeKey] === null ? false : record[attributeKey]
-                }
-                onChange={value =>
-                  this.handleTextInputChange(value, attributeKey)
-                }
+                isChecked={record[attributeKey] === null ? false : record[attributeKey]}
+                onChange={value => this.handleTextInputChange(value, attributeKey)}
                 label={attributeKey}
                 id={id}
                 name={attributeKey}
@@ -225,27 +221,24 @@ class UpdateTablePage extends React.Component {
     const attributes = {};
     // identity is needed to update the record
     attributes["identity"] = record.identity;
+    const schemaAttributes = this.dataSource.schemaAttributes(this.entity);
     // pass any other attributes that have changed
     for (const attr in record) {
       if (record[attr] !== this.originalRecord[attr]) {
         attributes[attr] = record[attr];
       }
+      if (schemaAttributes[attr] && schemaAttributes[attr].required) {
+        attributes[attr] = record[attr];
+      }
       if (attr === "outputFile") {
-        attributes["outputFile"] =
-          record.outputFile === "" ? null : record.outputFile;
+        attributes["outputFile"] = record.outputFile === "" ? null : record.outputFile;
       }
     }
     // call update
     this.props.service.management.connection
-      .sendMethod(
-        record.routerId || record.nodeId,
-        this.entity,
-        attributes,
-        "UPDATE"
-      )
+      .sendMethod(record.routerId || record.nodeId, this.entity, attributes, "UPDATE")
       .then(results => {
-        let statusCode =
-          results.context.message.application_properties.statusCode;
+        let statusCode = results.context.message.application_properties.statusCode;
         if (statusCode < 200 || statusCode >= 300) {
           const msg = `Updated ${record.name} failed with message: ${results.context.message.application_properties.statusDescription}`;
           console.log(`error ${msg}`);
@@ -253,12 +246,7 @@ class UpdateTablePage extends React.Component {
         } else {
           const msg = `Updated ${this.props.entity} ${record.name}`;
           console.log(`success ${msg}`);
-          this.props.handleAddNotification(
-            "action",
-            msg,
-            new Date(),
-            "success"
-          );
+          this.props.handleAddNotification("action", msg, new Date(), "success");
         }
         const props = this.props;
         props.locationState.currentRecord = record;
@@ -280,17 +268,11 @@ class UpdateTablePage extends React.Component {
 
     return (
       <React.Fragment>
-        <PageSection
-          variant={PageSectionVariants.light}
-          className="overview-table-page"
-        >
+        <PageSection variant={PageSectionVariants.light} className="overview-table-page">
           <Stack>
             <StackItem className="overview-header details">
               <Breadcrumb>
-                <BreadcrumbItem
-                  className="link-button"
-                  onClick={this.breadcrumbSelected}
-                >
+                <BreadcrumbItem className="link-button" onClick={this.breadcrumbSelected}>
                   {this.icap(this.entity)}
                 </BreadcrumbItem>
               </Breadcrumb>
@@ -306,10 +288,7 @@ class UpdateTablePage extends React.Component {
                   >
                     Cancel
                   </Button>
-                  <Button
-                    onClick={this.handleUpdate}
-                    isDisabled={!this.state.changes}
-                  >
+                  <Button onClick={this.handleUpdate} isDisabled={!this.state.changes}>
                     Update
                   </Button>
                 </ActionGroup>
@@ -318,7 +297,9 @@ class UpdateTablePage extends React.Component {
             <StackItem id="update-form">
               <Card>
                 <CardBody>
-                  <Form isHorizontal aria-label="update-entity-form">{this.schemaToForm()}</Form>
+                  <Form isHorizontal aria-label="update-entity-form">
+                    {this.schemaToForm()}
+                  </Form>
                 </CardBody>
               </Card>
             </StackItem>

@@ -19,7 +19,7 @@ under the License.
 
 import React from "react";
 import DefaultData from "./defaultData";
-import ConnectionClose from "../../connectionClose";
+import ConnectionClose from "../../common/connectionClose";
 
 class ConnectionData extends DefaultData {
   constructor(service, schema) {

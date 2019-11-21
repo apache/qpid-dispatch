@@ -19,7 +19,7 @@ under the License.
 
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
-import AddressesComponent from "../addressesComponent";
+import AddressesComponent from "../common/addressesComponent";
 
 class TrafficComponent extends Component {
   constructor(props) {
@@ -47,9 +47,7 @@ class TrafficComponent extends Component {
                 <AddressesComponent
                   addresses={this.props.addresses}
                   addressColors={this.props.addressColors}
-                  handleChangeAddress={
-                    this.props.handleChangeTrafficFlowAddress
-                  }
+                  handleChangeAddress={this.props.handleChangeTrafficFlowAddress}
                   handleHoverAddress={this.props.handleHoverAddress}
                 />
               </li>
@@ -89,10 +87,7 @@ class TrafficComponent extends Component {
                     x2="100%"
                     y2="0%"
                   >
-                    <stop
-                      style={{ stopColor: "#999999", stopOpacity: 1 }}
-                      offset="0"
-                    />
+                    <stop style={{ stopColor: "#999999", stopOpacity: 1 }} offset="0" />
                     <stop
                       style={{ stopColor: "#00FF00", stopOpacity: 1 }}
                       offset="0.333"
@@ -101,10 +96,7 @@ class TrafficComponent extends Component {
                       style={{ stopColor: "#FFA500", stopOpacity: 1 }}
                       offset="0.666"
                     />
-                    <stop
-                      style={{ stopColor: "#FF0000", stopOpacity: 1 }}
-                      offset="1"
-                    />
+                    <stop style={{ stopColor: "#FF0000", stopOpacity: 1 }} offset="1" />
                   </linearGradient>
                 </defs>
                 <g>

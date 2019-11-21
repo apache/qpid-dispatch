@@ -25,26 +25,8 @@ class ThroughputChart extends ChartBase {
     this.title = "Deliveries per sec";
     this.color = "#99C2EB"; //ChartThemeColor.blue;
     this.setStyle(this.color);
-    this.isRate = true;
     this.ariaLabel = "throughput-chart";
   }
-
-  updateData = () => {
-    this.props.service.management.topology.fetchAllEntities(
-      {
-        entity: "router",
-        attrs: ["deliveriesEgress"]
-      },
-      results => {
-        let deliveries = 0;
-        for (let id in results) {
-          const aresult = results[id]["router"];
-          deliveries += parseInt(aresult.results[0]);
-        }
-        this.addData(deliveries);
-      }
-    );
-  };
 }
 
 export default ThroughputChart;

@@ -28,15 +28,13 @@ import {
 } from "@patternfly/react-table";
 import { Button, Pagination } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
-import TableToolbar from "../tableToolbar";
+import TableToolbar from "../common/tableToolbar";
 import { dataMap, defaultData } from "./entityData";
 
 // If the breadcrumb on the detailsTablePage was used to return to this page,
 // we will have saved state info in props.location.state
 const propFromLocation = (props, which, defaultValue) => {
-  return props &&
-    props.detailsState &&
-    typeof props.detailsState[which] !== "undefined"
+  return props && props.detailsState && typeof props.detailsState[which] !== "undefined"
     ? props.detailsState[which]
     : defaultValue;
 };
@@ -149,9 +147,7 @@ class EntityListTable extends React.Component {
       if (!this.mounted) return;
       const { rows, page, total, allRows } = sliced;
       allRows.forEach(row => {
-        const prevRow = this.state.allRows.find(
-          r => r.data.name === row.data.name
-        );
+        const prevRow = this.state.allRows.find(r => r.data.name === row.data.name);
         if (prevRow && prevRow.selected) {
           row.selected = true;
         }
@@ -173,6 +169,7 @@ class EntityListTable extends React.Component {
     }
     return (
       <Button
+        data-testid={value}
         className="link-button"
         onClick={() => this.detailClick(value, extraInfo)}
       >
@@ -395,10 +392,7 @@ class EntityListTable extends React.Component {
     const tableProps = {
       cells: this.columns,
       rows: this.state.rows,
-      actions: this.dataSource.actionMenuItems(
-        this.props.entity,
-        this.handleAction
-      ),
+      actions: this.dataSource.actionMenuItems(this.props.entity, this.handleAction),
       "aria-label": this.props.entity,
       sortBy: this.state.sortBy,
       onSort: this.onSort,

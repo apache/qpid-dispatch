@@ -30,37 +30,51 @@ if(CONSOLE_INSTALL)
         OUTPUT_VARIABLE NPM_VERSION)
     if(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))
 
-          set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/stand-alone")
+          set(CONSOLE_SOURCE_DIR "${CMAKE_SOURCE_DIR}/console/react")
           set(CONSOLE_BUILD_DIR "${CMAKE_BINARY_DIR}/console")
 
           ## copy the build config files
           configure_file( ${CONSOLE_SOURCE_DIR}/package.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/package-lock.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/tslint.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/gulpfile.js ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/vendor-js.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/vendor-css.txt ${CONSOLE_BUILD_DIR}/ COPYONLY)
+          configure_file( ${CONSOLE_SOURCE_DIR}/yarn.lock ${CONSOLE_BUILD_DIR}/ COPYONLY)
 
-          ## Files needed to create the ${CONSOLE_ARTIFACTS}
-          file (GLOB_RECURSE CONSOLE_JS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.js)
-          file (GLOB_RECURSE CONSOLE_TS_SOURCES ${CONSOLE_SOURCE_DIR}/plugin/js/*.ts)
-          file (GLOB CONSOLE_TXT_SOURCES ${CONSOLE_BUILD_DIR}/vendor-*.txt)
-          set(CONSOLE_CSS_SOURCE ${CONSOLE_SOURCE_DIR}/plugin/css/dispatch.css)
-          set(ALL_CONSOLE_SOURCES ${CONSOLE_CSS_SOURCE} ${CONSOLE_TXT_SOURCES})
+          function(copyDirectory fromDir toDir subDir)
+            set(BASE "${fromDir}/${subDir}")
+            file (GLOB_RECURSE FILES ${BASE}/*.*)
+            foreach(ITEM ${FILES})
+              get_filename_component(ITEM_PATH ${ITEM} PATH)
+              get_filename_component(ITEM_FILE ${ITEM} NAME)
+              string(REPLACE ${BASE} "" ITEM_PATH ${ITEM_PATH})
+              #message(STATUS "from ${ITEM} to ${toDir}/${subDir}${ITEM_PATH}/${ITEM_FILE}")
+              configure_file( ${ITEM} "${toDir}/${subDir}${ITEM_PATH}/${ITEM_FILE}" COPYONLY)
+            endforeach()
+          endfunction()
 
-          ## Files created during the console build
+          # copy the files needed for the build to the build/console directory
+          # this is needed because 'npm run build' and 'npm test' create and modify
+          # files and we don't want that to happen in the source directory
+          copyDirectory(${CONSOLE_SOURCE_DIR} ${CONSOLE_BUILD_DIR} "src")
+          copyDirectory(${CONSOLE_SOURCE_DIR} ${CONSOLE_BUILD_DIR} "public")
+          copyDirectory(${CONSOLE_SOURCE_DIR} ${CONSOLE_BUILD_DIR} "test_data")
+
+          ## If any of these files change, rebuild the console
+          file (GLOB_RECURSE CONSOLE_SOURCES ${CONSOLE_SOURCE_DIR}/src/*.*)
+          file (GLOB_RECURSE CONSOLE_PUBLIC_FILES ${CONSOLE_SOURCE_DIR}/public/*.*)
+          file (GLOB_RECURSE CONSOLE_TEST_FILES ${CONSOLE_SOURCE_DIR}/test_data/*.*)
+          set(ALL_CONSOLE_SOURCES ${CONSOLE_SOURCES} ${CONSOLE_PUBLIC_FILES} ${CONSOLE_TEST_FILES})
+
+          ## If any of these files is older than the above ALL_CONSOLE_SOURCE
+          ## then rebuild the console
           set(CONSOLE_ARTIFACTS
-            ${CONSOLE_BUILD_DIR}/dist/js/vendor.min.js
-            ${CONSOLE_BUILD_DIR}/dist/css/vendor.min.css
-            ${CONSOLE_BUILD_DIR}/dist/css/dispatch.min.css
+            ${CONSOLE_BUILD_DIR}/build/index.html
+            ${CONSOLE_BUILD_DIR}/build/app.js
           )
 
           ## Tell cmake how and when to build ${CONSOLE_ARTIFACTS}
           add_custom_command (
             OUTPUT ${CONSOLE_ARTIFACTS}
             COMMENT "Running console build"
-            COMMAND npm install --loglevel=error
-            COMMAND ${NPM_EXECUTABLE} run build -- --src ${CONSOLE_SOURCE_DIR} --target "production"
+            COMMAND ${NPM_EXECUTABLE} install --loglevel=error
+            COMMAND ${NPM_EXECUTABLE} run build -- --target "production"
             DEPENDS ${ALL_CONSOLE_SOURCES}
             WORKING_DIRECTORY ${CONSOLE_BUILD_DIR}/
             )
@@ -75,72 +89,11 @@ if(CONSOLE_INSTALL)
           ##
 
           ## Files copied to the root of the console's install dir
-          set(BASE_FILES
-            ${CONSOLE_SOURCE_DIR}/index.html
-            ${CONSOLE_SOURCE_DIR}/main.js
-            ${CONSOLE_SOURCE_DIR}/favicon-32x32.png
-            ${CONSOLE_SOURCE_DIR}/config.json
-          )
-          ## Files copied to the img/ dir
-          set(IMAGES
-            ${CONSOLE_SOURCE_DIR}/plugin/img/bg-modal-about-pf.png
-            ${CONSOLE_SOURCE_DIR}/plugin/img/logo-alt.svg
-            ${CONSOLE_SOURCE_DIR}/plugin/img/console_logo.png
-          )
-          ## Files copied to the css/ dir
-          set(CSS_FONTS
-            ${CONSOLE_SOURCE_DIR}/plugin/css/brokers.ttf
-          )
-          ## Files copied to the css/fonts/ dir
-          set(CSSFONTS_FONTS
-            ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/fonts/ui-grid.woff
-            ${CONSOLE_BUILD_DIR}/node_modules/angular-ui-grid/fonts/ui-grid.ttf
-          )
-          ## Files copied to the fonts/ dir
-          set(VENDOR_FONTS
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Regular-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Bold-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Light-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Semibold-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-SemiboldItalic-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-BoldItalic-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/OpenSans-Italic-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.woff2
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/fontawesome-webfont.eot
-            ${CONSOLE_BUILD_DIR}/node_modules/patternfly/dist/fonts/PatternFlyIcons-webfont.ttf
-            ${CONSOLE_BUILD_DIR}/node_modules/bootstrap/dist/fonts/glyphicons-halflings-regular.woff2
-          )
-
-          install(DIRECTORY ${CONSOLE_BUILD_DIR}/dist/
+          install(DIRECTORY ${CONSOLE_BUILD_DIR}/build/
             DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
             PATTERN "*.map" EXCLUDE
           )
-          install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/html/
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/html
-            FILES_MATCHING PATTERN "*.html"
-          )
-          install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/js/
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/js
-            FILES_MATCHING PATTERN "*.js"
-          )
-          install(FILES ${BASE_FILES}
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}
-          )
-          install(FILES ${CSS_FONTS}
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/css/
-          )
-          install(FILES ${CSSFONTS_FONTS}
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/css/fonts/
-          )
-          install(FILES ${VENDOR_FONTS}
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/fonts/
-          )
-          install(FILES ${IMAGES}
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/img/
-          )
-          install(DIRECTORY ${CONSOLE_SOURCE_DIR}/plugin/data/
-            DESTINATION ${CONSOLE_STAND_ALONE_INSTALL_DIR}/plugin/data
-          )
+
     else(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))
       message(STATUS "Cannot build console. npm version 3.1.10 or greater is required.")
     endif(NOT (${NPM_VERSION} VERSION_LESS "3.1.10"))

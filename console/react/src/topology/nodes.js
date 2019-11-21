@@ -17,7 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import { utils } from "../amqp/utilities.js";
+import { utils } from "../common/amqp/utilities.js";
 import * as d3 from "d3";
 
 export class Node {

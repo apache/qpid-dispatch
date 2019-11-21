@@ -1,9 +1,27 @@
+/*
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License.
+*/
+
 import React from "react";
 import { Table, TableHeader, TableBody } from "@patternfly/react-table";
-import ConnectionClose from "../../connectionClose";
+import ConnectionClose from "../../common/connectionClose";
 
-// update the table every 5 seconds
-const UPDATE_INTERVAL = 1000 * 5;
+const UPDATE_INTERVAL = 5000;
 
 class DelayedDeliveriesCard extends React.Component {
   constructor(props) {
@@ -25,13 +43,21 @@ class DelayedDeliveriesCard extends React.Component {
   }
 
   closeButton = (value, extraInfo) => {
-    return <ConnectionClose extraInfo={extraInfo} {...this.props} service={this.props.service} />;
+    return (
+      <ConnectionClose
+        extraInfo={extraInfo}
+        {...this.props}
+        service={this.props.service}
+      />
+    );
   };
 
   componentDidMount = () => {
     this.mounted = true;
     this.timer = setInterval(this.updateData, UPDATE_INTERVAL);
     this.updateData();
+    // we need 2 measurements to get a rate
+    setTimeout(this.updateData, 1000);
   };
 
   componentWillUnmount = () => {
@@ -50,7 +76,10 @@ class DelayedDeliveriesCard extends React.Component {
           let response = nodes[node]["router.link"];
           // eslint-disable-next-line no-loop-func
           response.results.forEach(result => {
-            let link = this.props.service.utilities.flatten(response.attributeNames, result);
+            let link = this.props.service.utilities.flatten(
+              response.attributeNames,
+              result
+            );
             if (link.linkType === "endpoint") {
               link.router = this.props.service.utilities.nameFromId(node);
               link.role = "normal";
@@ -71,10 +100,16 @@ class DelayedDeliveriesCard extends React.Component {
                 ["deliveriesDelayed1Sec", "deliveriesDelayed10Sec"],
                 this.rates,
                 link.name,
-                12 // average over 12 snapshots (each snapshot is 5 seconds apart)
+                2 // average over 2 snapshots (each snapshot is 5 seconds apart)
               );
-              link.deliveriesDelayed1SecRate = Math.round(delayedRates.deliveriesDelayed1Sec, 1);
-              link.deliveriesDelayed10SecRate = Math.round(delayedRates.deliveriesDelayed10Sec, 1);
+              link.deliveriesDelayed1SecRate = Math.round(
+                delayedRates.deliveriesDelayed1Sec,
+                1
+              );
+              link.deliveriesDelayed10SecRate = Math.round(
+                delayedRates.deliveriesDelayed10Sec,
+                1
+              );
               /* The killConnection event handler (in qdrOverview.js) expects
                  a row object with a routerId and the identity of a connection. 
                  Here we set those attributes so that when killConnection is 
@@ -90,7 +125,9 @@ class DelayedDeliveriesCard extends React.Component {
         if (links.length === 0) return;
         // update the grid's data
         links = links.filter(link => {
-          return link.deliveriesDelayed1SecRate > 0 || link.deliveriesDelayed10SecRate > 0;
+          return (
+            link.deliveriesDelayed1SecRate > 0 || link.deliveriesDelayed10SecRate > 0
+          );
         });
         links.sort((a, b) => {
           if (a.deliveriesDelayed1SecRate > b.deliveriesDelayed1SecRate) return -1;

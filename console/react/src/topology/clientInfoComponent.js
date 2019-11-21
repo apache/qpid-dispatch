@@ -29,7 +29,7 @@ import {
 import { CodeBranchIcon } from "@patternfly/react-icons";
 
 import DetailsTable from "./clientInfoDetailsComponent";
-import { utils } from "../amqp/utilities.js";
+import { utils } from "../common/amqp/utilities.js";
 const { queue } = require("d3-queue");
 
 class ClientInfoComponent extends Component {

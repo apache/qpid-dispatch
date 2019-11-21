@@ -26,14 +26,14 @@ import {
   TopologySideBar
 } from "@patternfly/react-topology";
 
-import QDRPopup from "../qdrPopup";
+import QDRPopup from "../common/qdrPopup";
 import { Traffic } from "./traffic.js";
 import { separateAddresses } from "../chord/filters.js";
 import { Nodes } from "./nodes.js";
 import { Links } from "./links.js";
 import { nextHop, connectionPopupHTML, getSizes } from "./topoUtils.js";
 import { BackgroundMap } from "./map.js";
-import { utils } from "../amqp/utilities.js";
+import { utils } from "../common/amqp/utilities.js";
 import { Legend } from "./legend.js";
 import RouterInfoComponent from "./routerInfoComponent";
 import ClientInfoComponent from "./clientInfoComponent";
@@ -47,7 +47,7 @@ import {
   addDefs,
   updateState
 } from "./svgUtils.js";
-import { QDRLogger } from "../qdrGlobals";
+import { QDRLogger } from "../common/qdrGlobals";
 const TOPOOPTIONSKEY = "topologyLegendOptions";
 
 class TopologyPage extends Component {
