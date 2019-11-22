@@ -125,13 +125,17 @@ class QdstatTest(system_test.TestCase):
 
         # extract the number in the priority column of every address
         for i in range(6, len(lines) - 1):
-            pri = re.findall('\d+', lines[i][priority_column:])
-            # make sure the priority found is a number
-            self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
-            priority = int(pri[0])
-            # make sure the priority is from -1 to 9
-            self.assertTrue(priority >= -1, "Priority was less than -1")
-            self.assertTrue(priority <= 9, "Priority was greater than 9")
+            pri = re.findall(r'[-\d]+', lines[i][priority_column:])
+
+            # make sure the priority found is a hyphen or a legal number
+            if pri[0] == '-':
+                pass # naked hypnen is allowed
+            else:
+                self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
+                priority = int(pri[0])
+                # make sure the priority is from -1 to 9
+                self.assertTrue(priority >= -1, "Priority was less than -1")
+                self.assertTrue(priority <= 9, "Priority was greater than 9")
 
     def test_address_with_limit(self):
         out = self.run_qdstat(['--address', '--limit=1'])
@@ -338,9 +342,10 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         priorities = {}
         for i in range(6, len(lines) - 1):
             if re.search(r'inter-router', lines[i]):
-                pri = re.findall('\d+', lines[i][priority_column:])
+                pri = re.findall(r'[-\d]+', lines[i][priority_column:])
                 # make sure the priority found is a number
                 self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
+                self.assertTrue(pri[0] != '-') # naked hypen disallowed
                 priority = int(pri[0])
                 # make sure the priority is from 0 to 9
                 self.assertTrue(priority >= 0, "Priority was less than 0")
