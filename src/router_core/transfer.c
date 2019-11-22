@@ -257,7 +257,7 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
         link->credit_to_core += credit;
     }
 
-    action->args.connection.link   = link;
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     action->args.connection.credit = credit;
     action->args.connection.drain  = drain_mode;
 
@@ -297,16 +297,17 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_link_t *link = safe_deref_qdr_link_t(action->args.connection.link);
+
+    if (discard || !link)
         return;
 
-    qdr_link_t *link      = action->args.connection.link;
     int  credit           = action->args.connection.credit;
     bool drain            = action->args.connection.drain;
     bool activate         = false;
     bool drain_was_set    = !link->drain_mode && drain;
     qdr_link_work_t *work = 0;
-    
+
     link->drain_mode = drain;
 
     //
