@@ -104,7 +104,7 @@ before_script:
 - source qpid-proton/build/config.sh
 - mkdir build
 - pushd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DDISPATCH_TEST_TIMEOUT=600 ${DISPATCH_CMAKE_ARGS}
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${DISPATCH_CMAKE_ARGS}
 - cmake --build . --target install -- -j $NPROC
 
 script:
