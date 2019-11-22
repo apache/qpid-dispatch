@@ -334,12 +334,15 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
             qdr_address_t *addr = link->owning_addr;
             if (addr && qdr_address_is_mobile_CT(addr) && DEQ_SIZE(addr->subscriptions) == 0 && link->link_direction == QD_INCOMING) {
                 qdr_addr_endpoint_state_t *endpoint_state = qdrc_get_endpoint_state_for_connection(mc->endpoint_state_list, link->conn);
-                assert(endpoint_state);
-                assert(link->edge_context == 0);
-                link->edge_context = endpoint_state;
-                endpoint_state->ref_count++;
-                if (qdrc_can_send_address(addr, link->conn)) {
-                    qdrc_send_message(mc->core, addr, endpoint_state->endpoint, true);
+                // Fix for DISPATCH-1492. Remove the assert(endpoint_state); and add an if condition check for endpoint_state
+                // We will not prevent regular endpoints from connecting to the edge listener for now.
+                if (endpoint_state) {
+                    assert(link->edge_context == 0);
+                    link->edge_context = endpoint_state;
+                    endpoint_state->ref_count++;
+                    if (qdrc_can_send_address(addr, link->conn)) {
+                        qdrc_send_message(mc->core, addr, endpoint_state->endpoint, true);
+                    }
                 }
             }
             break;

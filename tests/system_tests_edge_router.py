@@ -2697,6 +2697,38 @@ class MobileAddressEventTest(MessagingHandler):
     def run(self):
         Container(self).run()
 
+class EdgeListenerSender(TestCase):
+
+    inter_router_port = None
+
+    @classmethod
+    def setUpClass(cls):
+        super(EdgeListenerSender, cls).setUpClass()
+
+        def router(name, mode, connection, extra=None):
+            config = [
+                ('router', {'mode': mode, 'id': name}),
+                ('address',
+                 {'prefix': 'multicast', 'distribution': 'multicast'}),
+                connection
+            ]
+
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        edge_port_A = cls.tester.get_port()
+        router('INT.A', 'interior',  ('listener', {'role': 'edge', 'port': edge_port_A}))
+        cls.routers[0].wait_ports()
+
+    # Without the fix for DISPATCH-1492, this test will fail because
+    # of the router crash.
+    def test_edge_listener_sender_crash_DISPATCH_1492(self):
+        addr = self.routers[0].addresses[0]
+        blocking_connection = BlockingConnection(addr)
+        blocking_sender = blocking_connection.create_sender(address="multicast")
+        self.assertTrue(blocking_sender!=None)
 
 if __name__== '__main__':
     unittest.main(main_module())
