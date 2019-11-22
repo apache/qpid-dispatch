@@ -124,22 +124,22 @@ struct qdr_action_t {
         // Arguments for connection-level actions
         //
         struct {
-            qdr_connection_t *conn;
-            qdr_field_t      *connection_label;
-            qdr_field_t      *container_id;
-            qdr_link_t       *link;
-            qdr_delivery_t   *delivery;
-            qd_message_t     *msg;
-            qd_direction_t    dir;
-            qdr_terminus_t   *source;
-            qdr_terminus_t   *target;
-            qdr_error_t      *error;
-            qd_detach_type_t  dt;
-            int               credit;
-            bool              more;  // true if there are more frames arriving, false otherwise
-            bool              drain;
-            uint8_t           tag[32];
-            int               tag_length;
+            qdr_connection_t_sp  conn;
+            qdr_field_t         *connection_label;
+            qdr_field_t         *container_id;
+            qdr_link_t_sp        link;
+            qdr_delivery_t      *delivery;
+            qd_message_t        *msg;
+            qd_direction_t       dir;
+            qdr_terminus_t      *source;
+            qdr_terminus_t      *target;
+            qdr_error_t         *error;
+            qd_detach_type_t     dt;
+            int                  credit;
+            bool                 more;  // true if there are more frames arriving, false otherwise
+            bool                 drain;
+            uint8_t              tag[32];
+            int                  tag_length;
         } connection;
 
         //

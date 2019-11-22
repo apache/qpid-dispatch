@@ -119,7 +119,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
         context_binder(conn, bind_token);
     }
 
-    action->args.connection.conn             = conn;
+    set_safe_ptr_qdr_connection_t(conn, &action->args.connection.conn);
     action->args.connection.connection_label = qdr_field(label);
     action->args.connection.container_id     = qdr_field(remote_container_id);
     qdr_action_enqueue(core, action);
@@ -131,7 +131,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
 void qdr_connection_closed(qdr_connection_t *conn)
 {
     qdr_action_t *action = qdr_action(qdr_connection_closed_CT, "connection_closed");
-    action->args.connection.conn = conn;
+    set_safe_ptr_qdr_connection_t(conn, &action->args.connection.conn);
     qdr_action_enqueue(conn->core, action);
 }
 
@@ -556,8 +556,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
 
     qdr_link_setup_histogram(conn, dir, link);
 
-    action->args.connection.conn   = conn;
-    action->args.connection.link   = link;
+    set_safe_ptr_qdr_connection_t(conn, &action->args.connection.conn);
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     action->args.connection.dir    = dir;
     action->args.connection.source = source;
     action->args.connection.target = target;
@@ -571,7 +571,8 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 {
     qdr_action_t *action = qdr_action(qdr_link_inbound_second_attach_CT, "link_second_attach");
 
-    action->args.connection.link   = link;
+    set_safe_ptr_qdr_connection_t(link->conn, &action->args.connection.conn);
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     action->args.connection.source = source;
     action->args.connection.target = target;
     qdr_action_enqueue(link->core, action);
@@ -582,8 +583,8 @@ void qdr_link_detach(qdr_link_t *link, qd_detach_type_t dt, qdr_error_t *error)
 {
     qdr_action_t *action = qdr_action(qdr_link_inbound_detach_CT, "link_detach");
 
-    action->args.connection.conn   = link->conn;
-    action->args.connection.link   = link;
+    set_safe_ptr_qdr_connection_t(link->conn, &action->args.connection.conn);
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     action->args.connection.error  = error;
     action->args.connection.dt     = dt;
     qdr_action_enqueue(link->core, action);
@@ -596,7 +597,7 @@ static void qdr_link_detach_sent(qdr_link_t *link)
 {
     qdr_action_t *action = qdr_action(qdr_link_detach_sent_CT, "link_detach_sent");
 
-    action->args.connection.link = link;
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     qdr_action_enqueue(link->core, action);
 }
 
@@ -605,7 +606,7 @@ static void qdr_link_processing_complete(qdr_core_t *core, qdr_link_t *link)
 {
     qdr_action_t *action = qdr_action(qdr_link_processing_complete_CT, "link_processing_complete");
 
-    action->args.connection.link = link;
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     qdr_action_enqueue(core, action);
 }
 
@@ -1264,8 +1265,8 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
 
-    if (!discard) {
-        qdr_connection_t *conn = action->args.connection.conn;
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    if (!discard && conn) {
 
         do {
             DEQ_ITEM_INIT(conn);
@@ -1343,10 +1344,9 @@ void qdr_connection_free(qdr_connection_t *conn)
 
 static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    if (discard || !conn)
         return;
-
-    qdr_connection_t *conn = action->args.connection.conn;
 
     //
     // Deactivate routes associated with this connection
@@ -1494,11 +1494,11 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_connection_t  *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    qdr_link_t        *link = safe_deref_qdr_link_t(action->args.connection.link);
+    if (discard || !conn || !link)
         return;
 
-    qdr_connection_t  *conn   = action->args.connection.conn;
-    qdr_link_t        *link   = action->args.connection.link;
     qd_direction_t     dir    = action->args.connection.dir;
     qdr_terminus_t    *source = action->args.connection.source;
     qdr_terminus_t    *target = action->args.connection.target;
@@ -1642,11 +1642,11 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
 
 static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_link_t       *link = safe_deref_qdr_link_t(action->args.connection.link);
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    if (discard || !link || !conn)
         return;
 
-    qdr_link_t       *link   = action->args.connection.link;
-    qdr_connection_t *conn   = link->conn;
     qdr_terminus_t   *source = action->args.connection.source;
     qdr_terminus_t   *target = action->args.connection.target;
 
@@ -1753,11 +1753,11 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 
 static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    qdr_link_t       *link = safe_deref_qdr_link_t(action->args.connection.link);
+    if (discard || !conn || !link)
         return;
 
-    qdr_connection_t *conn  = action->args.connection.conn;
-    qdr_link_t       *link  = action->args.connection.link;
     qdr_error_t      *error = action->args.connection.error;
     qd_detach_type_t  dt    = action->args.connection.dt;
     qdr_address_t    *addr  = link->owning_addr;
@@ -1912,26 +1912,23 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
  */
 static void qdr_link_detach_sent_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_link_t *link = safe_deref_qdr_link_t(action->args.connection.link);
+
+    if (discard || !link)
         return;
 
-    qdr_link_t *link = action->args.connection.link;
-
-    if (link) {
-        link->detach_send_done = true;
-        if (link->conn && link->detach_received)
-            qdr_link_cleanup_protected_CT(core, link->conn, link, "Link detached");
-    }
+    link->detach_send_done = true;
+    if (link->conn && link->detach_received)
+        qdr_link_cleanup_protected_CT(core, link->conn, link, "Link detached");
 }
 
 
 static void qdr_link_processing_complete_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (!discard) {
-        qdr_link_t *link = action->args.connection.link;
+    qdr_link_t *link = safe_deref_qdr_link_t(action->args.connection.link);
+    if (discard || !link)
+        return;
 
-        if (link)
-            qdr_link_cleanup_CT(core, link->conn, link, "Link cleanup deferred after IO processing");
-    }
+    qdr_link_cleanup_CT(core, link->conn, link, "Link cleanup deferred after IO processing");
 }
 
