@@ -31,7 +31,11 @@ class CreateEntity extends React.Component {
   };
 
   render() {
-    return <Button onClick={this.handleClick}>Create</Button>;
+    return (
+      <Button aria-label="create-entity-button" onClick={this.handleClick}>
+        Create
+      </Button>
+    );
   }
 }
 

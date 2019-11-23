@@ -19,18 +19,30 @@ under the License.
 
 import React from "react";
 import { render } from "@testing-library/react";
-import DetailsTablePage from "./detailsTablePage";
+import { service, login } from "../serviceTest";
+import DetailTablesPage from "./detailsTablePage";
 
-it("renders the detailsTablePage", () => {
-  const entity = "testEntity";
+it("renders the DetailTablesPage", async () => {
+  const entity = "router";
+  const routerName = "A";
+
+  await login();
+  expect(service.management.connection.is_connected()).toBe(true);
+
   const props = {
     entity,
-    locationState: { currentRecord: { name: "test" } },
+    locationState: {
+      currentRecord: {
+        name: routerName,
+        routerId: service.utilities.idFromName(routerName, "_topo")
+      }
+    },
     details: true,
-    schema: { entityTypes: { testEntity: { attributes: [], operations: [] } } },
-    service: { management: { topology: { fetchEntities: () => Promise.resolve([]) } } }
+    service,
+    schema: service.schema
   };
-  const { getByLabelText } = render(<DetailsTablePage {...props} />);
-  const table = getByLabelText(entity);
-  expect(table).toBeInTheDocument();
+
+  const { getByTestId } = render(<DetailTablesPage {...props} />);
+  const header = getByTestId(`detail-for-${routerName}`);
+  expect(header).toBeInTheDocument();
 });

@@ -185,7 +185,7 @@ const nodeProperties = {
     charge: [-1800, -900]
   },
   edge: {
-    radius: 20,
+    radius: 24,
     refX: {
       end: 24,
       start: -12

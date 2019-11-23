@@ -42,4 +42,8 @@ it("renders a EntityList", async () => {
 
   // clicking on the log entity should not crash
   fireEvent.click(logEntity);
+
+  fireEvent.click(getByTestId("router"));
+  fireEvent.click(getByTestId("autoLink"));
+  fireEvent.click(getByTestId("connection"));
 });

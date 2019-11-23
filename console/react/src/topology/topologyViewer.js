@@ -26,7 +26,6 @@ import {
   TopologySideBar
 } from "@patternfly/react-topology";
 
-import QDRPopup from "../common/qdrPopup";
 import { Traffic } from "./traffic.js";
 import { separateAddresses } from "../chord/filters.js";
 import { Nodes } from "./nodes.js";
@@ -83,8 +82,6 @@ class TopologyPage extends Component {
       savedOptions.map.show = false;
     }
     this.state = {
-      popupContent: "",
-      showPopup: false,
       legendOptions: savedOptions,
       showRouterInfo: false,
       showClientInfo: false,
@@ -149,6 +146,7 @@ class TopologyPage extends Component {
     this.props.service.management.topology.setUpdateEntities([]);
     this.props.service.management.topology.stopUpdating();
     this.props.service.management.topology.delChangedAction("topology");
+    this.props.service.management.topology.delUpdatedAction("connectionPopupHTML");
     this.traffic.remove();
     this.forceData.nodes.savePositions();
     window.removeEventListener("resize", this.resize);
@@ -391,7 +389,7 @@ class TopologyPage extends Component {
     // mouse out of a path
     this.popupCancelled = true;
     this.props.service.management.topology.delUpdatedAction("connectionPopupHTML");
-    this.setState({ showPopup: false });
+    this.hideTooltip();
     d.selected = false;
     connectionPopupHTML();
   };
@@ -429,14 +427,13 @@ class TopologyPage extends Component {
         d.selected = true;
         this.popupCancelled = false;
         let updateTooltip = () => {
+          if (this.popupCancelled) return;
           if (d.selected) {
-            this.setState({
-              popupContent: connectionPopupHTML(
-                d,
-                this.props.service.management.topology._nodeInfo
-              )
-            });
-            this.displayTooltip(event);
+            const popupContent = connectionPopupHTML(
+              d,
+              this.props.service.management.topology._nodeInfo
+            );
+            this.displayTooltip(popupContent, { x: event.pageX, y: event.pageY });
           } else {
             this.handleMouseOutPath(d);
           }
@@ -534,7 +531,8 @@ class TopologyPage extends Component {
         let e = d3.event;
         self.popupCancelled = false;
         d.toolTip(self.props.service.management.topology).then(function(toolTip) {
-          self.showToolTip(toolTip, e);
+          if (self.popupCancelled) return;
+          self.displayTooltip(toolTip, { x: e.pageX, y: e.pageY });
         });
         if (d === self.mousedown_node) return;
         // enlarge target node
@@ -564,8 +562,8 @@ class TopologyPage extends Component {
         self.current_node = null;
         // unenlarge target node
         d3.select(this).attr("transform", "");
-        self.setState({ showPopup: false });
         self.popupCancelled = true;
+        self.hideTooltip();
         self.clearAllHighlights();
         self.mouseover_node = null;
         self.restart();
@@ -610,9 +608,9 @@ class TopologyPage extends Component {
         self.clearAllHighlights();
         self.mousedown_node = null;
         // handle clicking on nodes that represent multiple sub-nodes
-        if (d.normals && !d.isArtemis && !d.isQpid) {
+        if (d.normals && !d.isArtemis && !d.isQpid && d.nodeType !== "edge") {
           self.doDialog(d, "client");
-        } else if (d.nodeType === "_topo") {
+        } else if (d.nodeType === "_topo" || d.nodeType === "edge") {
           self.doDialog(d, "router");
         }
         // apply any data changes to the interface
@@ -670,7 +668,7 @@ class TopologyPage extends Component {
     this.svg.selectAll(".subtext").remove();
     let multiples = this.svg.selectAll(".multiple");
     multiples.each(function(d) {
-      let g = d3.select(this);
+      let g = d3.select(this.parentNode);
       let r = Nodes.radius(d.nodeType);
       g.append("svg:text")
         .attr("x", r + 4)
@@ -764,37 +762,29 @@ class TopologyPage extends Component {
       this.setState({ showClientInfo: true });
     }
   };
+
   handleCloseRouterInfo = type => {
     this.setState({ showRouterInfo: false });
   };
+
   handleCloseClientInfo = () => {
     this.setState({ showClientInfo: false });
   };
 
-  showToolTip = (title, event) => {
-    // show the tooltip
-    this.setState({ popupContent: title });
-    this.displayTooltip(event);
-  };
-
-  displayTooltip = event => {
+  displayTooltip = (content, xy) => {
     if (this.popupCancelled) {
-      this.setState({ showPopup: false });
-      return;
+      return this.hideTooltip();
     }
     // position the popup
     d3.select("#popover-div")
-      .style("left", event.pageX + 5 + "px")
-      .style("top", `${event.pageY}px`);
-    // show popup
-    this.setState({ showPopup: true }, () =>
-      d3
-        .select("#popover-div")
-        //.style("left", Math.min(width - pwidth, event.pageX + 5) + "px")
-        .on("mouseout", () => {
-          this.setState({ showPopup: false });
-        })
-    );
+      .style("left", `${xy.x + 5}px`)
+      .style("top", `${xy.y}px`)
+      .style("display", "block")
+      .html(content);
+  };
+
+  hideTooltip = () => {
+    d3.select("#popover-div").style("display", "none");
   };
 
   clearAllHighlights = () => {
@@ -1020,31 +1010,21 @@ class TopologyPage extends Component {
           />
         )}
 
-        <div
-          id="popover-div"
-          className={this.state.showPopup ? "qdrPopup" : "qdrPopup hidden"}
-          ref={el => (this.popupRef = el)}
-        >
-          <QDRPopup content={this.state.popupContent}></QDRPopup>
-        </div>
+        <div id="popover-div" className="qdrPopup"></div>
 
-        {this.state.showRouterInfo ? (
+        {this.state.showRouterInfo && (
           <RouterInfoComponent
             d={this.d}
             topology={this.props.service.management.topology}
             handleCloseRouterInfo={this.handleCloseRouterInfo}
           />
-        ) : (
-          <div />
         )}
-        {this.state.showClientInfo ? (
+        {this.state.showClientInfo && (
           <ClientInfoComponent
             d={this.d}
             topology={this.props.service.management.topology}
             handleCloseClientInfo={this.handleCloseClientInfo}
           />
-        ) : (
-          <div />
         )}
       </TopologyView>
     );

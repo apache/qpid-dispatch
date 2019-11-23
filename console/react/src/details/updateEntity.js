@@ -31,7 +31,11 @@ class UpdateEntity extends React.Component {
   };
 
   render() {
-    return <Button onClick={this.handleClick}>Update</Button>;
+    return (
+      <Button aria-label="update-entity-button" onClick={this.handleClick}>
+        Update
+      </Button>
+    );
   }
 }
 

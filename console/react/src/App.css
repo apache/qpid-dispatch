@@ -753,6 +753,7 @@ path.empty {
   opacity: 1;
   padding: 12px;
   font-size: 14px;
+  display: none;
 }
 
 #popover-div {

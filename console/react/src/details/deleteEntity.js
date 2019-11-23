@@ -43,9 +43,7 @@ class DeleteEntity extends React.Component {
   };
 
   getName = record => {
-    return record.name !== null
-      ? record.name
-      : `${this.props.entity}/${record.identity}`;
+    return record.name !== null ? record.name : `${this.props.entity}/${record.identity}`;
   };
 
   delete = () => {
@@ -60,35 +58,21 @@ class DeleteEntity extends React.Component {
           "DELETE"
         )
         .then(results => {
-          let statusCode =
-            results.context.message.application_properties.statusCode;
+          let statusCode = results.context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
             const msg = `Deleted ${name} failed with message: ${results.context.message.application_properties.statusDescription}`;
             console.log(`error ${msg}`);
-            this.props.handleAddNotification(
-              "action",
-              msg,
-              new Date(),
-              "danger"
-            );
+            this.props.handleAddNotification("action", msg, new Date(), "danger");
           } else {
             const msg = `Deleted ${this.props.entity} ${name}`;
             console.log(`success ${msg}`);
-            this.props.handleAddNotification(
-              "action",
-              msg,
-              new Date(),
-              "success"
-            );
+            this.props.handleAddNotification("action", msg, new Date(), "success");
           }
-          this.setState(
-            { isModalOpen: false, closing: false, closed: true },
-            () => {
-              if (this.props.notifyClick) {
-                this.props.notifyClick("Done");
-              }
+          this.setState({ isModalOpen: false, closing: false, closed: true }, () => {
+            if (this.props.notifyClick) {
+              this.props.notifyClick("Done");
             }
-          );
+          });
         });
     });
   };
@@ -101,6 +85,7 @@ class DeleteEntity extends React.Component {
       <React.Fragment>
         {!this.props.showNow && (
           <Button
+            aria-label="delete-entity-button"
             className={`${this.props.asButton ? "" : "link-button"}`}
             onClick={this.handleModalShow}
           >
@@ -114,6 +99,7 @@ class DeleteEntity extends React.Component {
           onClose={this.handleModalHide}
           actions={[
             <Button
+              aria-label="confirm-delete"
               key="confirm"
               variant="primary"
               onClick={this.delete}
@@ -122,6 +108,7 @@ class DeleteEntity extends React.Component {
               Delete
             </Button>,
             <Button
+              aria-label="cancel-delete"
               key="cancel"
               variant="link"
               onClick={this.handleModalHide}

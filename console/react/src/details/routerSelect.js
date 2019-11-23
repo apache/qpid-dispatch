@@ -33,19 +33,6 @@ class RouterSelect extends React.Component {
       selectedOption: "",
       routers: []
     };
-
-    this.onToggle = () => {
-      this.setState({
-        isOpen: !this.state.isOpen
-      });
-    };
-
-    this.onSelect = event => {
-      const routerName = event.target.id;
-      this.setState({ selectedOption: routerName, isOpen: false }, () => {
-        this.props.handleRouterSelected(this.nameToId[routerName]);
-      });
-    };
   }
 
   componentDidMount = () => {
@@ -59,6 +46,19 @@ class RouterSelect extends React.Component {
     });
     this.setState({ routers, selectedOption: routers[0] }, () => {
       this.props.handleRouterSelected(this.nameToId[routers[0]]);
+    });
+  };
+
+  onToggle = () => {
+    this.setState({
+      isOpen: !this.state.isOpen
+    });
+  };
+
+  onSelect = event => {
+    const routerName = event.target.textContent;
+    this.setState({ selectedOption: routerName, isOpen: false }, () => {
+      this.props.handleRouterSelected(this.nameToId[routerName]);
     });
   };
 

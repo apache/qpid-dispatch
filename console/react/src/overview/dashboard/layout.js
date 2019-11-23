@@ -88,8 +88,8 @@ class PageLayout extends React.Component {
       visualizations: [{ name: "topology" }, { name: "flow", title: "Message flow" }],
       details: [{ name: "entities" }, { name: "schema" }]
     };
-    this.state.connecting = true;
-    this.tryInitialConnect();
+    //this.state.connecting = true;
+    //this.tryInitialConnect();
   }
 
   componentDidMount = () => {

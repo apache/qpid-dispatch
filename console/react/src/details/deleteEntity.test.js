@@ -17,21 +17,21 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import React, { Component } from "react";
+import React from "react";
+import { render, fireEvent } from "@testing-library/react";
+import DeleteEntity from "./deleteEntity";
 
-class Updated extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {};
-  }
+it("renders DeleteEntity", () => {
+  const entity = "listener";
+  const props = {
+    entity,
+    record: { name: "testListener" }
+  };
 
-  render() {
-    return (
-      <pre aria-label="last-updated" data-pf-content="true" className="overview-loading">
-        {`Updated ${this.props.service.utilities.strDate(this.props.lastUpdated)}`}
-      </pre>
-    );
-  }
-}
+  const { getByLabelText } = render(<DeleteEntity {...props} />);
+  const button = getByLabelText("delete-entity-button");
+  expect(button).toBeInTheDocument();
 
-export default Updated;
+  fireEvent.click(button);
+  expect(getByLabelText("confirm-delete")).toBeInTheDocument();
+});

@@ -111,7 +111,7 @@ export function appendContent(g) {
       else if (d.nodeType === "edge" || d.nodeType === "_edge") y = 4;
       return y;
     })
-    .attr("class", "id")
+    .attr("class", d => (d.nodeType === "_topo" ? "label" : "id"))
     .classed("console", function(d) {
       return utils.isConsole(d);
     })

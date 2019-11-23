@@ -17,21 +17,22 @@ specific language governing permissions and limitations
 under the License.
 */
 
-import React, { Component } from "react";
+import React from "react";
+import { render, fireEvent } from "@testing-library/react";
+import UpdateEntity from "./updateEntity";
 
-class Updated extends Component {
-  constructor(props) {
-    super(props);
-    this.state = {};
-  }
+it("renders UpdateEntity", () => {
+  let buttonClicked = false;
+  const props = {
+    handleEntityAction: () => {
+      buttonClicked = true;
+    }
+  };
 
-  render() {
-    return (
-      <pre aria-label="last-updated" data-pf-content="true" className="overview-loading">
-        {`Updated ${this.props.service.utilities.strDate(this.props.lastUpdated)}`}
-      </pre>
-    );
-  }
-}
+  const { getByLabelText } = render(<UpdateEntity {...props} />);
+  const button = getByLabelText("update-entity-button");
+  expect(button).toBeInTheDocument();
 
-export default Updated;
+  fireEvent.click(button);
+  expect(buttonClicked).toBe(true);
+});

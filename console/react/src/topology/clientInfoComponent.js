@@ -162,6 +162,8 @@ class ClientInfoComponent extends Component {
   };
 
   componentWillUnmount = () => {
+    this.unmounted = true;
+
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -173,6 +175,7 @@ class ClientInfoComponent extends Component {
   };
   getTooltip = () => {
     this.props.d.toolTip(this.props.topology, true).then(toolTip => {
+      if (this.unmounted) return;
       this.setState({ toolTip });
     });
   };
@@ -248,6 +251,7 @@ class ClientInfoComponent extends Component {
         }
         // await until all sent requests have completed
         q.await(() => {
+          if (this.unmounted) return;
           this.setState({
             detail: { template: "edgeRouters", title: "edge router" }
           });
@@ -265,6 +269,7 @@ class ClientInfoComponent extends Component {
           this.d.key,
           [{ entity: "router.link", attrs: attrs }],
           results => {
+            if (this.unmounted) return;
             let links = results[this.d.key]["router.link"];
             for (let i = 0; i < this.d.normals.length; i++) {
               let n = this.d.normals[i];
@@ -319,6 +324,7 @@ class ClientInfoComponent extends Component {
   };
   updateDetail = () => {
     this.groupDetail().then(det => {
+      if (this.unmounted) return;
       Object.keys(det.infoPerId).forEach(id => {
         this.cachedInfo.push(det.infoPerId[id]);
       });
@@ -406,6 +412,7 @@ class ClientInfoComponent extends Component {
 
   onExpand = (event, rowIndex, colIndex, isOpen, rowData, extraData) => {
     const { rows } = this.state;
+    if (this.unmounted) return;
     if (!isOpen) {
       //set all other expanded cells false in this row if we are expanding
       rows[rowIndex].cells.forEach(cell => {

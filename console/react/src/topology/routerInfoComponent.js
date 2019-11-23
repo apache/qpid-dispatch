@@ -35,13 +35,16 @@ class RouterInfoComponent extends Component {
   };
 
   componentWillUnmount = () => {
+    this.unmounted = true;
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
   };
+
   getTooltip = () => {
     this.props.d.toolTip(this.props.topology, true).then(toolTip => {
+      if (this.unmounted) return;
       this.setState({ toolTip });
     });
   };
