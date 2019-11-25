@@ -131,6 +131,10 @@ class parsed_attach():
         # get the session (channel) number
         if self.line.startswith(':'):
             self.line = self.line[1:]
+        proton_frame_key = "FRAME: "
+        if self.line.startswith(proton_frame_key):
+            self.line = self.line[len(proton_frame_key):]
+
         sti = self.line.find(' ')
         if sti < 0:
             raise ValueError("space not found after channel number at head of line %s" % (self.line))

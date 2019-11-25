@@ -437,7 +437,6 @@ class TopologyDispositionTests ( TestCase ):
 
 
     def test_04_scraper_tool ( self ):
-        self.skipTest("Test skipped during development of new qpid-proton log formats.")
         name = 'test_04'
         error = str(None)
         if self.skip [ name ] :
