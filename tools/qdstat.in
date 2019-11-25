@@ -34,7 +34,7 @@ from time import ctime, strftime, gmtime
 import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, BodyFormat
 from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_ssl_domain, opts_sasl,
                                                   opts_url)
@@ -55,6 +55,7 @@ class BusManager(Node):
                             ssl_domain=opts_ssl_domain(opts),
                             sasl=opts_sasl(opts)))
         self.show = getattr(self, opts.show)
+        self.bodyFormat = BodyFormat.CSV if opts.csv else BodyFormat.CLASSIC
 
     def query(self, entity_type, attribute_names=None, limit=None):
         if attribute_names:
@@ -120,7 +121,7 @@ class BusManager(Node):
 
 
     def displayEdges(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("id"))
         heads.append(Header("host"))
@@ -183,7 +184,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)            
         
     def displayConnections(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("id"))
         heads.append(Header("host"))
@@ -305,7 +306,7 @@ class BusManager(Node):
         return outlist
 
     def displayGeneral(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("attr"))
         heads.append(Header("value"))
@@ -366,7 +367,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)
 
     def displayRouterLinks(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("type"))
         heads.append(Header("dir"))
@@ -483,7 +484,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)
 
     def displayRouterNodes(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("router-id"))
         heads.append(Header("next-hop"))
@@ -534,7 +535,7 @@ class BusManager(Node):
             print("Router is Standalone - No Router List")
 
     def displayAddresses(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("class"))
         heads.append(Header("addr"))
@@ -602,7 +603,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)
 
     def displayAutolinks(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("addr"))
         heads.append(Header("dir"))
@@ -641,7 +642,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)
 
     def displayLinkRoutes(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("address"))
         heads.append(Header("dir"))
@@ -687,7 +688,7 @@ class BusManager(Node):
         disp.formattedTable(title, heads, dispRows)
 
     def displayMemory(self, show_date_id=True):
-        disp = Display(prefix="  ")
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("type"))
         heads.append(Header("size", Header.COMMAS))
