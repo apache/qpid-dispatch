@@ -26,6 +26,7 @@ import os
 import re
 import system_test
 import unittest
+import sys
 from subprocess import PIPE
 from proton import Url, SSLDomain, SSLUnavailable, SASL
 from system_test import main_module, SkipIfNeeded
@@ -73,8 +74,23 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("Mode                             standalone" in out)
         self.assertEqual(out.count("QDR.A"), 2)
 
+    def test_general_csv(self):
+        out = self.run_qdstat(['--general', '--csv'], r'(?s)Router Statistics.*Mode","Standalone')
+        self.assertTrue("Connections","1" in out)
+        self.assertTrue("Nodes","0" in out)
+        self.assertTrue("Auto Links","0" in out)
+        self.assertTrue("Link Routes","0" in out)
+        self.assertTrue("Router Id","QDR.A" in out)
+        self.assertTrue("Mode","standalone" in out)
+        self.assertEqual(out.count("QDR.A"), 2)
+
     def test_connections(self):
         self.run_qdstat(['--connections'], r'host.*container.*role')
+        outs = self.run_qdstat(['--connections'], 'no-auth')
+        outs = self.run_qdstat(['--connections'], 'QDR.A')
+
+    def test_connections_csv(self):
+        self.run_qdstat(['--connections', "--csv"], r'host.*container.*role')
         outs = self.run_qdstat(['--connections'], 'no-auth')
         outs = self.run_qdstat(['--connections'], 'QDR.A')
 
@@ -84,13 +100,27 @@ class QdstatTest(system_test.TestCase):
         parts = out.split("\n")
         self.assertEqual(len(parts), 9)
 
+    def test_links_csv(self):
+        self.run_qdstat(['--links', "--csv"], r'QDR.A')
+        out = self.run_qdstat(['--links'], r'endpoint.*out.*local.*temp.')
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 9)
+
     def test_links_with_limit(self):
         out = self.run_qdstat(['--links', '--limit=1'])
         parts = out.split("\n")
         self.assertEqual(len(parts), 8)
 
+    def test_links_with_limit_csv(self):
+        out = self.run_qdstat(['--links', '--limit=1', "--csv"])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 7)
+
     def test_nodes(self):
         self.run_qdstat(['--nodes'], r'No Router List')
+
+    def test_nodes_csv(self):
+        self.run_qdstat(['--nodes', "--csv"], r'No Router List')
 
     def test_address(self):
         out = self.run_qdstat(['--address'], r'QDR.A')
@@ -98,8 +128,27 @@ class QdstatTest(system_test.TestCase):
         parts = out.split("\n")
         self.assertEqual(len(parts), 11)
 
+    def test_address_csv(self):
+        out = self.run_qdstat(['--address'], r'QDR.A')
+        out = self.run_qdstat(['--address'], r'\$management')
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 11)
+
     def test_qdstat_no_args(self):
         outs = self.run_qdstat(args=None)
+        self.assertTrue("Presettled Count" in outs)
+        self.assertTrue("Dropped Presettled Count" in outs)
+        self.assertTrue("Accepted Count" in outs)
+        self.assertTrue("Rejected Count" in outs)
+        self.assertTrue("Deliveries from Route Container" in outs)
+        self.assertTrue("Deliveries to Route Container" in outs)
+        self.assertTrue("Deliveries to Fallback" in outs)
+        self.assertTrue("Egress Count" in outs)
+        self.assertTrue("Ingress Count" in outs)
+        self.assertTrue("Uptime" in outs)
+
+    def test_qdstat_no_other_args_csv(self):
+        outs = self.run_qdstat(["--csv"])
         self.assertTrue("Presettled Count" in outs)
         self.assertTrue("Dropped Presettled Count" in outs)
         self.assertTrue("Accepted Count" in outs)
@@ -137,10 +186,42 @@ class QdstatTest(system_test.TestCase):
                 self.assertTrue(priority >= -1, "Priority was less than -1")
                 self.assertTrue(priority <= 9, "Priority was greater than 9")
 
+    def test_address_priority_csv(self):
+        HEADER_ROW = 4
+        PRI_COL = 4
+        out = self.run_qdstat(['--address', "--csv"])
+        lines = out.split("\n")
+
+        # make sure the output contains a header line
+        self.assertTrue(len(lines) >= 2)
+
+        # see if the header line has the word priority in it
+        header_line = lines[HEADER_ROW].split(',')
+        self.assertTrue(header_line[PRI_COL] == '"pri"')
+
+        # extract the number in the priority column of every address
+        for i in range(HEADER_ROW + 1, len(lines) - 1):
+            line = lines[i].split(',')
+            pri = line[PRI_COL][1:-1] # unquoted value
+
+            # make sure the priority found is a hyphen or a legal number
+            if pri == '-':
+                pass # naked hypnen is allowed
+            else:
+                priority = int(pri)
+                # make sure the priority is from -1 to 9
+                self.assertTrue(priority >= -1, "Priority was less than -1")
+                self.assertTrue(priority <= 9, "Priority was greater than 9")
+
     def test_address_with_limit(self):
         out = self.run_qdstat(['--address', '--limit=1'])
         parts = out.split("\n")
         self.assertEqual(len(parts), 8)
+
+    def test_address_with_limit_csv(self):
+        out = self.run_qdstat(['--address', '--limit=1', '--csv'])
+        parts = out.split("\n")
+        self.assertEqual(len(parts), 7)
 
     def test_memory(self):
         out = self.run_qdstat(['--memory'])
@@ -150,6 +231,16 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("QDR.A" in out)
         self.assertTrue("UTC" in out)
         regexp = r'qdr_address_t\s+[0-9]+'
+        assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+
+    def test_memory_csv(self):
+        out = self.run_qdstat(['--memory', '--csv'])
+        if out.strip() == "No memory statistics available":
+            # router built w/o memory pools enabled]
+            return self.skipTest("Router's memory pools disabled")
+        self.assertTrue("QDR.A" in out)
+        self.assertTrue("UTC" in out)
+        regexp = r'qdr_address_t","[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_log(self):
@@ -220,9 +311,34 @@ class QdstatTest(system_test.TestCase):
 
         self.assertEqual(links, 2000)
 
+        # Run qdstat with a limit less than 10,000
+        # repeat with --csv
+        outs = self.run_qdstat(['--links', '--limit=2000', '--csv'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 2000)
+
         # Run qdstat with a limit of 700 because 700
         # is the maximum number of rows we get per request
         outs = self.run_qdstat(['--links', '--limit=700'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 700)
+
+        # Run qdstat with a limit of 700 because 700
+        # is the maximum number of rows we get per request
+        # repeat with --csv
+        outs = self.run_qdstat(['--links', '--limit=700', '--csv'])
         out_list = outs.split("\n")
 
         links = 0
@@ -245,9 +361,35 @@ class QdstatTest(system_test.TestCase):
 
         self.assertEqual(links, 500)
 
+        # Run qdstat with a limit of 500 because 700
+        # is the maximum number of rows we get per request
+        # and we want to try something less than 700
+        # repeat with --csv
+        outs = self.run_qdstat(['--links', '--limit=500', '--csv'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+
+        self.assertEqual(links, 500)
+
         # DISPATCH-1485. Try to run qdstat with a limit=0. Without the fix for DISPATCH-1485
         # this following command will hang and the test will fail.
         outs = self.run_qdstat(['--links', '--limit=0'])
+        out_list = outs.split("\n")
+
+        links = 0
+        for out in out_list:
+            if "endpoint" in out and "examples" in out:
+                links += 1
+        self.assertEqual(links, COUNT*2)
+
+        # DISPATCH-1485. Try to run qdstat with a limit=0. Without the fix for DISPATCH-1485
+        # this following command will hang and the test will fail.
+        # repeat with --csv
+        outs = self.run_qdstat(['--links', '--limit=0', '--csv'])
         out_list = outs.split("\n")
 
         links = 0
@@ -356,6 +498,94 @@ class QdstatLinkPriorityTest(system_test.TestCase):
 
         # make sure that all priorities are present in the list (currently 0-9)
         self.assertEqual(len(priorities.keys()), 10, "Not all priorities are present")
+
+
+    def test_link_priority_csv(self):
+        HEADER_ROW = 4
+        TYPE_COL = 0
+        PRI_COL = 9
+        out = self.run_qdstat(['--links', '--csv'])
+        lines = out.split("\n")
+
+        # make sure the output contains a header line
+        self.assertTrue(len(lines) >= 2)
+
+        # see if the header line has the word priority in it
+        header_line = lines[HEADER_ROW].split(',')
+        self.assertTrue(header_line[PRI_COL] == '"pri"')
+
+        # extract the number in the priority column of every inter-router link
+        priorities = {}
+        for i in range(HEADER_ROW + 1, len(lines) - 1):
+            line = lines[i].split(',')
+            if line[TYPE_COL] == '"inter-router"':
+                pri = line[PRI_COL][1:-1]
+                # make sure the priority found is a number
+                self.assertTrue(len(pri) > 0, "Can not find numeric priority in '%s'" % lines[i])
+                self.assertTrue(pri != '-')  # naked hypen disallowed
+                priority = int(pri)
+                # make sure the priority is from 0 to 9
+                self.assertTrue(priority >= 0, "Priority was less than 0")
+                self.assertTrue(priority <= 9, "Priority was greater than 9")
+
+                # mark this priority as present
+                priorities[priority] = True
+
+        # make sure that all priorities are present in the list (currently 0-9)
+        self.assertEqual(len(priorities.keys()), 10, "Not all priorities are present")
+
+
+    def _test_links_all_routers(self, command):
+        out = self.run_qdstat(command)
+
+        self.assertTrue(out.count('UTC') == 1)
+        self.assertTrue(out.count('Router Links') == 2)
+        self.assertTrue(out.count('inter-router') == 40)
+        self.assertTrue(out.count('router-control') == 4)
+
+    def test_links_all_routers(self):
+        self._test_links_all_routers(['--links', '--all-routers'])
+
+    def test_links_all_routers_csv(self):
+        self._test_links_all_routers(['--links', '--all-routers', '--csv'])
+
+
+    def _test_all_entities(self, command):
+        out = self.run_qdstat(command)
+
+        self.assertTrue(out.count('UTC') == 1)
+        self.assertTrue(out.count('Router Links') == 1)
+        self.assertTrue(out.count('Router Addresses') == 1)
+        self.assertTrue(out.count('Connections') == 2)
+        self.assertTrue(out.count('AutoLinks') == 2)
+        self.assertTrue(out.count('Link Routes') == 3)
+        self.assertTrue(out.count('Router Statistics') == 1)
+        self.assertTrue(out.count('Types') == 1)
+
+    def test_all_entities(self):
+        self._test_all_entities(['--all-entities'])
+
+    def test_all_entities_csv(self):
+        self._test_all_entities(['--all-entities', '--csv'])
+
+    def _test_all_entities_all_routers(self, command):
+        out = self.run_qdstat(command)
+
+        self.assertTrue(out.count('UTC') == 1)
+        self.assertTrue(out.count('Router Links') == 2)
+        self.assertTrue(out.count('Router Addresses') == 2)
+        self.assertTrue(out.count('Connections') == 4)
+        self.assertTrue(out.count('AutoLinks') == 4)
+        self.assertTrue(out.count('Link Routes') == 6)
+        self.assertTrue(out.count('Router Statistics') == 2)
+        self.assertTrue(out.count('Types') == 2)
+
+    def test_all_entities_all_routers(self):
+        self._test_all_entities_all_routers(['--all-entities', '--all-routers'])
+
+    def test_all_entities_all_routers_csv(self):
+        self._test_all_entities_all_routers(['--all-entities', '--csv', '--all-routers'])
+
 
 try:
     SSLDomain(SSLDomain.MODE_CLIENT)
