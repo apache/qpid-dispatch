@@ -19,10 +19,10 @@ under the License
 
 // Module included in the following assemblies:
 //
-// planning-router-network.adoc
+// router-deployment-guidelines.adoc
 
-[id='router-connection-considerations-{context}']
-= Router connection considerations
+[id='router-connection-guidelines-{context}']
+= Router connection guidelines
 
 Before creating a router network, you should understand how routers connect to each other, and the factors that affect the direction in which an inter-router connection should be established.
 

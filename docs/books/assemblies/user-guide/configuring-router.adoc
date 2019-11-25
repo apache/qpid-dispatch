@@ -22,7 +22,7 @@ under the License
 // book.adoc
 
 [id='configuring-router-{context}']
-= Configuring a router
+= Configuring {RouterName}
 
 Each {RouterName} router contains a `qdrouterd.conf` configuration file. You edit this file to define how the router should operate.
 
