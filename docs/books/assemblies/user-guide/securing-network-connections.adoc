@@ -29,11 +29,11 @@ You can configure {RouterName} to communicate with clients, routers, and brokers
 * SSL/TLS for certificate-based encryption and mutual authentication
 * SASL for authentication with mechanisms
 
-To secure the router network, you configure SSL/TLS, SASL (or a combination of both) to secure each of the following types of connections:
+You configure SSL/TLS, SASL (or a combination of both) to secure any of the following:
 
-* xref:securing-connections-between-routers-{context}[Connections between routers]
-* xref:securing-incoming-client-connections-{context}[Incoming client connections]
-* xref:securing-outgoing-connections-{context}[Outgoing connections]
+* xref:securing-connections-between-routers-{context}[Secure connections between routers]
+* xref:securing-incoming-client-connections-{context}[Secure incoming client connections]
+* xref:securing-outgoing-connections-{context}[Secure outgoing connections]
 
 // Securing connections between routers
 include::../../modules/user-guide/securing-connections-between-routers.adoc[leveloffset=+1]

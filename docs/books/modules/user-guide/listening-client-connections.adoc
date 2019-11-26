@@ -57,5 +57,11 @@ listener {
 +
 `[(amqp|amqps|ws|wss)://](__HOST__|__IP ADDRESS__)[:port]`
 +
-For more information, see xref:connection-failover-{context}[].
+For more information, see xref:understanding-connection-failover-{context}[].
 --
+
+.Additional resources
+
+* After enabling a router to listen for client connections, secure the connection.
++
+For more information, see xref:securing-incoming-client-connections-{context}[].

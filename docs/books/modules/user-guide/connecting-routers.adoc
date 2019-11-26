@@ -87,3 +87,9 @@ listener {
 . If the router should connect to any other routers, repeat this procedure.
 +
 Edge routers can only connect to interior routers. They cannot connect to other edge routers.
+
+.Additional resources
+
+* After connecting a router to another router, secure the connection.
++
+For more information, see xref:securing-connections-between-routers-{context}[].

@@ -26,12 +26,12 @@ under the License
 
 {RouterName} connects clients, servers, AMQP services, and other routers through network connections. To connect the router to other messaging endpoints, you configure _listeners_ to accept connections, and _connectors_ to make outbound connections. However, connections are bidirectional - once the connection is established, message traffic flows in both directions.
 
-You can configure the following types of connections:
+You can do the following:
 
-`inter-router`:: The connection is for another interior router in the network. Inter-router discovery and routing protocols can only be used over inter-router connections.
-`normal`:: The connection is for AMQP clients using normal message delivery.
-`edge`:: The connection is between an edge router and an interior router.
-`route-container`:: The connection is for a broker or other resource that holds known addresses.
+* xref:connecting-routers-{context}[Connect a router to another router]
+* xref:listening-client-connections-{context}[Listen for client connections]
+* xref:connecting-to-external-amqp-containers-{context}[Connect a router to an external AMQP container]
+* xref:understanding-connection-failover-{context}[Understand connection failover]
 
 // Connecting routers
 include::../../modules/user-guide/connecting-routers.adoc[leveloffset=+1]
@@ -43,4 +43,4 @@ include::../../modules/user-guide/listening-client-connections.adoc[leveloffset=
 include::../../modules/user-guide/connecting-routers-external-amqp-containers.adoc[leveloffset=+1]
 
 // Connection failover
-include::../../modules/user-guide/connection-failover.adoc[leveloffset=+1]
+include::../../modules/user-guide/understanding-connection-failover.adoc[leveloffset=+1]
