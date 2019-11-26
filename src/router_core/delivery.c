@@ -1013,8 +1013,7 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
         if (!!work && !!peer_link) {
             sys_mutex_lock(peer_link->conn->work_lock);
             if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
-                // Adding this work at priority 0.
-                qdr_add_link_ref(peer_link->conn->links_with_work, peer_link, QDR_LINK_LIST_CLASS_WORK);
+                qdr_add_link_ref(&peer_link->conn->links_with_work[peer_link->priority], peer_link, QDR_LINK_LIST_CLASS_WORK);
                 sys_mutex_unlock(peer_link->conn->work_lock);
 
                 //
@@ -1116,8 +1115,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv, "qdr_delivery_push_CT - add to updated list");
         qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
-        // Adding this work at priority 0.
-        qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+        qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
     sys_mutex_unlock(link->conn->work_lock);

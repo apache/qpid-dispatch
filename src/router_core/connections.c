@@ -679,8 +679,7 @@ void qdr_link_enqueue_work_CT(qdr_core_t      *core,
 
     sys_mutex_lock(conn->work_lock);
     DEQ_INSERT_TAIL(link->work_list, work);
-    // Enqueue work at priority 0.
-    qdr_add_link_ref(conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+    qdr_add_link_ref(&conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
 
     qdr_connection_activate_CT(core, conn);
@@ -975,7 +974,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     //
     sys_mutex_lock(conn->work_lock);
     qdr_del_link_ref(&conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
-    qdr_del_link_ref(conn->links_with_work + link->priority, link, QDR_LINK_LIST_CLASS_WORK);
+    qdr_del_link_ref(&conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
     sys_mutex_unlock(conn->work_lock);
 
     if (link->ref[QDR_LINK_LIST_CLASS_ADDRESS]) {
@@ -1018,8 +1017,13 @@ static void qdr_link_cleanup_protected_CT(qdr_core_t *core, qdr_connection_t *co
     bool do_cleanup = false;
 
     sys_mutex_lock(conn->work_lock);
-    if (link->processing)
+    // prevent an I/O thread from processing this link (DISPATCH-1475)
+    qdr_del_link_ref(&conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
+    if (link->processing) {
+        // Cannot cleanup link because I/O thread is currently processing it
+        // Mark it so the I/O thread will notify the core when processing is complete
         link->ready_to_free = true;
+    }
     else
         do_cleanup = true;
     sys_mutex_unlock(conn->work_lock);
@@ -1368,7 +1372,7 @@ static void qdr_connection_closed_CT(qdr_core_t *core, qdr_action_t *action, boo
     for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
         link_ref = DEQ_HEAD(conn->links_with_work[priority]);
         while (link_ref) {
-            qdr_del_link_ref(conn->links_with_work + priority, link_ref->link, QDR_LINK_LIST_CLASS_WORK);
+            qdr_del_link_ref(&conn->links_with_work[priority], link_ref->link, QDR_LINK_LIST_CLASS_WORK);
             link_ref = DEQ_HEAD(conn->links_with_work[priority]);
         }
     }

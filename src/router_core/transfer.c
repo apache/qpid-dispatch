@@ -320,8 +320,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         sys_mutex_lock(link->conn->work_lock);
 
         if (DEQ_SIZE(link->undelivered) > 0) {
-            // Adding this work at priority 0.
-            qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+            qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
             activate = true;
         }
 
@@ -371,8 +370,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             if (work)
                 DEQ_INSERT_TAIL(link->work_list, work);
             if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
-                // Adding this work at priority 0.
-                qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+                qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
                 activate = true;
             }
             sys_mutex_unlock(link->conn->work_lock);
