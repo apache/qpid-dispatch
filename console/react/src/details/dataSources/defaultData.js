@@ -127,6 +127,10 @@ class DefaultData {
       });
     });
   };
+
+  validate = record => {
+    return { validated: true };
+  };
 }
 
 export default DefaultData;

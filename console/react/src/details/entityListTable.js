@@ -30,6 +30,7 @@ import { Button, Pagination } from "@patternfly/react-core";
 import { Redirect } from "react-router-dom";
 import TableToolbar from "../common/tableToolbar";
 import { dataMap, defaultData } from "./entityData";
+import EmptyTable from "./emptyTablePage";
 
 // If the breadcrumb on the detailsTablePage was used to return to this page,
 // we will have saved state info in props.location.state
@@ -444,11 +445,17 @@ class EntityListTable extends React.Component {
           hidePagination={true}
           actionButtons={actionButtons()}
         />
-        <Table {...tableProps}>
-          <TableHeader />
-          <TableBody />
-        </Table>
-        {this.renderPagination("bottom")}
+        {this.state.rows.length > 0 ? (
+          <React.Fragment>
+            <Table {...tableProps}>
+              <TableHeader />
+              <TableBody />
+            </Table>
+            {this.renderPagination("bottom")}
+          </React.Fragment>
+        ) : (
+          <EmptyTable entity={this.props.entity} />
+        )}
         {this.state.action && this.doAction()}
       </React.Fragment>
     );

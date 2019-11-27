@@ -39,9 +39,7 @@ it("renders a CreateTablePage", async () => {
     handleAddNotification: () => {},
     handleActionCancel: () => {}
   };
-  const { getByLabelText, getByText, getByTestId } = render(
-    <CreateTablePage {...props} />
-  );
+  const { getByLabelText, getByText } = render(<CreateTablePage {...props} />);
 
   // the create form should be present
   const createForm = getByLabelText("create-entity-form");

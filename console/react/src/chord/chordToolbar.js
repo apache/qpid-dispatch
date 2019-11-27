@@ -22,8 +22,21 @@ import { Toolbar, ToolbarGroup, ToolbarItem } from "@patternfly/react-core";
 import OptionsComponent from "./optionsComponent";
 import RoutersComponent from "./routersComponent";
 import DropdownPanel from "../common/dropdownPanel";
+import PropTypes from "prop-types";
 
 class ChordToolbar extends React.Component {
+  static propTypes = {
+    isRate: PropTypes.bool.isRequired,
+    byAddress: PropTypes.bool.isRequired,
+    addresses: PropTypes.object.isRequired,
+    chordColors: PropTypes.object.isRequired,
+    arcColors: PropTypes.object.isRequired,
+    handleChangeAddress: PropTypes.func.isRequired,
+    handleChangeOption: PropTypes.func.isRequired,
+    handleHoverAddress: PropTypes.func.isRequired,
+    handleHoverRouter: PropTypes.func.isRequired
+  };
+
   render() {
     return (
       <Toolbar

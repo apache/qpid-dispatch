@@ -18,8 +18,14 @@ under the License.
 */
 
 import React, { Component } from "react";
+import PropTypes from "prop-types";
 
 class RoutersComponent extends Component {
+  static propTypes = {
+    arcColors: PropTypes.object.isRequired,
+    handleHoverRouter: PropTypes.func.isRequired
+  };
+
   constructor(props) {
     super(props);
     this.state = {};
@@ -32,29 +38,25 @@ class RoutersComponent extends Component {
           {Object.keys(this.props.arcColors).length === 0 ? (
             <li key={`colors-empty`}>There is no traffic</li>
           ) : (
-              Object.keys(this.props.arcColors).map((router, i) => {
-                return (
-                  <li
-                    key={`router-${i}`}
-                    className="legend-line"
-                    onMouseEnter={() =>
-                      this.props.handleHoverRouter(router, true)
-                    }
-                    onMouseLeave={() =>
-                      this.props.handleHoverRouter(router, false)
-                    }
-                  >
-                    <span
-                      className="legend-color"
-                      style={{ backgroundColor: this.props.arcColors[router] }}
-                    ></span>
-                    <span className="legend-router legend-text" title={router}>
-                      {router}
-                    </span>
-                  </li>
-                );
-              })
-            )}
+            Object.keys(this.props.arcColors).map((router, i) => {
+              return (
+                <li
+                  key={`router-${i}`}
+                  className="legend-line"
+                  onMouseEnter={() => this.props.handleHoverRouter(router, true)}
+                  onMouseLeave={() => this.props.handleHoverRouter(router, false)}
+                >
+                  <span
+                    className="legend-color"
+                    style={{ backgroundColor: this.props.arcColors[router] }}
+                  ></span>
+                  <span className="legend-router legend-text" title={router}>
+                    {router}
+                  </span>
+                </li>
+              );
+            })
+          )}
         </ul>
       </React.Fragment>
     );

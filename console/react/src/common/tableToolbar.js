@@ -20,7 +20,6 @@ under the License.
 import React from "react";
 import {
   Dropdown,
-  DropdownPosition,
   DropdownToggle,
   DropdownItem,
   Pagination,
@@ -36,9 +35,7 @@ class TableToolbar extends React.Component {
     this.state = {
       isDropDownOpen: false,
       searchValue:
-        this.props.filterBy && this.props.filterBy.value
-          ? this.props.filterBy.value
-          : "",
+        this.props.filterBy && this.props.filterBy.value ? this.props.filterBy.value : "",
       filterField: this.props.fields[0].title
     };
 
@@ -86,10 +83,11 @@ class TableToolbar extends React.Component {
 
     this.buildDropdown = () => {
       const { isDropDownOpen } = this.state;
+      //           position={DropdownPosition.right}
+
       return (
         <Dropdown
           onSelect={this.onDropDownSelect}
-          position={DropdownPosition.right}
           toggle={
             <DropdownToggle onToggle={this.onDropDownToggle}>
               {this.state.filterField}
@@ -97,9 +95,7 @@ class TableToolbar extends React.Component {
           }
           isOpen={isDropDownOpen}
           dropdownItems={this.props.fields.map(f => {
-            return (
-              <DropdownItem key={`item-${f.title}`}>{f.title}</DropdownItem>
-            );
+            return <DropdownItem key={`item-${f.title}`}>{f.title}</DropdownItem>;
           })}
         />
       );
@@ -126,16 +122,10 @@ class TableToolbar extends React.Component {
     return (
       <Toolbar className="pf-l-toolbar pf-u-mx-xl pf-u-my-md table-toolbar">
         <ToolbarGroup>
-          <ToolbarItem className="pf-u-mr-md">
-            {this.buildDropdown()}
-          </ToolbarItem>
-          <ToolbarItem className="pf-u-mr-xl">
-            {this.buildSearchBox()}
-          </ToolbarItem>
+          <ToolbarItem className="pf-u-mr-md">{this.buildDropdown()}</ToolbarItem>
+          <ToolbarItem className="pf-u-mr-xl">{this.buildSearchBox()}</ToolbarItem>
         </ToolbarGroup>
-        {this.props.actionButtons && (
-          <ToolbarGroup>{actionsButtons}</ToolbarGroup>
-        )}
+        {this.props.actionButtons && <ToolbarGroup>{actionsButtons}</ToolbarGroup>}
         {!this.props.hidePagination && (
           <ToolbarGroup className="toolbar-pagination">
             <ToolbarItem>
@@ -145,9 +135,7 @@ class TableToolbar extends React.Component {
                 page={this.props.page}
                 perPage={this.props.perPage}
                 onSetPage={(_evt, value) => this.props.onSetPage(value)}
-                onPerPageSelect={(_evt, value) =>
-                  this.props.onPerPageSelect(value)
-                }
+                onPerPageSelect={(_evt, value) => this.props.onPerPageSelect(value)}
                 variant={"top"}
               />
             </ToolbarItem>

@@ -43,7 +43,9 @@ it("renders the addresses component with an address", () => {
 it("renders the addresses component without an address", () => {
   const props = {
     addresses: {},
-    addressColors: {}
+    addressColors: {},
+    handleChangeAddress: () => {},
+    handleHoverAddress: () => {}
   };
   const { getByText } = render(<AddressesComponent {...props} />);
   expect(getByText("There is no traffic")).toBeInTheDocument();

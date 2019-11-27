@@ -170,7 +170,7 @@ class DelayedDeliveriesCard extends React.Component {
 
     const caption = (
       <React.Fragment>
-        <span className="caption">Links with delayed deliveries</span>
+        <span className="caption">Connections with delayed deliveries</span>
         <div className="updated">
           Updated at {this.lastUpdateString()} | Next {this.nextUpdateString()}
         </div>

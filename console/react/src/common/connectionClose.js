@@ -19,8 +19,16 @@ under the License.
 
 import React from "react";
 import { Button, Modal } from "@patternfly/react-core";
+import PropTypes from "prop-types";
 
 class ConnectionClose extends React.Component {
+  static propTypes = {
+    extraInfo: PropTypes.object.isRequired,
+    service: PropTypes.object.isRequired,
+    handleAddNotification: PropTypes.func.isRequired,
+    asButton: PropTypes.bool,
+    notifyClick: PropTypes.func
+  };
   constructor(props) {
     super(props);
     this.state = {
@@ -47,8 +55,7 @@ class ConnectionClose extends React.Component {
           { adminStatus: "deleted" }
         )
         .then(results => {
-          let statusCode =
-            results.context.message.application_properties.statusCode;
+          let statusCode = results.context.message.application_properties.statusCode;
           if (statusCode < 200 || statusCode >= 300) {
             console.log(
               `error ${record.name} ${results.context.message.application_properties.statusDescription}`

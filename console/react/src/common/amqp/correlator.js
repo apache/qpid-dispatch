@@ -25,9 +25,8 @@ class Correlator {
     this._correlationID = 0;
     this.maxCorrelatorDepth = 10;
   }
-  corr() {
-    return ++this._correlationID + "";
-  }
+  corr = () => `${++this._correlationID}`;
+
   // Associate this correlation id with the promise's resolve and reject methods
   register(id, resolve, reject) {
     this._objects[id] = { resolver: resolve, rejector: reject };
@@ -37,10 +36,16 @@ class Correlator {
   resolve(context) {
     var correlationID = context.message.correlation_id;
     // call the promise's resolve function with a copy of the rhea response (so we don't keep any references to internal rhea data)
-    this._objects[correlationID].resolver({
-      response: utils.copy(context.message.body),
-      context: context
-    });
+    if (this._objects[correlationID]) {
+      this._objects[correlationID].resolver({
+        response: utils.copy(context.message.body),
+        context: context
+      });
+    } else {
+      console.log(
+        `recieved message without a corresponding correlationID ${correlationID}`
+      );
+    }
     delete this._objects[correlationID];
   }
   reject(id, error) {

@@ -49,7 +49,7 @@ class NotificationDrawer extends React.Component {
           isOpen: false,
           events: []
         },
-        event: { title: "Events", isOpen: false, events: [] }
+        event: { title: "Notifications", isOpen: false, events: [] }
       }
     };
     this.severityToIcon = {

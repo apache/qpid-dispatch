@@ -19,9 +19,16 @@ under the License.
 
 import React, { Component } from "react";
 import * as d3 from "d3";
+import PropTypes from "prop-types";
 const FA = require("react-fontawesome");
 
 class AddressesComponent extends Component {
+  static propTypes = {
+    addresses: PropTypes.object.isRequired,
+    handleChangeAddress: PropTypes.func.isRequired,
+    handleHoverAddress: PropTypes.func.isRequired,
+    addressColors: PropTypes.object.isRequired
+  };
   constructor(props) {
     super(props);
     this.state = {};

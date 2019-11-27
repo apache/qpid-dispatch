@@ -24,8 +24,13 @@ import {
   AccordionContent,
   AccordionToggle
 } from "@patternfly/react-core";
+import PropTypes from "prop-types";
 
 class DropdownPanel extends React.Component {
+  static propTypes = {
+    title: PropTypes.string.isRequired,
+    panel: PropTypes.object.isRequired
+  };
   constructor(props) {
     super(props);
     this.state = {

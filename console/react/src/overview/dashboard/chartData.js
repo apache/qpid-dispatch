@@ -20,13 +20,7 @@ under the License.
 class ChartData {
   constructor(service) {
     this.service = service;
-    this.rates = [];
-    this.rawData = [];
-    this.rateStorage = {};
-    this.initialized = false;
-    for (let i = 0; i < 60 * 60; i++) {
-      this.rates.push(0);
-    }
+    this.reset();
     this.isRate = false;
   }
 
@@ -35,6 +29,16 @@ class ChartData {
       this.rawData.push(datum);
     }
     this.initialized = true;
+  };
+
+  reset = () => {
+    this.rates = [];
+    this.rawData = [];
+    this.rateStorage = {};
+    this.initialized = false;
+    for (let i = 0; i < 60 * 60; i++) {
+      this.rates.push(0);
+    }
   };
 
   addData = datum => {
@@ -54,6 +58,7 @@ class ChartData {
       );
       datum = Math.round(avg.val);
     }
+    if (datum < 0) datum = 0;
     this.rates.push(datum);
     this.rates.splice(0, 1);
   };

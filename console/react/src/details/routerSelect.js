@@ -18,11 +18,7 @@ under the License.
 */
 
 import React from "react";
-import {
-  OptionsMenu,
-  OptionsMenuItem,
-  OptionsMenuToggleWithText
-} from "@patternfly/react-core";
+import { OptionsMenu, OptionsMenuItem, OptionsMenuToggle } from "@patternfly/react-core";
 import { utils } from "../common/amqp/utilities";
 
 class RouterSelect extends React.Component {
@@ -32,6 +28,19 @@ class RouterSelect extends React.Component {
       isOpen: false,
       selectedOption: "",
       routers: []
+    };
+
+    this.onToggle = () => {
+      this.setState({
+        isOpen: !this.state.isOpen
+      });
+    };
+
+    this.onSelect = event => {
+      const routerName = event.target.textContent;
+      this.setState({ selectedOption: routerName, isOpen: false }, () => {
+        this.props.handleRouterSelected(this.nameToId[routerName]);
+      });
     };
   }
 
@@ -49,21 +58,9 @@ class RouterSelect extends React.Component {
     });
   };
 
-  onToggle = () => {
-    this.setState({
-      isOpen: !this.state.isOpen
-    });
-  };
-
-  onSelect = event => {
-    const routerName = event.target.textContent;
-    this.setState({ selectedOption: routerName, isOpen: false }, () => {
-      this.props.handleRouterSelected(this.nameToId[routerName]);
-    });
-  };
-
   render() {
     const { routers, selectedOption, isOpen } = this.state;
+
     const menuItems = routers.map(r => (
       <OptionsMenuItem
         onSelect={this.onSelect}
@@ -76,12 +73,12 @@ class RouterSelect extends React.Component {
     ));
 
     const toggle = (
-      <OptionsMenuToggleWithText toggleText={selectedOption} onToggle={this.onToggle} />
+      <OptionsMenuToggle onToggle={this.onToggle} toggleTemplate={selectedOption} />
     );
 
     return (
       <OptionsMenu
-        id="routerSelect"
+        id="options-menu-single-option-example"
         menuItems={menuItems}
         isOpen={isOpen}
         toggle={toggle}

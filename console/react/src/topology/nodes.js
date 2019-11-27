@@ -379,20 +379,21 @@ export class Nodes {
     }
     return undefined;
   }
-  getOrCreateNode(
-    id,
-    name,
-    nodeType,
-    nodeIndex,
-    x,
-    y,
-    connectionContainer,
-    resultIndex,
-    fixed,
-    properties
-  ) {
-    properties = properties || {};
-    let gotNode = this.find(connectionContainer, properties, name);
+  getOrCreateNode = nodeObj => {
+    const {
+      id,
+      name,
+      nodeType,
+      nodeIndex,
+      x,
+      y,
+      connectionContainer,
+      resultIndex,
+      fixed,
+      properties
+    } = nodeObj;
+    const props = properties || {};
+    let gotNode = this.find(connectionContainer, props, name);
     if (gotNode) {
       return gotNode;
     }
@@ -401,7 +402,7 @@ export class Nodes {
       id,
       name,
       nodeType,
-      properties,
+      props,
       routerId,
       x,
       y,
@@ -410,37 +411,17 @@ export class Nodes {
       fixed,
       connectionContainer
     );
-  }
+  };
   add(obj) {
     this.nodes.push(obj);
     return obj;
   }
-  addUsing(
-    id,
-    name,
-    nodeType,
-    nodeIndex,
-    x,
-    y,
-    connectContainer,
-    resultIndex,
-    fixed,
-    properties
-  ) {
-    let obj = this.getOrCreateNode(
-      id,
-      name,
-      nodeType,
-      nodeIndex,
-      x,
-      y,
-      connectContainer,
-      resultIndex,
-      fixed,
-      properties
-    );
+
+  addUsing = nodeInfo => {
+    let obj = this.getOrCreateNode(nodeInfo);
     return this.add(obj);
-  }
+  };
+
   clearHighlighted() {
     for (let i = 0; i < this.nodes.length; ++i) {
       this.nodes[i].highlighted = false;
@@ -472,18 +453,18 @@ export class Nodes {
       }
       position.fixed = position.fixed ? true : false;
       let parts = id.split("/");
-      this.addUsing(
+      this.addUsing({
         id,
         name,
-        parts[1],
-        this.nodes.length,
-        position.x,
-        position.y,
-        name,
-        undefined,
-        position.fixed,
-        {}
-      );
+        nodeType: parts[1],
+        nodeIndex: this.nodes.length,
+        x: position.x,
+        y: position.y,
+        connectionContainer: name,
+        resultIndex: undefined,
+        fixed: position.fixed,
+        properties: {}
+      });
     }
     return animate;
   }

@@ -25,7 +25,7 @@ const DEFAULT_INTERVAL = 5000;
 export class QDRService {
   constructor(hooks) {
     this.utilities = utils;
-    this.hooks = hooks;
+    this.hooks = hooks || function() {};
     this.schema = null;
     this.initManagement();
   }

@@ -57,7 +57,7 @@ import { utils } from "../../common/amqp/utilities";
 import throughputData from "./throughputData";
 import inflightData from "./inflightData";
 
-class PageLayout extends React.Component {
+class PageLayout extends React.PureComponent {
   constructor(props) {
     super(props);
     this.state = {
@@ -142,6 +142,7 @@ class PageLayout extends React.Component {
       this.lastLocation = this.props.location.pathname;
       this.setState({ connected: false });
     } else if (whatHappened === "reconnect") {
+      this.throughputChartData.reset();
       this.handleAddNotification(
         "event",
         "Connection to router resumed",

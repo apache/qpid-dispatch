@@ -20,6 +20,7 @@ under the License.
 import React from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
 import {
+  Alert,
   Button,
   Stack,
   StackItem,
@@ -62,7 +63,8 @@ class CreateTablePage extends React.Component {
       redirectState: { page: 1 },
       redirectPath: "/dashboard",
       lastUpdated: new Date(),
-      record: {}
+      record: {},
+      errorText: null
     };
 
     // if we get to this page and we don't have a props.location.state.entity
@@ -76,21 +78,16 @@ class CreateTablePage extends React.Component {
         this.props.location.state.entity);
 
     if (!this.entity) {
-      this.state.redirect = true;
+      this.props.history.push("/dashboard");
     } else {
       this.dataSource = !detailsDataMap[this.entity]
         ? new defaultData(this.props.service, this.props.schema)
-        : new detailsDataMap[this.entity](
-          this.props.service,
-          this.props.schema
-        );
+        : new detailsDataMap[this.entity](this.props.service, this.props.schema);
       this.locationState = this.props.locationState;
 
       const attributes = this.dataSource.schemaAttributes(this.entity);
       for (let attributeKey in attributes) {
-        this.state.record[attributeKey] = this.getDefault(
-          attributes[attributeKey]
-        );
+        this.state.record[attributeKey] = this.getDefault(attributes[attributeKey]);
       }
     }
   }
@@ -119,6 +116,9 @@ class CreateTablePage extends React.Component {
   schemaToForm = () => {
     const attributes = this.dataSource.schemaAttributes(this.entity);
     const formGroups = [];
+    if (this.state.errorText) {
+      formGroups.push(<Alert variant="danger" isInline title={this.state.errorText} />);
+    }
     for (let attributeKey in attributes) {
       if (attributeKey !== "identity") {
         const attribute = attributes[attributeKey];
@@ -166,9 +166,7 @@ class CreateTablePage extends React.Component {
                     aria-describedby="entiy-form-field"
                     name={attributeKey}
                     isDisabled={readOnly}
-                    onChange={value =>
-                      this.handleTextInputChange(value, attributeKey)
-                    }
+                    onChange={value => this.handleTextInputChange(value, attributeKey)}
                   />
                 </FormGroup>
               );
@@ -177,9 +175,7 @@ class CreateTablePage extends React.Component {
                 <FormGroup {...formGroupProps} key={attributeKey}>
                   <FormSelect
                     value={this.state.record[attributeKey]}
-                    onChange={value =>
-                      this.handleTextInputChange(value, attributeKey)
-                    }
+                    onChange={value => this.handleTextInputChange(value, attributeKey)}
                     id={id}
                     name={attributeKey}
                   >
@@ -202,9 +198,7 @@ class CreateTablePage extends React.Component {
                     label={attributeKey}
                     id={id}
                     name={attributeKey}
-                    onChange={value =>
-                      this.handleTextInputChange(value, attributeKey)
-                    }
+                    onChange={value => this.handleTextInputChange(value, attributeKey)}
                   />
                 </FormGroup>
               );
@@ -244,31 +238,25 @@ class CreateTablePage extends React.Component {
         attributes[attr] = record[attr];
     }
 
-    // call update
+    // call create
     this.props.service.management.connection
       .sendMethod(this.props.routerId, this.entity, attributes, "CREATE")
       .then(results => {
-        let statusCode =
-          results.context.message.application_properties.statusCode;
+        let statusCode = results.context.message.application_properties.statusCode;
         if (statusCode < 200 || statusCode >= 300) {
-          let message =
-            results.context.message.application_properties.statusDescription;
-          const msg = `Create failed with message: ${message}`;
+          let message = results.context.message.application_properties.statusDescription;
+          //const msg = `Create failed with message: ${message}`;
           console.log(
             `error Create failed ${results.context.message.application_properties.statusDescription}`
           );
-          this.props.handleAddNotification("action", msg, new Date(), "danger");
+          //this.props.handleAddNotification("action", msg, new Date(), "danger");
+          this.setState({ errorText: message });
         } else {
           const msg = `Created ${this.props.entity} ${record.name}`;
           console.log(`success ${msg}`);
-          this.props.handleAddNotification(
-            "action",
-            msg,
-            new Date(),
-            "success"
-          );
+          this.props.handleAddNotification("action", msg, new Date(), "success");
+          this.handleCancel();
         }
-        this.handleCancel();
       });
   };
 
@@ -286,17 +274,11 @@ class CreateTablePage extends React.Component {
 
     return (
       <React.Fragment>
-        <PageSection
-          variant={PageSectionVariants.light}
-          className="overview-table-page"
-        >
+        <PageSection variant={PageSectionVariants.light} className="overview-table-page">
           <Stack>
             <StackItem className="overview-header details">
               <Breadcrumb>
-                <BreadcrumbItem
-                  className="link-button"
-                  onClick={this.breadcrumbSelected}
-                >
+                <BreadcrumbItem className="link-button" onClick={this.breadcrumbSelected}>
                   {this.icap(this.entity)}
                 </BreadcrumbItem>
               </Breadcrumb>
@@ -319,7 +301,9 @@ class CreateTablePage extends React.Component {
             <StackItem id="update-form">
               <Card>
                 <CardBody>
-                  <Form isHorizontal aria-label="create-entity-form">{this.schemaToForm()}</Form>
+                  <Form isHorizontal aria-label="create-entity-form">
+                    {this.schemaToForm()}
+                  </Form>
                 </CardBody>
               </Card>
             </StackItem>

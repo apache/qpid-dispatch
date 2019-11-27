@@ -20,8 +20,19 @@ under the License.
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
 import AddressesComponent from "../common/addressesComponent";
+import PropTypes from "prop-types";
 
 class OptionsComponent extends Component {
+  static propTypes = {
+    isRate: PropTypes.bool.isRequired,
+    handleChangeOption: PropTypes.func.isRequired,
+    byAddress: PropTypes.bool.isRequired,
+    addresses: PropTypes.object.isRequired,
+    addressColors: PropTypes.object.isRequired,
+    handleChangeAddress: PropTypes.func.isRequired,
+    handleHoverAddress: PropTypes.func.isRequired
+  };
+
   constructor(props) {
     super(props);
     this.state = {};

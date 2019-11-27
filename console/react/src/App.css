@@ -21,82 +21,13 @@ under the License.
   height: 100vh;
 }
 
-/*
-#main-content-page-layout-manual-nav {
-  overflow-y: hidden;
-}
-*/
-
 .App {
   text-align: center;
   height: 100%;
 }
 
-.App-logo {
-  animation: App-logo-spin infinite 20s linear;
-  height: 40vmin;
-  pointer-events: none;
-}
-
-.App-header {
-  background-color: #282c34;
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: calc(10px + 2vmin);
-  color: white;
-}
-
-.App-link {
-  color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .pf-c-avatar {
   --pf-c-avatar--Width: initial !important;
-}
-
-.donut-chart-sm {
-  width: 8em;
-  height: 8em;
-}
-
-.donut-chart-sm tspan {
-  fill: #000000 !important;
-}
-
-.deployment-donut {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.deployment-donut .deployment-donut-row {
-  display: flex;
-}
-
-.deployment-donut .deployment-donut-column {
-  display: flex;
-  flex-direction: column;
-}
-
-.deployment-donut .scaling-controls {
-  justify-content: center;
-  font-size: 24px;
-}
-
-.deployment-donut .scaling-controls a {
-  color: #bbb;
 }
 
 .topo-middle {
@@ -354,6 +285,7 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   width: 40em !important;
   position: absolute !important;
   right: 0;
+  top: 4.5em;
   padding: 2em;
   background-color: #fafafa;
   border: 1px solid #d1d1d1;
@@ -983,6 +915,7 @@ div.qdrChord .legend-text {
 
 .duration-tabs li.selected {
   border-bottom: 4px solid blue;
+  color: blue;
 }
 
 .overview-charts-page .pf-c-table caption {
@@ -1210,6 +1143,7 @@ span.entity-type i.link-type-router-control:before {
   top: 4.8em;
   color: black;
   right: 0em;
+  max-height: calc(100vh - 80px);
 }
 
 .drawer-pf-title {
@@ -1389,6 +1323,31 @@ span.entity-type i.link-type-router-control:before {
   }
 }
 
+.alert-in {
+  animation: fadeIn 0.25s linear;
+}
+.alert-out {
+  animation: fadeOut 1s linear;
+}
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes fadeOut {
+  0% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
 #topicCogWrapper {
   position: relative;
   margin: auto;
@@ -1430,7 +1389,7 @@ span.entity-type i.link-type-router-control:before {
 }
 
 div.connecting {
-  opacity: 0.2;
+  opacity: 0;
 }
 
 .connect-error p {
@@ -1501,8 +1460,24 @@ button.dropdown-panel-toggle.pf-c-accordion__toggle span.pf-c-accordion__toggle-
   background-image: none;
 }
 
+#NotificationDrawer .pf-c-accordion__expanded-content.pf-m-fixed {
+  max-height: none;
+}
+
 .dropdown-panel-accordion.pf-c-accordion {
   box-shadow: none;
   border: 1px solid #eaeaea;
   border-bottom: 1px solid black;
+}
+
+.pf-c-modal-box.pf-m-sm * {
+  font-family: RedHatDisplay;
+}
+
+.form-error {
+  color: red;
+}
+
+#emptyResults {
+  height: auto;
 }

@@ -20,6 +20,7 @@ under the License.
 import React from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
 import {
+  Alert,
   Button,
   Stack,
   StackItem,
@@ -82,7 +83,8 @@ class UpdateTablePage extends React.Component {
       redirectPath: "/dashboard",
       lastUpdated: new Date(),
       changes: false,
-      record: this.fixNull(this.props.locationState.currentRecord)
+      record: this.fixNull(this.props.locationState.currentRecord),
+      errorText: null
     };
     this.originalRecord = utils.copy(this.state.record);
   }
@@ -116,6 +118,9 @@ class UpdateTablePage extends React.Component {
     const record = this.state.record;
     const attributes = this.dataSource.schemaAttributes(this.entity);
     const formGroups = [];
+    if (this.state.errorText) {
+      formGroups.push(<Alert variant="danger" isInline title={this.state.errorText} />);
+    }
     for (let attributeKey in attributes) {
       const attribute = attributes[attributeKey];
       let type = attribute.type;
@@ -234,6 +239,11 @@ class UpdateTablePage extends React.Component {
         attributes["outputFile"] = record.outputFile === "" ? null : record.outputFile;
       }
     }
+    const { validated, errorText } = this.dataSource.validate(record);
+    if (!validated) {
+      this.setState({ errorText });
+      return;
+    }
     // call update
     this.props.service.management.connection
       .sendMethod(record.routerId || record.nodeId, this.entity, attributes, "UPDATE")
@@ -242,15 +252,18 @@ class UpdateTablePage extends React.Component {
         if (statusCode < 200 || statusCode >= 300) {
           const msg = `Updated ${record.name} failed with message: ${results.context.message.application_properties.statusDescription}`;
           console.log(`error ${msg}`);
-          this.props.handleAddNotification("action", msg, new Date(), "danger");
+          this.setState({
+            errorText: results.context.message.application_properties.statusDescription
+          });
+          //this.props.handleAddNotification("action", msg, new Date(), "danger");
         } else {
           const msg = `Updated ${this.props.entity} ${record.name}`;
           console.log(`success ${msg}`);
           this.props.handleAddNotification("action", msg, new Date(), "success");
+          const props = this.props;
+          props.locationState.currentRecord = record;
+          this.props.handleActionCancel(props);
         }
-        const props = this.props;
-        props.locationState.currentRecord = record;
-        this.props.handleActionCancel(props);
       });
   };
 

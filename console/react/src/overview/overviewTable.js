@@ -171,6 +171,7 @@ class OverviewTable extends React.Component {
         extraInfo={extraInfo}
         service={this.props.service}
         detailClick={this.detailClick}
+        handleAddNotification={this.props.handleAddNotification}
       />
     );
   };

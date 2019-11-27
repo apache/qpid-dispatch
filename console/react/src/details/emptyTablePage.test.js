@@ -19,25 +19,12 @@ under the License.
 
 import React from "react";
 import { render } from "@testing-library/react";
-import DropdownMenu from "./DropdownMenu";
+import EmptyTable from "./emptyTablePage";
 
-it("the dropdown menu component renders and calls event handlers", () => {
-  const isVisible = true;
-  const isConnected = () => true;
-  let logoutCalled = false;
-  const handleDropdownLogout = () => (logoutCalled = true);
-  let menuRef = null;
-  render(
-    <DropdownMenu
-      ref={el => (menuRef = el)}
-      isVisible={isVisible}
-      isConnected={isConnected}
-      parentClass=""
-      handleDropdownLogout={handleDropdownLogout}
-      handleContextHide={() => {}}
-    />
-  );
-  menuRef.show(true);
-  menuRef.logout();
-  expect(logoutCalled).toBe(true);
+it("renders an EmptyTable", async () => {
+  const props = {
+    entity: "test"
+  };
+
+  render(<EmptyTable {...props} />);
 });

@@ -28,6 +28,7 @@ class Link {
     this.cls = cls;
     this.uid = uid;
   }
+
   markerId(end) {
     let selhigh = this.highlighted ? "highlighted" : this.selected ? "selected" : "";
     if (selhigh === "" && !this.left && !this.right) selhigh = "unknown";
@@ -40,15 +41,18 @@ export class Links {
     this.links = [];
     this.logger = logger;
   }
+
   reset() {
     this.links.length = 0;
   }
+
   getLinkSource(nodesIndex) {
     for (let i = 0; i < this.links.length; ++i) {
       if (this.links[i].target === nodesIndex) return i;
     }
     return -1;
   }
+
   getLink(_source, _target, dir, cls, uid) {
     for (let i = 0; i < this.links.length; i++) {
       let s = this.links[i].source,
@@ -74,6 +78,7 @@ export class Links {
       uid = uid + "." + this.links.length;
     return this.links.push(new Link(_source, _target, dir, cls, uid)) - 1;
   }
+
   linkFor(source, target) {
     for (let i = 0; i < this.links.length; ++i) {
       if (this.links[i].source === source && this.links[i].target === target)
@@ -151,7 +156,10 @@ export class Links {
         if (!connectionsPerContainer[connection.container])
           connectionsPerContainer[connection.container] = [];
         let linksDir = getLinkDir(connection, onode);
-        if (linksDir === "unknown") unknowns.push(nodeIds[source]);
+        if (linksDir === "unknown") {
+          continue;
+          //unknowns.push(nodeIds[source]);
+        }
         connectionsPerContainer[connection.container].push({
           source: source,
           linksDir: linksDir,
@@ -189,18 +197,18 @@ export class Links {
           height,
           localStorage
         );
-        let node = nodes.getOrCreateNode(
-          nodeIds[container.source],
+        let node = nodes.getOrCreateNode({
+          id: nodeIds[container.source],
           name,
-          container.connection.role,
-          nodes.getLength(),
-          position.x,
-          position.y,
-          container.connection.container,
-          container.resultsIndex,
-          position.fixed,
-          container.connection.properties
-        );
+          nodeType: container.connection.role,
+          nodeIndex: nodes.getLength(),
+          x: position.x,
+          y: position.y,
+          connectionContainer: container.connection.container,
+          resultIndex: container.resultsIndex,
+          fixed: position.fixed,
+          properties: container.connection.properties
+        });
         node.host = container.connection.host;
         node.cdir = container.linksDir;
         node.user = container.connection.user;
@@ -283,6 +291,7 @@ var getLinkDir = function(connection, onode) {
   if (outCount > 0) return "out";
   return "unknown";
 };
+
 var getKey = function(containers) {
   let parts = {};
   let connection = containers[0].connection;

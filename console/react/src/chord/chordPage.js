@@ -20,13 +20,16 @@ under the License.
 import React, { Component } from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
 import ChordViewer from "./chordViewer";
+import PropTypes from "prop-types";
 
 class MessageFlowPage extends Component {
+  static propTypes = {
+    service: PropTypes.object.isRequired
+  };
+
   constructor(props) {
     super(props);
-    this.state = {
-      lastUpdated: new Date()
-    };
+    this.state = {};
   }
 
   render() {

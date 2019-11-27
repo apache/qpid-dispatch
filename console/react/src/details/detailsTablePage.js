@@ -144,7 +144,11 @@ class DetailTablesPage extends React.Component {
 
   icap = s => s.charAt(0).toUpperCase() + s.slice(1);
 
-  parentItem = () => this.locationState().currentRecord.name;
+  parentItem = () => {
+    if (this.locationState().currentRecord.name)
+      return this.locationState().currentRecord.name;
+    return `${this.entity}/${this.locationState().currentRecord.identity}`;
+  };
 
   breadcrumbSelected = () => {
     if (this.props.details) {

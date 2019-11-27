@@ -45,7 +45,7 @@ it("renders the TopologyViewer component", async () => {
   expect(getByLabelText("topology-diagram")).toBeInTheDocument();
 
   // make sure it created the svg
-  expect(getByLabelText("topology-svg")).toBeInTheDocument();
+  await waitForElement(() => getByLabelText("topology-svg"));
 
   // the svg should have a router circle
   await waitForElement(() => getByTestId("router-0"));

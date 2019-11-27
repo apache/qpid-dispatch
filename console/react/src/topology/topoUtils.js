@@ -19,6 +19,7 @@ under the License.
 
 /* global Set */
 import { utils } from "../common/amqp/utilities.js";
+import * as d3 from "d3";
 
 // highlight the paths between the selected node and the hovered node
 function findNextHopNode(from, d, nodeInfo, selected_node, nodes) {
@@ -250,16 +251,12 @@ export function connectionPopupHTML(d, nodeInfo) {
   return HTML;
 }
 
-export function getSizes(topologyRef) {
+export function getSizes(id) {
   const gap = 5;
-  let topoWidth =
-    topologyRef.offsetWidth > 0 ? topologyRef.offsetWidth : window.innerWidth;
-  let width = topoWidth - gap;
-  let top = topologyRef.offsetTop;
-  let height = window.innerHeight - top - gap;
-  if (width < 10 || height < 10) {
-    console.log(`page width and height are abnormal w: ${width} h: ${height}`);
-    return [0, 0];
+  const sel = d3.select(`#${id}`);
+  if (!sel.empty()) {
+    const brect = sel.node().getBoundingClientRect();
+    return { width: brect.width - gap, height: brect.height - gap };
   }
-  return { width, height };
+  return { width: window.innerWidth - 200, height: window.innerHeight - 100 };
 }

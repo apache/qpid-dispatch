@@ -126,18 +126,18 @@ export class Legend {
       let node = lookFor.find(lf => lf.cmp(n));
       if (node) {
         if (!legendNodes.nodes.some(ln => ln.key === node.title)) {
-          let newNode = legendNodes.addUsing(
-            node.title,
-            node.text,
-            node.role,
-            undefined,
-            0,
-            0,
-            i,
-            0,
-            false,
-            node.props ? node.props : {}
-          );
+          let newNode = legendNodes.addUsing({
+            id: node.title,
+            name: node.text,
+            nodeType: node.role,
+            nodeIndex: undefined,
+            x: 0,
+            y: 0,
+            connectionContainer: i,
+            resultIndex: 0,
+            fixed: 0,
+            properties: node.props ? node.props : {}
+          });
           if (node.cdir) {
             newNode.cdir = node.cdir;
           }

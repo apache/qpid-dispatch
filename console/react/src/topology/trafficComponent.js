@@ -20,8 +20,18 @@ under the License.
 import React, { Component } from "react";
 import { Checkbox } from "@patternfly/react-core";
 import AddressesComponent from "../common/addressesComponent";
+import PropTypes from "prop-types";
 
 class TrafficComponent extends Component {
+  static propTypes = {
+    dots: PropTypes.bool.isRequired,
+    congestion: PropTypes.bool.isRequired,
+    addresses: PropTypes.object.isRequired,
+    addressColors: PropTypes.object.isRequired,
+    handleChangeTrafficAnimation: PropTypes.func.isRequired,
+    handleChangeTrafficFlowAddress: PropTypes.func.isRequired,
+    handleHoverAddress: PropTypes.func.isRequired
+  };
   constructor(props) {
     super(props);
     this.state = {};

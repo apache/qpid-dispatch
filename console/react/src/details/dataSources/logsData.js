@@ -26,6 +26,26 @@ class LogsData extends DefaultData {
       module: { readOnly: true }
     };
   }
+
+  validate = record => {
+    let validated = true;
+    let errorText = "";
+    const enables = ["trace", "debug", "info", "notice", "warning", "error", "critical"];
+
+    const enableParts = record.enable.split(",");
+    if (enableParts.length === 1 && enableParts[0] === "") {
+    } else {
+      enableParts.forEach(part => {
+        part = part.trim();
+        if (part.endsWith("+")) part = part.slice(0, -1);
+        if (!enables.includes(part)) {
+          errorText = `enable must be one of ${enables.join(", ")}`;
+          validated = false;
+        }
+      });
+    }
+    return { validated, errorText };
+  };
 }
 
 export default LogsData;

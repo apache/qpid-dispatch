@@ -63,7 +63,7 @@ class DashboardPage extends React.Component {
                             this.state.timePeriod === 60 ? "selected" : ""
                           }`}
                         >
-                          Min
+                          Minute
                         </li>
                         <li
                           onClick={() => this.setTimePeriod(60 * 60)}

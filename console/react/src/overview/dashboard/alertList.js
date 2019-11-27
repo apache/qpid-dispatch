@@ -30,19 +30,36 @@ class AlertList extends React.Component {
   }
 
   hideAlert = alert => {
+    alert.hiding = true;
+    alert.adding = false;
+    this.setState({ alerts: this.state.alerts });
+    const self = this;
+    alert.timer = setTimeout(() => self.alertRemoved(alert), 1000);
+  };
+
+  addAlert = (type, message) => {
+    const { alerts } = this.state;
+    const alert = { key: this.nextIndex++, type, message, adding: true };
+    const self = this;
+    alert.timer = setTimeout(() => self.hideAlert(alert), 4000);
+    alerts.unshift(alert);
+    this.setState({ alerts });
+  };
+
+  alertRemoved = alert => {
     const { alerts } = this.state;
     const index = alerts.findIndex(a => a.key === alert.key);
     if (index >= 0) alerts.splice(index, 1);
     this.setState({ alerts });
   };
 
-  addAlert = (severity, message) => {
-    const { alerts } = this.state;
-    const alert = { key: this.nextIndex++, type: severity, message };
+  handleMouseOver = alert => {
+    clearTimeout(alert.timer);
+  };
+
+  handleMouseOut = alert => {
     const self = this;
-    setTimeout(() => self.hideAlert(alert), 5000);
-    alerts.unshift(alert);
-    this.setState({ alerts });
+    alert.timer = setTimeout(() => self.hideAlert(alert), 2000);
   };
 
   render() {
@@ -51,11 +68,17 @@ class AlertList extends React.Component {
         {this.state.alerts.map((alert, i) => (
           <Alert
             key={`alert-${i}`}
+            className={alert.adding ? "alert-in" : alert.hiding ? "alert-out" : ""}
+            onMouseOver={() => this.handleMouseOver(alert)}
+            onMouseOut={() => this.handleMouseOut(alert)}
             variant={alert.type}
             title={alert.type}
             isInline
             action={
-              <AlertActionCloseButton aria-label="alert-close-button" onClose={() => this.hideAlert(alert)} />
+              <AlertActionCloseButton
+                aria-label="alert-close-button"
+                onClose={() => this.hideAlert(alert)}
+              />
             }
           >
             {alert.message.length > 40

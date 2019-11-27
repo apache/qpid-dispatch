@@ -19,8 +19,16 @@ under the License.
 
 import React, { Component } from "react";
 import ContextMenuComponent from "./contextMenuComponent";
+import PropTypes from "prop-types";
 
 class DropdownMenu extends Component {
+  static propTypes = {
+    isVisible: PropTypes.bool,
+    handleDropdownLogout: PropTypes.func.isRequired,
+    isConnected: PropTypes.func.isRequired,
+    handleContextHide: PropTypes.func.isRequired,
+    parentClass: PropTypes.string.isRequired
+  };
   constructor(props) {
     super(props);
     this.state = {

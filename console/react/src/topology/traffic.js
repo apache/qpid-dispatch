@@ -43,7 +43,25 @@ export class Traffic {
         this.addAnimationType(t, converter, radius);
       }.bind(this)
     );
+    // called by angular when mouse enters one of the address legends
+    this.$scope.enterLegend = address => {
+      // fade all flows that aren't for this address
+      this.fadeOtherAddresses(address);
+    };
+    // called when the mouse leaves one of the address legends
+    this.$scope.leaveLegend = () => {
+      this.unFadeAll();
+    };
   }
+  fadeOtherAddresses = address => {
+    d3.selectAll("circle.flow").classed("fade", function(d) {
+      return d.address !== address;
+    });
+  };
+  unFadeAll = () => {
+    d3.selectAll("circle.flow").classed("fade", false);
+  };
+
   // stop updating the traffic data
   stop() {
     if (this.interval) {

@@ -18,26 +18,36 @@ under the License.
 */
 
 import React from "react";
-import { render } from "@testing-library/react";
-import DropdownMenu from "./DropdownMenu";
+import {
+  EmptyState,
+  EmptyStateVariant,
+  EmptyStateBody,
+  EmptyStateIcon,
+  Bullseye,
+  Title
+} from "@patternfly/react-core";
 
-it("the dropdown menu component renders and calls event handlers", () => {
-  const isVisible = true;
-  const isConnected = () => true;
-  let logoutCalled = false;
-  const handleDropdownLogout = () => (logoutCalled = true);
-  let menuRef = null;
-  render(
-    <DropdownMenu
-      ref={el => (menuRef = el)}
-      isVisible={isVisible}
-      isConnected={isConnected}
-      parentClass=""
-      handleDropdownLogout={handleDropdownLogout}
-      handleContextHide={() => {}}
-    />
-  );
-  menuRef.show(true);
-  menuRef.logout();
-  expect(logoutCalled).toBe(true);
-});
+import { SearchIcon } from "@patternfly/react-icons";
+import { safePlural } from "../common/qdrGlobals";
+
+class EmptyTable extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = {};
+  }
+  render() {
+    return (
+      <Bullseye id="emptyResults">
+        <EmptyState variant={EmptyStateVariant.small}>
+          <EmptyStateIcon icon={SearchIcon} />
+          <Title headingLevel="h2" size="lg">
+            No results found
+          </Title>
+          <EmptyStateBody>There are no {safePlural(2, this.props.entity)}</EmptyStateBody>
+        </EmptyState>
+      </Bullseye>
+    );
+  }
+}
+
+export default EmptyTable;

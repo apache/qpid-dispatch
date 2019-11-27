@@ -22,7 +22,6 @@ class RouterData {
     this.service = service;
     this.fields = [
       { title: "Router", field: "name" },
-      { title: "Area", field: "area" },
       { title: "Mode", field: "mode" },
       {
         title: "Addresses",

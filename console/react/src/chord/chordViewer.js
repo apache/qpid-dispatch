@@ -27,6 +27,7 @@ import { qdrlayoutChord } from "./layout/layout.js";
 import ChordToolbar from "./chordToolbar";
 import QDRPopup from "../common/qdrPopup";
 import * as d3 from "d3";
+import PropTypes from "prop-types";
 
 const CHORDOPTIONSKEY = "chordOptions";
 const CHORDFILTERKEY = "chordFilter";
@@ -38,10 +39,14 @@ const MIN_RADIUS = 200;
 const TRANSITION_DURATION = 1000;
 
 class ChordViewer extends Component {
+  static propTypes = {
+    service: PropTypes.object.isRequired
+  };
+
   constructor(props) {
     super(props);
     this.state = {
-      addresses: [],
+      addresses: {},
       showPopup: false,
       popupContent: "",
       showEmpty: false,
@@ -192,7 +197,7 @@ class ChordViewer extends Component {
 
   // size the diagram based on the browser window size
   getRadius = () => {
-    const { width, height } = getSizes(this.chordRef);
+    const { width, height } = getSizes("chordContainer");
     return Math.max(Math.floor((Math.min(width, height) * 0.9) / 2), MIN_RADIUS);
   };
 
@@ -932,7 +937,7 @@ class ChordViewer extends Component {
         sideBarOpen={false}
         className="qdrTopology"
       >
-        <div ref={el => (this.chordRef = el)} className="qdrChord">
+        <div id="chordContainer" className="qdrChord">
           {this.state.showEmpty ? (
             <div aria-label="chord-no-traffic" id="noTraffic">
               {this.state.emptyText}

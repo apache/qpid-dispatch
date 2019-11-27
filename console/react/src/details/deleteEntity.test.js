@@ -19,19 +19,37 @@ under the License.
 
 import React from "react";
 import { render, fireEvent } from "@testing-library/react";
+import { service, login } from "../serviceTest";
 import DeleteEntity from "./deleteEntity";
 
-it("renders DeleteEntity", () => {
+it("renders DeleteEntity", async () => {
   const entity = "listener";
+  const routerName = "A";
+  const recordName = "testListener";
+
+  await login();
+  expect(service.management.connection.is_connected()).toBe(true);
+
   const props = {
     entity,
-    record: { name: "testListener" }
+    service,
+    record: {
+      name: recordName,
+      routerId: service.utilities.idFromName(routerName, "_topo"),
+      identity: `${entity}/:amqp:${recordName}`
+    },
+    handleAddNotification: () => {}
   };
 
   const { getByLabelText } = render(<DeleteEntity {...props} />);
   const button = getByLabelText("delete-entity-button");
   expect(button).toBeInTheDocument();
 
+  // so the delete confirmation popup
   fireEvent.click(button);
-  expect(getByLabelText("confirm-delete")).toBeInTheDocument();
+  const confirmButton = getByLabelText("confirm-delete");
+  expect(confirmButton).toBeInTheDocument();
+
+  // try to delete
+  fireEvent.click(confirmButton);
 });

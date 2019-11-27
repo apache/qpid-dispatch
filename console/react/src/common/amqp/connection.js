@@ -179,6 +179,11 @@ class ConnectionManager {
     }
   };
 
+  on_reconnected = () => {
+    const self = this;
+    setTimeout(self.on_connection_open, 100);
+  };
+
   createSenderReceiver = options => {
     return new Promise((resolve, reject) => {
       var timeout = options.timeout || 10000;
@@ -199,7 +204,7 @@ class ConnectionManager {
         // in case this connection dies
         this.rhea.on("disconnected", this.on_disconnected);
         // in case this connection dies and is then reconnected automatically
-        this.rhea.on("connection_open", this.on_connection_open);
+        this.rhea.on("connection_open", this.on_reconnected);
         // receive messages here
         this.connection.on("message", this.on_message);
         resolve(context);
@@ -222,10 +227,12 @@ class ConnectionManager {
   };
 
   connect = options => {
+    this.options = options;
     return new Promise((resolve, reject) => {
       var finishConnecting = () => {
         this.createSenderReceiver(options).then(
           results => {
+            this.on_connection_open();
             resolve(results);
           },
           error => {
@@ -295,7 +302,6 @@ class ConnectionManager {
         clearTimeout(timer);
         // prevent future disconnects from calling reject
         this.rhea.removeListener("disconnected", timedOut);
-        this.on_connection_open();
         resolve({ context: context });
       };
       // register an event handler for when the connection opens

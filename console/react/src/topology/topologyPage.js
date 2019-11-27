@@ -24,9 +24,7 @@ import TopologyViewer from "./topologyViewer";
 class TopologyPage extends Component {
   constructor(props) {
     super(props);
-    this.state = {
-      lastUpdated: new Date()
-    };
+    this.state = {};
   }
 
   render() {
