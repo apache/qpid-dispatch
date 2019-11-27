@@ -18,7 +18,8 @@ tests/system_tests_handle_failover.py
 .history/
 .tox
 .vscode
-node_modules/
+console/stand-alone/node_modules/
+console/react/node_modules/
 console/stand-alone/dist/
 console/stand-alone/package-lock.json
 tools/qdmanage
