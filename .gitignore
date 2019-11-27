@@ -26,4 +26,5 @@ tools/qdmanage
 tools/qdstat
 console/react/build/
 console/react/coverage/
-
+console/react/.prettierrc
+console/react/.prettierignore
