@@ -1,6 +1,6 @@
 {
-  "short_name": "React App",
-  "name": "Create React App Sample",
+  "short_name": "Dispatch Console",
+  "name": "Console for Apache Qpid Dispatch Router",
   "icons": [
     {
       "src": "favicon.ico",
