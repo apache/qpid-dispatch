@@ -81,6 +81,8 @@ static void hostname_tree_free(qd_parse_tree_t *hostname_tree);
 // Imported qpid_dispatch_internal.policy.policy_manager python module
 static PyObject * module = 0;
 
+ALLOC_DEFINE(qd_policy_settings_t);
+
 //
 // Policy configuration/statistics management interface
 //
@@ -1207,7 +1209,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
         if (!qd_conn->policy_settings) {
-            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+            qd_conn->policy_settings = new_qd_policy_settings_t();
             ZERO(qd_conn->policy_settings);
         }
 
@@ -1258,7 +1260,7 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
         const char *policy_vhost = qd_connector_policy_vhost(connector);
 
         if (policy_vhost && strlen(policy_vhost) > 0) {
-            qd_conn->policy_settings = NEW(qd_policy_settings_t);
+            qd_conn->policy_settings = new_qd_policy_settings_t();
             if (qd_conn->policy_settings) {
                 ZERO(qd_conn->policy_settings);
 
@@ -1299,7 +1301,7 @@ void qd_policy_settings_free(qd_policy_settings_t *settings)
     if (settings->targetPattern)   free(settings->targetPattern);
     if (settings->sourceParseTree) qd_parse_tree_free(settings->sourceParseTree);
     if (settings->targetParseTree) qd_parse_tree_free(settings->targetParseTree);
-    free (settings);
+    free_qd_policy_settings_t(settings);
 }
 
 
