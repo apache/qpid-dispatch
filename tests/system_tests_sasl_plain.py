@@ -123,6 +123,7 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
         except:
             pass
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_sasl_fail(self):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
@@ -216,6 +217,7 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
         except:
             pass
 
+    @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_sasl_fail(self):
         passed = False
         long_type = 'org.apache.qpid.dispatch.connection'
