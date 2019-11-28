@@ -45,6 +45,16 @@ ALLOC_DEFINE(qd_parsed_field_t);
 ALLOC_DECLARE(qd_parsed_turbo_t);
 ALLOC_DEFINE(qd_parsed_turbo_t);
 
+qd_parsed_field_t* qd_field_first_child(qd_parsed_field_t *field)
+{
+    return DEQ_HEAD(field->children);
+}
+
+qd_parsed_field_t* qd_field_next_child(qd_parsed_field_t *field)
+{
+    return DEQ_NEXT(field);
+}
+
 /**
  * size = the number of bytes following tag:size (payload, including the count)
  * count = the number of elements. Applies only to compound structures

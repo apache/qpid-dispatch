@@ -347,12 +347,13 @@ PyObject *qd_field_to_py(qd_parsed_field_t *field)
       case QD_AMQP_LIST32: {
           uint32_t count = qd_parse_sub_count(field);
           result = PyList_New(count);
-          for (uint32_t idx = 0; idx < count; idx++) {
-              qd_parsed_field_t *sub = qd_parse_sub_value(field, idx);
-              PyObject *pysub = qd_field_to_py(sub);
+          qd_parsed_field_t *item = qd_field_first_child(field);
+          for (uint32_t idx = 0; item && idx < count; idx++) {
+              PyObject *pysub = qd_field_to_py(item);
               if (pysub == 0)
                   return 0;
               PyList_SetItem(result, idx, pysub);
+              item = qd_field_next_child(item);
           }
           break;
       }
