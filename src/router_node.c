@@ -1525,14 +1525,17 @@ static void CORE_link_offer(void *context, qdr_link_t *link, int delivery_count)
 
 static void CORE_link_drained(void *context, qdr_link_t *link)
 {
+    qd_router_t *router = (qd_router_t*) context;
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
         return;
 
     pn_link_t *plink = qd_link_pn(qlink);
 
-    if (plink)
+    if (plink) {
         pn_link_drained(plink);
+        qdr_link_drained(router->router_core, link);
+    }
 }
 
 
