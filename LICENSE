@@ -212,12 +212,6 @@ The following 3 files are licensed under the BSD license, for details see licens
 2. console/hawtio/src/main/webapp/plugin/lib/d3.min.js
 3. console/hawtio/src/main/webapp/plugin/lib/zd3-queue.min.js
 
-console/dispatch-dashboard/dispatch/static/dashboard/dispatch/jquery.dynatree.min.js is licensed under the MIT licence, for details see licenses/jquery.dynatree-license
-
-The following 2 files are covered by the MIT License, for details see licenses/angular-ui-license
-1. console/dispatch-dashboard/dispatch/static/dashboard/dispatch/lib/slider.js
-2. console/dispatch-dashboard/dispatch/static/dashboard/dispatch/lib/ui-grid.js
-
 The following 2 files are covered by the MIT license, for details see licenses/jquery.tipsy-license
 1. console/hawtio/src/main/webapp/plugin/css/jquery.tipsy.css
 2. console/hawtio/src/main/webapp/plugin/lib/jquery.tipsy.js

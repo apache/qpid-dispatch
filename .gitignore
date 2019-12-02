@@ -18,8 +18,13 @@ tests/system_tests_handle_failover.py
 .history/
 .tox
 .vscode
-console/stand-alone/node_modules/
-console/stand-alone/dist/
-console/stand-alone/package-lock.json
 tools/qdmanage
 tools/qdstat
+console/stand-alone/node_modules/
+console/react/node_modules/
+console/stand-alone/dist/
+console/stand-alone/package-lock.json
+console/react/build/
+console/react/coverage/
+console/react/.prettierrc
+console/react/.prettierignore

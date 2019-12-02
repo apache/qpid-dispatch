@@ -769,8 +769,8 @@ class AsyncTestReceiver(MessagingHandler):
     Empty = Queue.Empty
 
     def __init__(self, address, source, conn_args=None, container_id=None,
-                 wait=True, recover_link=False):
-        super(AsyncTestReceiver, self).__init__()
+                 wait=True, recover_link=False, msg_args={}):
+        super(AsyncTestReceiver, self).__init__(**msg_args)
         self.address = address
         self.source = source
         self.conn_args = conn_args

@@ -43,7 +43,7 @@ The console will automatically connect to the router at localhost:5673
 
 ## To disable the console and still allow the router to respond to other http traffic
 
-- in the listener portion of the config file, add an httpRoot: None
+- in the listener portion of the config file, add an httpRootDir: None
 
 ```
 listener {
@@ -51,7 +51,7 @@ listener {
     host: 0.0.0.0
     port: 5673
     http: true
-    httpRoot: None
+    httpRootDir: None
     saslMechanisms: ANONYMOUS
 }
 ```
