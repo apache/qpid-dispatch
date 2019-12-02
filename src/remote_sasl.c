@@ -310,7 +310,7 @@ static void set_policy_settings(pn_connection_t* conn, permissions_t* permission
 {
     if (permissions->targets.start || permissions->sources.start) {
         qd_connection_t *qd_conn = (qd_connection_t*) pn_connection_get_context(conn);
-        qd_conn->policy_settings = NEW(qd_policy_settings_t);
+        qd_conn->policy_settings = new_qd_policy_settings_t();
         ZERO(qd_conn->policy_settings);
 
         if (permissions->targets.start && permissions->targets.capacity) {
