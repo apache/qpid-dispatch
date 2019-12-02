@@ -236,15 +236,15 @@ class Node(object):
         # too many rows. So, as a safety we are going to ask only for
         # MAX_ALLOWED_COUNT_PER_REQUEST. Since this is used by both qdstat
         # and qdmanage, we have determined that the optimal value for
-        # MAX_ALLOWED_COUNT_PER_REQUEST is 700
-        MAX_ALLOWED_COUNT_PER_REQUEST = 700
+        # MAX_ALLOWED_COUNT_PER_REQUEST is 500
+        MAX_ALLOWED_COUNT_PER_REQUEST = 500
 
         response_results = []
         response_attr_names = []
         if offset is None:
             offset = 0
 
-        if count is None:
+        if count is None or count==0:
             # count has not been specified. For each request the
             # maximum number of rows we can get without proton
             # failing is MAX_ALLOWED_COUNT_PER_REQUEST

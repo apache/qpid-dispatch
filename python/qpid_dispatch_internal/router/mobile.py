@@ -39,9 +39,9 @@ class MobileAddressEngine(object):
         self.node_tracker  = node_tracker
         self.id            = self.container.id
         self.mobile_seq    = 0
-        self.local_addrs   = []
-        self.added_addrs   = []
-        self.deleted_addrs = []
+        self.local_addrs   = set([])
+        self.added_addrs   = set([])
+        self.deleted_addrs = set([])
         self.sent_deltas   = {}
         self.treatments    = {}
 
@@ -54,7 +54,7 @@ class MobileAddressEngine(object):
         if len(self.added_addrs) > 0 or len(self.deleted_addrs) > 0:
             self.mobile_seq += 1
             hints = [self.treatments[a] for a in self.added_addrs]
-            msg = MessageMAU(None, self.id, self.mobile_seq, self.added_addrs, self.deleted_addrs, _hints=hints)
+            msg = MessageMAU(None, self.id, self.mobile_seq, list(self.added_addrs), list(self.deleted_addrs), _hints=hints)
 
             self.sent_deltas[self.mobile_seq] = msg
             if len(self.sent_deltas) > MAX_KEPT_DELTAS:
@@ -62,11 +62,10 @@ class MobileAddressEngine(object):
 
             self.container.send('amqp:/_topo/0/all/qdrouter.ma', msg)
             self.container.log_ma(LOG_TRACE, "SENT: %r" % msg)
-            self.local_addrs.extend(self.added_addrs)
-            for addr in self.deleted_addrs:
-                self.local_addrs.remove(addr)
-            self.added_addrs   = []
-            self.deleted_addrs = []
+            self.local_addrs.update(self.added_addrs)
+            self.local_addrs.difference_update(self.deleted_addrs)
+            self.added_addrs.clear()
+            self.deleted_addrs.clear()
         return self.mobile_seq
 
 
@@ -74,11 +73,11 @@ class MobileAddressEngine(object):
         """
         """
         self.treatments[addr] = treatment
-        if self.local_addrs.count(addr) == 0:
-            if self.added_addrs.count(addr) == 0:
-                self.added_addrs.append(addr)
+        if addr not in self.local_addrs:
+            if addr not in self.added_addrs:
+                self.added_addrs.add(addr)
         else:
-            if self.deleted_addrs.count(addr) > 0:
+            if addr in self.deleted_addrs:
                 self.deleted_addrs.remove(addr)
 
 
@@ -86,11 +85,11 @@ class MobileAddressEngine(object):
         """
         """
         del self.treatments[addr]
-        if self.local_addrs.count(addr) > 0:
-            if self.deleted_addrs.count(addr) == 0:
-                self.deleted_addrs.append(addr)
+        if addr in self.local_addrs:
+            if addr not in self.deleted_addrs:
+                self.deleted_addrs.add(addr)
         else:
-            if self.added_addrs.count(addr) > 0:
+            if addr in self.added_addrs:
                 self.added_addrs.remove(addr)
 
 
@@ -163,7 +162,7 @@ class MobileAddressEngine(object):
         ##
         ## The peer needs to be sent an absolute update with the whole address list
         ##
-        smsg = MessageMAU(None, self.id, self.mobile_seq, None, None, self.local_addrs)
+        smsg = MessageMAU(None, self.id, self.mobile_seq, None, None, list(self.local_addrs))
         self.container.send('amqp:/_topo/0/%s/qdrouter.ma' % msg.id, smsg)
         self.container.log_ma(LOG_TRACE, "SENT: %r" % smsg)
 

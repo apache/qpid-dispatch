@@ -17,11 +17,11 @@
 # under the License.
 #
 
-import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import unittest
 
 from proton import Message
 from proton.handlers import MessagingHandler
@@ -143,13 +143,13 @@ class LinkRouteTest(TestCase):
     def test_qdstat_link_routes_on_B(self):
         output = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
         lines = output.split("\n")
-        self.assertEqual(len(lines), 8) # 4 links, 3 lines of header and an empty line at the end
-        header = lines[1]
+        self.assertEqual(len(lines), 11) # 4 links, 3 lines of header and an empty line at the end
+        header = lines[4]
         columns = header.split()
         self.assertEqual(len(columns), 6)
         self.assertEqual(columns[4], "add-ext-prefix")
         self.assertEqual(columns[5], "del-ext-prefix")
-        linkroutes = parse_fields(header, lines[3:7])
+        linkroutes = parse_fields(header, lines[6:10])
         self.assertEqual(linkroutes[0][0], "foo")
         self.assertEqual(linkroutes[0][1], "in")
         self.assertEqual(linkroutes[0][4], "bar.")

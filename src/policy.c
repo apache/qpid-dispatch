@@ -40,9 +40,13 @@
 // The current statistics maintained globally through multiple
 // reconfiguration of policy settings.
 //
+static sys_mutex_t *stats_lock = 0;
+
 static int n_connections = 0;
 static int n_denied = 0;
 static int n_processed = 0;
+static int n_links_denied = 0;
+static int n_total_denials = 0;
 
 //
 // error conditions signaled to effect denial
@@ -77,6 +81,8 @@ static void hostname_tree_free(qd_parse_tree_t *hostname_tree);
 // Imported qpid_dispatch_internal.policy.policy_manager python module
 static PyObject * module = 0;
 
+ALLOC_DEFINE(qd_policy_settings_t);
+
 //
 // Policy configuration/statistics management interface
 //
@@ -109,6 +115,7 @@ qd_policy_t *qd_policy(qd_dispatch_t *qd)
     policy->max_connection_limit = 65535;
     policy->tree_lock            = sys_mutex();
     policy->hostname_tree        = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
+    stats_lock                   = sys_mutex();
 
     qd_log(policy->log_source, QD_LOG_TRACE, "Policy Initialized");
     return policy;
@@ -127,6 +134,8 @@ void qd_policy_free(qd_policy_t *policy)
     hostname_tree_free(policy->hostname_tree);
     Py_XDECREF(module);
     free(policy);
+    if (stats_lock)
+        sys_mutex_free(stats_lock);
 }
 
 //
@@ -209,9 +218,21 @@ qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
  **/
 qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
     // Return global stats
-    if (!qd_entity_set_long(entity, "connectionsProcessed", n_processed) &&
-        !qd_entity_set_long(entity, "connectionsDenied", n_denied) &&
-        !qd_entity_set_long(entity, "connectionsCurrent", n_connections)
+    int np, nd, nc, nl, nt;
+    sys_mutex_lock(stats_lock);
+    {
+        np = n_processed;
+        nd = n_denied;
+        nc = n_connections;
+        nl = n_links_denied;
+        nt = n_total_denials;
+    }
+    sys_mutex_unlock(stats_lock);
+    if (!qd_entity_set_long(entity, "connectionsProcessed", np) &&
+        !qd_entity_set_long(entity, "connectionsDenied", nd) &&
+        !qd_entity_set_long(entity, "connectionsCurrent", nc) &&
+        !qd_entity_set_long(entity, "linksDenied", nl) &&
+        !qd_entity_set_long(entity, "totalDenials", nt)
     )
         return QD_ERROR_NONE;
     return qd_error_code();
@@ -229,17 +250,25 @@ qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
 bool qd_policy_socket_accept(qd_policy_t *policy, const char *hostname)
 {
     bool result = true;
+    int nc;
+    sys_mutex_lock(stats_lock);
     if (n_connections < policy->max_connection_limit) {
         // connection counted and allowed
-        n_connections += 1;
-        qd_log(policy->log_source, QD_LOG_TRACE, "ALLOW Connection '%s' based on global connection count. nConnections= %d", hostname, n_connections);
+        n_connections++;
+        n_processed++;
+        nc = n_connections;
+        sys_mutex_unlock(stats_lock);
+        qd_log(policy->log_source, QD_LOG_TRACE, "ALLOW Connection '%s' based on global connection count. nConnections= %d", hostname, nc);
     } else {
         // connection denied
         result = false;
-        n_denied += 1;
-        qd_log(policy->log_source, QD_LOG_INFO, "DENY Connection '%s' based on global connection count. nConnections= %d", hostname, n_connections);
+        n_denied++;
+        n_total_denials++;
+        n_processed++;
+        nc = n_connections;
+        sys_mutex_unlock(stats_lock);
+        qd_log(policy->log_source, QD_LOG_INFO, "DENY Connection '%s' based on global connection count. nConnections= %d", hostname, nc);
     }
-    n_processed += 1;
     return result;
 }
 
@@ -248,8 +277,10 @@ bool qd_policy_socket_accept(qd_policy_t *policy, const char *hostname)
 //
 void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
 {
-    n_connections -= 1;
+    sys_mutex_lock(stats_lock);
+    n_connections--;
     assert (n_connections >= 0);
+    sys_mutex_unlock(stats_lock);
     if (policy->enableVhostPolicy) {
         // HACK ALERT: TODO: This should be deferred to a Python thread
         qd_python_lock_state_t lock_state = qd_python_lock();
@@ -272,8 +303,19 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
         qd_python_unlock(lock_state);
     }
     const char *hostname = qd_connection_name(conn);
-    qd_log(policy->log_source, QD_LOG_DEBUG, "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d. nConnections= %d.",
-            hostname, conn->n_sessions, conn->n_senders, conn->n_receivers, n_connections);
+    int ssnDenied = 0;
+    int sndDenied = 0;
+    int rcvDenied = 0;
+    if (conn->policy_settings && conn->policy_settings->denialCounts) {
+        ssnDenied = conn->policy_settings->denialCounts->sessionDenied;
+        sndDenied = conn->policy_settings->denialCounts->senderDenied;
+        rcvDenied = conn->policy_settings->denialCounts->receiverDenied;
+    }
+    qd_log(policy->log_source, QD_LOG_DEBUG, 
+           "Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d, "
+           "sessions_denied=%d, senders_denied=%d, receivers_denied=%d. nConnections= %d.",
+            hostname, conn->n_sessions, conn->n_senders, conn->n_receivers,
+            ssnDenied, sndDenied, rcvDenied, n_connections);
 }
 
 
@@ -530,6 +572,9 @@ void qd_policy_deny_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
     (void) pn_condition_set_name(       cond, QD_AMQP_COND_RESOURCE_LIMIT_EXCEEDED);
     (void) pn_condition_set_description(cond, SESSION_DISALLOWED);
     pn_session_close(ssn);
+    sys_mutex_lock(stats_lock);
+    n_total_denials++;
+    sys_mutex_unlock(stats_lock);
     if (qd_conn->policy_settings->denialCounts) {
         qd_conn->policy_settings->denialCounts->sessionDenied++;
     }
@@ -592,6 +637,10 @@ void _qd_policy_deny_amqp_link(pn_link_t *link, qd_connection_t *qd_conn, const 
     (void) pn_condition_set_name(       cond, condition);
     (void) pn_condition_set_description(cond, LINK_DISALLOWED);
     pn_link_close(link);
+    sys_mutex_lock(stats_lock);
+    n_links_denied++;
+    n_total_denials++;
+    sys_mutex_unlock(stats_lock);
 }
 
 
@@ -1160,7 +1209,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
         char settings_name[SETTINGS_NAME_SIZE];
         uint32_t conn_id = qd_conn->connection_id;
         if (!qd_conn->policy_settings) {
-            qd_conn->policy_settings = NEW(qd_policy_settings_t); // TODO: memory pool for settings
+            qd_conn->policy_settings = new_qd_policy_settings_t();
             ZERO(qd_conn->policy_settings);
         }
 
@@ -1211,7 +1260,7 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
         const char *policy_vhost = qd_connector_policy_vhost(connector);
 
         if (policy_vhost && strlen(policy_vhost) > 0) {
-            qd_conn->policy_settings = NEW(qd_policy_settings_t);
+            qd_conn->policy_settings = new_qd_policy_settings_t();
             if (qd_conn->policy_settings) {
                 ZERO(qd_conn->policy_settings);
 
@@ -1252,7 +1301,7 @@ void qd_policy_settings_free(qd_policy_settings_t *settings)
     if (settings->targetPattern)   free(settings->targetPattern);
     if (settings->sourceParseTree) qd_parse_tree_free(settings->sourceParseTree);
     if (settings->targetParseTree) qd_parse_tree_free(settings->targetParseTree);
-    free (settings);
+    free_qd_policy_settings_t(settings);
 }
 
 

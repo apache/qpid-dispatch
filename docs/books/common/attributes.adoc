@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Standard document attributes
+
+:data-uri!:
+:doctype: article
+:experimental:
+:idprefix:
+:imagesdir: images
+:numbered:
+:sectanchors!:
+:sectnums:
+:source-highlighter: highlightjs
+:highlightjs-theme: solarized_dark
+:toc: left
+:linkattrs:
+:toclevels: 3
+
+// Component attributes
+
+:ProductName: Apache Qpid
+:RouterLongName: {ProductName} Dispatch Router
+:ClientAmqpPythonName: {ProductName} Proton Python
+:ConsoleName: {RouterLongName} Console
+:FragmentDir: ../../common
+:RouterName: Dispatch Router
+:RouterSchemaDir: ../../build/doc/book
+:RouterConfigFile: /etc/qpid-dispatch/qdrouterd.conf
+:DispatchRouterVersion: 1.10.0-SNAPSHOT
+
+// Book names
+
+:RouterBook: Using {RouterLongName}
+
+// Doc links
+
+:DispatchRouterUrlBase: https://qpid.apache.org/releases/qpid-dispatch-{DispatchRouterVersion}
+
+:DispatchRouterDownloadUrl: https://qpid.apache.org/download.html
+:DispatchRouterDownloadLink: link:{DispatchRouterDownloadUrl}[Download page^]
+
+:DispatchRouterPackagesUrl: https://qpid.apache.org/packages.html
+:DispatchRouterPackagesLink: link:{DispatchRouterPackagesUrl}[Packages page^]
+
+:ManagementEntitiesUrl: {DispatchRouterUrlBase}/man/managementschema.html
+:ManagementEntitiesLink: link:{ManagementEntitiesUrl}[{RouterName} Management Schema^]
+
+:RouterBookUrl: {DispatchRouterUrlBase}/book/book.html
+:RouterBookLink: link:{RouterBookUrl}[{RouterBook}]
+
+:qdmanageManPageUrl: {DispatchRouterUrlBase}/man/qdmanage.html
+:qdmanageManPageLink: link:{qdmanageManPageUrl}[qdmanage man page^]
+
+:qdrouterdManPageUrl: {DispatchRouterUrlBase}/man/qdrouterd.html
+:qdrouterdManPageLink: link:{qdrouterdManPageUrl}[qdrouterd man page^]
+
+:qdrouterdConfManPageUrl: {DispatchRouterUrlBase}/man/qdrouterd.conf.html
+:qdrouterdConfManPageLink: link:{qdrouterdConfManPageUrl}[qdrouterd.conf man page^]
+
+:qdstatManPageUrl: {DispatchRouterUrlBase}/man/qdstat.html
+:qdstatManPageLink: link:{qdstatManPageUrl}[qdstat man page^]
+
+:QpidDispatchReadmeUrl: https://gitbox.apache.org/repos/asf?p=qpid-dispatch.git;a=blob_plain;f=README;hb={DispatchRouterVersion}
+:QpidDispatchReadmeLink: link:{QpidDispatchReadmeUrl}[Qpid Dispatch README^]
+
+:ClientAmqpPythonUrl: https://qpid.apache.org/proton/
+
+// Other links
+
+:AmqpSpecUrl: http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-overview-v1.0-os.html
+:AmqpSpecLink: link:{AmqpSpecUrl}[AMQP 1.0 specification^]

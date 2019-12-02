@@ -46,12 +46,15 @@
 #define QDR_ROUTER_MODIFIED_DELIVERIES                 19
 #define QDR_ROUTER_DELAYED_1SEC                        20
 #define QDR_ROUTER_DELAYED_10SEC                       21
-#define QDR_ROUTER_DELIVERIES_INGRESS                  22
-#define QDR_ROUTER_DELIVERIES_EGRESS                   23
-#define QDR_ROUTER_DELIVERIES_TRANSIT                  24
-#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  25
-#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   26
-#define QDR_ROUTER_DELIVERIES_REDIRECTED               27
+#define QDR_ROUTER_DELIVERIES_STUCK                    22
+#define QDR_ROUTER_DELIVERIES_INGRESS                  23
+#define QDR_ROUTER_DELIVERIES_EGRESS                   24
+#define QDR_ROUTER_DELIVERIES_TRANSIT                  25
+#define QDR_ROUTER_DELIVERIES_INGRESS_ROUTE_CONTAINER  26
+#define QDR_ROUTER_DELIVERIES_EGRESS_ROUTE_CONTAINER   27
+#define QDR_ROUTER_DELIVERIES_REDIRECTED               28
+#define QDR_ROUTER_LINKS_BLOCKED                       29
+#define QDR_ROUTER_UPTIME_SECONDS                      30
 
 
 const char *qdr_router_columns[] =
@@ -77,12 +80,15 @@ const char *qdr_router_columns[] =
      "modifiedDeliveries",
      "deliveriesDelayed1Sec",
      "deliveriesDelayed10Sec",
+     "deliveriesStuck",
      "deliveriesIngress",
      "deliveriesEgress",
      "deliveriesTransit",
      "deliveriesIngressRouteContainer",
      "deliveriesEgressRouteContainer",
      "deliveriesRedirectedToFallback",
+     "linksBlocked",
+     "uptimeSeconds",
      0};
 
 
@@ -197,6 +203,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
         qd_compose_insert_ulong(body, core->deliveries_delayed_10sec);
         break;
 
+    case QDR_ROUTER_DELIVERIES_STUCK:
+        qd_compose_insert_ulong(body, core->deliveries_stuck);
+        break;
+
     case QDR_ROUTER_DELIVERIES_INGRESS:
         qd_compose_insert_ulong(body, core->deliveries_ingress);
         break;
@@ -219,6 +229,14 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_DELIVERIES_REDIRECTED:
         qd_compose_insert_ulong(body, core->deliveries_redirected);
+        break;
+
+    case QDR_ROUTER_LINKS_BLOCKED:
+        qd_compose_insert_uint(body, core->links_blocked);
+        break;
+
+    case QDR_ROUTER_UPTIME_SECONDS:
+        qd_compose_insert_uint(body, core->uptime_ticks);
         break;
 
     default:

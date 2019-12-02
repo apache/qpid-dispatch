@@ -1,0 +1,65 @@
+# Suppression file for memory leaks
+# found by AddressSanitizer (ASAN)
+#
+leak:_flush_send_queue_CT
+leak:add_session_to_free_list
+leak:compose_message_annotations
+leak:qd_parse_annotations
+leak:qd_compose_insert_string_n
+leak:qd_core_agent_query_handler
+leak:qd_dispatch_configure_connector
+leak:qd_dispatch_configure_listener
+leak:qd_dispatch_configure_ssl_profile
+leak:qd_manage_response_handler
+leak:qd_message_receive
+leak:qd_policy_amqp_open
+leak:qd_policy_amqp_open_connector
+leak:qd_policy_c_counts_alloc
+leak:qd_policy_open_fetch_settings
+leak:qdi_router_configure_body
+leak:qdr_action
+leak:qdr_add_local_address_CT
+leak:qdr_connection_opened
+leak:qdr_core_subscribe
+leak:qdr_error_description
+leak:qdr_forward_balanced_CT
+leak:qdr_forward_closest_CT
+leak:qdr_forward_multicast_CT
+leak:qdr_link_deliver
+leak:qdr_link_deliver_to_routed_link
+leak:qdr_link_deliver_to_routed_link
+leak:qdr_link_outbound_detach_CT
+leak:qdr_manage_advance_address_CT
+leak:qdr_node_connect_deliveries
+leak:qdr_route_add_auto_link_CT
+leak:qdr_route_add_link_route_CT
+leak:qdr_route_connection_opened_CT
+leak:qdr_subscribe_CT
+leak:qdr_terminus
+leak:router_annotate_message
+leak:qd_container_register_node_type
+
+# Ubuntu 18.04 (Bionic)
+leak:qdr_link_issue_credit_CT
+leak:qdr_delivery_push_CT
+
+# Ubuntu 16.04 (Xenial)
+leak:_ctypes_alloc_format_string
+leak:__strdup
+leak:add_link_to_free_list
+leak:qd_parse_internal
+
+
+####
+#### Miscellaneous 3rd party libraries, test code, etc:
+####
+
+leak:*libpython*
+leak:*libwebsockets*
+leak:*python2*
+
+# We should be able to uncomment these once all known dispatch leaks have been fixed
+leak:*libqpid-proton*
+
+# Ignore test code
+leak:run_unit_tests.c

@@ -25,72 +25,23 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-from optparse import OptionGroup
 import sys
 import locale
 import socket
 import re
 from datetime import datetime
 from time import ctime, strftime, gmtime
-import  qpid_dispatch_site
+import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong
-from qpid_dispatch_internal.tools.command import connection_options, main, OptionParser, opts_ssl_domain, opts_sasl, \
-        opts_url
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, BodyFormat
+from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
+                                                  opts_ssl_domain, opts_sasl,
+                                                  opts_url)
 from qpid_dispatch_internal.compat import UNICODE
 
-def parse_args(argv):
-    """ Set global variables for options, return arguments """
-
-    usage = "%prog [options]"
-    parser = OptionParser(usage=usage)
-
-    parser.add_option_group(connection_options(parser))
-
-    parser.add_option("-g", "--general", help="Show General Router Stats",  action="store_const", const="g",   dest="show")
-    parser.add_option("-c", "--connections", help="Show Connections",       action="store_const", const="c",   dest="show")
-    parser.add_option("-l", "--links", help="Show Router Links",            action="store_const", const="l",   dest="show")
-    parser.add_option("-n", "--nodes", help="Show Router Nodes",            action="store_const", const="n",   dest="show")
-    parser.add_option("-e", "--edge", help="Show edge connections",         action="store_const", const="e",   dest="show")
-    parser.add_option("-a", "--address", help="Show Router Addresses",      action="store_const", const="a",   dest="show")
-    parser.add_option("-m", "--memory", help="Show Router Memory Stats",    action="store_const", const="m",   dest="show")
-    parser.add_option("--autolinks", help="Show Auto Links",                action="store_const", const="autolinks",  dest="show")
-    parser.add_option("--linkroutes", help="Show Link Routes",              action="store_const", const="linkroutes", dest="show")
-
-    parser.add_option("--all-routers", help="Show entities for all routers in network. Can also be used in combination with other options",  action="store_const", const="all_routers",  dest="all_routers")
-    parser.add_option("--all-entities", help="Show all router entities. Can be combined with --all-routers option", action="store_const", const="all_entities", dest="all_entities")
-
-    parser.add_option("-v", "--verbose", help="Show maximum detail",        action="store_true", dest="verbose")
-    parser.add_option("--log", help="Show recent log entries", action="store_const", const="log", dest="show")
-
-    # This limit can be used to limit the number of output rows and
-    # can be used in conjunction with options
-    # like -c, -l, -a, --autolinks, --linkroutes and --log.
-    # By default, the limit is not set, which means the limit is unlimited.
-    parser.add_option("--limit", help="Limit number of output rows", type="int", default=None)
-
-    opts, args = parser.parse_args(args=argv)
-
-    if opts.router and opts.all_routers:
-        parser.error("--all-routers cannot be combined with single router option -r " + opts.router)
-
-    if opts.all_entities and opts.show:
-           parser.error("--all-entities cannot be combined with specific entity option -" + opts.show)
-
-    if not opts.show and not opts.all_entities and opts.all_routers:
-        opts.show = u'g'
-
-    if not opts.all_routers and not opts.all_entities and not opts.show:
-        opts.show = u'g'
-
-    return opts, args
-
 def get(obj, attr):
-    if attr in obj.__dict__:
-        return obj.__dict__[attr]
-    return None
-
+    return getattr(obj, attr, None)
 
 class BusManager(Node):
 
@@ -102,7 +53,9 @@ class BusManager(Node):
             Node.connection(opts_url(opts), opts.router,
                             timeout=opts.timeout,
                             ssl_domain=opts_ssl_domain(opts),
-                            sasl=opts_sasl(self.opts)))
+                            sasl=opts_sasl(opts)))
+        self.show = getattr(self, opts.show)
+        self.bodyFormat = BodyFormat.CSV if opts.csv else BodyFormat.CLASSIC
 
     def query(self, entity_type, attribute_names=None, limit=None):
         if attribute_names:
@@ -155,8 +108,20 @@ class BusManager(Node):
             return text[:-1]
         return text
 
-    def displayEdges(self):
-        disp = Display(prefix="  ")
+    def displayRouterId(self):
+        objects = self.query('org.apache.qpid.dispatch.router')
+        router = objects[0]
+        if router:
+            print(router.id)
+
+    def display_datetime_router_id(self):
+        print(str(datetime.utcnow()) + " UTC")
+        self.displayRouterId()
+        print("")
+
+
+    def displayEdges(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("id"))
         heads.append(Header("host"))
@@ -171,8 +136,14 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
         
         if not objects:
+            if show_date_id:
+                self.display_datetime_router_id()
             print("No Edge Router Connections")
             return
+
+        if show_date_id:
+            self.display_datetime_router_id()
+
         has_active = False
         
         first = objects[0]
@@ -187,7 +158,6 @@ class BusManager(Node):
             heads.append(Header("active"))
         
         for conn in objects:
-            #print (conn)
             if conn.role == "edge":
                row = []
                row.append(conn.identity)
@@ -213,8 +183,8 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)            
         
-    def displayConnections(self):
-        disp = Display(prefix="  ")
+    def displayConnections(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("id"))
         heads.append(Header("host"))
@@ -228,6 +198,31 @@ class BusManager(Node):
         rows = []
         objects = self.query('org.apache.qpid.dispatch.connection', limit=self.opts.limit)
 
+        if show_date_id:
+            self.display_datetime_router_id()
+
+        has_uptime = False
+        has_last_dlv = False
+
+        if objects:
+            first_conn = objects[0]
+            try:
+                lastDlvSeconds = first_conn.lastDlvSeconds
+                has_last_dlv = True
+            except:
+                pass
+            try:
+                uptime = first_conn.uptimeSeconds
+                has_uptime = True
+            except:
+                pass
+
+        # This is so that, this qdstat can be used against older routers without Python keyerrors
+        if has_last_dlv:
+            heads.append(Header("last dlv"))
+        if has_uptime:
+            heads.append(Header("uptime"))
+
         for conn in objects:
             row = []
             row.append(conn.identity)
@@ -238,6 +233,13 @@ class BusManager(Node):
             row.append(self.connSecurity(conn))
             row.append(self.connAuth(conn))
             row.append(self.noTrailingSlash(get(conn, 'tenant')))
+            if has_last_dlv:
+                if conn.lastDlvSeconds is None:
+                    row.append('-')
+                else:
+                    row.append(TimeLong(conn.lastDlvSeconds))
+            if has_uptime:
+                row.append(TimeLong(conn.uptimeSeconds))
             rows.append(row)
         title = "Connections"
         dispRows = rows
@@ -303,8 +305,8 @@ class BusManager(Node):
             outlist.append(str(i))
         return outlist
 
-    def displayGeneral(self):
-        disp = Display(prefix="  ")
+    def displayGeneral(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("attr"))
         heads.append(Header("value"))
@@ -313,9 +315,16 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
+        if show_date_id:
+            self.display_datetime_router_id()
+
         rows.append(('Version',       router.version))
         rows.append(('Mode',          router.mode))
         rows.append(('Router Id',     router.id))
+        try:
+            rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
+        except:
+            pass
         rows.append(('Area',          router.area))
         rows.append(('Link Routes',   router.linkRouteCount))
         rows.append(('Auto Links',    router.autoLinkCount))
@@ -335,9 +344,14 @@ class BusManager(Node):
             rows.append(('Released Count', router.releasedDeliveries))
             rows.append(('Modified Count', router.modifiedDeliveries))
             try:
-                rows.append(('Deliveries Delayed > 1sec', router.deliveriesDelayed1Sec))
+                rows.append(('Deliveries Delayed > 1sec',  router.deliveriesDelayed1Sec))
                 rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
-                rows.append(('Deliveries to Fallback', router.deliveriesRedirectedToFallback))
+                rows.append(('Deliveries Stuck > 10sec',   router.deliveriesStuck))
+                rows.append(('Deliveries to Fallback',     router.deliveriesRedirectedToFallback))
+                try:
+                    rows.append(('Links Blocked', router.linksBlocked))
+                except:
+                    pass
             except:
                 pass
             rows.append(('Ingress Count', router.deliveriesIngress))
@@ -352,8 +366,8 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
-    def displayRouterLinks(self):
-        disp = Display(prefix="  ")
+    def displayRouterLinks(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("type"))
         heads.append(Header("dir"))
@@ -370,14 +384,20 @@ class BusManager(Node):
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
                 'capacity', 'undeliveredCount', 'unsettledCount', 'deliveryCount',
                 'presettledCount', 'droppedPresettledCount', 'acceptedCount', 'rejectedCount', 'releasedCount',
-                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'adminStatus', 'operStatus',
-                'linkName', 'priority', 'settleRate')
+                'modifiedCount', 'deliveriesDelayed1Sec', 'deliveriesDelayed10Sec', 'deliveriesStuck',
+                'creditAvailable', 'zeroCreditSeconds',
+                'adminStatus', 'operStatus', 'linkName', 'priority', 'settleRate')
 
         objects = self.query('org.apache.qpid.dispatch.router.link', cols, limit=self.opts.limit)
 
         has_dropped_presettled_count = False
         has_priority = False
         has_delayed  = False
+        has_stuck    = False
+        has_credit   = False
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         if objects:
             first_row = objects[0]
@@ -388,6 +408,10 @@ class BusManager(Node):
                     has_priority = True
                 if hasattr(first_row, 'deliveriesDelayed1Sec'):
                     has_delayed = True
+                if hasattr(first_row, 'deliveriesStuck'):
+                    has_stuck = True
+                if hasattr(first_row, 'creditAvailable'):
+                    has_credit = True
 
         if has_priority:
             heads.append(Header("pri"))
@@ -406,6 +430,11 @@ class BusManager(Node):
         if has_delayed:
             heads.append(Header("delay"))
             heads.append(Header("rate"))
+        if has_stuck:
+            heads.append(Header("stuck"))
+        if has_credit:
+            heads.append(Header("cred"))
+            heads.append(Header("blkd"))
         if self.opts.verbose:
             heads.append(Header("admin"))
             heads.append(Header("oper"))
@@ -437,6 +466,14 @@ class BusManager(Node):
             if has_delayed:
                 row.append(link.deliveriesDelayed1Sec + link.deliveriesDelayed10Sec)
                 row.append(link.settleRate)
+            if has_stuck:
+                row.append(link.deliveriesStuck)
+            if has_credit:
+                row.append(link.creditAvailable)
+                if link.zeroCreditSeconds > 0:
+                    row.append(TimeShort(link.zeroCreditSeconds * 1000000000))
+                else:
+                    row.append('-')
             if self.opts.verbose:
                 row.append(link.adminStatus)
                 row.append(link.operStatus)
@@ -446,8 +483,8 @@ class BusManager(Node):
         dispRows = rows
         disp.formattedTable(title, heads, dispRows)
 
-    def displayRouterNodes(self):
-        disp = Display(prefix="  ")
+    def displayRouterNodes(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("router-id"))
         heads.append(Header("next-hop"))
@@ -462,6 +499,9 @@ class BusManager(Node):
 
         # Find the most recent topo change in this neighborhood.
         lastTopoChange = 0.0
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         for node in objects:
             row = []
@@ -494,8 +534,8 @@ class BusManager(Node):
         else:
             print("Router is Standalone - No Router List")
 
-    def displayAddresses(self):
-        disp = Display(prefix="  ")
+    def displayAddresses(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("class"))
         heads.append(Header("addr"))
@@ -510,6 +550,9 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
         has_priority = False
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         if objects:
             first_row = objects[0]
@@ -538,7 +581,7 @@ class BusManager(Node):
             row.append(self._addr_phase(addr.name))
             row.append(addr.distribution)
             if has_priority:
-                row.append(addr.priority if addr.priority >= 0 else "")
+                row.append(addr.priority if addr.priority >= 0 else "-")
             if self.opts.verbose:
                 row.append(addr.inProcess)
             row.append(addr.containerCount if addr.name[0] in 'CDEF' else addr.subscriberCount)
@@ -559,8 +602,8 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayAutolinks(self):
-        disp = Display(prefix="  ")
+    def displayAutolinks(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("addr"))
         heads.append(Header("dir"))
@@ -574,6 +617,14 @@ class BusManager(Node):
 
         objects = self.query('org.apache.qpid.dispatch.router.config.autoLink', cols, limit=self.opts.limit)
 
+        if show_date_id:
+            self.display_datetime_router_id()
+
+        if not objects:
+            print("AutoLinks")
+            print("No AutoLinks found")
+            return
+
         for al in objects:
             row = []
             row.append(al.address)
@@ -584,13 +635,14 @@ class BusManager(Node):
             row.append(al.operStatus)
             row.append(al.lastError)
             rows.append(row)
+
         title = "AutoLinks"
         sorter = Sorter(heads, rows, 'addr', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayLinkRoutes(self):
-        disp = Display(prefix="  ")
+    def displayLinkRoutes(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("address"))
         heads.append(Header("dir"))
@@ -602,6 +654,17 @@ class BusManager(Node):
         link_routes = self.query('org.apache.qpid.dispatch.router.config.linkRoute', cols, limit=self.opts.limit)
 
         have_add_del_prefix = False
+
+        if not link_routes:
+            if show_date_id:
+                self.display_datetime_router_id()
+            print("Link Routes")
+            print("No Link Routes found")
+            return
+
+        if show_date_id:
+            self.display_datetime_router_id()
+
         for link_route in link_routes:
             row = []
             row.append(link_route.prefix if link_route.prefix else link_route.pattern)
@@ -624,8 +687,8 @@ class BusManager(Node):
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
 
-    def displayMemory(self):
-        disp = Display(prefix="  ")
+    def displayMemory(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
         heads = []
         heads.append(Header("type"))
         heads.append(Header("size", Header.COMMAS))
@@ -641,6 +704,9 @@ class BusManager(Node):
                 'batchesRebalancedToGlobal')
 
         objects = self.query('org.apache.qpid.dispatch.allocator', cols)
+
+        if show_date_id:
+            self.display_datetime_router_id()
 
         for t in objects:
             row = []
@@ -667,14 +733,27 @@ class BusManager(Node):
         for line in log:
             print("%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2]))
 
-    def show_all(self):
-        self.displayRouterLinks()
-        self.displayAddresses()
-        self.displayConnections()
-        self.displayAutolinks()
-        self.displayLinkRoutes()
-        self.displayGeneral()
-        self.displayMemory()
+    def show_all(self, show_summary=True):
+        if show_summary:
+            # print the datetime and router id
+            print(str(datetime.utcnow())  + " UTC")
+            self.displayRouterId()
+            print("")
+
+        self.displayRouterLinks(show_date_id=False)
+        print("")
+        self.displayAddresses(show_date_id=False)
+        print("")
+        self.displayConnections(show_date_id=False)
+        print("")
+        self.displayAutolinks(show_date_id=False)
+        print("")
+        self.displayLinkRoutes(show_date_id=False)
+        print("")
+        self.displayGeneral(show_date_id=False)
+        print("")
+        self.displayMemory(show_date_id=False)
+        print("")
 
     def has_nodes(self):
         all_nodes = super(BusManager, self).get_mgmt_nodes()
@@ -687,67 +766,41 @@ class BusManager(Node):
 
         return has_nodes, all_nodes
 
-    def show_entity(self, main):
-        if   main == 'l': self.displayRouterLinks()
-        elif main == 'n': self.displayRouterNodes()
-        elif main == 'a': self.displayAddresses()
-        elif main == 'm': self.displayMemory()
-        elif main == 'g': self.displayGeneral()
-        elif main == 'e': self.displayEdges()
-        elif main == 'c': self.displayConnections()
-        elif main == 'autolinks': self.displayAutolinks()
-        elif main == 'linkroutes': self.displayLinkRoutes()
-        elif main == 'log': self.displayLog()
+    def has_nodes(self):
+        all_nodes = super(BusManager, self).get_mgmt_nodes()
+        has_nodes = True
+        if all_nodes:
+            if len(all_nodes) < 2:
+                has_nodes = False
+        else:
+           has_nodes = False
 
-    def all_routers_entities(self):
+        return has_nodes, all_nodes
+
+    def display(self):
         has_nodes, nodes = self.has_nodes()
-        if has_nodes:
+        if self.opts.all_routers and has_nodes:
+            print(str(datetime.utcnow()) + " UTC")
             for node in nodes:
                 super(BusManager, self).set_client(node[6:])
                 parts = node.split("/")
                 print ("Router ", parts[3])
-                self.show_all()
+                print("")
+                if self.show.__name__ == 'show_all':
+                    self.show(show_summary=False)
+                else:
+                    self.show(show_date_id=False)
                 print("")
         else:
-            self.show_all()
-
-    def displayMain(self, identitys, opts):
-        main = opts.show
-        if opts.all_routers and main:
-            print (str(datetime.now()))
-            has_nodes, nodes = self.has_nodes()
-            if has_nodes:
-                for node in nodes:
-                    super(BusManager, self).set_client(node[6:])
-                    parts = node.split("/")
-                    print ("Router ", parts[3])
-                    self.show_entity(main)
-                    print("")
-            else:
-                self.show_entity(main)
-        elif opts.all_routers and opts.all_entities:
-            print (str(datetime.now()))
-            self.all_routers_entities()
-        elif opts.all_entities:
-            print (str(datetime.now()))
-            # Display all the relevant entities from the one router that
-            # qdstat is connecting to.
-            self.show_all()
-        elif main:
-            self.show_entity(main)
-
-    def display(self, identitys):
-        self.displayMain(identitys, self.opts)
+            self.show()
 
 def run(argv):
-    opts, args = parse_args(argv)
-    if args[1:]:
-        raise Exception("Unexpected arguments: %s" % " ".join(args[1:]))
-    bm = BusManager(opts)
+    args = parse_args_qdstat(BusManager)
+    bm = BusManager(args)
     try:
-        bm.display(args)
+        bm.display()
     finally:
         bm.close()
 
 if __name__ == "__main__":
-        sys.exit(main(run, sys.argv))
+        sys.exit(main(run))

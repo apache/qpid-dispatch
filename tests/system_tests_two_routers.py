@@ -24,13 +24,14 @@ from __future__ import print_function
 
 from time import sleep
 import json, os
-import unittest2 as unittest
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
 from proton import Message, Timeout, Delivery
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import AsyncTestReceiver
+from system_test import AsyncTestSender
+from system_test import unittest
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce
@@ -363,6 +364,28 @@ class TwoRouterTest(TestCase):
         test = DeleteConnectionWithReceiver(self.routers[0].addresses[0])
         self.assertEqual(test.error, None)
         test.run()
+
+    def test_30_huge_address(self):
+        # try a link with an extremely long address
+        # DISPATCH-1461
+        addr = "A" * 2019
+        rx = AsyncTestReceiver(self.routers[0].addresses[0],
+                               source=addr)
+        tx = AsyncTestSender(self.routers[1].addresses[0],
+                             target=addr,
+                             count=100)
+        tx.wait()
+
+        i = 100
+        while i:
+            try:
+                rx.queue.get(timeout=TIMEOUT)
+                i -= 1
+            except AsyncTestReceiver.Empty:
+                break;
+        self.assertEqual(0, i)
+        rx.stop()
+
 
 class DeleteConnectionWithReceiver(MessagingHandler):
     def __init__(self, address):

@@ -41,6 +41,7 @@ def is_ipv6_enabled():
     try:
         sock = socket.socket(socket.AF_INET6, socket.SOCK_STREAM)
         sock.bind(('::1', 0))
+        sock.close()
     except Exception as e:
         ipv6_enabled = False
 
@@ -286,7 +287,7 @@ class PolicyAppConnectionMgr(object):
         self.max_per_user = maxconnperuser
         self.max_per_host = maxconnperhost
 
-    def can_connect(self, conn_id, user, host, diags):
+    def can_connect(self, conn_id, user, host, diags, grp_max_user, grp_max_host):
         """
         Register a connection attempt.
         If all the connection limit rules pass then add the
@@ -304,9 +305,12 @@ class PolicyAppConnectionMgr(object):
         if host in self.per_host_state:
             n_host = len(self.per_host_state[host])
 
+        max_per_user = grp_max_user if grp_max_user is not None else self.max_per_user
+        max_per_host = grp_max_host if grp_max_host is not None else self.max_per_host
+
         allowbytotal = self.connections_active < self.max_total
-        allowbyuser  = n_user < self.max_per_user
-        allowbyhost  = n_host < self.max_per_host
+        allowbyuser  = n_user < max_per_user
+        allowbyhost  = n_host < max_per_host
 
         if allowbytotal and allowbyuser and allowbyhost:
             if not user in self.per_user_state:

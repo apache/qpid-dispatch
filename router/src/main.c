@@ -29,6 +29,7 @@
 #include <stdlib.h>
 #include <getopt.h>
 #include <errno.h>
+#include <limits.h>
 #include "config.h"
 
 static int            exit_with_sigint = 0;
@@ -179,43 +180,40 @@ static void daemon_process(const char *config_path, const char *python_pkgdir, b
 
 
             //
-            // If config path is not represented by its full path, then
-            // save current path before changing to /
+            // If config path is not a fully qualified path, then construct the
+            // fully qualified path to the config file.  This needs to be done
+            // since the daemon will set "/" to its working directory.
             //
             char *config_path_full = NULL;
             if (strncmp("/", config_path, 1)) {
-                char *cur_path = NULL;
-                size_t path_size = 256;
-                int getcwd_error = 0;
-                cur_path = (char *) calloc(path_size, sizeof(char));
+                size_t path_size = PATH_MAX;
+                char *cur_path = (char *) calloc(path_size, sizeof(char));
                 errno = 0;
 
                 while (getcwd(cur_path, path_size) == NULL) {
                     free(cur_path);
-                    if ( errno != ERANGE ) {
-                        // If unable to get current directory
-                        getcwd_error = 1;
-                        break;
+                    if (errno != ERANGE) {
+                        // Hard failure - can't recover from this
+                        perror("Unable to determine current directory");
+                        exit(1);
                     }
-                    // If current path does not fit, allocate more memory
+                    // errno == ERANGE: the current path does not fit, allocate
+                    // more memory
                     path_size += 256;
                     cur_path = (char *) calloc(path_size, sizeof(char));
                     errno = 0;
                 }
 
                 // Populating fully qualified config file name
-                if (!getcwd_error) {
-                    size_t cpf_len = path_size + strlen(config_path) + 1;
-                    config_path_full = calloc(cpf_len, sizeof(char));
-                    snprintf(config_path_full, cpf_len, "%s%s%s",
-                             cur_path,
-                             !strcmp("/", cur_path)? "":"/",
-                             config_path);
+                const char *path_sep = !strcmp("/", cur_path) ? "" : "/";
+                size_t cpf_len = strlen(cur_path) + strlen(path_sep) + strlen(config_path) + 1;
+                config_path_full = calloc(cpf_len, sizeof(char));
+                snprintf(config_path_full, cpf_len, "%s%s%s",
+                         cur_path, path_sep, config_path);
 
-                    // Releasing temporary path variable
-                    memset(cur_path, 0, path_size * sizeof(char));
-                    free(cur_path);
-                }
+                // Releasing temporary path variable
+                memset(cur_path, 0, path_size * sizeof(char));
+                free(cur_path);
             }
 
             //

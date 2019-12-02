@@ -28,7 +28,6 @@ from __future__ import print_function
 
 import sys
 from time import sleep
-import unittest2 as unittest
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -39,11 +38,13 @@ from proton import Message
 from proton import Delivery
 from qpid_dispatch.management.client import Node
 from system_test import AsyncTestSender
+from system_test import AsyncTestReceiver
 from system_test import TestCase
 from system_test import Qdrouterd
 from system_test import main_module
 from system_test import TIMEOUT
 from system_test import TestTimeout
+from system_test import unittest
 
 
 MAX_FRAME=1023
@@ -395,24 +396,50 @@ class MulticastLinearTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_90_no_subscribers(self):
-        # DISPATCH-779: ensure credit is available even if there are no
-        # subscribers
-        tx = AsyncTestSender(address=self.EA1.listener,
-                             target='multicast/no/subscriber',
-                             count=LINK_CAPACITY * 2,
-                             presettle=True,
-                             container_id="test_90_presettled")
-        tx.wait()
-        self.assertEqual(None, tx.error)
+    def test_90_credit_no_subscribers(self):
+        """
+        Verify that multicast senders are blocked until a consumer is present.
+        """
+        test = MulticastCreditBlocked(address=self.EA1.listener,
+                                      target='multicast/no/subscriber1')
 
-        tx = AsyncTestSender(address=self.EA1.listener,
-                             target='multicast/no/subscriber',
-                             count=LINK_CAPACITY * 2,
-                             presettle=False,
-                             container_id="test_90_unsettled")
+        test.run()
+        self.assertEqual(None, test.error)
+
+        test = MulticastCreditBlocked(address=self.INT_A.listener,
+                                      target='multicast/no/subscriber2')
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_91_anonymous_sender(self):
+        """
+        Verify that senders over anonymous links do not block waiting for
+        consumers.
+        """
+
+        # no receiver - should not block, return RELEASED
+        msg = Message(body="test_100_anonymous_sender")
+        msg.address = "multicast/test_100_anonymous_sender"
+        tx = AsyncTestSender(address=self.INT_B.listener,
+                             count=5,
+                             target=None,
+                             message=msg,
+                             container_id="test_100_anonymous_sender")
         tx.wait()
-        self.assertEqual(500, tx.released)
+        self.assertEqual(5, tx.released)
+
+        # now add a receiver:
+        rx = AsyncTestReceiver(address=self.INT_A.listener,
+                               source=msg.address)
+        self.INT_B.wait_address(msg.address)
+        tx = AsyncTestSender(address=self.INT_B.listener,
+                             count=5,
+                             target=None,
+                             message=msg,
+                             container_id="test_100_anonymous_sender")
+        tx.wait()
+        self.assertEqual(5, tx.accepted)
+        rx.stop()
 
     def test_999_check_for_leaks(self):
         self._check_for_leaks()
@@ -909,6 +936,52 @@ class MulticastUnsettled3AckMA(MulticastUnsettled3Ack):
             self.done()
             return
         super(MulticastUnsettled3AckMA, self).on_message(event)
+
+
+class MulticastCreditBlocked(MessagingHandler):
+    """
+    Ensure that credit is not provided when there are no consumers present.
+    This client connects to 'address' and creates a sender to 'target'.  Once
+    the sending link has opened a short timer is started.  It is expected that
+    on_sendable() is NOT invoked before the timer expires.
+    """
+    def __init__(self, address, target=None, timeout=2, **handler_kwargs):
+        super(MulticastCreditBlocked, self).__init__(**handler_kwargs)
+        self.target = target
+        self.address = address
+        self.time_out = timeout
+
+        self.conn = None
+        self.sender = None
+        self.timer = None
+        self.error = "Timeout NOT triggered as expected!"
+
+    def done(self):
+        # stop the reactor and clean up the test
+        if self.timer:
+            self.timer.cancel()
+        if self.conn:
+            self.conn.close()
+
+    def timeout(self):
+        self.error = None
+        self.done()
+
+    def on_start(self, event):
+        self.conn = event.container.connect(self.address)
+        self.sender = event.container.create_sender(self.conn,
+                                                    target=self.target,
+                                                    name="McastBlocked")
+
+    def on_link_opened(self, event):
+        self.timer = event.reactor.schedule(self.time_out, TestTimeout(self))
+
+    def on_sendable(self, event):
+        self.error = "Unexpected call to on_sendable()!"
+        self.done()
+
+    def run(self):
+        Container(self).run()
 
 
 if __name__ == '__main__':

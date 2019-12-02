@@ -1,0 +1,3 @@
+# Suppression file for address issues found by AddressSanitizer (ASAN)
+# Note: memory leaks should not be suppressed here - update lsan.supp
+# instead.

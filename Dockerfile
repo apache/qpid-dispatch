@@ -37,7 +37,8 @@
 ################# Begin code #######
 
 # Get the latest Centos version from dockerhub
-FROM centos:latest
+#FROM centos:latest  NEEDS JIRA DISPATCH-1444 FIXED!
+FROM centos:7
 
 MAINTAINER "dev@qpid.apache.org"
 
@@ -47,7 +48,7 @@ MAINTAINER "dev@qpid.apache.org"
 RUN yum -y install epel-release
 
 # now install the rest of the packages
-RUN yum -y install gcc cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel java-1.8.0-openjdk-devel git make doxygen valgrind emacs libuv libuv-devel libwebsockets-devel python-unittest2 && yum clean all -y
+RUN yum -y install gcc cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel java-1.8.0-openjdk-devel git make doxygen valgrind emacs libuv libuv-devel libwebsockets-devel && yum clean all -y
 
 # Create a main directory and clone the qpid-proton repo from github
 RUN mkdir /main && cd /main && git clone https://github.com/apache/qpid-proton.git  && cd /main/qpid-proton && mkdir /main/qpid-proton/build

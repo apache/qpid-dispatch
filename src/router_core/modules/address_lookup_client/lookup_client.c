@@ -312,9 +312,6 @@ static qdr_address_t *qdr_lookup_terminus_address_CT(qdr_core_t       *core,
             *unavailable = true;
     }
 
-    if (qdr_terminus_is_coordinator(terminus))
-        *unavailable = false;
-
     if (!!addr && addr->core_endpoint != 0)
         *core_endpoint = true;
 
@@ -341,7 +338,11 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
     if (core_endpoint) {
         qdrc_endpoint_do_bound_attach_CT(core, addr, link, source, target);
     }
-
+    else if (unavailable && qdr_terminus_is_coordinator(dir == QD_INCOMING ? target : source) && !addr) {
+        qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_COORDINATOR_PRECONDITION_FAILED, true);
+        qdr_terminus_free(source);
+        qdr_terminus_free(target);
+    }
     else if (unavailable) {
         qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
         qdr_terminus_free(source);
@@ -405,14 +406,12 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
         // Issue the initial credit only if one of the following
         // holds:
         // - there are destinations for the address
-        // - if the address treatment is multicast
         // - the address is that of an exchange (no subscribers allowed)
         //
         if (dir == QD_INCOMING
             && (DEQ_SIZE(addr->subscriptions)
                 || DEQ_SIZE(addr->rlinks)
                 || qd_bitmask_cardinality(addr->rnodes)
-                || qdr_is_addr_treatment_multicast(addr)
                 || !!addr->exchange
                 || (!!addr->fallback
                     && (DEQ_SIZE(addr->fallback->subscriptions)
@@ -672,7 +671,6 @@ static uint64_t on_reply(qdr_core_t    *core,
             // The address is for a link route, but there are no destinations upstream.  Fail with no-route.
             //
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
-
         else
             //
             // The address is for a link route and there are destinations upstream.  Directly forward the attach.

@@ -32,8 +32,8 @@ from __future__ import print_function
 import os
 import sys
 from fnmatch import fnmatch
-import unittest2 as unittest
 import system_test
+from system_test import unittest
 
 # Collect all system_tests_*.py scripts in the same directory as this script.
 test_modules = [os.path.splitext(f)[0] for f in os.listdir(system_test.DIR)

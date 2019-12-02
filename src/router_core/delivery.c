@@ -26,7 +26,6 @@ ALLOC_DEFINE(qdr_delivery_t);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *delivery);
 static void qdr_delivery_free_extension_state(qdr_delivery_t *delivery);
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
@@ -184,7 +183,7 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
     action->args.delivery.error       = error;
 
     // handle delivery-state extensions e.g. declared, transactional-state
-    qdr_delivery_read_extension_state(delivery, disposition, ext_state, false);
+    qdr_delivery_set_extension_state(delivery, disposition, ext_state, false);
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -339,30 +338,36 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
     if (link) {
         bool do_rate = false;
 
+        // router sets the disposition for incoming links, outgoing is set by
+        // the remote
+        const uint64_t outcome = (link->link_direction == QD_INCOMING)
+            ? delivery->disposition   // local
+            : delivery->remote_disposition;
+
         if (delivery->presettled) {
-            do_rate = delivery->disposition != PN_RELEASED;
+            do_rate = outcome != PN_RELEASED;
             link->presettled_deliveries++;
             if (link->link_direction ==  QD_INCOMING && link->link_type == QD_LINK_ENDPOINT)
                 core->presettled_deliveries++;
         }
-        else if (delivery->disposition == PN_ACCEPTED) {
+        else if (outcome == PN_ACCEPTED) {
             do_rate = true;
             link->accepted_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->accepted_deliveries++;
         }
-        else if (delivery->disposition == PN_REJECTED) {
+        else if (outcome == PN_REJECTED) {
             do_rate = true;
             link->rejected_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->rejected_deliveries++;
         }
-        else if (delivery->disposition == PN_RELEASED && !delivery->presettled) {
+        else if (outcome == PN_RELEASED && !delivery->presettled) {
             link->released_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->released_deliveries++;
         }
-        else if (delivery->disposition == PN_MODIFIED) {
+        else if (outcome == PN_MODIFIED) {
             link->modified_deliveries++;
             if (link->link_direction ==  QD_INCOMING)
                 core->modified_deliveries++;
@@ -377,6 +382,14 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
             link->deliveries_delayed_1sec++;
             if (link->link_direction ==  QD_INCOMING)
                 core->deliveries_delayed_1sec++;
+        }
+
+        //
+        // If this delivery was marked as stuck, decrement the currently-stuck counters in the link and router.
+        //
+        if (delivery->stuck) {
+            link->deliveries_stuck--;
+            core->deliveries_stuck--;
         }
 
         if (qd_bitmask_valid_bit_value(delivery->ingress_index) && link->ingress_histogram)
@@ -439,9 +452,9 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
 
     qd_bitmask_free(delivery->link_exclusion);
     qdr_error_free(delivery->error);
+    qdr_delivery_free_extension_state(delivery);
 
     free_qdr_delivery_t(delivery);
-
 }
 
 
@@ -680,7 +693,10 @@ static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
             peer->error       = error;
             push = true;
             error_assigned = true;
-            qdr_delivery_copy_extension_state(dlv, peer, false);
+            qdr_delivery_set_extension_state(peer,
+                                             dlv->remote_disposition,
+                                             dlv->extension_state,
+                                             false);
         }
     }
 
@@ -997,8 +1013,7 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
         if (!!work && !!peer_link) {
             sys_mutex_lock(peer_link->conn->work_lock);
             if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
-                // Adding this work at priority 0.
-                qdr_add_link_ref(peer_link->conn->links_with_work, peer_link, QDR_LINK_LIST_CLASS_WORK);
+                qdr_add_link_ref(&peer_link->conn->links_with_work[peer_link->priority], peer_link, QDR_LINK_LIST_CLASS_WORK);
                 sys_mutex_unlock(peer_link->conn->work_lock);
 
                 //
@@ -1100,8 +1115,7 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
     if (dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
         qdr_delivery_incref(dlv, "qdr_delivery_push_CT - add to updated list");
         qdr_add_delivery_ref_CT(&link->updated_deliveries, dlv);
-        // Adding this work at priority 0.
-        qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+        qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
         activate = true;
     }
     sys_mutex_unlock(link->conn->work_lock);
@@ -1113,14 +1127,14 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
         qdr_connection_activate_CT(core, link->conn);
 }
 
-pn_data_t* qdr_delivery_extension_state(qdr_delivery_t *delivery)
+
+pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *delivery)
 {
-    if (!delivery->extension_state) {
-        delivery->extension_state = pn_data(0);
-    }
-    pn_data_rewind(delivery->extension_state);
+    if (delivery->extension_state)
+        pn_data_rewind(delivery->extension_state);
     return delivery->extension_state;
 }
+
 
 void qdr_delivery_free_extension_state(qdr_delivery_t *delivery)
 {
@@ -1130,12 +1144,17 @@ void qdr_delivery_free_extension_state(qdr_delivery_t *delivery)
     }
 }
 
+
+// copy local disposition data into proton delivery
 void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition)
 {
     if (dlv->disposition > PN_MODIFIED) {
-        pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), qdr_delivery_extension_state(dlv));
+        pn_data_t *src = dlv->extension_state;
+        if (src) {
+            pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), src);
+            qdr_delivery_free_extension_state(dlv);
+        }
         if (update_disposition) pn_delivery_update(pdlv, dlv->disposition);
-        qdr_delivery_free_extension_state(dlv);
     }
 }
 
@@ -1144,25 +1163,22 @@ void qdr_delivery_export_transfer_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv
     qdr_delivery_write_extension_state(dlv, pdlv, true);
 }
 
+
 void qdr_delivery_export_disposition_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv)
 {
     qdr_delivery_write_extension_state(dlv, pdlv, false);
 }
 
-void qdr_delivery_copy_extension_state(qdr_delivery_t *src, qdr_delivery_t *dest, bool update_diposition)
-{
-    if (src->disposition > PN_MODIFIED) {
-        pn_data_copy(qdr_delivery_extension_state(dest), qdr_delivery_extension_state(src));
-        if (update_diposition) dest->disposition = src->disposition;
-        qdr_delivery_free_extension_state(src);
-    }
-}
 
-void qdr_delivery_read_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition)
+void qdr_delivery_set_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition)
 {
     if (disposition > PN_MODIFIED) {
-        pn_data_rewind(disposition_data);
-        pn_data_copy(qdr_delivery_extension_state(dlv), disposition_data);
+        if (disposition_data) {
+            pn_data_rewind(disposition_data);
+            if (!dlv->extension_state)
+                dlv->extension_state = pn_data(0);
+            pn_data_copy(dlv->extension_state, disposition_data);
+        }
         if (update_disposition) dlv->disposition = disposition;
     }
 }

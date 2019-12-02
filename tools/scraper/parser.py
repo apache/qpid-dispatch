@@ -375,6 +375,7 @@ class ParsedLogLine(object):
     policy_trace_key = "POLICY (trace) ["
     router_ls_key = "ROUTER_LS (info)"
     transfer_key = "@transfer(20)"
+    proton_frame_key = "FRAME: "
 
     def sender_settle_mode_of(self, value):
         if value == "0":
@@ -854,6 +855,9 @@ class ParsedLogLine(object):
         # get the session (channel) number
         if self.line.startswith(':'):
             self.line = self.line[1:]
+        if self.line.startswith(self.proton_frame_key):
+            self.line = self.line[len(self.proton_frame_key):]
+
         sti = self.line.find(' ')
         if sti < 0:
             raise ValueError("space not found after channel number at head of line %s" % (self.line))

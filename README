@@ -20,7 +20,21 @@ packages installed:
 - cyrus-sasl-devel
 - asciidoc (for building docs)
 - asciidoctor (for building docs)
-- python-unittest2 (python2-unittest2 on Fedora) (we use unittest2 for running python tests)
+
+The unit tests are implemented using Python's unittest library.
+Python versions prior to 2.7 do not have this library.  In
+order to run the unit tests using older versions of python the
+"unittest2" module must be installed.
+
+This may be available from your Linux distribution or via pip:
+
+  pip install unittest2
+
+The command line arguments parsing is done using Python's argparse library.
+Python versions prior to 2.7 do not have this library. Similar to what happend
+with unittest2, this may be fixed via pip:
+
+  pip install argparse
 
 Dispatch will not build on Windows.
 
@@ -86,10 +100,82 @@ This does the following:
 - Run system tests on the installation in 'install'.
 
 
-Using Valgrind
-==============
+Run Time Validation
+===================
 
-If valgrind is installed and cmake option 'USE_VALGRIND' is 'ON' the tests will
-be run with valgrind's memcheck debugger. You can set other types of test runner
-or modify the valgrind flags by setting the TEST_RUNNER cmake variable.
+The CTest test suite can be configured to enable extra run time
+validation checks against the dispatch router.
 
+Since run time validation slows down qdrouter considerably it is
+disabled by default.  It can be enabled by setting the RUNTIME_CHECK
+build flag via the cmake command.
+
+Note well: Depending on your environment the ctest suite may time out
+if validation is enabled due to the additional run time overhead it
+adds.  You can extend the default test time via the ctest "--timeout"
+option.  Example:
+
+ctest --timeout 1500 -VV
+
+The Qpid Dispatch Router test suite supports the following run time
+validation tools:
+
+Valgrind Memcheck
+-----------------
+Runs qdrouterd under Valgrind's memcheck leak checker during the CTest
+suite.  This will cause tests to fail if a memory error is
+encountered.  Use the grinder tool (in the bin directory) to create a
+summary of the errors found during the test run.
+
+The valgrind toolset must be installed in order to use memcheck.
+
+To enable memcheck set the RUNTIME_CHECK build flag to "memcheck":
+
+cmake .. -DRUNTIME_CHECK=memcheck
+
+If valgrind detects errors the qdrouterd process will exit with an
+exit code of 42. This will be displayed in the CTest output. For
+example:
+
+RuntimeError: Errors during teardown:
+Process XXXX error: exit code 42, expected 0
+
+GCC/Clang Thread Sanitizer (TSAN)
+---------------------------------
+This option turns on extra run time threading verification.
+
+Applicable only to GCC versions >= 7.4 and Clang versions >= 6.0.
+
+To enable the thread sanitizer set the RUNTIME_CHECK build flag to "tsan":
+
+cmake .. -DRUNTIME_CHECK=tsan
+
+The TSAN library (libtsan) must be installed in order to use this
+option.
+
+If threading violations are detected during the CTest suite the
+qdrouterd process will exit with an exit code of 66. This will be
+displayed in the CTest output. For example:
+
+RuntimeError: Errors during teardown:
+Process XXXX error: exit code 66, expected 0
+
+False positives can be suppressed via the tsan.supp file in the tests
+directory.
+
+GCC/Clang Address Sanitizer (ASAN)
+----------------------------------
+This option turns on extra run time memory verification, including
+leak checks.
+
+Applicable only to GCC versions >= 5.4 and Clang versions >= 6.0.
+
+To enable the address sanitizer set the RUNTIME_CHECK build flag to "asan":
+
+cmake .. -DRUNTIME_CHECK=asan
+
+The ASAN (libasan) and UBSAN (libubsan) libraries must be installed in
+order to use this option.
+
+False positive leak errors can be suppressed via the lsan.supp file in
+the tests directory.

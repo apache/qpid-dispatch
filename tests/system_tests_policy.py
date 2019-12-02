@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import unittest as unittest
 import os, json, re, signal
+import sys
 import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
@@ -38,7 +39,7 @@ from test_broker import FakeBroker
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
-    Verify that connections beyond the absolute limit are denied
+    Verify that connections beyond the absolute limit are denied and counted
     """
     @classmethod
     def setUpClass(cls):
@@ -54,6 +55,18 @@ class AbsoluteConnectionCountLimit(TestCase):
 
     def address(self):
         return self.router.addresses[0]
+
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
 
     def test_verify_maximum_connections(self):
         addr = self.address()
@@ -79,6 +92,10 @@ class AbsoluteConnectionCountLimit(TestCase):
 
         bc1.close()
         bc2.close()
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["connectionsDenied"] == 1)
+        self.assertTrue(policystats[0]["totalDenials"] == 1)
 
 class LoadPolicyFromFolder(TestCase):
     """
@@ -263,9 +280,7 @@ class LoadPolicyFromFolder(TestCase):
 
 class SenderReceiverLimits(TestCase):
     """
-    Verify that specifying a policy folder from the router conf file
-    effects loading the policies in that folder.
-    This test relies on qdmanage utility.
+    Verify that policy can limit senders and receivers by count.
     """
     @classmethod
     def setUpClass(cls):
@@ -312,11 +327,32 @@ class SenderReceiverLimits(TestCase):
 
         bs1.close()
 
+    def test_verify_z_connection_stats(self):
+        # This test relies on being executed after test_verify_n_receivers and test_verify_n_senders.
+        # This test is named to follow those tests alphabetically.
+        # It also relies on executing after the router log file has written the policy logs.
+        # In some emulated environments the router log file writes may lag test execution.
+        # To accomodate the file lag this test may retry reading the log file.
+        verified = False
+        for tries in range(5):
+            with  open('../setUpClass/SenderReceiverLimits.log', 'r') as router_log:
+                log_lines = router_log.read().split("\n")
+                close_lines = [s for s in log_lines if "senders_denied=1, receivers_denied=1" in s]
+                verified = len(close_lines) == 1
+            if verified:
+                break;
+            print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
+            sys.stdout.flush()
+            time.sleep(1)
+        self.assertTrue(verified, msg='Policy did not log sender and receiver denials.')
+
 
 class PolicyVhostOverride(TestCase):
     """
-    Verify that specifying a policy folder from the router conf file
-    effects loading the policies in that folder.
+    Verify that listener policyVhost can override normally discovered vhost.
+    Verify that specific vhost and global denial counts are propagated.
+      This test conveniently forces the vhost denial statistics to be
+      on a named vhost and we know where to find them.
     This test relies on qdmanage utility.
     """
     @classmethod
@@ -335,6 +371,18 @@ class PolicyVhostOverride(TestCase):
     def address(self):
         return self.router.addresses[0]
 
+    def run_qdmanage(self, cmd, input=None, expect=Process.EXIT_OK):
+        p = self.popen(
+            ['qdmanage'] + cmd.split(' ') + ['--bus', re.sub(r'amqp://', 'amqp://u1:password@', self.address()), '--indent=-1', '--timeout', str(TIMEOUT)],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
+            universal_newlines=True)
+        out = p.communicate(input)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        return out
+
     def test_verify_n_receivers(self):
         n = 4
         addr = self.address()
@@ -352,6 +400,20 @@ class PolicyVhostOverride(TestCase):
 
         br1.close()
 
+        vhoststats = json.loads(self.run_qdmanage('query --type=vhostStats'))
+        foundStat = False
+        for vhs in vhoststats:
+            if vhs["id"] == "override.host.com":
+                foundStat = True
+                self.assertTrue(vhs["senderDenied"] == 0)
+                self.assertTrue(vhs["receiverDenied"] == 1)
+                break
+        self.assertTrue(foundStat, msg="did not find virtual host id 'override.host.com' in stats")
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["linksDenied"] == 1)
+        self.assertTrue(policystats[0]["totalDenials"] == 1)
+
     def test_verify_n_senders(self):
         n = 2
         addr = self.address()
@@ -365,6 +427,20 @@ class PolicyVhostOverride(TestCase):
         self.assertRaises(LinkDetached, bs1.create_sender, "****NO****")
 
         bs1.close()
+
+        vhoststats = json.loads(self.run_qdmanage('query --type=vhostStats'))
+        foundStat = False
+        for vhs in vhoststats:
+            if vhs["id"] == "override.host.com":
+                foundStat = True
+                self.assertTrue(vhs["senderDenied"] == 1)
+                self.assertTrue(vhs["receiverDenied"] == 1)
+                break
+        self.assertTrue(foundStat, msg="did not find virtual host id 'override.host.com' in stats")
+
+        policystats = json.loads(self.run_qdmanage('query --type=policy'))
+        self.assertTrue(policystats[0]["linksDenied"] == 2)
+        self.assertTrue(policystats[0]["totalDenials"] == 2)
 
 
 class Capabilities(ReceiverOption):
@@ -1108,6 +1184,80 @@ class VhostPolicyFromRouterConfig(TestCase):
             self.assertTrue(receiver.link_error,
                             msg="source address must not be allowed, but it was [%s]" % source_addr)
 
+
+class VhostPolicyConnLimit(TestCase):
+    """
+    Verify that connections beyond the vhost limit are allowed
+    if override specified in vhost.group.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyConnLimit, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('vhost', {
+                'hostname': '0.0.0.0', 'maxConnections': 100,
+                'maxConnectionsPerUser': 2,
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*', 'remoteHosts': '*',
+                        'sources': '*', 'targets': '*',
+                        'allowDynamicSource': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                ), (
+                    'anonymous', {
+                        'users': 'anonymous', 'remoteHosts': '*',
+                        'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
+                        'targets': 'addr/*, simpleaddress, queue.${user}',
+                        'allowDynamicSource': 'true',
+                        'allowAnonymousSender': 'true',
+                        'maxConnectionsPerUser': 3
+                    }
+                )]
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-policy-conn-limit', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_verify_vhost_maximum_connections_override(self):
+        addr = "%s/$management" % self.address()
+        timeout = 5
+
+        # three connections should be ok
+        denied = False
+        try:
+            bc1 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc2 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+            bc3 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertFalse(denied)  # assert connections were opened
+
+        # fourth connection should be denied
+        denied = False
+        try:
+            bc4 = SyncRequestResponse(BlockingConnection(addr, timeout=timeout))
+        except ConnectionException:
+            denied = True
+        except Timeout:
+            denied = True
+
+        self.assertTrue(denied)  # assert if connection that should not open did open
+
+        bc1.connection.close()
+        bc2.connection.close()
+        bc3.connection.close()
 
 class ClientAddressValidator(MessagingHandler):
     """

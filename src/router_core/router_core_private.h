@@ -124,22 +124,22 @@ struct qdr_action_t {
         // Arguments for connection-level actions
         //
         struct {
-            qdr_connection_t *conn;
-            qdr_field_t      *connection_label;
-            qdr_field_t      *container_id;
-            qdr_link_t       *link;
-            qdr_delivery_t   *delivery;
-            qd_message_t     *msg;
-            qd_direction_t    dir;
-            qdr_terminus_t   *source;
-            qdr_terminus_t   *target;
-            qdr_error_t      *error;
-            qd_detach_type_t  dt;
-            int               credit;
-            bool              more;  // true if there are more frames arriving, false otherwise
-            bool              drain;
-            uint8_t           tag[32];
-            int               tag_length;
+            qdr_connection_t_sp  conn;
+            qdr_field_t         *connection_label;
+            qdr_field_t         *container_id;
+            qdr_link_t_sp        link;
+            qdr_delivery_t      *delivery;
+            qd_message_t        *msg;
+            qd_direction_t       dir;
+            qdr_terminus_t      *source;
+            qdr_terminus_t      *target;
+            qdr_error_t         *error;
+            qd_detach_type_t     dt;
+            int                  credit;
+            bool                 more;  // true if there are more frames arriving, false otherwise
+            bool                 drain;
+            uint8_t              tag[32];
+            int                  tag_length;
         } connection;
 
         //
@@ -431,9 +431,12 @@ struct qdr_link_t {
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
     qdr_link_oper_status_t   oper_status;
     int                      capacity;
-    int                      credit_to_core; ///< Number of the available credits incrementally given to the core
-    int                      credit_pending; ///< Number of credits to be issued once consumers are available
-    int                      credit_stored;  ///< Number of credits given to the link before it was ready to process them.
+    int                      credit_to_core;    ///< Number of the available credits incrementally given to the core
+    int                      credit_pending;    ///< Number of credits to be issued once consumers are available
+    int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them.
+    int                      credit_reported;   ///< Number of credits to expose to management
+    uint32_t                 zero_credit_time;  ///< Number of core ticks when credit last went to zero
+    bool                     reported_as_blocked; ///< The fact that this link has been blocked with zero credit has been logged
     bool                     admin_enabled;
     bool                     strip_annotations_in;
     bool                     strip_annotations_out;
@@ -458,6 +461,7 @@ struct qdr_link_t {
     uint64_t  modified_deliveries;
     uint64_t  deliveries_delayed_1sec;
     uint64_t  deliveries_delayed_10sec;
+    uint64_t  deliveries_stuck;
     uint64_t  settled_deliveries[QDR_LINK_RATE_DEPTH];
     uint64_t *ingress_histogram;
     uint8_t   priority;
@@ -655,6 +659,8 @@ struct qdr_connection_t {
     qdr_conn_admin_status_t     admin_status;
     qdr_error_t                *error;
     bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
+    uint32_t                    conn_uptime; // Timestamp which can be used to calculate the number of seconds this connection has been up and running.
+    uint32_t                    last_delivery_time; // Timestamp which can be used to calculate the number of seconds since the last delivery arrived on this connection.
 };
 
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
@@ -756,6 +762,7 @@ struct qdr_core_t {
     sys_thread_t      *thread;
     bool               running;
     qdr_action_list_t  action_list;
+    qdr_action_list_t  action_list_background;  /// Actions processed only when the action_list is empty
     sys_cond_t        *action_cond;
     sys_mutex_t       *action_lock;
 
@@ -804,6 +811,7 @@ struct qdr_core_t {
     qdr_link_drain_t          drain_handler;
     qdr_link_push_t           push_handler;
     qdr_link_deliver_t        deliver_handler;
+    qdr_link_get_credit_t     get_credit_handler;
     qdr_delivery_update_t     delivery_update_handler;
     qdr_connection_close_t    conn_close_handler;
 
@@ -863,7 +871,9 @@ struct qdr_core_t {
     uint64_t deliveries_ingress_route_container;
     uint64_t deliveries_delayed_1sec;
     uint64_t deliveries_delayed_10sec;
+    uint64_t deliveries_stuck;
     uint64_t deliveries_redirected;
+    uint32_t links_blocked;
 
     qdr_edge_conn_addr_t          edge_conn_addr;
     void                         *edge_context;
@@ -893,6 +903,7 @@ void  qdr_agent_setup_CT(qdr_core_t *core);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
+void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
 void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr);
 void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
@@ -992,5 +1003,13 @@ void qdr_core_timer_free_CT(qdr_core_t *core, qdr_core_timer_t *timer);
  * @param n uint8_t index for the sheaf to be reset prior to re-use.
  */
 void qdr_reset_sheaf(qdr_core_t *core, uint8_t n);
+
+/**
+ * Run in an IO thread.
+ *
+ * Records Proton's view of the link's available credit and tracks it for management and
+ * logging.
+ */
+void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link);
 
 #endif

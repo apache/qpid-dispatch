@@ -1202,6 +1202,16 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     pn_data_format(props, props_str, &props_len);
 
+    if (conn->connector) {
+        char conn_msg[300];
+        qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+                " auth=%s user=%s container_id=%s",
+                connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
+                        authenticated ? mech : "no", (char*) user, container);
+        strcpy(conn->connector->conn_msg, conn_msg);
+    }
+
+
     qd_log(router->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
            " auth=%s user=%s container_id=%s props=%s",
            connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
@@ -1360,6 +1370,14 @@ static void CORE_link_first_attach(void             *context,
     // Open (attach) the link
     //
     pn_link_open(qd_link_pn(qlink));
+
+    //
+    // All links on the inter router or edge connection have unbounded q2 limit.
+    // Blocking control messages can lead to various failures
+    //
+    if (qdr_connection_role(conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(conn) == QDR_ROLE_INTER_ROUTER) {
+        qd_link_set_q2_limit_unbounded(qlink, true);
+    }
 
     //
     // Mark the link as stalled and waiting for initial credit.
@@ -1651,6 +1669,18 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 }
 
 
+static int CORE_link_get_credit(void *context, qdr_link_t *link)
+{
+    qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
+    pn_link_t *plink = !!qlink ? qd_link_pn(qlink) : 0;
+
+    if (!plink)
+        return 0;
+
+    return pn_link_remote_credit(plink);
+}
+
+
 static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
     qd_router_t   *router = (qd_router_t*) context;
@@ -1762,6 +1792,7 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             CORE_link_drain,
                             CORE_link_push,
                             CORE_link_deliver,
+                            CORE_link_get_credit,
                             CORE_delivery_update,
                             CORE_close_connection);
 

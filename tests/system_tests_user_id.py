@@ -23,8 +23,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
-import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, DIR, main_module
+from system_test import unittest
 from qpid_dispatch.management.client import Node
 from proton import SSLDomain
 
@@ -37,6 +37,8 @@ class QdSSLUseridTest(TestCase):
     @classmethod
     def setUpClass(cls):
         super(QdSSLUseridTest, cls).setUpClass()
+
+        os.environ["TLS_SERVER_PASSWORD"] = "server-password"
 
         ssl_profile1_json = os.path.join(DIR, 'displayname_files', 'profile_names1.json')
         ssl_profile2_json = os.path.join(DIR, 'displayname_files', 'profile_names2.json')
@@ -90,7 +92,9 @@ class QdSSLUseridTest(TestCase):
                              'certFile': cls.ssl_file('server-certificate.pem'),
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'uidFormat': 'cs5',
-                             'password': 'server-password'}),
+                            # Use the env: prefix TLS_SERVER_PASSWORD. The TLS_SERVER_PASSWORD
+                            # is set to 'server-password'
+                             'password': 'env:TLS_SERVER_PASSWORD'}),
 
             # no fingerprint field
             ('sslProfile', {'name': 'server-ssl7',
@@ -113,7 +117,9 @@ class QdSSLUseridTest(TestCase):
                              'caCertFile': cls.ssl_file('ca-certificate.pem'),
                              'certFile': cls.ssl_file('server-certificate.pem'),
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
-                             'password': 'server-password'}),
+                            # Use the prefix 'file:' for the password. This should read the file and
+                            # use the password from the file.
+                             'password': 'file:' + cls.ssl_file('server-password-file.txt')}),
 
             # one component of uidFormat is invalid (x), this will result in an error in the fingerprint calculation.
             # The user_id will fall back to proton's pn_transport_get_user
@@ -131,7 +137,9 @@ class QdSSLUseridTest(TestCase):
                              'certFile': cls.ssl_file('server-certificate.pem'),
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'uidFormat': 'abxd',
-                             'password': 'server-password'}),
+                            # Use the prefix 'literal:'. This makes sure we maintain
+                            #backward compatability
+                             'password': 'literal:server-password'}),
 
             ('sslProfile', {'name': 'server-ssl12',
                              'caCertFile': cls.ssl_file('ca-certificate.pem'),
@@ -139,7 +147,8 @@ class QdSSLUseridTest(TestCase):
                              'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                              'uidFormat': '1',
                              'uidNameMappingFile': ssl_profile1_json,
-                             'password': 'server-password'}),
+                            # Use the pass: followed by the actual password
+                             'password': 'pass:server-password'}),
 
             # should translate a display name
             # specifying both passwordFile and password, password takes precedence.
@@ -150,6 +159,9 @@ class QdSSLUseridTest(TestCase):
                             'uidFormat': '2',
                             'uidNameMappingFile': ssl_profile2_json,
                             'password': 'server-password',
+                            # If both passwordFile and password are provided, the passwordFile is ignored.
+                            # Here we specify a bad password in the passwordFile and
+                            # it is ignored.
                             'passwordFile': cls.ssl_file('server-password-file-bad.txt')}),
 
             ('sslProfile', {'name': 'server-ssl14',
@@ -158,6 +170,8 @@ class QdSSLUseridTest(TestCase):
                             'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                             'uidFormat': '1',
                             'uidNameMappingFile': ssl_profile1_json,
+                            # Use just the deprecated passwordFile entity to make sure it is backward
+                            # compatible.
                             'passwordFile': cls.ssl_file('server-password-file.txt')}),
 
             ('listener', {'port': cls.tester.get_port(), 'sslProfile': 'server-ssl1', 'authenticatePeer': 'yes',

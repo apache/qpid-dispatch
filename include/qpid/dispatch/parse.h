@@ -243,6 +243,9 @@ qd_parsed_field_t *qd_parse_sub_key(qd_parsed_field_t *field, uint32_t idx);
  */
 qd_parsed_field_t *qd_parse_sub_value(qd_parsed_field_t *field, uint32_t idx);
 
+qd_parsed_field_t *qd_field_first_child(qd_parsed_field_t *field);
+qd_parsed_field_t *qd_field_next_child(qd_parsed_field_t *field);
+
 /**
  * Convenience Function - Return true iff the field is a map.
  *

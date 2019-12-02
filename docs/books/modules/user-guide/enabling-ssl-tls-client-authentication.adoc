@@ -1,0 +1,62 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// securing-incoming-client-connections.adoc
+
+[id='enabling-ssl-tls-client-authentication-{context}']
+= Enabling SSL/TLS client authentication
+
+In addition to SSL/TLS encryption, you can also use SSL/TLS to authenticate an incoming connection from a client. With this method, a clients must present its own X.509 certificate to the router, which the router uses to verify the client's identity.
+
+.Prerequisites
+
+* SSL/TLS encryption must be configured.
++
+For more information, see xref:enabling-ssl-tls-encryption-{context}[].
+
+* The client must have an X.509 certificate that it can use to authenticate to the router.
+
+.Procedure
+
+include::{FragmentDir}/fragment-router-open-config-file-step.adoc[]
+
+. Configure the `listener` for this connection to use SSL/TLS to authenticate the client.
++
+--
+This example adds SSL/TLS authentication to a `normal` listener to authenticate incoming connections from a client. The client will only be able to connect to the router by presenting its own X.509 certificate to the router, which the router will use to verify the client's identity.
+
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: 0.0.0.0
+    port: 5672
+    role: normal
+    sslProfile: service-tls
+    requireSsl: yes
+    authenticatePeer: yes
+    saslMechanisms: EXTERNAL
+    ...
+}
+----
+`authenticatePeer`:: Specify `yes` to authenticate the client's identity.
+
+`saslMechanisms`:: Specify `EXTERNAL` to enable X.509 client certificate authentication.
+--

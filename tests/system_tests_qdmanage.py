@@ -22,9 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import json, unittest2 as unittest, os
+import json
+import os
 
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import unittest
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
@@ -178,9 +180,9 @@ class QdmanageTest(TestCase):
     def test_get_schema(self):
         schema = dictify(QdSchema().dump())
         actual = self.run_qdmanage("get-json-schema")
-        self.assertEquals(schema, dictify(json.loads(actual)))
+        self.assertEqual(schema, dictify(json.loads(actual)))
         actual = self.run_qdmanage("get-schema")
-        self.assertEquals(schema, dictify(json.loads(actual)))
+        self.assertEqual(schema, dictify(json.loads(actual)))
 
     def test_get_annotations(self):
         """
@@ -230,11 +232,13 @@ class QdmanageTest(TestCase):
         self.assertEqual(len(out), 1)
         self.assertEqual(len(out['org.apache.qpid.dispatch.sslProfile']), 3)
 
-
     def test_get_log(self):
-        log = json.loads(self.run_qdmanage("get-log limit=1"))[0]
-        self.assertEquals(['AGENT', 'debug'], log[0:2])
-        self.assertRegexpMatches(log[2], 'get-log')
+        logs = json.loads(self.run_qdmanage("get-log limit=20"))
+        found = False
+        for log in logs:
+            if u'get-log' in log[2] and ['AGENT', 'debug'] == log[0:2]:
+                found = True
+        self.assertTrue(found)
 
     def test_get_logstats(self):
         query_command = 'QUERY --type=logStats'
@@ -265,7 +269,7 @@ class QdmanageTest(TestCase):
             if log_levels_present == n_log_levels:
                 good_logs += 1
 
-        self.assertEquals ( good_logs, len(logs) )
+        self.assertEqual ( good_logs, len(logs) )
 
     def test_update(self):
         exception = False
@@ -407,8 +411,8 @@ class QdmanageTest(TestCase):
         listener_port = self.get_port()
 
         listener = self.create(long_type, name, str(listener_port))
-        self.assertEquals(listener['type'], long_type)
-        self.assertEquals(listener['name'], name)
+        self.assertEqual(listener['type'], long_type)
+        self.assertEqual(listener['name'], name)
 
         exception_occurred = False
 

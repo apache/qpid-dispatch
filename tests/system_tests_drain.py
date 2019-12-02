@@ -22,8 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from system_test import TestCase, Qdrouterd, main_module
+from system_test import unittest
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 from system_tests_drain_support import DrainMessagesMoreHandler

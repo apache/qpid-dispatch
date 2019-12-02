@@ -510,6 +510,11 @@
 	                "description":"Number of links attached to the router node.",
 	                "graph": true
 	            },
+                "blockedLinkCount": {
+                    "type": "integer",
+                    "description": "The number of links that are flagged as blocked.  A blocked link is one in which the available credit has remained zero for more than 10 seconds.",
+                    "graph": true
+                },
 	            "nodeCount": {
 	                "type": "integer",
 	                "description":"Number of known peer router nodes.",
@@ -570,6 +575,11 @@
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
                 },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
+                },
                 "deliveriesIngress": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to it by a sender that is directly attached to the router.",
@@ -584,12 +594,12 @@
                     "type": "integer",
                     "description":"Number of deliveries that were sent to another router in the network.",
                     "graph": true
-                },                
+                },
                 "deliveriesIngressRouteContainer": {
                     "type": "integer",
                     "description":"Number of deliveries that were received from router container connections.",
                     "graph": true
-                },                
+                },
                 "deliveriesEgressRouteContainer": {
                     "type": "integer",
                     "description":"Number of deliveries that were sent to route container connections.",
@@ -599,9 +609,14 @@
                     "type": "integer",
                     "description": "Number of deliveries that were sent to the fallback destination due to the primary destination being unreachable.",
                     "graph": true
-                }
+                },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the router was started."
+                }                
             }
-        },       
+        },
         "sslProfile": {
             "description":"Attributes for setting TLS/SSL configuration for connections.",
             "referential": true,
@@ -612,12 +627,12 @@
                     "type": "string",
                     "description": "Specifies the enabled ciphers so the SSL Ciphers can be hardened. In other words, use this field to disable weak ciphers. The ciphers are specified in the format understood by the OpenSSL library. For example, ciphers can be set to ALL:!aNULL:!EXPORT56:RC4+RSA:+HIGH:+MEDIUM:+LOW:+SSLv2:+EXP; -- The full list of allowed ciphers can be viewed using the openssl ciphers command",
                     "create": true
-                },      
+                },
                 "protocols": {
                     "type": "string",
                     "description": "The TLS protocols that this sslProfile can use. You can specify a list of one or more of TLSv1, TLSv1.1, or TLSv1.2. To specify multiple protocols, separate the protocols with a space. For example, to permit the sslProfile to use TLS v1.1 and TLS v1.2 only, you would set the value to TLSv1.1 TLSv1.2. If you do not specify a value, the sslProfile uses the TLS protocol specified by the system-wide configuration.",
                     "create": true
-                },                            
+                },
                 "caCertFile": {
                     "type": "path",
                     "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
@@ -639,14 +654,14 @@
                 },
                 "passwordFile": {
                     "type": "path",
-                    "description": "If the above private key is password protected, this is the absolute path to a file containing the password that unlocks the certificate key. This file should be permission protected to limit access",
+                    "description": "(DEPRECATED) If the above private key is password protected, this is the absolute path to the file containing the password that unlocks the certificate key. This file should be permission protected to limit access. This has been deprecated. Use the file: prefix in the password field to specify the absolute path of the file containing the password. If both password and passwordFile are provided, the passwordFile is ignored",
+                    "deprecated": true,
                     "create": true
 
                 },
                 "password": {
                     "type": "string",
-                    "description": "(DEPRECATED) An alternative to storing the password in a file referenced by passwordFile is to supply the password right here in the configuration file.  This takes precedence over the passwordFile if both are specified. This attribute has been deprecated because it is unsafe to store plain text passwords in config files. Use the passwordFile instead",
-                    "deprecated": true,
+                    "description": "The password that unlocks the certificate key. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'password: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'password: file:<absolute-path-to-file>'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'password: pass:<password>', or 'password: literal:<password>', or 'password: <password>'. This option is insecure, so it should only be used if security is not a concern. If both password and passwordFile are provided, the passwordFile is ignored.",
                     "create": true
 
                 },
@@ -688,7 +703,7 @@
                     "default": "amqp",
                     "create": true
 
-                },                
+                },
                 "realm": {
                     "type": "string",
                     "description": "Value to set for hostname field on sasl-init",
@@ -875,7 +890,7 @@
                 },
                 "httpRootDir": {
                     "type": "path",
-                    "description": "Absolute path to a directory from which to serve static HTML files. For example, /usr/share/qpid-dispatch/console.",
+                    "description": "Absolute path to a directory from which to serve static HTML files. Defaults to the stand-alone console installation directory (typically /usr/share/qpid-dispatch/console).",
                     "deprecationName": "httpRoot",
                     "create": true
                 },
@@ -1008,7 +1023,7 @@
                 "saslPassword": {
                     "type": "string",
                     "required": false,
-                    "description": "The password that the connector is using to connect to a peer.",
+                    "description": "The password that the connector is using to connect to a peer. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'saslPassword: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'saslPassword: file:<absolute-path-to-file>'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'saslPassword: pass:<password>' or 'saslPassword: <password>'. This option is insecure, so it should only be used if security is not a concern.",
                     "create": true,
                     "hidden": true
                 },
@@ -1024,7 +1039,17 @@
                     "description": "A read-only, comma-separated list of failover urls. ",
                     "deprecationName": "failoverList",
                     "create": false
-                    
+
+                },
+                "connectionStatus": {
+                    "type": "string",
+                    "description": "A read-only status of the connection. Could be one of CONNECTING, SUCCESS, FAILED",
+                    "create": false
+                },
+                "connectionMsg": {
+                    "type": "string",
+                    "description": "A read-only connection message. Contains the connection message",
+                    "create": false
                 },
                 "policyVhost": {
                     "type": "string",
@@ -1514,6 +1539,20 @@
                     "graph": true,
                     "description": "The total number of settled deliveries that were held in the router for more than 10 seconds."
                 },
+                "deliveriesStuck": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current number of deliveries that are unsettled and have been held in the router for more than 10 seconds."
+                },
+                "creditAvailable": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of credits available on this link."
+                },
+                "zeroCreditSeconds": {
+                    "type": "integer",
+                    "description": "The number of seconds that the link's available credit has remained zero."
+                },
                 "settleRate": {
                     "type": "integer",
                     "graph": true,
@@ -1684,7 +1723,7 @@
                 },
                 "operStatus": {
                     "type": ["up", "closing"]
-                },            
+                },
                 "container": {
                     "description": "The container for this connection",
                     "type": "string"
@@ -1738,10 +1777,20 @@
                     "description": "If multi-tenancy is on for this connection, the tenant space in effect",
                     "type": "string"
                 },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the connection was created."
+                },                                
                 "properties": {
                     "description": "Connection properties supplied by the peer.",
                     "type": "map"
-                }
+                },
+                "lastDlvSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since a delivery was sent on this connection. Will display a - (dash) if no deliveries have been sent on the connection."
+                }                
             }
         },
 
@@ -1837,7 +1886,17 @@
                 },
                 "connectionsProcessed": {"type": "integer", "graph": true},
                 "connectionsDenied": {"type": "integer", "graph": true},
-                "connectionsCurrent": {"type": "integer", "graph": true}
+                "connectionsCurrent": {"type": "integer", "graph": true},
+                "linksDenied": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The sum of all vhost sender and receiver denials."
+                },
+                "totalDenials": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The total number of connection and link denials."
+                }
             }
         },
 
@@ -1908,6 +1967,18 @@
                     "type": "string",
                     "description": "A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard '*'. To deny access from all remote hosts, leave this attribute blank.",
                     "required": true
+                },
+                "maxConnectionsPerUser": {
+                    "type": "integer",
+                    "description": "Optional maximum number of connections that may be created by users in this group. This value, if specified, overrides the vhost maxConnectionsPerUser value",
+                    "required": false,
+                    "create": false
+                },
+                "maxConnectionsPerHost": {
+                    "type": "integer",
+                    "description": "Optional maximum number of concurrent connections allowed for any remote host by users in this group. This value, if specified, overrides the vhost maxConnectionsPerHost value",
+                    "required": false,
+                    "create": false
                 },
                 "maxFrameSize": {
                     "type": "integer",
@@ -1985,14 +2056,14 @@
                     "default": true,
                     "required": false,
                     "create": true
-                },                
+                },
                 "allowFallbackLinks": {
                     "type": "boolean",
                     "description": "Whether this connection is allowed to claim 'qd.fallback' capability for attached links.  This allows endpoints to act as fallback destinations for addresses that have fallback capability enabled.",
                     "default": true,
                     "required": false,
                     "create": true
-                },                
+                },
                 "sources": {
                     "type": "string",
                     "description": "A list of source addresses from which users in this group may receive messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses. You can use the substitution token '${user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name. You may specify attributes 'sources' or 'sourcePattern' but not both at the same time.",
@@ -2049,7 +2120,7 @@
                 "receiverDenied": {"type": "integer", "graph": true}
             }
         },
-        
+
         "dummy": {
             "description": "Dummy entity for test purposes.",
             "extends": "entity",

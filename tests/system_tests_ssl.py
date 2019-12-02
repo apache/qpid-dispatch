@@ -27,12 +27,12 @@ import re
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
 from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
+from system_test import unittest
 from proton import SASL, Url, SSLDomain, SSLUnavailable
 from proton.utils import BlockingConnection
 from distutils.version import StrictVersion
 import proton
 import cproton
-import unittest2 as unittest
 
 
 class RouterTestSslBase(TestCase):
@@ -456,7 +456,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1 only is allowed
         """
-        self.assertEquals(self.get_expected_tls_result([True, False, False, False]),
+        self.assertEqual(self.get_expected_tls_result([True, False, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS1))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -464,7 +464,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1.1 only is allowed
         """
-        self.assertEquals(self.get_expected_tls_result([False, True, False, False]),
+        self.assertEqual(self.get_expected_tls_result([False, True, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS11))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -472,7 +472,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1.2 only is allowed
         """
-        self.assertEquals(self.get_expected_tls_result([False, False, True, False]),
+        self.assertEqual(self.get_expected_tls_result([False, False, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -480,7 +480,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1.3 only is allowed
         """
-        self.assertEquals(self.get_expected_tls_result([False, False, False, True]),
+        self.assertEqual(self.get_expected_tls_result([False, False, False, True]),
                           self.get_allowed_protocols(self.PORT_TLS13))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -488,7 +488,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1 and TLSv1.1 only are allowed
         """
-        self.assertEquals(self.get_expected_tls_result([True, True, False, False]),
+        self.assertEqual(self.get_expected_tls_result([True, True, False, False]),
                           self.get_allowed_protocols(self.PORT_TLS1_TLS11))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -496,7 +496,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1 and TLSv1.2 only are allowed
         """
-        self.assertEquals(self.get_expected_tls_result([True, False, True, False]),
+        self.assertEqual(self.get_expected_tls_result([True, False, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS1_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -504,7 +504,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects TLSv1.1 and TLSv1.2 only are allowed
         """
-        self.assertEquals(self.get_expected_tls_result([False, True, True, False]),
+        self.assertEqual(self.get_expected_tls_result([False, True, True, False]),
                           self.get_allowed_protocols(self.PORT_TLS11_TLS12))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -512,7 +512,7 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
         """
-        self.assertEquals(self.get_expected_tls_result([True, True, True, True]),
+        self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
                           self.get_allowed_protocols(self.PORT_TLS_ALL))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
@@ -575,6 +575,8 @@ class RouterTestSslInterRouter(RouterTestSslBase):
 
         if not SASL.extended():
             return
+
+        os.environ["ENV_SASL_PASSWORD"] = "password"
 
         # Generate authentication DB
         super(RouterTestSslInterRouter, cls).create_sasl_files()
@@ -649,7 +651,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to All TLS versions allowed listener
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
                            'sslProfile': 'ssl-profile-tls-all'}),
             # SSL Profile for all TLS versions (protocols element not defined)
             ('sslProfile', {'name': 'ssl-profile-tls-all',
@@ -668,7 +670,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to listener that allows TLSv1.2 only
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS12,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'env:ENV_SASL_PASSWORD',
                            'sslProfile': 'ssl-profile-tls12'}),
             # SSL Profile for TLSv1.2
             ('sslProfile', {'name': 'ssl-profile-tls12',
@@ -688,7 +690,7 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             # Connector to listener that allows TLSv1 and TLSv1.2 only
             ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS1_TLS12,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
-                           'saslUsername': 'test@domain.com', 'saslPassword': 'password',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
                            'sslProfile': 'ssl-profile-tls1'}),
             # SSL Profile for TLSv1
             ('sslProfile', {'name': 'ssl-profile-tls1',

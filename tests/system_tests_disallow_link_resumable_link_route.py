@@ -22,11 +22,11 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from time import sleep, time
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import unittest
 
 from proton import Message, Terminus
 from proton.reactor import DurableSubscription, SenderOption

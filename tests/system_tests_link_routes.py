@@ -22,7 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
@@ -32,6 +31,7 @@ from system_test import AsyncTestSender
 from system_test import AsyncTestReceiver
 from system_test import QdManager
 from system_test import MgmtMsgProxy
+from system_test import unittest, QdManager
 from test_broker import FakeBroker
 
 from proton import Delivery
@@ -272,11 +272,11 @@ class LinkRouteTest(TestCase):
         self.assertEqual(out_list.count('out'), 4)
 
         parts = out.split("\n")
-        self.assertEqual(len(parts), 12)
+        self.assertEqual(len(parts), 15)
 
         out = self.run_qdstat_linkRoute(self.routers[1].addresses[0], args=['--limit=1'])
         parts = out.split("\n")
-        self.assertEqual(len(parts), 5)
+        self.assertEqual(len(parts), 8)
 
     def test_ccc_qdstat_link_routes_routerC(self):
         """
@@ -337,7 +337,7 @@ class LinkRouteTest(TestCase):
         # 3. inbound link to the $management
         # 4. outbound link to $management
         # self.assertEqual(4, len()
-        self.assertEquals(4, len(local_node.query(type='org.apache.qpid.dispatch.router.link').results))
+        self.assertEqual(4, len(local_node.query(type='org.apache.qpid.dispatch.router.link').results))
 
         blocking_connection.close()
 
@@ -610,7 +610,7 @@ class LinkRouteTest(TestCase):
 
         cmd = 'QUERY --type=linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        self.assertEquals(out.rstrip(), '[]')
+        self.assertEqual(out.rstrip(), '[]')
 
         # linkRoutes now gone on QDR.B but remember that it still exist on QDR.C
         # We will now try to create a receiver on address org.apache.dev on QDR.C.
@@ -632,7 +632,7 @@ class LinkRouteTest(TestCase):
 
         cmd = 'QUERY --type=linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=addr)
-        self.assertEquals(out.rstrip(), '[]')
+        self.assertEqual(out.rstrip(), '[]')
 
         res = local_node.query(type='org.apache.qpid.dispatch.router')
         results = res.results[0]
@@ -2120,6 +2120,31 @@ class Dispatch1428(TestCase):
         ]
         for c in cmds:
             self.run_qdmanage(cmd=c, address=self.routers[1].addresses[0])
+
+        # Now that the qdmanage has run, query the link routes and make sure that their "operStatus" is "active" before
+        # running any of the tests.
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        qd_manager = QdManager(self, address=self.routers[1].addresses[0])
+
+        for i in range(5):
+            all_link_routes_activated = True
+            link_routes = qd_manager.query(long_type)
+            for link_route in link_routes:
+                oper_status = link_route['operStatus']
+                if oper_status != "active":
+                    all_link_routes_activated = False
+                    break
+            if not all_link_routes_activated:
+                # One or more of the link routes have not been activated.
+                # Check after one second.
+                sleep(1)
+            else:
+                break
+
+        # All link routes created in this test MUST be activated before
+        # we can continue further testing.
+        self.assertTrue(all_link_routes_activated)
+
 
         first = SendReceive("%s/foo" % self.routers[1].addresses[0], "%s/foo" % self.routers[0].addresses[0])
         first.run()

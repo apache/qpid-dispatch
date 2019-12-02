@@ -110,7 +110,7 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->error        = 0;
     dlv->disposition  = 0;
 
-    qdr_delivery_read_extension_state(dlv, disposition, disposition_data, true);
+    qdr_delivery_set_extension_state(dlv, disposition, disposition_data, true);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - protect returned value");
 
@@ -257,11 +257,12 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
         link->credit_to_core += credit;
     }
 
-    action->args.connection.link   = link;
+    set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
     action->args.connection.credit = credit;
     action->args.connection.drain  = drain_mode;
 
     qdr_action_enqueue(core, action);
+    qdr_record_link_credit(core, link);
 }
 
 
@@ -296,16 +297,17 @@ void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr, bool ex
 
 static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    qdr_link_t *link = safe_deref_qdr_link_t(action->args.connection.link);
+
+    if (discard || !link)
         return;
 
-    qdr_link_t *link      = action->args.connection.link;
     int  credit           = action->args.connection.credit;
     bool drain            = action->args.connection.drain;
     bool activate         = false;
     bool drain_was_set    = !link->drain_mode && drain;
     qdr_link_work_t *work = 0;
-    
+
     link->drain_mode = drain;
 
     //
@@ -318,8 +320,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
         sys_mutex_lock(link->conn->work_lock);
 
         if (DEQ_SIZE(link->undelivered) > 0) {
-            // Adding this work at priority 0.
-            qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+            qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
             activate = true;
         }
 
@@ -369,8 +370,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             if (work)
                 DEQ_INSERT_TAIL(link->work_list, work);
             if (DEQ_SIZE(link->undelivered) > 0 || drain_was_set) {
-                // Adding this work at priority 0.
-                qdr_add_link_ref(link->conn->links_with_work, link, QDR_LINK_LIST_CLASS_WORK);
+                qdr_add_link_ref(&link->conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
                 activate = true;
             }
             sys_mutex_unlock(link->conn->work_lock);
@@ -452,10 +452,9 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         // Credit update: since this is a targeted link to an address for which
         // there is no consumers then do not replenish credit - drain instead.
-        // However edge and multicast are special snowflakes.  We cannot block
-        // credit on either (see DISPATCH-779 - mcast is effectively a topic)
+        // However edge is a special snowflake which always has credit available.
         //
-        if (link->edge || qdr_is_addr_treatment_multicast(addr)) {
+        if (link->edge) {
             qdr_link_issue_credit_CT(core, link, 1, false);
         } else {
             qdr_link_issue_credit_CT(core, link, 0, true);  // drain
@@ -572,6 +571,11 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         //
         if (!dlv->settled)
             qdr_delivery_release_CT(core, dlv);
+        else {
+            link->dropped_presettled_deliveries++;
+            if (dlv_link->link_type == QD_LINK_ENDPOINT)
+                core->dropped_presettled_deliveries++;
+        }
 
         //
         // Decrementing the delivery ref count for the action
@@ -620,7 +624,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             // deliveries because it increases the risk of credit starvation if there
             // are many addresses sharing the link.
             //
-            if (link->link_type == QD_LINK_ROUTER || link->edge)
+            if (link->link_type == QD_LINK_CONTROL || link->link_type == QD_LINK_ROUTER || link->edge)
                 qdr_link_issue_credit_CT(core, link, 1, false);
         }
     }
@@ -638,6 +642,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     if (!link)
         return;
+    if (link->conn)
+        link->conn->last_delivery_time = core->uptime_ticks;
 
     //
     // Record the ingress time so we can track the age of this delivery.
@@ -665,8 +671,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         // If this is an attach-routed link, put the delivery directly onto the peer link
         //
         qdr_delivery_t *peer = qdr_forward_new_delivery_CT(core, dlv, link->connected_link, dlv->msg);
-
-        qdr_delivery_copy_extension_state(dlv, peer, true);
+        qdr_delivery_set_extension_state(peer,
+                                         dlv->remote_disposition,
+                                         qdr_delivery_extension_state(dlv),
+                                         true);
 
         //
         // Copy the delivery tag.  For link-routing, the delivery tag must be preserved.

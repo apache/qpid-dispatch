@@ -22,6 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .display import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, Sortable
+from .display import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, Sortable, BodyFormat
 
-__all__ = ["Display", "Header", "Sorter", "YN", "Commas", "TimeLong", "TimeShort", "Sortable"]
+__all__ = ["Display", "Header", "Sorter", "YN", "Commas", "TimeLong", "TimeShort", "Sortable", "BodyFormat"]

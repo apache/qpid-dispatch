@@ -58,7 +58,4 @@ void          sys_thread_join(sys_thread_t *thread);
 /** Return the OS identifier for this thread */
 long sys_thread_id(sys_thread_t *thread);
 
-/** Return the OS identifier for the current thread */
-long sys_thread_self();
-
 #endif

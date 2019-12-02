@@ -83,6 +83,8 @@ class PolicyKeys(object):
     KW_CONNECTIONS_APPROVED     = "connectionsApproved"
     KW_CONNECTIONS_DENIED       = "connectionsDenied"
     KW_CONNECTIONS_CURRENT      = "connectionsCurrent"
+    KW_LINKS_DENIED             = "linksDenied"
+    KW_TOTAL_DENIALS            = "totalDenials"
     KW_PER_USER_STATE           = "perUserState"
     KW_PER_HOST_STATE           = "perHostState"
 
@@ -138,6 +140,8 @@ class PolicyCompiler(object):
     allowed_settings_options = [
         PolicyKeys.KW_USERS,
         PolicyKeys.KW_REMOTE_HOSTS,
+        PolicyKeys.KW_MAXCONNPERHOST,
+        PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_MAX_FRAME_SIZE,
         PolicyKeys.KW_MAX_MESSAGE_SIZE,
         PolicyKeys.KW_MAX_SESSION_WINDOW,
@@ -260,6 +264,8 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_TARGETS] = ''
         policy_out[PolicyKeys.KW_SOURCE_PATTERN] = ''
         policy_out[PolicyKeys.KW_TARGET_PATTERN] = ''
+        policy_out[PolicyKeys.KW_MAXCONNPERHOST] = None # optional group limit
+        policy_out[PolicyKeys.KW_MAXCONNPERUSER] = None
 
         cerror = []
         user_sources = False
@@ -270,7 +276,16 @@ class PolicyCompiler(object):
             if key not in self.allowed_settings_options:
                 warnings.append("Policy vhost '%s' user group '%s' option '%s' is ignored." %
                                 (vhostname, usergroup, key))
-            if key in [PolicyKeys.KW_MAX_FRAME_SIZE,
+            if key in [PolicyKeys.KW_MAXCONNPERHOST,
+                       PolicyKeys.KW_MAXCONNPERUSER
+                       ]:
+                if not self.validateNumber(val, 0, 65535, cerror):
+                    msg = ("Policy vhost '%s' user group '%s' option '%s' has error '%s'." % 
+                           (vhostname, usergroup, key, cerror[0]))
+                    errors.append(msg)
+                    return False
+                policy_out[key] = int(val)
+            elif key in [PolicyKeys.KW_MAX_FRAME_SIZE,
                        PolicyKeys.KW_MAX_MESSAGE_SIZE,
                        PolicyKeys.KW_MAX_RECEIVERS,
                        PolicyKeys.KW_MAX_SENDERS,
@@ -516,8 +531,8 @@ class AppStats(object):
         self._manager.get_agent().qd.qd_dispatch_policy_c_counts_refresh(self._cstats, entitymap)
         attributes.update(entitymap)
 
-    def can_connect(self, conn_id, user, host, diags):
-        return self.conn_mgr.can_connect(conn_id, user, host, diags)
+    def can_connect(self, conn_id, user, host, diags, group_max_conn_user, group_max_conn_host):
+        return self.conn_mgr.can_connect(conn_id, user, host, diags, group_max_conn_user, group_max_conn_host)
 
     def disconnect(self, conn_id, user, host):
         self.conn_mgr.disconnect(conn_id, user, host)
@@ -751,8 +766,11 @@ class PolicyLocal(object):
 
             # This user passes administrative approval.
             # Now check live connection counts
+            # Extract optional usergroup connection counts
+            group_max_conn_user = groupsettings.get(PolicyKeys.KW_MAXCONNPERUSER)
+            group_max_conn_host = groupsettings.get(PolicyKeys.KW_MAXCONNPERHOST)
             diags = []
-            if not stats.can_connect(conn_name, user, rhost, diags):
+            if not stats.can_connect(conn_name, user, rhost, diags, group_max_conn_user, group_max_conn_host):
                 for diag in diags:
                     self._manager.log_info(
                         "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "

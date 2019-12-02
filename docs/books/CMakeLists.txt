@@ -47,7 +47,7 @@ if (ASCIIDOCTOR_EXE)
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
     COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/book.adoc -o user-guide/index.html
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/*.adoc ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/modules/*.adoc ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/assemblies/*.adoc
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/user-guide/*.adoc
     )
 
   add_custom_target (books DEPENDS ${books})
@@ -55,4 +55,3 @@ if (ASCIIDOCTOR_EXE)
 else ()
   message (STATUS "AsciiDoctor not found: Not generating books")
 endif ()
-

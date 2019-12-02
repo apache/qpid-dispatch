@@ -123,6 +123,32 @@ void qdr_modules_finalize(qdr_core_t *core)
 }
 
 
+/*
+ * router_core_process_background_action_LH
+ *
+ * Process up to one available background action.
+ * Return true iff an action was processed.
+ */
+static bool router_core_process_background_action_LH(qdr_core_t *core)
+{
+    qdr_action_t *action = DEQ_HEAD(core->action_list_background);
+
+    if (!!action) {
+        DEQ_REMOVE_HEAD(core->action_list_background);
+        sys_mutex_unlock(core->action_lock);
+        if (action->label)
+            qd_log(core->log, QD_LOG_TRACE, "Core background action '%s'%s", action->label, core->running ? "" : " (discard)");
+        action->action_handler(core, action, !core->running);
+        sys_mutex_lock(core->action_lock);
+
+        free_qdr_action_t(action);
+        return true;
+    }
+
+    return false;
+}
+
+
 void *router_core_thread(void *arg)
 {
     qdr_core_t        *core = (qdr_core_t*) arg;
@@ -138,15 +164,17 @@ void *router_core_thread(void *arg)
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
         //
-        // Use the lock only to protect the condition variable and the action list
+        // Use the lock only to protect the condition variable and the action lists
         //
         sys_mutex_lock(core->action_lock);
 
         //
         // Block on the condition variable when there is no action to do
         //
-        while (core->running && DEQ_IS_EMPTY(core->action_list))
-            sys_cond_wait(core->action_cond, core->action_lock);
+        while (core->running && DEQ_IS_EMPTY(core->action_list)) {
+            if (!router_core_process_background_action_LH(core))
+                sys_cond_wait(core->action_cond, core->action_lock);
+        }
 
         //
         // Move the entire action list to a private list so we can process it without

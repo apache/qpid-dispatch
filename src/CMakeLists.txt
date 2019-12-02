@@ -99,6 +99,7 @@ set(qpid_dispatch_SOURCES
   router_core/modules/edge_addr_tracking/edge_addr_tracking.c
   router_core/modules/address_lookup_server/address_lookup_server.c
   router_core/modules/address_lookup_client/lookup_client.c
+  router_core/modules/stuck_delivery_detection/delivery_tracker.c
   router_node.c
   router_pynode.c
   schema_enum.c
@@ -139,11 +140,19 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
       PROPERTY COMPILE_FLAGS -Wno-strict-aliasing)
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
+# DISPATCH-1384 - for MacOS use flat_namespace instead of 2 level
+# namespace (acts more like linux)
+if (APPLE)
+  set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-flat_namespace ${QPID_DISPATCH_LIB_LINK_FLAGS}")
+else(APPLE)
+  set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-z,defs ${QPID_DISPATCH_LIB_LINK_FLAGS}")
+endif(APPLE)
+
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
 target_link_libraries(qpid-dispatch ${qpid_dispatch_LIBRARIES})
 set_target_properties(qpid-dispatch PROPERTIES
-  LINK_FLAGS "${CATCH_UNDEFINED}")
+  LINK_FLAGS "${QPID_DISPATCH_LIB_LINK_FLAGS}")
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
 

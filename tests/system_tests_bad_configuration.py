@@ -34,6 +34,7 @@ import re
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, TIMEOUT, Process
 
+
 class RouterTestBadConfiguration(TestCase):
 
     """
@@ -109,10 +110,14 @@ class RouterTestBadConfiguration(TestCase):
         """
         with open('../setUpClass/test-router.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
-            regex = ".*(getaddrinfo|proton:io Name or service not known).*"
-            errors_caught = [line for line in log_lines if re.match(regex, line)]
+            expected_errors = [
+                "proton:io Name or service not known",  # Linux
+                "proton:io unknown node or service",  # macOS
+            ]
+            errors_caught = [line for line in log_lines
+                             if any([expected_error in line for expected_error in expected_errors])]
 
-            self.error_caught = len(errors_caught) > 0
+            self.error_caught = any(errors_caught)
 
             # If condition not yet satisfied and not exhausted max attempts,
             # re-schedule the verification.
@@ -137,7 +142,7 @@ class RouterTestBadConfiguration(TestCase):
         It expects that the error can be caught in the logs.
         :return:
         """
-        self.assertEqual(True, self.error_caught)
+        self.assertTrue(self.error_caught)
 
     def test_qdmanage_query(self):
         """

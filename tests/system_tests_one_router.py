@@ -22,9 +22,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
+from system_test import unittest, QdManager
 from proton.handlers import MessagingHandler, TransactionHandler
 from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
 from proton.utils import BlockingConnection, SyncRequestResponse
@@ -306,11 +306,6 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_26_multicast_no_receiver(self):
-        test = MulticastUnsettledNoReceiverTest(self.address)
-        test.run()
-        self.assertEqual(None, test.error)
-
     def test_27_released_vs_modified(self):
         test = ReleasedVsModifiedTest(self.address)
         test.run()
@@ -410,6 +405,7 @@ class OneRouterTest(TestCase):
         Tests connection property that is a binary map. The router ignores AMQP binary data type.
         Router should not return anything for connection properties
         """
+        self.skipTest("Skipped until proton bug fixed.")
         connection = BlockingConnection(self.router.addresses[0],
                                         timeout=60,
                                         properties=CONNECTION_PROPERTIES_BINARY)
@@ -501,6 +497,10 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_48_connection_uptime_last_dlv(self):
+        test = ConnectionUptimeLastDlvTest(self.address, "test_48")
+        test.run()
+        self.assertEqual(None, test.error)
 
 
 class Entity(object):
@@ -520,7 +520,7 @@ class RouterProxy(object):
     def response(self, msg):
         ap = msg.properties
         bd = msg.body
-        if bd.__class__ == dict and 'results' in bd and 'attributeNames' in bd:
+        if isinstance(bd, dict) and 'results' in bd and 'attributeNames' in bd:
             ##
             ## This is a query response
             ##
@@ -1235,18 +1235,21 @@ class MulticastUnsettled ( MessagingHandler ) :
 
 
     def on_start ( self, event ):
-        self.send_conn = event.container.connect ( self.addr )
         self.recv_conn = event.container.connect ( self.addr )
-
-        self.sender = event.container.create_sender   ( self.send_conn, self.addr )
         for i in range ( self.n_receivers ) :
             rcvr = event.container.create_receiver ( self.recv_conn, self.addr, name = "receiver_" + str(i) )
-            self.receivers.append ( rcvr )
             rcvr.flow ( self.n_messages )
-            self.n_received.append ( 0 )
 
         self.test_timer = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
 
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.receivers.append(event.receiver)
+            self.n_received.append(0)
+            # start the sender once all receivers links are up
+            if len(self.receivers) == self.n_receivers:
+                self.send_conn = event.container.connect(self.addr)
+                self.sender = event.container.create_sender(self.send_conn, self.addr)
 
     def on_sendable ( self, event ) :
         while self.n_sent < self.n_messages :
@@ -1254,11 +1257,10 @@ class MulticastUnsettled ( MessagingHandler ) :
                 break
             for i in range ( self.n_messages ) :
                 msg = Message ( body = i )
-                # The sender does not settle, but the 
+                # The sender does not settle, but the
                 # receivers will..
                 self.sender.send ( msg )
                 self.n_sent += 1
-
 
     def on_message ( self, event ) :
         if self.bailing :
@@ -1984,9 +1986,10 @@ class StripMessageAnnotationsNoAddTrace ( MessagingHandler ) :
 
         notes = event.message.annotations
 
-        if notes.__class__ != dict :
-            self.bail ( "annotations are not a dictionary" )
+        if not isinstance(notes, dict):
+            self.bail("annotations are not a dictionary")
             return
+
         # No annotations should get stripped -- neither the
         # ones that the router adds, not the custome one that
         # I added.
@@ -2398,6 +2401,7 @@ class MulticastUnsettledTest(MessagingHandler):
         self.n_sent     = 0
         self.n_received = 0
         self.n_accepted = 0
+        self.n_receivers = 0
 
     def check_if_done(self):
         if self.n_received == self.count * 2 and self.n_accepted == self.count:
@@ -2411,8 +2415,6 @@ class MulticastUnsettledTest(MessagingHandler):
     def on_start(self, event):
         self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
         self.conn      = event.container.connect(self.address)
-        self.sender    = event.container.create_sender(self.conn, self.dest,
-                                                       options=AtLeastOnce())
         self.receiver1 = event.container.create_receiver(self.conn, self.dest,
                                                          name="A",
                                                          options=AtLeastOnce())
@@ -2421,6 +2423,14 @@ class MulticastUnsettledTest(MessagingHandler):
                                                          options=AtLeastOnce());
         self.receiver1.flow(self.count)
         self.receiver2.flow(self.count)
+
+    def on_link_opened(self, event):
+        if event.receiver:
+            self.n_receivers += 1
+            # start the sender once all receivers links are up
+            if self.n_receivers == 2:
+                self.sender = event.container.create_sender(self.conn, self.dest,
+                                                            options=AtLeastOnce())
 
     def on_sendable(self, event):
         for i in range(self.count - self.n_sent):
@@ -2596,82 +2606,100 @@ class MultiframePresettledTest(MessagingHandler):
         Container(self).run()
 
 
-class MulticastUnsettledNoReceiverTest(MessagingHandler):
-    """
-    Creates a sender to a multicast address. Router provides a credit of 'linkCapacity' to this sender even
-    if there are no receivers (The sender should be able to send messages to multicast addresses even when no receiver
-    is connected). The router will send a disposition of released back to the sender and will end up dropping
-    these messages since there is no receiver.
-    """
-    def __init__(self, address):
-        super(MulticastUnsettledNoReceiverTest, self).__init__()
-        self.address = address
-        self.dest = "multicast.MulticastNoReceiverTest"
-        self.error = None
-        self.n_sent = 0
-        self.max_send = 250
-        self.n_released = 0
-        self.n_accepted = 0
+class UptimeLastDlvChecker(object):
+    def __init__(self, parent, lastDlv=None, uptime=0):
+        self.parent = parent
+        self.uptime = uptime
+        self.lastDlv = lastDlv
+        self.expected_num_connections = 2
+        self.num_connections = 0
+
+    def on_timer_task(self, event):
+        local_node = Node.connect(self.parent.address, timeout=TIMEOUT)
+        result = local_node.query('org.apache.qpid.dispatch.connection')
+        container_id_index = result.attribute_names.index('container')
+        uptime_seconds_index = result.attribute_names.index('uptimeSeconds')
+        last_dlv_seconds_index = result.attribute_names.index('lastDlvSeconds')
+        for res in result.results:
+            container_id = res[container_id_index]
+
+            # We only care if the container_id is "UPTIME-TEST"
+            if container_id == self.parent.container_id:
+                uptime_seconds = res[uptime_seconds_index]
+                if self.uptime != 0 and uptime_seconds < self.uptime:
+                    self.parent.error = "The connection uptime should be greater than or equal to %d seconds but instead is %d seconds" % (self.uptime, uptime_seconds)
+                last_dlv_seconds = res[last_dlv_seconds_index]
+                if self.lastDlv is None:
+                    if last_dlv_seconds is not None:
+                        self.parent.error = "Expected lastDlvSeconds to be empty"
+                else:
+                    if not last_dlv_seconds >= self.lastDlv:
+                        self.parent.error = "Connection lastDeliverySeconds must be greater than or equal to $d but is %d" % (self.lastDlv, last_dlv_seconds)
+                    else:
+                        self.parent.success = True
+                self.num_connections += 1
+
+        if self.expected_num_connections != self.num_connections:
+            self.parent.error = "Number of client connections expected=%d, but got %d" % (self.expected_num_connections, self.num_connections)
+
+        self.parent.cancel_custom()
+
+
+class ConnectionUptimeLastDlvTest(MessagingHandler):
+    def __init__(self, address, dest):
+        super(ConnectionUptimeLastDlvTest, self).__init__()
         self.timer = None
-        self.conn = None
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.address = address
         self.sender = None
-        self.query_sent = False
+        self.receiver = None
+        self.error = None
+        self.custom_timer = None
+        self.container_id = "UPTIME-TEST"
+        self.dest = dest
+        self.reactor = None
+        self.success = False
+
+    def cancel_custom(self):
+        self.custom_timer.cancel()
+        if self.error or self.success:
+            self.timer.cancel()
+            self.sender_conn.close()
+            self.receiver_conn.close()
+        else:
+            msg = Message(body=self.container_id)
+            self.sender.send(msg)
+
+            # We have now sent a message that the router must have sent to the
+            # receiver. We will wait for 2 seconds and once again check
+            # uptime and lastDlv
+            self.custom_timer = self.reactor.schedule(2, UptimeLastDlvChecker(self, uptime=7, lastDlv=2))
 
     def timeout(self):
-        self.error = "Timeout expired: n_sent=%d n_released=%d n_accepted=%d" % \
-                     (self.n_sent, self.n_released, self.n_accepted)
-        self.conn.close()
-
-    def check_if_done(self):
-        if self.n_accepted > 0:
-            self.error = "Messages should not be accepted as there are no receivers"
-            self.timer.cancel()
-            self.conn.close()
-        elif self.max_send == self.n_released and not self.query_sent:
-            self.mgmt_tx.send(self.proxy.query_links())
-            self.query_sent = True
+        self.error = "Timeout Expired:, Test took too long to execute. "
+        self.sender_conn.close()
+        self.receiver_conn.close()
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
-        self.conn = event.container.connect(self.address)
-        self.mgmt_rx = event.container.create_receiver(self.conn, dynamic=True)
-        self.mgmt_tx = event.container.create_sender(self.conn, '$management')
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
 
-    def on_link_opened(self, event):
-        if event.receiver == self.mgmt_rx:
-            self.proxy  = RouterProxy(self.mgmt_rx.remote_source.address)
-            self.sender = event.container.create_sender(self.conn, self.dest)
+        # Let's create a sender and receiver but not send any messages.
+        self.sender = event.container.create_sender(self.sender_conn, self.dest)
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
 
-    def on_message(self, event):
-        if event.receiver == self.mgmt_rx:
-            results = self.proxy.response(event.message)
-            for link in results:
-                if link.linkDir == 'in' and link.owningAddr == 'M0' + self.dest:
-                    if link.releasedCount != self.max_send:
-                        self.error = "Released count expected %d, got %d" % (self.max_send, link.droppedPresettledCount)
-            self.timer.cancel()
-            self.conn.close()
-
-    def on_sendable(self, event):
-        if event.sender == self.sender:
-            if self.n_sent >= self.max_send:
-                return
-            self.n_sent += 1
-            msg = Message(body=self.n_sent)
-            event.sender.send(msg)
-
-    def on_accepted(self, event):
-        if event.sender == self.sender:
-            self.n_accepted += 1
-        self.check_if_done()
-
-    def on_released(self, event):
-        if event.sender == self.sender:
-            self.n_released += 1
-        self.check_if_done()
+        # Execute a management query for connections after 5 seconds
+        # This will help us check the uptime and lastDlv time
+        # No deliveries were sent on any link yet, so the lastDlv must be "-"
+        self.reactor = event.reactor
+        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv=None))
 
     def run(self):
-        Container(self).run()
+        container = Container(self)
+        container.container_id = self.container_id
+        container.run()
 
 
 class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
@@ -3148,6 +3176,83 @@ class UnsettledLargeMessageTest(MessagingHandler):
             # Receiver bails after receiving max_receive messages.
             self.receiver.close()
             self.recv_conn.close()
+
+class OneRouterUnavailableCoordinatorTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(OneRouterUnavailableCoordinatorTest, cls).setUpClass()
+        name = "test-router"
+        OneRouterTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR',  'defaultDistribution': 'unavailable'}),
+            ('listener', {'port': cls.tester.get_port() }),
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def test_46_coordinator_linkroute_unavailable_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We try to connect a tx sender
+        # to make sure a good detailed message saying "the link route to a coordinator must be
+        # configured" is sent back.
+        test = RejectCoordinatorGoodMessageTest(self.address)
+        test.run()
+        self.assertTrue(test.passed)
+
+    def test_47_coordinator_linkroute_available_DISPATCH_1453(self):
+        # The defaultDistribution on the router is unavailable. We create a link route with $coordinator address
+        # The link route is not attached to any broker. When the attach comes in, the reject message must be
+        # condition=:"qd:no-route-to-dest", description="No route to the destination node"
+        COORDINATOR = "$coordinator"
+        long_type = 'org.apache.qpid.dispatch.router.config.linkRoute'
+        qd_manager = QdManager(self, address=self.address)
+        args = {"prefix": COORDINATOR, "connection": "broker", "dir": "in"}
+        qd_manager.create(long_type, args)
+        link_route_created = False
+
+        # Verify that the link route was created by querying for it.
+        outs = qd_manager.query(long_type)[0]
+        if outs:
+            try:
+                if outs['prefix'] == COORDINATOR:
+                    link_route_created = True
+            except:
+                pass
+
+        self.assertTrue(link_route_created)
+
+        # We have verified that the link route has been created but there is no broker connections.
+        # Now let's try to open a transaction. We should get a no route to destination error
+        test = RejectCoordinatorGoodMessageTest(self.address, link_route_present=True)
+        test.run()
+        self.assertTrue(test.passed)
+
+
+class RejectCoordinatorGoodMessageTest(RejectCoordinatorTest):
+    def __init__(self, url, link_route_present=False):
+        super(RejectCoordinatorGoodMessageTest, self).__init__(url)
+        self.link_route_present = link_route_present
+        self.error_with_link_route = "No route to the destination node"
+
+    def on_link_error(self, event):
+        link = event.link
+        # If the link name is 'txn-ctrl' and there is a link error and it matches self.error, then we know
+        # that the router has rejected the link because it cannot coordinate transactions itself
+        if link.name == "txn-ctrl":
+            if self.link_route_present:
+                if link.remote_condition.description == self.error_with_link_route and link.remote_condition.name == 'qd:no-route-to-dest':
+                    self.link_error = True
+            else:
+                if link.remote_condition.description == self.error and link.remote_condition.name == 'amqp:precondition-failed':
+                    self.link_error = True
+
+            self.check_if_done()
+
+    def run(self):
+        Container(self).run()
 
 
 class Q2HoldoffDropTest(MessagingHandler):

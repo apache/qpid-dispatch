@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-import unittest2 as unittest
+from system_test import unittest
 
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
 from qpid_dispatch_internal.policy.policy_util import HostStruct
@@ -238,57 +238,66 @@ class PolicyAppConnectionMgrTests(TestCase):
     def test_policy_app_conn_mgr_fail_by_total(self):
         stats = PolicyAppConnectionMgr(1, 2, 2)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('application connection limit' in diags[0])
 
     def test_policy_app_conn_mgr_fail_by_user(self):
         stats = PolicyAppConnectionMgr(3, 1, 2)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per user' in diags[0])
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, 2, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, 2, None))
 
     def test_policy_app_conn_mgr_fail_by_hosts(self):
         stats = PolicyAppConnectionMgr(3, 2, 1)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per host' in diags[0])
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, None, 2))
+        self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, None, 2))
 
     def test_policy_app_conn_mgr_fail_by_user_hosts(self):
         stats = PolicyAppConnectionMgr(3, 1, 1)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 2)
         self.assertTrue('per user' in diags[0] or 'per user' in diags[1])
         self.assertTrue('per host' in diags[0] or 'per host' in diags[1])
+        diags = []
+        self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, 2, 2))
+        self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, 2, 2))
 
     def test_policy_app_conn_mgr_update(self):
         stats = PolicyAppConnectionMgr(3, 1, 2)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per user' in diags[0])
         diags = []
         stats.update(3, 2, 2)
-        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
 
     def test_policy_app_conn_mgr_disconnect(self):
         stats = PolicyAppConnectionMgr(3, 1, 2)
         diags = []
-        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags))
-        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
+        self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
         self.assertTrue('per user' in diags[0])
         diags = []
         stats.disconnect("10.10.10.10:10000", 'chuck', '10.10.10.10')
-        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags))
+        self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
 
     def test_policy_app_conn_mgr_create_bad_settings(self):
         denied = False
@@ -315,9 +324,9 @@ class PolicyAppConnectionMgrTests(TestCase):
         stats = PolicyAppConnectionMgr(10000, 10000, 10000)
         diags = []
         for i in range(0, 10000):
-            self.assertTrue(stats.can_connect('1.1.1.1:' + str(i), 'chuck', '1.1.1.1', diags))
+            self.assertTrue(stats.can_connect('1.1.1.1:' + str(i), 'chuck', '1.1.1.1', diags, None, None))
             self.assertTrue(len(diags) == 0)
-        self.assertFalse(stats.can_connect('1.1.1.1:10000', 'chuck', '1.1.1.1', diags))
+        self.assertFalse(stats.can_connect('1.1.1.1:10000', 'chuck', '1.1.1.1', diags, None, None))
         self.assertTrue(len(diags) == 3)
         self.assertTrue(stats.connections_active == 10000)
         self.assertTrue(stats.connections_approved == 10000)

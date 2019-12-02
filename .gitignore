@@ -11,6 +11,7 @@ tests/authservice.py
 tests/failoverserver.py
 tests/system_tests_authz_service_plugin.py
 tests/system_tests_handle_failover.py
+tests/system_tests_topology_disposition.py
 *.iml
 .idea
 .metadata

@@ -76,30 +76,49 @@ void qdr_terminus_free(qdr_terminus_t *term)
 }
 
 
+// DISPATCH-1461: snprintf() is evil - it returns >= size on overflow.  This
+// wrapper will never return >= size, even if truncated.  This makes it safe to
+// do pointer & length arithmetic without overflowing the destination buffer in
+// qdr_terminus_format()
+//
+static inline int safe_snprintf(char *str, size_t size, const char *format, ...)
+{
+    va_list ap;
+    va_start(ap, format);
+    int rc = vsnprintf(str, size, format, ap);
+    va_end(ap);
+
+    if (size && rc >= size)
+        return size - 1;  // return actual # of bytes written (excluding null)
+    return rc;
+}
+
+
 void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
 {
-    size_t len = snprintf(output, *size, "{");
+    size_t len = safe_snprintf(output, *size, "{");
 
     output += len;
     *size  -= len;
     len     = 0;
-    
+
     do {
         if (term == 0)
             break;
 
         if (term->coordinator) {
-            len = snprintf(output, *size, "<coordinator>");
+            len = safe_snprintf(output, *size, "<coordinator>");
             break;
         }
 
         if (term->dynamic)
-            len = snprintf(output, *size, "<dynamic>");
+            len = safe_snprintf(output, *size, "<dynamic>");
         else if (term->address && term->address->iterator) {
             qd_iterator_reset_view(term->address->iterator, ITER_VIEW_ALL);
-            len = qd_iterator_ncopy(term->address->iterator, (unsigned char*) output, *size);
+            len = qd_iterator_ncopy(term->address->iterator, (unsigned char*) output, *size - 1);
+            output[len] = 0;
         } else if (term->address == 0)
-            len = snprintf(output, *size, "<none>");
+            len = safe_snprintf(output, *size, "<none>");
 
         output += len;
         *size  -= len;
@@ -111,7 +130,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_DELIVERIES:    text = " dur:deliveries"; break;
         }
 
-        len     = snprintf(output, *size, "%s", text);
+        len     = safe_snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
@@ -122,7 +141,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_EXPIRE_NEVER:           text = "";              break;
         }
 
-        len     = snprintf(output, *size, "%s", text);
+        len     = safe_snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
@@ -132,18 +151,18 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         case PN_DIST_MODE_MOVE:        text = " dist:move";   break;
         }
 
-        len     = snprintf(output, *size, "%s", text);
+        len     = safe_snprintf(output, *size, "%s", text);
         output += len;
         *size  -= len;
 
         if (term->timeout > 0) {
-            len     = snprintf(output, *size, " timeout:%"PRIu32, term->timeout);
+            len     = safe_snprintf(output, *size, " timeout:%"PRIu32, term->timeout);
             output += len;
             *size  -= len;
         }
 
         if (term->capabilities && pn_data_size(term->capabilities) > 0) {
-            len     = snprintf(output, *size, " caps:");
+            len     = safe_snprintf(output, *size, " caps:");
             output += len;
             *size  -= len;
 
@@ -154,7 +173,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         }
 
         if (term->filter && pn_data_size(term->filter) > 0) {
-            len     = snprintf(output, *size, " flt:");
+            len     = safe_snprintf(output, *size, " flt:");
             output += len;
             *size  -= len;
 
@@ -165,7 +184,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         }
 
         if (term->outcomes && pn_data_size(term->outcomes) > 0) {
-            len     = snprintf(output, *size, " outcomes:");
+            len     = safe_snprintf(output, *size, " outcomes:");
             output += len;
             *size  -= len;
 
@@ -176,7 +195,7 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
         }
 
         if (term->properties && pn_data_size(term->properties) > 0) {
-            len     = snprintf(output, *size, " props:");
+            len     = safe_snprintf(output, *size, " props:");
             output += len;
             *size  -= len;
 
@@ -191,8 +210,8 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
 
     output += len;
     *size  -= len;
-    
-    len = snprintf(output, *size, "}");
+
+    len = safe_snprintf(output, *size, "}");
     *size -= len;
 }
 

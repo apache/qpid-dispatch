@@ -23,12 +23,12 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import ast
-import unittest2 as unittest
 from time import sleep
 from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
 from system_test import AsyncTestReceiver
+from system_test import unittest
 from proton import Message, Timeout
 from proton.reactor import AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SendException

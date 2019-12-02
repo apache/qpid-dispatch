@@ -17,14 +17,56 @@
 # under the License
 #
 
-os: linux
 sudo: true
 language: c
 cache: ccache
-env:
-  - PROTON_VERSION=master BUILD_TYPE=Debug
-  - PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
-  - PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
+matrix:
+  fast_finish: true
+  allow_failures:
+    - os: osx
+  include:
+  - name: "apache-rat:check"
+    os: linux
+    sudo: false
+    env: []
+    language: java
+    addons:
+      apt:
+        packages: []
+    cache:
+      directories:
+        - $HOME/.m2/repository
+      before_cache:
+        - rm -rf $HOME/.m2/repository/org/apache/qpid/*
+    install: []
+    before_script: []
+    script:
+    - mvn apache-rat:check
+  # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
+  - os: linux
+    env:
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=Debug
+  - os: linux
+    env:
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
+  - os: linux
+    env:
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
+  - os: osx
+    osx_image: xcode10.1
+    env:
+    - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=master
+    before_install:
+    - bash ./macports.sh
+    - export COLUMNS=80
+    - yes | sudo port install cmake swig swig-python libuv jsoncpp libwebsockets cyrus-sasl2 pkgconfig python37 py37-pip
+    # set aliases for CMake's PythonInterp and PythonLibs to find MacPort's `python` on the path first
+    - sudo port select --set python python37
+    - sudo port select --set python3 python37
+    - python -m venv p3venv
+    - source p3venv/bin/activate
+    - pip install unittest2
 
 addons:
   apt:
@@ -37,8 +79,6 @@ addons:
     - python2.7-dev
     - sasl2-bin
     - swig
-    # For apache RAT tool
-    - maven
     # documentation
     - asciidoc
     - asciidoctor
@@ -49,39 +89,32 @@ addons:
     - lcov
 
 install:
+- NPROC=2
 - PREFIX=$PWD/install
 - git clone --depth=10 --branch=$PROTON_VERSION https://github.com/apache/qpid-proton.git
 
-# Build and install latest proton from source.
+# Build and install proton from source.
 - mkdir qpid-proton/build
 - pushd qpid-proton/build
-- export PATH="/usr/bin:$PATH" # Avoid mismatched python interpreters in /opt
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO 
-- cmake --build . --target install
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO
+- cmake --build . --target install -- -j $NPROC
 - popd
 
 before_script:
-- PREFIX=$PWD/install
 - source qpid-proton/build/config.sh
 - mkdir build
 - pushd build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DUSE_VALGRIND=NO -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DDISPATCH_TEST_TIMEOUT=600
-- cmake --build . --target install
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${DISPATCH_CMAKE_ARGS}
+- cmake --build . --target install -- -j $NPROC
 
 script:
 - pushd ../qpid-proton
 - echo $(echo "Current proton commit:") $(git rev-parse HEAD) "(${PROTON_VERSION})"
 - popd
+# Workaround on macOS for PROTON-808 Binaries have their library locations stripped
+- if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
 - ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
-- popd
-- mvn apache-rat:check
 
 after_success:
-- pushd build
+- cd ${TRAVIS_BUILD_DIR}/build
 - if [ "$BUILD_TYPE" = "Coverage" ]; then bash <(curl -s https://codecov.io/bash); fi
-
-cache:
-  directories:
-  - $HOME/.m2/repository
-  before_cache:
-  - rm -rf $HOME/.m2/repository/org/apache/qpid/*
