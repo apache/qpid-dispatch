@@ -1531,8 +1531,11 @@ static void CORE_link_drained(void *context, qdr_link_t *link)
 
     pn_link_t *plink = qd_link_pn(qlink);
 
-    if (plink)
+    if (plink) {
         pn_link_drained(plink);
+        link->drain_mode = false;
+        link->credit_to_core = 0;
+    }
 }
 
 

@@ -58,7 +58,6 @@ struct qd_link_t {
     qd_direction_t              direction;
     void                       *context;
     qd_node_t                  *node;
-    bool                        drain_mode;
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
     bool                        q2_limit_unbounded;
@@ -122,7 +121,6 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
     link->node       = node;
 
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
-    link->drain_mode             = pn_link_get_drain(pn_link);
 
     pn_link_set_context(pn_link, link);
     node->ntype->outgoing_handler(node->context, link);
@@ -159,7 +157,6 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->direction  = QD_INCOMING;
     link->context    = 0;
     link->node       = node;
-    link->drain_mode = pn_link_get_drain(pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
 
     pn_link_set_context(pn_link, link);
@@ -878,7 +875,6 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     link->direction  = dir;
     link->context    = node->context;
     link->node       = node;
-    link->drain_mode = pn_link_get_drain(link->pn_link);
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(link->pn_link);
 
     pn_link_set_context(link->pn_link, link);
@@ -1037,18 +1033,6 @@ void qd_link_detach(qd_link_t *link)
         pn_link_detach(link->pn_link);
         pn_link_close(link->pn_link);
     }
-}
-
-
-bool qd_link_drain_changed(qd_link_t *link, bool *mode)
-{
-    bool pn_mode = pn_link_get_drain(link->pn_link);
-    bool changed = pn_mode != link->drain_mode;
-
-    *mode = pn_mode;
-    if (changed)
-        link->drain_mode = pn_mode;
-    return changed;
 }
 
 
