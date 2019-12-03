@@ -265,6 +265,14 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     qdr_record_link_credit(core, link);
 }
 
+void qdr_link_drained(qdr_core_t *core, qdr_link_t *link)
+{
+    if (link) {
+        link->drain_mode = false;
+        link->credit_to_core = 0;
+    }
+}
+
 
 void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr, bool exclude_inprocess, bool control)
 {

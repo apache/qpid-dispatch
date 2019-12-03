@@ -674,6 +674,15 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
 
 void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
 
+/**
+ * The passed in link has been drained, it is no longer in drain mode. Sets the link's drain flag to false and sets credit to core to zero.
+ * Call this right after calling pn_link_drained
+ *
+ * @param core - router core
+ * @param link - the link that has been drained
+ */
+void qdr_link_drained(qdr_core_t *core, qdr_link_t *link);
+
 typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
