@@ -157,7 +157,6 @@ void *router_core_thread(void *arg)
 
     qdr_forwarder_setup_CT(core);
     qdr_route_table_setup_CT(core);
-    qdr_agent_setup_CT(core);
 
     qdr_modules_init(core);
 
