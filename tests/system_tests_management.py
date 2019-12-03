@@ -198,6 +198,12 @@ class ManagementTest(system_test.TestCase):
         router = node3.query(type=ROUTER).get_entities()
         self.assertEqual(self.router.name, router[0]['id'])
 
+        # Delete the listener
+        entity.delete()
+        response = self.node.query(type=LISTENER, attribute_names=['name'])
+        for l in response.get_dicts():
+            self.assertTrue(l['name'] != 'foo')
+
     def test_log(self):
         """Create, update and query log entities"""
 

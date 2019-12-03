@@ -769,23 +769,27 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
         on_accept(e);
         break;
 
-    case PN_LISTENER_CLOSE: {
-        pn_condition_t *cond = pn_listener_condition(li->pn_listener);
-        if (pn_condition_is_set(cond)) {
-            qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
-                   pn_condition_get_description(cond),
-                   pn_condition_get_name(cond));
-            if (li->exit_on_error) {
-                qd_log(log, QD_LOG_CRITICAL, "Shutting down, required listener failed %s",
-                       host_port);
-                exit(1);
+    case PN_LISTENER_CLOSE:
+        if (li->pn_listener) {
+            pn_condition_t *cond = pn_listener_condition(li->pn_listener);
+            if (pn_condition_is_set(cond)) {
+                qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
+                       pn_condition_get_description(cond),
+                       pn_condition_get_name(cond));
+                if (li->exit_on_error) {
+                    qd_log(log, QD_LOG_CRITICAL, "Shutting down, required listener failed %s",
+                           host_port);
+                    exit(1);
+                }
+            } else {
+                qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
             }
-        } else {
-            qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
+            pn_listener_set_context(li->pn_listener, 0);
+            li->pn_listener = 0;
+            qd_listener_decref(li);
         }
-        qd_listener_decref(li);
         break;
-    }
+
     default:
         break;
     }
