@@ -914,8 +914,8 @@ div.qdrChord .legend-text {
 }
 
 .duration-tabs li.selected {
-  border-bottom: 4px solid blue;
-  color: blue;
+  border-bottom: 4px solid #0066cc;
+  color: #0066cc;
 }
 
 .overview-charts-page .pf-c-table caption {
@@ -964,7 +964,7 @@ div.qdrChord .legend-text {
 .overview-header.details .pf-c-breadcrumb__item.link-button {
   border: 0;
   background-color: transparent;
-  color: blue;
+  color: #0066cc;
   font-weight: bold;
   white-space: nowrap;
   padding-left: 0;
@@ -989,7 +989,7 @@ div.qdrChord .legend-text {
 }
 
 .link-dir-out {
-  color: blue;
+  color: #0066cc;
 }
 
 .overview-table tr {
@@ -1077,7 +1077,7 @@ div.details-table ul.entities-list {
 }
 
 .entities-list li.selected {
-  border-left: 2px solid blue;
+  border-left: 2px solid #0066cc;
   background-color: #eaeaea;
 }
 
@@ -1243,7 +1243,7 @@ span.entity-type i.link-type-router-control:before {
 
 #NotificationDrawer button.pf-m-expanded,
 #NotificationDrawer dd.pf-m-expanded {
-  border-left-color: blue;
+  border-left-color: #0066cc;
 }
 
 #NotificationDrawer .panel-body {
