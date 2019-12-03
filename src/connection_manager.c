@@ -920,12 +920,24 @@ qd_connection_manager_t *qd_connection_manager(qd_dispatch_t *qd)
 }
 
 
+// Called on router shutdown
+//
 void qd_connection_manager_free(qd_connection_manager_t *cm)
 {
     if (!cm) return;
     qd_listener_t *li = DEQ_HEAD(cm->listeners);
     while (li) {
         DEQ_REMOVE_HEAD(cm->listeners);
+        if (li->pn_listener) {
+            // DISPATCH-1508: force cleanup of pn_listener context.  This is
+            // usually done in the PN_LISTENER_CLOSE event handler in server.c,
+            // but since the router is going down those events will no longer
+            // be generated.
+            pn_listener_set_context(li->pn_listener, 0);
+            pn_listener_close(li->pn_listener);
+            li->pn_listener = 0;
+            qd_listener_decref(li);  // for the pn_listener's context
+        }
         qd_listener_decref(li);
         li = DEQ_HEAD(cm->listeners);
     }
