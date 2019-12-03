@@ -39,6 +39,7 @@ typedef struct qdr_conn_identifier_t qdr_conn_identifier_t;
 typedef struct qdr_connection_ref_t  qdr_connection_ref_t;
 typedef struct qdr_exchange          qdr_exchange_t;
 typedef struct qdr_edge_t            qdr_edge_t;
+typedef struct qdr_agent_t           qdr_agent_t;
 
 ALLOC_DECLARE(qdr_address_t);
 ALLOC_DECLARE(qdr_address_config_t);
@@ -801,15 +802,7 @@ struct qdr_core_t {
     qdrc_attach_addr_lookup_t  addr_lookup_handler;
     void                      *addr_lookup_context;
 
-    //
-    // Agent section
-    //
-    qdr_query_list_t       outgoing_query_list;
-    sys_mutex_t           *query_lock;
-    qd_timer_t            *agent_timer;
-    qdr_manage_response_t  agent_response_handler;
-    qdr_subscription_t    *agent_subscription_mobile;
-    qdr_subscription_t    *agent_subscription_local;
+    qdr_agent_t               *mgmt_agent;
 
     //
     // Route table section
@@ -921,7 +914,9 @@ void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost, uint64_t in_conn_id);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
-void  qdr_agent_setup_CT(qdr_core_t *core);
+qdr_agent_t *qdr_agent(qdr_core_t *core);
+void qdr_agent_setup_subscriptions(qdr_agent_t *agent, qdr_core_t *core);
+void qdr_agent_free(qdr_agent_t *agent);
 void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);

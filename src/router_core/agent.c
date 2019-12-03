@@ -39,6 +39,18 @@ static void qdr_manage_update_CT(qdr_core_t *core, qdr_action_t *action, bool di
 ALLOC_DECLARE(qdr_query_t);
 ALLOC_DEFINE(qdr_query_t);
 
+
+struct qdr_agent_t {
+    qdr_query_list_t       outgoing_query_list;
+    sys_mutex_t           *query_lock;
+    qd_timer_t            *timer;
+    qdr_manage_response_t  response_handler;
+    qdr_subscription_t    *subscription_mobile;
+    qdr_subscription_t    *subscription_local;
+    qd_log_source_t       *log_source;
+};
+
+
 //==================================================================================
 // Internal Functions
 //==================================================================================
@@ -46,20 +58,21 @@ ALLOC_DEFINE(qdr_query_t);
 static void qdr_agent_response_handler(void *context)
 {
     qdr_core_t  *core = (qdr_core_t*) context;
+    qdr_agent_t *agent = core->mgmt_agent;
     qdr_query_t *query;
     bool         done = false;
 
     while (!done) {
-        sys_mutex_lock(core->query_lock);
-        query = DEQ_HEAD(core->outgoing_query_list);
+        sys_mutex_lock(agent->query_lock);
+        query = DEQ_HEAD(agent->outgoing_query_list);
         if (query)
-            DEQ_REMOVE_HEAD(core->outgoing_query_list);
-        done = DEQ_SIZE(core->outgoing_query_list) == 0;
-        sys_mutex_unlock(core->query_lock);
+            DEQ_REMOVE_HEAD(agent->outgoing_query_list);
+        done = DEQ_SIZE(agent->outgoing_query_list) == 0;
+        sys_mutex_unlock(agent->query_lock);
 
         if (query) {
             bool more = query->more;
-            core->agent_response_handler(query->context, &query->status, more);
+            agent->response_handler(query->context, &query->status, more);
             if (!more)
                 qdr_query_free(query);
         }
@@ -69,13 +82,15 @@ static void qdr_agent_response_handler(void *context)
 
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query)
 {
-    sys_mutex_lock(core->query_lock);
-    DEQ_INSERT_TAIL(core->outgoing_query_list, query);
-    bool notify = DEQ_SIZE(core->outgoing_query_list) == 1;
-    sys_mutex_unlock(core->query_lock);
+    qdr_agent_t *agent = core->mgmt_agent;
+
+    sys_mutex_lock(agent->query_lock);
+    DEQ_INSERT_TAIL(agent->outgoing_query_list, query);
+    bool notify = DEQ_SIZE(agent->outgoing_query_list) == 1;
+    sys_mutex_unlock(agent->query_lock);
 
     if (notify)
-        qd_timer_schedule(core->agent_timer, 0);
+        qd_timer_schedule(agent->timer, 0);
 }
 
 
@@ -106,6 +121,54 @@ static void qdr_agent_set_columns(qdr_query_t *query, qd_parsed_field_t *attribu
 //==================================================================================
 // Interface Functions
 //==================================================================================
+
+
+// called prior to core thread start
+qdr_agent_t *qdr_agent(qdr_core_t *core)
+{
+    qdr_agent_t *agent = NEW(qdr_agent_t);
+    ZERO(agent);
+
+    DEQ_INIT(agent->outgoing_query_list);
+    agent->query_lock  = sys_mutex();
+    agent->timer = qd_timer(core->qd, qdr_agent_response_handler, core);
+    agent->log_source = qd_log_source("AGENT");
+    return agent;
+}
+
+
+// called after core thread has shutdown
+void qdr_agent_free(qdr_agent_t *agent)
+{
+    if (agent) {
+        qd_timer_free(agent->timer);
+        if (agent->query_lock)
+            sys_mutex_free(agent->query_lock);
+
+        //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
+        //already been shut down. But, all the action would have done at this point is free the subscriptions
+        //so we just do that directly.
+        free(agent->subscription_mobile);
+        free(agent->subscription_local);
+
+        free(agent);
+    }
+}
+
+
+// create management subscriptions
+// (called after core thread starts)
+void qdr_agent_setup_subscriptions(qdr_agent_t *agent, qdr_core_t *core)
+{
+
+    agent->subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
+                                                    QD_TREATMENT_ANYCAST_CLOSEST, false,
+                                                    qdr_management_agent_on_message, core);
+    agent->subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
+                                                   QD_TREATMENT_ANYCAST_CLOSEST, false,
+                                                   qdr_management_agent_on_message, core);
+}
+
 
 void qdr_manage_create(qdr_core_t              *core,
                        void                    *context,
@@ -323,24 +386,16 @@ static void qdr_agent_set_columns(qdr_query_t *query,
 }
 
 
-
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler)
 {
-    core->agent_response_handler = response_handler;
+    assert(core->mgmt_agent);  // expect: management agent must already be present
+    core->mgmt_agent->response_handler = response_handler;
 }
 
 
 //==================================================================================
 // In-Thread Functions
 //==================================================================================
-
-void qdr_agent_setup_CT(qdr_core_t *core)
-{
-    DEQ_INIT(core->outgoing_query_list);
-    core->query_lock  = sys_mutex();
-    core->agent_timer = qd_timer(core->qd, qdr_agent_response_handler, core);
-}
-
 
 static void qdr_agent_forbidden(qdr_core_t *core, qdr_query_t *query, bool op_query)
 {

@@ -56,8 +56,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     // Set up the logging sources for the router core
     //
-    core->log       = qd->router->log_source;
-    core->agent_log = qd_log_source("AGENT");
+    core->log = qd->router->log_source;
 
     //
     // Set up the threading support
@@ -79,19 +78,19 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     core->id_lock = sys_mutex();
 
     //
+    // Initialize the management agent
+    //
+    core->mgmt_agent = qdr_agent(core);
+
+    //
     // Launch the core thread
     //
     core->thread = sys_thread(router_core_thread, core);
 
     //
-    // Perform outside-of-thread setup for the management agent
+    // Setup the agents subscriptions to $management
     //
-    core->agent_subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
-                                                         QD_TREATMENT_ANYCAST_CLOSEST, false,
-                                                         qdr_management_agent_on_message, core);
-    core->agent_subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
-                                                        QD_TREATMENT_ANYCAST_CLOSEST, false,
-                                                        qdr_management_agent_on_message, core);
+    qdr_agent_setup_subscriptions(core->mgmt_agent, core);
 
     return core;
 }
@@ -118,12 +117,6 @@ void qdr_core_free(qdr_core_t *core)
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
     qd_timer_free(core->work_timer);
-
-    //we can't call qdr_core_unsubscribe on the subscriptions because the action processing thread has
-    //already been shut down. But, all the action would have done at this point is free the subscriptions
-    //so we just do that directly.
-    free(core->agent_subscription_mobile);
-    free(core->agent_subscription_local);
 
     for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {
         if (core->forwarders[i]) {
@@ -206,7 +199,8 @@ void qdr_core_free(qdr_core_t *core)
 
     qdr_modules_finalize(core);
 
-    if (core->query_lock)                sys_mutex_free(core->query_lock);
+    qdr_agent_free(core->mgmt_agent);
+
     if (core->routers_by_mask_bit)       free(core->routers_by_mask_bit);
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
