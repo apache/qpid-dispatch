@@ -554,7 +554,7 @@ text.on-demand,
 text.normal,
 text.edge,
 text.address-checkbox {
-  font-family: FontAwesome;
+  font-family: FontAwesome !important;
   font-weight: normal;
   font-size: 16px;
 }
@@ -1479,7 +1479,7 @@ button.dropdown-panel-toggle.pf-c-accordion__toggle span.pf-c-accordion__toggle-
   border-bottom: 1px solid black;
 }
 
-.pf-c-modal-box.pf-m-sm * {
+.pf-c-modal-box.pf-m-sm *:not(.fas) {
   font-family: RedHatDisplay;
 }
 
