@@ -369,8 +369,14 @@ div.state-container button.pf-c-clipboard-copy__group-copy {
   font-size: 1.125em;
   margin-bottom: 1em;
 }
-.fill-card {
-  width: 100%;
+
+/*
+#delayedDeliveries {
+  width: 80%;
+}
+*/
+#activeAddresses {
+  min-width: 28%;
 }
 
 .qdrTopology,
@@ -899,9 +905,10 @@ div.qdrChord .legend-text {
 }
 
 .deliveries-title {
-  white-space: nowrap;
+  /* white-space: nowrap; */
   font-size: 20px;
   color: #888;
+  min-width: 9em;
 }
 
 .duration-tabs {
@@ -932,6 +939,8 @@ div.qdrChord .legend-text {
   color: #888;
   white-space: nowrap;
   padding-right: 2em;
+  max-width: 12em;
+  min-width: 12em;
 }
 
 .toolbar-pagination {

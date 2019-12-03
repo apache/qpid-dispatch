@@ -29,8 +29,8 @@ class DelayedDeliveriesCard extends React.Component {
     this.state = {
       lastUpdate: new Date(),
       columns: [
-        "Router",
         "Connection",
+        "Router",
         "1 sec rate",
         "10 sec rate",
         "Capacity",
@@ -90,7 +90,7 @@ class DelayedDeliveriesCard extends React.Component {
                   connection
                 );
                 if (link.connectionId === conn.identity) {
-                  link.connection = this.props.service.utilities.clientName(conn);
+                  link.connection = conn.name; //this.props.service.utilities.clientName(conn);
                   return true;
                 }
                 return false;
@@ -141,8 +141,8 @@ class DelayedDeliveriesCard extends React.Component {
         let rows = links.map(link => {
           return {
             cells: [
-              link.router,
               link.connection,
+              link.router,
               link.deliveriesDelayed1SecRate.toLocaleString(),
               link.deliveriesDelayed10SecRate.toLocaleString(),
               link.capacity.toLocaleString(),
@@ -171,9 +171,7 @@ class DelayedDeliveriesCard extends React.Component {
     const caption = (
       <React.Fragment>
         <span className="caption">Connections with delayed deliveries</span>
-        <div className="updated">
-          Updated at {this.lastUpdateString()} | Next {this.nextUpdateString()}
-        </div>
+        <div className="updated">Updated at {this.lastUpdateString()}</div>
       </React.Fragment>
     );
     return (

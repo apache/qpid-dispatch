@@ -28,7 +28,7 @@ class ActiveAddressesCard extends React.Component {
     super(props);
     this.state = {
       lastUpdate: new Date(),
-      columns: ["Address", "Class", "Settle rate"],
+      columns: ["Address", "In", "Out", "Settle rate"],
       rows: []
     };
   }
@@ -46,33 +46,51 @@ class ActiveAddressesCard extends React.Component {
 
   updateData = () => {
     this.props.service.management.topology.fetchAllEntities(
-      {
-        entity: "router.link",
-        attrs: ["settleRate", "linkType", "linkDir", "owningAddr"]
-      },
+      [
+        {
+          entity: "router.link",
+          attrs: ["settleRate", "linkType", "linkDir", "owningAddr"]
+        },
+        {
+          entity: "router.address",
+          attrs: ["identity", "deliveriesIngress", "deliveriesEgress"]
+        }
+      ],
       results => {
         if (!this.mounted) return;
         let active = {};
         for (let id in results) {
-          const aresult = results[id]["router.link"];
-          for (let i = 0; i < aresult.results.length; i++) {
-            const result = this.props.service.utilities.flatten(
-              aresult.attributeNames,
-              aresult.results[i]
+          console.log(id);
+          const linkData = results[id]["router.link"];
+          const addressData = results[id]["router.address"];
+          const addresses = this.props.service.utilities.flattenAll(addressData);
+
+          for (let i = 0; i < linkData.results.length; i++) {
+            const link = this.props.service.utilities.flatten(
+              linkData.attributeNames,
+              linkData.results[i]
             );
-            if (result.linkType === "endpoint" && result.linkDir === "in") {
-              if (
-                parseInt(result.settleRate) > 0 &&
-                result.owningAddr && !result.owningAddr.startsWith("Ltemp.")
-              ) {
-                if (!active.hasOwnProperty[result.owningAddr]) {
-                  active[result.owningAddr] = {
-                    addr: this.props.service.utilities.addr_text(result.owningAddr),
-                    cls: this.props.service.utilities.addr_class(result.owningAddr),
+            if (link.linkType === "endpoint") {
+              if (link.owningAddr && !link.owningAddr.startsWith("Ltemp.")) {
+                if (!active[link.owningAddr]) {
+                  console.log(`initializing active for ${link.owningAddr}`);
+                  active[link.owningAddr] = {
+                    addr: this.props.service.utilities.addr_text(link.owningAddr),
+                    in: 0,
+                    out: 0,
                     settleRate: 0
                   };
                 }
-                active[result.owningAddr].settleRate += parseInt(result.settleRate);
+                const address = addresses.find(
+                  address => address.identity === link.owningAddr
+                );
+                if (address) {
+                  console.log(address);
+                  active[link.owningAddr].in += parseInt(address.deliveriesIngress);
+                  active[link.owningAddr].out += parseInt(address.deliveriesEgress);
+                }
+                active[link.owningAddr].settleRate += parseInt(link.settleRate);
+                console.log(active[link.owningAddr]);
               }
             }
           }
@@ -81,7 +99,8 @@ class ActiveAddressesCard extends React.Component {
           return {
             cells: [
               active[addr].addr,
-              active[addr].cls,
+              active[addr].in.toLocaleString(),
+              active[addr].out.toLocaleString(),
               active[addr].settleRate.toLocaleString()
             ]
           };
@@ -105,9 +124,7 @@ class ActiveAddressesCard extends React.Component {
     const caption = (
       <React.Fragment>
         <span className="caption">Most active addresses</span>
-        <div className="updated">
-          Updated at {this.lastUpdateString()} | Next {this.nextUpdateString()}
-        </div>
+        <div className="updated">Updated at {this.lastUpdateString()}</div>
       </React.Fragment>
     );
     return (

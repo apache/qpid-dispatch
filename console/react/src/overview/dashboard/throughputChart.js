@@ -22,7 +22,7 @@ import ChartBase from "./chartBase";
 class ThroughputChart extends ChartBase {
   constructor(props) {
     super(props);
-    this.title = "Messages delivered";
+    this.title = "Messages delivered per second";
     this.color = "#99C2EB"; //ChartThemeColor.blue;
     this.setStyle(this.color);
     this.ariaLabel = "throughput-chart";

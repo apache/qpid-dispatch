@@ -93,10 +93,10 @@ class DashboardPage extends React.Component {
           </StackItem>
           <StackItem>
             <Split gutter="md">
-              <SplitItem>
+              <SplitItem id="activeAddresses">
                 <ActiveAddressesCard service={this.props.service} />
               </SplitItem>
-              <SplitItem className="fill-card">
+              <SplitItem id="delayedDeliveries" isFilled>
                 <DelayedDeliveriesCard {...this.props} service={this.props.service} />
               </SplitItem>
             </Split>
