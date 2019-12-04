@@ -108,7 +108,7 @@ static qd_config_ssl_profile_t *qd_find_ssl_profile(qd_connection_manager_t *cm,
  * Read the file from the password_file location on the file system and populate password_field with the
  * contents of the file.
  */
-static void qd_set_password_from_file(char *password_file, char **password_field, qd_log_source_t *log_source)
+static void qd_set_password_from_file(const char *password_file, char **password_field, qd_log_source_t *log_source)
 {
     if (password_file) {
         FILE *file = fopen(password_file, "r");
@@ -403,13 +403,15 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         char *actual_pass = 0;
         bool is_file_path = 0;
         qd_config_process_password(&actual_pass, config->sasl_password, &is_file_path, false, qd->connection_manager->log_source);
-        if (actual_pass && is_file_path) {
-            qd_set_password_from_file(actual_pass, &config->sasl_password, qd->connection_manager->log_source);
-
-        }
-        else if (actual_pass) {
-            free(config->sasl_password);
-            config->sasl_password = actual_pass;
+        if (actual_pass) {
+            if (is_file_path) {
+                qd_set_password_from_file(actual_pass, &config->sasl_password, qd->connection_manager->log_source);
+                free(actual_pass);
+            }
+            else {
+                free(config->sasl_password);
+                config->sasl_password = actual_pass;
+            }
         }
     }
 
@@ -595,12 +597,15 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         char *actual_pass = 0;
         bool is_file_path = 0;
         qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, true, cm->log_source); CHECK();
-        if (actual_pass && is_file_path) {
-            qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password, cm->log_source);
-        }
-        else if (actual_pass) {
-            free(ssl_profile->ssl_password);
-            ssl_profile->ssl_password = actual_pass;
+        if (actual_pass) {
+            if (is_file_path) {
+                qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password, cm->log_source);
+                free(actual_pass);
+            }
+            else {
+                free(ssl_profile->ssl_password);
+                ssl_profile->ssl_password = actual_pass;
+            }
         }
     }
     else if (password_file) {
