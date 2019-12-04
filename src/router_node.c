@@ -1534,7 +1534,7 @@ static void CORE_link_drained(void *context, qdr_link_t *link)
 
     if (plink) {
         pn_link_drained(plink);
-        qdr_link_drained(router->router_core, link);
+        qdr_link_set_drained(router->router_core, link);
     }
 }
 

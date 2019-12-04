@@ -265,7 +265,7 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
     qdr_record_link_credit(core, link);
 }
 
-void qdr_link_drained(qdr_core_t *core, qdr_link_t *link)
+void qdr_link_set_drained(qdr_core_t *core, qdr_link_t *link)
 {
     if (link) {
         link->drain_mode = false;
