@@ -1757,13 +1757,16 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 
 static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
-    qdr_link_t       *link = safe_deref_qdr_link_t(action->args.connection.link);
-    if (discard || !conn || !link)
-        return;
-
+    qdr_connection_t *conn  = safe_deref_qdr_connection_t(action->args.connection.conn);
+    qdr_link_t       *link  = safe_deref_qdr_link_t(action->args.connection.link);
     qdr_error_t      *error = action->args.connection.error;
     qd_detach_type_t  dt    = action->args.connection.dt;
+
+    if (discard || !conn || !link) {
+        qdr_error_free(error);
+        return;
+    }
+
     qdr_address_t    *addr  = link->owning_addr;
 
     if (link->detach_received)
