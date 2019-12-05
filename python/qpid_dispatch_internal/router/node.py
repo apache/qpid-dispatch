@@ -555,7 +555,7 @@ class RouterNode(object):
 
     def unmap_all_addresses(self):
         self.mobile_address_sequence = 0
-        for a in self.mobile_addresses:
+        for addr in self.mobile_addresses:
             self.adapter.unmap_destination(addr, self.maskbit)
             self.log(LOG_DEBUG, "Remote destination %s unmapped from router %s" % (self._logify(addr), self.id))
 
