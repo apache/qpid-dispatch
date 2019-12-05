@@ -17,22 +17,15 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// overview.adoc
+// understanding-link-routing.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='link-route-addresses-{context}']
+= Link route addresses
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+A link route address represents a broker queue, topic, or other service. When a client attaches a link route address to a router, the router propagates a link attachment to the broker resource identified by the address.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
-
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+Using link route addresses, the router network does not participate in
+aggregated message distribution. The router simply passes message
+delivery and settlement between the two end points.

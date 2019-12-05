@@ -1,0 +1,51 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// book.adoc
+
+[id='installing-router-{context}']
+= Installing {RouterName}
+
+You can deploy {RouterName} as a single standalone router, or as multiple routers connected together in a router network. Router networks may represent any arbitrary topology, enabling you to design the network to best fit your requirements.
+
+With {RouterName}, the router network topology is independent from the message routing. This means that messaging clients always experience the same message routing behavior regardless of the underlying network topology. Even in a multi-site or hybrid cloud router network, the connected endpoints behave as if they were connected to a single, logical router.
+
+To create the router network topology, complete the following:
+
+. xref:router-deployment-guidelines-{context}[Review the deployment guidelines].
++
+You should understand the different router operating modes you can deploy in your topology, and be aware of security requirements for the interior portion of the router network.
+
+. xref:installing-router-linux-{context}[Install {RouterName} on the host].
++
+If you are creating a router network with multiple routers, repeat this step on each host.
+
+. xref:preparing-router-configurations-{context}[Prepare the router configurations].
++
+After installing {RouterName}, configure it to define how it should connect to other routers and endpoints, and how it should operate.
+
+. xref:starting-router-{context}[Start the routers].
++
+After the routers are configured, start them so that they can connect to each other and begin routing messages.
+
+include::../../modules/user-guide/installing-router-linux.adoc[leveloffset=+1]
+include::../../modules/user-guide/preparing-router-configurations.adoc[leveloffset=+1]
+include::../../modules/user-guide/starting-routers.adoc[leveloffset=+1]

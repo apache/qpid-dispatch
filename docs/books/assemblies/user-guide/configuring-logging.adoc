@@ -17,22 +17,17 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// configuring-router.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='configuring-logging-{context}']
+= Configuring logging
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+{RouterName} contains internal logging modules that provide important information about each router. For each module, you can configure the logging level, the format of the log file, and the location to which the logs should be written.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+// Logging modules
+include::../../modules/user-guide/logging-modules.adoc[leveloffset=+1]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+// Configuring default logging
+include::../../modules/user-guide/configuring-default-logging.adoc[leveloffset=+1]

@@ -19,15 +19,21 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// book.adoc
+// configuring-address-space-message-routing.adoc
 
-[id='important-terms-concepts-{context}']
-= Important terms and concepts
+[id='understanding-message-routing-{context}']
+= Understanding message routing
 
-Before using {RouterName}, you should be familiar with AMQP and understand some key concepts about {RouterName}.
+With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message’s _address_ and _routing pattern_.
 
-include::../../modules/user-guide/overview-of-amqp.adoc[leveloffset=+1]
-include::../../modules/user-guide/what-routers-are.adoc[leveloffset=+1]
-include::../../modules/user-guide/how-routers-route-messages.adoc[leveloffset=+1]
-include::../../modules/user-guide/router-security.adoc[leveloffset=+1]
-include::../../modules/user-guide/router-management.adoc[leveloffset=+1]
+// Message routing flow control
+include::../../modules/user-guide/message-routing-flow-control.adoc[leveloffset=+1]
+
+// Addresses
+include::../../modules/user-guide/addresses-message-routing.adoc[leveloffset=+1]
+
+// Routing patterns
+include::../../modules/user-guide/routing-patterns-message-routing.adoc[leveloffset=+1]
+
+// Message settlement and reliability
+include::../../modules/user-guide/message-settlement-reliability-message-routing.adoc[leveloffset=+1]

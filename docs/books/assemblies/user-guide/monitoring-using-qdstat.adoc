@@ -17,22 +17,15 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// managing-router.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='monitoring-using-qdstat-{context}']
+= Monitoring using `qdstat`
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+The `qdstat` tool is a command-line tool for monitoring the status and performance of {RouterName} router networks.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+include::../../modules/user-guide/syntax-using-qdstat.adoc[leveloffset=+1]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+include::../../modules/user-guide/commands-monitoring-router-network.adoc[leveloffset=+1]

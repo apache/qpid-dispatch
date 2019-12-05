@@ -17,22 +17,15 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// managing-router.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='troubleshooting-{context}']
+= Troubleshooting {RouterName}
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+You can use the {RouterName} logs to diagnose and troubleshoot error and performance issues with the routers in your router network.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+include::../../modules/user-guide/viewing-log-entries.adoc[leveloffset=+1]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+include::../../modules/user-guide/troubleshooting-using-logs.adoc[leveloffset=+1]

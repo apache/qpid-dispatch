@@ -1,0 +1,43 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// understanding-message-routing.adoc
+
+[id='addresses-message-routing-{context}']
+= Addresses
+
+Addresses determine how messages flow through your router network. An address designates an endpoint in your messaging network, such as:
+
+* Endpoint processes that consume data or offer a service
+* Topics that match multiple consumers to multiple producers
+* Entities within a messaging broker:
+** Queues
+** Durable Topics
+** Exchanges
+
+When a router receives a message, it uses the message's address to determine where to send the message (either its destination or one step closer to its destination).
+
+{RouterName} considers addresses to be _mobile_ in that any user of an address may be directly connected to any router in the router network and may even
+move around the topology. In cases where messages are broadcast to or
+balanced across multiple consumers, the users of the address may be connected to multiple routers in the network.
+
+Mobile addresses may be discovered during normal router operation or
+configured through management settings.

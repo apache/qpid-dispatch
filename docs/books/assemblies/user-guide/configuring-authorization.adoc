@@ -1,0 +1,44 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// book.adoc
+
+[id='configuring-authorization-{context}']
+= Configuring authorization
+
+You can configure _policies_ to secure messaging resources in your messaging environment. Policies ensure that only authorized users can access messaging endpoints through the router network, and that the resources on those endpoints are used in an authorized way.
+
+* xref:types-policies-{context}[]
+* xref:how-policies-enforce-connection-resource-limits-{context}[]
+* xref:setting-global-connection-limits-{context}[]
+* xref:setting-connection-resource-limits-messaging-endpoints-{context}[]
+
+// Types of policies
+include::../../modules/user-guide/types-policies.adoc[leveloffset=+1]
+
+// How policies enforce connection and resources limits
+include::../../modules/user-guide/how-policies-enforce-connection-resource-limits.adoc[leveloffset=+1]
+
+// Creating global policies
+include::../../modules/user-guide/setting-global-connection-limits.adoc[leveloffset=+1]
+
+// Creating vhost policies
+include::setting-connection-resource-limits-messaging-endpoints.adoc[leveloffset=+1]

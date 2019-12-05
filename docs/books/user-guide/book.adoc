@@ -23,34 +23,36 @@ include::common/attributes.adoc[]
 
 = {RouterBook}
 
-// Overview
+= Overview
 include::assemblies/user-guide/overview.adoc[leveloffset=+1]
 
-// Installing
-include::modules/user-guide/installing-router.adoc[leveloffset=+1]
+= Learn
+include::assemblies/user-guide/important-terms-concepts.adoc[leveloffset=+1]
 
-// Getting started
+= Get started
 include::assemblies/user-guide/getting-started.adoc[leveloffset=+1]
 
-// Configuring a router network topology
-include::assemblies/user-guide/creating-router-network-topology.adoc[leveloffset=+1]
+= Install
+include::assemblies/user-guide/router-deployment-guidelines.adoc[leveloffset=+1]
+include::assemblies/user-guide/installing-router.adoc[leveloffset=+1]
 
-// Configuring a router
-include::assemblies/user-guide/configuring-router.adoc[leveloffset=+1]
+[id='configuration']
+= Configure
+include::modules/user-guide/configuring-router-properties.adoc[leveloffset=+1]
+include::assemblies/user-guide/configuring-network-connections.adoc[leveloffset=+1]
+include::assemblies/user-guide/securing-network-connections.adoc[leveloffset=+1]
+include::assemblies/user-guide/configuring-authorization.adoc[leveloffset=+1]
+include::assemblies/user-guide/configuring-logging.adoc[leveloffset=+1]
+include::assemblies/user-guide/configuring-routing.adoc[leveloffset=+1]
 
-// Routing messages through the router network
-include::modules/user-guide/routing.adoc[leveloffset=+1]
+[id='management']
+= Manage
+include::assemblies/user-guide/monitoring-using-web-console.adoc[leveloffset=+1]
+include::assemblies/user-guide/monitoring-using-qdstat.adoc[leveloffset=+1]
+include::modules/user-guide/managing-using-qdmanage.adoc[leveloffset=+1]
+include::assemblies/user-guide/troubleshooting.adoc[leveloffset=+1]
 
-[id="monitoring-managing-router-network"]
-== Monitoring and managing the router network
-include::modules/user-guide/starting-routers.adoc[leveloffset=+2]
-include::modules/user-guide/logging.adoc[leveloffset=+2]
-include::modules/user-guide/using-console.adoc[leveloffset=+2]
-include::modules/user-guide/monitoring-using-qdstat.adoc[leveloffset=+2]
-include::modules/user-guide/managing-using-qdmanage.adoc[leveloffset=+2]
+[appendix]
+include::modules/user-guide/amqp-mapping.adoc[leveloffset=+1]
 
-// Technical Details and Specifications
-include::modules/user-guide/technical-details-specifications.adoc[leveloffset=+1]
-
-// Revision information
 include::revision-info.adoc[]

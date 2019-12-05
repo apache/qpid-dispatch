@@ -17,15 +17,11 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// getting-started.adoc
+// understanding-link-routing.adoc
 
-[id='installing-router-{context}']
-= Installing {RouterName}
+[id='routing-patterns-link-routing-{context}']
+= Routing patterns for link routing
 
-include::{FragmentDir}/fragment-router-install-intro.adoc[]
-
-.Procedure
-
-include::{FragmentDir}/fragment-router-install-steps.adoc[]
+Routing patterns are not used with link routing, because there is a direct link between the sender and receiver. The router only makes a routing decision when it receives the initial link-attach request frame. Once the link is established, the router passes the messages along the link in a balanced distribution.

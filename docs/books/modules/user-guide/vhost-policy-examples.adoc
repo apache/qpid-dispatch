@@ -1,0 +1,124 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='vhost-policy-examples-{context}']
+= Vhost policy examples
+
+These examples demonstrate how to use vhost policies to authorize access to messaging resources.
+
+.Defining basic resource limits for a messaging endpoint
+====
+In this example, a vhost policy defines resource limits for clients connecting to the `example.com` host.
+
+[source,json,options="nowrap"]
+----
+[
+    ["vhost", {
+        "hostname": "example.com",  // <1>
+        "maxConnectionsPerUser": 10,  // <2>
+        "allowUnknownUser": true,  // <3>
+        "groups": {
+            "admin": {
+                "users": ["admin1", "admin2"],  // <4>
+                "remoteHosts": ["127.0.0.1", "::1"],  // <5>
+                "sources": "*",  // <6>
+                "targets": "*"  // <7>
+            },
+            "$default": {
+                "remoteHosts": "*",  // <8>
+                "sources": ["news*", "sports*" "chat*"],  // <9>
+                "targets": "chat*"  // <10>
+            }
+        }
+    }]
+]
+----
+
+<1> The rules defined in this vhost policy will be applied to any user connecting to `example.com`.
+
+<2> Each user can open up to 10 connections to the vhost.
+
+<3> Any user can connect to this vhost. Users that are not part of the `admin` group are assigned to the `$default` group.
+
+<4> If the `admin1` or `admin2` user connects to the vhost, they are assigned to the `admin` user group.
+
+<5> Users in the `admin` user group must connect from localhost. If the admin user attempts to connect from any other host, the connection will be denied.
+
+<6> Users in the admin user group can receive from any address.
+
+<7> Users in the admin user group can send to any address.
+
+<8> Any non-admin user is permitted to connect from any host.
+
+<9> Non-admin users are permitted to receive messages from any addresses that start with the `news`, `sports`, or `chat` prefixes.
+
+<10> Non-admin users are permitted to send messages to any addresses that start with the `chat` prefix.
+====
+
+.Limiting memory consumption
+====
+By using the advanced vhost policy attributes, you can control how much system buffer memory a user connection can potentially consume.
+
+In this example, a stock trading site provides services for stock traders. However, the site must also accept high-capacity, automated data feeds from stock exchanges. To prevent trading activity from consuming memory needed for the feeds, a larger amount of system buffer memory is allotted to the feeds than to the traders.
+
+This example uses the `maxSessions` and `maxSessionWindow` attributes to set the buffer memory consumption limits for each AMQP session. These settings are passed directly to the AMQP connection and session negotiations, and do not require any processing cycles on the router.
+
+This example does not show the vhost policy settings that are unrelated to buffer allocation.
+
+[source,json,options="nowrap"]
+----
+[
+    ["vhost", {
+        "hostname": "traders.com",  // <1>
+        "groups": {
+            "traders": {
+                "users": ["trader1", "trader2"],  // <2>
+                "maxFrameSize": 10000,
+                "maxSessionWindow": 5000000,  // <3>
+                "maxSessions": 1  // <4>
+            },
+            "feeds": {
+                "users": ["nyse-feed", "nasdaq-feed"],  // <5>
+                "maxFrameSize": 60000,
+                "maxSessionWindow": 1200000000,  // <6>
+                "maxSessions": 3  // <7>
+            }
+        }
+    }]
+]
+----
+
+<1> The rules defined in this vhost policy will be applied to any user connecting to `traders.com`.
+
+<2> The `traders` group includes `trader1`, `trader2`, and any other user defined in the list.
+
+<3> At most, 5,000,000 bytes of data can be in flight on each session.
+
+<4> Only one session per connection is allowed.
+
+<5> The `feeds` group includes two users.
+
+<6> At most, 1,200,000,000 bytes of data can be in flight on each session.
+
+<7> Up to three sessions per connection are allowed.
+====

@@ -1,0 +1,90 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-address-space-message-routing.adoc
+
+[id='address-pattern-matching-{context}']
+= Address pattern matching
+
+In some router configuration scenarios, you might need to use pattern matching to match a range of addresses rather than a single, literal address. Address patterns match any address that corresponds to the pattern.
+
+An address pattern is a sequence of tokens (typically words) that are delimited by either `.` or `/` characters. They also can contain special wildcard characters that represent words:
+
+* `*` represents exactly one word
+* `#` represents zero or more words
+
+.Address pattern
+====
+This address contains two tokens, separated by the `/` delimiter:
+
+`my/address`
+====
+
+.Address pattern with wildcard
+====
+This address contains three tokens. The `*` is a wildcard, representing any single word that might be between `my` and `address`:
+
+`my/*/address`
+====
+
+The following table shows some address patterns and examples of the addresses that would match them:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `news/*`
+a| `news/europe`
+
+`news/usa`
+a| `news`
+
+`news/usa/sports`
+
+a| `news/#`
+a| `news`
+
+`news/europe`
+
+`news/usa/sports`
+a| `europe`
+
+`usa`
+
+a| `news/europe/#`
+a| `news/europe`
+
+`news/europe/sports`
+
+`news/europe/politics/fr`
+a| `news/usa`
+
+`europe`
+
+a| `news/*/sports`
+a| `news/europe/sports`
+
+`news/usa/sports`
+a| `news`
+
+`news/europe/fr/sports`
+
+|===

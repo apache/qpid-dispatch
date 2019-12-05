@@ -1,0 +1,65 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-address-space-message-routing.adoc
+
+[id='configuring-address-semantics-{context}']
+= Configuring address semantics
+
+You can route messages between clients without using a broker. In a brokerless scenario (sometimes called _direct-routed messaging_), {RouterName} routes messages between clients directly.
+
+To route messages between clients, you configure an address with a routing distribution pattern. When a router receives a message with this address, the message is routed to its destination or destinations based on the address's routing distribution pattern.
+
+.Procedure
+
+. In the `{RouterConfigFile}` configuration file, add an `address` section.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+address {
+    prefix: my_address
+    distribution: multicast
+    ...
+}
+----
+
+`prefix` | `pattern`::
+The address or group of addresses to which the address settings should be applied. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
++
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
++
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
+
+`distribution`:: The message distribution pattern. The default is `balanced`, but you can specify any of the following options:
++
+* `balanced` - Messages sent to the address will be routed to one of the receivers, and the routing network will attempt to balance the traffic load based on the rate of settlement.
+* `closest` - Messages sent to the address are sent on the shortest path to reach the destination. It means that if there are multiple receivers for the same address, only the closest one will receive the message.
+* `multicast` - Messages are sent to all receivers that are attached to the address in a _publish/subscribe_ model.
++
+For more information about message distribution patterns, see xref:routing-patterns-message-routing-{context}[].
+
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_address[address] in the `qdrouterd.conf` man page.
+--
+
+. Add the same `address` section to any other routers that need to use the address.
++
+The `address` that you added to this router configuration file only controls how this router distributes messages sent to the address. If you have additional routers in your router network that should distribute messages for this address, then you must add the same `address` section to each of their configuration files.

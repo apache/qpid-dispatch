@@ -19,20 +19,13 @@ under the License
 
 // Module included in the following assemblies:
 //
-// overview.adoc
+// getting-started.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='installing-router-linux-{context}']
+= Installing {RouterName} on {RouterPlatform}
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+include::{FragmentDir}/fragment-router-install-intro.adoc[]
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+.Procedure
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+include::{FragmentDir}/fragment-router-install-steps.adoc[]

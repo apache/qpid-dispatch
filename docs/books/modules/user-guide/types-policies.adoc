@@ -1,0 +1,37 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// Module is included in the following assemblies:
+//
+// authorizing-access-messaging-resources.adoc
+
+[id='types-policies-{context}']
+= Types of policies
+
+{RouterName} provides the following types of policies to control connection and resource limits:
+
+Global policies::
+Settings for the router. A global policy defines the maximum number of incoming user connections for the router (across all messaging endpoints), and defines how the router should use vhost policies.
+
+Vhost policies::
+Connection and AMQP resource limits for a router ingress port (called an AMQP virtual host, or vhost). A vhost policy defines what a client using a particular connection can access on any messaging endpoint in the router network.
+
+The resource limits defined in global and vhost policies are applied to user connections only. The limits do not affect inter-router connections or router connections that are outbound to waypoints.
+
+Access to an AMQP resource allowed by policy for a given user connection to a given vhost is granted across the entire router network. Access restrictions are applied only at the router port to which a client is connected and only to resource requests originated by the client.

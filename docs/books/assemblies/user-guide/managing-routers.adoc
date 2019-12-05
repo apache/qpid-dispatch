@@ -17,22 +17,17 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// managing-router.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='managing-routers-{context}']
+= Managing routers
 
-{RouterName} supports the following industry-recognized standards and network protocols:
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
+include::../../modules/user-guide/starting-routers.adoc[leveloffset=+1]
 
-.Additional resources
+include::../../modules/user-guide/changing-router-configuration.adoc[leveloffset=+1]
 
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+include::../../modules/user-guide/syntax-using-qdmanage.adoc[leveloffset=+1]

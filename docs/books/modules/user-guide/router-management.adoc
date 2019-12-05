@@ -44,4 +44,4 @@ A command-line tool for viewing and updating the configuration of a router at ru
 
 .Additional resources
 
-* xref:monitoring-managing-router-network[]
+* xref:management[Management]

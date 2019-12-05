@@ -1,0 +1,55 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// troubleshooting.adoc
+
+[id='viewing-log-entries-{context}']
+= Viewing log entries
+
+You may need to view log entries to diagnose errors, performance problems, and other important issues. A log entry consists of an optional timestamp, the logging module, the logging level, and the log message.
+
+.Procedure
+
+* Do one of the following:
+
+** View log entries on the console.
++
+By default, events are logged to the console, and you can view them there. However, if the `output` attribute is set for a particular logging module, then you can find those log entries in the specified location (`stderr`, `syslog`, or a file).
+
+** Use the *`qdstat --log`* command to view recent log entries.
++
+--
+You can use the `--limit` parameter to limit the number of log entries that are displayed. For more information about `qdstat`, see {qdstatManPageLink}.
+
+This example displays the last three log entries for `Router.A`:
+
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --log --limit=3 -r ROUTER.A
+Wed Jun  7 17:49:32 2019 ROUTER (none) Core action 'link_deliver'
+Wed Jun  7 17:49:32 2019 ROUTER (none) Core action 'send_to'
+Wed Jun  7 17:49:32 2019 SERVER (none) [2]:0 -> @flow(19) [next-incoming-id=1, incoming-window=61, next-outgoing-id=0, outgoing-window=2147483647, handle=0, delivery-count=1, link-credit=250, drain=false]
+----
+--
+
+.Additional resources
+
+* For more information about configuring logging modules, see xref:configuring-default-logging-{context}[].

@@ -17,22 +17,5 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
-//
-// overview.adoc
-
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
-
-{RouterName} supports the following industry-recognized standards and network protocols:
-
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
-
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
++
+A _prefix_ matches either an exact address or the beginning segment within an address that is delimited by either a `.` or `/` character. For example, the prefix `my_address` would match the address `my_address` as well as `my_address.1` and `my_address/1`. However, it would not match `my_address1`.

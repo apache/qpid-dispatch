@@ -1,0 +1,66 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// configuring-logging.adoc
+
+[id='logging-modules-{context}']
+= Logging modules
+
+{RouterName} logs are broken into different categories called _logging modules_. Each module provides important information about a particular aspect of {RouterName}.
+
+`DEFAULT`::
+The default module. This module applies defaults to all of the other logging modules.
+
+`ROUTER`::
+This module provides information and statistics about the local router. This includes how the router connects to other routers in the network, and information about the remote destinations that are directly reachable from the router (link routes, waypoints, autolinks, and so on).
+
+`ROUTER_HELLO`::
+This module provides information about the _Hello_ protocol used by interior routers to exchange Hello messages, which include information about the router's ID and a list of its reachable neighbors (the other routers with which this router has bidirectional connectivity).
+
+`ROUTER_LS`::
+This module provides information about link-state data between routers, including Router Advertisement (RA), Link State Request (LSR), and Link State Update (LSU) messages.
++
+Periodically, each router sends an LSR to the other routers and receives an LSU with the requested information. Exchanging the above information, each router can compute the next hops in the topology, and the related costs.
+
+`ROUTER_MA`::
+This module provides information about the exchange of mobile address information between routers, including Mobile Address Request (MAR) and Mobile Address Update (MAU) messages exchanged between routers. You can use this log to monitor the state of mobile addresses attached to each router.
+
+`MESSAGE`::
+This module provides information about AMQP messages sent and received by the router, including information about the address, body, and link. You can use this log to find high-level information about messages on a particular router.
+
+`SERVER`::
+This module provides information about how the router is listening for and connecting to other containers in the network (such as clients, routers, and brokers). This information includes the state of AMQP messages sent and received by the broker (open, begin, attach, transfer, flow, and so on), and the related content of those messages.
+
+`AGENT`::
+This module provides information about configuration changes made to the router from either editing the router's configuration file or using `qdmanage`.
+
+`CONTAINER`::
+This module provides information about the nodes related to the router. This includes only the AMQP relay node.
+
+`ERROR`::
+This module provides detailed information about error conditions encountered during execution.
+
+`POLICY`::
+This module provides information about policies that have been configured for the router.
+
+.Additional resources
+
+* For examples of these logging modules, see xref:troubleshooting-using-logs-{context}[].

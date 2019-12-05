@@ -21,8 +21,8 @@ under the License
 //
 // getting-started.adoc
 
-[id='viewing-default-router-configuration-file-{context}']
-= Viewing the default router configuration file
+[id='exploring-default-router-configuration-file-{context}']
+= Exploring the default router configuration file
 
 The router's configuration file (`qdrouterd.conf`) controls the way in which the router functions. The default configuration file contains the minimum number of settings required for the router to run. As you become more familiar with the router, you can add to or change these settings, or create your own configuration files.
 
@@ -34,7 +34,7 @@ By default, the router configuration file defines the following settings for the
 
 .Procedure
 
-. Open the following file: `/etc/qpid-dispatch/qdrouterd.conf`.
+. Open the following file: `{RouterConfigFile}`.
 +
 --
 When {RouterName} is installed, `qdrouterd.conf` is installed in this directory. When the router is started, it runs with the settings defined in this file.
@@ -43,7 +43,7 @@ When {RouterName} is installed, `qdrouterd.conf` is installed in this directory.
 . Review the default settings in `qdrouterd.conf`.
 +
 --
-.Default Configuration File
+.Default configuration file
 [options="nowrap"]
 ----
 router {

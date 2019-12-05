@@ -1,0 +1,80 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='setting-resource-limits-outgoing-connections-{context}']
+= Setting resource limits for outgoing connections
+
+If a router establishes an outgoing connection to an external AMQP container (such as a client or broker), you can restrict the resources that the external container can access on the router by configuring a connector vhost policy.
+
+The resource limits that are defined in a connector vhost policy are applied to links that are initiated by the external AMQP container. The connector vhost policy does not restrict links that the router creates.
+
+A connector vhost policy can only be applied to a connector with a `normal` or `route-container` role. You cannot apply connector vhost policies to connectors that have `inter-router` or `edge` roles.
+
+.Prerequisites
+
+* Vhost policies are enabled for the router. For more information, see xref:enabling-vhost-policies-{context}[].
+
+.Procedure
+
+. In the `{RouterConfigFile}` configuration file, add a `vhost` section with a `$connector` user group.
++
+--
+[options="nowrap"]
+----
+vhost {
+    hostname: my-connector-policy
+    groups: {
+        $connector: {
+            sources: *
+            targets: *
+            maxSenders: 5
+            maxReceivers: 10
+            allowAnonymousSender: true
+            allowWaypointLinks: true
+        }
+    }
+}
+----
+
+`hostname`::
+A unique name to identify the connector vhost policy. This name does not represent an actual hostname; therefore, choose a name that will not conflict with an actual vhost hostname.
+
+`$connector`::
+Identifies this vhost policy as a connector vhost policy. For more information about the resource limits you can apply, see xref:creating-vhost-policies-{context}[].
+--
+
+. Apply the connector vhost policy to the connector that establishes the connection to the external AMQP container.
++
+--
+The following example applies the connector vhost policy that was configured in the previous step:
+
+[options="nowrap"]
+----
+connector {
+    host: 192.0.2.10
+    port: 5672
+    role: normal
+    policyVhost: my-connector-policy
+}
+----
+--

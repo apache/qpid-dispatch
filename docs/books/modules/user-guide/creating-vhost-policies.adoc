@@ -1,0 +1,145 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='creating-vhost-policies-{context}']
+= Creating vhost policies
+
+A vhost policy defines the connection limits and resource limits for users connecting to the router from a remote host. You must create one vhost policy for each remote host.
+
+.Prerequisites
+
+Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies-{context}[].
+
+.Procedure
+
+. Add a `vhost` section and define the connection limits for the messaging endpoint.
++
+--
+The connection limits apply to all users that are connected to the vhost. These limits control the number of users that can be connected simultaneously to the vhost.
+
+[options="nowrap",subs="+quotes"]
+----
+vhost {
+    hostname: example.com
+    maxConnections: 10000
+    maxConnectionsPerUser: 100
+    maxConnectionsPerHost: 100
+    allowUnknownUser: true
+    ...
+}
+----
+`hostname`::
+The literal hostname of the vhost (the messaging endpoint) or a pattern that matches the vhost hostname. This vhost policy will be applied to any client connection that is directed to the hostname that you specify. This name must be unique; you can only have one vhost policy per hostname.
++
+If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostnames. For more information, see xref:vhost-policy-hostname-pattern-matching-rules-{context}[].
+
+`maxConnections`::
+The global maximum number of concurrent client connections allowed for this vhost. The default is 65535.
+
+`maxConnectionsPerUser`::
+The maximum number of concurrent client connections allowed for any user. The default is 65535.
+
+`maxConnectionsPerHost`::
+The maximum number of concurrent client connections allowed for any remote host (the host from which the client is connecting). The default is 65535.
+
+`allowUnknownUser`::
+Whether unknown users (users who are not members of a defined user group) are allowed to connect to the vhost. Unknown users are assigned to the `$default` user group and receive `$default` settings. The default is `false`, which means that unknown users are not allowed.
+--
+
+. In the `vhost` section, beneath the connection settings that you added, add a `groups` entity to define the resource limits.
++
+--
+You define resource limits by user group. A user group specifies the messaging resources the members of the group are allowed to access.
+
+This example shows three user groups: admin, developers, and $default:
+
+[options="nowrap",subs="+quotes"]
+----
+vhost {
+    ...
+    groups: {
+        admin: {
+            users: admin1, admin2
+            remoteHosts: 127.0.0.1, ::1
+            sources: *
+            targets: *
+        }
+        developers: {
+            users: dev1, dev2, dev3
+            remoteHosts: *
+            sources: myqueue1, myqueue2
+            targets: myqueue1, myqueue2
+        }
+        $default: {
+            remoteHosts: *
+            allowDynamicSource: true,
+            allowAdminStatusUpdate: true,
+            sources: myqueue1, myqueue2
+            targets: myqueue1, myqueue2
+        }
+    }
+}
+----
+`users`::
+A list of authenticated users for this user group. Use commas to separate multiple users. A user may belong to only one vhost user group.
+
+`remoteHosts`::
+A list of remote hosts from which the users may connect. A host can be a hostname, IP address, or IP address range. Use commas to separate multiple hosts. To allow access from all remote hosts, specify a wildcard `*`. To deny access from all remote hosts, leave this attribute blank.
+
+`maxConnectionsPerUser`::
+The maximum number of connections that may be created by users in this user group. This value, if specified, overrides the vhost `maxConnectionsPerUser` value.
+
+`maxConnectionsPerHost`::
+The maximum number of concurrent connections that may be created by users in this user group from any of the permitted remote hosts. This value, if specified, overrides the vhost `maxConnectionsPerUser` value.
+
+`allowDynamicSource`::
+If `true`, connections from users in this group are permitted to attach receivers to dynamic sources. This permits creation of listeners to temporary addresses or temporary queues. If `false`, use of dynamic sources is not permitted.
+
+`allowAdminStatusUpdate`::
+If `true`, connections from users in this group are permitted to modify the `adminStatus` of connections. This permits termination of sender or receiver connections.  If `false`, the users of this group are prohibited from terminating any connections. Inter-router connections can never be terminated by any usee. The default is `true`, even if the policy is not configured.
+
+`allowWaypointLinks`::
+If `true`, connections from users in this group are permitted to attach links using waypoint capabilities. This allows endpoints to act as waypoints (that is, brokers) without the need for configuring auto-links. If `false`, use of waypoint capabilities is not permitted.
+
+`allowDynamicLinkRoutes`::
+If `true`, connections from users in this group may dynamically create connection-scoped link route destinations. This allows endpoints to act as link route destinations (that is, brokers) without the need for configuring link routes. If `false`, creation of dynamic link route destinations is not permitted.
+
+`allowFallbackLinks`::
+If `true`, connections from users in this group are permitted to attach links using fallback-link capabilities. This allows endpoints to act as fallback destinations (and sources) for addresses that have fallback enabled. If `false`, use of fallback-link capabilities is not permitted.
+
+`sources` | `sourcePattern`::
+A list of AMQP source addresses from which users in this group may receive messages.
++
+Use `sources` to specify one or more literal addresses. To specify multiple addresses, use a comma-separated list. To prevent users in this group from receiving messages from any addresses, leave this attribute blank. To allow access to an address specific to a particular user, specify the `${user}` token. For more information, see xref:methods-specifying-vhost-policy-source-target-addresses-{context}[].
++
+Alternatively, you can use `sourcePattern` to match one or more addresses that correspond to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
++
+To specify multiple address ranges, use a comma-separated list of address patterns. For more information, see xref:address-pattern-matching-{context}[]. To allow access to address ranges that are specific to a particular user, specify the `${user}` token. For more information, see xref:methods-specifying-vhost-policy-source-target-addresses-{context}[].
+
+`targets` | `targetPattern`::
+A list of AMQP target addresses from which users in this group may send messages. You can specify multiple AMQP addresses and use user name substitution and address patterns the same way as with source addresses.
+--
+
+. If necessary, add any advanced user group settings to the vhost user groups.
++
+The advanced user group settings enable you to define resource limits based on the AMQP connection open, session begin, and link attach phases of the connection. For more information, see link:{qdrouterdConfManPageUrl}#_vhost[vhost^] in the `qdrouterd.conf` man page.

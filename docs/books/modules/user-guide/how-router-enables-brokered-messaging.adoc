@@ -1,0 +1,41 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-brokered-messaging.adoc
+
+[id='how-router-enables-brokered-messaging-{context}']
+= How {RouterName} enables brokered messaging
+
+Brokered messaging enables {RouterName} to store messages on a broker queue. This requires a connection to the broker, a _waypoint_ address to represent the broker queue, and _autolinks_ to attach to the waypoint address.
+
+An autolink is a link that is automatically created by the router to attach to a waypoint address. With autolinks, client traffic is handled on the router, not the broker. Clients attach their links to the router, and then the router uses internal autolinks to connect to the queue on the broker. Therefore, the queue will always have a single producer and a single consumer regardless of how many clients are attached to the router.
+
+.Brokered messaging
+image::brokered-messaging.png[Brokered Messaging, align="center"]
+
+In this diagram, the sender connects to the router and sends messages to my_queue. The router attaches an outgoing link to the broker, and then sends the messages to my_queue. Later, the receiver connects to the router and requests messages from my_queue. The router attaches an incoming link to the broker to receive the messages from my_queue, and then delivers them to the receiver.
+
+You can also route messages to a _sharded queue_, which is a single, logical queue comprised of multiple, underlying physical queues. Using queue sharding, it is possible to distribute a single queue over multiple brokers. Clients can connect to any of the brokers that hold a shard to send and receive messages.
+
+.Brokered messaging with sharded queue
+image::sharded-queue-02.png[Brokered Messaging with Sharded Queue, align="center"]
+
+In this diagram, a sharded queue (my_queue) is distributed across two brokers. The router is connected to the clients and to both brokers. The sender connects to the router and sends messages to my_queue. The router attaches an outgoing link to each broker, and then sends messages to each shard (by default, the routing distribution is `balanced`). Later, the receiver connects to the router and requests all of the messages from my_queue. The router attaches an incoming link to one of the brokers to receive the messages from my_queue, and then delivers them to the receiver.

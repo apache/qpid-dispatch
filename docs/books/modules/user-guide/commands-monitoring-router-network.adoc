@@ -1,0 +1,124 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// monitoring-using-qdstat.adoc
+
+[id='commands-monitoring-router-network-{context}']
+= Commands for monitoring the router network
+
+You can use `qdstat` to view the status of routers on your router network. For example, you can view information about the attached links and configured addresses, available connections, and nodes in the router network.
+
+[cols="50,50"]
+|===
+| To... | Use this command...
+
+| Create a state dump containing all statistics for all routers
+
+A state dump shows the current operational state of the router network.
+a|
+[options="nowrap"]
+----
+$ qdstat --all-routers --all-entities
+----
+
+If you run this command on an interior router, it displays the statistics for all interior routers. If you run the command on an edge router, it displays the statistics for only that edge router.
+
+| Create a state dump containing a single statistic for all routers
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -l\|-a\|-c\|--autolinks\|--linkroutes\|-g\|-m --all-routers
+----
+
+If you run this command on an interior router, it displays the statistic for all interior routers. If you run the command on an edge router, it displays the statistic for only that edge router.
+
+| Create a state dump containing all statistics for a single router
+a|
+[options="nowrap"]
+----
+$ qdstat --all-entities
+----
+
+This command shows the statistics for the local router only.
+
+| View general statistics for a router
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -g [all-routers\|__<connection-options>__]
+----
+
+| View a list of connections to a router
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -c [all-routers\|__<connection-options>__]
+----
+
+| View the AMQP links attached to a router
+
+You can view a list of AMQP links attached to the router from clients (sender/receiver), from or to other routers into the network, to other containers (for example, brokers), and from the tool itself.
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -l [all-routers\|__<connection-options>__]
+----
+
+| View known routers on the router network
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -n [all-routers\|__<connection-options>__]
+----
+
+| View the addresses known to a router
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -a [all-routers\|__<connection-options>__]
+----
+
+| View a router's autolinks
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --autolinks [all-routers\|__<connection-options>__]
+----
+
+| View the status of a router's link routes
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --linkroutes [all-routers\|__<connection-options>__]
+----
+
+| View a router's memory consumption
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat -m [all-routers\|__<connection-options>__]
+----
+
+|===
+
+.Additional resources
+
+* For more information about the fields displayed by each `qdstat` command, see the {qdstatManPageLink}.

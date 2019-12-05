@@ -17,22 +17,20 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// book.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='monitoring-using-web-console'-{context}']
+= Monitoring using {ConsoleName}
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+{ConsoleName} is a web console for monitoring the status and performance of {RouterName} router networks.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+//.Prerequisites
+include::{FragmentDir}/fragment-console-prereq.adoc[]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
+include::../../modules/user-guide/setting-up-access-web-console.adoc[leveloffset=+1]
 
-.Additional resources
+include::../../modules/user-guide/accessing-web-console.adoc[leveloffset=+1]
 
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+include::../../modules/user-guide/monitoring-router-network-web-console.adoc[leveloffset=+1]

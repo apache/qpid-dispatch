@@ -1,0 +1,54 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// authorizing-access-messaging-resources.adoc
+
+[id='setting-connection-resource-limits-messaging-endpoints-{context}']
+= Setting connection and resource limits for messaging endpoints
+
+You can define the connection limit and AMQP resource limits for a messaging endpoint by configuring a _vhost policy_. Vhost policies define what resources clients are permitted to access on a messaging endpoint over a particular connection.
+
+[NOTE]
+====
+A vhost is typically the name of the host to which the client connection is directed. For example, if a client application opens a connection to the `amqp://mybroker.example.com:5672/queue01` URL, the vhost would be `mybroker.example.com`.
+====
+
+* xref:enabling-vhost-policies-{context}[]
+* xref:creating-vhost-policies-{context}[]
+* xref:creating-vhost-policies-json-{context}[]
+* xref:setting-resource-limits-outgoing-connections-{context}[]
+* xref:methods-specifying-vhost-policy-source-target-addresses-{context}[]
+* xref:vhost-policy-hostname-pattern-matching-rules-{context}[]
+* xref:vhost-policy-examples-{context}[]
+
+include::../../modules/user-guide/enabling-vhost-policies.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/creating-vhost-policies.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/creating-vhost-policies-json.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/setting-resource-limits-outgoing-connections.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/methods-specifying-vhost-policy-source-target-addresses.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/vhost-policy-hostname-pattern-matching-rules.adoc[leveloffset=+1]
+
+include::../../modules/user-guide/vhost-policy-examples.adoc[leveloffset=+1]

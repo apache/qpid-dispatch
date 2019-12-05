@@ -1,0 +1,88 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-brokered-messaging.adoc
+
+[id='handling-undeliverable-messages-{context}']
+= Handling undeliverable messages
+
+You handle undeliverable messages for an address by configuring autolinks that point to _fallback destinations_. A fallback destination (such as a queue on a broker) stores messages that are not directly routable to any consumers.
+
+During normal message delivery, {RouterName} delivers messages to the consumers that are attached to the router network. However, if no consumers are reachable, the messages are diverted to any fallback destinations that were configured for the address (if the autolinks that point to the fallback destinations are active). When a consumer reconnects and becomes reachable again, it receives the messages stored at the fallback destination.
+
+[NOTE]
+====
+{RouterName} preserves the original delivery order for messages stored at a fallback destination. However, when a consumer reconnects, any new messages produced while the queue is draining will be interleaved with the messages stored at the fallback destination.
+====
+
+.Prerequisites
+
+* The router is connected to a broker.
++
+For more information, see xref:connecting-to-external-amqp-containers-{context}[].
+
+.Procedure
+
+This procedure enables fallback for an address and configures autolinks to connect to the broker queue that provides the fallback destination for the address.
+
+. In the `{RouterConfigFile}` configuration file, enable fallback destinations for the address.
++
+[options="nowrap",subs="+quotes"]
+----
+address {
+    prefix: my_address
+    enableFallback: yes
+}
+----
+
+. Add an _outgoing_ autolink to a queue on the broker.
++
+--
+For the address for which you enabled fallback, if messages are not routable to any consumers, the router will use this autolink to send the messages to a queue on the broker.
+
+[options="nowrap",subs="+quotes"]
+----
+autoLink {
+    address: my_address.2
+    direction: out
+    connection: my_broker
+    fallback: yes
+}
+----
+--
+
+. If you want the router to send queued messages to attached consumers as soon as they connect to the router network, add an _incoming_ autolink.
++
+--
+As soon as a consumer attaches to the router, it will receive the messages stored in the broker queue, along with any new messages sent by the producer. The original delivery order of the queued messages is preserved; however, the queued messages will be interleaved with the new messages.
+
+If you do not add the incoming autolink, the messages will be stored on the broker, but will not be sent to consumers when they attach to the router.
+
+[options="nowrap",subs="+quotes"]
+----
+autoLink {
+    address: my_address.2
+    direction: in
+    connection: my_broker
+    fallback: yes
+}
+----
+--

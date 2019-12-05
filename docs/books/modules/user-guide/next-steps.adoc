@@ -26,11 +26,11 @@ under the License
 
 After using {RouterName} to distribute messages between two clients, you can use the following sections to learn more about {RouterName} configuration, deployment, and management.
 
-xref:configuring-router-{context}[Configure non-default settings for the router]::
-{RouterName} ships with default settings that are suitable for many basic use cases. You can configure the router's essential properties, network connections, security settings, logging, and routing mechanisms.
+xref:configuration[Change the router's configuration]::
+{RouterName} ships with default settings that are suitable for many basic use cases. You can further experiment with the standalone router that you used in the _Getting started_ example by changing the router's essential properties, network connections, security settings, logging, and routing mechanisms.
 
-xref:creating-router-network-topology-{context}[Plan a {RouterName} deployment]::
+xref:installing-router-{context}[Install and configure {RouterName}]::
 {RouterName} is typically deployed in router networks. You can design a router network of any arbitrary topology to interconnect the endpoints in your messaging network.
 
-xref:monitoring-managing-router-network[Monitor and manage {RouterName}]::
+xref:management[Monitor and manage {RouterName}]::
 You can use the web console and command-line management tools to monitor the status and performance of the routers in your router network.

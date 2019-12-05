@@ -17,22 +17,20 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// overview.adoc
+// configuring-routing.adoc
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+[id='creating-link-routes-{context}']
+= Creating link routes
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+A link route represents a private messaging path between a sender and a receiver in which the router passes the messages between end points. You can use it to connect a client to a service (such as a broker queue).
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
+// Understanding link routing
+include::understanding-link-routing.adoc[leveloffset=+1]
 
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
+// Creating a link route
+include::../../modules/user-guide/creating-link-route.adoc[leveloffset=+1]
 
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+// Link route example
+include::../../modules/user-guide/link-route-example.adoc[leveloffset=+1]

@@ -1,0 +1,51 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='enabling-vhost-policies-{context}']
+= Enabling vhost policies
+
+You must enable the router to use vhost policies before you can create the policies.
+
+.Procedure
+
+* In the `{RouterConfigFile}` configuration file, add a `policy` section if one does not exist, and enable vhost policies for the router.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+policy {
+    ...
+    enableVhostPolicy: true
+    enableVhostNamePatterns: true
+    defaultVhost: $default
+}
+----
+`enableVhostPolicy`::
+Enables the router to enforce the connection denials and resource limits defined in the configured vhost policies. The default is `false`, which means that the router will not enforce any vhost policies.
+
+`enableVhostNamePatterns`::
+Enables pattern matching for vhost hostnames. If set to `true`, you can use wildcards to specify a range of hostnames for a vhost. If set to `false`, vhost hostnames are treated as literal strings. This means that you must specify the exact hostname for each vhost. The default is `false`.
+
+`defaultVhost`::
+The name of the default vhost policy, which is applied to any connection for which a vhost policy has not been configured. The default is `$default`. If `defaultVhost` is not defined, then default vhost processing is disabled.
+--

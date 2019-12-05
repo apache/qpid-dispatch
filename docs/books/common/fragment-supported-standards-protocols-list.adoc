@@ -17,22 +17,19 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
-//
-// overview.adoc
+* Version 1.0 of the Advanced Message Queueing Protocol (AMQP)
+* Modern TCP with IPv6
+* Client compatibility
++
+--
+{RouterName} should, in theory, work with any client that is compatible with AMQP 1.0. The following clients have been tested:
 
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
+qpid::messaging::
+The Qpid messaging clients work with {RouterName} as long as they are configured to use the 1.0 version of the protocol. To enable AMQP 1.0 in the C++ client, use the `\{protocol:amqp1.0}` connection option.
 
-{RouterName} supports the following industry-recognized standards and network protocols:
+Proton Reactor::
+The Proton Reactor API is compatible with {RouterName}.
 
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
-
-[NOTE]
-====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
-====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
+Proton Messenger::
+Messenger works with {RouterName}.
+--

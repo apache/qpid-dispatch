@@ -1,0 +1,72 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// understanding-message-routing.adoc
+
+[id='routing-patterns-message-routing-{context}']
+= Routing patterns
+
+Routing patterns define the paths that a message with a mobile address
+can take across a network. These routing patterns can be used for both
+direct routing, in which the router distributes messages between
+clients without a broker, and indirect routing, in which the router
+enables clients to exchange messages through a broker.
+
+Routing patterns fall into two categories: Anycast
+(Balanced and Closest) and Multicast. There is no concept of
+"unicast" in which there is only one consumer for an address.
+
+Anycast distribution delivers each message to one consumer whereas
+multicast distribution delivers each message to all consumers.
+
+Each address has one of the following routing patterns, which define the path that a message with the address can take across the messaging network:
+
+Balanced:: An anycast method that allows multiple consumers to use the same address. Each message is delivered to a single consumer only, and {RouterName} attempts to balance the traffic load across the router network.
++
+--
+If multiple consumers are attached to the same address, each router determines which outbound path should receive a message by considering each path's current number of unsettled deliveries. This means that more messages will be delivered along paths where deliveries are settled at higher rates.
+
+[NOTE]
+====
+{RouterName} neither measures nor uses message settlement time to determine which outbound path to use.
+====
+
+In this scenario, the messages are spread across both receivers regardless of path length:
+
+.Balanced Message Routing
+image::balanced-routing.png[Balanced Message Routing, align="center"]
+--
+
+Closest:: An anycast method in which every message is sent along the shortest path to reach the destination, even if there are other consumers for the same address.
++
+{RouterName} determines the shortest path based on the topology cost to reach each of the consumers. If there are multiple consumers with the same lowest cost, messages will be spread evenly among those consumers.
++
+In this scenario, all messages sent by `Sender` will be delivered to `Receiver 1`:
++
+.Closest Message Routing
+image::closest-routing.png[Closest Message Routing, align="center"]
+
+Multicast:: Messages are sent to all consumers attached to the address. Each consumer will receive one copy of the message.
++
+In this scenario, all messages are sent to all receivers:
++
+.Multicast Message Routing
+image::multicast-routing.png[Multicast Message Routing, align="center"]

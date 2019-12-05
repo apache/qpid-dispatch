@@ -24,7 +24,7 @@ under the License
 [id='how-routers-route-messages-{context}']
 = How routers route messages
 
-In a router network, _routing_ is the process by which messages are delivered to their destinations. To accomplish this, {RouterName} offers two different routing mechanisms: 
+In a router network, _routing_ is the process by which messages are delivered to their destinations. To accomplish this, {RouterName} offers two different routing mechanisms:
 
 Message routing::
 Message routing enables you to distribute messages in anycast and multicast patterns. These patterns can be used for both direct routing, in which the router distributes messages between clients without a message broker, and indirect routing, in which the router enables clients to exchange messages through a message broker.
@@ -45,7 +45,7 @@ Message routing supports both anycast and multicast routing patterns. You can lo
 Sharding messages from one producer might cause that producer’s messages to be received in a different order than the order in which they were sent.
 --
 
-Link routing:: 
+Link routing::
 Link routing enables you to establish a dedicated, virtual "path" between a sender and receiver that travels through the router network. Link routes are typically used to connect clients to message brokers in scenarios in which a direct connection is unfeasible. Therefore, link routes enable messaging capabilities that are not possible with message routing, such as:
 +
 --
@@ -68,6 +68,6 @@ With a link route, consumers can provide server-side selectors for broker subscr
 
 .Additional resources
 
-* xref:configuring-message-routing[]
+* xref:configuring-message-routing-{context}[]
 
-* xref:configuring-link-routing[]
+* xref:creating-link-routes-{context}[]

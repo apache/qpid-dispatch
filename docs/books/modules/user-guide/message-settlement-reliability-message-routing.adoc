@@ -1,0 +1,69 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// understanding-message-routing.adoc
+
+[id='message-settlement-reliability-message-routing-{context}']
+= Message settlement and reliability
+
+{RouterName} can deliver messages with the following degrees of reliability:
+
+* At most once
+* At least once
+* Exactly once
+
+The level of reliability is negotiated between the producer and the router when the producer establishes a link to the router. To achieve the negotiated level of reliability, {RouterName} treats all messages as either _pre-settled_ or _unsettled_.
+
+Pre-settled::
+Sometimes called _fire and forget_, the router settles the incoming and outgoing deliveries and propagates the settlement to the message's destination. However, it does not guarantee delivery.
+
+Unsettled::
+{RouterName} propagates the settlement between the producer and consumer. For an anycast address, the router associates the incoming delivery with the resulting outgoing delivery. Based on this association, the router propagates changes in delivery state from the consumer to the producer.
++
+For a multicast address, the router associates the incoming delivery with all outbound deliveries. The router waits for each consumer to set their delivery's final state. After all outgoing deliveries have reached their final state, the router sets a final delivery state for the original inbound delivery and passes it to the producer.
++
+The following table describes the reliability guarantees for unsettled messages sent to an anycast or multicast address:
++
+[cols="20,40,40"]
+|===
+| Final disposition | Anycast | Multicast
+
+| `accepted`
+| The consumer received the message.
+a|
+Either:
+
+* All consumers received the message,
+
+* Or, at least one consumer received the message, but no consumers rejected it.
+
+| `released`
+| The message did not reach its destination.
+| The message did not reach any of the consumers.
+
+| `modified`
+| The message may or may not have reached its destination. The delivery is considered to be "in-doubt" and should be re-sent if "at least once" delivery is required.
+| The message may or may not have reached any of the consumers. However, no consumers rejected or accepted it.
+
+| `rejected`
+| The consumer rejected the message.
+| At least one consumer rejected the message.
+|===

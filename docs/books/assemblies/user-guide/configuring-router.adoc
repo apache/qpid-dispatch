@@ -31,8 +31,8 @@ You can do the following:
 * xref:configuring-router-properties-{context}[Configure essential router properties]
 * xref:configuring-network-connections-{context}[Configure network connections]
 * xref:securing-network-connections-{context}[Secure network connections]
-* xref:authorizing-access-to-messaging-resources[Authorize access to messaging resources]
-* xref:logging[Configure logging]
+* xref:authorizing-access-messaging-resources-{context}[Authorize access to messaging resources]
+* xref:configuring-logging-{context}[Configure logging]
 
 // Configuring router properties
 include::../../modules/user-guide/configuring-router-properties.adoc[leveloffset=+1]
@@ -44,4 +44,7 @@ include::configuring-network-connections.adoc[leveloffset=+1]
 include::securing-network-connections.adoc[leveloffset=+1]
 
 // Authorizing access to messaging resources
-include::../../modules/user-guide/authorization.adoc[leveloffset=+1]
+include::authorizing-access-messaging-resources.adoc[leveloffset=+1]
+
+// Configuring logging
+include::configuring-logging.adoc[leveloffset=+1]

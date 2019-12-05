@@ -1,0 +1,113 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-link-routing.adoc
+
+[id='creating-link-route-{context}']
+= Creating a link route
+
+Link routes establish a link between a sender and a receiver that travels through a router. You can configure inward and outward link routes to enable the router to receive link-attaches from clients and to send them to a particular destination.
+
+With link routing, client traffic is handled on the broker, not the router. Clients have a direct link through the router to a broker's queue. Therefore, each client is a separate producer or consumer.
+
+[NOTE]
+====
+If the connection to the broker fails, the routed links are detached, and the router will attempt to reconnect to the broker (or its backup). Once the connection is reestablished, the link route to the broker will become reachable again.
+
+From the client's perspective, the client will see the detached links (that is, the senders or receivers), but not the failed connection. Therefore, if you want the client to reattach dropped links in the event of a broker connection failure, you must configure this functionality on the client. Alternatively, you can use message routing with autolinks instead of link routing. For more information, see xref:routing-messages-through-broker-queues-{context}[].
+====
+
+.Procedure
+
+. Add an outgoing connection to the broker if one does not exist.
++
+If the queue is sharded across multiple brokers, you must add a connection for each broker. For more information, see xref:connecting-to-external-amqp-containers-{context}[].
+
+. If you want clients to send local transactions to the broker, create a link route for the transaction coordinator:
++
+--
+[options="nowrap",subs="+quotes"]
+----
+linkRoute {
+    prefix: $coordinator  <1>
+    connection: my_broker
+    direction: in
+}
+----
+<1> The `$coordinator` prefix designates this link route as a transaction coordinator. When the client opens a transacted session, the requests to start and end the transaction are propagated along this link route to the broker.
+
+{RouterName} does not support routing transactions to multiple brokers. If you have multiple brokers in your environment, choose a single broker and route all transactions to it.
+--
+
+. If you want clients to send messages on this link route, create an incoming link route:
++
+--
+[options="nowrap",subs="+quotes"]
+----
+linkRoute {
+    prefix: my_queue
+    connection: my_broker
+    direction: in
+    ...
+}
+----
+
+`prefix` | `pattern`:: The address prefix or pattern that matches the broker queue that should be the destination for routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
++
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
++
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
+
+`connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
++
+If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
+
+`direction`:: Set this attribute to `in` to specify that clients can send messages into the router network on this link route.
+
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[linkRoute] in the `qdrouterd.conf` man page.
+--
+
+. If you want clients to receive messages on this link route, create an outgoing link route:
++
+--
+[options="nowrap",subs="+quotes"]
+----
+linkRoute {
+    prefix: my_queue
+    connection: my_broker
+    direction: out
+    ...
+}
+----
+
+`prefix` | `pattern`:: The address prefix or pattern that matches the broker queue from which you want to receive routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
++
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
++
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
+
+`connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
++
+If multiple brokers are connected to the router through this connection, requests for addresses matching the link route's prefix or pattern are balanced across the brokers. Alternatively, if you want to specify a particular broker, use `containerID` and add the broker's container ID.
+`direction`:: Set this attribute to `out` to specify that this link route is for receivers.
+
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_linkroute[linkRoute] in the `qdrouterd.conf` man page.
+--

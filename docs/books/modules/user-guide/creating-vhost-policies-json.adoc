@@ -1,0 +1,89 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='creating-vhost-policies-json-{context}']
+= Creating vhost policies as JSON files
+
+As an alternative to using the router configuration file, you can configure vhost policies in JSON files. If you have multiple routers that need to share the same vhost configuration, you can put the vhost configuration JSON files in a location accessible to each router, and then configure the routers to apply the vhost policies defined in these JSON files.
+
+.Prerequisites
+
+* Vhost policies must be enabled for the router. For more information, see xref:enabling-vhost-policies-{context}[].
+
+.Procedure
+
+. In the `{RouterConfigFile}` configuration file, specify the directory where you want to store the vhost policy definition JSON files.
++
+--
+[options="nowrap",subs="+quotes"]
+----
+policy {
+    ...
+    policyDir: /etc/qpid-dispatch-policies
+}
+----
+`policyDir`::
+The absolute path to the directory that holds vhost policy definition files in JSON format. The router processes all of the vhost policies in each JSON file that is in this directory.
+--
+
+. In the vhost policy definition directory, create a JSON file for each vhost policy.
++
+--
+.Vhost Policy Definition JSON File
+====
+[source,json,options="nowrap"]
+----
+[
+    ["vhost", {
+        "hostname": "example.com",
+        "maxConnections": 10000,
+        "maxConnectionsPerUser": 100,
+        "maxConnectionsPerHost": 100,
+        "allowUnknownUser": true,
+        "groups": {
+            "admin": {
+                "users": ["admin1", "admin2"],
+                "remoteHosts": ["127.0.0.1", "::1"],
+                "sources": "*",
+                "targets": "*"
+            },
+            "developers": {
+                "users": ["dev1", "dev2", "dev3"],
+                "remoteHosts": "*",
+                "sources": ["myqueue1", "myqueue2"],
+                "targets": ["myqueue1", "myqueue2"]
+            },
+            "$default": {
+                "remoteHosts": "*",
+                "allowDynamicSource": true,
+                "sources": ["myqueue1", "myqueue2"],
+                "targets": ["myqueue1", "myqueue2"]
+            }
+        }
+    }]
+]
+----
+
+For more information about these attributes, see xref:creating-vhost-policies-{context}[].
+====
+--

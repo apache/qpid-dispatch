@@ -1,0 +1,116 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// configuring-brokered-messaging.adoc
+
+[id='routing-messages-through-broker-queues-{context}']
+= Routing messages through broker queues
+
+You can route messages to and from a broker queue to provide clients with access to the queue through a router. In this scenario, clients connect to a router to send and receive messages, and the router routes the messages to or from the broker queue.
+
+You can route messages to a queue hosted on a single broker, or route messages to a _sharded queue_ distributed across multiple brokers.
+
+.Procedure
+
+. In the `{RouterConfigFile}` configuration file, add a waypoint address for the broker queue.
++
+--
+A waypoint address identifies a queue on a broker to which you want to route messages. This example adds a waypoint address for the `my_queue` queue:
+
+[options="nowrap",subs="+quotes"]
+----
+address {
+    prefix: my_queue
+    waypoint: yes
+}
+----
+
+`prefix` | `pattern`:: The address prefix or pattern that matches the broker queue to which you want to send messages. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
++
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
++
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
+
+`waypoint`:: Set this attribute to `yes` so that the router handles messages sent to this address as a waypoint.
+--
+
+. Connect the router to the broker.
+
+.. Add an outgoing connection to the broker if one does not exist.
++
+--
+If the queue is sharded across multiple brokers, you must add a connection for each broker. For more information, see xref:connecting-to-external-amqp-containers-{context}[].
+
+[NOTE]
+====
+If the connection to the broker fails, {RouterName} automatically attempts to reestablish the connection and reroute message deliveries to any available alternate destinations. However, some deliveries could be returned to the sender with a `RELEASED` or `MODIFIED` disposition. Therefore, you should ensure that your clients can handle these deliveries appropriately (generally by resending them).
+====
+--
+
+.. If you want to send messages to the broker queue, add an _outgoing_ autolink to the broker queue.
++
+--
+If the queue is sharded across multiple brokers, you must add an outgoing autolink for each broker.
+
+This example configures an outgoing auto link to send messages to a broker queue:
+
+[options="nowrap",subs="+quotes"]
+----
+autoLink {
+    address: my_queue
+    connection: my_broker
+    direction: out
+    ...
+}
+----
+
+`address`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
+`externalAddress`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the sender uses. In this scenario, senders send messages to the `address` address, and then the router routes them to the broker queue represented by the `externalAddress` address.
+`connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
+`direction`:: Set this attribute to `out` to specify that this autolink can send messages from the router to the broker.
+
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[autoLink] in the `qdrouterd.conf` man page.
+--
+
+. If you want to receive messages from the broker queue, add an _incoming_ autolink from the broker queue:
++
+--
+If the queue is sharded across multiple brokers, you must add an outgoing autolink for each broker.
+
+This example configures an incoming auto link to receive messages from a broker queue:
+
+[options="nowrap",subs="+quotes"]
+----
+autoLink {
+    address: my_queue
+    connection: my_broker
+    direction: in
+    ...
+}
+----
+
+`address`:: The address of the broker queue. When the autolink is created, it will be attached to this address.
+`externalAddress`:: An optional alternate address for the broker queue. You use an external address if the broker queue should have a different address than that which the receiver uses. In this scenario, receivers receive messages from the `address` address, and the router retrieves them from the broker queue represented by the `externalAddress` address.
+`connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
+`direction`:: Set this attribute to `in` to specify that this autolink can receive messages from the broker to the router.
+
+For information about additional attributes, see link:{qdrouterdConfManPageUrl}#_autolink[autoLink] in the `qdrouterd.conf` man page.
+--

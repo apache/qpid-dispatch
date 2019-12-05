@@ -1,0 +1,96 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='methods-specifying-vhost-policy-source-target-addresses-{context}']
+= Methods for specifying vhost policy source and target addresses
+
+If you want to allow or deny access to multiple addresses on a vhost, there are several methods you can use to match multiple addresses without having to specify each address individually.
+
+The following table describes the methods a vhost policy can use to specify multiple source and target addresses:
+
+[cols="33,67",options="header"]
+|===
+| To... | Do this...
+
+| Allow all users in the user group to access all source or target addresses
+a| Use a `*` wildcard character.
+
+.Receive from any address
+====
+[source,options="nowrap"]
+----
+sources: *
+----
+====
+
+| Prevent all users in the user group from accessing all source or target addresses
+a| Do not specify a value.
+
+.Prohibit message transfers to all addresses
+====
+[source,options="nowrap"]
+----
+targets:
+----
+====
+
+| Allow access to some resources specific to each user
+a| Use the `${user}` username substitution token. You can use this token with `source`, `target`, `sourcePattern`, and `targetPattern`.
+
+[NOTE]
+====
+You can only specify the `${user}` token once in an AMQP address name or pattern. If there are multiple tokens in an address, only the leftmost token will be substituted.
+====
+
+.Receive from a user-specific address
+====
+This definition allows the users in the user group to receive messages from any address that meets any of the following rules:
+
+* Starts with the prefix `tmp_` and ends with the user name
+* Starts with the prefix `temp` followed by any additional characters
+* Starts with the user name, is followed by `-home-`, and ends with any additional characters
+[source,options="nowrap"]
+----
+sources: tmp_${user}, temp*, ${user}-home-*
+----
+====
+
+.User-specific address patterns
+====
+This definition allows the users in the user group to receive messages from any address that meets any of the following rules:
+
+* Starts with the prefix `tmp` and ends with the user name
+* Starts with the prefix `temp` followed by zero or more additional characters
+* Starts with the user name, is followed by `home`, and ends with one or more additional characters
+[source,options="nowrap"]
+----
+sourcePattern: tmp.${user}, temp/#, ${user}.home/*
+----
+====
+
+[NOTE]
+====
+In an address pattern (`sourcePattern` or `targetPattern`), the username substitution token must be either the first or last token in the pattern. The token must also be alone within its delimited field, which means that it cannot be concatenated with literal text prefixes or suffixes.
+====
+
+|===

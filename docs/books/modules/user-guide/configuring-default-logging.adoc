@@ -1,0 +1,81 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// configuring-logging.adoc
+
+[id='configuring-default-logging-{context}']
+= Configuring default logging
+
+You can specify the types of events that should be logged, the format of the log entries, and where those entries should be sent.
+
+.Procedure
+
+. In the `{RouterConfigFile}` configuration file, add a `log` section to set the default logging properties:
++
+--
+This example configures all logging modules to log events starting at the `info` level:
+
+[options="nowrap",subs="+quotes"]
+----
+log {
+    module: DEFAULT
+    enable: info+
+    includeTimestamp: yes
+}
+----
+
+`module`:: Specify `DEFAULT`.
+
+`enable`:: The logging level. You can specify any of the following levels (from lowest to highest):
++
+* `trace` - provides the most information, but significantly affects system performance
+* `debug` - useful for debugging, but affects system performance
+* `info` - provides general information without affecting system performance
+* `notice` - provides general information, but is less verbose than `info`
+* `warning` - provides information about issues you should be aware of, but which are not errors
+* `error` - error conditions that you should address
+* `critical` - critical system issues that you must address immediately
+
++
+To specify multiple levels, use a comma-separated list. You can also use `+` to specify a level and all levels above it. For example, `trace,debug,warning+` enables trace, debug, warning, error, and critical levels. For default logging, you should typically use the `info+` or `notice+` level. These levels will provide general information, warnings, and errors for all modules without affecting the performance of {RouterName}.
+
+`includeTimestamp`:: Set this to `yes` to include the timestamp in all logs.
+
+For information about additional log attributes, see link:{qdrouterdConfManPageUrl}#_log[log] in the `qdrouterd.conf` man page.
+--
+
+. If you want to configure non-default logging for any of the logging modules, add an additional `log` section for each module that should not follow the default.
++
+--
+This example configures the `ROUTER` logging module to log `debug` events:
+[options="nowrap",subs="+quotes"]
+----
+log {
+    module: ROUTER
+    enable: debug
+    includeTimestamp: yes
+}
+----
+--
+
+.Additional resources
+
+* For more information about viewing and using logs, see xref:troubleshooting-{context}[].

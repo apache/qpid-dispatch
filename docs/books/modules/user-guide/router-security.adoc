@@ -40,4 +40,4 @@ Authorization::
 
 * xref:securing-network-connections-{context}[]
 
-* xref:authorizing-access-to-messaging-resources[]
+* xref:configuring-authorization-{context}[]

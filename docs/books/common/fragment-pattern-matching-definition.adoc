@@ -17,22 +17,14 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// Module included in the following assemblies:
-//
-// overview.adoc
-
-[id='supported-standards-protocols-{context}']
-= Supported standards and protocols
-
-{RouterName} supports the following industry-recognized standards and network protocols:
-
-include::{FragmentDir}/fragment-supported-standards-protocols-list.adoc[]
-
++
+A _pattern_ matches an address that corresponds to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
++
+The `*` and `#` characters are reserved as wildcards. Therefore, you should not use them in the message address.
++
+For more information about creating address patterns, see xref:address-pattern-matching-{context}[].
++
 [NOTE]
 ====
-The details of distributed transactions (XA) within AMQP are not provided in the 1.0 version of the specification. AMQ Interconnect does not support XA transactions.
+You can convert a `prefix` value to a `pattern` by appending `/\#` to it. For example, the prefix `a/b/c` is equivalent to the pattern `a/b/c/#`.
 ====
-
-.Additional resources
-
-include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]

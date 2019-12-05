@@ -1,0 +1,44 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// authorizing-access-messaging-resources.adoc
+
+[id='setting-global-connection-limits-{context}']
+= Setting global connection limits
+
+You can create a global policy to set the incoming connection limit for a router. This limit defines the total number of concurrent client connections that can be open for this router.
+
+.Procedure
+
+* In the `{RouterConfigFile}` configuration file, add a `policy` section and set the `maxConnections`.
++
+--
+This example sets the incoming connection limit to 10000:
+
+[options="nowrap",subs="+quotes"]
+----
+policy {
+    maxConnections: 10000
+}
+----
+`maxConnections`::
+This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
+--

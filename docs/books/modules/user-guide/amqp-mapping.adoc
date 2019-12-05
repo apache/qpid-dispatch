@@ -1,0 +1,129 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// overview.adoc
+
+[id='amqp-mapping-{context}']
+= AMQP mapping
+
+{RouterName} is an AMQP router and as such, it provides extensions,
+code-points, and semantics for routing over AMQP. This section describes the
+details of {RouterName}'s use of AMQP.
+
+[discrete]
+== Message annotations
+
+The following message annotation fields are defined by {RouterName}:
+
+[options="header"]
+|===
+| Field | Type | Description
+
+|`x-opt-qd.ingress` |string |The identity of the ingress router for a
+message-routed message. The ingress router is the first router
+encountered by a transiting message. The router will, if this field is
+present, leave it unaltered. If the field is not present, the router
+will insert the field with its own identity.
+
+|`x-opt-qd.trace` |list of string |The list of routers through which this
+message-routed message has transited. If this field is not present, the
+router will do nothing. If the field is present, the router will
+append its own identity to the end of the list.
+
+|`x-opt-qd.to` |string |To-override for message-routed messages. If this
+field is present, the address in this field will be used for routing instead of the `to` field in the message properties. A router may append,
+remove, or modify this annotation field depending on the policy in place
+for routing the message.
+
+|`x-opt-qd.phase` |integer |The address-phase, if not zero, for messages
+flowing between routers.
+
+|===
+
+[discrete]
+== Source and target capabilities
+
+The following capability values are used in sources and targets:
+
+`qd.router`::
+This capability is added to sources and targets that are used for inter-router message exchange. This capability denotes a link used for router-control messages flowing between routers.
+
+`qd.router-data`::
+This capability is added to sources and targets that are used for inter-router message exchange. This capability denotes a link used for user messages being message-routed across an inter-router connection.
+
+[discrete]
+== Dynamic node properties
+
+The following dynamic node properties are used by {RouterName} in sources:
+
+`x-opt-qd.address`::
+The node address describing the destination desired for a dynamic source. If this is absent, the router will terminate any dynamic receivers. If this address is present, the router will use the address to route the dynamic link attach to the proper destination container.
+
+[discrete]
+== Addresses and address formats
+
+The following AMQP addresses and address patterns are used within
+{RouterName}:
+
+.Address patterns
+--
+`_local/<addr>`::
+An address that references a locally-attached endpoint. Messages using this address pattern will not be routed over more than one link.
+
+`_topo/0/<router>/<addr>`::
+An address that references an endpoint attached to a specific router node in the network topology. Messages with addresses that follow this pattern shall be routed along the shortest path to the specified router. Addresses of this form are always routable in that the address itself contains enough information to route the message to its destination.
++
+The `0` component immediately preceding the router ID is a placeholder for an _area_ which may be used in the future if area routing is implemented.
+
+`<addr>`::
+A mobile address. An address of this format represents an endpoint or a set of distinct endpoints that are attached to the network in arbitrary locations. It is the responsibility of the router network to determine which router nodes are valid destinations for mobile addresses.
+--
+
+.Supported addresses
+--
+`$management`::
+The management agent on the attached router/container. This address would be used by an endpoint that is a management client/console/tool wishing to access management data from the attached container.
+
+`_topo/0/Router.E/$management`::
+The management agent at Router.E in area 0. This address would be used by a management client wishing to access management data from a specific container that is reachable within the network.
+
+`_local/qdhello`::
+The router entity in each of the connected routers. This address is used to communicate with neighbor routers and is exclusively for the `HELLO` discovery protocol.
+
+`_local/qdrouter`::
+The router entity in each of the connected routers. This address is used by a router to communicate with other routers in the network.
+
+`_topo/0/Router.E/qdrouter`::
+The router entity at the specifically-indicated router. This address form is used by a router to communicate with a specific router that may or may not be a neighbor.
+--
+
+[discrete]
+== Implementation of the AMQP Management specification
+
+{RouterName} is manageable remotely by AMQP. It is compliant with the emerging AMQP Management specification (draft 9) with the following differences:
+
+* The `name` attribute is not required when an entity is created. If not supplied, it will be set to the same value as the system-generated `identity` attribute. Otherwise, it is treated as per the standard.
+
+* The `REGISTER` and `DEREGISTER` operations are not implemented. The router automatically discovers peer routers through the router network and makes their management addresses available through the standard `GET-MGMT-NODES` operation.
+
+.Additional resources
+
+* link:https://www.oasis-open.org/committees/download.php/54441/AMQP%20Management%20v1.0%20WD09[AMQP Management Version 1.0 (Draft 9)]
