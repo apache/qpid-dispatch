@@ -31,6 +31,14 @@ You can define the connection limit and AMQP resource limits for a messaging end
 A vhost is typically the name of the host to which the client connection is directed. For example, if a client application opens a connection to the `amqp://mybroker.example.com:5672/queue01` URL, the vhost would be `mybroker.example.com`.
 ====
 
+* xref:enabling-vhost-policies-{context}[]
+* xref:creating-vhost-policies-{context}[]
+* xref:creating-vhost-policies-json-{context}[]
+* xref:setting-resource-limits-outgoing-connections-{context}[]
+* xref:methods-specifying-vhost-policy-source-target-addresses-{context}[]
+* xref:vhost-policy-hostname-pattern-matching-rules-{context}[]
+* xref:vhost-policy-examples-{context}[]
+
 include::../../modules/user-guide/enabling-vhost-policies.adoc[leveloffset=+1]
 
 include::../../modules/user-guide/creating-vhost-policies.adoc[leveloffset=+1]

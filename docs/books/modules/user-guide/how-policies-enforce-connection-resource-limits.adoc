@@ -21,8 +21,8 @@ under the License
 //
 // authorizing-access-messaging-resources.adoc
 
-[id='how-router-enforces-connection-resource-limits-{context}']
-= How {RouterName} enforces connection and resource limits
+[id='how-policies-enforce-connection-resource-limits-{context}']
+= How policies enforce connection and resource limits
 
 {RouterName} uses policies to determine whether to permit a connection, and if it is permitted, to apply the appropriate resource limits.
 

@@ -21,10 +21,10 @@ under the License
 //
 // authorizing-access-messaging-resources.adoc
 
-[id='setting-global-connection-limits-router-{context}']
-= Setting global connection limits for a router
+[id='setting-global-connection-limits-{context}']
+= Setting global connection limits
 
-You can set the incoming connection limit for a router. This limit defines the total number of concurrent client connections that can be open for this router.
+You can create a global policy to set the incoming connection limit for a router. This limit defines the total number of concurrent client connections that can be open for this router.
 
 .Procedure
 
