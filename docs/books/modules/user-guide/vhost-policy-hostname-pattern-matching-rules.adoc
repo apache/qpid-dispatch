@@ -1,0 +1,76 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// setting-connection-resource-limits-messaging-endpoints.adoc
+
+[id='vhost-policy-hostname-pattern-matching-rules-{context}']
+= Vhost policy hostname pattern matching rules
+
+In a vhost policy, vhost hostnames can be either literal hostnames or patterns that cover a range of hostnames.
+
+A hostname pattern is a sequence of words with one or more of the following wildcard characters:
+
+* `*` represents exactly one word
+* `#` represents zero or more words
+
+The following table shows some examples of hostname patterns:
+
+[options="header"]
+|===
+| This pattern... | Matches... | But not...
+
+a| `*.example.com`
+a| `www.example.com`
+a| `example.com`
+`srv2.www.example.com`
+
+a| `#.example.com`
+a| `example.com`
+`www.example.com`
+`a.b.c.d.example.com`
+a| `myhost.com`
+
+a| `www.*.test.example.com`
+a| `www.a.test.example.com`
+a| `www.test.example.com`
+`www.a.b.c.test.example.com`
+
+a| `www.#.test.example.com`
+a| `www.test.example.com`
+`www.a.test.example.com`
+`www.a.b.c.test.example.com`
+a| `test.example.com`
+|===
+
+Vhost hostname pattern matching applies the following precedence rules:
+
+[options="header"]
+|===
+| Policy pattern | Precedence
+| Exact match | High
+| *           | Medium
+| #           | Low
+|===
+
+[NOTE]
+====
+{RouterName} does not permit you to create vhost hostname patterns that conflict with existing patterns. This includes patterns that can be reduced to be the same as an existing pattern. For example, you would not be able to create the `\#.#.\#.#.com` pattern if `#.com` already exists.
+====

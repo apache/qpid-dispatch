@@ -1,0 +1,48 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// configuring-router.adoc
+
+[id='authorizing-access-messaging-resources-{context}']
+= Authorizing access to messaging resources
+
+You can configure _policies_ to secure messaging resources in your messaging environment. Policies ensure that only authorized users can access messaging endpoints through the router network, and that the resources on those endpoints are used in an authorized way.
+
+{RouterName} provides the following types of policies:
+
+Global policies::
+Settings for the router. A global policy defines the maximum number of incoming user connections for the router (across all messaging endpoints), and defines how the router should use vhost policies.
+
+Vhost policies::
+Connection and AMQP resource limits for a router ingress port (called an AMQP virtual host, or vhost). A vhost policy defines what a client using a particular connection can access on any messaging endpoint in the router network.
+
+The resource limits defined in global and vhost policies are applied to user connections only. The limits do not affect inter-router connections or router connections that are outbound to waypoints.
+
+Access to an AMQP resource allowed by policy for a given user connection to a given vhost is granted across the entire router network. Access restrictions are applied only at the router port to which a client is connected and only to resource requests originated by the client.
+
+// How the router enforces connection and resources limits
+include::../../modules/user-guide/how-router-enforces-connection-resource-limits.adoc[leveloffset=+1]
+
+// Setting global connection limits for a router
+include::../../modules/user-guide/setting-global-connection-limits-router.adoc[leveloffset=+1]
+
+// Setting connection and resource limits for messaging endpoints
+include::setting-connection-resource-limits-messaging-endpoints.adoc[leveloffset=+1]

@@ -44,4 +44,4 @@ include::configuring-network-connections.adoc[leveloffset=+1]
 include::securing-network-connections.adoc[leveloffset=+1]
 
 // Authorizing access to messaging resources
-include::../../modules/user-guide/authorization.adoc[leveloffset=+1]
+include::authorizing-access-messaging-resources.adoc[leveloffset=+1]
