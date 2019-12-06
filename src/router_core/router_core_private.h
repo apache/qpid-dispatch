@@ -231,17 +231,16 @@ typedef void (*qdr_general_work_handler_t) (qdr_core_t *core, qdr_general_work_t
 struct qdr_general_work_t {
     DEQ_LINKS(qdr_general_work_t);
     qdr_general_work_handler_t   handler;
-    qdr_field_t                 *field;
     int                          maskbit;
     int                          inter_router_cost;
     qd_message_t                *msg;
     qdr_receive_t                on_message;
     void                        *on_message_context;
     uint64_t                     in_conn_id;
-    int                          treatment;
+    uint64_t                     mobile_seq;
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;
-    qdr_global_stats_handler_t  stats_handler;
-    void                       *context;
+    qdr_global_stats_handler_t   stats_handler;
+    void                        *context;
 };
 
 ALLOC_DECLARE(qdr_general_work_t);
@@ -349,6 +348,8 @@ struct qdr_node_t {
     uint32_t          ref_count;
     qd_bitmask_t     *valid_origins;
     int               cost;
+    uint64_t          mobile_seq;
+    char             *wire_address_ma;    ///< The address of this router's mobile-sync agent in non-hashed form
 };
 
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
@@ -380,9 +381,21 @@ struct qdr_subscription_t {
     qdr_address_t *addr;
     qdr_receive_t  on_message;
     void          *on_message_context;
+    bool           in_core;
 };
 
 DEQ_DECLARE(qdr_subscription_t, qdr_subscription_list_t);
+
+typedef struct qdr_subscription_ref_t {
+    DEQ_LINKS(struct qdr_subscription_ref_t);
+    qdr_subscription_t *sub;
+} qdr_subscription_ref_t;
+
+ALLOC_DECLARE(qdr_subscription_ref_t);
+DEQ_DECLARE(qdr_subscription_ref_t, qdr_subscription_ref_list_t);
+
+void qdr_add_subscription_ref_CT(qdr_subscription_ref_list_t *list, qdr_subscription_t *sub);
+void qdr_del_subscription_ref_CT(qdr_subscription_ref_list_t *list, qdr_subscription_ref_t *ref);
 
 DEQ_DECLARE(qdr_delivery_t, qdr_delivery_list_t);
 
@@ -508,12 +521,18 @@ struct qdr_address_t {
     qdr_link_t                *edge_outlink;  ///< [ref] Out-link to connected Interior router (on edge router)
     qd_address_treatment_t     treatment;
     qdr_forwarder_t           *forwarder;
-    int                        ref_count;     ///< Number of link-routes + auto-links referencing this address
-    bool                       block_deletion;
+    int                        ref_count;     ///< Number of entities referencing this address
     bool                       local;
     bool                       router_control_only; ///< If set, address is only for deliveries arriving on a control link
     uint32_t                   tracked_deliveries;
     uint64_t                   cost_epoch;
+
+    //
+    // State for mobile-address synchronization
+    //
+    DEQ_LINKS_N(SYNC_ADD, qdr_address_t);
+    DEQ_LINKS_N(SYNC_DEL, qdr_address_t);
+    uint32_t sync_mask;
 
     //
     // State for tracking fallback destinations for undeliverable deliveries
@@ -793,10 +812,10 @@ struct qdr_core_t {
     //
     // Route table section
     //
-    void                 *rt_context;
-    qdr_mobile_added_t    rt_mobile_added;
-    qdr_mobile_removed_t  rt_mobile_removed;
-    qdr_link_lost_t       rt_link_lost;
+    void                    *rt_context;
+    qdr_set_mobile_seq_t     rt_set_mobile_seq;
+    qdr_set_my_mobile_seq_t  rt_set_my_mobile_seq;
+    qdr_link_lost_t          rt_link_lost;
 
     //
     // Connection section
@@ -821,6 +840,7 @@ struct qdr_core_t {
     qdrc_event_subscription_list_t conn_event_subscriptions;
     qdrc_event_subscription_list_t link_event_subscriptions;
     qdrc_event_subscription_list_t addr_event_subscriptions;
+    qdrc_event_subscription_list_t router_event_subscriptions;
 
     qd_router_mode_t  router_mode;
     const char       *router_area;
@@ -918,8 +938,8 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
 void qdr_in_process_send_to_CT(qdr_core_t *core, qd_iterator_t *address, qd_message_t *msg, bool exclude_inprocess, bool control);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, qd_address_treatment_t treatment);
-void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash);
+void qdr_post_set_mobile_seq_CT(qdr_core_t *core, int router_maskbit, uint64_t mobile_seq);
+void qdr_post_set_my_mobile_seq_CT(qdr_core_t *core, uint64_t mobile_seq);
 void qdr_post_link_lost_CT(qdr_core_t *core, int link_maskbit);
 
 void qdr_post_general_work_CT(qdr_core_t *core, qdr_general_work_t *work);

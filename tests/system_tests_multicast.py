@@ -558,6 +558,7 @@ class MulticastBase(MessagingHandler):
                 self.r_conns[name] = conn
                 self.create_receiver(event.container, conn, self.topic, name)
                 self.n_receivers += 1
+                self.c_received[name] = 0
 
     def on_link_opened(self, event):
         if event.receiver:
@@ -720,7 +721,7 @@ class MulticastPresettled(MulticastBase):
 
 class MulticastPresettledRxFail(MulticastPresettled):
     """
-    Spontaineously close a receiver or connection on message received
+    Spontaneously close a receiver or connection on message received
     """
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastPresettledRxFail, self).__init__(config, count, body, SendPresettled())
@@ -871,7 +872,7 @@ class MulticastUnsettled1Ack(MulticastUnsettled3Ack):
 
 class MulticastUnsettledRxFail(MulticastUnsettled3Ack):
     """
-    Spontaineously close a receiver or connection on message received
+    Spontaneously close a receiver or connection on message received
     """
     def __init__(self, config, count, drop_clients, detach, body):
         super(MulticastUnsettledRxFail, self).__init__(config, count, body)

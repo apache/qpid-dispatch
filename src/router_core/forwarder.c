@@ -269,14 +269,28 @@ void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
 
 void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg)
 {
-    qdr_general_work_t *work = qdr_general_work(qdr_forward_on_message);
-    work->on_message         = sub->on_message;
-    work->on_message_context = sub->on_message_context;
-    work->msg                = qd_message_copy(msg);
-    work->maskbit            = link ? link->conn->mask_bit : 0;
-    work->inter_router_cost  = link ? link->conn->inter_router_cost : 1;
-    work->in_conn_id         = link ? link->conn->identity : 0;
-    qdr_post_general_work_CT(core, work);
+    int      mask_bit = link ? link->conn->mask_bit : 0;
+    int      cost     = link ? link->conn->inter_router_cost : 1;
+    uint64_t identity = link ? link->conn->identity : 0;
+
+    if (sub->in_core) {
+        //
+        // The handler runs in-core.  Invoke it right now.
+        //
+        sub->on_message(sub->on_message_context, msg, mask_bit, cost, identity);
+    } else {
+        //
+        // The handler runs in an IO thread.  Defer its invocation.
+        //
+        qdr_general_work_t *work = qdr_general_work(qdr_forward_on_message);
+        work->on_message         = sub->on_message;
+        work->on_message_context = sub->on_message_context;
+        work->msg                = qd_message_copy(msg);
+        work->maskbit            = mask_bit;
+        work->inter_router_cost  = cost;
+        work->in_conn_id         = identity;
+        qdr_post_general_work_CT(core, work);
+    }
 }
 
 
@@ -327,7 +341,7 @@ static void qdr_forward_to_subscriber(qdr_core_t *core, qdr_subscription_t *sub,
         // after the message fully arrives
         //
         assert(in_dlv);
-        DEQ_INSERT_TAIL(in_dlv->subscriptions, sub);
+        qdr_add_subscription_ref_CT(&in_dlv->subscriptions, sub);
         qd_message_Q2_holdoff_disable(in_msg);
     }
 }

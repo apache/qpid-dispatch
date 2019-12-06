@@ -85,18 +85,18 @@ void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_m
 void qdr_core_remove_next_hop(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_cost(qdr_core_t *core, int router_maskbit, int cost);
 void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask_t *routers);
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address_hash, int treatment_hint);
-void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address_hash);
+void qdr_core_flush_destinations(qdr_core_t *core, int router_maskbit);
+void qdr_core_mobile_seq_advanced(qdr_core_t *core, int router_maskbit);
 
-typedef void (*qdr_mobile_added_t)   (void *context, const char *address_hash, qd_address_treatment_t treatment);
-typedef void (*qdr_mobile_removed_t) (void *context, const char *address_hash);
-typedef void (*qdr_link_lost_t)      (void *context, int link_maskbit);
+typedef void (*qdr_set_mobile_seq_t)    (void *context, int router_maskbit, uint64_t mobile_seq);
+typedef void (*qdr_set_my_mobile_seq_t) (void *context, uint64_t mobile_seq);
+typedef void (*qdr_link_lost_t)         (void *context, int link_maskbit);
 
-void qdr_core_route_table_handlers(qdr_core_t           *core, 
-                                   void                 *context,
-                                   qdr_mobile_added_t    mobile_added,
-                                   qdr_mobile_removed_t  mobile_removed,
-                                   qdr_link_lost_t       link_lost);
+void qdr_core_route_table_handlers(qdr_core_t              *core, 
+                                   void                    *context,
+                                   qdr_set_mobile_seq_t     set_mobile_seq,
+                                   qdr_set_my_mobile_seq_t  set_my_mobile_seq,
+                                   qdr_link_lost_t          link_lost);
 
 /**
  ******************************************************************************
@@ -106,11 +106,27 @@ void qdr_core_route_table_handlers(qdr_core_t           *core,
 typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
                                uint64_t conn_id);
 
+/**
+ * qdr_core_subscribe
+ *
+ * Subscribe an in-process handler to receive messages to a particular address.
+ *
+ * @param core Pointer to the core module
+ * @param address The address of messages to be received
+ * @param aclass Address class character
+ * @param phase Address phase character ('0' .. '9')
+ * @param treatment Treatment for the address if it be being created as a side effect of this call
+ * @param in_core True iff the handler is to be run in the context of the core thread
+ * @param on_message The handler function
+ * @param context The opaque context sent to the handler on all invocations
+ * @return Pointer to the subscription object
+ */
 qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        const char             *address,
                                        char                    aclass,
                                        char                    phase,
                                        qd_address_treatment_t  treatment,
+                                       bool                    in_core,
                                        qdr_receive_t           on_message,
                                        void                   *context);
 

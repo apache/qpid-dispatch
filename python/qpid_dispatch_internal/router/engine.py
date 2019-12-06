@@ -26,7 +26,6 @@ from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, M
 from .hello import HelloProtocol
 from .link import LinkStateEngine
 from .path import PathEngine
-from .mobile import MobileAddressEngine
 from .node import NodeTracker
 from .message import Message
 
@@ -56,13 +55,10 @@ class RouterEngine(object):
         self._config        = None # Not yet loaded
         self._log_hello     = LogAdapter("ROUTER_HELLO")
         self._log_ls        = LogAdapter("ROUTER_LS")
-        self._log_ma        = LogAdapter("ROUTER_MA")
         self._log_general   = LogAdapter("ROUTER")
-        self.io_adapter     = [IoAdapter(self.receive, "qdrouter",    'L', '0', TREATMENT_MULTICAST_FLOOD),
-                               IoAdapter(self.receive, "qdrouter.ma", 'L', '0', TREATMENT_MULTICAST_ONCE),
-                               IoAdapter(self.receive, "qdrouter",    'T', '0', TREATMENT_MULTICAST_FLOOD),
-                               IoAdapter(self.receive, "qdrouter.ma", 'T', '0', TREATMENT_MULTICAST_ONCE),
-                               IoAdapter(self.receive, "qdhello",     'L', '0', TREATMENT_MULTICAST_FLOOD)]
+        self.io_adapter     = [IoAdapter(self.receive, "qdrouter", 'L', '0', TREATMENT_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdrouter", 'T', '0', TREATMENT_MULTICAST_FLOOD),
+                               IoAdapter(self.receive, "qdhello",  'L', '0', TREATMENT_MULTICAST_FLOOD)]
         self.max_routers    = max_routers
         self.id             = router_id
         self.instance       = int(time.time())
@@ -77,7 +73,6 @@ class RouterEngine(object):
         self.hello_protocol        = HelloProtocol(self, self.node_tracker)
         self.link_state_engine     = LinkStateEngine(self)
         self.path_engine           = PathEngine(self)
-        self.mobile_address_engine = MobileAddressEngine(self, self.node_tracker)
 
 
     ##========================================================================================
@@ -98,26 +93,28 @@ class RouterEngine(object):
                 raise ValueError("No router configuration found")
         return self._config
 
-    def addressAdded(self, addr, treatment):
-        """
-        """
-        try:
-            if addr[0] in 'MCDEFH':
-                self.mobile_address_engine.add_local_address(addr, treatment)
-        except Exception:
-            self.log_ma(LOG_ERROR, "Exception in new-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
 
-    def addressRemoved(self, addr):
+    def setMobileSeq(self, router_maskbit, mobile_seq):
         """
+        Another router's mobile sequence number has been changed and the Python router needs to store
+        this number.
         """
-        try:
-            if addr[0] in 'MCDEFH':
-                self.mobile_address_engine.del_local_address(addr)
-        except Exception:
-            self.log_ma(LOG_ERROR, "Exception in del-address processing\n%s" % format_exc(LOG_STACK_LIMIT))
+        self.node_tracker.set_mobile_seq(router_maskbit, mobile_seq)
 
+        
+    def setMyMobileSeq(self, mobile_seq):
+        """
+        This router's mobile sequence number has been changed and the Python router needs to store
+        this number and immediately send a router-advertisement message to reflect the change.
+        """
+        self.link_state_engine.set_mobile_seq(mobile_seq)
+        self.link_state_engine.send_ra(time.time())
+
+        
     def linkLost(self, link_id):
         """
+        The control-link to a neighbor has been dropped.  We can cancel the neighbor from the
+        link-state immediately instead of waiting for the hello-timeout to expire.
         """
         self.node_tracker.link_lost(link_id)
 
@@ -132,6 +129,7 @@ class RouterEngine(object):
             self.node_tracker.tick(now)
         except Exception:
             self.log(LOG_ERROR, "Exception in timer processing\n%s" % format_exc(LOG_STACK_LIMIT))
+
 
     def handleControlMessage(self, opcode, body, link_id, cost):
         """
@@ -158,19 +156,10 @@ class RouterEngine(object):
                 self.log_ls(LOG_TRACE, "RCVD: %r" % msg)
                 self.link_state_engine.handle_lsr(msg, now)
 
-            elif opcode == 'MAU':
-                msg = MessageMAU(body)
-                self.log_ma(LOG_TRACE, "RCVD: %r" % msg)
-                self.mobile_address_engine.handle_mau(msg, now)
-
-            elif opcode == 'MAR':
-                msg = MessageMAR(body)
-                self.log_ma(LOG_TRACE, "RCVD: %r" % msg)
-                self.mobile_address_engine.handle_mar(msg, now)
-
         except Exception:
             self.log(LOG_ERROR, "Exception in control message processing\n%s" % format_exc(LOG_STACK_LIMIT))
             self.log(LOG_ERROR, "Control message error: opcode=%s body=%r" % (opcode, body))
+
 
     def receive(self, message, link_id, cost):
         """
@@ -182,6 +171,7 @@ class RouterEngine(object):
             self.log(LOG_ERROR, "Exception in raw message processing\n%s" % format_exc(LOG_STACK_LIMIT))
             self.log(LOG_ERROR, "Exception in raw message processing: properties=%r body=%r" %
                      (message.properties, message.body))
+
 
     def getRouterData(self, kind):
         """

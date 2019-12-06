@@ -303,8 +303,9 @@ void qcm_edge_mgmt_init_CT(qdr_core_t *core)
                                             (QDRC_EVENT_CONN_EDGE_ESTABLISHED
                                              | QDRC_EVENT_CONN_EDGE_LOST),
                                             _conn_event_CT,
-                                            NULL,  // link event
-                                            NULL,  // addr event
+                                            0,     // link event
+                                            0,     // addr event
+                                            0,     // router event
                                             core); // context
 }
 

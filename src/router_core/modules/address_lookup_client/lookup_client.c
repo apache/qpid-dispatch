@@ -774,7 +774,7 @@ static void qcm_addr_lookup_client_init_CT(qdr_core_t *core, void **module_conte
     client->core      = core;
     client->event_sub = qdrc_event_subscribe_CT(client->core,
                                                 QDRC_EVENT_CONN_EDGE_ESTABLISHED | QDRC_EVENT_CONN_EDGE_LOST,
-                                                on_conn_event, 0, 0,
+                                                on_conn_event, 0, 0, 0,
                                                 client);
 
     core->addr_lookup_handler = qcm_addr_lookup_CT;

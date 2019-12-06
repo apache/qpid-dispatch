@@ -649,7 +649,7 @@ static void qdrc_test_client_api_setup(test_module_t *test_module)
     tc->conn_events = qdrc_event_subscribe_CT(test_module->core,
                                               (QDRC_EVENT_CONN_OPENED | QDRC_EVENT_CONN_CLOSED),
                                               _on_conn_event,
-                                              NULL, NULL, tc);
+                                              0, 0, 0, tc);
 
     qd_log(test_module->core->log, QD_LOG_TRACE, "client test registered %p", tc->conn_events);
 }

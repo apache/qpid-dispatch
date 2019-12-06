@@ -98,6 +98,7 @@ qcm_edge_conn_mgr_t *qcm_edge_conn_mgr(qdr_core_t *core)
                                             on_conn_event,
                                             0,
                                             0,
+                                            0,
                                             cm);
     cm->active_edge_connection = 0;
 

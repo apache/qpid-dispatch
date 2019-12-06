@@ -448,6 +448,15 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     qdr_delivery_increment_counters_CT(core, delivery);
 
     //
+    // Remove any subscription references
+    //
+    qdr_subscription_ref_t *sub = DEQ_HEAD(delivery->subscriptions);
+    while (sub) {
+        qdr_del_subscription_ref_CT(&delivery->subscriptions, sub);
+        sub = DEQ_HEAD(delivery->subscriptions);
+    }
+
+    //
     // Free all the peer qdr_delivery_ref_t references
     //
     qdr_delivery_ref_t *ref = DEQ_HEAD(delivery->peers);
@@ -1063,11 +1072,11 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
             // The entire message has now been received. Check to see if there are in process subscriptions that need to
             // receive this message. in process subscriptions, at this time, can deal only with full messages.
             //
-            qdr_subscription_t *sub = DEQ_HEAD(in_dlv->subscriptions);
-            while (sub) {
-                DEQ_REMOVE_HEAD(in_dlv->subscriptions);
-                qdr_forward_on_message_CT(core, sub, link, in_dlv->msg);
-                sub = DEQ_HEAD(in_dlv->subscriptions);
+            qdr_subscription_ref_t *subref = DEQ_HEAD(in_dlv->subscriptions);
+            while (subref) {
+                qdr_forward_on_message_CT(core, subref->sub, link, in_dlv->msg);
+                qdr_del_subscription_ref_CT(&in_dlv->subscriptions, subref);
+                subref = DEQ_HEAD(in_dlv->subscriptions);
             }
 
             // This is a presettled multi-frame unicast delivery.

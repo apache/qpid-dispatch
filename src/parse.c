@@ -676,7 +676,9 @@ int qd_parse_is_list(qd_parsed_field_t *field)
     if (!field)
         return 0;
 
-    return field->tag == QD_AMQP_LIST8 || field->tag == QD_AMQP_LIST32;
+    return field->tag == QD_AMQP_LIST8
+        || field->tag == QD_AMQP_LIST32
+        || field->tag == QD_AMQP_LIST0;
 }
 
 
