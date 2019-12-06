@@ -427,6 +427,9 @@ class QdstatTest(system_test.TestCase):
                         time_parts = uptime_part.split(":")
                         if int(time_parts[3]) > 0:
                             non_zero_seconds = True
+                        if not non_zero_seconds:
+                            if int(time_parts[2]) > 0:
+                                non_zero_seconds = True
         self.assertTrue(non_zero_seconds)
 
         c.close()
