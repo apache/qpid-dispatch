@@ -352,12 +352,12 @@ class LinkRouteTest(TestCase):
         blocking_connection = BlockingConnection(addr)
 
         # Receive on org.apache.dev
-        blocking_receiver = blocking_connection.create_receiver(address="org.apache.dev")
+        blocking_receiver = blocking_connection.create_receiver(address="org.apache.dev.1")
 
         apply_options = AtMostOnce()
 
         # Sender to  to org.apache.dev
-        blocking_sender = blocking_connection.create_sender(address="org.apache.dev", options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address="org.apache.dev.1", options=apply_options)
         msg = Message(body=hello_world_2)
         # Send a message
         blocking_sender.send(msg)
@@ -371,10 +371,10 @@ class LinkRouteTest(TestCase):
         # Make sure that the router node acting as the broker (QDR.A) had one message routed through it. This confirms
         # that the message was link routed
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesEgress)
+                                            name='M0org.apache.dev.1').deliveriesEgress)
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache.dev').deliveriesIngress)
+                                            name='M0org.apache.dev.1').deliveriesIngress)
 
         blocking_connection.close()
 
@@ -563,12 +563,12 @@ class LinkRouteTest(TestCase):
         blocking_connection = BlockingConnection(addr)
 
         # Receive on org.apache
-        blocking_receiver = blocking_connection.create_receiver(address="org.apache")
+        blocking_receiver = blocking_connection.create_receiver(address="org.apache.1")
 
         apply_options = AtMostOnce()
 
         # Sender to  to org.apache
-        blocking_sender = blocking_connection.create_sender(address="org.apache", options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address="org.apache.1", options=apply_options)
 
         msg = Message(body=hello_world_4)
         # Send a message
@@ -583,10 +583,10 @@ class LinkRouteTest(TestCase):
         # Make sure that the router node acting as the broker (QDR.A) had one message routed through it. This confirms
         # that the message was link routed
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesEgress)
+                                            name='M0org.apache.1').deliveriesEgress)
 
         self.assertEqual(1, local_node.read(type='org.apache.qpid.dispatch.router.address',
-                                            name='M0org.apache').deliveriesIngress)
+                                            name='M0org.apache.1').deliveriesIngress)
 
         blocking_connection.close()
 

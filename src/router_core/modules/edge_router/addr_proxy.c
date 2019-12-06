@@ -526,7 +526,8 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
                                             on_conn_event,
                                             0,
                                             on_addr_event,
-                                            ap);
+                                            0,
+                                            ap);                                            
 
     core->edge_conn_addr = qcm_edge_conn_addr;
     core->edge_context = ap;

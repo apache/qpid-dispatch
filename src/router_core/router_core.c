@@ -37,6 +37,7 @@ ALLOC_DEFINE(qdr_general_work_t);
 ALLOC_DEFINE(qdr_link_work_t);
 ALLOC_DEFINE(qdr_connection_ref_t);
 ALLOC_DEFINE(qdr_connection_info_t);
+ALLOC_DEFINE(qdr_subscription_ref_t);
 
 static void qdr_general_handler(void *context);
 
@@ -86,10 +87,10 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     // Perform outside-of-thread setup for the management agent
     //
     core->agent_subscription_mobile = qdr_core_subscribe(core, "$management", 'M', '0',
-                                                         QD_TREATMENT_ANYCAST_CLOSEST,
+                                                         QD_TREATMENT_ANYCAST_CLOSEST, false,
                                                          qdr_management_agent_on_message, core);
     core->agent_subscription_local = qdr_core_subscribe(core, "$management", 'L', '0',
-                                                        QD_TREATMENT_ANYCAST_CLOSEST,
+                                                        QD_TREATMENT_ANYCAST_CLOSEST, false,
                                                         qdr_management_agent_on_message, core);
 
     return core;
@@ -220,6 +221,7 @@ void qdr_router_node_free(qdr_core_t *core, qdr_node_t *rnode)
     DEQ_REMOVE(core->routers, rnode);
     core->routers_by_mask_bit[rnode->mask_bit] = 0;
     core->cost_epoch++;
+    free(rnode->wire_address_ma);
     free_qdr_node_t(rnode);
 }
 
@@ -376,7 +378,7 @@ qdr_address_t *qdr_add_local_address_CT(qdr_core_t *core, char aclass, const cha
         if (addr) {
             qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
             DEQ_INSERT_TAIL(core->addrs, addr);
-            addr->block_deletion = true;
+            addr->ref_count++;
             addr->local = (aclass == 'L');
         }
     }
@@ -553,8 +555,6 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
     if (link->link_direction == QD_OUTGOING) {
         qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->rlinks) == 1) {
-            if (key && (*key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY || *key == QD_ITER_HASH_PREFIX_MOBILE))
-                qdr_post_mobile_added_CT(core, key, addr->treatment);
             qdr_addr_start_inlinks_CT(core, addr);
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
         } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
@@ -581,9 +581,6 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
     if (link->link_direction == QD_OUTGOING) {
         qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->rlinks) == 0) {
-            const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-            if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE || *key == QD_ITER_HASH_PREFIX_EDGE_SUMMARY))
-                qdr_post_mobile_removed_CT(core, key);
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
         } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
@@ -608,8 +605,6 @@ void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_co
 {
     qdr_add_connection_ref(&addr->conns, conn);
     if (DEQ_SIZE(addr->conns) == 1) {
-        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        qdr_post_mobile_added_CT(core, key, addr->treatment);
         qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
     }
 }
@@ -619,8 +614,6 @@ void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
 {
     qdr_del_connection_ref(&addr->conns, conn);
     if (DEQ_IS_EMPTY(addr->conns)) {
-        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
-        qdr_post_mobile_removed_CT(core, key);
         qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
     }
 }
@@ -691,6 +684,7 @@ void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr
     qd_iterator_free(pattern);
 }
 
+
 void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls)
 {
     if (link->ref[cls] != 0)
@@ -760,6 +754,22 @@ void qdr_del_delivery_ref(qdr_delivery_ref_list_t *list, qdr_delivery_ref_t *ref
 {
     DEQ_REMOVE(*list, ref);
     free_qdr_delivery_ref_t(ref);
+}
+
+
+void qdr_add_subscription_ref_CT(qdr_subscription_ref_list_t *list, qdr_subscription_t *sub)
+{
+    qdr_subscription_ref_t *ref = new_qdr_subscription_ref_t();
+    DEQ_ITEM_INIT(ref);
+    ref->sub = sub;
+    DEQ_INSERT_TAIL(*list, ref);
+}
+
+
+void qdr_del_subscription_ref_CT(qdr_subscription_ref_list_t *list, qdr_subscription_ref_t *ref)
+{
+    DEQ_REMOVE(*list, ref);
+    free_qdr_subscription_ref_t(ref);
 }
 
 

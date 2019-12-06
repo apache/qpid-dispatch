@@ -60,6 +60,11 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_ADDR_NO_LONGER_SOURCE      An address transitioned from one to zero local sources (inlink)
  * QDRC_EVENT_ADDR_TWO_SOURCE            An address transitioned from one to two local sources (inlink)
  * QDRC_EVENT_ADDR_ONE_SOURCE            An address transitioned from two to one local sources (inlink)
+ *
+ * QDRC_EVENT_ROUTER_ADDED               A remote router has been discovered
+ * QDRC_EVENT_ROUTER_REMOVED             A remote router has been lost
+ * QDRC_EVENT_ROUTER_MOBILE_FLUSH        A remote router needs its mobile addresses unmapped
+ * QDRC_EVENT_ROUTER_MOBILE_SEQ_ADVANCED A remote router's mobile sequence advanced past our version of the sequence
 */
 
 #define QDRC_EVENT_CONN_OPENED               0x00000001
@@ -70,27 +75,33 @@ typedef uint32_t qdrc_event_t;
 #define QDRC_EVENT_CONN_IR_LOST              0x00000020
 #define _QDRC_EVENT_CONN_RANGE               0x0000003F
 
-#define QDRC_EVENT_LINK_IN_ATTACHED          0x00000100
-#define QDRC_EVENT_LINK_IN_DETACHED          0x00000200
-#define QDRC_EVENT_LINK_OUT_ATTACHED         0x00000400
-#define QDRC_EVENT_LINK_OUT_DETACHED         0x00000800
-#define QDRC_EVENT_LINK_EDGE_DATA_ATTACHED   0x00001000
-#define QDRC_EVENT_LINK_EDGE_DATA_DETACHED   0x00002000
-#define _QDRC_EVENT_LINK_RANGE               0x00003F00
+#define QDRC_EVENT_LINK_IN_ATTACHED          0x00000040
+#define QDRC_EVENT_LINK_IN_DETACHED          0x00000080
+#define QDRC_EVENT_LINK_OUT_ATTACHED         0x00000100
+#define QDRC_EVENT_LINK_OUT_DETACHED         0x00000200
+#define QDRC_EVENT_LINK_EDGE_DATA_ATTACHED   0x00000400
+#define QDRC_EVENT_LINK_EDGE_DATA_DETACHED   0x00000800
+#define _QDRC_EVENT_LINK_RANGE               0x00000FC0
 
-#define QDRC_EVENT_ADDR_ADDED                0x00010000
-#define QDRC_EVENT_ADDR_REMOVED              0x00020000
-#define QDRC_EVENT_ADDR_BECAME_LOCAL_DEST    0x00040000
-#define QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST 0x00080000
-#define QDRC_EVENT_ADDR_BECAME_DEST          0x00100000
-#define QDRC_EVENT_ADDR_NO_LONGER_DEST       0x00200000
-#define QDRC_EVENT_ADDR_ONE_LOCAL_DEST       0x00400000
-#define QDRC_EVENT_ADDR_TWO_DEST             0x00800000
-#define QDRC_EVENT_ADDR_BECAME_SOURCE        0x01000000
-#define QDRC_EVENT_ADDR_NO_LONGER_SOURCE     0x02000000
-#define QDRC_EVENT_ADDR_TWO_SOURCE           0x04000000
-#define QDRC_EVENT_ADDR_ONE_SOURCE           0x08000000
-#define _QDRC_EVENT_ADDR_RANGE               0x0FFF0000
+#define QDRC_EVENT_ADDR_ADDED                0x00001000
+#define QDRC_EVENT_ADDR_REMOVED              0x00002000
+#define QDRC_EVENT_ADDR_BECAME_LOCAL_DEST    0x00004000
+#define QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST 0x00008000
+#define QDRC_EVENT_ADDR_BECAME_DEST          0x00010000
+#define QDRC_EVENT_ADDR_NO_LONGER_DEST       0x00020000
+#define QDRC_EVENT_ADDR_ONE_LOCAL_DEST       0x00040000
+#define QDRC_EVENT_ADDR_TWO_DEST             0x00080000
+#define QDRC_EVENT_ADDR_BECAME_SOURCE        0x00100000
+#define QDRC_EVENT_ADDR_NO_LONGER_SOURCE     0x00200000
+#define QDRC_EVENT_ADDR_TWO_SOURCE           0x00400000
+#define QDRC_EVENT_ADDR_ONE_SOURCE           0x00800000
+#define _QDRC_EVENT_ADDR_RANGE               0x00FFF000
+
+#define QDRC_EVENT_ROUTER_ADDED               0x01000000
+#define QDRC_EVENT_ROUTER_REMOVED             0x02000000
+#define QDRC_EVENT_ROUTER_MOBILE_FLUSH        0x04000000
+#define QDRC_EVENT_ROUTER_MOBILE_SEQ_ADVANCED 0x08000000
+#define _QDRC_EVENT_ROUTER_RANGE              0x0F000000
 
 
 /**
@@ -112,6 +123,10 @@ typedef void (*qdrc_address_event_t) (void          *context,
                                       qdrc_event_t   event_type,
                                       qdr_address_t *addr);
 
+typedef void (*qdrc_router_event_t) (void          *context,
+                                     qdrc_event_t   event_type,
+                                     qdr_node_t    *router);
+
 /**
  * qdrc_event_subscribe_CT
  *
@@ -130,6 +145,7 @@ qdrc_event_subscription_t *qdrc_event_subscribe_CT(qdr_core_t             *core,
                                                    qdrc_connection_event_t on_conn_event,
                                                    qdrc_link_event_t       on_link_event,
                                                    qdrc_address_event_t    on_addr_event,
+                                                   qdrc_router_event_t     on_router_event,
                                                    void                   *context);
 
 /**
@@ -152,5 +168,6 @@ DEQ_DECLARE(qdrc_event_subscription_t, qdrc_event_subscription_list_t);
 void qdrc_event_conn_raise(qdr_core_t *core, qdrc_event_t event, qdr_connection_t *conn);
 void qdrc_event_link_raise(qdr_core_t *core, qdrc_event_t event, qdr_link_t *link);
 void qdrc_event_addr_raise(qdr_core_t *core, qdrc_event_t event, qdr_address_t *addr);
+void qdrc_event_router_raise(qdr_core_t *core, qdrc_event_t event, qdr_node_t *router);
 
 #endif

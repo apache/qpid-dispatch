@@ -21,18 +21,18 @@
 #include "route_control.h"
 #include <stdio.h>
 
-static void qdr_add_router_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_del_router_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_set_link_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_remove_link_CT       (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_set_next_hop_CT      (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_remove_next_hop_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_set_cost_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_set_valid_origins_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_map_destination_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_unmap_destination_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_subscribe_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_unsubscribe_CT       (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_add_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_del_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_link_CT            (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_remove_link_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_next_hop_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_remove_next_hop_CT     (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_cost_CT            (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_valid_origins_CT   (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_flush_destinations_CT  (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_mobile_seq_advanced_CT (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_subscribe_CT           (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_unsubscribe_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
 
 
 //==================================================================================
@@ -108,34 +108,32 @@ void qdr_core_set_valid_origins(qdr_core_t *core, int router_maskbit, qd_bitmask
 }
 
 
-void qdr_core_map_destination(qdr_core_t *core, int router_maskbit, const char *address_hash, int treatment_hint)
+void qdr_core_flush_destinations(qdr_core_t *core, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdr_map_destination_CT, "map_destination");
+    qdr_action_t *action = qdr_action(qdr_flush_destinations_CT, "flush_destinations");
     action->args.route_table.router_maskbit = router_maskbit;
-    action->args.route_table.address        = qdr_field(address_hash);
-    action->args.route_table.treatment_hint = treatment_hint;
     qdr_action_enqueue(core, action);
 }
 
 
-void qdr_core_unmap_destination(qdr_core_t *core, int router_maskbit, const char *address_hash)
+void qdr_core_mobile_seq_advanced(qdr_core_t *core, int router_maskbit)
 {
-    qdr_action_t *action = qdr_action(qdr_unmap_destination_CT, "unmap_destination");
+    qdr_action_t *action = qdr_action(qdr_mobile_seq_advanced_CT, "mobile_seq_advanced");
     action->args.route_table.router_maskbit = router_maskbit;
-    action->args.route_table.address        = qdr_field(address_hash);
     qdr_action_enqueue(core, action);
 }
 
-void qdr_core_route_table_handlers(qdr_core_t           *core, 
-                                   void                 *context,
-                                   qdr_mobile_added_t    mobile_added,
-                                   qdr_mobile_removed_t  mobile_removed,
-                                   qdr_link_lost_t       link_lost)
+
+void qdr_core_route_table_handlers(qdr_core_t              *core, 
+                                   void                    *context,
+                                   qdr_set_mobile_seq_t     set_mobile_seq,
+                                   qdr_set_my_mobile_seq_t  set_my_mobile_seq,
+                                   qdr_link_lost_t          link_lost)
 {
-    core->rt_context        = context;
-    core->rt_mobile_added   = mobile_added;
-    core->rt_mobile_removed = mobile_removed;
-    core->rt_link_lost      = link_lost;
+    core->rt_context           = context;
+    core->rt_set_mobile_seq    = set_mobile_seq;
+    core->rt_set_my_mobile_seq = set_my_mobile_seq;
+    core->rt_link_lost         = link_lost;
 }
 
 
@@ -144,6 +142,7 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
                                        char                    aclass,
                                        char                    phase,
                                        qd_address_treatment_t  treatment,
+                                       bool                    in_core,
                                        qdr_receive_t           on_message,
                                        void                   *context)
 {
@@ -152,6 +151,7 @@ qdr_subscription_t *qdr_core_subscribe(qdr_core_t             *core,
     sub->addr               = 0;
     sub->on_message         = on_message;
     sub->on_message_context = context;
+    sub->in_core            = in_core;
 
     qdr_action_t *action = qdr_action(qdr_subscribe_CT, "subscribe");
     action->args.io.address       = qdr_field(address);
@@ -298,23 +298,26 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         }
 
         //
-        // Set the block-deletion flag on this address for the time that it is associated
-        // with an existing remote router node.
+        // Bump the address's ref_count for the time that it is associated with an existing remote router node.
         //
-        addr->block_deletion = true;
+        addr->ref_count++;
 
         //
         // Create a router-node record to represent the remote router.
         //
         qdr_node_t *rnode = new_qdr_node_t();
-        DEQ_ITEM_INIT(rnode);
+        ZERO(rnode);
         rnode->owning_addr       = addr;
         rnode->mask_bit          = router_maskbit;
-        rnode->next_hop          = 0;
         rnode->link_mask_bit     = -1;
-        rnode->ref_count         = 0;
         rnode->valid_origins     = qd_bitmask(0);
-        rnode->cost              = 0;
+
+        qd_iterator_reset_view(iter, ITER_VIEW_ALL);
+        int addr_len = qd_iterator_length(iter);
+
+        rnode->wire_address_ma = (char*) malloc(addr_len + 4);
+        qd_iterator_ncopy(iter, (unsigned char*) rnode->wire_address_ma, addr_len);
+        strcpy(rnode->wire_address_ma + addr_len, ".ma");
 
         //
         // Insert at the head of the list because we don't yet know the cost to this
@@ -400,7 +403,7 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     // Check the address and free it if there are no other interested parties tracking it
     //
-    oaddr->block_deletion = false;
+    oaddr->ref_count--;
     qdr_check_addr_CT(core, oaddr);
 }
 
@@ -558,141 +561,58 @@ static void qdr_set_valid_origins_CT(qdr_core_t *core, qdr_action_t *action, boo
         qd_bitmask_free(valid_origins);
 }
 
-static qd_address_treatment_t default_treatment(qdr_core_t *core, int hint) {
-    switch (hint) {
-    case QD_TREATMENT_MULTICAST_FLOOD:
-        return QD_TREATMENT_MULTICAST_FLOOD;
-    case QD_TREATMENT_MULTICAST_ONCE:
-        return QD_TREATMENT_MULTICAST_ONCE;
-    case QD_TREATMENT_ANYCAST_CLOSEST:
-        return QD_TREATMENT_ANYCAST_CLOSEST;
-    case QD_TREATMENT_ANYCAST_BALANCED:
-        return QD_TREATMENT_ANYCAST_BALANCED;
-    case QD_TREATMENT_LINK_BALANCED:
-        return QD_TREATMENT_LINK_BALANCED;
-    case QD_TREATMENT_UNAVAILABLE:
-        return QD_TREATMENT_UNAVAILABLE;
-    default:
-        return core->qd->default_treatment == QD_TREATMENT_UNAVAILABLE ? QD_TREATMENT_ANYCAST_BALANCED : core->qd->default_treatment;
-    }
-}
 
-static void qdr_map_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_flush_destinations_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    int          router_maskbit = action->args.route_table.router_maskbit;
-    qdr_field_t *address        = action->args.route_table.address;
-    int          treatment_hint = action->args.route_table.treatment_hint;
-
-    if (discard) {
-        qdr_field_free(address);
+    if (!!discard)
         return;
-    }
+
+    int router_maskbit = action->args.route_table.router_maskbit;
 
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
-            qd_log(core->log, QD_LOG_CRITICAL, "map_destination: Router maskbit out of range: %d", router_maskbit);
+            qd_log(core->log, QD_LOG_CRITICAL, "flush_destinations: Router maskbit out of range: %d", router_maskbit);
             break;
-        }
-
-        if (core->routers_by_mask_bit[router_maskbit] == 0) {
-            qd_log(core->log, QD_LOG_CRITICAL, "map_destination: Router not found");
-            break;
-        }
-
-        qd_iterator_t *iter = address->iterator;
-        qdr_address_t *addr = 0;
-
-        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-        if (!addr) {
-            qdr_address_config_t   *addr_config;
-            qd_address_treatment_t  treatment = qdr_treatment_for_address_hash_with_default_CT(core,
-                                                                                               iter,
-                                                                                               default_treatment(core, treatment_hint),
-                                                                                               &addr_config);
-            addr = qdr_address_CT(core, treatment, addr_config);
-            if (!addr) {
-                qd_log(core->log, QD_LOG_CRITICAL, "map_destination: ignored");
-                break;
-            }
-            qd_hash_insert(core->addr_hash, iter, addr, &addr->hash_handle);
-            DEQ_ITEM_INIT(addr);
-            DEQ_INSERT_TAIL(core->addrs, addr);
-            // if the address is a link route, add the pattern to the wildcard
-            // address parse tree
-            {
-                const char *a_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
-                if (QDR_IS_LINK_ROUTE(a_str[0])) {
-                    qdr_link_route_map_pattern_CT(core, iter, addr);
-                }
-            }
         }
 
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-        qd_bitmask_set_bit(addr->rnodes, router_maskbit);
-        rnode->ref_count++;
-        addr->cost_epoch--;
-        qdr_addr_start_inlinks_CT(core, addr);
+        if (rnode == 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "flush_destinations: Router not found");
+            break;
+        }
 
         //
-        // Raise an address event if this is the first destination for the address
+        // Raise the event to be picked up by core modules.
         //
-        if (qd_bitmask_cardinality(addr->rnodes) + DEQ_SIZE(addr->rlinks) == 1)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_DEST, addr);
-        else if (qd_bitmask_cardinality(addr->rnodes) == 1 && DEQ_SIZE(addr->rlinks) == 1)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
+        qdrc_event_router_raise(core, QDRC_EVENT_ROUTER_MOBILE_FLUSH, rnode);
     } while (false);
-
-    qdr_field_free(address);
 }
 
 
-static void qdr_unmap_destination_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_mobile_seq_advanced_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    int          router_maskbit = action->args.route_table.router_maskbit;
-    qdr_field_t *address        = action->args.route_table.address;
-
-    if (discard) {
-        qdr_field_free(address);
+    if (!!discard)
         return;
-    }
+
+    int router_maskbit = action->args.route_table.router_maskbit;
 
     do {
         if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
-            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Router maskbit out of range: %d", router_maskbit);
+            qd_log(core->log, QD_LOG_CRITICAL, "seq_advanced: Router maskbit out of range: %d", router_maskbit);
             break;
         }
 
-        if (core->routers_by_mask_bit[router_maskbit] == 0) {
-            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Router not found");
+        qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+        if (rnode == 0) {
+            qd_log(core->log, QD_LOG_CRITICAL, "seq_advanced: Router not found");
             break;
         }
-
-        qdr_node_t    *rnode = core->routers_by_mask_bit[router_maskbit];
-        qd_iterator_t *iter  = address->iterator;
-        qdr_address_t *addr  = 0;
-
-        qd_hash_retrieve(core->addr_hash, iter, (void**) &addr);
-        if (!addr) {
-            qd_log(core->log, QD_LOG_CRITICAL, "unmap_destination: Address not found");
-            break;
-        }
-        
-        qd_bitmask_clear_bit(addr->rnodes, router_maskbit);
-        rnode->ref_count--;
-        addr->cost_epoch--;
 
         //
-        // Raise an address event if this was the last destination for the address
+        // Raise the event to be picked up by core modules.
         //
-        if (qd_bitmask_cardinality(addr->rnodes) + DEQ_SIZE(addr->rlinks) == 0)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_DEST, addr);
-        else if (qd_bitmask_cardinality(addr->rnodes) == 0 && DEQ_SIZE(addr->rlinks) == 1)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
-
-        qdr_check_addr_CT(core, addr);
+        qdrc_event_router_raise(core, QDRC_EVENT_ROUTER_MOBILE_SEQ_ADVANCED, rnode);
     } while (false);
-
-    qdr_field_free(address);
 }
 
 
@@ -754,27 +674,15 @@ static void qdr_unsubscribe_CT(qdr_core_t *core, qdr_action_t *action, bool disc
 // Call-back Functions
 //==================================================================================
 
-static void qdr_do_mobile_added(qdr_core_t *core, qdr_general_work_t *work)
+static void qdr_do_set_mobile_seq(qdr_core_t *core, qdr_general_work_t *work)
 {
-    char *address_hash = qdr_field_copy(work->field);
-    if (address_hash) {
-        core->rt_mobile_added(core->rt_context, address_hash, work->treatment);
-        free(address_hash);
-    }
-
-    qdr_field_free(work->field);
+    core->rt_set_mobile_seq(core->rt_context, work->maskbit, work->mobile_seq);
 }
 
 
-static void qdr_do_mobile_removed(qdr_core_t *core, qdr_general_work_t *work)
+static void qdr_do_set_my_mobile_seq(qdr_core_t *core, qdr_general_work_t *work)
 {
-    char *address_hash = qdr_field_copy(work->field);
-    if (address_hash) {
-        core->rt_mobile_removed(core->rt_context, address_hash);
-        free(address_hash);
-    }
-
-    qdr_field_free(work->field);
+    core->rt_set_my_mobile_seq(core->rt_context, work->mobile_seq);
 }
 
 
@@ -784,19 +692,19 @@ static void qdr_do_link_lost(qdr_core_t *core, qdr_general_work_t *work)
 }
 
 
-void qdr_post_mobile_added_CT(qdr_core_t *core, const char *address_hash, qd_address_treatment_t treatment)
+void qdr_post_set_mobile_seq_CT(qdr_core_t *core, int router_maskbit, uint64_t mobile_seq)
 {
-    qdr_general_work_t *work = qdr_general_work(qdr_do_mobile_added);
-    work->field = qdr_field(address_hash);
-    work->treatment = treatment;
+    qdr_general_work_t *work = qdr_general_work(qdr_do_set_mobile_seq);
+    work->mobile_seq = mobile_seq;
+    work->maskbit    = router_maskbit;
     qdr_post_general_work_CT(core, work);
 }
 
 
-void qdr_post_mobile_removed_CT(qdr_core_t *core, const char *address_hash)
+void qdr_post_set_my_mobile_seq_CT(qdr_core_t *core, uint64_t mobile_seq)
 {
-    qdr_general_work_t *work = qdr_general_work(qdr_do_mobile_removed);
-    work->field = qdr_field(address_hash);
+    qdr_general_work_t *work = qdr_general_work(qdr_do_set_my_mobile_seq);
+    work->mobile_seq = mobile_seq;
     qdr_post_general_work_CT(core, work);
 }
 

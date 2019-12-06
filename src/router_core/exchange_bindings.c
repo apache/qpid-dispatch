@@ -928,9 +928,11 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
             ex->alternate = next_hop(ex, alternate, alt_phase);
         }
 
-        qdr_post_mobile_added_CT(core,
-                                 (const char*) qd_hash_key_by_handle(ex->qdr_addr->hash_handle),
-                                 ex->qdr_addr->treatment);
+        //
+        // TODO - handle case where there was already a local dest.
+        //
+        qdr_addr_start_inlinks_CT(ex->core, ex->qdr_addr);
+        qdrc_event_addr_raise(ex->core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, ex->qdr_addr);
     }
 
     return ex;
@@ -939,8 +941,7 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
 static void qdr_exchange_free(qdr_exchange_t *ex)
 {
     if (ex->core->running && DEQ_SIZE(ex->qdr_addr->rlinks) == 0) {
-        qdr_post_mobile_removed_CT(ex->core,
-                                   (const char*) qd_hash_key_by_handle(ex->qdr_addr->hash_handle));
+        qdrc_event_addr_raise(ex->core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, ex->qdr_addr);
     }
 
     DEQ_REMOVE(ex->core->exchanges, ex);

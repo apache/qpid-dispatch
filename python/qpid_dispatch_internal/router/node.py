@@ -187,14 +187,7 @@ class NodeTracker(object):
             if node.link_state_requested():
                 self.container.link_state_engine.send_lsr(node_id)
             if node.mobile_address_requested():
-                self.container.mobile_address_engine.send_mar(node_id, node.mobile_address_sequence)
-
-        ##
-        ## If local changes have been made to the list of mobile addresses, send
-        ## an unsolicited mobile-address-update to all routers.
-        ##
-        mobile_seq = self.container.mobile_address_engine.tick(now)
-        self.container.link_state_engine.set_mobile_seq(mobile_seq)
+                self.container.router_adapter.mobile_seq_advanced(node.maskbit)
 
         ##
         ## Send an immediate RA if our link state changed
@@ -258,6 +251,15 @@ class NodeTracker(object):
             node.remove_link()
             if self.link_state.del_peer(node_id):
                 self.link_state_changed = True
+
+
+    def set_mobile_seq(self, router_maskbit, mobile_seq):
+        """
+        """
+        for node in self.nodes.values():
+            if node.maskbit == router_maskbit:
+                node.mobile_address_sequence = mobile_seq
+                return
 
 
     def in_flux_mode(self, now):
@@ -406,7 +408,6 @@ class RouterNode(object):
         self.next_hop_router         = None
         self.cost                    = None
         self.valid_origins           = None
-        self.mobile_addresses        = set([])
         self.mobile_address_sequence = 0
         self.need_ls_request         = True
         self.need_mobile_request     = False
@@ -541,34 +542,10 @@ class RouterNode(object):
         return False
 
 
-    def map_address(self, addr, treatment = -1):
-        self.mobile_addresses.add(addr)
-        self.adapter.map_destination(addr, treatment, self.maskbit)
-        self.log(LOG_DEBUG, "Remote destination %s mapped to router %s" % (self._logify(addr), self.id))
-
-
-    def unmap_address(self, addr):
-        self.mobile_addresses.remove(addr)
-        self.adapter.unmap_destination(addr, self.maskbit)
-        self.log(LOG_DEBUG, "Remote destination %s unmapped from router %s" % (self._logify(addr), self.id))
-
-
     def unmap_all_addresses(self):
         self.mobile_address_sequence = 0
-        for addr in self.mobile_addresses:
-            self.adapter.unmap_destination(addr, self.maskbit)
-            self.log(LOG_DEBUG, "Remote destination %s unmapped from router %s" % (self._logify(addr), self.id))
-
-    def overwrite_addresses(self, addrs_list):
-        added   = []
-        deleted = []
-        addrs = set(addrs_list)
-        added = addrs.difference(self.mobile_addresses)
-        deleted = self.mobile_addresses.difference(addrs)
-        for a in added:
-            self.map_address(a)
-        for a in deleted:
-            self.unmap_address(a)
+        self.adapter.flush_destinations(self.maskbit)
+        self.log(LOG_DEBUG, "Remote destinations flushed from router %s" % (self.id))
 
 
     def update_instance(self, instance, version):

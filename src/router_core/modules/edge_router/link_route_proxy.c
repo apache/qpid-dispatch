@@ -462,8 +462,9 @@ void qcm_edge_link_route_init_CT(qdr_core_t *core)
                                              | QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST
                                              | QDRC_EVENT_ADDR_BECAME_LOCAL_DEST),
                                             _on_conn_event,
-                                            NULL,
+                                            0,
                                             _on_addr_event,
+                                            0,
                                             core);
 }
 

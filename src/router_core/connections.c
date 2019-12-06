@@ -1249,7 +1249,6 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
         && DEQ_SIZE(addr->inlinks) == 0
         && qd_bitmask_cardinality(addr->rnodes) == 0
         && addr->ref_count == 0
-        && !addr->block_deletion
         && addr->tracked_deliveries == 0
         && addr->core_endpoint == 0
         && addr->fallback_for == 0) {
@@ -1767,7 +1766,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         return;
     }
 
-    qdr_address_t    *addr  = link->owning_addr;
+    qdr_address_t *addr = link->owning_addr;
 
     if (link->detach_received)
         return;
@@ -1839,7 +1838,9 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
                     //
                     // Unbind the address and the link.
                     //
+                    addr->ref_count++;
                     qdr_core_unbind_address_link_CT(core, addr, link);
+                    addr->ref_count--;
 
                     //
                     // If this is an edge data link, raise a link event to indicate its detachment.
@@ -1865,8 +1866,11 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             switch (link->link_type) {
             case QD_LINK_ENDPOINT:
             case QD_LINK_EDGE_DOWNLINK:
-                if (addr)
+                if (addr) {
+                    addr->ref_count++;
                     qdr_core_unbind_address_link_CT(core, addr, link);
+                    addr->ref_count--;
+                }
                 break;
 
             case QD_LINK_CONTROL:

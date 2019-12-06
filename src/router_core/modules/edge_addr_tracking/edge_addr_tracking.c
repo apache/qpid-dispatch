@@ -407,6 +407,7 @@ static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_c
             0,
             on_link_event,
             on_addr_event,
+            0,
             context);
 }
 
