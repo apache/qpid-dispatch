@@ -31,7 +31,7 @@ You can do the following:
 * xref:configuring-router-properties-{context}[Configure essential router properties]
 * xref:configuring-network-connections-{context}[Configure network connections]
 * xref:securing-network-connections-{context}[Secure network connections]
-* xref:authorizing-access-to-messaging-resources[Authorize access to messaging resources]
+* xref:authorizing-access-messaging-resources-{context}[Authorize access to messaging resources]
 * xref:logging[Configure logging]
 
 // Configuring router properties

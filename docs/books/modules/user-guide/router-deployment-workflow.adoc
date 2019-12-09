@@ -52,7 +52,7 @@ Repeat this step for each additional router to which you want to connect this ro
 +
 These properties should be configured the same way on each router. Therefore, you should only configure each one once, and then copy the configuration to each additional router in the router network.
 
-** xref:authorizing-access-to-messaging-resources[Authorization]
+** xref:authorizing-access-messaging-resources-{context}[Authorization]
 +
 If necessary, configure policies to control which messaging resources clients are able to access on the router network.
 
