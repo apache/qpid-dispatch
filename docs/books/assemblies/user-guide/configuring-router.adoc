@@ -32,7 +32,7 @@ You can do the following:
 * xref:configuring-network-connections-{context}[Configure network connections]
 * xref:securing-network-connections-{context}[Secure network connections]
 * xref:authorizing-access-messaging-resources-{context}[Authorize access to messaging resources]
-* xref:logging[Configure logging]
+* xref:configuring-logging-{context}[Configure logging]
 
 // Configuring router properties
 include::../../modules/user-guide/configuring-router-properties.adoc[leveloffset=+1]
@@ -45,3 +45,6 @@ include::securing-network-connections.adoc[leveloffset=+1]
 
 // Authorizing access to messaging resources
 include::authorizing-access-messaging-resources.adoc[leveloffset=+1]
+
+// Configuring logging
+include::configuring-logging.adoc[leveloffset=+1]
