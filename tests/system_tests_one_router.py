@@ -400,34 +400,6 @@ class OneRouterTest(TestCase):
 
         client.connection.close()
 
-    def test_39_connection_properties_binary(self):
-        """
-        Tests connection property that is a binary map. The router ignores AMQP binary data type.
-        Router should not return anything for connection properties
-        """
-        self.skipTest("Skipped until proton bug fixed.")
-        connection = BlockingConnection(self.router.addresses[0],
-                                        timeout=60,
-                                        properties=CONNECTION_PROPERTIES_BINARY)
-        client = SyncRequestResponse(connection)
-
-        node = Node.connect(self.router.addresses[0])
-
-        results = node.query(type='org.apache.qpid.dispatch.connection', attribute_names=[u'properties']).results
-
-        results_found = True
-
-        for result in results:
-            if not result[0]:
-                results_found = False
-            else:
-                results_found = True
-                break
-
-        self.assertFalse(results_found)
-
-        client.connection.close()
-
     def test_40_anonymous_sender_no_receiver(self):
         test = AnonymousSenderNoRecvLargeMessagedTest(self.address)
         test.run()
