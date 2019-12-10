@@ -169,11 +169,13 @@ class OneRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(results[deliveries_presettled_index], 10)
 
         # check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], test.n_sent)
         self.assertEqual(test.sender_stats['releasedCount'], 10)
         self.assertEqual(test.sender_stats['presettledCount'], 10)
         self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['releasedCount',
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'releasedCount',
                                                                          'presettledCount',
                                                                          'droppedPresettledCount'])))
 
@@ -229,11 +231,13 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         self.assertEqual(results[deliveries_presettled_index], 10)
 
         # check link statistics
+        self.assertEqual(test.sender_stats['deliveryCount'], test.n_sent)
         self.assertEqual(test.sender_stats['releasedCount'], 10)
         self.assertEqual(test.sender_stats['presettledCount'], 10)
         self.assertEqual(test.sender_stats['droppedPresettledCount'], 10)
         self.assertTrue(_link_stats_are_zero(test.sender_stats,
-                                             _LINK_STATISTIC_KEYS - set(['releasedCount',
+                                             _LINK_STATISTIC_KEYS - set(['deliveryCount',
+                                                                         'releasedCount',
                                                                          'presettledCount',
                                                                          'droppedPresettledCount'])))
 
