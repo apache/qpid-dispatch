@@ -20,6 +20,7 @@
 #include "python_private.h"   // must be first!
 
 #include "log_private.h"
+#include "server_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "aprintf.h"
@@ -541,7 +542,16 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         if (qd_entity_has(entity, "enable")) {
             enable = qd_entity_get_string(entity, "enable");
             QD_ERROR_BREAK();
+
             src->mask = enable_mask(enable);
+
+            //
+            // If trace logging is enabled, loop thru all connections in the router and call the pn_transport_set_tracer callback
+            // so proton frame trace can be output as part of the router trace log.
+            //
+            if (qd_log_enabled(src, QD_LOG_TRACE)) {
+                qd_server_trace_all_connections();
+            }
         }
         QD_ERROR_BREAK();
 

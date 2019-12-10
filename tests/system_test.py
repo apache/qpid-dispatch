@@ -1003,6 +1003,16 @@ class QdManager(object):
             cmd += " %s=%s" % (k, v)
         return json.loads(self(cmd))
 
+    def update(self, long_type, kwargs, name=None, identity=None):
+        cmd = 'UPDATE --type=%s' % long_type
+        if identity is not None:
+            cmd += " --identity=%s" % identity
+        elif name is not None:
+            cmd += " --name=%s" % name
+        for k, v in kwargs.items():
+            cmd += " %s=%s" % (k, v)
+        return json.loads(self(cmd))
+
     def delete(self, long_type, name=None, identity=None):
         cmd = 'DELETE --type=%s' %  long_type
         if identity is not None:

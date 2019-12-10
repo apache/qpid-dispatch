@@ -60,6 +60,13 @@ const char     *MULTICAST_DISTRIBUTION = "multicast";
 const char     *BALANCED_DISTRIBUTION  = "balanced";
 const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 
+qd_dispatch_t *qd = 0;
+
+qd_dispatch_t *qd_dispatch_get_dispatch()
+{
+    return qd;
+}
+
 qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
 {
     //
@@ -69,7 +76,7 @@ qd_dispatch_t *qd_dispatch(const char *python_pkgdir, bool test_hooks)
     gettimeofday(&time, NULL);
     srandom((unsigned int)time.tv_sec + ((unsigned int)time.tv_usec << 11));
     
-    qd_dispatch_t *qd = NEW(qd_dispatch_t);
+    qd = NEW(qd_dispatch_t);
     ZERO(qd);
 
     qd_entity_cache_initialize();   /* Must be first */
