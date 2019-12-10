@@ -63,6 +63,10 @@ struct qd_dispatch_t {
     char  *metadata;
 };
 
+qd_dispatch_t *qd_dispatch_get_dispatch();
+
+
+
 /**
  * Configure the router node from a configuration entity.
  * If this is not called, the router will run in ENDPOINT mode.

@@ -18,6 +18,7 @@
  */
 
 #include "python_private.h"             // must be first!
+#include "dispatch_private.h"
 #include <qpid/dispatch/python_embedded.h>
 
 #include <qpid/dispatch/ctools.h>
@@ -1276,6 +1277,27 @@ void qd_server_set_container(qd_dispatch_t *qd, qd_container_t *container)
     qd->server->container = container;
 }
 
+void qd_server_trace_all_connections()
+{
+    qd_dispatch_t *qd = qd_dispatch_get_dispatch();
+    if (qd->server) {
+        sys_mutex_lock(qd->server->lock);
+        qd_connection_list_t  conn_list = qd->server->conn_list;
+        qd_connection_t *conn = DEQ_HEAD(conn_list);
+        while(conn) {
+            //
+            // If there is already a tracer on the transport, nothing to do, move on to the next connection.
+            //
+            pn_transport_t *tport  = pn_connection_transport(conn->pn_conn);
+            if (! pn_transport_get_tracer(tport)) {
+                pn_transport_trace(tport, PN_TRACE_FRM);
+                pn_transport_set_tracer(tport, transport_tracer);
+            }
+            conn = DEQ_NEXT(conn);
+        }
+        sys_mutex_unlock(qd->server->lock);
+    }
+}
 
 void qd_server_run(qd_dispatch_t *qd)
 {
