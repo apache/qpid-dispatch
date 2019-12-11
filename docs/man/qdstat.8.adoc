@@ -218,7 +218,7 @@ The number of undelivered messages stored on the link's FIFO.
 unsett::
 The number of unsettled deliveries being tracked by the link.
 
-del::
+deliv::
 The total number of deliveries that have transited this link.
 
 presett::
@@ -255,12 +255,12 @@ blkd::
 The time elapsed since the available credit for this link became zero and has remained zero.
 
 admin::
-The administrative status of the link:
+The administrative status of the link (with -v option only):
   - 'enabled' - The link is enabled for normal operation.
   - 'disabled' - The link is disabled and should be quiescing or stopped (not yet supported).
 
 oper::
-The operational status of the link:
+The operational status of the link (with -v option only):
   - 'up' - The link is operational.
   - 'down' - The link is not attached.
   - 'quiescing' - The link is in the process of quiescing (not yet supported).
