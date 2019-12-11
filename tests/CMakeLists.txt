@@ -138,6 +138,7 @@ foreach(py_test_module
     system_tests_fallback_dest
     system_tests_router_mesh
     system_tests_stuck_deliveries
+    system_tests_qdstat_no_timeout
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
