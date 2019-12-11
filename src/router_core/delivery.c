@@ -107,8 +107,7 @@ void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
     delivery->ref_counted = true;
     qdr_link_t *link = qdr_delivery_link(delivery);
     if (link)
-        qd_log(link->core->log, QD_LOG_DEBUG,
-               "Delivery incref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, rc + 1, label);
+        qd_log(link->core->log, QD_LOG_DEBUG, "Delivery incref:    dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) delivery, rc + 1,  link->identity, label);
 }
 
 
@@ -130,7 +129,11 @@ void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char 
 {
     uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref:    dlv:%lx rc:%"PRIu32" %s", (long) delivery, ref_count - 1, label);
+
+    qdr_link_t *link = qdr_delivery_link(delivery);
+
+    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref:    dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) delivery, ref_count - 1,  link ? link->identity : 0, label);
+
 
     if (ref_count == 1) {
         //
@@ -373,6 +376,8 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
                 core->modified_deliveries++;
         }
 
+        qd_log(core->log, QD_LOG_DEBUG, "Delivery outcome for%s: dlv:%lx link:%"PRIu64" is %s", delivery->presettled?" pre-settled":"", (long) delivery,  link->identity, pn_disposition_type_name(outcome));
+
         uint32_t delay = core->uptime_ticks - delivery->ingress_time;
         if (delay > 10) {
             link->deliveries_delayed_10sec++;
@@ -596,7 +601,11 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *label)
 {
     uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref_CT: dlv:%lx rc:%"PRIu32" %s", (long) dlv, ref_count - 1, label);
+
+    qdr_link_t *link = qdr_delivery_link(dlv);
+
+    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref_CT:  dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) dlv, ref_count - 1,  link ? link->identity : 0, label);
+
     assert(ref_count > 0);
 
     if (ref_count == 1)
