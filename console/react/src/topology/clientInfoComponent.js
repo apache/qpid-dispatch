@@ -18,7 +18,7 @@ under the License.
 */
 
 import React, { Component } from "react";
-import { Modal } from "@patternfly/react-core";
+import { Button, Modal } from "@patternfly/react-core";
 import {
   Table,
   TableHeader,
@@ -32,6 +32,7 @@ import DetailsTable from "./clientInfoDetailsComponent";
 import { utils } from "../common/amqp/utilities.js";
 const { queue } = require("d3-queue");
 
+const PERPAGE = 10;
 class ClientInfoComponent extends Component {
   constructor(props) {
     super(props);
@@ -79,22 +80,18 @@ class ClientInfoComponent extends Component {
           compoundParent: 3,
           cells: [
             {
-              title: (
-                <DetailsTable rows={[1, 2, 3, 4, 5, 6]} id="compound-expansion-table-1" />
-              ),
+              title: "",
               props: { colSpan: 4, className: "pf-m-no-padding" }
             }
           ]
         }
       ]
     };
-    this.timer = null;
     this.rates = {};
-    this.expandedRows = new Set();
     this.d = this.props.d; // the node object
 
     this.dStart = 0;
-    this.dStop = Math.min(this.d.normals.length, 10);
+    this.dStop = Math.min(this.d.normals.length, PERPAGE);
     this.cachedInfo = [];
     this.updateTimer = null;
 
@@ -128,6 +125,7 @@ class ClientInfoComponent extends Component {
           "capacity"
         ],
         cols: ["linkType", "addr", "settleRate", "delayed1", "delayed10", "usage"],
+        columns: ["Link type", "Addr", "Settle rate", "Delayed1", "Delayed10", "Usage"],
         calc: {
           addr: link => {
             return utils.addr_text(link.owningAddr);
@@ -150,72 +148,72 @@ class ClientInfoComponent extends Component {
         cols: ["addr", "direction", "containerId"]
       },
       addressFields: {
-        cols: ["prefix", "distribution"]
-      }
+        cols: ["name", "distribution", "deliveriesEgress"]
+      },
+      clients: [
+        "Container",
+        "Encrypted",
+        "Host",
+        {
+          title: "Links",
+          cellTransforms: [compoundExpand]
+        }
+      ],
+      edgeRouters: [
+        "Name",
+        "Connections",
+        "Accepted rate",
+        {
+          title: "Addresses",
+          cellTransforms: [compoundExpand]
+        },
+        ""
+      ],
+      edgeColumns: ["Name", "Distribution", "Deliveries egress"]
     };
   }
 
   componentDidMount = () => {
-    this.timer = setInterval(this.getTooltip, 5000);
-    this.getTooltip();
     this.doUpdateDetail();
   };
 
   componentWillUnmount = () => {
     this.unmounted = true;
 
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
     if (this.updateTimer) {
       clearTimeout(this.updateTimer);
       this.updateTimer = null;
     }
   };
-  getTooltip = () => {
-    this.props.d.toolTip(this.props.topology, true).then(toolTip => {
-      if (this.unmounted) return;
-      this.setState({ toolTip });
-    });
-  };
 
-  // called for each expanded row to get further details about the edge router
-  moreInfo = (id, infoPerId) => {
-    let nodeId = utils.idFromName(id, "_edge");
-    this.props.topology.fetchEntities(
-      nodeId,
-      [
-        { entity: "router.link", attrs: [] },
-        {
-          entity: "linkRoute",
-          attrs: this.fields.linkRouteFields.cols
-        },
-        {
-          entity: "autoLink",
-          attrs: this.fields.autoLinkFields.cols
-        },
-        { entity: "address", attrs: [] }
-      ],
-      results => {
-        // save the results for each entity requested
-        if (infoPerId[id]) {
-          infoPerId[id].linkRoutes = utils.flattenAll(results[nodeId].linkRoute);
-          infoPerId[id].autoLinks = utils.flattenAll(results[nodeId].autoLink);
-          infoPerId[id].addresses = utils.flattenAll(results[nodeId].address);
+  handleSeparate = row => {
+    this.props.handleSeparate(row.container).then(d => {
+      if (!d || !d.normals) {
+        this.props.handleCloseClientInfo();
+      } else {
+        this.d = d;
+        this.dStart = 0;
+        this.dStop = Math.min(this.d.normals.length, PERPAGE);
+        if (this.updateTimer) {
+          clearTimeout(this.updateTimer);
+          this.updateTimer = null;
         }
+        this.doUpdateDetail();
       }
-    );
+    });
   };
 
   // get the detail info for the popup
   groupDetail = () => {
     // queued function to get the .router info for an edge router
-    const q_getEdgeInfo = (n, infoPerId, callback) => {
+    const q_getEdgeInfo = (n, infoPerId, resolve) => {
       const nodeId = utils.idFromName(n.container, "_edge");
       this.props.topology.fetchEntities(
         nodeId,
-        [{ entity: "router", attrs: [] }],
+        [
+          { entity: "router" },
+          { entity: "router.address", attrs: this.fields.addressFields }
+        ],
         results => {
           let r = results[nodeId].router;
           infoPerId[n.container] = utils.flatten(r.attributeNames, r.results[0]);
@@ -229,11 +227,18 @@ class ClientInfoComponent extends Component {
           infoPerId[n.container].acceptedDeliveriesRate = Math.round(
             rates.acceptedDeliveries,
             2
+          ).toLocaleString();
+          infoPerId[n.container].container = n.container;
+          infoPerId[n.container].addresses = utils.flattenAll(
+            results[nodeId]["router.address"],
+            address => {
+              address.deliveriesEgress = parseInt(
+                address.deliveriesEgress
+              ).toLocaleString();
+              return address;
+            }
           );
-          infoPerId[n.container].linkRoutes = [];
-          infoPerId[n.container].autoLinks = [];
-          infoPerId[n.container].addresses = [];
-          callback(null);
+          resolve(null);
         }
       );
     };
@@ -245,17 +250,15 @@ class ClientInfoComponent extends Component {
         let q = queue(10);
         for (let n = this.dStart; n < this.dStop; n++) {
           q.defer(q_getEdgeInfo, this.d.normals[n], infoPerId);
-          if (this.expandedRows.has(this.d.normals[n].container)) {
-            this.moreInfo(this.d.normals[n].container, infoPerId);
-          }
         }
         // await until all sent requests have completed
         q.await(() => {
           if (this.unmounted) return;
+          const columns = this.fields.edgeRouters;
           this.setState({
-            detail: { template: "edgeRouters", title: "edge router" }
+            detail: { template: "edgeRouters", title: "edge router" },
+            columns
           });
-          // send the results
           resolve({
             description: "Select an edge router to see more info",
             infoPerId: infoPerId
@@ -305,8 +308,10 @@ class ClientInfoComponent extends Component {
             let preposition =
               this.d.cdir === "in" ? "to" : this.d.cdir === "both" ? "for" : "from";
             let plural = count > 1 ? "s" : "";
+            const columns = this.fields.clients;
             this.setState({
-              detail: { template: "clients", title: "client" }
+              detail: { template: "clients", title: "client" },
+              columns
             });
             resolve({
               description: `There ${verb} ${count} ${dir} connection${plural} ${preposition} ${this.d.routerId} with role ${this.d.nodeType}`,
@@ -322,35 +327,38 @@ class ClientInfoComponent extends Component {
     this.cachedInfo = [];
     this.updateDetail();
   };
+
   updateDetail = () => {
     this.groupDetail().then(det => {
       if (this.unmounted) return;
       Object.keys(det.infoPerId).forEach(id => {
         this.cachedInfo.push(det.infoPerId[id]);
       });
+      /*
       if (this.dStop < this.d.normals.length) {
         this.dStart = this.dStop;
-        this.dStop = Math.min(this.d.normals.length, this.dStart + 10);
+        this.dStop = Math.min(this.d.normals.length, this.dStart + PERPAGE);
         setTimeout(this.updateDetail, 1);
       } else {
-        const infoPerId = this.cachedInfo.sort((a, b) => {
-          return a.name > b.name ? 1 : -1;
-        });
-        const rows = this.getRows(infoPerId);
-        this.setState({
-          detail: {
-            title: `for ${this.d.normals.length} ${this.state.detail.title}${
-              this.d.normals.length > 1 ? "s" : ""
-            }`,
-            description: det.description,
-            infoPerId: infoPerId
-          },
-          rows: rows
-        });
-        this.dStart = 0;
-        this.dStop = Math.min(this.d.normals.length, 10);
-        this.updateTimer = setTimeout(this.doUpdateDetail, 2000);
-      }
+        */
+      const infoPerId = this.cachedInfo.sort((a, b) => {
+        return a.name > b.name ? 1 : -1;
+      });
+      const rows = this.getRows(infoPerId);
+      this.setState({
+        detail: {
+          title: `for ${this.d.normals.length} ${this.state.detail.title}${
+            this.d.normals.length > 1 ? "s" : ""
+          }`,
+          description: det.description,
+          infoPerId: infoPerId
+        },
+        rows: rows
+      });
+      this.dStart = 0;
+      this.dStop = Math.min(this.d.normals.length, PERPAGE);
+      this.updateTimer = setTimeout(this.doUpdateDetail, 2000);
+      //}
     });
   };
 
@@ -358,37 +366,86 @@ class ClientInfoComponent extends Component {
   getRows = infoPerId => {
     let newRows = [];
     const oldRows = this.state.rows;
-    for (let i = 0; i < infoPerId.length; i++) {
+    const limit = Math.min(PERPAGE, infoPerId.length);
+    for (let i = 0; i < limit; i++) {
       let row = infoPerId[i];
-      let oldRow = oldRows.find(r => r.cells[0].title === row.container);
+      let oldRow;
       let cells = [];
-      cells.push({ title: row.container, props: { component: "th" } });
-      cells.push({ title: row.encrypted });
-      cells.push({ title: row.host });
-      cells.push({
-        title: (
-          <React.Fragment>
-            <CodeBranchIcon key="icon" /> {row.links.length}
-          </React.Fragment>
-        ),
-        props: {
-          isOpen: oldRow ? oldRow.cells[3].props.isOpen : false,
-          ariaControls: "compound-expansion-table-1"
-        }
-      });
-      newRows.push({
-        isOpen: oldRow ? oldRow.isOpen : false,
-        cells: cells
-      });
       let subRows = [];
-      row.links.forEach(link => {
-        let subCells = [];
-        this.fields.linkFields.cols.forEach(col => {
-          subCells.push(link[col]);
-        });
-        subRows.push({ cells: subCells });
-      });
+      let columns = [];
+      let colSpan = 4;
 
+      if (this.state.detail.template === "edgeRouters") {
+        // infoPerId is an array of router info
+        columns = this.fields.edgeColumns;
+        colSpan = 5;
+        oldRow = oldRows.find(r => r.cells[0].title === row.name);
+        cells.push({ title: row.name, props: { component: "th" } });
+        cells.push({ title: row.connectionCount });
+        cells.push({ title: row.acceptedDeliveriesRate });
+        cells.push({
+          title: (
+            <React.Fragment>
+              <CodeBranchIcon key="icon" /> {row.addresses.length}{" "}
+            </React.Fragment>
+          ),
+          props: {
+            isOpen: oldRow ? oldRow.cells[3].props.isOpen : false,
+            ariaControls: "compound-expansion-table-1"
+          }
+        });
+        cells.push({
+          title: (
+            <Button
+              className="link-button"
+              variant="link"
+              onClick={() => this.handleSeparate(row)}
+            >
+              Expand
+            </Button>
+          )
+        });
+        newRows.push({
+          isOpen: oldRow ? oldRow.isOpen : false,
+          cells: cells
+        });
+        row.addresses.forEach(address => {
+          let subCells = [];
+          this.fields.addressFields.cols.forEach(col => {
+            subCells.push(address[col]);
+          });
+          subRows.push({ cells: subCells });
+        });
+      } else {
+        // infoPerId is an array of connections
+        columns = this.fields.linkFields.columns;
+        oldRow = oldRows.find(r => r.cells[0].title === row.container);
+        cells.push({ title: row.container, props: { component: "th" } });
+        cells.push({ title: row.encrypted });
+        cells.push({ title: row.host });
+        cells.push({
+          title: (
+            <React.Fragment>
+              <CodeBranchIcon key="icon" /> {row.links.length}
+            </React.Fragment>
+          ),
+          props: {
+            isOpen: oldRow ? oldRow.cells[3].props.isOpen : false,
+            ariaControls: "compound-expansion-table-1"
+          }
+        });
+        newRows.push({
+          isOpen: oldRow ? oldRow.isOpen : false,
+          cells: cells
+        });
+        row.links.forEach(link => {
+          let subCells = [];
+          this.fields.linkFields.cols.forEach(col => {
+            subCells.push(link[col]);
+          });
+          subRows.push({ cells: subCells });
+        });
+      }
       newRows.push({
         parent: i * 2,
         compoundParent: 3,
@@ -396,13 +453,12 @@ class ClientInfoComponent extends Component {
           {
             title: (
               <DetailsTable
-                rows={subRows}
+                columns={columns}
                 subRows={subRows}
-                tst={`there are ${subRows.length} sub rows`}
                 id="compound-expansion-table-1"
               />
             ),
-            props: { colSpan: 4, className: "pf-m-no-padding" }
+            props: { colSpan, className: "pf-m-no-padding" }
           }
         ]
       });
