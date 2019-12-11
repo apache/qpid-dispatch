@@ -515,6 +515,7 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
     char* module = 0;
     char *output = 0;
     char *enable = 0;
+    bool trace_enabled = false;
 
     do {
 
@@ -545,12 +546,8 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
 
             src->mask = enable_mask(enable);
 
-            //
-            // If trace logging is enabled, loop thru all connections in the router and call the pn_transport_set_tracer callback
-            // so proton frame trace can be output as part of the router trace log.
-            //
             if (qd_log_enabled(src, QD_LOG_TRACE)) {
-                qd_server_trace_all_connections();
+                trace_enabled = true;
             }
         }
         QD_ERROR_BREAK();
@@ -572,6 +569,14 @@ qd_error_t qd_log_entity(qd_entity_t *entity) {
         free(enable);
 
     sys_mutex_unlock(log_source_lock);
+
+    //
+    // If trace logging is enabled, loop thru all connections in the router and call the pn_transport_set_tracer callback
+    // so proton frame trace can be output as part of the router trace log.
+    //
+    if (trace_enabled) {
+        qd_server_trace_all_connections();
+    }
 
     return qd_error_code();
 }

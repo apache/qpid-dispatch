@@ -1281,6 +1281,7 @@ void qd_server_trace_all_connections()
 {
     qd_dispatch_t *qd = qd_dispatch_get_dispatch();
     if (qd->server) {
+        sys_mutex_lock(qd->server->lock);
         qd_connection_list_t  conn_list = qd->server->conn_list;
         qd_connection_t *conn = DEQ_HEAD(conn_list);
         while(conn) {
@@ -1294,6 +1295,7 @@ void qd_server_trace_all_connections()
             }
             conn = DEQ_NEXT(conn);
         }
+        sys_mutex_unlock(qd->server->lock);
     }
 }
 
