@@ -95,11 +95,6 @@ g.selected line {
 #messageFlowPage .pf-l-stack__item {
   border-bottom: 1px solid #aaa;
 }
-path.hittarget {
-  stroke-width: 15px;
-  stroke: transparent;
-}
-
 .node.client rect {
   stroke: black;
   fill: white;
@@ -529,7 +524,7 @@ circle.node.normal.out {
   fill: #c0f0c0;
 }
 circle.node.edge {
-  fill: #e0e0ff;
+  fill: #efefff;
 }
 circle.node.on-demand {
   fill: #c0ffc0;
@@ -538,7 +533,6 @@ circle.node.on-demand.artemis {
   fill: #fcc;
   /*opacity: 0.2; */
 }
-
 circle.node.normal.console {
   fill: lightcyan;
 }
@@ -548,11 +542,13 @@ circle.node.artemis {
 circle.node.route-container {
   fill: orange;
 }
+circle.node.edge.multiple {
+  fill: #e0e0ff;
+}
 
 text.console,
 text.on-demand,
 text.normal,
-text.edge,
 text.address-checkbox {
   font-family: FontAwesome !important;
   font-weight: normal;
@@ -569,8 +565,12 @@ text.id {
 }
 
 text.label {
-  text-anchor: start;
+  text-anchor: middle;
   font-weight: bold;
+}
+
+text.label.long {
+  text-anchor: start;
 }
 
 @font-face {
@@ -701,9 +701,10 @@ path.empty {
   border: 1px solid gray;
   background-color: white;
   color: black;
-  opacity: 0.95;
+  opacity: 1;
   padding: 12px;
   font-size: 16px;
+  box-shadow: var(--pf-global--BoxShadow--md);
 }
 
 #popover-div h5 {
@@ -844,6 +845,8 @@ div.qdrChord .legend-text {
   border-top: 1px solid #888;
   border-left: 1px solid #888;
   border-right: 1px solid #888;
+  text-align: left;
+  box-shadow: rgba(3, 3, 3, 0.05) 0px 1px 1px 0px, rgba(3, 3, 3, 0.06) 0px 4px 8px 4px;
 }
 
 .context-menu.layout-dropdown li {
@@ -851,7 +854,7 @@ div.qdrChord .legend-text {
 }
 
 .context-menu .menu-item {
-  padding: 0.5em 1.5em;
+  padding: 0.25em 1em;
 }
 .context-menu .menu-item.separator {
   border-bottom: 1px solid #888;
@@ -983,7 +986,9 @@ div.qdrChord .legend-text {
 .overview-header.details .pf-c-breadcrumb__item.link-button:hover {
   text-decoration: underline;
 }
-
+.pf-c-button.pf-m-link.link-button:hover {
+  text-decoration: underline;
+}
 .noWrap {
   white-space: nowrap;
 }
@@ -1489,4 +1494,13 @@ button.dropdown-panel-toggle.pf-c-accordion__toggle span.pf-c-accordion__toggle-
 
 #emptyResults {
   height: auto;
+}
+
+.node-name-underline {
+  stroke: black;
+  stroke-width: 0.8px;
+}
+
+.node-name {
+  text-decoration: underline;
 }

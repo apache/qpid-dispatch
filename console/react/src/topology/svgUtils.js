@@ -34,7 +34,7 @@ export function updateState(circle) {
       return d.fixed ? d.fixed & 1 : false;
     })
     .classed("multiple", function(d) {
-      return d.normals && d.normals.length > 1;
+      return d.normals;
     });
 }
 
@@ -49,6 +49,9 @@ export function appendCircle(g) {
         return Nodes.radius(d.nodeType);
       })
       .attr("fill", function(d) {
+        if (d.nodeType === "edge" && d.normals && d.normals.length > 1) {
+          return "url(#diagonal-stripe-1) #fff;";
+        }
         if (d.cdir === "both" && !utils.isConsole(d)) {
           return "url(#half-circle)";
         }
@@ -101,7 +104,7 @@ export function appendCircle(g) {
 export function appendContent(g) {
   // show node IDs
   g.append("svg:text")
-    .attr("x", d => Nodes.textOffset(d.nodeType))
+    .attr("x", d => Nodes.textOffset(d.nodeType, d.name.length))
     .attr("y", function(d) {
       let y = 7;
       if (utils.isArtemis(d)) y = 8;
@@ -111,7 +114,10 @@ export function appendContent(g) {
       else if (d.nodeType === "edge" || d.nodeType === "_edge") y = 4;
       return y;
     })
-    .attr("class", d => (d.nodeType === "_topo" ? "label" : "id"))
+    .attr("class", d =>
+      d.nodeType === "_topo" || d.nodeType === "_edge" ? "label" : "id"
+    )
+    .classed("long", d => d.name.length > 4)
     .classed("console", function(d) {
       return utils.isConsole(d);
     })
@@ -144,11 +150,11 @@ export function appendContent(g) {
         return d.properties.product ? d.properties.product[0].toUpperCase() : "S";
       } else if (d.nodeType === "normal") {
         return "\uf109"; // icon-laptop for clients
-      } else if (d.nodeType === "edge" || d.nodeType === "_edge") {
-        return "Edge";
+      } else if (d.nodeType === "edge") {
+        return "Edges";
       }
-      return d.name.length > 7
-        ? d.name.substr(0, 3) + "..." + d.name.substr(d.name.length - 3, 3)
+      return d.name.length > 15
+        ? d.name.substr(0, 5) + "..." + d.name.substr(d.name.length - 5)
         : d.name;
     });
 }
@@ -199,6 +205,25 @@ export function addDefs(svg) {
     .attr("d", function(d) {
       return d.sten === "end" ? "M 0 -5 L 10 0 L 0 5 z" : "M 10 -5 L 0 0 L 10 5 z";
     });
+
+  // based on http://iros.github.io/patternfills/sample_svg.html
+  svg
+    .append("svg:defs")
+    .append("pattern")
+    .attr("id", "diagonal-stripe-1")
+    .attr("patternUnits", "userSpaceOnUse")
+    .attr("width", 10)
+    .attr("height", 10)
+    .append("image")
+    .attr(
+      "xlink:href",
+      "data:image/svg+xml;base64,PHN2ZyB4bWxucz0naHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmcnIHdpZHRoPScxMCcgaGVpZ2h0PScxMCc+CiAgPHJlY3Qgd2lkdGg9JzEwJyBoZWlnaHQ9JzEwJyBmaWxsPSd3aGl0ZScvPgogIDxwYXRoIGQ9J00tMSwxIGwyLC0yCiAgICAgICAgICAgTTAsMTAgbDEwLC0xMAogICAgICAgICAgIE05LDExIGwyLC0yJyBzdHJva2U9J2JsYWNrJyBzdHJva2Utd2lkdGg9JzEnLz4KPC9zdmc+Cg=="
+    )
+    .attr("x", 0)
+    .attr("y", 0)
+    .attr("width", 10)
+    .attr("height", 10);
+
   addStyles(
     sten,
     {

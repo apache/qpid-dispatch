@@ -39,6 +39,13 @@ class OptionsComponent extends Component {
   }
 
   render() {
+    const addressInfo = {};
+    for (const address in this.props.addressColors) {
+      addressInfo[address] = {
+        color: this.props.addressColors[address],
+        checked: this.props.addresses[address]
+      };
+    }
     return (
       <React.Fragment>
         <Checkbox
@@ -60,8 +67,7 @@ class OptionsComponent extends Component {
         {this.props.byAddress && (
           <div className="chord-addresses">
             <AddressesComponent
-              addresses={this.props.addresses}
-              addressColors={this.props.addressColors}
+              addressColors={addressInfo}
               handleChangeAddress={this.props.handleChangeAddress}
               handleHoverAddress={this.props.handleHoverAddress}
             />

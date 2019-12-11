@@ -34,14 +34,16 @@ var utils = {
   isArtemis: function(d) {
     return (
       (d.nodeType === "route-container" || d.nodeType === "on-demand") &&
-      d.properties && d.properties.product === "apache-activemq-artemis"
+      d.properties &&
+      d.properties.product === "apache-activemq-artemis"
     );
   },
 
   isQpid: function(d) {
     return (
       (d.nodeType === "route-container" || d.nodeType === "on-demand") &&
-      d.properties && d.properties.product === "qpid-cpp"
+      d.properties &&
+      d.properties.product === "qpid-cpp"
     );
   },
 
@@ -167,6 +169,12 @@ var utils = {
     let parts = ["amqp:", type, name, "$management"];
     if (type === "_topo") parts.splice(2, 0, "0");
     return parts.join("/");
+  },
+
+  typeFromId: function(id) {
+    var parts = id.split("/");
+    if (parts.length > 1) return parts[1];
+    return "unknown";
   },
 
   // calculate the average rate of change per second for a list of fields on the given obj

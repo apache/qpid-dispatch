@@ -185,12 +185,21 @@ const nodeProperties = {
     charge: [-1800, -900]
   },
   edge: {
+    radius: 30,
+    refX: {
+      end: 34,
+      start: -21
+    },
+    linkDistance: [90, 55],
+    charge: [-1350, -900]
+  },
+  _edge: {
     radius: 24,
     refX: {
       end: 24,
-      start: -12
+      start: -17
     },
-    linkDistance: [110, 55],
+    linkDistance: [90, 55],
     charge: [-1350, -900]
   },
   // generated nodes from connections. key is from connection.role
@@ -206,7 +215,6 @@ const nodeProperties = {
 };
 // aliases
 nodeProperties._topo = nodeProperties["inter-router"];
-nodeProperties._edge = nodeProperties["edge"];
 nodeProperties["on-demand"] = nodeProperties["normal"];
 nodeProperties["route-container"] = nodeProperties["normal"];
 
@@ -218,10 +226,12 @@ export class Nodes {
     if (nodeProperties[type].radius) return nodeProperties[type].radius;
     return 15;
   }
-  static textOffset(type) {
+  static textOffset(type, len) {
     let r = Nodes.radius(type);
-    let ret = type === "inter-router" || type === "_topo" ? r + 10 : 0;
-    return ret;
+    if (type === "inter-router" || type === "_topo" || type === "_edge") {
+      if (len > 4) return -(r - 5);
+    }
+    return 0;
   }
   static maxRadius() {
     let max = 0;

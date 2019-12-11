@@ -55,6 +55,19 @@ export const mockService = ({ onSendMethod }) => {
         delChangedAction: () => {},
         addUpdatedAction: () => {},
         delUpdatedAction: () => {},
+        get: () => {
+          return new Promise(resolve => {
+            resolve();
+          });
+        },
+        startUpdating: () => {
+          return new Promise(resolve => {
+            resolve();
+          });
+        },
+        edgesPerRouter: () => {},
+        edgeList: [],
+        nodeIdList: () => [],
         fetchAllEntities: (stuff, cb) => {
           cb(fetchResults);
         },

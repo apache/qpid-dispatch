@@ -24,7 +24,6 @@ const FA = require("react-fontawesome");
 
 class AddressesComponent extends Component {
   static propTypes = {
-    addresses: PropTypes.object.isRequired,
     handleChangeAddress: PropTypes.func.isRequired,
     handleHoverAddress: PropTypes.func.isRequired,
     addressColors: PropTypes.object.isRequired
@@ -35,7 +34,7 @@ class AddressesComponent extends Component {
   }
 
   dotClicked = address => {
-    this.props.handleChangeAddress(address, !this.props.addresses[address]);
+    this.props.handleChangeAddress(address, !this.props.addressColors[address].checked);
   };
 
   dotHover = (address, over) => {
@@ -45,8 +44,8 @@ class AddressesComponent extends Component {
   };
 
   coloredDot = (address, i) => {
-    const color = this.props.addressColors[address];
-    const checkColor = this.props.addresses[address] ? "white" : color;
+    const color = this.props.addressColors[address].color;
+    const checkColor = this.props.addressColors[address].checked ? "white" : color;
     const darker = d3.rgb(color).darker();
     const bgColor = {
       backgroundColor: color,
@@ -73,10 +72,10 @@ class AddressesComponent extends Component {
   render() {
     return (
       <ul className="addresses">
-        {Object.keys(this.props.addresses).length === 0 ? (
+        {Object.keys(this.props.addressColors).length === 0 ? (
           <li key={`address-empty`}>There is no traffic</li>
         ) : (
-          Object.keys(this.props.addresses).map((address, i) => {
+          Object.keys(this.props.addressColors).map((address, i) => {
             return (
               <li key={`address-${i}`} className="legend-line">
                 {this.coloredDot(address, i)}

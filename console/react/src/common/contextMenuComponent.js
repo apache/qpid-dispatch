@@ -67,11 +67,22 @@ class ContextMenuComponent extends React.Component {
       );
     });
 
+    const top = Math.max(
+      Math.min(
+        window.innerHeight - menuItems.length * 35,
+        this.props.contextEventPosition[1]
+      ),
+      0
+    );
+    const left = Math.max(
+      Math.min(window.innerWidth - 200, this.props.contextEventPosition[0]),
+      0
+    );
     const style =
       this.props.contextEventPosition[0] >= 0
         ? {
-            left: `${this.props.contextEventPosition[0]}px`,
-            top: `${this.props.contextEventPosition[1]}px`
+            left: `${left}px`,
+            top: `${top}px`
           }
         : {};
     return (

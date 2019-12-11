@@ -26,7 +26,6 @@ class TrafficComponent extends Component {
   static propTypes = {
     dots: PropTypes.bool.isRequired,
     congestion: PropTypes.bool.isRequired,
-    addresses: PropTypes.object.isRequired,
     addressColors: PropTypes.object.isRequired,
     handleChangeTrafficAnimation: PropTypes.func.isRequired,
     handleChangeTrafficFlowAddress: PropTypes.func.isRequired,
@@ -55,7 +54,6 @@ class TrafficComponent extends Component {
             {this.props.dots ? (
               <li id="traffic-dots-addresses">
                 <AddressesComponent
-                  addresses={this.props.addresses}
                   addressColors={this.props.addressColors}
                   handleChangeAddress={this.props.handleChangeTrafficFlowAddress}
                   handleHoverAddress={this.props.handleHoverAddress}
@@ -90,7 +88,7 @@ class TrafficComponent extends Component {
                 <defs>
                   <linearGradient
                     xmlns="http://www.w3.org/2000/svg"
-                    id="gradienta1bEihLEHL"
+                    id="colorGradient"
                     gradientUnits="userSpaceOnUse"
                     x1="0%"
                     y1="0%"
@@ -115,7 +113,7 @@ class TrafficComponent extends Component {
                     height="20"
                     x="0"
                     y="0"
-                    fill="url(#gradienta1bEihLEHL)"
+                    fill="url(#colorGradient)"
                   ></rect>
                   <text x="1" y="30" className="label">
                     Idle

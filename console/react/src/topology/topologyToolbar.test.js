@@ -28,9 +28,6 @@ it("renders a TopologyToolbar", () => {
         addresses: {
           testAddress: true
         },
-        addressColors: {
-          testAddress: "#EAEAEA"
-        },
         dots: true,
         congestion: true
       },
@@ -43,7 +40,10 @@ it("renders a TopologyToolbar", () => {
     handleHoverAddress: () => {},
     handleUpdateMapColor: () => {},
     handleUpdateMapShown: () => {},
-    handleChangeArrows: () => {}
+    handleChangeArrows: () => {},
+    addressColors: {
+      testAddress: { color: "#EAEAEA", checked: true }
+    }
   };
   const { getByTestId } = render(<TopologyToolbar {...props} />);
 

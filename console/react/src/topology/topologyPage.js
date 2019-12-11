@@ -34,7 +34,10 @@ class TopologyPage extends Component {
         variant={PageSectionVariants.light}
         id="topologyPage"
       >
-        <TopologyViewer service={this.props.service} />
+        <TopologyViewer
+          service={this.props.service}
+          handleAddNotification={this.props.handleAddNotification}
+        />
       </PageSection>
     );
   }

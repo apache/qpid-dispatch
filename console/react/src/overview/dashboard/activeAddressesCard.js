@@ -60,7 +60,6 @@ class ActiveAddressesCard extends React.Component {
         if (!this.mounted) return;
         let active = {};
         for (let id in results) {
-          console.log(id);
           const linkData = results[id]["router.link"];
           const addressData = results[id]["router.address"];
           const addresses = this.props.service.utilities.flattenAll(addressData);
@@ -73,7 +72,6 @@ class ActiveAddressesCard extends React.Component {
             if (link.linkType === "endpoint") {
               if (link.owningAddr && !link.owningAddr.startsWith("Ltemp.")) {
                 if (!active[link.owningAddr]) {
-                  console.log(`initializing active for ${link.owningAddr}`);
                   active[link.owningAddr] = {
                     addr: this.props.service.utilities.addr_text(link.owningAddr),
                     in: 0,
@@ -85,17 +83,18 @@ class ActiveAddressesCard extends React.Component {
                   address => address.identity === link.owningAddr
                 );
                 if (address) {
-                  console.log(address);
                   active[link.owningAddr].in += parseInt(address.deliveriesIngress);
                   active[link.owningAddr].out += parseInt(address.deliveriesEgress);
                 }
                 active[link.owningAddr].settleRate += parseInt(link.settleRate);
-                console.log(active[link.owningAddr]);
               }
             }
           }
         }
-        let rows = Object.keys(active).map(addr => {
+        const activeKeys = Object.keys(active).filter(
+          key => active[key].in > 0 && active[key].out > 0
+        );
+        const rows = activeKeys.map(addr => {
           return {
             cells: [
               active[addr].addr,

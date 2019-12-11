@@ -26,14 +26,20 @@ const lookFor = [
   {
     role: "_topo",
     title: "Router",
-    text: "",
+    text: "Router",
     cmp: n => n.nodeType === "_topo"
   },
   {
     role: "edge",
-    title: "Router",
-    text: "Edge",
+    title: "Edge Group",
+    text: "Edge Group",
     cmp: n => n.nodeType === "edge"
+  },
+  {
+    role: "_edge",
+    title: "Edge Router",
+    text: "Edge Router",
+    cmp: n => n.nodeType === "_edge"
   },
   {
     role: "normal",
@@ -104,52 +110,35 @@ export class Legend {
       .selectAll("g");
   }
 
-  gap = d => {
-    let g = Nodes.radius(d.nodeType) * 2 + PADDING;
-    if (d.nodeType === "_topo") {
-      g -= Nodes.radius(d.nodeType) / 2;
-    }
-    return g;
-  };
-
   // create or update the legend
   update() {
     let lsvg;
-    if (d3.select("#topo_svg_legend svg").empty()) {
-      lsvg = this.init();
-    } else {
-      lsvg = d3.select("#topo_svg_legend svg g").selectAll("g");
-    }
+    d3.select("#svglegend").remove();
+    lsvg = this.init();
+
     // add a node to legendNodes for each node type that is currently in the svg
     let legendNodes = new Nodes();
-    this.nodes.nodes.forEach((n, i) => {
-      let node = lookFor.find(lf => lf.cmp(n));
-      if (node) {
-        if (!legendNodes.nodes.some(ln => ln.key === node.title)) {
-          let newNode = legendNodes.addUsing({
-            id: node.title,
-            name: node.text,
-            nodeType: node.role,
-            nodeIndex: undefined,
-            x: 0,
-            y: 0,
-            connectionContainer: i,
-            resultIndex: 0,
-            fixed: 0,
-            properties: node.props ? node.props : {}
-          });
-          if (node.cdir) {
-            newNode.cdir = node.cdir;
-          }
+    lookFor.forEach((node, i) => {
+      if (this.nodes.nodes.some(n => node.cmp(n))) {
+        let newNode = legendNodes.addUsing({
+          id: node.title,
+          name: node.text,
+          nodeType: node.role,
+          nodeIndex: undefined,
+          x: 0,
+          y: 0,
+          connectionContainer: i,
+          resultIndex: 0,
+          fixed: 0,
+          properties: node.props ? node.props : {}
+        });
+        if (node.cdir) {
+          newNode.cdir = node.cdir;
         }
       }
     });
-
-    // determine the y coordinate of the last existing node in the legend
+    // cury is the y position to add the next legend node
     let cury = 2;
-    lsvg.each((d, i) => {
-      cury += this.gap(d);
-    });
 
     // associate the legendNodes with lsvg
     lsvg = lsvg.data(legendNodes.nodes, function(d) {
@@ -161,14 +150,16 @@ export class Legend {
       .enter()
       .append("svg:g")
       .attr("transform", d => {
+        if (d.nodeType === "edge") cury += 4;
         let t = `translate(2, ${cury})`;
-        cury += this.gap(d);
+        cury = cury + Nodes.radius(d.nodeType) * 2 + PADDING;
         return t;
       });
     appendCircle(legendEnter, this.urlPrefix);
     appendContent(legendEnter);
     appendTitle(legendEnter);
     legendEnter
+      .filter(d => d.nodeType !== "_edge" && d.nodeType !== "_topo")
       .append("svg:text")
       .attr("x", 35)
       .attr("y", 6)
@@ -177,32 +168,9 @@ export class Legend {
         return d.key;
       });
 
-    // remove any nodes that dropped out of legendNodes
-    lsvg.exit().remove();
-
     let svgEl = document.getElementById("svglegend");
     if (svgEl) {
       svgEl.style.height = `${cury + 20}px`;
     }
-    /*
-    // position the legend based on it's size
-    let svgEl = document.getElementById("svglegend");
-    if (svgEl) {
-      let bb;
-      // firefox can throw an exception on getBBox on an svg element
-      try {
-        bb = svgEl.getBBox();
-      } catch (e) {
-        bb = {
-          y: 0,
-          height: 200,
-          x: 0,
-          width: 200
-        };
-      }
-      svgEl.style.height = bb.y + bb.height + "px";
-      svgEl.style.width = bb.x + bb.width + "px";
-    }
-    */
   }
 }

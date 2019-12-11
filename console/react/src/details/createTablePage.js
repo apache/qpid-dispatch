@@ -78,7 +78,7 @@ class CreateTablePage extends React.Component {
         this.props.location.state.entity);
 
     if (!this.entity) {
-      this.props.history.push("/dashboard");
+      this.props.history.replace("/dashboard");
     } else {
       this.dataSource = !detailsDataMap[this.entity]
         ? new defaultData(this.props.service, this.props.schema)

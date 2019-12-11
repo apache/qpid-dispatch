@@ -66,7 +66,6 @@ if(CONSOLE_INSTALL)
           ## then rebuild the console
           set(CONSOLE_ARTIFACTS
             ${CONSOLE_BUILD_DIR}/build/index.html
-            ${CONSOLE_BUILD_DIR}/build/app.js
           )
 
           ## Tell cmake how and when to build ${CONSOLE_ARTIFACTS}

@@ -124,13 +124,31 @@ export class BackgroundMap {
     this.geo.selectAll(".land").attr("d", this.geoPath);
   }
 
+  setSvg(svg, width, height) {
+    this.svg = svg;
+    this.geo = svg
+      .append("g")
+      .attr("class", "geo")
+      .style("opacity", this.options.show ? "1" : "0");
+
+    this.geo
+      .append("rect")
+      .attr("class", "ocean")
+      .attr("width", width)
+      .attr("height", height)
+      .attr("fill", "#FFF");
+
+    if (this.options.show) {
+      this.svg.call(this.zoom).on("dblclick.zoom", null);
+    }
+  }
+
   init(_unused, svg, width, height) {
     return new Promise((resolve, reject) => {
       if (this.initialized) {
         resolve();
         return;
       }
-      this.svg = svg;
       this.width = width;
       this.height = height;
       // track last translation and scale event we processed
@@ -170,21 +188,7 @@ export class BackgroundMap {
         .translate([0, 0]) // not linked directly to projection
         .on("zoom", this.zoomed);
 
-      this.geo = svg
-        .append("g")
-        .attr("class", "geo")
-        .style("opacity", this.options.show ? "1" : "0");
-
-      this.geo
-        .append("rect")
-        .attr("class", "ocean")
-        .attr("width", width)
-        .attr("height", height)
-        .attr("fill", "#FFF");
-
-      if (this.options.show) {
-        this.svg.call(this.zoom).on("dblclick.zoom", null);
-      }
+      if (!this.svg) this.setSvg(svg, width, height);
 
       fetch("data/countries.json")
         .then(res => res.json())

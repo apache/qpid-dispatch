@@ -30,7 +30,8 @@ it("renders the TopologyViewer component", async () => {
     });
   });
   const props = {
-    service
+    service,
+    handleAddNotification: () => {}
   };
 
   await login();

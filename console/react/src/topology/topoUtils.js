@@ -68,6 +68,7 @@ export function connectionPopupHTML(d, nodeInfo) {
   }
   // return all of onode's connections that connecto to right
   let getConnsArray = function(onode, key, right) {
+    if (!onode) return [];
     if (right.normals) {
       // if we want connections between a router and a client[s]
       let connIds = new Set();
@@ -106,6 +107,7 @@ export function connectionPopupHTML(d, nodeInfo) {
   // construct HTML to be used in a popup when the mouse is moved over a link.
   // The HTML is sanitized elsewhere before it is displayed
   let linksHTML = function(onode, conns) {
+    if (!onode) return "";
     const max_links = 10;
     const fields = [
       "deliveryCount",
@@ -259,4 +261,111 @@ export function getSizes(id) {
     return { width: brect.width - gap, height: brect.height - gap };
   }
   return { width: window.innerWidth - 200, height: window.innerHeight - 100 };
+}
+
+// The following 2 reconcile functions are needed due to the way
+// d3 associates data with svg elements.
+// If we were to create new nodes and links arrays, even if the
+// new array elements had the same uid, the svg elements would not be
+// associated with the new array elements. This would cause
+// multiple, difficult to diagnose problems.
+
+// combine two arrays into the 1st array without creating a new array
+export function reconcileArrays(existing, newArray) {
+  // remove from existing, any elements that are not in newArray
+  for (let i = existing.length - 1; i >= 0; --i) {
+    const uid = existing[i].uid();
+    if (!newArray.some(n => n.uid() === uid)) {
+      existing.splice(i, 1);
+    }
+  }
+  // add to existing, any elements that are only in newArray
+  newArray.forEach(n => {
+    const uid = n.uid();
+    if (!existing.some(e => e.uid() === uid)) {
+      existing.push(n);
+    }
+  });
+}
+
+// Links are 'special' in that each link contians a reference
+// to the two nodes that it is linking.
+// So we need to fix the new links' source and target
+export function reconcileLinks(existingLinks, newLinks, existingNodes) {
+  reconcileArrays(existingLinks, newLinks);
+  existingLinks.forEach(e => {
+    // in new links, the source and target will be a number
+    // instead of references to the node
+    if (typeof e.source === "number") {
+      e.source = existingNodes.findIndex(nn => nn.uid() === e.suid);
+      e.target = existingNodes.findIndex(nn => nn.uid() === e.tuid);
+    }
+  });
+}
+
+function getNearestRouter(node, nodes, links) {
+  let link = null;
+  while (node && node.nodeType !== "_topo" && link !== undefined) {
+    if (node.nodeType === "_edge") {
+      // we are at an edge, find the link between the edge and a router
+      const uid = node.uid();
+      for (let l = 0; l < links.links.length; ++l) {
+        const lnk = links.links[l];
+        if (lnk.suid === uid && lnk.target.nodeType === "_topo") {
+          link = lnk;
+          node = lnk.target;
+          break;
+        } else if (lnk.tuid === uid && lnk.source.nodeType === "_topo") {
+          link = lnk;
+          node = lnk.source;
+          break;
+        }
+      }
+    } else {
+      // we are at a client (or group)
+      let connected_node = nodes.find(node.routerId, {}, node.routerId);
+      link = links.linkFor(node, connected_node);
+      node = connected_node;
+    }
+    // highlight the link between the target_node and its router
+    if (link) {
+      node.highlighted = true;
+      link.highlighted = true;
+      d3.select(`path[id='hitpath-${link.uid()}']`).classed("highlighted", true);
+    }
+  }
+  return node;
+}
+
+// entry point when highlighting path between selected node and
+// the node the mouse is over
+export function nextHopHighlight(selected_node, d, nodes, links, nodeInfo) {
+  selected_node.highlighted = true;
+  d.highlighted = true;
+
+  // if the selected node isn't a router,
+  // find the router to which it is connected
+  selected_node = getNearestRouter(selected_node, nodes, links);
+
+  // this the hovered node isn't a router
+  // find the router to which it is connected
+  d = getNearestRouter(d, nodes, links);
+
+  // selected_node and d are now routers
+  nextHop(
+    selected_node,
+    d,
+    nodes,
+    links,
+    nodeInfo,
+    selected_node,
+    (link, fnode, tnode) => {
+      link.highlighted = true;
+      d3.select(`path[id='hitpath-${link.uid()}']`).classed("highlighted", true);
+      fnode.highlighted = true;
+      tnode.highlighted = true;
+    }
+  );
+  let hnode = nodes.nodeFor(d.name);
+  hnode.highlighted = true;
 }

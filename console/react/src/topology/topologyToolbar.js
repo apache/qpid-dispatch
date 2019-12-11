@@ -37,8 +37,7 @@ class TopologyToolbar extends React.Component {
               title="Traffic"
               panel={
                 <TrafficComponent
-                  addresses={this.props.legendOptions.traffic.addresses}
-                  addressColors={this.props.legendOptions.traffic.addressColors}
+                  addressColors={this.props.addressColors}
                   handleChangeTrafficAnimation={this.props.handleChangeTrafficAnimation}
                   handleChangeTrafficFlowAddress={
                     this.props.handleChangeTrafficFlowAddress

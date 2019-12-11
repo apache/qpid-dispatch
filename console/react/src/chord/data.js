@@ -18,6 +18,7 @@ under the License.
 */
 
 import { MIN_CHORD_THRESHOLD } from "./matrix.js";
+import { utils } from "../common/amqp/utilities.js";
 
 const SAMPLES = 5; // number of snapshots to use for rate calculations
 
@@ -79,8 +80,12 @@ class ChordData {
   getMatrix() {
     let self = this;
     return new Promise(function(resolve, reject) {
-      // get the router.node and router.link info
-      self.QDRService.management.topology.fetchAllEntities(
+      // get the router.node and router.link info for interior routers
+      const interior = self.QDRService.management.topology
+        .nodeIdList()
+        .filter(n => utils.typeFromId(n) !== "_edge");
+      self.QDRService.management.topology.fetchEntities(
+        interior,
         [
           { entity: "router.node", attrs: ["id", "index"] },
           {

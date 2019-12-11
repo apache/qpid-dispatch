@@ -38,15 +38,39 @@ class ContextMenu extends Component {
       },
       {
         title: "Unselect",
-        action: this.setSelected,
+        action: this.props.setSelected,
         enabled: this.isSelected
       },
       {
         title: "Select",
-        action: this.setSelected,
-        enabled: data => !this.isSelected(data)
+        action: this.props.setSelected,
+        enabled: data => !this.isSelected(data),
+        endGroup: true
       }
     ];
+    // on a router or edge group, allow separate/collapse edges
+    if (
+      this.props.contextEventData.nodeType === "_topo" ||
+      this.props.contextEventData.nodeType === "edge"
+    ) {
+      const additional = [];
+      if (this.props.canExpandAll) {
+        additional.push({
+          title: "Expand all edges",
+          action: this.props.separateAllEdges,
+          enabled: () => true
+        });
+      }
+      if (this.props.canCollapseAll) {
+        additional.push({
+          title: "Collapse all edges",
+          action: this.props.collapseAllEdges,
+          enabled: () => true
+        });
+      }
+      // append expand/collapse items
+      this.contextMenuItems = [...this.contextMenuItems, ...additional];
+    }
   }
 
   setFixed = (item, data) => {
@@ -55,10 +79,6 @@ class ContextMenu extends Component {
 
   isFixed = data => {
     return data.isFixed();
-  };
-
-  setSelected = (item, data) => {
-    this.props.setSelected(item, data);
   };
 
   isSelected = data => {

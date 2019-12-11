@@ -208,7 +208,7 @@ class PageLayout extends React.PureComponent {
         true
       );
 
-      this.redirect = true;
+      //this.redirect = true;
       this.props.history.replace(connectPath);
       this.setState({
         activeItem,

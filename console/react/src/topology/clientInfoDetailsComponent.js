@@ -29,8 +29,7 @@ class DetailsTable extends React.Component {
   }
 
   render() {
-    const { columns } = this.state;
-    let subRows = this.props.subRows || [];
+    const { columns, subRows } = this.props;
     return (
       <Table aria-label="client-info-details-table" cells={columns} rows={subRows}>
         <TableHeader />

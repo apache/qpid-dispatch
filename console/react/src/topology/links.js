@@ -20,19 +20,25 @@ under the License.
 import { utils } from "../common/amqp/utilities.js";
 
 class Link {
-  constructor(source, target, dir, cls, uid) {
+  constructor(source, target, dir, cls, uid, suid, tuid) {
     this.source = source;
     this.target = target;
+    this.suid = suid;
+    this.tuid = tuid;
     this.left = dir === "in" || dir === "both";
     this.right = dir === "out" || dir === "both";
     this.cls = cls;
-    this.uid = uid;
+    this.uuid = uid;
   }
 
   markerId(end) {
     let selhigh = this.highlighted ? "highlighted" : this.selected ? "selected" : "";
     if (selhigh === "" && !this.left && !this.right) selhigh = "unknown";
     return `-${selhigh}-${end === "end" ? this.target.radius() : this.source.radius()}`;
+  }
+
+  uid() {
+    return this.uuid;
   }
 }
 
@@ -53,7 +59,7 @@ export class Links {
     return -1;
   }
 
-  getLink(_source, _target, dir, cls, uid) {
+  getLink(_source, _target, dir, cls, suid, tuid) {
     for (let i = 0; i < this.links.length; i++) {
       let s = this.links[i].source,
         t = this.links[i].target;
@@ -69,14 +75,11 @@ export class Links {
         return -i;
       }
     }
-    //this.logger.debug("creating new link (" + (links.length) + ") between " + nodes[_source].name + " and " + nodes[_target].name);
-    if (
-      this.links.some(function(l) {
-        return l.uid === uid;
-      })
-    )
+    let uid = `${suid}-${tuid}`;
+    if (this.links.some(l => l.uid() === uid)) {
       uid = uid + "." + this.links.length;
-    return this.links.push(new Link(_source, _target, dir, cls, uid)) - 1;
+    }
+    return this.links.push(new Link(_source, _target, dir, cls, uid, suid, tuid)) - 1;
   }
 
   linkFor(source, target) {
@@ -87,7 +90,7 @@ export class Links {
         return this.links[i];
     }
     // the selected node was a client/broker
-    return null;
+    return undefined;
   }
 
   getPosition(name, nodes, source, client, height, localStorage) {
@@ -117,10 +120,11 @@ export class Links {
     return position;
   }
 
-  initialize(nodeInfo, nodes, unknowns, height, localStorage) {
+  initialize(nodeInfo, nodes, separateContainers, unknowns, height, localStorage) {
     this.reset();
-    let connectionsPerContainer = {};
-    let nodeIds = Object.keys(nodeInfo);
+    const connectionsPerContainer = {};
+    const nodeIds = Object.keys(nodeInfo);
+    const nodeNames = new Set(nodeIds.map(n => utils.nameFromId(n)));
     // collect connection info for each router
     for (let source = 0; source < nodeIds.length; source++) {
       let onode = nodeInfo[nodeIds[source]];
@@ -132,7 +136,6 @@ export class Links {
       )
         continue;
 
-      const suid = nodes.get(source).uid();
       for (let c = 0; c < onode.connection.results.length; c++) {
         let connection = utils.flatten(
           onode.connection.attributeNames,
@@ -144,12 +147,17 @@ export class Links {
           connection.container = connection.name.replace("/", "").replace(":", "-");
           //utils.uuidv4();
         }
-        // this is a connection to another interior router
-        if (connection.role === "inter-router") {
+        // this is a connection to another interior/edge router
+        if (
+          connection.role === "inter-router" ||
+          (connection.role === "edge" && separateContainers.has(connection.container)) ||
+          nodeNames.has(connection.container)
+        ) {
+          const suid = nodes.get(source).uid();
           const target = getContainerIndex(connection.container, nodeInfo);
           if (target >= 0) {
             const tuid = nodes.get(target).uid();
-            this.getLink(source, target, connection.dir, "", `${suid}-${tuid}`);
+            this.getLink(source, target, connection.dir, "", suid, tuid);
           }
           continue;
         }
@@ -157,8 +165,7 @@ export class Links {
           connectionsPerContainer[connection.container] = [];
         let linksDir = getLinkDir(connection, onode);
         if (linksDir === "unknown") {
-          continue;
-          //unknowns.push(nodeIds[source]);
+          unknowns.push(nodeIds[source]);
         }
         connectionsPerContainer[connection.container].push({
           source: source,
@@ -241,13 +248,7 @@ export class Links {
         let source = links[l].source;
         const suid = nodes.get(source).uid();
         const tuid = nodes.get(target).uid();
-        this.getLink(
-          links[l].source,
-          target,
-          links[l].linksDir,
-          "small",
-          `${suid}-${tuid}`
-        );
+        this.getLink(links[l].source, target, links[l].linksDir, "small", suid, tuid);
       }
     }
   }
