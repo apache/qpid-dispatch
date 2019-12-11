@@ -376,7 +376,7 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
                 core->modified_deliveries++;
         }
 
-        qd_log(core->log, QD_LOG_DEBUG, delivery->presettled?"Delivery outcome for pre-settled: dlv:%lx link:%"PRIu64" is %s": "Delivery outcome for: dlv:%lx link:%"PRIu64" is %s", (long) delivery,  link->identity, pn_disposition_type_name(outcome));
+        qd_log(core->log, QD_LOG_DEBUG, "Delivery outcome for%s: dlv:%lx link:%"PRIu64" is %s", delivery->presettled?" pre-settled":"", (long) delivery,  link->identity, pn_disposition_type_name(outcome));
 
         uint32_t delay = core->uptime_ticks - delivery->ingress_time;
         if (delay > 10) {
