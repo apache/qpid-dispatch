@@ -1,0 +1,50 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// routing-messages-through-router-network.adoc
+
+[id='configuring-message-routing-{context}']
+= Configuring message routing
+
+Message routing is the default routing mechanism. You can use it to route messages on a per-message basis between clients directly (direct-routed messaging), or to and from broker queues (brokered messaging).
+
+With message routing, you can do the following:
+
+* xref:understanding-message-routing-{context}[Understand message routing concepts]
+* xref:configuring-address-semantics-{context}[Configure address semantics (route messages between clients)]
+* xref:configuring-addresses-prioritized-message-delivery-{context}[Configure addresses for prioritized message delivery]
+* xref:configuring-brokered-messaging-{context}[Configure brokered messaging]
+* xref:address-pattern-matching-{context}[Understand address pattern matching]
+
+// Understanding message routing
+include::understanding-message-routing.adoc[leveloffset=+1]
+
+// Configuring address semantics
+include::../../modules/user-guide/configuring-address-semantics.adoc[leveloffset=+1]
+
+// Configuring addresses for prioritized message delivery
+include::../../modules/user-guide/configuring-addresses-prioritized-message-delivery.adoc[leveloffset=+1]
+
+// Configuring brokered messaging
+include::configuring-brokered-messaging.adoc[leveloffset=+1]
+
+// Address pattern matching
+include::../../modules/user-guide/address-pattern-matching.adoc[leveloffset=+1]

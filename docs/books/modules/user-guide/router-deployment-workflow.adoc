@@ -56,7 +56,7 @@ These properties should be configured the same way on each router. Therefore, yo
 +
 If necessary, configure policies to control which messaging resources clients are able to access on the router network.
 
-** xref:routing[Routing]
+** xref:routing-messages-through-router-network-{context}[Routing messages through the router network]
 +
 {RouterName} automatically routes messages without any configuration: clients can send messages to the router network, and the router automatically routes them to their destinations. However, you can configure the routing to meet your exact requirements. You can configure the routing patterns to be used for certain addresses, create waypoints and autolinks to route messages through broker queues, and create link routes to connect clients to brokers.
 

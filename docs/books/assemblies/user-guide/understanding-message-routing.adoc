@@ -1,0 +1,39 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This assembly is included in the following assemblies:
+//
+// configuring-address-space-message-routing.adoc
+
+[id='understanding-message-routing-{context}']
+= Understanding message routing
+
+With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message’s _address_ and _routing pattern_.
+
+// Message routing flow control
+include::../../modules/user-guide/message-routing-flow-control.adoc[leveloffset=+1]
+
+// Addresses
+include::../../modules/user-guide/addresses-message-routing.adoc[leveloffset=+1]
+
+// Routing patterns
+include::../../modules/user-guide/routing-patterns-message-routing.adoc[leveloffset=+1]
+
+// Message settlement and reliability
+include::../../modules/user-guide/message-settlement-reliability-message-routing.adoc[leveloffset=+1]

@@ -39,7 +39,7 @@ include::assemblies/user-guide/creating-router-network-topology.adoc[leveloffset
 include::assemblies/user-guide/configuring-router.adoc[leveloffset=+1]
 
 // Routing messages through the router network
-include::modules/user-guide/routing.adoc[leveloffset=+1]
+include::assemblies/user-guide/routing-messages-through-router-network.adoc[leveloffset=+1]
 
 [id="monitoring-managing-router-network"]
 == Monitoring and managing the router network
