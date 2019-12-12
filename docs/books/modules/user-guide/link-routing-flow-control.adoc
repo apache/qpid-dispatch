@@ -17,20 +17,11 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// This assembly is included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// routing-messages-through-router-network.adoc
+// understanding-link-routing.adoc
 
-[id='creating-link-routes-{context}']
-= Creating link routes
+[id='link-routing-flow-control-{context}']
+= Link routing flow control
 
-A link route represents a private messaging path between a sender and a receiver in which the router passes the messages between end points. You can use it to connect a client to a service (such as a broker queue).
-
-// Understanding link routing
-include::understanding-link-routing.adoc[leveloffset=+1]
-
-// Creating a link route
-include::../../modules/user-guide/creating-link-route.adoc[leveloffset=+1]
-
-// Link route example
-include::../../modules/user-guide/link-route-example.adoc[leveloffset=+1]
+Unlike message routing, with link routing, the sender and receiver handle flow control directly: the receiver grants link credits, which is the number of messages it is able to receive. The router sends them directly to the sender, and then the sender sends the messages based on the credits that the receiver granted.

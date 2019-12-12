@@ -17,20 +17,15 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// This assembly is included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// routing-messages-through-router-network.adoc
+// understanding-link-routing.adoc
 
-[id='creating-link-routes-{context}']
-= Creating link routes
+[id='link-route-addresses-{context}']
+= Link route addresses
 
-A link route represents a private messaging path between a sender and a receiver in which the router passes the messages between end points. You can use it to connect a client to a service (such as a broker queue).
+A link route address represents a broker queue, topic, or other service. When a client attaches a link route address to a router, the router propagates a link attachment to the broker resource identified by the address.
 
-// Understanding link routing
-include::understanding-link-routing.adoc[leveloffset=+1]
-
-// Creating a link route
-include::../../modules/user-guide/creating-link-route.adoc[leveloffset=+1]
-
-// Link route example
-include::../../modules/user-guide/link-route-example.adoc[leveloffset=+1]
+Using link route addresses, the router network does not participate in
+aggregated message distribution. The router simply passes message
+delivery and settlement between the two end points.
