@@ -19,7 +19,7 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// creating-link-routes.adoc
+// configuring-link-routing.adoc
 
 [id='understanding-link-routing-{context}']
 = Understanding link routing

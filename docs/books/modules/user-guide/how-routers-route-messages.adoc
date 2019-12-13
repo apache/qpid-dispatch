@@ -70,4 +70,4 @@ With a link route, consumers can provide server-side selectors for broker subscr
 
 * xref:configuring-message-routing-{context}[]
 
-* xref:creating-link-routes-{context}[]
+* xref:configuring-link-routing-{context}[]

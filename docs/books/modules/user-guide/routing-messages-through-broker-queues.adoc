@@ -45,9 +45,9 @@ address {
 
 `prefix` | `pattern`:: The address prefix or pattern that matches the broker queue to which you want to send messages. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
-include::configuring-address-semantics.adoc[tags=prefix-matching]
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
 +
-include::configuring-address-semantics.adoc[tags=pattern-matching]
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
 
 `waypoint`:: Set this attribute to `yes` so that the router handles messages sent to this address as a waypoint.
 --

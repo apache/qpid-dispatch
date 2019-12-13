@@ -19,7 +19,7 @@ under the License
 
 // This module is included in the following assemblies:
 //
-// creating-link-routes.adoc
+// configuring-link-routing.adoc
 
 [id='link-route-example-{context}']
 = Link route example

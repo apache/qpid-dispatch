@@ -42,24 +42,12 @@ address {
 }
 ----
 
-`prefix` | `pattern`:: The address or group of addresses to which the address settings should be applied. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
+`prefix` | `pattern`::
+The address or group of addresses to which the address settings should be applied. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
-//tag::prefix-matching[]
-A _prefix_ matches either an exact address or the beginning segment within an address that is delimited by either a `.` or `/` character. For example, the prefix `my_address` would match the address `my_address` as well as `my_address.1` and `my_address/1`. However, it would not match `my_address1`.
-//end::prefix-matching[]
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
 +
-//tag::pattern-matching[]
-A _pattern_ matches an address that corresponds to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
-+
-The `*` and `#` characters are reserved as wildcards. Therefore, you should not use them in the message address.
-+
-For more information about creating address patterns, see xref:address-pattern-matching-{context}[].
-+
-[NOTE]
-====
-You can convert a `prefix` value to a `pattern` by appending `/\#` to it. For example, the prefix `a/b/c` is equivalent to the pattern `a/b/c/#`.
-====
-//end::pattern-matching[]
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
 
 `distribution`:: The message distribution pattern. The default is `balanced`, but you can specify any of the following options:
 +

@@ -19,7 +19,7 @@ under the License
 
 // This module is included in the following assemblies:
 //
-// creating-link-routes.adoc
+// configuring-link-routing.adoc
 
 [id='creating-link-route-{context}']
 = Creating a link route
@@ -72,9 +72,9 @@ linkRoute {
 
 `prefix` | `pattern`:: The address prefix or pattern that matches the broker queue that should be the destination for routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
-include::configuring-address-semantics.adoc[tags=prefix-matching]
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
 +
-include::configuring-address-semantics.adoc[tags=pattern-matching]
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
 
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 +
@@ -100,9 +100,9 @@ linkRoute {
 
 `prefix` | `pattern`:: The address prefix or pattern that matches the broker queue from which you want to receive routed link-attaches. All messages that match this prefix or pattern will be distributed along the link route. You can specify a prefix to match an exact address or beginning segment of an address. Alternatively, you can specify a pattern to match an address using wildcards.
 +
-include::configuring-address-semantics.adoc[tags=prefix-matching]
+include::{FragmentDir}/fragment-prefix-matching-definition.adoc[]
 +
-include::configuring-address-semantics.adoc[tags=pattern-matching]
+include::{FragmentDir}/fragment-pattern-matching-definition.adoc[]
 
 `connection` | `containerID`:: How the router should connect to the broker. You can specify either an outgoing connection (`connection`) or the container ID of the broker (`containerID`).
 +
