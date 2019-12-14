@@ -127,16 +127,17 @@ bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {
+    // Grab the link identity if the link is still active
+    qdr_link_t *link = qdr_delivery_link(delivery);
+    uint64_t link_identity = link ? link->identity : 0;
+
     uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
 
-    qdr_link_t *link = qdr_delivery_link(delivery);
-
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref:    dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) delivery, ref_count - 1,  link ? link->identity : 0, label);
-
+    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref:    dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) delivery, ref_count - 1, link_identity, label);
 
     if (ref_count == 1) {
-        //
+        // The ref_count was 1 and now it is zero. We are deleting the last ref.
         // The delivery deletion must occur inside the core thread.
         // Queue up an action to do the work.
         //
@@ -600,13 +601,14 @@ qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv)
 
 void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *label)
 {
-    uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
-
+    // Grab the link identity if the link is still active
     qdr_link_t *link = qdr_delivery_link(dlv);
+    uint64_t link_identity = link ? link->identity : 0;
 
-    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref_CT:  dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) dlv, ref_count - 1,  link ? link->identity : 0, label);
-
+    uint32_t ref_count = sys_atomic_dec(&dlv->ref_count);
     assert(ref_count > 0);
+
+    qd_log(core->log, QD_LOG_DEBUG, "Delivery decref_CT:  dlv:%lx rc:%"PRIu32" link:%"PRIu64" %s", (long) dlv, ref_count - 1,  link_identity, label);
 
     if (ref_count == 1)
         qdr_delete_delivery_internal_CT(core, dlv);
