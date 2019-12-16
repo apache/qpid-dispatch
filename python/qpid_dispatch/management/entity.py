@@ -81,7 +81,9 @@ class EntityBase(object):
         return self.attributes[name]
 
     def __getattr__(self, name):
-        return self.attributes[name]
+        if name in self.attributes:
+            return self.attributes[name]
+        raise AttributeError
 
     def __contains__(self, name):
         return name in self.attributes
