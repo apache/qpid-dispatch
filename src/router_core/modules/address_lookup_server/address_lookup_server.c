@@ -25,6 +25,8 @@
 #include "inttypes.h"
 
 
+#define CREDIT_WINDOW 32
+
 typedef struct _endpoint_ref {
     DEQ_LINKS(struct _endpoint_ref);
     qdrc_endpoint_t *endpoint;
@@ -295,7 +297,7 @@ static void _on_first_attach(void            *bind_context,
     DEQ_INSERT_TAIL(_server_state.endpoints, epr);
     *link_context = epr;
     qdrc_endpoint_second_attach_CT(_server_state.core, endpoint, remote_source, remote_target);
-    qdrc_endpoint_flow_CT(_server_state.core, endpoint, 1, false);
+    qdrc_endpoint_flow_CT(_server_state.core, endpoint, CREDIT_WINDOW, false);
 
     qd_log(_server_state.core->log, QD_LOG_TRACE,
            "Client attached to address lookup server (container=%s, endpoint=%p)",
