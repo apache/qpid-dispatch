@@ -44,7 +44,7 @@ class AddrTimer(object):
         self.parent = parent
 
     def on_timer_task(self, event):
-            self.parent.check_address()
+        self.parent.check_address()
 
 
 class RouterTest(TestCase):

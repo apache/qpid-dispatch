@@ -255,7 +255,7 @@ class LogFile:
                         curr_conn.peer_open = line
                         curr_conn.peer_type = key_prod_dispatch
                     elif key_prod_aqpidjms in line:
-                            curr_conn.peer_type = key_prod_aqpidjms
+                        curr_conn.peer_type = key_prod_aqpidjms
                     else:
                         for k in [key_prod_aartemis, key_prod_aqpidcpp]:
                             if k in line:
