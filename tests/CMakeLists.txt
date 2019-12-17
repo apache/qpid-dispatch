@@ -153,12 +153,15 @@ endforeach()
 #
 find_program(TOX_EXE "tox")
 if (TOX_EXE)
+  # the "skip_install" feature showed up in version 1.9.0 tox,
+  # which is used by our tox.ini script:
   set(TOX_MIN_VERSION 1.9.0)
-  execute_process(COMMAND ${PYTHON_EXECUTABLE} -c "import tox, sys; print('%s' % tox.__version__); sys.exit(0)"
+  execute_process(COMMAND "${TOX_EXE}" "--version"
                   RESULT_VARIABLE TOX_STATUS
                   OUTPUT_VARIABLE TOX_VERSION)
   if (TOX_STATUS EQUAL 0)
-    string(STRIP ${TOX_VERSION} TOX_VERSION)
+    string(STRIP "${TOX_VERSION}" TOX_VERSION)
+    string(REGEX MATCH "^[0-9][.][0-9][.][0-9]" TOX_VERSION "${TOX_VERSION}")
     if (TOX_VERSION STRLESS TOX_MIN_VERSION)
       message( STATUS "tox version ${TOX_VERSION} < required version ${TOX_MIN_VERSION} - skipping python-checker")
     else (TOX_VERSION STRLESS TOX_MIN_VERSION)
