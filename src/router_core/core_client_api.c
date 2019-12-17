@@ -76,8 +76,7 @@ struct qdrc_client_t {
     qdrc_client_request_list_t  reply_list;  // for expected reply
 
     uint32_t                    next_cid;   // correlation id generation
-    int                         rx_credit_max;
-    int                         rx_credit;
+    uint32_t                    rx_credit_window;  // initial credit grant
     int                         tx_credit;
 
     void                       *user_context;
@@ -146,7 +145,7 @@ static qdrc_endpoint_desc_t receiver_endpoint = {
 qdrc_client_t *qdrc_client_CT(qdr_core_t *core,
                               qdr_connection_t *conn,
                               qdr_terminus_t *target,
-                              int credit_window,
+                              uint32_t credit_window,
                               void *user_context,
                               qdrc_client_on_state_CT_t on_state_cb,
                               qdrc_client_on_flow_CT_t on_flow_cb)
@@ -159,7 +158,7 @@ qdrc_client_t *qdrc_client_CT(qdr_core_t *core,
     client->core = core;
     client->correlations = qd_hash(6, 4, 0);
     client->next_cid = rand();
-    client->rx_credit_max = credit_window;
+    client->rx_credit_window = credit_window;
     client->user_context = user_context;
     client->on_state_cb = on_state_cb;
     client->on_flow_cb = on_flow_cb;
@@ -422,8 +421,7 @@ static void _receiver_second_attach_CT(void *context,
     if (!client->receiver_up) {
         client->receiver_up = true;
         client->reply_to = qdr_field_copy(remote_source->address);
-        client->rx_credit = client->rx_credit_max;
-        qdrc_endpoint_flow_CT(client->core, client->receiver, client->rx_credit, false);
+        qdrc_endpoint_flow_CT(client->core, client->receiver, client->rx_credit_window, false);
         _state_updated_CT(client);
     }
     qdr_terminus_free(remote_source);
@@ -567,20 +565,10 @@ static void _receiver_transfer_CT(void *client_context,
         }
 
         qdrc_endpoint_settle_CT(core, delivery, disposition);
-
-        if (--client->rx_credit < (client->rx_credit_max / 2)) {
-            int prev = client->rx_credit;
-            client->rx_credit += client->rx_credit_max - client->rx_credit;
-
-            qd_log(core->log, QD_LOG_TRACE,
-                   "Client issuing flow on rx link: c=%p old value=%d credit=%d (max=%d)",
-                   client, prev, client->rx_credit, client->rx_credit_max);
-
-            qdrc_endpoint_flow_CT(core,
-                                  client->receiver,
-                                  client->rx_credit,
-                                  false);
-        }
+        qdrc_endpoint_flow_CT(core,
+                              client->receiver,
+                              1,
+                              false);
     }
 }
 

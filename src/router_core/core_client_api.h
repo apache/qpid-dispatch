@@ -121,7 +121,7 @@ typedef void (*qdrc_client_request_done_CT_t)(qdr_core_t    *core,
 qdrc_client_t *qdrc_client_CT(qdr_core_t                *core,
                               qdr_connection_t          *conn,
                               qdr_terminus_t            *target,
-                              int                        credit_window,
+                              uint32_t                   credit_window,
                               void                      *user_context,
                               qdrc_client_on_state_CT_t  on_state_cb,
                               qdrc_client_on_flow_CT_t   on_flow_cb);
