@@ -113,7 +113,7 @@ class RouterTestSslClient(RouterTestSslBase):
         try:
             p = Popen(['openssl', 'version'], stdout=PIPE, universal_newlines=True)
             openssl_out = p.communicate()[0]
-            m = re.search('[0-9]+\.[0-9]+\.[0-9]+', openssl_out)
+            m = re.search(r'[0-9]+\.[0-9]+\.[0-9]+', openssl_out)
             OPENSSL_OUT_VER = m.group(0)
             OPENSSL_VER_1_1_GT = StrictVersion(OPENSSL_OUT_VER) >= StrictVersion('1.1')
             print("OpenSSL Version found = %s" % OPENSSL_OUT_VER)

@@ -55,7 +55,7 @@ def help2txt(help_out):
         if item.group(3):
             result += heading(item.group(3).strip(), 3)
         else:
-            result += "%s\n:   %s\n\n" % (item.group(1), re.sub("\s+", " ", item.group(2)).strip())
+            result += "%s\n:   %s\n\n" % (item.group(1), re.sub(r"\s+", " ", item.group(2)).strip())
     return result
 
 def main(argv):

@@ -119,8 +119,8 @@ class ShortNames():
 
     def sort_customers(self):
         for c in common.dict_iterkeys(self.customer_dict):
-            l = self.customer_dict[c]
-            self.customer_dict[c] = sorted(l, key=lambda lfl: lfl.datetime)
+            x = self.customer_dict[c]
+            self.customer_dict[c] = sorted(x, key=lambda lfl: lfl.datetime)
 
     def customers(self, sname):
         return self.customer_dict[sname]

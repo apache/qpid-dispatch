@@ -1291,23 +1291,22 @@ class DistributionTests ( TestCase ):
     @SkipIfNeeded(DistributionSkipMapper.skip['test_20'], 'Test skipped during development.')
     def test_20_linkroute_mesh_all_local ( self ) :
         name='test_20'
-        """
-                       c           c
-        senders --->   A --------- B
-                        \         /
-                         \       /
-                          \     /
-                           \   /
-                            \ /
-                             D
-                             c
+        #
+        #                c           c
+        # senders --->   A --------- B
+        #                \         /
+        #                 \       /
+        #                  \     /
+        #                   \   /
+        #                    \ /
+        #                     D
+        #                     c
 
-        'c' indicates that I make connections to the route-container
-        listeners at the marked routers.
+        # 'c' indicates that I make connections to the route-container
+        # listeners at the marked routers.
 
-        This test should route all senders' link-attaches
-        to the local containers on router A.
-        """
+        # This test should route all senders' link-attaches
+        # to the local containers on router A.
 
         addr_suffix = "addr_20"
 
@@ -1393,23 +1392,22 @@ class DistributionTests ( TestCase ):
     @SkipIfNeeded(DistributionSkipMapper.skip['test_21'], 'Test skipped during development.')
     def test_21_linkroute_mesh_nonlocal ( self ) :
         name='test_21'
-        """
-                                   c
-        senders --->   A --------- B
-                        \         /
-                         \       /
-                          \     /
-                           \   /
-                            \ /
-                             D
-                             c
+        #
+        #                            c
+        # senders --->   A --------- B
+        #                 \         /
+        #                  \       /
+        #                   \     /
+        #                    \   /
+        #                     \ /
+        #                      D
+        #                      c
 
-        'c' indicates that I make connections to the route-container
-        listeners at the marked routers.
+        # 'c' indicates that I make connections to the route-container
+        # listeners at the marked routers.
 
-        This test should split all senders' link-attaches
-        between the connections on routers B and D.
-        """
+        # This test should split all senders' link-attaches
+        # between the connections on routers B and D.
 
         addr_suffix = "addr_21"
 
@@ -1497,20 +1495,19 @@ class DistributionTests ( TestCase ):
     @SkipIfNeeded(DistributionSkipMapper.skip['test_22'], 'Test skipped during development.')
     def test_22_linkroute_mesh_kill ( self ) :
         name='test_22'
-        """
-                       c           c
-        senders --->   A --------- B
-                        \         /
-                         \       /
-                          \     /
-                           \   /
-                            \ /
-                             D
-                             c
 
-        'c' indicates that I make connections to the route-container
-        listeners at the marked routers.
-        """
+        #               c           c
+        # senders --->   A --------- B
+        #                 \         /
+        #                  \       /
+        #                   \     /
+        #                    \   /
+        #                     \ /
+        #                      D
+        #                      c
+
+        # 'c' indicates that I make connections to the route-container
+        # listeners at the marked routers.
 
         addr_suffix = "addr_22"
 
@@ -2806,7 +2803,7 @@ class MulticastTest ( MessagingHandler ):
     def on_message ( self, event ):
 
         #if self.bailed is True :
-            #return
+        #    return
 
         if event.receiver == self.addr_check_receiver:
             # This is a response to one of my address-readiness checking messages.
