@@ -803,4 +803,4 @@ def run(argv):
         bm.close()
 
 if __name__ == "__main__":
-        sys.exit(main(run))
+    sys.exit(main(run))
