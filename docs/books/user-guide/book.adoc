@@ -41,13 +41,8 @@ include::assemblies/user-guide/configuring-router.adoc[leveloffset=+1]
 // Routing messages through the router network
 include::assemblies/user-guide/routing-messages-through-router-network.adoc[leveloffset=+1]
 
-[id="monitoring-managing-router-network"]
-== Monitoring and managing the router network
-include::modules/user-guide/starting-routers.adoc[leveloffset=+2]
-include::modules/user-guide/logging.adoc[leveloffset=+2]
-include::modules/user-guide/using-console.adoc[leveloffset=+2]
-include::modules/user-guide/monitoring-using-qdstat.adoc[leveloffset=+2]
-include::modules/user-guide/managing-using-qdmanage.adoc[leveloffset=+2]
+// Managing router
+include::assemblies/user-guide/managing-router.adoc[leveloffset=+1]
 
 // Technical Details and Specifications
 include::modules/user-guide/technical-details-specifications.adoc[leveloffset=+1]

@@ -1,0 +1,78 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+// This module is included in the following assemblies:
+//
+// monitoring-using-web-console.adoc
+
+[id='setting-up-access-web-console'-{context}']
+= Setting up access to {ConsoleName}
+
+Before you can access the web console, you must configure a `listener` to accept HTTP connections for the web console and serve the console files.
+
+.Procedure
+
+. On the router from which you want to access the web console, open the `{RouterConfigFile}` configuration file.
+
+. Add a `listener` to serve the console.
++
+--
+This example creates a `listener` that clients can use to access the web console:
+
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: 0.0.0.0
+    port: 8672
+    role: normal
+    http: true
+    httpRootDir: /usr/share/qpid-dispatch/console
+}
+----
+`host`:: The IP address (IPv4 or IPv6) or hostname on which the router will listen.
+
+`port`:: The port number or symbolic service name on which the router will listen.
+
+`role`:: The role of the connection. Specify `normal` to indicate that this connection is used for client traffic.
+
+`http`:: Set this attribute to `true` to specify that this `listener` should accept HTTP connections instead of plain AMQP connections.
+
+`httpRootDir`:: Specify the absolute path to the directory that contains the web console HTML files. The default directory is the stand-alone console installation directory, usually `/usr/share/qpid-dispatch/console`.
+--
+
+. If you want to secure access to the console, secure the `listener`.
++
+--
+For more information, see xref:securing-incoming-client-connections-{context}[]. This example adds basic user name and password authentication using SASL PLAIN:
+
+[options="nowrap",subs="+quotes"]
+----
+listener {
+    host: 0.0.0.0
+    port: 8672
+    role: normal
+    http: true
+    httpRootDir: /usr/share/qpid-dispatch/console
+    authenticatePeer: yes
+    saslMechanisms: PLAIN
+}
+----
+--
+
+. If you want to set up access to the web console from any other router in the router network, repeat this procedure for each router.

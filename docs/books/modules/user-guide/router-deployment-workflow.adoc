@@ -60,7 +60,7 @@ If necessary, configure policies to control which messaging resources clients ar
 +
 {RouterName} automatically routes messages without any configuration: clients can send messages to the router network, and the router automatically routes them to their destinations. However, you can configure the routing to meet your exact requirements. You can configure the routing patterns to be used for certain addresses, create waypoints and autolinks to route messages through broker queues, and create link routes to connect clients to brokers.
 
-** xref:logging[Logging]
+** xref:configuring-logging-{context}[Logging]
 +
 You can set the default logging configuration to ensure that events are logged at the correct level for your environment.
 

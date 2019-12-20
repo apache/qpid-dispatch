@@ -60,3 +60,7 @@ This module provides detailed information about error conditions encountered dur
 
 `POLICY`::
 This module provides information about policies that have been configured for the router.
+
+.Additional resources
+
+* For examples of these logging modules, see xref:troubleshooting-using-logs-{context}[].

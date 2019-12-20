@@ -32,5 +32,5 @@ xref:configuring-router-{context}[Configure non-default settings for the router]
 xref:creating-router-network-topology-{context}[Plan a {RouterName} deployment]::
 {RouterName} is typically deployed in router networks. You can design a router network of any arbitrary topology to interconnect the endpoints in your messaging network.
 
-xref:monitoring-managing-router-network[Monitor and manage {RouterName}]::
+xref:managing-router-{context}[Monitor and manage {RouterName}]::
 You can use the web console and command-line management tools to monitor the status and performance of the routers in your router network.

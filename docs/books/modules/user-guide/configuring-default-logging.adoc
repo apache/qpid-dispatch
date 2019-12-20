@@ -75,3 +75,7 @@ log {
 }
 ----
 --
+
+.Additional resources
+
+* For more information about viewing and using logs, see xref:troubleshooting-{context}[].
