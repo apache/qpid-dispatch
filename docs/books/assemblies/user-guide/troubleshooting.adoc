@@ -24,6 +24,7 @@ under the License
 [id='troubleshooting-{context}']
 = Troubleshooting {RouterName}
 
+You can use the {RouterName} logs to diagnose and troubleshoot error and performance issues with the routers in your router network.
 
 include::../../modules/user-guide/viewing-log-entries.adoc[leveloffset=+1]
 

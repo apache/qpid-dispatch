@@ -19,7 +19,7 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// managing-router.adoc
+// book.adoc
 
 [id='monitoring-using-web-console'-{context}']
 = Monitoring using {ConsoleName}

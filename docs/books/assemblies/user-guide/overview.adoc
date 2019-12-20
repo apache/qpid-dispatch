@@ -21,15 +21,11 @@ under the License
 //
 // book.adoc
 
-[id='overview-{context}']
-= Overview
+[id='overview-router-{context}']
+= Overview of {RouterName}
 
 {RouterName} is a lightweight AMQP message router for building scalable, available, and performant messaging networks.
 
 include::../../modules/user-guide/key-features.adoc[leveloffset=+1]
-
 include::../../modules/user-guide/supported-standards-protocols.adoc[leveloffset=+1]
-
-include::important-terms-concepts.adoc[leveloffset=+1]
-
 include::../../common/document_conventions.adoc[leveloffset=+1]

@@ -21,8 +21,8 @@ under the License
 //
 // getting-started.adoc
 
-[id='installing-router-{context}']
-= Installing {RouterName}
+[id='installing-router-linux-{context}']
+= Installing {RouterName} on {RouterPlatform}
 
 include::{FragmentDir}/fragment-router-install-intro.adoc[]
 

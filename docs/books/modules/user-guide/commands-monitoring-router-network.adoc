@@ -21,8 +21,8 @@ under the License
 //
 // monitoring-using-qdstat.adoc
 
-[id='monitoring-router-network-qdstat-{context}']
-= Monitoring the router network using `qdstat`
+[id='commands-monitoring-router-network-{context}']
+= Commands for monitoring the router network
 
 You can use `qdstat` to view the status of routers on your router network. For example, you can view information about the attached links and configured addresses, available connections, and nodes in the router network.
 

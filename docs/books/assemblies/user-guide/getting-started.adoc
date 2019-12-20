@@ -21,25 +21,22 @@ under the License
 //
 // book.adoc
 
+ifdef::context[:parent-context: {context}]
+
 [id='getting-started-{context}']
 = Getting started
 
-This section shows you how to start the {RouterName} with the default configuration settings, and distribute messages between two clients.
+This section provides a quick introduction to {RouterName} by showing you how to install {RouterName}, start the router with the default configuration settings, and distribute messages between two clients.
 
-.Prerequisites
+:context: getting-started
+include::../../modules/user-guide/installing-router-linux.adoc[leveloffset=+1]
+ifdef::parent-context[:context: {parent-context}]
+ifndef::parent-context[:!context:]
 
-* {RouterName} must be installed.
-+
-For more information, see xref:installing-router-{context}[].
+include::../../modules/user-guide/exploring-default-router-configuration-file.adoc[leveloffset=+1]
 
-// Viewing the default router configuration file
-include::../../modules/user-guide/viewing-default-router-configuration-file.adoc[leveloffset=+1]
-
-// Starting the router
 include::../../modules/user-guide/starting-router-getting-started.adoc[leveloffset=+1]
 
-// Sending some test messages
 include::../../modules/user-guide/sending-test-messages.adoc[leveloffset=+1]
 
-// Next steps
 include::../../modules/user-guide/next-steps.adoc[leveloffset=+1]

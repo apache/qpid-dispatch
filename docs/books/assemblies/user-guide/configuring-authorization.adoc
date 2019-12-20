@@ -19,10 +19,10 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// configuring-router.adoc
+// book.adoc
 
-[id='authorizing-access-messaging-resources-{context}']
-= Authorizing access to messaging resources
+[id='configuring-authorization-{context}']
+= Configuring authorization
 
 You can configure _policies_ to secure messaging resources in your messaging environment. Policies ensure that only authorized users can access messaging endpoints through the router network, and that the resources on those endpoints are used in an authorized way.
 

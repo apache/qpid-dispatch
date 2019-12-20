@@ -19,7 +19,7 @@ under the License
 
 // This assembly is included in the following assemblies:
 //
-// overview.adoc
+// book.adoc
 
 [id='important-terms-concepts-{context}']
 = Important terms and concepts
@@ -27,13 +27,7 @@ under the License
 Before using {RouterName}, you should be familiar with AMQP and understand some key concepts about {RouterName}.
 
 include::../../modules/user-guide/overview-of-amqp.adoc[leveloffset=+1]
-
 include::../../modules/user-guide/what-routers-are.adoc[leveloffset=+1]
-
-// include::modules/how-routers-connect-endpoints.adoc[leveloffset=+1]
-
 include::../../modules/user-guide/how-routers-route-messages.adoc[leveloffset=+1]
-
 include::../../modules/user-guide/router-security.adoc[leveloffset=+1]
-
 include::../../modules/user-guide/router-management.adoc[leveloffset=+1]

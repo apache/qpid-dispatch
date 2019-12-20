@@ -17,14 +17,14 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// This assembly is included in the following assemblies:
+// This module is included in the following assemblies:
 //
-// creating-router-network-topology.adoc
+// installing-router.adoc
 
-[id='router-deployment-workflow-{context}']
-= {RouterName} deployment workflow
+[id='preparing-router-configurations-{context}']
+= Preparing router configurations
 
-This workflow describes the basic workflow for deploying a {RouterName} router. To create a router network, complete this workflow for each router in the network.
+After installing {RouterName}, configure it to define how it should connect to other routers and endpoints, and how it should operate. If you are creating a router network, complete this workflow for each router in the network.
 
 .Prerequisites
 
@@ -52,18 +52,16 @@ Repeat this step for each additional router to which you want to connect this ro
 +
 These properties should be configured the same way on each router. Therefore, you should only configure each one once, and then copy the configuration to each additional router in the router network.
 
-** xref:authorizing-access-messaging-resources-{context}[Authorization]
+** xref:configuring-authorization-{context}[Authorization]
 +
 If necessary, configure policies to control which messaging resources clients are able to access on the router network.
 
-** xref:routing-messages-through-router-network-{context}[Routing messages through the router network]
+** xref:configuring-routing-{context}[Routing]
 +
 {RouterName} automatically routes messages without any configuration: clients can send messages to the router network, and the router automatically routes them to their destinations. However, you can configure the routing to meet your exact requirements. You can configure the routing patterns to be used for certain addresses, create waypoints and autolinks to route messages through broker queues, and create link routes to connect clients to brokers.
 
 ** xref:configuring-logging-{context}[Logging]
 +
 You can set the default logging configuration to ensure that events are logged at the correct level for your environment.
-
-. xref:starting-router-{context}[Start the router].
 
 . Repeat this workflow for each additional router that you want to add to the router network.

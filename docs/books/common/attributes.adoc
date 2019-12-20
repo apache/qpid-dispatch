@@ -20,7 +20,7 @@ under the License
 // Standard document attributes
 
 :data-uri!:
-:doctype: article
+:doctype: book
 :experimental:
 :idprefix:
 :imagesdir: images
@@ -39,6 +39,7 @@ under the License
 :RouterLongName: {ProductName} Dispatch Router
 :ClientAmqpPythonName: {ProductName} Proton Python
 :ConsoleName: {RouterLongName} Console
+:RouterPlatform: Linux
 :FragmentDir: ../../common
 :RouterName: Dispatch Router
 :RouterSchemaDir: ../../build/doc/book

@@ -28,4 +28,4 @@ The `qdstat` tool is a command-line tool for monitoring the status and performan
 
 include::../../modules/user-guide/syntax-using-qdstat.adoc[leveloffset=+1]
 
-include::../../modules/user-guide/monitoring-router-network-qdstat.adoc[leveloffset=+1]
+include::../../modules/user-guide/commands-monitoring-router-network.adoc[leveloffset=+1]

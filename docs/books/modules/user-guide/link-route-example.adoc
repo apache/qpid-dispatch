@@ -22,7 +22,7 @@ under the License
 // configuring-link-routing.adoc
 
 [id='link-route-example-{context}']
-= Link route example
+= Link route example: Connecting clients and brokers on different networks
 
 This example shows how a link route can connect a client to a message broker that is on a different private network.
 

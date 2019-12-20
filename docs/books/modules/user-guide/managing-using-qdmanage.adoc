@@ -17,18 +17,18 @@ specific language governing permissions and limitations
 under the License
 ////
 
-// This module is included in the following assemblies:
+// This assembly is included in the following assemblies:
 //
-// managing-routers.adoc
+// book.adoc
 
-[id='syntax-using-qdmanage-{context}']
-= Syntax for using `qdmanage`
+[id='managing-using-qdmanage-{context}']
+= Managing using `qdmanage`
 
-You can use `qdmanage` to view and modify the configuration of a running router at runtime. Specifically, `qdmanage` enables you to create, read, update, and delete the sections and attributes in the router's configuration file without having to restart the router.
+The `qdmanage` tool is a command-line tool for viewing and modifying the configuration of a running router at runtime.
 
 [NOTE]
 ====
-The `qdmanage` tool implements the AMQP management specification, which means that you can use it with any standard AMQP-managed endpoint, not just with {RouterName}.
+If you make a change to a router using `qdmanage`, the change takes effect immediately, but is lost if the router is stopped. If you want to make a permanent change to a router's configuration, you must edit the router's `{RouterConfigFile}` configuration file.
 ====
 
 You can use `qdmanage` with the following syntax:
