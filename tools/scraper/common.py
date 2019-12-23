@@ -169,3 +169,30 @@ html_escape_table = {
 
 def html_escape(text):
     return "".join(html_escape_table.get(c,c) for c in text)
+
+def strings_of_proton_log(text):
+    '''
+    Given a transfer log text string like:
+      "\x00SpE\x00Ss\xd0\x00\x00\x002\x00\x00\x00\x06@@@@\xa1$amqp:/_edge/EB1/temp.RkCWe_Is4jc3bcN\xa1\x0232\x00St\xd1\x00\x00\x00\x8c\x00\x00\x00\x0c\xa1\x04name\xa1\x04self\xa1\x04type\xa1\x13org.amqp.management\xa1\x09operation\xa1\x05QUERY\xa1\x0aentityType\xa1'org.apache.qpid.dispatch.router.address\xa1\x06offsetU\x00\xa1\x05count\x81\x00\x00\x00\x00\x00\x00\x01\xf4\x00Sw\xd1\x00\x00\x00Q\x00\x00\x00\x02\xa1\x0eattributeNames\xd0\x00\x00\x008\x00\x00\x00\x04\xa1\x04name\xa1\x0fsubscriberCount\xa1\x0bremoteCount\xa1\x0econtainerCount"
+    return the strings thereof:
+      "SpE Ss @@@@ $amqp:/_edge/EB1/temp.RkCWe_Is4jc3bcN name self type org.amqp.management operation QUERY entityType org.apache.qpid.dispatch.router.address offsetU count Sw attributeNames name subscriberCount remoteCount containerCount"
+    The intended use for this is to help decode management and router frames in the transfer nickname dump.
+    :param text:
+    :return: strings embedded in text
+    '''
+    r = "" # return result
+    sstate = 0 # when a backslash is seen, skip this many more input chars
+    skipping = False
+    for elem in text:
+        if sstate > 0:
+            sstate -= 1
+        else:
+            if elem == '\\':
+                if not skipping:
+                    r += ' '
+                skipping = True
+                sstate = 3
+            else:
+                skipping = False
+                r += elem
+    return r

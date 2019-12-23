@@ -99,7 +99,7 @@ class ShortNames():
         '''
         return common.html_escape(self.longnames[idx]) if html_escape else self.longnames[idx]
 
-    def htmlDump(self, with_link=False):
+    def htmlDump(self, with_link=False, log_strings=False):
         '''
         Print the name table as an unnumbered list to stdout
         long names are common.html_escape'd
@@ -114,7 +114,10 @@ class ShortNames():
                 dump_anchor = "<a name=\"%s_dump\"></a>" % (name)
                 if with_link:
                     name = "<a href=\"#%s\">%s</a>" % (name, name)
-                print ("<li> " + dump_anchor + name + " - " + common.html_escape(self.longnames[i]) + "</li>")
+                line = self.longnames[i]
+                if log_strings:
+                    line = common.strings_of_proton_log(line)
+                print ("<li> " + dump_anchor + name + " - " + common.html_escape(line) + "</li>")
             print ("</ul>")
 
     def sort_customers(self):
