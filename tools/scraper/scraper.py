@@ -763,7 +763,7 @@ def main_except(argv):
     print("<hr>")
 
     print("<a name=\"c_msgdump\"></a>")
-    comn.shorteners.short_data_names.htmlDump(True)
+    comn.shorteners.short_data_names.htmlDump(with_link=True, log_strings=True)
     print("<hr>")
 
     # link state info
