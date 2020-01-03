@@ -22,20 +22,47 @@
 from collections import defaultdict
 import common
 
+class ShortNameSorter():
+    '''
+    Class to hold registered name and TOD in a list for sort purposes:
+      the lname was observed at this datetime.
+    '''
+    def __init__(self, lname, datetime):
+        self.lname = lname
+        self.datetime = datetime
+
 class ShortNames():
     '''
     Name shortener.
     The short name for display is "name_" + index(longName)
-    Embellish the display name with an html popup
+    Conditionally Embellish the display name with an html popup
     Link and endpoint names, and data are tracked separately
     Names longer than threshold are shortened
     Each class has a prefix used when the table is dumped as HTML
+    Link names and Transfer data have a 'customer' of a ParsedLogLine.
+    * The customers share the short and long name
+    * The dict index is the object name and the value is a list of log lines using that name
+    * Sorting the customers puts their usage of the name in time order
     '''
     def __init__(self, prefixText, _threshold=25):
         self.longnames = []
         self.prefix = prefixText
         self.threshold = _threshold
         self.customer_dict = defaultdict(list)
+        self.sorter = []
+
+    def register(self, lname, pll):
+        '''
+        Register a long name and the TimeOfDay it is observed
+        Memorize all names, translated or not
+        Strip leading/trailing double quotes
+        :param lname: the name
+        :param pll: ParsedLogLine where name was observed
+        :return: none
+        '''
+        if lname.startswith("\"") and lname.endswith("\""):
+            lname = lname[1:-1]
+        self.sorter.append(ShortNameSorter(lname, pll.datetime))
 
     def translate(self, lname, show_popup=False, customer=None):
         '''
@@ -43,6 +70,8 @@ class ShortNames():
         Memorize all names, translated or not
         Strip leading/trailing double quotes
         :param lname: the name
+        :param show_popup: if true then embellish returned name with long name popup
+        :param customer: optional ParsedLogLine for customer_dict
         :return: If shortened HTML string of shortened name with popup containing long name else
         not-so-long name.
         '''
@@ -128,8 +157,21 @@ class ShortNames():
     def customers(self, sname):
         return self.customer_dict[sname]
 
-    def sorted_indexes(self):
-        return [self.longnames.index(sln) for sln in sorted(self.longnames)]
+    def sort_main(self):
+        '''
+        Create a list of longnames sorted in datetime order.
+        Then push the names into the class longnames list.
+
+        Called after registering all the names and recording their times but before
+        translating the names and using the translated results.
+        :return:
+        '''
+        temp = sorted(self.sorter, key=lambda sns: sns.datetime)
+        for sns in temp:
+            if sns.lname not in self.longnames:
+                self.longnames.append(sns.lname)
+        self.sorter = []
+
 
 class Shorteners():
     def __init__(self):

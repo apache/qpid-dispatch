@@ -138,10 +138,6 @@ def main_except(argv):
         rtrs = parser.parse_log_file(arg_log_file, log_i, comn)
         comn.routers.append(rtrs)
 
-        # marshall facts about the run
-        for rtr in rtrs:
-            rtr.discover_connection_facts(comn)
-
     # Create lists of various things sorted by time
     tree = []  # log line
     ls_tree = []  # link state lines
@@ -154,6 +150,17 @@ def main_except(argv):
     tree = sorted(tree, key=lambda lfl: lfl.datetime)
     ls_tree = sorted(ls_tree, key=lambda lfl: lfl.datetime)
     rr_tree = sorted(rr_tree, key=lambda lfl: lfl.datetime)
+
+    # post_extract the shortened names
+    comn.shorteners.short_link_names.sort_main()
+    comn.shorteners.short_data_names.sort_main()
+    for plf in tree:
+        plf.post_extract_names()
+
+    # marshall connection facts
+    for rtr_list in comn.routers:
+        for rtr in rtr_list:
+            rtr.discover_connection_facts(comn)
 
     # Back-propagate a router name/version/mode to each list's router0.
     # Complain if container name or version changes between instances.

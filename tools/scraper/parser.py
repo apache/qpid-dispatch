@@ -436,9 +436,9 @@ class ParsedLogLine(object):
             res.handle = resdict["handle"]
             res.role = "receiver" if resdict["role"] == "true" else "sender"
             res.is_receiver = res.role == "receiver"
+            # translated names handled later
             name = self.resdict_value(resdict, "name", "None")
-            res.link_short_name_popup = self.shorteners.short_link_names.translate(name, True, customer=self)
-            res.link_short_name = self.shorteners.short_link_names.translate(name, False)
+            self.shorteners.short_link_names.register(name, self)
             tmpsrc = self.resdict_value(resdict, "source", None)
             tmptgt = self.resdict_value(resdict, "target", None)
             res.snd_settle_mode = self.sender_settle_mode_of(
@@ -470,9 +470,7 @@ class ParsedLogLine(object):
             res.snd_settle_mode = extract_name(tmpssm)
             res.rcv_settle_mode = extract_name(tmprsm)
             """
-            res.web_show_str = ("<strong>%s</strong> %s %s %s (source: %s, target: %s, class: %s)" %
-                                (res.name, colorize_bg(res.channel_handle), res.role, res.link_short_name_popup,
-                                 res.source, res.target, res.link_class))
+            # show_str handled in post_extract
 
         elif perf == 0x13:
             # Performative: flow [channel,handle]
@@ -500,15 +498,8 @@ class ParsedLogLine(object):
             res.transfer_more = resdict.get("more", "") == "true"
             res.transfer_resume = resdict.get("resume", "") == "true"
             res.transfer_aborted = resdict.get("aborted", "") == "true"
-            self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
-            showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
-            res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s - %s bytes" % (
-                res.name, colorize_bg(res.channel_handle), res.delivery_id,
-                self.highlighted("settled", res.transfer_settled, common.color_of("presettled")),
-                self.highlighted("more", res.transfer_more, common.color_of("more")),
-                self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
-                self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
-                showdat, res.transfer_size)
+            # translated names handled in post_extract
+            self.shorteners.short_data_names.register(res.transfer_bare, self)
 
         elif perf == 0x15:
             # Performative: disposition [channel] (role first-last)
@@ -716,6 +707,30 @@ class ParsedLogLine(object):
             res.web_show_str += (" <span style=\"background-color:%s\">error</span> "
                                  "%s %s" % (common.color_of("errors"), condi, descr))
 
+    def post_extract_names(self):
+        perf = self.data.described_type.dtype_number
+        res = self.data
+        resdict = self.data.described_type.dict
+        if perf == 0x12:
+            # Performative:  attach [channel,handle] role name (source: src, target: tgt)
+            name = self.resdict_value(resdict, "name", "None")
+            res.link_short_name_popup = self.shorteners.short_link_names.translate(name, True, customer=self)
+            res.link_short_name = self.shorteners.short_link_names.translate(name, False)
+            res.web_show_str = ("<strong>%s</strong> %s %s %s (source: %s, target: %s, class: %s)" %
+                                (res.name, colorize_bg(res.channel_handle), res.role, res.link_short_name_popup,
+                                 res.source, res.target, res.link_class))
+        elif perf == 0x14:
+            # Performative: transfer [channel,handle] (id)
+            self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
+            showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
+            res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s - %s bytes" % (
+                res.name, colorize_bg(res.channel_handle), res.delivery_id,
+                self.highlighted("settled", res.transfer_settled, common.color_of("presettled")),
+                self.highlighted("more", res.transfer_more, common.color_of("more")),
+                self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
+                self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
+                showdat, res.transfer_size)
+
     def adverbl_link_to(self):
         """
         :return: html link to the main adverbl data display for this line
@@ -843,6 +858,7 @@ class ParsedLogLine(object):
         ste = self.line.find(']')
         if ste < 0:
             print("Failed to parse line ", _lineno, " : ", _line)
+            traceback.print_exc()
             raise ValueError("'%s' not found in line %s" % ("]", self.line))
         self.data.conn_num = self.line[:ste]
         if self.data.conn_num.startswith("C"):
@@ -968,8 +984,10 @@ def parse_log_file(fn, log_index, comn):
                 except Exception as e:
                     # t, v, tb = sys.exc_info()
                     if hasattr(e, 'message'):
+                        traceback.print_exc()
                         sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e.message))
                     else:
+                        traceback.print_exc()
                         sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e))
                 if pl is not None:
                     if pl.data.is_router_ls:
@@ -997,8 +1015,10 @@ def parse_log_file(fn, log_index, comn):
                 except Exception as e:
                     # t, v, tb = sys.exc_info()
                     if hasattr(e, 'message'):
+                        traceback.print_exc()
                         sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e.message))
                     else:
+                        traceback.print_exc()
                         sys.stderr.write("Failed to parse file '%s', line %d : %s. Analysis continuing...\n" % (fn, lineno, e))
                     # raise t, v, tb
             else:
@@ -1042,6 +1062,7 @@ if __name__ == "__main__":
     except:
         traceback.print_exc(file=sys.stdout)
         pass
+    comn.shorteners.short_data_names.sort_customers()
 
     print("Read two-instance file test")
     comn2 = common.Common()
