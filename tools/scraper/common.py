@@ -196,7 +196,3 @@ def strings_of_proton_log(text):
                 skipping = False
                 r += elem
     return r
-
-def eprint(*args, **kwargs):
-    print(*args, file=sys.stderr, **kwargs)
-    sys.stderr.flush()
