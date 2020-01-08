@@ -116,7 +116,7 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
                                        bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given);
 
 /* invoked when incoming message data arrives - schedule core thread */
-qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery);
+qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery, bool settled);
 
 
 //
