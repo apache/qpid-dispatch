@@ -1171,3 +1171,29 @@ def get_link_info(name, address):
         if item.get('name') == name:
             return item
     return None
+
+def has_mobile_dest_in_address_table(address, dest):
+    qdm = QdManager(address=address)
+    rc = qdm.query('org.apache.qpid.dispatch.router.address')
+    has_dest = False
+    for item in rc:
+        if dest in item.get("name"):
+            has_dest = True
+            break
+    return has_dest
+
+
+def get_inter_router_links(address):
+    """
+    Return a list of all links with type="inter-router
+    :param address:
+    """
+    inter_router_links = []
+    qdm = QdManager(address=address)
+    rc = qdm.query('org.apache.qpid.dispatch.router.link')
+    for item in rc:
+        if item.get("linkType") == "inter-router":
+            inter_router_links.append(item)
+
+    return inter_router_links
+

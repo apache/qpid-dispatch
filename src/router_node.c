@@ -376,7 +376,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     //
 
     if (delivery) {
-        qdr_deliver_continue(router->router_core, delivery);
+        qdr_deliver_continue(router->router_core, delivery, pn_delivery_settled(pnd));
         return next_delivery;
     }
 
@@ -1729,9 +1729,9 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         return;
 
     //
-    // If the disposition has changed, update the proton delivery.
+    // If the disposition has changed and the proton delivery has not already been settled, update the proton delivery.
     //
-    if (disp != pn_delivery_remote_state(pnd) && !qdr_delivery_presettled(dlv)) {
+    if (disp != pn_delivery_remote_state(pnd) && !pn_delivery_settled(pnd)) {
         qd_message_t *msg = qdr_delivery_message(dlv);
 
         if (disp == PN_MODIFIED)
