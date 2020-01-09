@@ -35,5 +35,4 @@ The details of distributed transactions (XA) within AMQP are not provided in the
 
 .Additional resources
 
-* link:http://www.amqp.org/resources/download[OASIS AMQP 1.0 Specification].
-* For more information about how {RouterName} applies AMQP, see xref:amqp-mapping-{context}[].
+include::{FragmentDir}/fragment-supported-standards-additional-resources.adoc[]
