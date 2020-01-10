@@ -48,10 +48,10 @@ matrix:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=Debug
   - os: linux
     env:
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.29.0 BUILD_TYPE=Coverage
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.30.0 BUILD_TYPE=Coverage
   - os: linux
     env:
-    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.29.0 BUILD_TYPE=RelWithDebInfo
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.30.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
   - os: osx
     osx_image: xcode10.1
