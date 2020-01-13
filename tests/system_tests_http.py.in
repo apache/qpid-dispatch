@@ -250,8 +250,9 @@ class RouterTestHttp(TestCase):
         self.assert_get("https://localhost:%s" % r.ports[0])
         # requireSsl=false Allows simple-ssl HTTP
 
-        # Commenting out the following assert until DISPATCH-1513 is fixed.
-        #self.assert_get("http://localhost:%s" % r.ports[0])
+        # The following test will be commented out if you are runnung a version lower than
+        # libwebsockets 3.2.0
+        ${TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER}self.assert_get("http://localhost:%s" % r.ports[0])
 
         self.assert_get("https://localhost:%s" % r.ports[1])
         # requireSsl=True does not allow simple-ssl HTTP
