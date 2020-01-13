@@ -50,7 +50,7 @@ struct qdr_delivery_t {
     pn_data_t              *extension_state;     ///< delivery-state in disposition performative
     qdr_error_t            *error;
     bool                    settled;
-    bool                    presettled;
+    bool                    presettled; /// Proton does not have a notion of pre-settled. This flag is introduced in Dispatch and should exclusively be used only to update management counters like presettled delivery counts on links etc. This flag DOES NOT represent the remote settlement state of the delivery.
     qdr_delivery_where_t    where;
     uint8_t                 tag[QDR_DELIVERY_TAG_MAX];
     int                     tag_length;

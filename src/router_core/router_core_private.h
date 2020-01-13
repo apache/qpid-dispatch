@@ -149,6 +149,7 @@ struct qdr_action_t {
             qdr_delivery_t *delivery;
             uint64_t        disposition;
             bool            settled;
+            bool            presettled;
             qdr_error_t    *error;
         } delivery;
 

@@ -203,19 +203,13 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
 
 qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core,qdr_delivery_t *in_dlv, bool settled)
 {
-    //
-    // If the delivery is already pre-settled, don't do anything with the pre-settled flag.
-    //
-    // If the in_delivery was not pre-settled, you can go to pre-settled.
-    if (! in_dlv->presettled && settled) {
-        in_dlv->presettled = settled;
-    }
 
     qdr_action_t   *action = qdr_action(qdr_deliver_continue_CT, "deliver_continue");
     action->args.connection.delivery = in_dlv;
 
     qd_message_t *msg = qdr_delivery_message(in_dlv);
     action->args.connection.more = !qd_message_receive_complete(msg);
+    action->args.delivery.presettled = settled;
 
     // This incref is for the action reference
     qdr_delivery_incref(in_dlv, "qdr_deliver_continue - add to action list");
@@ -1059,6 +1053,16 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
 
     qdr_delivery_t *in_dlv  = action->args.connection.delivery;
     bool more = action->args.connection.more;
+    bool presettled = action->args.delivery.presettled;
+
+    //
+    // If the delivery is already pre-settled, don't do anything with the pre-settled flag.
+    //
+    // If the in_delivery was not pre-settled, you can go to pre-settled.
+    if (! in_dlv->presettled && presettled) {
+        in_dlv->presettled = presettled;
+    }
+
     qdr_link_t *link = qdr_delivery_link(in_dlv);
 
     //
