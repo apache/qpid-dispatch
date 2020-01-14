@@ -388,12 +388,14 @@ class Qdrouterd(Process):
             self.defaults()
             return "".join(["%s {\n%s}\n"%(n, props(p, 1)) for n, p in self])
 
-    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True, perform_teardown=True, cl_args=[]):
+    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True,
+                 perform_teardown=True, cl_args=None, expect=Process.RUNNING):
         """
         @param name: name used for for output files, default to id from config.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
         """
+        cl_args = cl_args or []
         self.config = copy(config)
         self.perform_teardown = perform_teardown
         if not name: name = self.config.router_id
@@ -413,7 +415,7 @@ class Qdrouterd(Process):
             args += ['-I', os.path.join(env_home, 'python')]
 
         args = os.environ.get('QPID_DISPATCH_RUNNER', '').split() + args
-        super(Qdrouterd, self).__init__(args, name=name, expect=Process.RUNNING)
+        super(Qdrouterd, self).__init__(args, name=name, expect=expect)
         self._management = None
         self._wait_ready = False
         if wait:
@@ -428,8 +430,10 @@ class Qdrouterd(Process):
 
     def teardown(self):
         if self._management:
-            try: self._management.close()
+            try:
+                self._management.close()
             except: pass
+            self._management = None
 
         if not self.perform_teardown:
             return
@@ -631,7 +635,6 @@ class Tester(object):
         if errors:
             raise RuntimeError("Errors during teardown: \n\n%s" % "\n\n".join([str(e) for e in errors]))
 
-
     def cleanup(self, x):
         """Record object x for clean-up during tear-down.
         x should have on of the methods teardown, tearDown, stop or close"""
@@ -829,6 +832,7 @@ class AsyncTestReceiver(MessagingHandler):
             raise Exception("Timed out waiting for receiver start")
 
     def _main(self):
+        self._container.timeout = 5.0
         self._container.start()
         while self._container.process():
             if self._stop_thread:
@@ -870,6 +874,13 @@ class AsyncTestReceiver(MessagingHandler):
     def on_message(self, event):
         self.queue.put(event.message)
 
+    def on_disconnected(self, event):
+        # if remote terminates the connection kill the thread else it will spin
+        # on the cpu
+        if self._conn:
+            self._conn.close()
+            self._conn = None
+
 
 class AsyncTestSender(MessagingHandler):
     """
@@ -906,6 +917,7 @@ class AsyncTestSender(MessagingHandler):
         self._thread.start()
 
     def _main(self):
+        self._container.timeout = 5.0
         self._container.start()
         while self._container.process():
             self._check_if_done()
@@ -965,8 +977,17 @@ class AsyncTestSender(MessagingHandler):
 
     def on_link_error(self, event):
         self.error = "link error:%s" % str(event.link.remote_condition)
-        self._conn.close()
-        self._conn = None
+        if self._conn:
+            self._conn.close()
+            self._conn = None
+
+    def on_disconnected(self, event):
+        # if remote terminates the connection kill the thread else it will spin
+        # on the cpu
+        self.error = "connection to remote dropped"
+        if self._conn:
+            self._conn.close()
+            self._conn = None
 
 
 class QdManager(object):
