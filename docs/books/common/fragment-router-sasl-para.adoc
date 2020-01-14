@@ -17,4 +17,4 @@ specific language governing permissions and limitations
 under the License
 ////
 
-To see a list of Cyrus SASL plugins in a `dnf`-based Linux system, use the `dnf search cyrus-sasl` command. To install a Cyrus SASL plugin, use the `dnf install _PLUGIN_` command.
+To see a list of Cyrus SASL plugins in a `dnf`-based Linux system, use the `dnf search cyrus-sasl` command. To install a Cyrus SASL plugin, use the `dnf install _<plugin>_` command.
