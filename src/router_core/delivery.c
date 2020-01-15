@@ -126,7 +126,7 @@ bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
 
 void qdr_delivery_set_presettled(qdr_delivery_t *delivery)
 {
-    if (! delivery->presettled)
+    if (delivery)
         delivery->presettled = true;
 }
 
