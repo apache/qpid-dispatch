@@ -124,6 +124,11 @@ bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery)
     return qd_message_aborted(delivery->msg);
 }
 
+void qdr_delivery_set_presettled(qdr_delivery_t *delivery)
+{
+    if (delivery)
+        delivery->presettled = true;
+}
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {

@@ -110,6 +110,13 @@ void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv
 /* release dlv and possibly schedule its deletion on the core thread */
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label);
 
+/** Set the presettled flag on the delivery to true if it is not already true.
+ * The presettled flag can only go from false to true and not vice versa.
+ * This function should only be called when the delivery has been discarded and receive_complete flag is true in which case there
+ * will be no thread contention.
+**/
+void qdr_delivery_set_presettled(qdr_delivery_t *delivery);
+
 /* handles delivery disposition and settlement changes from the remote end of
  * the link, and schedules Core thread */
 void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
