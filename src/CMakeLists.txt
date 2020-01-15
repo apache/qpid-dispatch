@@ -126,8 +126,7 @@ set(qpid_dispatch_LIBRARIES
 
 # USE_LIBWEBSOCKETS is true only if LIBWEBSOCKETS_FOUND
 if(USE_LIBWEBSOCKETS)
-  configure_file(${CMAKE_CURRENT_SOURCE_DIR}/http-libwebsockets.c.in ${CMAKE_CURRENT_BINARY_DIR}/http-libwebsockets.c)
-  list(APPEND qpid_dispatch_SOURCES ${CMAKE_CURRENT_BINARY_DIR}/http-libwebsockets.c)
+  list(APPEND qpid_dispatch_SOURCES http-libwebsockets.c)
   list(APPEND qpid_dispatch_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
   list(APPEND qpid_dispatch_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
 else(USE_LIBWEBSOCKETS)
