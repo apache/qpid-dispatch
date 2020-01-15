@@ -251,6 +251,14 @@ class AddressCheckerTimeout ( object ):
     def on_timer_task(self, event):
         self.parent.address_check_timeout()
 
+
+class CounterCheckerTimeout ( object ):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.count_check_timeout()
+
 class LargePresettledLinkCounterTest(MessagingHandler):
     def __init__(self, sender_addr, receiver_addr):
         super(LargePresettledLinkCounterTest, self).__init__()
@@ -348,6 +356,110 @@ class LargePresettledLinkCounterTest(MessagingHandler):
         Container(self).run()
 
 
+class LargePresettledReleasedLinkCounterTest(MessagingHandler):
+    def __init__(self, sender_addr, receiver_addr):
+        super(LargePresettledReleasedLinkCounterTest, self).__init__(prefetch=0)
+        self.sender_addr = sender_addr
+        self.receiver_addr = receiver_addr
+        self.dest = "LargePresettledReleasedLinkCounterTest"
+        self.receiver_dropoff_count = 50
+        self.num_messages = 200
+        self.num_attempts = 0
+        self.n_sent= 0
+        self.done = False
+        self.n_received = 0
+        self.count_check_timer = None
+        self.success = False
+        self.links = None
+        self.receiver_conn_closed = False
+
+    def check_if_done(self):
+        # Step 6:
+        # Check the counts on the inter-router link of
+        # Router B (where the receiver is attached). There
+        # should be no released or modified messages.
+        self.links = get_inter_router_links(self.receiver_addr)
+        for link in self.links:
+            # We don't know how many deliveries got from one side of the
+            # inter-router link to the other but there should at least be as
+            # many as was sent to the receiver
+            if link.get("linkDir") == "in" \
+                    and link.get("presettledCount") > self.receiver_dropoff_count \
+                    and link.get("deliveryCount") > self.receiver_dropoff_count \
+                    and link.get("releasedCount") == 0\
+                    and link.get("modifiedCount") == 0:
+                self.success = True
+                break
+        self.sender_conn.close()
+        self.timer.cancel()
+
+    def count_check_timeout(self):
+        self.check_if_done()
+
+    def address_check_timeout(self):
+        if has_mobile_dest_in_address_table(self.sender_addr, self.dest):
+            # Step 3: The address has propagated to Router A. Now attach a sender
+            # to router A.
+            self.sender_conn = self.container.connect(self.sender_addr)
+            self.sender = self.container.create_sender(self.sender_conn,
+                                                       self.dest,
+                                                       name='SenderA')
+        else:
+            if self.num_attempts < 2:
+                self.address_check_timer = self.reactor.schedule(2, AddressCheckerTimeout(self))
+                self.num_attempts += 1
+
+    def timeout(self):
+        self.error = "Timeout Expired: self.n_sent=%d, self.self.n_received=%d  " % (self.n_sent, self.n_received)
+        self.sender_conn.close()
+        if not self.receiver_conn_closed:
+            self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.container = event.container
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        # Step 1: Create a receiver with name ReceiverA to address LargePresettledReleasedLinkCounterTest
+        # This receiver is attached to router B. Later a sender will be
+        # created which will be connected to Router A. The sender will send
+        # on the same address that the receiver is receiving on.
+        self.receiver_conn = event.container.connect(self.receiver_addr)
+        self.receiver = event.container.create_receiver(self.receiver_conn,
+                                                        self.dest,
+                                                        name='ReceiverA')
+        self.receiver.flow(self.receiver_dropoff_count)
+
+    def on_link_opened(self, event):
+        self.reactor = event.reactor
+        if event.receiver:
+            # Step 2: The receiver link has been opened.
+            # Give 2 seconds for the address to propagate to the other router (Router A)
+            self.address_check_timer = event.reactor.schedule(2, AddressCheckerTimeout(self))
+            self.num_attempts += 1
+
+    def on_sendable(self, event):
+        # Step 4: Send self.num_messages multi-frame large pre-settled messages.
+        # These messages will travel over inter-router link to Router B.
+        while self.n_sent < self.num_messages:
+            msg = Message(body=LARGE_PAYLOAD)
+            dlv = self.sender.send(msg)
+            # We are sending a pre-settled large multi frame message.
+            dlv.settle()
+            self.n_sent += 1
+
+    def on_message(self, event):
+        if self.receiver == event.receiver and not self.done:
+            self.n_received += 1
+            # Step 5: The receiver receives only 50 messages out of the 200
+            # messages and drops out.
+            if self.n_received == self.receiver_dropoff_count:
+                self.done = True
+                self.receiver_conn.close()
+                self.receiver_conn_closed = True
+                self.count_check_timer = event.reactor.schedule(3, CounterCheckerTimeout(self))
+
+    def run(self):
+        Container(self).run()
+
 
 class TwoRouterLargeMessagePresettledCountTest(TestCase):
     @classmethod
@@ -386,6 +498,47 @@ class TwoRouterLargeMessagePresettledCountTest(TestCase):
         # This test will fail if DISPATCH-1540 is not fixed since the
         # pre-settled count will show zero
         test = LargePresettledLinkCounterTest(sender_address, receiver_address)
+        test.run()
+        self.assertTrue(test.success)
+
+
+class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(TwoRouterLargeMessagePresettledReleasedCountTest, cls).setUpClass()
+
+        listen_port_1 = cls.tester.get_port()
+        listen_port_2 = cls.tester.get_port()
+        listen_port_inter_router = cls.tester.get_port()
+
+        config_1 = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'A'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+            ('listener', {'port': listen_port_1, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
+            ('listener', {'role': 'inter-router', 'port': listen_port_inter_router, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
+           ])
+
+        config_2 = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'B'}),
+            ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
+            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router,
+                           'verifyHostname': 'no'}),
+            ])
+
+        cls.routers = []
+        cls.routers.append(cls.tester.qdrouterd("A", config_1, wait=True))
+        cls.routers.append(cls.tester.qdrouterd("B", config_2, wait=True))
+        cls.routers[1].wait_router_connected('A')
+
+    def test_verify_inter_router_presettled_released_count_DISPATCH_1541(self):
+        # This test sends presettled large messages across routers. A sender is on
+        # router A and a receiver on B. The sender sends 200 messages, the receiver
+        # receives 50 messages and goes away by closing its connection. There should be no released or
+        # modified messages on the incoming inter-router link on Router B
+        # This test will fail without the patch to DISPATCH-1541
+        sender_address = self.routers[0].addresses[0]
+        receiver_address = self.routers[1].addresses[0]
+        test = LargePresettledReleasedLinkCounterTest(sender_address, receiver_address)
         test.run()
         self.assertTrue(test.success)
 

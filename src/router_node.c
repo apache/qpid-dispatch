@@ -355,6 +355,16 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         // Message has been marked for discard, no further processing necessary
         //
         if (receive_complete) {
+            // If this discarded delivery has already been settled by proton,
+            // set the presettled flag on the delivery to true if it is not already true.
+            // Since the entire message has already been received, we directly call the
+            // function to set the pre-settled flag since we cannot go thru the core-thread
+            // to do this since the delivery has been discarded.
+            // Discarded streaming deliveries are not put thru the core thread via the continue action.
+            if (pn_delivery_settled(pnd))
+                qdr_delivery_set_presettled(delivery);
+
+
             // note: expected that the code that set discard has handled
             // setting disposition and updating flow!
             pn_delivery_settle(pnd);
