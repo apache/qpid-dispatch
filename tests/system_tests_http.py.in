@@ -250,7 +250,7 @@ class RouterTestHttp(TestCase):
         self.assert_get("https://localhost:%s" % r.ports[0])
         # requireSsl=false Allows simple-ssl HTTP
 
-        # The following test will be commented out if you are runnung a version lower than
+        # The following test will be commented out if you are running a version lower than
         # libwebsockets 3.2.0
         ${TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER}self.assert_get("http://localhost:%s" % r.ports[0])
 
