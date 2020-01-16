@@ -326,8 +326,8 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
                                               qdr_address_t    *addr,
                                               qdr_link_t       *link,
                                               qd_direction_t    dir,
-                                              qdr_terminus_t   *source,
-                                              qdr_terminus_t   *target,
+                                              qdr_terminus_t   *source,  // must free when done
+                                              qdr_terminus_t   *target,  // must free when done
                                               bool              link_route,
                                               bool              unavailable,
                                               bool              core_endpoint,
@@ -337,27 +337,20 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
 
     if (core_endpoint) {
         qdrc_endpoint_do_bound_attach_CT(core, addr, link, source, target);
+        source = target = 0;  // ownership passed to qdrc_endpoint_do_bound_attach_CT
     }
     else if (unavailable && qdr_terminus_is_coordinator(dir == QD_INCOMING ? target : source) && !addr) {
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_COORDINATOR_PRECONDITION_FAILED, true);
-        qdr_terminus_free(source);
-        qdr_terminus_free(target);
     }
     else if (unavailable) {
         qdr_link_outbound_detach_CT(core, link, qdr_error(QD_AMQP_COND_NOT_FOUND, "Node not found"), 0, true);
-        qdr_terminus_free(source);
-        qdr_terminus_free(target);
     }
-
     else if (!addr) {
         //
         // No route to this destination, reject the link
         //
         qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
-        qdr_terminus_free(source);
-        qdr_terminus_free(target);
     }
-
     else if (link_route) {
         //
         // This is a link-routed destination, forward the attach to the next hop
@@ -365,21 +358,18 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
         qdr_terminus_t *term = dir == QD_INCOMING ? target : source;
         if (qdr_terminus_survives_disconnect(term) && !core->qd->allow_resumable_link_route) {
             qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_INVALID_LINK_EXPIRATION, true);
-            qdr_terminus_free(source);
-            qdr_terminus_free(target);
         } else {
             if (conn->role != QDR_ROLE_INTER_ROUTER && conn->connection_info) {
                 link->disambiguated_name = disambiguated_link_name(conn->connection_info, link->name);
             }
             bool success = qdr_forward_attach_CT(core, addr, link, source, target);
-            if (!success) {
+            if (success) {
+                source = target = 0;  // ownership passed to qdr_forward_attach_CT
+            } else {
                 qdr_link_outbound_detach_CT(core, link, 0, QDR_CONDITION_NO_ROUTE_TO_DESTINATION, true);
-                qdr_terminus_free(source);
-                qdr_terminus_free(target);
             }
         }
     }
-
     else if (dir == QD_INCOMING && qdr_terminus_is_coordinator(target)) {
         //
         // This target terminus is a coordinator.
@@ -389,6 +379,7 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
         // The attach response should have a null target to indicate refusal and the immediately coming detach.
         //
         qdr_link_outbound_second_attach_CT(core, link, source, 0);
+        source = 0;  // ownership passed to qdr_link_outbound_second_attach_CT
 
         //
         // Now, send back a detach with the error amqp:precondition-failed
@@ -401,6 +392,7 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
         //
         qdr_core_bind_address_link_CT(core, addr, link);
         qdr_link_outbound_second_attach_CT(core, link, source, target);
+        source = target = 0;  // ownership passed to qdr_link_outbound_second_attach_CT
 
         //
         // Issue the initial credit only if one of the following
@@ -427,6 +419,11 @@ static void qdr_link_react_to_first_attach_CT(qdr_core_t       *core,
         if (link->conn->role == QDR_ROLE_EDGE_CONNECTION)
             qdrc_event_link_raise(core, QDRC_EVENT_LINK_EDGE_DATA_ATTACHED, link);
     }
+
+    if (source)
+        qdr_terminus_free(source);
+    if (target)
+        qdr_terminus_free(target);
 }
 
 
