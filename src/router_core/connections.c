@@ -573,6 +573,8 @@ void qdr_link_second_attach(qdr_link_t *link, qdr_terminus_t *source, qdr_termin
 
     set_safe_ptr_qdr_connection_t(link->conn, &action->args.connection.conn);
     set_safe_ptr_qdr_link_t(link, &action->args.connection.link);
+
+    // ownership of source/target passed to core, core must free them when done
     action->args.connection.source = source;
     action->args.connection.target = target;
     qdr_action_enqueue(link->core, action);
@@ -1647,11 +1649,14 @@ static void qdr_link_inbound_second_attach_CT(qdr_core_t *core, qdr_action_t *ac
 {
     qdr_link_t       *link = safe_deref_qdr_link_t(action->args.connection.link);
     qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
-    if (discard || !link || !conn)
-        return;
-
     qdr_terminus_t   *source = action->args.connection.source;
     qdr_terminus_t   *target = action->args.connection.target;
+
+    if (discard || !link || !conn) {
+        qdr_terminus_free(source);
+        qdr_terminus_free(target);
+        return;
+    }
 
     link->oper_status = QDR_LINK_OPER_UP;
     link->attach_count++;
