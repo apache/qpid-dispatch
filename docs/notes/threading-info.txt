@@ -69,25 +69,35 @@ The one core thread has several responsibilities, including:
  *) Forwarding messages across the router
  *) Forwarding disposition and settlement state changes across the router
  *) Managing link credit flow
- *) Running the management Agent
+ *) Responding to management requests for data owned by the core thread
 
 The core thread can be thought of as sitting in between the worker
 threads, moving messages and state between them.
 
 When a worker thread needs to forward a received message it passes the
-message and associated delivery state to the core thread.  The core
-thread uses address information from the message to determine the
-outgoing link(s) for the message.  The core then queues the message to
-the proper outgoing link(s).  The core wakes the worker thread(s) (via
-the Proton proactor) so the message(s) can be written out the Proton
-link.
+message, its associated delivery state, and incoming link identifier
+to the core thread.
+
+The core thread uses the information supplied by the worker thread to
+determine the outgoing link(s) for the message.  Once the outgoing
+link(s) are identified the core creates the necessary outgoing
+delivery state(s) for sending the message out each link.
+
+The core binds together the incoming and outgoing deliveries (or
+incoming and outgoing links in the case of link routing) so state
+updates at one endpoint can be efficiently communicated to the peer
+endpoint.
+
+The core then queues the message and outgoing delivery state to the
+proper outgoing link(s).  The core wakes the worker thread(s) (via the
+Proton proactor) so the message(s) can be written out the Proton link.
 
 When delivery disposition or settlement changes are detected by a
-worker thread it notifies the core thread.  The core thread then
-finds the link or delivery to which the changes need to be propagated
-to.  This results in the core thread setting the new state in the
-link/delivery and waking a worker thread to update the new state in
-Proton.
+worker thread it notifies the core thread.  The core thread then uses
+the linkage between incoming and outgoing state to propagate the
+change to the peer.  This results in the core thread setting the new
+state in the peer link/delivery and waking a worker thread to update
+the new state in Proton.
 
 The core also manages credit flow.  The core grants credit to inbound
 links.  The core grants an initial batch of credit to a non-anonymous
@@ -113,6 +123,19 @@ condition waiting for work.  When a worker thread needs a service from
 the core thread, the worker queues a work item to the action_list then
 triggers the condition.  This causes the core thread to unblock and
 service the action_list work items.
+
+
+Embedded Python
+===============
+
+Some portions of the dispatch router are implemented in the Python
+language.  Python is currently used for parts of the routing protocol
+implementation and some management.
+
+The python interpreter cannot be shared between threads - only one
+thread can be executing the interpreter at a time.  This is enforced
+by the use of a single global lock that must be held whenever a thread
+executes the Python interpreter.
 
 
 Source Code Conventions
@@ -165,7 +188,7 @@ outbound delivery for each outbound link.  These outbound deliveries
 are also represented by their own pn_delivery_t and qdr_delivery_t
 instances.
 
-The core thread links the inbound and outbound qdr_deliver_t's
+The core thread links the inbound and outbound qdr_delivery_t's
 together.  This makes it trival to determine the "peer" of any
 delivery that is being forwarded.
 
@@ -183,6 +206,11 @@ The qdr_delivery_t structure is defined in src/router_core/delivery.h
 
 qd_message_t
 ------------
+
+Note: while the Proton API defines a structure for representing AMQP
+messages (pn_message_t), the dispatch router does not use it.  The
+dispatch router defines its own message representation that is tuned
+for forwarding efficiency.
 
 The qd_message_t structure represents a delivery's interface to an
 AMQP message.  A qd_message_t is shared between core and worker
