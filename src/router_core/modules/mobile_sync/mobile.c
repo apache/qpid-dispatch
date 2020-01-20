@@ -51,6 +51,8 @@ static const char *HAVE_SEQ   = "have_seq";
 #define ADDR_SYNC_TO_BE_DELETED         0x00000004
 #define ADDR_SYNC_MOBILE_TRACKING       0x00000008
 
+#define ADDR_SYNC_MA_REQUESTED          0x00000001
+
 #define BIT_SET(M,B)   M |= B
 #define BIT_CLEAR(M,B) M &= ~B
 #define BIT_IS_SET(M,B) (M & B)
@@ -67,6 +69,7 @@ typedef struct {
     qdr_address_list_t         deleted_addrs;
 } qdrm_mobile_sync_t;
 
+static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr_node_t *router);
 
 //================================================================================
 // Helper Functions
@@ -474,8 +477,19 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             }
 
             //
+            // If this is a differential MAU and it doesn't represent the next expected
+            // update, treat this like a sequence-advance and send a MAR
+            //
+            if (!exist_field && router->mobile_seq != mobile_seq - 1 && !BIT_IS_SET(router->sync_mask, ADDR_SYNC_MA_REQUESTED)) {
+                qcm_mobile_sync_on_router_advanced_CT(msync, router);
+                BIT_SET(router->sync_mask, ADDR_SYNC_MA_REQUESTED);
+                return;
+            }
+
+            //
             // Record the new mobile sequence for the remote router.
             //
+            BIT_CLEAR(router->sync_mask, ADDR_SYNC_MA_REQUESTED);
             router->mobile_seq = mobile_seq;
 
             //

@@ -351,6 +351,7 @@ struct qdr_node_t {
     int               cost;
     uint64_t          mobile_seq;
     char             *wire_address_ma;    ///< The address of this router's mobile-sync agent in non-hashed form
+    uint32_t          sync_mask;          ///< Bitmask for mobile-address-sync
 };
 
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
