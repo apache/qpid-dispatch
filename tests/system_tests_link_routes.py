@@ -532,12 +532,12 @@ class LinkRouteTest(TestCase):
         blocking_connection = BlockingConnection(addr)
 
         # Receive on org.apache
-        blocking_receiver = blocking_connection.create_receiver(address="org.apache")
+        blocking_receiver = blocking_connection.create_receiver(address="org.apache.2")
 
         apply_options = AtMostOnce()
 
         # Sender to  to org.apache
-        blocking_sender = blocking_connection.create_sender(address="org.apache", options=apply_options)
+        blocking_sender = blocking_connection.create_sender(address="org.apache.2", options=apply_options)
         msg = Message(body=hello_world_3)
         annotations = {'custom-annotation': '1/Custom_Annotation'}
         msg.annotations = annotations

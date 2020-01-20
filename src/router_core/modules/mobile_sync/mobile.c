@@ -44,14 +44,17 @@ static const char *EXIST      = "exist";
 static const char *HAVE_SEQ   = "have_seq";
 
 //
-// Address.sync_mask bit values
+// qdr_address_t.sync_mask bit values
 //
-#define ADDR_SYNC_IN_ADD_LIST           0x00000001
-#define ADDR_SYNC_IN_DEL_LIST           0x00000002
-#define ADDR_SYNC_TO_BE_DELETED         0x00000004
-#define ADDR_SYNC_MOBILE_TRACKING       0x00000008
+#define ADDR_SYNC_ADDRESS_IN_ADD_LIST     0x00000001
+#define ADDR_SYNC_ADDRESS_IN_DEL_LIST     0x00000002
+#define ADDR_SYNC_ADDRESS_TO_BE_DELETED   0x00000004
+#define ADDR_SYNC_ADDRESS_MOBILE_TRACKING 0x00000008
 
-#define ADDR_SYNC_MA_REQUESTED          0x00000001
+//
+// qdr_node_t.sync_mask bit values
+//
+#define ADDR_SYNC_ROUTER_MA_REQUESTED          0x00000001
 
 #define BIT_SET(M,B)   M |= B
 #define BIT_CLEAR(M,B) M &= ~B
@@ -121,7 +124,7 @@ qdr_node_t *qdc_mobile_sync_router_by_id(qdrm_mobile_sync_t *msync, qd_parsed_fi
  */
 static void qcm_mobile_sync_start_tracking(qdr_address_t *addr)
 {
-    BIT_SET(addr->sync_mask, ADDR_SYNC_MOBILE_TRACKING);
+    BIT_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_MOBILE_TRACKING);
     addr->ref_count++;
 }
 
@@ -132,7 +135,7 @@ static void qcm_mobile_sync_start_tracking(qdr_address_t *addr)
  */
 static void qcm_mobile_sync_stop_tracking(qdr_core_t *core, qdr_address_t *addr)
 {
-    BIT_CLEAR(addr->sync_mask, ADDR_SYNC_MOBILE_TRACKING);
+    BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_MOBILE_TRACKING);
     if (--addr->ref_count == 0)
         qdr_check_addr_CT(core, addr);
 }
@@ -173,10 +176,10 @@ static void qcm_mobile_sync_compose_diff_addr_list(qdrm_mobile_sync_t *msync, qd
         qd_compose_insert_string(field, hash_key);
         if (is_added) {
             DEQ_REMOVE_HEAD_N(SYNC_ADD, *list);
-            BIT_CLEAR(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST);
+            BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST);
         } else {
             DEQ_REMOVE_HEAD_N(SYNC_DEL, *list);
-            BIT_CLEAR(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST);
+            BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST);
             qcm_mobile_sync_stop_tracking(msync->core, addr);
         }
         addr = DEQ_HEAD(*list);
@@ -288,8 +291,8 @@ static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *ms
         //
         if (qcm_mobile_sync_addr_is_mobile(addr)
             && ((DEQ_SIZE(addr->rlinks) > 0 || DEQ_SIZE(addr->conns) > 0 || !!addr->exchange)
-                || BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST))
-            && !BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST)) {
+                || BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST))
+            && !BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST)) {
             const char *hash_key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
             qd_compose_insert_string(body, hash_key);
         }
@@ -306,8 +309,8 @@ static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *ms
         //
         if (qcm_mobile_sync_addr_is_mobile(addr)
             && ((DEQ_SIZE(addr->rlinks) > 0 || DEQ_SIZE(addr->conns) > 0 || !!addr->exchange)
-                || BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST))
-            && !BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST))
+                || BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST))
+            && !BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST))
             qd_compose_insert_int(body, addr->treatment);
         addr = DEQ_NEXT(addr);
     }
@@ -480,16 +483,16 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
             // If this is a differential MAU and it doesn't represent the next expected
             // update, treat this like a sequence-advance and send a MAR
             //
-            if (!exist_field && router->mobile_seq != mobile_seq - 1 && !BIT_IS_SET(router->sync_mask, ADDR_SYNC_MA_REQUESTED)) {
+            if (!exist_field && router->mobile_seq != mobile_seq - 1 && !BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED)) {
                 qcm_mobile_sync_on_router_advanced_CT(msync, router);
-                BIT_SET(router->sync_mask, ADDR_SYNC_MA_REQUESTED);
+                BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED);
                 return;
             }
 
             //
             // Record the new mobile sequence for the remote router.
             //
-            BIT_CLEAR(router->sync_mask, ADDR_SYNC_MA_REQUESTED);
+            BIT_CLEAR(router->sync_mask, ADDR_SYNC_ROUTER_MA_REQUESTED);
             router->mobile_seq = mobile_seq;
 
             //
@@ -516,7 +519,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                 addr = DEQ_HEAD(msync->core->addrs);
                 while (!!addr) {
                     if (qcm_mobile_sync_addr_is_mobile(addr) && !!qd_bitmask_value(addr->rnodes, router->mask_bit))
-                        BIT_SET(addr->sync_mask, ADDR_SYNC_TO_BE_DELETED);
+                        BIT_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_TO_BE_DELETED);
                     addr = DEQ_NEXT(addr);
                 }
             }
@@ -564,7 +567,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                         }
                     }
 
-                    BIT_CLEAR(addr->sync_mask, ADDR_SYNC_TO_BE_DELETED);
+                    BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_TO_BE_DELETED);
                     if (!qd_bitmask_value(addr->rnodes, router->mask_bit)) {
                         qd_bitmask_set_bit(addr->rnodes, router->mask_bit);
                         router->ref_count++;
@@ -627,7 +630,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                     qdr_address_t *next_addr = DEQ_NEXT(addr);
                     if (qcm_mobile_sync_addr_is_mobile(addr)
                         && !!qd_bitmask_value(addr->rnodes, router->mask_bit)
-                        && BIT_IS_SET(addr->sync_mask, ADDR_SYNC_TO_BE_DELETED)) {
+                        && BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_TO_BE_DELETED)) {
                         qd_bitmask_clear_bit(addr->rnodes, router->mask_bit);
                         router->ref_count--;
                         addr->cost_epoch--;
@@ -696,18 +699,18 @@ static void qcm_mobile_sync_on_became_local_dest_CT(qdrm_mobile_sync_t *msync, q
 
     qd_log(msync->log, QD_LOG_DEBUG, "Became Local Dest: %s", (const char*) qd_hash_key_by_handle(addr->hash_handle));
 
-    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST))
+    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST))
         return;
 
-    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST)) {
+    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST)) {
         //
         // If the address was deleted since the last update, simply forget that it was deleted.
         //
         DEQ_REMOVE_N(SYNC_DEL, msync->deleted_addrs, addr);
-        BIT_CLEAR(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST);
+        BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST);
     } else {
         DEQ_INSERT_TAIL_N(SYNC_ADD, msync->added_addrs, addr);
-        BIT_SET(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST);
+        BIT_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST);
         qcm_mobile_sync_start_tracking(addr);
     }
 }
@@ -720,19 +723,19 @@ static void qcm_mobile_sync_on_no_longer_local_dest_CT(qdrm_mobile_sync_t *msync
 
     qd_log(msync->log, QD_LOG_DEBUG, "No Longer Local Dest: %s", (const char*) qd_hash_key_by_handle(addr->hash_handle));
 
-    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST))
+    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST))
         return;
 
-    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST)) {
+    if (BIT_IS_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST)) {
         //
         // If the address was added since the last update, simply forget that it was added.
         //
         DEQ_REMOVE_N(SYNC_ADD, msync->added_addrs, addr);
-        BIT_CLEAR(addr->sync_mask, ADDR_SYNC_IN_ADD_LIST);
+        BIT_CLEAR(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_ADD_LIST);
         qcm_mobile_sync_stop_tracking(msync->core, addr);
     } else {
         DEQ_INSERT_TAIL_N(SYNC_DEL, msync->deleted_addrs, addr);
-        BIT_SET(addr->sync_mask, ADDR_SYNC_IN_DEL_LIST);
+        BIT_SET(addr->sync_mask, ADDR_SYNC_ADDRESS_IN_DEL_LIST);
     }
 }
 
