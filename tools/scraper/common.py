@@ -196,3 +196,26 @@ def strings_of_proton_log(text):
                 skipping = False
                 r += elem
     return r
+
+def ls_eval(text):
+    '''
+    Given a router_ls cost string like '{u'A': 1, u'C': 51L, u'B': 101L}',
+    return a dictionary {A:1, C:51, B:101}
+    This code replaces ast.literal_eval
+    '''
+    result = {}
+    text = text.strip(" {}")
+    if len(text) > 0:
+        items = text.split(', ')
+        for item in items:
+            kv = item.split(": ")
+            key = kv[0].strip()
+            if key.startswith("u'") or key.startswith('u"'):
+                key = key[2:-1]
+            elif key.startswith("'"):
+                key = key[1:-1]
+            val = kv[1].strip()
+            if val.endswith("L"):
+                val = val[:-1]
+            result[key] = int(val)
+    return result
