@@ -30,7 +30,7 @@ FROM fedora:latest
 MAINTAINER "dev@qpid.apache.org"
 
 # Install required packages. Some in this list are from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/master/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/master/README)
-RUN dnf -y install gcc cmake openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig java-1.8.0-openjdk-devel git make valgrind emacs libwebsockets-devel python-devel
+RUN dnf -y install gcc gcc-c++ cmake openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig java-1.8.0-openjdk-devel git make valgrind emacs libwebsockets-devel python-devel
 
 # Create a main directory and clone the qpid-proton repo from github
 RUN mkdir /main && cd /main && git clone https://gitbox.apache.org/repos/asf/qpid-proton.git  && cd /main/qpid-proton && mkdir /main/qpid-proton/build
