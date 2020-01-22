@@ -1432,6 +1432,30 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
         qdr_link_stalled_outbound(link);
 }
 
+
+static void CORE_conn_trace(void *context, qdr_connection_t *qdr_conn, bool trace)
+{
+    qd_connection_t      *qconn  = (qd_connection_t*) qdr_connection_get_context(qdr_conn);
+
+    if (!qconn)
+        return;
+
+    pn_transport_t *tport  = pn_connection_transport(qconn->pn_conn);
+
+    if (!tport)
+        return;
+
+    if (trace) {
+        pn_transport_trace(tport, PN_TRACE_FRM);
+        pn_transport_set_tracer(tport, connection_transport_tracer);
+
+    }
+    else {
+        pn_transport_set_tracer(tport, 0);
+        pn_transport_trace(tport, PN_TRACE_OFF);
+    }
+}
+
 static void CORE_close_connection(void *context, qdr_connection_t *qdr_conn, qdr_error_t *error)
 {
     if (qdr_conn) {
@@ -1807,7 +1831,8 @@ void qd_router_setup_late(qd_dispatch_t *qd)
                             CORE_link_deliver,
                             CORE_link_get_credit,
                             CORE_delivery_update,
-                            CORE_close_connection);
+                            CORE_close_connection,
+                            CORE_conn_trace);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);

@@ -23,6 +23,9 @@ from system_test import QdManager
 from proton.utils import BlockingConnection
 from proton import Message
 from proton.reactor import AtMostOnce
+from proton.reactor import Container
+
+import time
 
 apply_options = AtMostOnce()
 
@@ -119,6 +122,189 @@ class LogModuleProtocolTest(TestCase):
         # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
         self.assertTrue(num_attaches == 0)
 
+
+class EnableConnectionLevelInterRouterTraceTest(TestCase):
+
+    inter_router_port = None
+
+    @classmethod
+    def setUpClass(cls):
+        """Start a router and a messenger"""
+        super(EnableConnectionLevelInterRouterTraceTest, cls).setUpClass()
+
+        def router(name, connection):
+
+            config = [
+                # Use the deprecated attributes helloInterval, raInterval, raIntervalFlux, remoteLsMaxAge
+                # The routers should still start successfully after using these deprecated entities.
+                ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
+                ('listener', {'port': cls.tester.get_port()}),
+                connection
+            ]
+
+            config = Qdrouterd.Config(config)
+
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+
+        router('A',
+               ('listener', {'role': 'inter-router', 'port': inter_router_port}))
+
+        router('B',
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
+                              'verifyHostname': 'no'}))
+
+        cls.routers[0].wait_router_connected('QDR.B')
+        cls.routers[1].wait_router_connected('QDR.A')
+
+        cls.address = cls.routers[1].addresses[0]
+
+    def test_inter_router_protocol_trace(self):
+        qd_manager = QdManager(self, self.address)
+        # Turn off trace logging on all connections for Router B.
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"},
+                          name="log/DEFAULT")
+
+        # Get the connection id of the inter-router connection
+        results = qd_manager.query("org.apache.qpid.dispatch.connection")
+        conn_id = None
+        for result in results:
+            if result[u'role'] == u'inter-router':
+                conn_id = result[u'identity']
+
+        # Turn on trace logging for the inter-router connection
+        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
+
+        # Create a receiver and make sure the MAU update is seen on the inter-router connection log
+        TEST_ADDR_1 = "EnableConnectionLevelProtocolTraceTest1"
+        conn_2 = BlockingConnection(self.address)
+        blocking_receiver_1 = conn_2.create_receiver(address=TEST_ADDR_1)
+
+        # Give some time for the MAU to go over the inter-router link
+        time.sleep(2)
+        logs = qd_manager.get_log()
+        mau_found = False
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@transfer" in log[2] and TEST_ADDR_1 in log[2] and "MAU" in log[2]:
+                    mau_found = True
+                    break
+
+        self.assertTrue(mau_found)
+
+        # Turn off trace logging for the inter-router connection
+        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "no"}, identity=conn_id)
+
+        # Create a receiver and make sure the MAU update is NOT seen on the inter-router connection log
+        TEST_ADDR_2 = "EnableConnectionLevelProtocolTraceTest2"
+        conn_1 = BlockingConnection(self.address)
+        blocking_receiver_2 = conn_1.create_receiver(address=TEST_ADDR_2)
+
+        time.sleep(1)
+
+        logs = qd_manager.get_log()
+        mau_found = False
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@transfer" in log[2] and TEST_ADDR_2 in log[2] and "MAU" in log[2]:
+                    mau_found = True
+                    break
+
+        self.assertFalse(mau_found)
+        conn_1.close()
+        conn_2.close()
+
+
+class EnableConnectionLevelProtocolTraceTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(EnableConnectionLevelProtocolTraceTest, cls).setUpClass()
+        name = "test-router"
+        LogLevelUpdateTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': LogLevelUpdateTest.listen_port}),
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def test_single_connection_protocol_trace(self):
+        qd_manager = QdManager(self, self.address)
+
+        # Turn off trace logging on all connections.
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"},
+                          name="log/DEFAULT")
+
+        TEST_ADDR_1 = "EnableConnectionLevelProtocolTraceTest1"
+        MSG_BODY = "EnableConnectionLevelProtocolTraceTestMessage1"
+        CONTAINER_ID_1 = "CONTAINERID_1"
+        container_1 = Container()
+        container_1.container_id = CONTAINER_ID_1
+        conn_1 = BlockingConnection(self.address, container=container_1)
+
+
+        TEST_ADDR_2 = "EnableConnectionLevelProtocolTraceTest1"
+        CONTAINER_ID_2 = "CONTAINERID_2"
+        container_2 = Container()
+        container_2.container_id = CONTAINER_ID_2
+        conn_2 = BlockingConnection(self.address, container=container_2)
+
+        results = qd_manager.query("org.apache.qpid.dispatch.connection")
+        conn_id = None
+        for result in results:
+            if result[u'container'] == CONTAINER_ID_1:
+                conn_id = result[u'identity']
+
+        # Turn on trace logging for connection with identity conn_id
+        qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
+
+        blocking_receiver_1 = conn_1.create_receiver(address=TEST_ADDR_1)
+        blocking_sender_1 = conn_1.create_sender(address=TEST_ADDR_1, options=apply_options)
+
+        blocking_receiver_2 = conn_2.create_receiver(address=TEST_ADDR_2)
+        blocking_sender_2 = conn_2.create_sender(address=TEST_ADDR_2, options=apply_options)
+
+        num_attaches_1 = 0
+        num_attaches_2 = 0
+        logs = qd_manager.get_log()
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@attach" in log[2] and TEST_ADDR_1 in log[2]:
+                    num_attaches_1 += 1
+                elif "@attach" in log[2] and TEST_ADDR_2 in log[2]:
+                    num_attaches_2 += 1
+
+        # num_attaches_1 for address TEST_ADDR_1 must be 4, two attaches to/from sender and receiver
+        self.assertTrue(num_attaches_1 == 4)
+
+        # num_attaches_2 for address TEST_ADDR_2 must be 0 since trace was not
+        # turned on for that connection
+        self.assertTrue(num_attaches_2 == 0)
+
+
+        # Now turn off the connection tracing on that connection
+        qd_manager.update("org.apache.qpid.dispatch.connection",
+                                      {"enableProtocolTrace": "off"},
+                                      identity=conn_id)
+        blocking_receiver_1.close()
+        blocking_sender_1.close()
+
+        # Since tracing was turned off, there should be no detaches
+        logs = qd_manager.get_log()
+        num_detaches = 0
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@detach" in log[2]:
+                    num_detaches += 1
+        self.assertTrue(num_detaches == 0)
+        blocking_receiver_2.close()
+        blocking_sender_2.close()
+        conn_1.close()
+        conn_2.close()
 
 class LogLevelUpdateTest(TestCase):
     @classmethod

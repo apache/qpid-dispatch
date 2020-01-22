@@ -259,7 +259,10 @@ qdr_general_work_t *qdr_general_work(qdr_general_work_handler_t handler);
 //
 typedef enum {
     QDR_CONNECTION_WORK_FIRST_ATTACH,
-    QDR_CONNECTION_WORK_SECOND_ATTACH
+    QDR_CONNECTION_WORK_SECOND_ATTACH,
+    QDR_CONNECTION_WORK_TRACING_ON,
+    QDR_CONNECTION_WORK_TRACING_OFF
+
 } qdr_connection_work_type_t;
 
 typedef struct qdr_connection_work_t {
@@ -681,6 +684,7 @@ struct qdr_connection_t {
     bool                        closed; // This bit is used in the case where a client is trying to force close this connection.
     uint32_t                    conn_uptime; // Timestamp which can be used to calculate the number of seconds this connection has been up and running.
     uint32_t                    last_delivery_time; // Timestamp which can be used to calculate the number of seconds since the last delivery arrived on this connection.
+    bool                        enable_protocol_trace; // Has trace level logging been turned on for this connecvtion.
 };
 
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
@@ -826,6 +830,7 @@ struct qdr_core_t {
     qdr_link_get_credit_t     get_credit_handler;
     qdr_delivery_update_t     delivery_update_handler;
     qdr_connection_close_t    conn_close_handler;
+    qdr_connection_trace_t    conn_trace_handler;
 
     //
     // Events section

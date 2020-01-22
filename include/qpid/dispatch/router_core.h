@@ -714,6 +714,8 @@ typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_d
 typedef int (*qdr_link_get_credit_t)     (void *context, qdr_link_t *link);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
+typedef void (*qdr_connection_trace_t)   (void *context, qdr_connection_t *conn, bool trace);
+
 
 void qdr_connection_handlers(qdr_core_t             *core,
                              void                      *context,
@@ -729,7 +731,8 @@ void qdr_connection_handlers(qdr_core_t             *core,
                              qdr_link_deliver_t         deliver,
                              qdr_link_get_credit_t      get_credit,
                              qdr_delivery_update_t      delivery_update,
-                             qdr_connection_close_t     conn_close);
+                             qdr_connection_close_t     conn_close,
+                             qdr_connection_trace_t     conn_trace);
 
 /**
  ******************************************************************************
