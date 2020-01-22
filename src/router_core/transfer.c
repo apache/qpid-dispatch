@@ -59,8 +59,8 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver - protect returned value");
 
-    action->args.connection.delivery = dlv;
-    action->args.connection.more = !qd_message_receive_complete(msg);
+    action->args.delivery.delivery = dlv;
+    action->args.delivery.more = !qd_message_receive_complete(msg);
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -88,8 +88,8 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - protect returned value");
 
-    action->args.connection.delivery = dlv;
-    action->args.connection.more = !qd_message_receive_complete(msg);
+    action->args.delivery.delivery = dlv;
+    action->args.delivery.more = !qd_message_receive_complete(msg);
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -114,11 +114,11 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - protect returned value");
 
-    action->args.connection.delivery = dlv;
-    action->args.connection.more = !qd_message_receive_complete(msg);
-    action->args.connection.tag_length = tag_length;
+    action->args.delivery.delivery = dlv;
+    action->args.delivery.more = !qd_message_receive_complete(msg);
+    action->args.delivery.tag_length = tag_length;
     assert(tag_length <= QDR_DELIVERY_TAG_MAX);
-    memcpy(action->args.connection.tag, tag, tag_length);
+    memcpy(action->args.delivery.tag, tag, tag_length);
     qdr_action_enqueue(link->core, action);
     return dlv;
 }
@@ -642,8 +642,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (discard)
         return;
 
-    qdr_delivery_t *dlv  = action->args.connection.delivery;
-    bool            more = action->args.connection.more;
+    qdr_delivery_t *dlv  = action->args.delivery.delivery;
+    bool            more = action->args.delivery.more;
     qdr_link_t     *link = qdr_delivery_link(dlv);
 
     if (!link)
@@ -687,8 +687,8 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         //
         // Copy the delivery tag.  For link-routing, the delivery tag must be preserved.
         //
-        peer->tag_length = action->args.connection.tag_length;
-        memcpy(peer->tag, action->args.connection.tag, peer->tag_length);
+        peer->tag_length = action->args.delivery.tag_length;
+        memcpy(peer->tag, action->args.delivery.tag, peer->tag_length);
 
         qdr_forward_deliver_CT(core, link->connected_link, peer);
 

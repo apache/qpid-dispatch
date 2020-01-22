@@ -129,18 +129,13 @@ struct qdr_action_t {
             qdr_field_t         *connection_label;
             qdr_field_t         *container_id;
             qdr_link_t_sp        link;
-            qdr_delivery_t      *delivery;
-            qd_message_t        *msg;
             qd_direction_t       dir;
             qdr_terminus_t      *source;
             qdr_terminus_t      *target;
             qdr_error_t         *error;
             qd_detach_type_t     dt;
             int                  credit;
-            bool                 more;  // true if there are more frames arriving, false otherwise
             bool                 drain;
-            uint8_t              tag[32];
-            int                  tag_length;
         } connection;
 
         //
@@ -148,10 +143,13 @@ struct qdr_action_t {
         //
         struct {
             qdr_delivery_t *delivery;
-            uint64_t        disposition;
-            bool            settled;
-            bool            presettled;
             qdr_error_t    *error;
+            uint64_t        disposition;
+            uint8_t         tag[32];
+            int             tag_length;
+            bool            settled;
+            bool            presettled;  // true if remote settles while msg is in flight
+            bool            more;  // true if there are more frames arriving, false otherwise
         } delivery;
 
         //
