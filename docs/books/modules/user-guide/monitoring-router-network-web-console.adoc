@@ -24,22 +24,31 @@ under the License
 [id='monitoring-router-network-web-console'-{context}']
 = Monitoring the router network using {ConsoleName}
 
-In the web console, you use the tabs to monitor the router network.
+The web console provides several sections you can use to monitor the router network.
 
-[cols="30,70"]
+[cols="25,75"]
 |===
-| This tab... | Provides...
+| This section... | Provides...
 
-| `Overview` | Aggregated information about routers, addresses, links, connections, and logs.
+| Overview
+a|
+Aggregated information about the router network. This includes the following:
 
-| `Entities` | Detailed information about each AMQP management entity for each router in the router network. Some of the attributes have charts that you can add to the `Charts` tab.
+* Dashboard (shows router network statistics)
+* Routers
+* Addresses
+* Links
+* Connections
+* Logs
 
-| `Topology` | A graphical view of the router network, including routers, clients, and brokers. The topology shows how the routers are connected, and how messages are flowing through the network.
+| Visualizations
+a|
+A graphical view of the router network. You can view the following types of visualizations:
 
-| `Charts` | Graphs of the information selected on the `Entities` tab.
+`Topology`:: Shows the topology of the router network, including routers, clients, and brokers. It also shows how messages are flowing through the network.
+`Message flow`:: A chord diagram showing the real-time message flow by address.
 
-| `Message Flow` | A chord diagram showing the real-time message flow by address.
-
-| `Schema` | The management schema that controls each of the routers in the router network.
+| Details
+| Detailed configuration information about each AMQP management entity for each router in the router network. You can view and change the configuration of any of the routers in the network.
 
 |===
