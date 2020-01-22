@@ -301,6 +301,15 @@ int qdr_connection_process(qdr_connection_t *conn)
         case QDR_CONNECTION_WORK_SECOND_ATTACH :
             core->second_attach_handler(core->user_context, work->link, work->source, work->target);
             break;
+
+        case QDR_CONNECTION_WORK_TRACING_ON :
+            core->conn_trace_handler(core->user_context, conn, true);
+            break;
+
+        case QDR_CONNECTION_WORK_TRACING_OFF :
+            core->conn_trace_handler(core->user_context, conn, false);
+            break;
+
         }
 
         qdr_connection_work_free_CT(work);
@@ -628,7 +637,8 @@ void qdr_connection_handlers(qdr_core_t                *core,
                              qdr_link_deliver_t         deliver,
                              qdr_link_get_credit_t      get_credit,
                              qdr_delivery_update_t      delivery_update,
-                             qdr_connection_close_t     conn_close)
+                             qdr_connection_close_t     conn_close,
+                             qdr_connection_trace_t     conn_trace)
 {
     core->user_context            = context;
     core->first_attach_handler    = first_attach;
@@ -643,6 +653,7 @@ void qdr_connection_handlers(qdr_core_t                *core,
     core->get_credit_handler      = get_credit;
     core->delivery_update_handler = delivery_update;
     core->conn_close_handler      = conn_close;
+    core->conn_trace_handler      = conn_trace;
 }
 
 

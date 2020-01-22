@@ -76,6 +76,20 @@ class Entity(EntityBase):
 class Node(object):
     """Client proxy for an AMQP management node"""
 
+    def clean_attrs(self, attrs):
+        BOOL_VALUES = {"yes"  : True,
+                       "true" : True,
+                       "on"   : True,
+                       "no"   : False,
+                       "false": False,
+                       "off"  : False}
+        if isinstance(attrs, dict):
+            for key in attrs.keys():
+                if attrs[key] in BOOL_VALUES.keys():
+                    attrs[key] = BOOL_VALUES[attrs[key]]
+
+        return attrs
+
     @staticmethod
     def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None):
         """Return a BlockingConnection suitable for connecting to a management node
@@ -332,7 +346,7 @@ class Node(object):
         identity = identity or attributes.get(u'identity')
         if name and identity: name = None # Only send one
         request = self.request(operation=U'UPDATE', type=type, name=name,
-                               identity=identity, body=attributes)
+                               identity=identity, body=self.clean_attrs(attributes))
         return Entity(self, self.call(request).body)
 
     def delete(self, type=None, name=None, identity=None):

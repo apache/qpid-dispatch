@@ -99,11 +99,10 @@ static const int BACKLOG = 50;  /* Listening backlog */
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
 static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
 
-
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
  */
-static void transport_tracer(pn_transport_t *transport, const char *message)
+void transport_tracer(pn_transport_t *transport, const char *message)
 {
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx) {
@@ -112,6 +111,14 @@ static void transport_tracer(pn_transport_t *transport, const char *message)
     }
 }
 
+void connection_transport_tracer(pn_transport_t *transport, const char *message)
+{
+    qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
+    if (ctx) {
+        // Unconditionally write the log at TRACE level to the log file.
+        qd_log_impl_v1(ctx->server->protocol_log_source, QD_LOG_TRACE,  __FILE__, __LINE__, "[%"PRIu64"]:%s", ctx->connection_id, message);
+    }
+}
 
 /**
  * Save displayNameService object instance and ImportModule address

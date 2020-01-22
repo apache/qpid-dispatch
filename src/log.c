@@ -396,7 +396,7 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
     return level & mask;
 }
 
-void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, va_list ap)
+void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_level, const char *file, int line, const char *fmt, va_list ap)
 {
     /*-----------------------------------------------
       Count this log-event in this log's histogram
@@ -410,7 +410,10 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
     else
         source->severity_histogram[level_index]++;
 
-    if (!qd_log_enabled(source, level)) return;
+    if (check_level) {
+        if (!qd_log_enabled(source, level))
+            return;
+    }
 
     // Bounded buffer of log entries, keep most recent.
     sys_mutex_lock(log_lock);
@@ -429,11 +432,19 @@ void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, const char *fil
     sys_mutex_unlock(log_lock);
 }
 
+void qd_log_impl_v1(qd_log_source_t *source, qd_log_level_t level,  const char *file, int line, const char *fmt, ...)
+{
+    va_list ap;
+    va_start(ap, fmt);
+    qd_vlog_impl(source, level, false, file, line, fmt, ap);
+    va_end(ap);
+}
+
 void qd_log_impl(qd_log_source_t *source, qd_log_level_t level, const char *file, int line, const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
-  qd_vlog_impl(source, level, file, line, fmt, ap);
+  qd_vlog_impl(source, level, true, file, line, fmt, ap);
   va_end(ap);
 }
 

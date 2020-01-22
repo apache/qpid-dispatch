@@ -187,4 +187,14 @@ ALLOC_DECLARE(qd_pn_free_link_session_t);
  */
 void qd_server_trace_all_connections();
 
+/**
+ * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
+ */
+void transport_tracer(pn_transport_t *transport, const char *message);
+
+/**
+ * This is similar to the transport_tracer but it writes the message to the log at the trace level even if trace level is not enabled.
+ */
+void connection_transport_tracer(pn_transport_t *transport, const char *message);
+
 #endif
