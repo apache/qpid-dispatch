@@ -160,3 +160,80 @@ class RouterTestBadConfiguration(TestCase):
         except Exception as e:
             raise Exception("%s\n%s" % (e, out))
         return out
+
+
+class RouterTestIdFailCtrlChar(TestCase):
+    """
+    This test case sets up a router using a configuration router id
+    that is illegal (control character). The router should not start.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(RouterTestIdFailCtrlChar, cls).setUpClass()
+        cls.name = "test-router-ctrl-char"
+
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+
+    @classmethod
+    def tearDownClass(cls):
+        super(RouterTestIdFailCtrlChar, cls).tearDownClass()
+
+    def test_verify_reject_id_with_ctrl_char(self):
+        """
+        Writes illegal config, runs router, examines console output
+        """
+        conf_path = "../setUpClass/test-router-ctrl-char.conf"
+        with open(conf_path, 'w') as router_conf:
+            router_conf.write("router { \n")
+            router_conf.write("    id: abc\\bdef \n")
+            router_conf.write("}")
+
+        p = self.popen(
+            ['qdrouterd', '-c', conf_path],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_FAIL,
+            universal_newlines=True)
+        out = p.communicate(timeout=5)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        self.assertTrue("AttributeError" in out)
+
+class RouterTestIdFailWhiteSpace(TestCase):
+    """
+    This test case sets up a router using a configuration router id
+    that is illegal (whitespace character). The router should not start.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(RouterTestIdFailWhiteSpace, cls).setUpClass()
+        cls.name = "test-router-ctrl-char"
+
+    def __init__(self, test_method):
+        TestCase.__init__(self, test_method)
+
+    @classmethod
+    def tearDownClass(cls):
+        super(RouterTestIdFailWhiteSpace, cls).tearDownClass()
+
+    def test_verify_reject_id_with_whitespace(self):
+        """
+        Writes illegal config, runs router, examines console output
+        """
+        conf_path = "../setUpClass/test-router-whitespace.conf"
+        with open(conf_path, 'w') as router_conf:
+            router_conf.write("router { \n")
+            router_conf.write("    id: abc def \n")
+            router_conf.write("}")
+
+        p = self.popen(
+            ['qdrouterd', '-c', conf_path],
+            stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_FAIL,
+            universal_newlines=True)
+        out = p.communicate(timeout=5)[0]
+        try:
+            p.teardown()
+        except Exception as e:
+            raise Exception("%s\n%s" % (e, out))
+        self.assertTrue("AttributeError" in out)

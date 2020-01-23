@@ -374,7 +374,7 @@
             "singleton": true,
             "attributes": {
                 "id": {
-                    "description":"Router's unique identity. If not specified, a random identity will be assigned at startup.",
+                    "description":"Router's unique identity. This field may not contain whitespace or control characters. If not specified, a random identity will be assigned at startup.",
                     "type": "string",
                     "required": false,
                     "create": true
