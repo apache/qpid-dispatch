@@ -1652,7 +1652,7 @@
                 },
                 "transitOutstanding": {
                     "type": "list",
-                    "description": "List of numbers of outstanding deliveries across a transit (inter-router) link for this address.  This is for balanced distribution only."
+                    "description": "List of numbers of outstanding deliveries across a transit (inter-router) connection for this address.  This is for balanced distribution only."
                 },
                 "trackedDeliveries": {
                     "type": "integer",

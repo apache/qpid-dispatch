@@ -102,6 +102,7 @@ set(qpid_dispatch_SOURCES
   router_core/modules/address_lookup_client/lookup_client.c
   router_core/modules/stuck_delivery_detection/delivery_tracker.c
   router_core/modules/mobile_sync/mobile.c
+  router_core/modules/streaming_link_scrubber/streaming_link_scrubber.c
   router_node.c
   router_pynode.c
   schema_enum.c

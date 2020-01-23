@@ -19,6 +19,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <inttypes.h>
 #include "dispatch_private.h"
 #include "policy.h"
 #include <qpid/dispatch/container.h>
@@ -63,6 +64,7 @@ struct qd_link_t {
     bool                        q2_limit_unbounded;
     bool                        q3_blocked;
     DEQ_LINKS_N(Q3, qd_link_t); ///< Q3 blocked links
+    uint64_t                    link_id;
 };
 
 ALLOC_DEFINE(qd_link_t);
@@ -1151,6 +1153,18 @@ void qd_link_q3_unblock(qd_link_t *link)
         DEQ_REMOVE_N(Q3, qd_ssn->q3_blocked_links, link);
         link->q3_blocked = false;
     }
+}
+
+
+uint64_t qd_link_link_id(const qd_link_t *link)
+{
+    return link->link_id;
+}
+
+
+void qd_link_set_link_id(qd_link_t *link, uint64_t link_id)
+{
+    link->link_id = link_id;
 }
 
 

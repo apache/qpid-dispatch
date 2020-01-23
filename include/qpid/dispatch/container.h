@@ -91,6 +91,7 @@ typedef enum {
     QD_SSN_ROUTER_DATA_PRI_9,
     QD_SSN_CORE_ENDPOINT,     ///< core subscriptions
     QD_SSN_LINK_ROUTE,        ///< link routes
+    QD_SSN_LINK_STREAMING,    ///< link dedicated to streaming messages
     QD_SSN_CLASS_COUNT
 } qd_session_class_t;
 
@@ -231,6 +232,8 @@ void *qd_link_get_node_context(const qd_link_t *link);
 void qd_link_restart_rx(qd_link_t *link);
 void qd_link_q3_block(qd_link_t *link);
 void qd_link_q3_unblock(qd_link_t *link);
+uint64_t qd_link_link_id(const qd_link_t *link);
+void qd_link_set_link_id(qd_link_t *link, uint64_t link_id);
 
 qd_session_t *qd_session(pn_session_t *pn_ssn);
 void qd_session_cleanup(qd_connection_t *qd_conn);

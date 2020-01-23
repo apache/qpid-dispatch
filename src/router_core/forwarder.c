@@ -23,6 +23,8 @@
 #include <strings.h>
 #include "forwarder.h"
 #include "delivery.h"
+#include <inttypes.h>
+
 
 typedef struct qdr_forward_deliver_info_t {
     DEQ_LINKS(struct qdr_forward_deliver_info_t);
@@ -36,25 +38,68 @@ DEQ_DECLARE(qdr_forward_deliver_info_t, qdr_forward_deliver_info_list_t);
 ALLOC_DEFINE(qdr_forward_deliver_info_t);
 
 
-static qdr_link_t * peer_data_link(qdr_core_t *core,
-                                   qdr_node_t *node,
-                                   int         priority)
+// get the control link for a given inter-router connection
+static inline qdr_link_t *peer_router_control_link(qdr_core_t *core, int conn_mask)
 {
-    int nlmb = node->link_mask_bit;
+    return (conn_mask >= 0) ? core->control_links_by_mask_bit[conn_mask] : 0;
+}
 
-    if (nlmb < 0 || priority < 0)
+
+// find the proper outgoing data link on a connection using the given priority
+static inline qdr_link_t *peer_router_data_link(qdr_core_t *core,
+                                                int         conn_mask,
+                                                int         priority)
+{
+    if (conn_mask < 0 || priority < 0)
         return 0;
 
     // Try to return the requested priority link, but if it does
     // not exist, return the closest one that is lower.
     qdr_link_t * link = 0;
     while (1) {
-        if ((link = core->data_links_by_mask_bit[nlmb].links[priority]))
+        if ((link = core->data_links_by_mask_bit[conn_mask].links[priority]))
             return link;
         if (-- priority < 0)
             return 0;
     }
     return link;
+}
+
+
+// Returns true if the peer router can support this router opening additional incoming links dedicated for streaming messages
+//
+static inline bool next_hop_supports_streaming_links(const qdr_connection_t *conn)
+{
+    if (conn->role == QDR_ROLE_EDGE_CONNECTION)
+        return true;
+    if (conn->role == QDR_ROLE_INTER_ROUTER) {
+        return QDR_ROUTER_VERSION_AT_LEAST(conn->connection_info->version,
+                                           1, 13, 0);
+    }
+    return false;
+}
+
+
+// Get an idle anonymous link for a streaming message. This link will come from
+// either the connections free link pool or it will be dynamically created on
+// the given connection.
+static inline qdr_link_t *get_outgoing_streaming_link(qdr_core_t *core, qdr_connection_t *conn)
+{
+    if (!conn) return 0;
+
+    qdr_link_t *out_link = DEQ_HEAD(conn->streaming_link_pool);
+    if (out_link) {
+        DEQ_REMOVE_HEAD_N(STREAMING_POOL, conn->streaming_link_pool);
+        out_link->in_streaming_pool = false;
+    } else {
+        // no free links - create a new one
+        out_link = qdr_connection_new_streaming_link_CT(core, conn);
+        if (!out_link) {
+            qd_log(core->log, QD_LOG_WARNING, "[C%"PRIu64"] Unable to setup new outgoing streaming message link", conn->identity);
+            return 0;
+        }
+    }
+    return out_link;
 }
 
 
@@ -112,15 +157,15 @@ static void qdr_forward_find_closest_remotes_CT(qdr_core_t *core, qdr_address_t 
 }
 
 
-qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *link, qd_message_t *msg)
+qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *out_link, qd_message_t *msg)
 {
     qdr_delivery_t *out_dlv = new_qdr_delivery_t();
     uint64_t       *tag = (uint64_t*) out_dlv->tag;
-    if (link->conn)
-        link->conn->last_delivery_time = core->uptime_ticks;
+    if (out_link->conn)
+        out_link->conn->last_delivery_time = core->uptime_ticks;
 
     ZERO(out_dlv);
-    set_safe_ptr_qdr_link_t(link, &out_dlv->link_sp);
+    set_safe_ptr_qdr_link_t(out_link, &out_dlv->link_sp);
     out_dlv->msg        = qd_message_copy(msg);
     out_dlv->settled    = !in_dlv || in_dlv->settled;
     out_dlv->presettled = out_dlv->settled;
@@ -357,8 +402,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     bool          bypass_valid_origins = addr->forwarder->bypass_valid_origins;
     int           fanout               = 0;
     qd_bitmask_t *link_exclusion       = !!in_delivery ? in_delivery->link_exclusion : 0;
-    bool          receive_complete     = qd_message_receive_complete(qdr_delivery_message(in_delivery));
-    uint8_t       priority             = qdr_forward_effective_priority(msg, addr);
+    bool          receive_complete     = qd_message_receive_complete(msg);
 
     qdr_forward_deliver_info_list_t deliver_info_list;
     DEQ_INIT(deliver_info_list);
@@ -375,19 +419,26 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             // Only forward via links that don't result in edge-echo.
             //
             if (!qdr_forward_edge_echo_CT(in_delivery, out_link)) {
-                qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
 
-                // Store the out_link and out_delivery so we can forward the delivery later on
-                qdr_forward_deliver_info_t *deliver_info = new_qdr_forward_deliver_info_t();
-                ZERO(deliver_info);
-                deliver_info->out_dlv = out_delivery;
-                deliver_info->out_link = out_link;
-                DEQ_INSERT_TAIL(deliver_info_list, deliver_info);
+                if (!receive_complete && next_hop_supports_streaming_links(out_link->conn)) {
+                    out_link = get_outgoing_streaming_link(core, out_link->conn);
+                }
 
-                fanout++;
-                if (out_link->link_type != QD_LINK_CONTROL && out_link->link_type != QD_LINK_ROUTER && !out_link->fallback) {
-                    addr->deliveries_egress++;
-                    core->deliveries_egress++;
+                if (out_link) {
+                    qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+
+                    // Store the out_link and out_delivery so we can forward the delivery later on
+                    qdr_forward_deliver_info_t *deliver_info = new_qdr_forward_deliver_info_t();
+                    ZERO(deliver_info);
+                    deliver_info->out_dlv = out_delivery;
+                    deliver_info->out_link = out_link;
+                    DEQ_INSERT_TAIL(deliver_info_list, deliver_info);
+
+                    fanout++;
+                    if (out_link->link_type != QD_LINK_CONTROL && out_link->link_type != QD_LINK_ROUTER && !out_link->fallback) {
+                        addr->deliveries_egress++;
+                        core->deliveries_egress++;
+                    }
                 }
             }
 
@@ -399,6 +450,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     // Forward to remote routers with subscribers using the appropriate
     // link for the traffic class: control or data
     //
+
     //
     // Get the mask bit associated with the ingress router for the message.
     // This will be compared against the "valid_origin" masks for each
@@ -421,17 +473,15 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
     //
     if (origin >= 0) {
         int           dest_bit;
-        qdr_link_t   *dest_link;
-        qdr_node_t   *next_node;
-        qd_bitmask_t *link_set = qd_bitmask(0);
+        qd_bitmask_t *conn_set = qd_bitmask(0);  // connections to the next-hops
 
         //
-        // Loop over the target nodes for this address.  Build a set of outgoing links
+        // Loop over the target nodes for this address.  Build a set of outgoing connections
         // for which there are valid targets.  We do this to avoid sending more than one
-        // message down a given link.  It's possible that there are multiple destinations
-        // for this address that are all reachable over the same link.  In this case, we
-        // will send only one copy of the message over the link and allow a downstream
-        // router to fan the message out.
+        // message to a given next-hop.  It's possible that there are multiple destinations
+        // for this address that are all reachable via the same next-hop.  In this case, we
+        // will send only one copy of the message to the next-hop and allow the downstream
+        // routers to fan the message out.
         //
         int c;
         for (QD_BITMASK_EACH(addr->rnodes, dest_bit, c)) {
@@ -439,26 +489,30 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             if (!rnode)
                 continue;
 
-            if (rnode->next_hop)
-                next_node = rnode->next_hop;
-            else
-                next_node = rnode;
-
-            dest_link = control ? PEER_CONTROL_LINK(core, next_node) : peer_data_link(core, next_node, priority);
-            if (dest_link && qd_bitmask_value(rnode->valid_origins, origin))
-                qd_bitmask_set_bit(link_set, dest_link->conn->mask_bit);
+            // get the inter-router connection associated with path to rnode:
+            int conn_bit = (rnode->next_hop) ? rnode->next_hop->conn_mask_bit : rnode->conn_mask_bit;
+            if (conn_bit >= 0 && (!link_exclusion || qd_bitmask_value(link_exclusion, conn_bit) == 0)) {
+                qd_bitmask_set_bit(conn_set, conn_bit);
+            }
         }
 
         //
-        // Send a copy of the message outbound on each identified link.
+        // Send a copy of the message over the inter-router connection to the next hop
         //
-        int link_bit;
-        while (qd_bitmask_first_set(link_set, &link_bit)) {
-            qd_bitmask_clear_bit(link_set, link_bit);
-            dest_link = control ?
-                core->control_links_by_mask_bit[link_bit] :
-                core->data_links_by_mask_bit[link_bit].links[priority];
-            if (dest_link && (!link_exclusion || qd_bitmask_value(link_exclusion, link_bit) == 0)) {
+        int conn_bit;
+        while (qd_bitmask_first_set(conn_set, &conn_bit)) {
+            qd_bitmask_clear_bit(conn_set, conn_bit);
+
+            qdr_link_t  *dest_link;
+            if (control) {
+                dest_link = peer_router_control_link(core, conn_bit);
+            } else if (!receive_complete) {  // inter-router conns support dynamic streaming links
+                dest_link = get_outgoing_streaming_link(core, core->rnode_conns_by_mask_bit[conn_bit]);
+            } else {
+                dest_link = peer_router_data_link(core, conn_bit, qdr_forward_effective_priority(msg, addr));
+            }
+
+            if (dest_link) {
                 qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, dest_link, msg);
 
                 // Store the out_link and out_delivery so we can forward the delivery later on
@@ -475,7 +529,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             }
         }
 
-        qd_bitmask_free(link_set);
+        qd_bitmask_free(conn_set);
     }
 
     if (!exclude_inprocess) {
@@ -510,14 +564,11 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                            bool             exclude_inprocess,
                            bool             control)
 {
-    qdr_link_t     *out_link;
-    qdr_delivery_t *out_delivery;
-
+    const bool receive_complete = qd_message_receive_complete(msg);
     //
     // Forward to an in-process subscriber if there is one.
     //
     if (!exclude_inprocess) {
-        bool receive_complete = qd_message_receive_complete(msg);
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         if (sub) {
             qdr_forward_to_subscriber(core, sub, in_delivery, msg, receive_complete);
@@ -545,7 +596,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     }
 
     //
-    // Forward to a local subscriber.
+    // Forward to a locally attached subscriber.
     //
     qdr_link_ref_t *link_ref = DEQ_HEAD(addr->rlinks);
 
@@ -556,31 +607,38 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
         link_ref = DEQ_NEXT(link_ref);
 
     if (link_ref) {
-        out_link     = link_ref->link;
-        out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
-        qdr_forward_deliver_CT(core, out_link, out_delivery);
+        qdr_link_t *out_link = link_ref->link;
 
-        //
-        // If there are multiple local subscribers, rotate the list of link references
-        // so deliveries will be distributed among the subscribers in a round-robin pattern.
-        //
-        if (DEQ_SIZE(addr->rlinks) > 1) {
-            link_ref = DEQ_HEAD(addr->rlinks);
-            DEQ_REMOVE_HEAD(addr->rlinks);
-            DEQ_INSERT_TAIL(addr->rlinks, link_ref);
+        if (!receive_complete && next_hop_supports_streaming_links(out_link->conn)) {
+            out_link = get_outgoing_streaming_link(core, out_link->conn);
         }
 
-        if (!out_link->fallback) {
-            addr->deliveries_egress++;
-            core->deliveries_egress++;
-        }
+        if (out_link) {
+            qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+            qdr_forward_deliver_CT(core, out_link, out_delivery);
 
-        if (qdr_connection_route_container(out_link->conn)) {
-            core->deliveries_egress_route_container++;
-            addr->deliveries_egress_route_container++;
-        }
+            //
+            // If there are multiple local subscribers, rotate the list of link references
+            // so deliveries will be distributed among the subscribers in a round-robin pattern.
+            //
+            if (DEQ_SIZE(addr->rlinks) > 1) {
+                link_ref = DEQ_HEAD(addr->rlinks);
+                DEQ_REMOVE_HEAD(addr->rlinks);
+                DEQ_INSERT_TAIL(addr->rlinks, link_ref);
+            }
 
-        return 1;
+            if (!out_link->fallback) {
+                addr->deliveries_egress++;
+                core->deliveries_egress++;
+            }
+
+            if (qdr_connection_route_container(out_link->conn)) {
+                core->deliveries_egress_route_container++;
+                addr->deliveries_egress_route_container++;
+            }
+
+            return 1;
+        }
     }
 
     //
@@ -594,8 +652,6 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     // Forward to remote routers with subscribers using the appropriate
     // link for the traffic class: control or data
     //
-    qdr_node_t *next_node;
-
     if (addr->next_remote >= 0) {
         qdr_node_t *rnode = core->routers_by_mask_bit[addr->next_remote];
         if (rnode) {
@@ -603,15 +659,19 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
             if (addr->next_remote == -1)
                 qd_bitmask_first_set(addr->closest_remotes, &addr->next_remote);
 
-            if (rnode->next_hop)
-                next_node = rnode->next_hop;
-            else
-                next_node = rnode;
+            // get the inter-router connection associated with path to rnode:
+            int conn_bit = (rnode->next_hop) ? rnode->next_hop->conn_mask_bit : rnode->conn_mask_bit;
+            qdr_link_t *out_link;
+            if (control) {
+                out_link = peer_router_control_link(core, conn_bit);
+            } else if (!receive_complete) {
+                out_link = get_outgoing_streaming_link(core, core->rnode_conns_by_mask_bit[conn_bit]);
+            } else {
+                out_link = peer_router_data_link(core, conn_bit, qdr_forward_effective_priority(msg, addr));
+            }
 
-            uint8_t priority = qdr_forward_effective_priority(msg, addr);
-            out_link = control ? PEER_CONTROL_LINK(core, next_node) : peer_data_link(core, next_node, priority);
             if (out_link) {
-                out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+                qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
                 qdr_forward_deliver_CT(core, out_link, out_delivery);
                 addr->deliveries_transit++;
                 if (out_link->link_type == QD_LINK_ROUTER)
@@ -647,10 +707,10 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     }
 
     qdr_link_t *best_eligible_link       = 0;
-    int         best_eligible_link_bit   = -1;
+    int         best_eligible_conn_bit   = -1;
     uint32_t    eligible_link_value      = UINT32_MAX;
     qdr_link_t *best_ineligible_link     = 0;
-    int         best_ineligible_link_bit = -1;
+    int         best_ineligible_conn_bit = -1;
     uint32_t    ineligible_link_value    = UINT32_MAX;
 
     //
@@ -702,7 +762,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         // This will be compared against the "valid_origin" masks for each
         // candidate destination router.
         //
-        int origin = 0;
+        int origin = 0;  // default to this router
         qd_iterator_t *ingress_iter = in_delivery ? in_delivery->origin : 0;
 
         if (ingress_iter) {
@@ -717,26 +777,29 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
         int node_bit;
         for (QD_BITMASK_EACH(addr->rnodes, node_bit, c)) {
             qdr_node_t *rnode     = core->routers_by_mask_bit[node_bit];
-            qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
-            uint8_t     priority  = qdr_forward_effective_priority(msg, addr);
-            qdr_link_t *link      = peer_data_link(core, next_node, priority);
-            if (!link) continue;
-            int         link_bit  = link->conn->mask_bit;
-            int         value     = addr->outstanding_deliveries[link_bit];
-            bool        eligible  = link->capacity > value;
 
             if (qd_bitmask_value(rnode->valid_origins, origin)) {
+
+                qdr_node_t *next_node = rnode->next_hop ? rnode->next_hop : rnode;
+                int         conn_bit  = next_node->conn_mask_bit;
+                uint8_t     priority  = qdr_forward_effective_priority(msg, addr);
+                qdr_link_t *link      = peer_router_data_link(core, conn_bit, priority);
+                if (!link) continue;
+
+                int         value     = addr->outstanding_deliveries[conn_bit];
+                bool        eligible  = link->capacity > value;
+
                 //
                 // Link is a candidate, adjust the value by the bias (node cost).
                 //
                 value += rnode->cost;
                 if (eligible && eligible_link_value > value) {
                     best_eligible_link     = link;
-                    best_eligible_link_bit = link_bit;
+                    best_eligible_conn_bit = conn_bit;
                     eligible_link_value    = value;
                 } else if (!eligible && ineligible_link_value > value) {
                     best_ineligible_link     = link;
-                    best_ineligible_link_bit = link_bit;
+                    best_ineligible_conn_bit = conn_bit;
                     ineligible_link_value    = value;
                 }
             }
@@ -754,34 +817,43 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
     }
 
     qdr_link_t *chosen_link     = 0;
-    int         chosen_link_bit = -1;
+    int         chosen_conn_bit = -1;
 
     if (best_eligible_link) {
         chosen_link     = best_eligible_link;
-        chosen_link_bit = best_eligible_link_bit;
+        chosen_conn_bit = best_eligible_conn_bit;
     } else if (best_ineligible_link) {
         chosen_link     = best_ineligible_link;
-        chosen_link_bit = best_ineligible_link_bit;
+        chosen_conn_bit = best_ineligible_conn_bit;
     }
 
     if (chosen_link) {
+
+        // DISPATCH-1545 (head of line blocking): if the message is streaming,
+        // see if the allows us to open a dedicated link for streaming
+        if (!qd_message_receive_complete(msg) && next_hop_supports_streaming_links(chosen_link->conn)) {
+            chosen_link = get_outgoing_streaming_link(core, chosen_link->conn);
+            if (!chosen_link)
+                return 0;
+        }
+
         qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, chosen_link, msg);
         qdr_forward_deliver_CT(core, chosen_link, out_delivery);
 
         //
-        // If the delivery is unsettled and the link is inter-router, account for the outstanding delivery.
-        //
-        if (in_delivery && !in_delivery->settled && chosen_link_bit >= 0) {
-            addr->outstanding_deliveries[chosen_link_bit]++;
-            out_delivery->tracking_addr     = addr;
-            out_delivery->tracking_addr_bit = chosen_link_bit;
-            addr->tracked_deliveries++;
-        }
-
-        //
         // Bump the appropriate counter based on where we sent the delivery.
         //
-        if (chosen_link_bit >= 0) {
+        if (chosen_conn_bit >= 0) {  // sent to peer router
+            //
+            // If the delivery is unsettled account for the outstanding delivery sent inter-router.
+            //
+            if (in_delivery && !in_delivery->settled) {
+                addr->outstanding_deliveries[chosen_conn_bit]++;
+                out_delivery->tracking_addr     = addr;
+                out_delivery->tracking_addr_bit = chosen_conn_bit;
+                addr->tracked_deliveries++;
+            }
+
             addr->deliveries_transit++;
             if (chosen_link->link_type == QD_LINK_ROUTER)
                 core->deliveries_transit++;
@@ -841,8 +913,6 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
         //
         // Look for a next-hop we can use to forward the link-attach.
         //
-        qdr_node_t *next_node;
-
         if (addr->cost_epoch != core->cost_epoch) {
             addr->next_remote = -1;
             addr->cost_epoch  = core->cost_epoch;
@@ -864,14 +934,8 @@ bool qdr_forward_link_balanced_CT(qdr_core_t     *core,
                 if (addr->next_remote == -1)
                     qd_bitmask_first_set(addr->rnodes, &addr->next_remote);
 
-                if (rnode->next_hop)
-                    next_node = rnode->next_hop;
-                else
-                    next_node = rnode;
-
-                qdr_link_t * pdl = peer_data_link(core, next_node, 0);
-                if (next_node && pdl)
-                    conn = pdl->conn;
+                int conn_bit = (rnode->next_hop) ? rnode->next_hop->conn_mask_bit : rnode->conn_mask_bit;
+                conn = (conn_bit >= 0) ? core->rnode_conns_by_mask_bit[conn_bit] : 0;
             }
         }
     }

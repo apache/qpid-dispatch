@@ -165,6 +165,10 @@ void qdr_core_free(qdr_core_t *core)
     qdr_link_t *link = DEQ_HEAD(core->open_links);
     while (link) {
         DEQ_REMOVE_HEAD(core->open_links);
+        if (link->in_streaming_pool) {
+            DEQ_REMOVE_N(STREAMING_POOL, link->conn->streaming_link_pool, link);
+            link->in_streaming_pool = false;
+        }
         if (link->core_endpoint)
             qdrc_endpoint_do_cleanup_CT(core, link->core_endpoint);
         qdr_del_link_ref(&link->conn->links, link, QDR_LINK_LIST_CLASS_CONNECTION);
@@ -196,9 +200,15 @@ void qdr_core_free(qdr_core_t *core)
             work = DEQ_HEAD(conn->work_list);
         }
 
+        if (conn->has_streaming_links) {
+            assert(DEQ_IS_EMPTY(conn->streaming_link_pool));  // all links have been released
+            qdr_del_connection_ref(&core->streaming_connections, conn);
+        }
+
         qdr_connection_free(conn);
         conn = DEQ_HEAD(core->open_connections);
     }
+    assert(DEQ_SIZE(core->streaming_connections) == 0);
 
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
@@ -211,6 +221,7 @@ void qdr_core_free(qdr_core_t *core)
     if (core->control_links_by_mask_bit) free(core->control_links_by_mask_bit);
     if (core->data_links_by_mask_bit)    free(core->data_links_by_mask_bit);
     if (core->neighbor_free_mask)        qd_bitmask_free(core->neighbor_free_mask);
+    if (core->rnode_conns_by_mask_bit)   free(core->rnode_conns_by_mask_bit);
 
     free(core);
 }

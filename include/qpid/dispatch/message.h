@@ -404,6 +404,15 @@ bool qd_message_Q2_holdoff_should_block(qd_message_t *msg);
  */
 bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg);
 
+
+/**
+ * Check if a message has hit its Q2 limit and is currently blocked.
+ * When blocked no further message data will be read from the link.
+ *
+ * @param msg A pointer to the message
+ */
+bool qd_message_is_Q2_blocked(const qd_message_t *msg);
+
 /**
  * Return qd_link through which the message is being received.
  * @param msg A pointer to the message
