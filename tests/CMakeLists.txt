@@ -59,6 +59,9 @@ target_link_libraries(test-sender ${Proton_LIBRARIES} qpid-dispatch)
 add_executable(test-receiver test-receiver.c)
 target_link_libraries(test-receiver ${Proton_LIBRARIES})
 
+add_executable(clogger clogger.c)
+target_link_libraries(clogger ${Proton_LIBRARIES})
+
 
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 

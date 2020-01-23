@@ -31,6 +31,7 @@ from proton import Message, Timeout, Delivery
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
+from system_test import get_inter_router_links
 from system_test import unittest
 
 from proton.handlers import MessagingHandler
@@ -1752,6 +1753,109 @@ class MulticastTestClient(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class StreamingLinkScrubberTest(TestCase):
+    """
+    Verify that unused inter-router streaming links are eventually reclaimed
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(StreamingLinkScrubberTest, cls).setUpClass()
+
+        def router(name, extra):
+            config = [
+                ('router', {'id': 'Router%s' % name,
+                            'mode': 'interior'}),
+                ('listener', {'port': cls.tester.get_port(),
+                              'stripAnnotations': 'no'}),
+                ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+                ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
+
+            ]
+
+            if extra:
+                config.extend(extra)
+
+            config = Qdrouterd.Config(config)
+
+            # run routers in test mode to shorten the streaming link scrubber
+            # interval to 5 seconds an the maximum pool size to two links
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True, cl_args=["--test-hooks"]))
+
+        cls.routers = []
+
+        inter_router_port = cls.tester.get_port()
+
+        router('A',
+               [('listener', {'role': 'inter-router',
+                              'port': inter_router_port})])
+        cls.RouterA = cls.routers[-1]
+        cls.RouterA.listener = cls.RouterA.addresses[0]
+
+        router('B',
+               [('connector', {'name': 'connectorToA', 'role':
+                               'inter-router',
+                               'port': inter_router_port,
+                              'verifyHostname': 'no'})])
+        cls.RouterB = cls.routers[-1]
+        cls.RouterB.listener = cls.RouterB.addresses[0]
+
+        cls.RouterA.wait_router_connected('RouterB')
+        cls.RouterB.wait_router_connected('RouterA')
+
+    def test_01_streaming_link_scrubber(self):
+        """
+        Ensure extra streaming links are closed by the periodic scrubber
+        """
+        address = "closest/scrubber"
+
+        # scrubber removes at most 10 links per scan, the test pool size is 2
+        sender_count = 12
+
+        # fire up a receiver on RouterB to get 1 message from each sender:
+        env = dict(os.environ, PN_TRACE_FRM="1")
+        cmd = ["test-receiver",
+               "-a", self.RouterB.listener,
+               "-s", address,
+               "-c", str(sender_count)]
+        rx = self.popen(cmd, env=env)
+
+        self.RouterA.wait_address(address)
+
+        # remember the count of inter-router links on A before we start streaming
+        pre_count = len(get_inter_router_links(self.RouterA.listener))
+
+        # fire off the senders
+        cmd = ["test-sender",
+               "-a", self.RouterA.listener,
+               "-t", address,
+               "-c", "1",
+               "-sx"
+        ]
+        senders = [self.popen(cmd, env=env) for x in range(sender_count)]
+
+        for tx in senders:
+            out_text, out_error = tx.communicate(timeout=TIMEOUT)
+            if tx.returncode:
+                raise Exception("Sender failed: %s %s" % (out_text, out_error))
+
+        # expect: more inter-router links opened.  Should be 12 more, but
+        # depending on when the scrubber runs it may be as low as two
+        post_count = len(get_inter_router_links(self.RouterA.listener))
+        self.assertTrue(post_count > pre_count)
+
+        # expect: after 5 seconds 10 of the links should be closed and 2
+        # should remain (--test-hooks router option sets these parameters)
+        while (post_count - pre_count) > 2:
+            sleep(0.1)
+            post_count = len(get_inter_router_links(self.RouterA.listener))
+
+        out_text, out_error = rx.communicate(timeout=TIMEOUT)
+        if rx.returncode:
+            raise Exception("Receiver failed: %s %s" % (out_text, out_error))
 
 if __name__ == '__main__':
     unittest.main(main_module())

@@ -1049,7 +1049,7 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 }
 
 
-void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
+void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bool more)
 {
     qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
 
@@ -1060,24 +1060,38 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv)
         qdr_link_work_t *work      = peer->link_work;
         qdr_link_t      *peer_link = qdr_delivery_link(peer);
 
-        //
-        // Determines if the peer connection can be activated.
-        // For a large message, the peer delivery's link_work MUST be at the head of the peer link's work list. This link work is only removed
-        // after the streaming message has been sent.
-        //
-        if (!!work && !!peer_link) {
-            sys_mutex_lock(peer_link->conn->work_lock);
-            if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
-                qdr_add_link_ref(&peer_link->conn->links_with_work[peer_link->priority], peer_link, QDR_LINK_LIST_CLASS_WORK);
-                sys_mutex_unlock(peer_link->conn->work_lock);
+        if (!!peer_link) {
 
-                //
-                // Activate the outgoing connection for later processing.
-                //
-                qdr_connection_activate_CT(core, peer_link->conn);
+            if (peer_link->streaming && !more) {
+                if (!peer_link->in_streaming_pool) {
+                    // A streaming message has completed.  It is now safe to
+                    // re-use this streaming link for the next streaming
+                    // message since that new message will not be blocked
+                    // indefinitely by the current message.
+                    DEQ_INSERT_TAIL_N(STREAMING_POOL, peer_link->conn->streaming_link_pool, peer_link);
+                    peer_link->in_streaming_pool = true;
+                }
             }
-            else
-                sys_mutex_unlock(peer_link->conn->work_lock);
+
+            //
+            // Determines if the peer connection can be activated.
+            // For a large message, the peer delivery's link_work MUST be at the head of the peer link's work list. This link work is only removed
+            // after the streaming message has been sent.
+            //
+            if (!!work) {
+                sys_mutex_lock(peer_link->conn->work_lock);
+                if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
+                    qdr_add_link_ref(&peer_link->conn->links_with_work[peer_link->priority], peer_link, QDR_LINK_LIST_CLASS_WORK);
+                    sys_mutex_unlock(peer_link->conn->work_lock);
+
+                    //
+                    // Activate the outgoing connection for later processing.
+                    //
+                    qdr_connection_activate_CT(core, peer_link->conn);
+                }
+                else
+                    sys_mutex_unlock(peer_link->conn->work_lock);
+            }
         }
 
         peer = qdr_delivery_next_peer_CT(in_dlv);
@@ -1108,7 +1122,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     // If it is already in the undelivered list, don't try to deliver this again.
     //
     if (!!link && in_dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
-        qdr_deliver_continue_peers_CT(core, in_dlv);
+        qdr_deliver_continue_peers_CT(core, in_dlv, more);
 
         qd_message_t *msg = qdr_delivery_message(in_dlv);
 

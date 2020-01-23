@@ -483,6 +483,38 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     //
+    // Head of line blocking avoidance (DISPATCH-1545)
+    //
+    // Before we can forward a message we need to determine whether or not this
+    // message is "streaming" - a large message that has the potential to block
+    // other messages sharing the trunk link.  At this point we cannot for sure
+    // know the actual length of the incoming message, so we employ the
+    // following heuristic to determine if the message is "streaming":
+    //
+    // - If the message is receive-complete it is NOT a streaming message.
+    // - If it is NOT receive-complete:
+    //   Continue buffering incoming data until:
+    //   - receive has completed => NOT a streaming message
+    //   - not rx-complete AND Q2 threshold hit => a streaming message
+    //
+    // Once Q2 is hit we MUST forward the message regardless of rx-complete
+    // since Q2 will block forever unless the incoming data is drained via
+    // forwarding.
+    //
+    if (!receive_complete) {
+        if (qd_message_is_Q2_blocked(msg)) {
+            qd_log(router->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64" L%"PRIu64"] Incoming message classified as streaming. User:%s",
+                   conn->connection_id,
+                   qd_link_link_id(link),
+                   conn->user_id);
+        } else {
+            // Continue buffering this message
+            return false;
+        }
+    }
+
+    //
     // Determine if the incoming link is anonymous.  If the link is addressed,
     // there are some optimizations we can take advantage of.
     //
@@ -766,6 +798,7 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
 static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
+    uint64_t link_id;
 
     // The connection that this link belongs to is gone. Perhaps an AMQP close came in.
     // This link handler should not continue since there is no connection.
@@ -780,7 +813,9 @@ static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
                                                        qdr_terminus(qd_link_remote_source(link)),
                                                        qdr_terminus(qd_link_remote_target(link)),
                                                        pn_link_name(qd_link_pn(link)),
-                                                       terminus_addr);
+                                                       terminus_addr,
+                                                       &link_id);
+    qd_link_set_link_id(link, link_id);
     qdr_link_set_context(qdr_link, link);
     qd_link_set_context(link, qdr_link);
 
@@ -794,6 +829,7 @@ static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
 static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
 {
     qd_connection_t  *conn     = qd_link_connection(link);
+    uint64_t link_id;
 
     // The connection that this link belongs to is gone. Perhaps an AMQP close came in.
     // This link handler should not continue since there is no connection.
@@ -806,7 +842,9 @@ static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
                                                  qdr_terminus(qd_link_remote_source(link)),
                                                  qdr_terminus(qd_link_remote_target(link)),
                                                  pn_link_name(qd_link_pn(link)),
-                                                 terminus_addr);
+                                                 terminus_addr,
+                                                 &link_id);
+    qd_link_set_link_id(link, link_id);
     qdr_link_set_context(qdr_link, link);
     qd_link_set_context(link, qdr_link);
 
@@ -1481,14 +1519,6 @@ static void CORE_link_first_attach(void             *context,
     pn_link_open(qd_link_pn(qlink));
 
     //
-    // All links on the inter router or edge connection have unbounded q2 limit.
-    // Blocking control messages can lead to various failures
-    //
-    if (qdr_connection_role(conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(conn) == QDR_ROLE_INTER_ROUTER) {
-        qd_link_set_q2_limit_unbounded(qlink, true);
-    }
-
-    //
     // Mark the link as stalled and waiting for initial credit.
     //
     if (qdr_link_direction(link) == QD_OUTGOING)
@@ -1513,16 +1543,6 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     // Open (attach) the link
     //
     pn_link_open(pn_link);
-
-    qd_connection_t  *conn     = qd_link_connection(qlink);
-    qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
-    //
-    // All links on the inter router or edge connection have unbounded q2 limit
-    //
-    if (qdr_connection_role(qdr_conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(qdr_conn) == QDR_ROLE_INTER_ROUTER) {
-        qd_link_set_q2_limit_unbounded(qlink, true);
-    }
-
 
     //
     // Mark the link as stalled and waiting for initial credit.

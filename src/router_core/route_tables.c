@@ -246,11 +246,13 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
 
         core->routers_by_mask_bit       = NEW_PTR_ARRAY(qdr_node_t, qd_bitmask_width());
         core->control_links_by_mask_bit = NEW_PTR_ARRAY(qdr_link_t, qd_bitmask_width());
+        core->rnode_conns_by_mask_bit   = NEW_PTR_ARRAY(qdr_connection_t, qd_bitmask_width());
         core->data_links_by_mask_bit    = NEW_ARRAY(qdr_priority_sheaf_t, qd_bitmask_width());
         for (int idx = 0; idx < qd_bitmask_width(); idx++) {
             core->routers_by_mask_bit[idx]   = 0;
             core->control_links_by_mask_bit[idx] = 0;
             core->data_links_by_mask_bit[idx].count = 0;
+            core->rnode_conns_by_mask_bit[idx] = 0;
             for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority)
               core->data_links_by_mask_bit[idx].links[priority] = 0;
 
@@ -312,7 +314,7 @@ static void qdr_add_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
         ZERO(rnode);
         rnode->owning_addr       = addr;
         rnode->mask_bit          = router_maskbit;
-        rnode->link_mask_bit     = -1;
+        rnode->conn_mask_bit     = -1;
         rnode->valid_origins     = qd_bitmask(0);
 
         qd_iterator_reset_view(iter, ITER_VIEW_ALL);
@@ -414,20 +416,20 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
 static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     int router_maskbit = action->args.route_table.router_maskbit;
-    int link_maskbit   = action->args.route_table.link_maskbit;
+    int conn_maskbit   = action->args.route_table.link_maskbit;  // "link" identifies a connection, not an amqp link
 
     if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
         qd_log(core->log, QD_LOG_CRITICAL, "set_link: Router maskbit out of range: %d", router_maskbit);
         return;
     }
 
-    if (link_maskbit >= qd_bitmask_width() || link_maskbit < 0) {
-        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Link maskbit out of range: %d", link_maskbit);
+    if (conn_maskbit >= qd_bitmask_width() || conn_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Link maskbit out of range: %d", conn_maskbit);
         return;
     }
 
-    if (core->control_links_by_mask_bit[link_maskbit] == 0) {
-        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Invalid link reference: %d", link_maskbit);
+    if (core->control_links_by_mask_bit[conn_maskbit] == 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_link: Invalid link reference: %d", conn_maskbit);
         return;
     }
 
@@ -440,7 +442,7 @@ static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard
     // Add the peer_link reference to the router record.
     //
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->link_mask_bit = link_maskbit;
+    rnode->conn_mask_bit = conn_maskbit;
     qdr_addr_start_inlinks_CT(core, rnode->owning_addr);
 }
 
@@ -460,7 +462,7 @@ static void qdr_remove_link_CT(qdr_core_t *core, qdr_action_t *action, bool disc
     }
 
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
-    rnode->link_mask_bit = -1;
+    rnode->conn_mask_bit = -1;
 }
 
 

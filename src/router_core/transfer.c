@@ -925,3 +925,16 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
             qdr_addr_start_inlinks_CT(core, addr->fallback_for);
     }
 }
+
+
+// True if link currently has no outstanding deliveries or work.
+// Used to determine if it is safe for the core to close a link.
+//
+bool qdr_link_is_idle_CT(const qdr_link_t *link)
+{
+    return (DEQ_SIZE(link->undelivered) == 0 &&
+            DEQ_SIZE(link->unsettled) == 0 &&
+            DEQ_SIZE(link->settled) == 0 &&
+            DEQ_SIZE(link->updated_deliveries) == 0 &&
+            !link->ref[QDR_LINK_LIST_CLASS_WORK]);
+}

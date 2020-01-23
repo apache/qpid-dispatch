@@ -2232,6 +2232,12 @@ bool qd_message_Q2_holdoff_should_unblock(qd_message_t *msg)
 }
 
 
+bool qd_message_is_Q2_blocked(const qd_message_t *msg)
+{
+    return ((const qd_message_pvt_t*)msg)->content->q2_input_holdoff;
+}
+
+
 qd_link_t * qd_message_get_receiving_link(const qd_message_t *msg)
 {
     return safe_deref_qd_link_t(((qd_message_pvt_t *)msg)->content->input_link_sp);
@@ -2250,6 +2256,7 @@ void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
     msg_pvt->content->aborted = aborted;
 }
+
 
 bool qd_message_oversize(const qd_message_t *msg)
 {
