@@ -24,7 +24,7 @@ under the License
 [id='monitoring-router-network-web-console'-{context}']
 = Monitoring the router network using {ConsoleName}
 
-The web console provides several sections you can use to monitor the router network.
+The web console provides several sections that you can use to monitor the router network.
 
 [cols="25,75"]
 |===
@@ -32,7 +32,7 @@ The web console provides several sections you can use to monitor the router netw
 
 | Overview
 a|
-Aggregated information about the router network. This includes the following:
+Aggregated information about the router network. This information includes the following:
 
 * Dashboard (shows router network statistics)
 * Routers
@@ -43,12 +43,12 @@ Aggregated information about the router network. This includes the following:
 
 | Visualizations
 a|
-A graphical view of the router network. You can view the following types of visualizations:
+Graphical view of the router network. You can see the following types of visualizations:
 
-`Topology`:: Shows the topology of the router network, including routers, clients, and brokers. It also shows how messages are flowing through the network.
+`Topology`:: Topology of the router network, including routers, clients, and brokers. This visualization also shows how messages are flowing through the network.
 `Message flow`:: A chord diagram showing the real-time message flow by address.
 
 | Details
-| Detailed configuration information about each AMQP management entity for each router in the router network. You can view and change the configuration of any of the routers in the network.
+| Detailed configuration information about each AMQP management entity, for each router in the router network. You can view and change the configuration of any of the routers in the network.
 
 |===
