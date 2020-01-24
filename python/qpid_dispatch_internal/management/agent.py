@@ -259,13 +259,14 @@ class RouterEntity(EntityAdapter):
         return self.attributes.get('id')
 
     def create(self):
-        for ch in self.attributes[u"id"]:
-            try:
-                disallowed = unicodedata.category(ch)[0] in "CZ"
-            except TypeError:
-                disallowed = unicodedata.category(ch.decode('utf-8'))[0] in "CZ"
-            if disallowed:  # disallow control and whitespace characters
-                raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes[u"id"]))
+        if u"id" in self.attributes.keys():
+            for ch in self.attributes[u"id"]:
+                try:
+                    disallowed = unicodedata.category(ch)[0] in "CZ"
+                except TypeError:
+                    disallowed = unicodedata.category(ch.decode('utf-8'))[0] in "CZ"
+                if disallowed:  # disallow control and whitespace characters
+                    raise AttributeError("Router id attribute containing character '%s' in id '%s' is disallowed." % (ch, self.attributes[u"id"]))
         try:
             self.attributes[u"hostName"] = socket.gethostbyaddr(socket.gethostname())[0]
         except:
