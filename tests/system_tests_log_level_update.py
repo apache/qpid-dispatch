@@ -26,6 +26,100 @@ from proton.reactor import AtMostOnce
 
 apply_options = AtMostOnce()
 
+
+class LogModuleProtocolTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(LogModuleProtocolTest, cls).setUpClass()
+        name = "test-router"
+        LogModuleProtocolTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': LogModuleProtocolTest.listen_port}),
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'})
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def create_sender_receiver(self, test_address, test_msg, blocking_connection=None):
+        if not blocking_connection:
+            blocking_connection = BlockingConnection(self.address)
+        blocking_receiver = blocking_connection.create_receiver(address=test_address)
+        blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
+        msg = Message(body=test_msg)
+        blocking_sender.send(msg)
+        received_message = blocking_receiver.receive()
+        self.assertEqual(test_msg, received_message.body)
+
+    def test_turn_on_protocol_trace(self):
+        hello_world_0 = "Hello World_0!"
+        qd_manager = QdManager(self, self.address)
+        blocking_connection = BlockingConnection(self.address)
+
+        TEST_ADDR = "moduletest0"
+        self.create_sender_receiver(TEST_ADDR, hello_world_0, blocking_connection)
+
+        num_attaches = 0
+        logs = qd_manager.get_log()
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@attach" in log[2] and TEST_ADDR in log[2]:
+                    num_attaches += 1
+
+        # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
+        self.assertTrue(num_attaches == 4)
+
+        # Turn off trace logging using qdmanage
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"}, name="log/DEFAULT")
+
+        # Turn on trace (not trace+) level logging for the PROTOCOL module. After doing
+        # this we will create a sender and a receiver and make sure that the PROTOCOL module
+        # is emitting proton frame trace messages.
+
+        # Before DISPATCH-1558, the only way to turn on proton frame trace logging was to set
+        # enable to trace on the SERVER or the DEFAULT module. Turning on trace for the SERVER
+        # module would also spit out dispatch trace level messages from the SERVER module.
+        # DISPATCH-1558 adds the new PROTOCOL module which moves all protocol traces into
+        # that module.
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "trace+"}, name="log/PROTOCOL")
+
+        TEST_ADDR = "moduletest1"
+        hello_world_1 = "Hello World_1!"
+        self.create_sender_receiver(TEST_ADDR, hello_world_1, blocking_connection)
+
+        num_attaches = 0
+        logs = qd_manager.get_log()
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@attach" in log[2] and TEST_ADDR in log[2]:
+                    num_attaches += 1
+
+        # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
+        self.assertTrue(num_attaches == 4)
+
+        # Now turn off trace logging for the PROTOCOL module and make sure
+        # that there is no more proton frame trace messages appearing in the log
+        qd_manager.update("org.apache.qpid.dispatch.log",
+                          {"enable": "info+"}, name="log/PROTOCOL")
+
+        TEST_ADDR = "moduletest2"
+        hello_world_2 = "Hello World_2!"
+        self.create_sender_receiver(TEST_ADDR, hello_world_2, blocking_connection)
+
+        num_attaches = 0
+        logs = qd_manager.get_log()
+        for log in logs:
+            if u'PROTOCOL' in log[0]:
+                if "@attach" in log[2] and TEST_ADDR in log[2]:
+                    num_attaches += 1
+
+        # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
+        self.assertTrue(num_attaches == 0)
+
+
 class LogLevelUpdateTest(TestCase):
     @classmethod
     def setUpClass(cls):
@@ -71,7 +165,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # num_attaches for address TEST_ADDR must be 4, two attaches to/from sender and receiver
@@ -91,7 +185,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be no attach frames with address TEST_ADDR
@@ -108,7 +202,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be 4 attach frames with address TEST_ADDR
@@ -123,7 +217,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 
@@ -141,12 +235,12 @@ class LogLevelUpdateTest(TestCase):
         TEST_ADDR = "apachetest5"
 
         # Step 1. Turn off trace logging for module DEFAULT and enable trace logging
-        #         for the SERVER module and make sure it works.
+        #         for the PROTOCOL module and make sure it works.
         qd_manager = QdManager(self, self.address)
         # Set log level to info+ on the DEFAULT module
         qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"}, name="log/DEFAULT")
-        # Set log level to trace+ on the SERVER module
-        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "trace+"}, name="log/SERVER")
+        # Set log level to trace+ on the PROTOCOL module
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "trace+"}, name="log/PROTOCOL")
         blocking_connection = BlockingConnection(self.address)
 
         self.create_sender_receiver(TEST_ADDR, hello_world_5,
@@ -155,7 +249,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         # There should be 4 attach frames with address TEST_ADDR
@@ -163,7 +257,7 @@ class LogLevelUpdateTest(TestCase):
         self.assertTrue(num_attaches == 4)
 
         TEST_ADDR = "apachetest6"
-        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"}, name="log/SERVER")
+        qd_manager.update("org.apache.qpid.dispatch.log", {"enable": "info+"}, name="log/PROTOCOL")
 
         self.create_sender_receiver(TEST_ADDR, hello_world_6, blocking_connection)
 
@@ -171,7 +265,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
         self.assertTrue(num_attaches == 0)
@@ -183,7 +277,7 @@ class LogLevelUpdateTest(TestCase):
         num_attaches = 0
         logs = qd_manager.get_log()
         for log in logs:
-            if u'SERVER' in log[0]:
+            if u'PROTOCOL' in log[0]:
                 if "@attach" in log[2] and TEST_ADDR in log[2]:
                     num_attaches += 1
 

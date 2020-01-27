@@ -406,7 +406,7 @@ class TopologyDispositionTests ( TestCase ):
         error = None
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
-        st_key = "SERVER (trace) ["
+        st_key = "PROTOCOL (trace) ["
         qc_key = "qd.conn-id\"="
         for letter in ['A', 'B', 'C', 'D']:
             log_name = ('../setUpClass/%s.log' % letter)
