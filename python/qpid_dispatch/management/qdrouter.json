@@ -1082,6 +1082,7 @@
                         "HTTP",
                         "CONN_MGR",
                         "PYTHON",
+                        "PROTOCOL",
                         "DEFAULT"
                     ],
                     "required": true,

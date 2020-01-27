@@ -58,6 +58,7 @@ struct qd_server_t {
     pn_proactor_t            *proactor;
     qd_container_t           *container;
     qd_log_source_t          *log_source;
+    qd_log_source_t          *protocol_log_source; // Log source for the PROTOCOL module
     void                     *start_context;
     sys_cond_t               *cond;
     sys_mutex_t              *lock;
@@ -98,14 +99,17 @@ static const int BACKLOG = 50;  /* Listening backlog */
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
 static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
 
+
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
  */
 static void transport_tracer(pn_transport_t *transport, const char *message)
 {
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
-    if (ctx)
-        qd_log(ctx->server->log_source, QD_LOG_TRACE, "[%"PRIu64"]:%s", ctx->connection_id, message);
+    if (ctx) {
+        // The PROTOCOL module is used exclusively for logging protocol related tracing. The protocol could be AMQP, HTTP, TCP etc.
+        qd_log(ctx->server->protocol_log_source, QD_LOG_TRACE, "[%"PRIu64"]:%s", ctx->connection_id, message);
+    }
 }
 
 
@@ -609,9 +613,12 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
 
     //
     // Proton pushes out its trace to transport_tracer() which in turn writes a trace
-    // message to the qdrouter log If trace level logging is enabled on the router set
+    // message to the qdrouter log
+    // If trace level logging is enabled on the PROTOCOL module, set PN_TRACE_FRM as the transport trace
+    // and also set the transport tracer callback.
+    // Note here that if trace level logging is enabled on the DEFAULT module, all modules are logging at trace level too.
     //
-    if (qd_log_enabled(ctx->server->log_source, QD_LOG_TRACE)) {
+    if (qd_log_enabled(ctx->server->protocol_log_source, QD_LOG_TRACE)) {
         pn_transport_trace(tport, PN_TRACE_FRM);
         pn_transport_set_tracer(tport, transport_tracer);
     }
@@ -1226,6 +1233,7 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 
     qd_server->qd               = qd;
     qd_server->log_source       = qd_log_source("SERVER");
+    qd_server->protocol_log_source = qd_log_source("PROTOCOL");
     qd_server->container_name   = container_name;
     qd_server->sasl_config_path = sasl_config_path;
     qd_server->sasl_config_name = sasl_config_name;
