@@ -1351,7 +1351,7 @@ static void CORE_connection_activate(void *context, qdr_connection_t *conn)
 
 static void CORE_link_first_attach(void             *context,
                                    qdr_connection_t *conn,
-                                   qdr_link_t       *link, 
+                                   qdr_link_t       *link,
                                    qdr_terminus_t   *source,
                                    qdr_terminus_t   *target)
 {
@@ -1381,12 +1381,16 @@ static void CORE_link_first_attach(void             *context,
     //
     pn_link_open(qd_link_pn(qlink));
 
+    // DISPATCH-1460, DISPATCH-1576 Do not block router control messages.
+    // Control messages must be received in their entirety before they are
+    // consumed. Flow controlling such messages mean they will never fully
+    // arrive thus never be consumed (therefore flow control is never
+    // released).
     //
-    // All links on the inter router or edge connection have unbounded q2 limit.
-    // Blocking control messages can lead to various failures
-    //
-    if (qdr_connection_role(conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(conn) == QDR_ROLE_INTER_ROUTER) {
+    const qd_link_type_t lt = qdr_link_type(link);
+    if (lt == QD_LINK_CONTROL || lt == QD_LINK_EDGE_DOWNLINK) {
         qd_link_set_q2_limit_unbounded(qlink, true);
+        qd_link_set_q3_limit_unbounded(qlink, true);
     }
 
     //
@@ -1415,15 +1419,17 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
     //
     pn_link_open(pn_link);
 
-    qd_connection_t  *conn     = qd_link_connection(qlink);
-    qdr_connection_t *qdr_conn = (qdr_connection_t*) qd_connection_get_context(conn);
+    // DISPATCH-1460, DISPATCH-1576 Do not block router control messages.
+    // Control messages must be received in their entirety before they are
+    // consumed. Flow controlling such messages mean they will never fully
+    // arrive thus never be consumed (therefore flow control is never
+    // released).
     //
-    // All links on the inter router or edge connection have unbounded q2 limit
-    //
-    if (qdr_connection_role(qdr_conn) == QDR_ROLE_EDGE_CONNECTION || qdr_connection_role(qdr_conn) == QDR_ROLE_INTER_ROUTER) {
+    const qd_link_type_t lt = qdr_link_type(link);
+    if (lt == QD_LINK_CONTROL || lt == QD_LINK_EDGE_DOWNLINK) {
         qd_link_set_q2_limit_unbounded(qlink, true);
+        qd_link_set_q3_limit_unbounded(qlink, true);
     }
-
 
     //
     // Mark the link as stalled and waiting for initial credit.

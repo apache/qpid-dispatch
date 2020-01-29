@@ -1677,11 +1677,12 @@ void qd_message_send(qd_message_t *in_msg,
 
     buf = msg->cursor.buffer;
 
-    pn_session_t     *pns  = pn_link_session(pnl);
+    pn_session_t   *pns  = pn_link_session(pnl);
+    const uint32_t  q3_limit = qd_link_is_q3_limit_unbounded(link) ? 0 : QD_QLIMIT_Q3_UPPER;
 
     while (!content->aborted
            && buf
-           && pn_session_outgoing_bytes(pns) <= QD_QLIMIT_Q3_UPPER) {
+           && (q3_limit == 0 || pn_session_outgoing_bytes(pns) <= q3_limit)) {
 
         // This will send the remaining data in the buffer if any. There may be
         // zero bytes left to send if we stopped here last time and there was
@@ -1783,7 +1784,7 @@ void qd_message_send(qd_message_t *in_msg,
         }
     }
 
-    *q3_stalled = (pn_session_outgoing_bytes(pns) > QD_QLIMIT_Q3_UPPER);
+    *q3_stalled = (q3_limit && pn_session_outgoing_bytes(pns) > q3_limit);
 }
 
 

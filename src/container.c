@@ -61,6 +61,7 @@ struct qd_link_t {
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
     bool                        q2_limit_unbounded;
+    bool                        q3_limit_unbounded;
 };
 
 DEQ_DECLARE(qd_link_t, qd_link_list_t);
@@ -931,7 +932,7 @@ pn_session_t *qd_link_pn_session(qd_link_t *link)
 }
 
 
-bool qd_link_is_q2_limit_unbounded(qd_link_t *link)
+bool qd_link_is_q2_limit_unbounded(const qd_link_t *link)
 {
     return link->q2_limit_unbounded;
 }
@@ -940,6 +941,18 @@ bool qd_link_is_q2_limit_unbounded(qd_link_t *link)
 void qd_link_set_q2_limit_unbounded(qd_link_t *link, bool q2_limit_unbounded)
 {
     link->q2_limit_unbounded = q2_limit_unbounded;
+}
+
+
+bool qd_link_is_q3_limit_unbounded(const qd_link_t *link)
+{
+    return link->q3_limit_unbounded;
+}
+
+
+void qd_link_set_q3_limit_unbounded(qd_link_t *link, bool q3_limit_unbounded)
+{
+    link->q3_limit_unbounded = q3_limit_unbounded;
 }
 
 
