@@ -425,6 +425,9 @@ class MessageRouteAbortTest(MessagingHandler):
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
 
     def send(self):
+        if self.delivery:
+            return
+
         op, size = self.program.pop(0) if len(self.program) > 0 else (None, None)
 
         if op == None:
