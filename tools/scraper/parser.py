@@ -371,6 +371,7 @@ class ParsedLogLine(object):
     ** common             common block object
     """
     server_trace_key = "SERVER (trace) ["
+    protocol_trace_key = "PROTOCOL (trace) ["
     server_info_key = "SERVER (info) ["
     policy_trace_key = "POLICY (trace) ["
     router_ls_key = "ROUTER_LS (info)"
@@ -767,6 +768,7 @@ class ParsedLogLine(object):
         :param _router:
         """
         if not (ParsedLogLine.server_trace_key in _line or
+                ParsedLogLine.protocol_trace_key in _line or
                 (ParsedLogLine.policy_trace_key in _line and "lookup_user:" in _line) or  # open (not begin, attach)
                 ParsedLogLine.server_info_key in _line or
                 ParsedLogLine.router_ls_key in _line):
@@ -835,24 +837,28 @@ class ParsedLogLine(object):
         # extract connection number
         sti = self.line.find(self.server_trace_key)
         if sti < 0:
-            sti = self.line.find(self.policy_trace_key)
+            sti = self.line.find(self.protocol_trace_key)
             if sti < 0:
-                sti = self.line.find(self.server_info_key)
+                sti = self.line.find(self.policy_trace_key)
                 if sti < 0:
-                    sti = self.line.find(self.router_ls_key)
+                    sti = self.line.find(self.server_info_key)
                     if sti < 0:
-                        raise ValueError("Log keyword/level not found in line %s" % (self.line))
+                        sti = self.line.find(self.router_ls_key)
+                        if sti < 0:
+                            raise ValueError("Log keyword/level not found in line %s" % (self.line))
+                        else:
+                            self.line = self.line[sti + len(self.router_ls_key):]
+                            self.data.is_router_ls = True
+                            # this has no relationship to AMQP log lines
+                            return
                     else:
-                        self.line = self.line[sti + len(self.router_ls_key):]
-                        self.data.is_router_ls = True
-                        # this has no relationship to AMQP log lines
-                        return
+                        self.line = self.line[sti + len(self.server_info_key):]
+                        self.data.is_server_info = True
                 else:
-                    self.line = self.line[sti + len(self.server_info_key):]
-                    self.data.is_server_info = True
+                    self.line = self.line[sti + len(self.policy_trace_key):]
+                    self.data.is_policy_trace = True
             else:
-                self.line = self.line[sti + len(self.policy_trace_key):]
-                self.data.is_policy_trace = True
+                self.line = self.line[sti + len(self.protocol_trace_key):]
         else:
             self.line = self.line[sti + len(self.server_trace_key):]
         ste = self.line.find(']')

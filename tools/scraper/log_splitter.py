@@ -119,7 +119,10 @@ class parsed_attach():
         key_strace = "SERVER (trace) ["
         sti = self.line.find(key_strace)
         if sti < 0:
-            raise ValueError("'%s' not found in line %s" % (key_strace, self.line))
+            key_strace = "PROTOCOL (trace) ["
+            sti = self.line.find(key_strace)
+            if sti < 0:
+                raise ValueError("'%s' not found in line %s" % (key_strace, self.line))
         self.line = self.line[sti + len(key_strace):]
         ste = self.line.find(']')
         if ste < 0:
@@ -223,6 +226,7 @@ class LogFile:
         """
         key_sstart = "SERVER (info) Container Name:"  # Normal 'router is starting' restart discovery line
         key_strace = "SERVER (trace) ["  # AMQP traffic
+        key_ptrace = "PROTOCOL (trace) [" # AMQP traffic
         key_error = "@error(29)"
         key_openin = "<- @open(16)"
         key_xfer = "@transfer"
@@ -236,10 +240,18 @@ class LogFile:
             self.instance += 1
             self.restarts.append(line)
         else:
+            found = False
             if self.parse_identify(key_strace, line):
                 self.amqp_lines += 1
                 idx = line.find(key_strace)
                 idx += len(key_strace)
+                found = True
+            elif self.parse_identify(key_ptrace, line):
+                self.amqp_lines += 1
+                idx = line.find(key_ptrace)
+                idx += len(key_ptrace)
+                found = True
+            if found:
                 eidx = line.find("]", idx + 1)
                 conn_id = line[idx:eidx]
                 keyname = connection.keyname(self.instance, conn_id)

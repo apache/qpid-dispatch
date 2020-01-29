@@ -161,15 +161,23 @@ and divides the connection data. Connection names inclued the router instance ID
 * Enable router logging
 
 The routers need to generate proper logging for Scraper.
-The information classes are exposed by enabling log levels.
+Expose the information in router logs that Scraper requires by 
+enabling specific log levels for some of the router logging modules.
 
-| Log level      | Information               |
+| Log module and level | Information exposed in logs |
 |----------------|---------------------------|
 | ROUTER info    | Router version            |
 | SERVER info    | Router restart discovery  |
-| SERVER trace   | AMQP control and data     |
+| SERVER trace   | AMQP control and data - versions 1.10 and earlier |
+| PROTOCOL trace | AMQP control and data - versions 1.11 and later   |
 | ROUTER_LS info | Router link state reports |
 
+* Enable version-specific router logging
+
+| Version          | SERVER trace                | PROTOCOL trace         |
+|------------------|-----------------------------|------------------------|
+| 1.10 and earlier | Required                    | Error - do not specify |
+| 1.11 and later   | Do not specify - clutters log file with info that Scraper does not use | Required |
 
 * Run your tests to populate log files used as Scraper input.
 
@@ -207,7 +215,7 @@ The information classes are exposed by enabling log levels.
       --files FILES [FILES ...], -f FILES [FILES ...]
 
 * Split mode works with a single file and ignores all other switches
-* Normal mode (no --split switch) accepts other swithces and multiple files
+* Normal mode (no --split switch) accepts other switches and multiple files
 
 ### Switch --skip-all-data
     tools/scraper/scraper.py --skip-all-data -f FILE [FILE ...]
