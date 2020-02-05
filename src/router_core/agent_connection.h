@@ -36,6 +36,6 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                              qd_parsed_field_t *in_body);
 
 #define QDR_CONNECTION_COLUMN_COUNT 23
-const char *qdr_connection_columns[QDR_CONNECTION_COLUMN_COUNT + 1];
+extern const char *qdr_connection_columns[QDR_CONNECTION_COLUMN_COUNT + 1];
 
 #endif

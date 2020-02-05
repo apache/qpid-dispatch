@@ -787,7 +787,7 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
 
     // This is the string that will contain the comma separated failover list
     char failover_info[arr_length];
-    failover_info[0] = 0;
+    memset(failover_info, 0, sizeof(failover_info));
 
     while(item) {
 

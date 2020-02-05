@@ -23,7 +23,7 @@
 
 #define QDR_ROUTER_COLUMN_COUNT  31
 
-const char *qdr_router_columns[QDR_ROUTER_COLUMN_COUNT + 1];
+extern const char *qdr_router_columns[QDR_ROUTER_COLUMN_COUNT + 1];
 
 void qdra_router_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
 void qdra_router_get_next_CT(qdr_core_t *core, qdr_query_t *query);

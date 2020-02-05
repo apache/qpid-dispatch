@@ -31,6 +31,6 @@ void qdra_link_update_CT(qdr_core_t          *core,
 
 #define QDR_LINK_COLUMN_COUNT  29
 
-const char *qdr_link_columns[QDR_LINK_COLUMN_COUNT + 1];
+extern const char *qdr_link_columns[QDR_LINK_COLUMN_COUNT + 1];
 
 #endif
