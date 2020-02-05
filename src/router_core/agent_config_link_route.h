@@ -36,6 +36,6 @@ const char *qdra_link_route_direction_CT(qd_parsed_field_t *field, qd_direction_
 
 #define QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT 13
 
-const char *qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT + 1];
+extern const char *qdr_config_link_route_columns[QDR_CONFIG_LINK_ROUTE_COLUMN_COUNT + 1];
 
 #endif

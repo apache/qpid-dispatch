@@ -33,6 +33,6 @@ void qdra_address_get_CT(qdr_core_t *core,
 
 #define QDR_ADDRESS_COLUMN_COUNT 21
 
-const char *qdr_address_columns[QDR_ADDRESS_COLUMN_COUNT + 1];
+extern const char *qdr_address_columns[QDR_ADDRESS_COLUMN_COUNT + 1];
 
 #endif

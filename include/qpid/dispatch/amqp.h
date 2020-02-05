@@ -62,7 +62,7 @@ typedef enum {
 /**
  * AMQP Type Tags
  */
-enum {
+typedef enum {
     QD_AMQP_NULL = 0x40,
     QD_AMQP_BOOLEAN = 0x56,
     QD_AMQP_TRUE = 0x41,
