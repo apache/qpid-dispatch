@@ -34,6 +34,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
+from datetime import datetime
 from subprocess import PIPE, STDOUT
 from copy import copy
 try:
@@ -1218,3 +1219,46 @@ def get_inter_router_links(address):
 
     return inter_router_links
 
+
+class Timestamp(object):
+    """
+    Time stamps for logging.
+    """
+    def __init__(self):
+        self.ts = datetime.now()
+
+    def __str__(self):
+        return self.ts.strftime("%Y-%m-%d %H:%M:%S:%f")
+
+
+class Logger(object):
+    """
+    Record an event log for a self test.
+    May print per-event or save events to be printed later.
+    """
+
+    def __init__(self, title="Logger", print_to_console=False, save_for_dump=True):
+        self.title = title
+        self.print_to_console = print_to_console
+        self.save_for_dump = save_for_dump
+        self.logs = []
+
+    def log(self, msg):
+        ts = Timestamp()
+        if self.save_for_dump:
+            self.logs.append( (ts, msg) )
+        if self.print_to_console:
+            print("%s %s" % (ts, msg))
+            sys.stdout.flush()
+
+    def dump(self):
+        print(self)
+        sys.stdout.flush()
+
+    def __str__(self):
+        lines = []
+        lines.append(self.title)
+        for ts, msg in self.logs:
+            lines.append("%s %s" % (ts, msg))
+        res = str('\n'.join(lines))
+        return res

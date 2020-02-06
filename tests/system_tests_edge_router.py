@@ -22,7 +22,6 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from datetime import datetime
 from time import sleep
 from threading import Event
 from threading import Timer
@@ -31,6 +30,7 @@ from proton import Message, Timeout
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
+from system_test import Logger
 from system_test import QdManager
 from system_test import unittest
 from system_tests_link_routes import ConnLinkRouteService
@@ -471,7 +471,7 @@ class RouterTest(TestCase):
                                  "test_12")
         test.run()
         if test.error is not None:
-            print(str(test.logger))
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
     def test_13_mobile_address_edge_to_edge_one_interior(self):
@@ -1892,26 +1892,6 @@ class DynamicAddressTest(MessagingHandler):
 
     def run(self):
         Container(self).run()
-
-class Logger(object):
-    """
-    Keep an in-memory list of timestamped messages.
-    Print only on request successful tests are not encumbered
-    with print detail.
-    """
-    PRINT_TO_CONSOLE = False
-    def __init__(self):
-        self.msgs = []
-
-    def log(self, msg):
-        ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S:%f")
-        m = "%s %s" % (ts, msg)
-        self.msgs.append(m)
-        if Logger.PRINT_TO_CONSOLE:
-            print(m)
-
-    def __str__(self):
-        return '\n'.join(self.msgs)
 
 
 class CustomTimeout(object):
