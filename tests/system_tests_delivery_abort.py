@@ -23,6 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message, Timeout
+from system_test import Logger
 from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from proton.handlers import MessagingHandler
@@ -107,6 +108,8 @@ class RouterTest(TestCase):
                                      self.routers[0].addresses[0],
                                      "addr_05")
         test.run()
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -115,6 +118,8 @@ class RouterTest(TestCase):
                                      self.routers[1].addresses[0],
                                      "addr_06")
         test.run()
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -403,21 +408,24 @@ class MessageRouteAbortTest(MessagingHandler):
         self.sender1       = None
         self.receiver      = None
         self.delivery      = None
+        self.logger        = Logger(title="MessageRouteAbortTest")
 
-        self.program       = [('D', 10), ('D', 10), ('A', 10), ('A', 10), ('D', 10), ('D', 10),
-                              ('A', 100), ('D', 100),
-                              ('A', 1000), ('A', 1000), ('A', 1000), ('A', 1000), ('A', 1000), ('D', 1000),
-                              ('A', 10000), ('A', 10000), ('A', 10000), ('A', 10000), ('A', 10000), ('D', 10000),
-                              ('A', 100000), ('A', 100000), ('A', 100000), ('A', 100000), ('A', 100000), ('D', 100000), ('F', 10)]
+        self.program       = [('D', 10), ('D', 20), ('A', 30), ('A', 40), ('D', 50), ('D', 60),
+                              ('A', 100), ('D', 110),
+                              ('A', 1000), ('A', 1010), ('A', 1020), ('A', 1030), ('A', 1040), ('D', 1050),
+                              ('A', 10000), ('A', 10010), ('A', 10020), ('A', 10030), ('A', 10040), ('D', 10050),
+                              ('A', 100000), ('A', 100010), ('A', 100020), ('A', 100030), ('A', 100040), ('D', 100050), ('F', 10)]
         self.result        = []
-        self.expected_result = [10, 10, 10, 10, 100, 1000, 10000, 100000]
+        self.expected_result = [10, 20, 50, 60, 110, 1050, 10050, 100050]
 
     def timeout(self):
         self.error = "Timeout Expired - Unprocessed Ops: %r, Result: %r" % (self.program, self.result)
+        self.logger.log(self.error)
         self.sender_conn.close()
         self.receiver_conn.close()
 
     def on_start(self, event):
+        self.logger.log("on_start")
         self.timer         = event.reactor.schedule(10.0, Timeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
@@ -426,9 +434,11 @@ class MessageRouteAbortTest(MessagingHandler):
 
     def send(self):
         if self.delivery:
+            self.logger.log("send(): Do not send - delivery to be aborted is in flight")
             return
 
         op, size = self.program.pop(0) if len(self.program) > 0 else (None, None)
+        self.logger.log("send - op=%s, size=%s" % (str(op), str(size)))
 
         if op == None:
             return
@@ -437,14 +447,18 @@ class MessageRouteAbortTest(MessagingHandler):
         if op == 'F':
             body = "FINISH"
         else:
-            for i in range(size // 10):
-                body += "0123456789"
+            bod = str(size)
+            bod2 = "0000000000" + bod
+            bod3 = "." + bod2[-9:]
+            body = bod3 * (size // 10)
         msg = Message(body=body)
         
         if op in 'DF':
+            self.logger.log("send(): Send message size: %d" % (size))
             delivery = self.sender1.send(msg)
 
         if op == 'A':
+            self.logger.log("send(): Start aborted message size: %d" % (size))
             self.delivery = self.sender1.delivery(self.sender1.delivery_tag())
             encoded = msg.encode()
             self.sender1.stream(encoded)
@@ -452,15 +466,18 @@ class MessageRouteAbortTest(MessagingHandler):
     def finish(self):
         if self.result != self.expected_result:
             self.error = "Expected: %r, Actual: %r" % (self.expected_result, self.result)
+            self.logger.log(self.error)
         self.sender_conn.close()
         self.receiver_conn.close()
         self.timer.cancel()
         
     def on_sendable(self, event):
+        self.logger.log("on_sendable")
         if event.sender == self.sender1:
             if self.delivery:
                 self.delivery.abort()
                 self.delivery = None
+                self.logger.log("on_sendable aborts delivery")
             else:
                 self.send()
 
@@ -469,6 +486,7 @@ class MessageRouteAbortTest(MessagingHandler):
         if m.body == "FINISH":
             self.finish()
         else:
+            self.logger.log("on_message receives len: %d" %(len(m.body)))
             self.result.append(len(m.body))
             self.send()
 
