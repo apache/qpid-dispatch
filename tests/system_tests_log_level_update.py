@@ -129,14 +129,11 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Start a router and a messenger"""
         super(EnableConnectionLevelInterRouterTraceTest, cls).setUpClass()
 
         def router(name, connection):
 
             config = [
-                # Use the deprecated attributes helloInterval, raInterval, raIntervalFlux, remoteLsMaxAge
-                # The routers should still start successfully after using these deprecated entities.
                 ('router', {'mode': 'interior', 'id': 'QDR.%s'%name}),
                 ('listener', {'port': cls.tester.get_port()}),
                 connection
@@ -231,6 +228,20 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         cls.router = cls.tester.qdrouterd(name, config)
         cls.router.wait_ready()
         cls.address = cls.router.addresses[0]
+
+    def test_enable_protocol_trace_on_non_existent_connection(self):
+        qd_manager = QdManager(self, self.address)
+
+        bad_request = False
+
+        try:
+            # Turn on trace logging for connection with invalid or non-existent identity
+            outs = qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity='G10000')
+        except Exception as e:
+            if "BadRequestStatus" in str(e):
+                bad_request = True
+
+        self.assertTrue(bad_request)
 
     def test_single_connection_protocol_trace(self):
         qd_manager = QdManager(self, self.address)

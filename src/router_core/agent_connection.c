@@ -569,6 +569,19 @@ void qdra_connection_update_CT(qdr_core_t      *core,
         // will allow the user on this connection to terminate some other connection.
         qdr_connection_t *user_conn = _find_conn_CT(core, query->in_conn);
         qd_parsed_field_t *trace_field   = qd_parse_value_by_key(in_body, qdr_connection_columns[QDR_CONNECTION_ENABLE_PROTOCOL_TRACE]);
+
+
+        //
+        // The only two fields that can be updated on a connection is the enableProtocolTrace flag and the admin state.
+        // If both these fields are not there, this is a bad request
+        // For example, this qdmanage is a bad request - qdmanage update --type=connection identity=1
+        //
+        if (!trace_field && !admin_state) {
+            qdra_connection_set_bad_request(query);
+            qdr_agent_enqueue_response_CT(core, query);
+            return;
+        }
+
         bool enable_protocol_trace = !!trace_field ? qd_parse_as_bool(trace_field) : false;
 
         qdr_connection_t *conn = 0;
@@ -576,7 +589,6 @@ void qdra_connection_update_CT(qdr_core_t      *core,
         bool admin_status_bad_or_forbidden = false;
 
         if (admin_state) {
-
             if (!user_conn) {
                 // This is bad. The user connection (that was requesting that some
                 // other connection be dropped) is gone
@@ -596,7 +608,7 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                     qd_compose_end_map(query->body);
                     admin_status_bad_or_forbidden = true;
                  }
-                else if (admin_state) { //admin state and trace are the only fields that can be updated via the update management request for type connection.
+                else {
                     if (identity) {
                         conn = qdr_connection_find_by_identity_CT(core, identity);
                         qdra_connection_update_set_status(core, query, conn, admin_state);
@@ -606,58 +618,50 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                         admin_status_bad_or_forbidden = true;
                     }
                 }
-                else {
-                    qdra_connection_set_bad_request(query);
-                    admin_status_bad_or_forbidden = true;
-                }
+            }
+
+            if (admin_status_bad_or_forbidden) {
+                //
+                // Enqueue the response and return
+                //
+                qdr_agent_enqueue_response_CT(core, query);
+                return;
             }
         }
 
-        if (admin_status_bad_or_forbidden) {
-            //
-            // Enqueue the response and return
-            //
-            qdr_agent_enqueue_response_CT(core, query);
-            return;
-        }
-
-        //
-        // The only two fields that can be updated on a connection is the enableProtocolTrace flag and the admin state.
-        // If both these fields are not there, this is a bad request
-        // For example, this qdmanage is a bad request - qdmanage update --type=connection identity=1
-        //
-        if (!trace_field && !admin_state) {
-            qdra_connection_set_bad_request(query);
-            qdr_agent_enqueue_response_CT(core, query);
-            return;
-        }
-
-        if (!conn) {
-            if (identity) {
+        if (trace_field) {
+            if (!conn) {
                 conn = qdr_connection_find_by_identity_CT(core, identity);
+            }
+
+            if (conn) {
                 //
-                // The trace logging needs to be turned on if enableProtocolTrace is true.
+                // Trace logging needs to be turned on if enableProtocolTrace is true.
+                // Trace logging needs to be turned off if enableProtocolTrace is false.
                 //
-                if (conn) {
-                    qdr_connection_work_type_t work_type = QDR_CONNECTION_WORK_TRACING_ON;
-                    conn->enable_protocol_trace = enable_protocol_trace;
-                    if (!enable_protocol_trace) {
-                        work_type = QDR_CONNECTION_WORK_TRACING_OFF;
-                    }
-                    qdr_connection_work_t *work = new_qdr_connection_work_t();
-                    ZERO(work);
-                    work->work_type = work_type;
-                    qdr_connection_enqueue_work_CT(core, conn, work);
-                    query->status = QD_AMQP_OK;
-                    qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
+                qdr_connection_work_type_t work_type = QDR_CONNECTION_WORK_TRACING_ON;
+                conn->enable_protocol_trace = enable_protocol_trace;
+                if (!enable_protocol_trace) {
+                    work_type = QDR_CONNECTION_WORK_TRACING_OFF;
                 }
+                qdr_connection_work_t *work = new_qdr_connection_work_t();
+                ZERO(work);
+                work->work_type = work_type;
+                qdr_connection_enqueue_work_CT(core, conn, work);
+                query->status = QD_AMQP_OK;
+                qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
             }
             else {
-                // No identity provided. This is a bad request
+                //
+                // The identity supplied was used to obtain the connection. If the connection was not found,
+                // it is possible that the connection went away or the wrong identity was provided.
+                // Either way we will have to let the caller know that this is a bad request.
+                //
                 qdra_connection_set_bad_request(query);
             }
         }
-    }
+
+    }    // if (qd_parse_is_map(in_body) && identity)
     else {
         qdra_connection_set_bad_request(query);
     }

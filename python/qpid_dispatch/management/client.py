@@ -77,12 +77,16 @@ class Node(object):
     """Client proxy for an AMQP management node"""
 
     def clean_attrs(self, attrs):
-        BOOL_VALUES = {"yes": 1, "true": 1, "on": 1, "no": 0, "false": 0,
-                       "off": 0}
+        BOOL_VALUES = {"yes"  : True,
+                       "true" : True,
+                       "on"   : True,
+                       "no"   : False,
+                       "false": False,
+                       "off"  : False}
         if isinstance(attrs, dict):
             for key in attrs.keys():
                 if attrs[key] in BOOL_VALUES.keys():
-                    attrs[key] = bool(BOOL_VALUES[attrs[key]])
+                    attrs[key] = BOOL_VALUES[attrs[key]]
 
         return attrs
 

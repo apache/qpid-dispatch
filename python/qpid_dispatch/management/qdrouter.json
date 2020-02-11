@@ -1754,6 +1754,7 @@
                     "description": "Indicates whether protocol level amqp frame trace logging is turned on or off for this connection.",
                     "type": "boolean",
                     "create": false,
+                    "update": true,
                     "default": false
                 },
                 "sasl": {

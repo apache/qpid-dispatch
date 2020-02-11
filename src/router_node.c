@@ -1451,7 +1451,6 @@ static void CORE_conn_trace(void *context, qdr_connection_t *qdr_conn, bool trac
 
     }
     else {
-        pn_transport_set_tracer(tport, 0);
         pn_transport_trace(tport, PN_TRACE_OFF);
     }
 }
