@@ -1228,7 +1228,7 @@ class Timestamp(object):
         self.ts = datetime.now()
 
     def __str__(self):
-        return self.ts.strftime("%Y-%m-%d %H:%M:%S:%f")
+        return self.ts.strftime("%Y-%m-%d %H:%M:%S.%f")
 
 
 class Logger(object):
