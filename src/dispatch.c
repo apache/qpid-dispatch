@@ -379,3 +379,49 @@ void qd_dispatch_router_unlock(qd_dispatch_t *qd) { sys_mutex_unlock(qd->router-
 qdr_core_t* qd_dispatch_router_core(qd_dispatch_t *qd) {
     return qd->router->router_core;
 }
+
+
+/* qd_router_memory_usage
+ *
+ * Return the amount of memory currently provisioned by the qdrouterd process.
+ * This includes data, stack, and code memory.  On systems supporting virtual
+ * memory this value may be larger than the physical RAM available on the
+ * platform.
+ *
+ * Return 0 if the memory usage cannot be determined.
+ */
+uint64_t qd_router_memory_usage()
+{
+    // @TODO(kgiusti): only works for linux (what? doesn't everyone run linux?)
+
+    // parse the VmSize value out of the /proc/[pid]/status file
+    const pid_t my_pid = getpid();
+    const char *status_template = "/proc/%ld/status";
+    char status_path[64];
+    if (snprintf(status_path, 64, status_template, (long int)my_pid) >= 64) {
+        // huh, did not fit?  Should not happen
+        return 0;
+    }
+
+    FILE *status_fp = fopen(status_path, "r");
+    if (!status_fp) {
+        // possible - if not on linux
+        return 0;
+    }
+
+    // the format of the /proc/[pid]/status file is documented in the linux man
+    // pages (man proc)
+    size_t buflen = 0;
+    char *buffer = 0;
+    uint64_t my_mem_kb = 0;
+    int scanned = 0;
+    while (getline(&buffer, &buflen, status_fp) != -1) {
+        scanned = sscanf(buffer, "VmSize: %"PRIu64, &my_mem_kb);
+        if (scanned == 1)
+            break;
+    }
+    free(buffer);
+
+    fclose(status_fp);
+    return (scanned == 1) ? my_mem_kb * 1024 : 0;
+}

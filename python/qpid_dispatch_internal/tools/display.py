@@ -57,11 +57,38 @@ def TimeLong(value):
 def TimeShort(value):
   return strftime("%X", gmtime(value / 1000000000))
 
+def NumKMG(value, base=1000):
+    """
+    Format large numbers in a human readable summary
+    """
+    # IEEE 1541 numeric suffix definitions:
+    SUFFIX = {1024: ('KiB', 'MiB', 'GiB', 'TiB', 'PiB'),
+              1000: ('k', 'm', 'g', 't', 'p')}
+
+    def _numCell(fp, suffix):
+        # adjust the precision based on the size
+        if fp < 10.0:
+            return "%.2f %s" % (fp, suffix)
+        if fp < 100.0:
+            return "%.1f %s" % (fp, suffix)
+        return "%.0f %s" % (fp, suffix)
+
+    if value < base:
+        return "%d" % value
+
+    # round down to a power of base:
+    sx = SUFFIX[base]
+    for i in range(len(sx)):
+        value /= float(base);
+        if value < base:
+            return _numCell(value, sx[i])
+    return _numCell(value, sx[-1])
+
 
 class Header:
   """ """
   NONE = 1
-  KMG = 2
+  KMG = 2    # 1000 based units
   YN = 3
   Y = 4
   TIME_LONG = 5
@@ -70,6 +97,7 @@ class Header:
   COMMAS = 8
   # This is a plain number, no formatting
   PLAIN_NUM = 9
+  KiMiGi = 10  # 1024 based units
 
   def __init__(self, text, format=NONE):
     self.text = text
@@ -90,7 +118,9 @@ class Header:
       if self.format == Header.PLAIN_NUM:
         return PlainNum(value)
       if self.format == Header.KMG:
-        return self.num(value)
+        return NumKMG(value)
+      if self.format == Header.KiMiGi:
+        return NumKMG(value, base=1024)
       if self.format == Header.YN:
         if value:
           return 'Y'
@@ -123,25 +153,6 @@ class Header:
     except:
       return "?"
 
-  def numCell(self, value, tag):
-    fp = float(value) / 1000.
-    if fp < 10.0:
-      return "%1.2f%c" % (fp, tag)
-    if fp < 100.0:
-      return "%2.1f%c" % (fp, tag)
-    return "%4d%c" % (value / 1000, tag)
-
-
-  def num(self, value):
-    if value < 1000:
-      return "%4d" % value
-    if value < 1000000:
-      return self.numCell(value, 'k')
-    value /= 1000
-    if value < 1000000:
-      return self.numCell(value, 'm')
-    value /= 1000
-    return self.numCell(value, 'g')
 
 def PlainNum(value):
   try:

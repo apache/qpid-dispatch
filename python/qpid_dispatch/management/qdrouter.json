@@ -614,7 +614,12 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The number of seconds since the router was started."
-                }                
+                },
+                "memoryUsage": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The current amount of memory in use by the qdrouterd process in bytes.  This includes memory provisioned for stack, data, and code (VmSize).  This value is set to Null if the platform does not provide access to the process memory size."
+                }
             }
         },
         "sslProfile": {

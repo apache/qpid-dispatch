@@ -138,6 +138,9 @@ const char* qd_address_logstr(qd_address_t* address);
 /** Retrieve the proper forwarder for a given semantic */
 qd_router_forwarder_t *qd_router_get_forwarder(qd_address_treatment_t t);
 
+/** Retrieve the routers current memory usage (in bytes) */
+uint64_t qd_router_memory_usage(void);
+
 ///@}
 
 #endif
