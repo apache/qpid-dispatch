@@ -34,7 +34,7 @@ from time import ctime, strftime, gmtime
 import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
-from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, BodyFormat
+from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, BodyFormat, Num
 from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_ssl_domain, opts_sasl,
                                                   opts_url)
@@ -326,39 +326,39 @@ class BusManager(Node):
         except:
             pass
         rows.append(('Area',          router.area))
-        rows.append(('Link Routes',   router.linkRouteCount))
-        rows.append(('Auto Links',    router.autoLinkCount))
-        rows.append(('Links',         router.linkCount))
-        rows.append(('Nodes',         router.nodeCount))
-        rows.append(('Addresses',     router.addrCount))
-        rows.append(('Connections',   router.connectionCount))
+        rows.append(('Link Routes',   Num(router.linkRouteCount)))
+        rows.append(('Auto Links',    Num(router.autoLinkCount)))
+        rows.append(('Links',         Num(router.linkCount)))
+        rows.append(('Nodes',         Num(router.nodeCount)))
+        rows.append(('Addresses',     Num(router.addrCount)))
+        rows.append(('Connections',   Num(router.connectionCount)))
 
         # Overall delivery related counts.
         # These overall statistics were introduced in 1.1 version.
         # Wrap these in a try except so that newer versions of qdstat works with older version of router
         try:
-            rows.append(('Presettled Count', router.presettledDeliveries))
-            rows.append(('Dropped Presettled Count', router.droppedPresettledDeliveries))
-            rows.append(('Accepted Count', router.acceptedDeliveries))
-            rows.append(('Rejected Count', router.rejectedDeliveries))
-            rows.append(('Released Count', router.releasedDeliveries))
-            rows.append(('Modified Count', router.modifiedDeliveries))
+            rows.append(('Presettled Count', Num(router.presettledDeliveries)))
+            rows.append(('Dropped Presettled Count', Num(router.droppedPresettledDeliveries)))
+            rows.append(('Accepted Count', Num(router.acceptedDeliveries)))
+            rows.append(('Rejected Count', Num(router.rejectedDeliveries)))
+            rows.append(('Released Count', Num(router.releasedDeliveries)))
+            rows.append(('Modified Count', Num(router.modifiedDeliveries)))
             try:
-                rows.append(('Deliveries Delayed > 1sec',  router.deliveriesDelayed1Sec))
-                rows.append(('Deliveries Delayed > 10sec', router.deliveriesDelayed10Sec))
-                rows.append(('Deliveries Stuck > 10sec',   router.deliveriesStuck))
-                rows.append(('Deliveries to Fallback',     router.deliveriesRedirectedToFallback))
+                rows.append(('Deliveries Delayed > 1sec',  Num(router.deliveriesDelayed1Sec)))
+                rows.append(('Deliveries Delayed > 10sec', Num(router.deliveriesDelayed10Sec)))
+                rows.append(('Deliveries Stuck > 10sec',   Num(router.deliveriesStuck)))
+                rows.append(('Deliveries to Fallback',     Num(router.deliveriesRedirectedToFallback)))
                 try:
-                    rows.append(('Links Blocked', router.linksBlocked))
+                    rows.append(('Links Blocked', Num(router.linksBlocked)))
                 except:
                     pass
             except:
                 pass
-            rows.append(('Ingress Count', router.deliveriesIngress))
-            rows.append(('Egress Count', router.deliveriesEgress))
-            rows.append(('Transit Count', router.deliveriesTransit))
-            rows.append(('Deliveries from Route Container', router.deliveriesIngressRouteContainer))
-            rows.append(('Deliveries to Route Container', router.deliveriesEgressRouteContainer))
+            rows.append(('Ingress Count', Num(router.deliveriesIngress)))
+            rows.append(('Egress Count', Num(router.deliveriesEgress)))
+            rows.append(('Transit Count', Num(router.deliveriesTransit)))
+            rows.append(('Deliveries from Route Container', Num(router.deliveriesIngressRouteContainer)))
+            rows.append(('Deliveries to Route Container', Num(router.deliveriesEgressRouteContainer)))
         except:
             pass
 
@@ -377,8 +377,7 @@ class BusManager(Node):
         heads.append(Header("class"))
         heads.append(Header("addr"))
         heads.append(Header("phs"))
-        heads.append(Header("cap"))
-
+        heads.append(Header("cap", Header.KMG))
 
         rows = []
         cols = ('linkType', 'linkDir', 'connectionId', 'identity', 'peer', 'owningAddr',
@@ -414,26 +413,26 @@ class BusManager(Node):
                     has_credit = True
 
         if has_priority:
-            heads.append(Header("pri"))
-        heads.append(Header("undel"))
-        heads.append(Header("unsett"))
-        heads.append(Header("deliv"))
-        heads.append(Header("presett"))
+            heads.append(Header("pri", Header.KMG))
+        heads.append(Header("undel", Header.KMG))
+        heads.append(Header("unsett", Header.KMG))
+        heads.append(Header("deliv", Header.KMG))
+        heads.append(Header("presett", Header.KMG))
 
         if has_dropped_presettled_count:
-            heads.append(Header("psdrop"))
+            heads.append(Header("psdrop", Header.KMG))
 
-        heads.append(Header("acc"))
-        heads.append(Header("rej"))
-        heads.append(Header("rel"))
-        heads.append(Header("mod"))
+        heads.append(Header("acc", Header.KMG))
+        heads.append(Header("rej", Header.KMG))
+        heads.append(Header("rel", Header.KMG))
+        heads.append(Header("mod", Header.KMG))
         if has_delayed:
-            heads.append(Header("delay"))
-            heads.append(Header("rate"))
+            heads.append(Header("delay", Header.KMG))
+            heads.append(Header("rate", Header.KMG))
         if has_stuck:
-            heads.append(Header("stuck"))
+            heads.append(Header("stuck", Header.KMG))
         if has_credit:
-            heads.append(Header("cred"))
+            heads.append(Header("cred", Header.KMG))
             heads.append(Header("blkd"))
         if self.opts.verbose:
             heads.append(Header("admin"))
@@ -584,18 +583,18 @@ class BusManager(Node):
                 row.append(addr.priority if addr.priority >= 0 else "-")
             if self.opts.verbose:
                 row.append(addr.inProcess)
-            row.append(addr.containerCount if addr.name[0] in 'CDEF' else addr.subscriberCount)
-            row.append(addr.remoteCount)
-            row.append(addr.deliveriesIngress)
-            row.append(addr.deliveriesEgress)
-            row.append(addr.deliveriesTransit)
+            row.append(Num(addr.containerCount) if addr.name[0] in 'CDEF' else Num(addr.subscriberCount))
+            row.append(Num(addr.remoteCount))
+            row.append(Num(addr.deliveriesIngress))
+            row.append(Num(addr.deliveriesEgress))
+            row.append(Num(addr.deliveriesTransit))
             try:
-                row.append(addr.deliveriesRedirectedToFallback)
+                row.append(Num(addr.deliveriesRedirectedToFallback))
             except:
                 row.append("-")
             if self.opts.verbose:
-                row.append(addr.deliveriesToContainer)
-                row.append(addr.deliveriesFromContainer)
+                row.append(Num(addr.deliveriesToContainer))
+                row.append(Num(addr.deliveriesFromContainer))
             rows.append(row)
         title = "Router Addresses"
         sorter = Sorter(heads, rows, 'addr', 0, True)
@@ -711,13 +710,13 @@ class BusManager(Node):
         for t in objects:
             row = []
             row.append(self._identity_clean(t.identity))
-            row.append(t.typeSize)
-            row.append(t.transferBatchSize)
-            row.append(t.localFreeListMax)
-            row.append(t.totalAllocFromHeap)
-            row.append(t.heldByThreads)
-            row.append(t.batchesRebalancedToThreads)
-            row.append(t.batchesRebalancedToGlobal)
+            row.append(Num(t.typeSize))
+            row.append(Num(t.transferBatchSize))
+            row.append(Num(t.localFreeListMax))
+            row.append(Num(t.totalAllocFromHeap))
+            row.append(Num(t.heldByThreads))
+            row.append(Num(t.batchesRebalancedToThreads))
+            row.append(Num(t.batchesRebalancedToGlobal))
             rows.append(row)
         if not rows:
             # router built w/o memory pools:

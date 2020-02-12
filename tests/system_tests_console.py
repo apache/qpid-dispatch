@@ -51,7 +51,7 @@ class ConsolePreReq(object):
             devnull = open(os.devnull, "w")
             subprocess.Popen([name], stdout=devnull, stderr=devnull).communicate()
         except OSError as e:
-            if e.errno == os.errno.ENOENT:
+            if errno == errno.ENOENT:
                 return False
         return True
 

@@ -86,6 +86,8 @@ class Header:
       if self.format == Header.NONE:
         return value
       if self.format == Header.KMG:
+        if isinstance(value, Num):
+          return self.num_format(value.value)
         return self.num(value)
       if self.format == Header.YN:
         if value:
@@ -127,6 +129,7 @@ class Header:
       return "%2.1f%c" % (fp, tag)
     return "%4d%c" % (value / 1000, tag)
 
+
   def num(self, value):
     if value < 1000:
       return "%4d" % value
@@ -137,6 +140,38 @@ class Header:
       return self.numCell(value, 'm')
     value /= 1000
     return self.numCell(value, 'g')
+
+  def num_format(self, value):
+    if value < 10:
+      return "%1d" % value
+    elif value < 100:
+      return "%2d" % value
+    elif value < 1000:
+      return "%3d" % value
+    elif value < 10000:
+      return "%4d" % value
+    elif value < 100000:
+      return "%5d" % value
+    elif value < 1000000:
+      return "%6d" % value
+    elif value < 10000000:
+      return "%7d" % value
+    elif value < 100000000:
+      return "%8d" % value
+    elif value < 1000000000:
+      return "%9d" % value
+    elif value < 10000000000:
+      return "%10d" % value
+    elif value < 100000000000:
+      return "%11d" % value
+    elif value < 1000000000000:
+      return "%12d" % value
+    return "%15d" % value
+
+class Num:
+  def __init__(self, value):
+    self.value = value
+    self.format = Header.KMG
 
 class BodyFormat:
   """
@@ -172,7 +207,13 @@ class Display:
       fRow = []
       col = 0
       for cell in row:
-        fRow.append(heads[col].formatted(cell))
+        if isinstance(cell, Num) and cell.format != None and cell.format != heads[col].format:
+          curr_format = heads[col].format
+          heads[col].format = cell.format
+          fRow.append(heads[col].formatted(cell))
+          heads[col].format = curr_format
+        else:
+          fRow.append(heads[col].formatted(cell))
         col += 1
       fRows.append(fRow)
     headtext = []
