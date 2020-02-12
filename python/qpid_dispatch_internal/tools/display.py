@@ -68,6 +68,8 @@ class Header:
   TIME_SHORT = 6
   DURATION = 7
   COMMAS = 8
+  # This is a plain number, no formatting
+  PLAIN_NUM = 9
 
   def __init__(self, text, format=NONE):
     self.text = text
@@ -85,6 +87,8 @@ class Header:
         return ''
       if self.format == Header.NONE:
         return value
+      if self.format == Header.PLAIN_NUM:
+        return PlainNum(value)
       if self.format == Header.KMG:
         return self.num(value)
       if self.format == Header.YN:
@@ -127,6 +131,7 @@ class Header:
       return "%2.1f%c" % (fp, tag)
     return "%4d%c" % (value / 1000, tag)
 
+
   def num(self, value):
     if value < 1000:
       return "%4d" % value
@@ -137,6 +142,33 @@ class Header:
       return self.numCell(value, 'm')
     value /= 1000
     return self.numCell(value, 'g')
+
+def PlainNum(value):
+    if value < 10:
+      return "%1d" % value
+    elif value < 100:
+      return "%2d" % value
+    elif value < 1000:
+      return "%3d" % value
+    elif value < 10000:
+      return "%4d" % value
+    elif value < 100000:
+      return "%5d" % value
+    elif value < 1000000:
+      return "%6d" % value
+    elif value < 10000000:
+      return "%7d" % value
+    elif value < 100000000:
+      return "%8d" % value
+    elif value < 1000000000:
+      return "%9d" % value
+    elif value < 10000000000:
+      return "%10d" % value
+    elif value < 100000000000:
+      return "%11d" % value
+    elif value < 1000000000000:
+      return "%12d" % value
+    return "%15d" % value
 
 class BodyFormat:
   """
