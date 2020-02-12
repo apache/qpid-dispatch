@@ -65,6 +65,7 @@ set(qpid_dispatch_SOURCES
   router_agent.c
   router_config.c
   address_lookup_utils.c
+  platform.c
   router_core/agent.c
   router_core/agent_address.c
   router_core/agent_config_address.c
@@ -156,6 +157,9 @@ set_target_properties(qpid-dispatch PROPERTIES
   LINK_FLAGS "${QPID_DISPATCH_LIB_LINK_FLAGS}")
 install(TARGETS qpid-dispatch
   LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
+
+# check for various function availability
+check_symbol_exists(getrlimit sys/resource.h QD_HAVE_GETRLIMIT)
 
 # https://stackoverflow.com/questions/54771452/expanding-a-variable-cmakedefine-and-generator-expression-in-template-file
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/config.h.in" CONFIG_H_IN)
