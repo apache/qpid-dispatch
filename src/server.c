@@ -28,6 +28,7 @@
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/failoverlist.h>
 #include <qpid/dispatch/alloc.h>
+#include <qpid/dispatch/platform.h>
 
 #include <proton/event.h>
 #include <proton/listener.h>
@@ -1318,6 +1319,27 @@ void qd_server_trace_all_connections()
     }
 }
 
+
+static double normalize_memory_size(const uint64_t bytes, const char **suffix)
+{
+    static const char * const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
+    const int units_ct = 5;
+    const double base = 1024.0;
+
+    double value = (double)bytes;
+    for (int i = 0; i < units_ct; ++i) {
+        if (value < base) {
+            if (suffix)
+                *suffix = units[i];
+            return value;
+        }
+        value /= base;
+    }
+    if (suffix)
+        *suffix = units[units_ct - 1];
+    return value;
+}
+
 void qd_server_run(qd_dispatch_t *qd)
 {
     qd_server_t *qd_server = qd->server;
@@ -1327,6 +1349,19 @@ void qd_server_run(qd_dispatch_t *qd)
     qd_log(qd_server->log_source,
            QD_LOG_NOTICE, "Operational, %d Threads Running (process ID %ld)",
            qd_server->thread_count, (long)getpid());
+
+    const uintmax_t ram_size = qd_platform_memory_size();
+    const uint64_t  vm_size = qd_router_memory_usage();
+    if (ram_size && vm_size) {
+        const char *suffix_vm = 0;
+        const char *suffix_ram = 0;
+        double vm = normalize_memory_size(vm_size, &suffix_vm);
+        double ram = normalize_memory_size(ram_size, &suffix_ram);
+        qd_log(qd_server->log_source, QD_LOG_NOTICE,
+               "Process VmSize %.2f %s (%.2f %s available memory)",
+               vm, suffix_vm, ram, suffix_ram);
+    }
+
 #ifndef NDEBUG
     qd_log(qd_server->log_source, QD_LOG_INFO, "Running in DEBUG Mode");
 #endif

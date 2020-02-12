@@ -1,3 +1,5 @@
+#ifndef __dispatch_platform_h__
+#define __dispatch_platform_h__ 1
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -17,8 +19,24 @@
  * under the License.
  */
 
-#define QPID_DISPATCH_VERSION "${QPID_DISPATCH_VERSION}"
-#define QPID_DISPATCH_LIB "$<$<BOOL:${APPLE}>:@rpath/>$<TARGET_FILE_NAME:qpid-dispatch>"
-#define QPID_CONSOLE_STAND_ALONE_INSTALL_DIR "${CONSOLE_STAND_ALONE_INSTALL_DIR}"
-#cmakedefine01 QD_MEMORY_STATS
-#cmakedefine01 QD_HAVE_GETRLIMIT
+#include <stdint.h>
+
+/**
+ * Platform specific utility functions
+ */
+
+/**
+ * Determine the amount of usable 'fast' memory (RAM only, not including swap)
+ * installed.  If resource constraints are in use (e.g setrlimit(),
+ * containerization, etc) for the qdrouterd process this routine should return
+ * the minimum of (physical memory, memory resource limit).
+ *
+ * This value is used by the router to detect and react to low memory
+ * conditions.
+ *
+ * Returns the size of fast memory in bytes or zero if the size cannot be
+ * determined.
+ */
+uintmax_t qd_platform_memory_size(void);
+
+#endif
