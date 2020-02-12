@@ -24,6 +24,7 @@ from __future__ import print_function
 
 import json
 import os
+import sys
 
 from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import unittest
@@ -573,6 +574,25 @@ class QdmanageTest(TestCase):
         self.assertEqual(out_links, COUNT)
         self.assertEqual(in_links, COUNT)
 
+    def test_check_memory_usage(self):
+        """
+        Verify that the process memory usage is present. Non-Linux platforms
+        may return zero, so accept that as a valid value.
+        """
+        long_type = 'org.apache.qpid.dispatch.router'
+        query_command = 'QUERY --type=' + long_type
+        output = json.loads(self.run_qdmanage(query_command))
+        self.assertEqual(len(output), 1)
+        mem = output[0].get('memoryUsage')
+
+        if sys.platform.lower().startswith('linux'):
+            # @TODO(kgiusti) - linux only for now
+            self.assertTrue(mem is not None)
+            self.assertTrue(mem >= 0)
+        else:
+            # @TODO(kgiusti) - update test to handle other platforms as support
+            # is added
+            self.assertTrue(mem is None)
 
 
 if __name__ == '__main__':

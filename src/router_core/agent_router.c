@@ -55,6 +55,7 @@
 #define QDR_ROUTER_DELIVERIES_REDIRECTED               28
 #define QDR_ROUTER_LINKS_BLOCKED                       29
 #define QDR_ROUTER_UPTIME_SECONDS                      30
+#define QDR_ROUTER_MEMORY_USAGE                        31
 
 
 const char *qdr_router_columns[] =
@@ -89,6 +90,7 @@ const char *qdr_router_columns[] =
      "deliveriesRedirectedToFallback",
      "linksBlocked",
      "uptimeSeconds",
+     "memoryUsage",
      0};
 
 
@@ -238,6 +240,14 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
     case QDR_ROUTER_UPTIME_SECONDS:
         qd_compose_insert_uint(body, core->uptime_ticks);
         break;
+
+    case QDR_ROUTER_MEMORY_USAGE: {
+        uint32_t size = qd_router_memory_usage();
+        if (size)
+            qd_compose_insert_ulong(body, size);
+        else  // memory usage not available
+            qd_compose_insert_null(body);
+    } break;
 
     default:
         qd_compose_insert_null(body);

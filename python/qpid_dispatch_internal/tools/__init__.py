@@ -23,5 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from .display import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, Sortable, BodyFormat, PlainNum
+from .display import NumKMG
 
-__all__ = ["Display", "Header", "Sorter", "YN", "Commas", "TimeLong", "TimeShort", "Sortable", "BodyFormat", "PlainNum"]
+__all__ = ["Display", "Header", "Sorter", "YN", "Commas", "TimeLong", "TimeShort", "Sortable", "BodyFormat", "PlainNum",
+           "NumKMG"]

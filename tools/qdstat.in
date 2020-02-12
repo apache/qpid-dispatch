@@ -35,6 +35,7 @@ import qpid_dispatch_site
 from qpid_dispatch.management.client import Url, Node, Entity
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from qpid_dispatch_internal.tools import Display, Header, Sorter, YN, Commas, TimeLong, TimeShort, BodyFormat, PlainNum
+from qpid_dispatch_internal.tools import NumKMG
 from qpid_dispatch_internal.tools.command import (parse_args_qdstat, main,
                                                   opts_ssl_domain, opts_sasl,
                                                   opts_url)
@@ -324,6 +325,12 @@ class BusManager(Node):
         try:
             rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
         except:
+            pass
+        try:
+            if router.memoryUsage > 0:
+                rows.append(('VmSize', NumKMG(router.memoryUsage,
+                                              base=1024)))
+        except Exception:
             pass
         rows.append(('Area',          router.area))
         rows.append(('Link Routes',   PlainNum(router.linkRouteCount)))
@@ -707,6 +714,7 @@ class BusManager(Node):
         if show_date_id:
             self.display_datetime_router_id()
 
+        pooled_total = 0
         for t in objects:
             row = []
             row.append(self._identity_clean(t.identity))
@@ -718,6 +726,7 @@ class BusManager(Node):
             row.append(PlainNum(t.batchesRebalancedToThreads))
             row.append(PlainNum(t.batchesRebalancedToGlobal))
             rows.append(row)
+            pooled_total += (t.typeSize * t.totalAllocFromHeap)
         if not rows:
             # router built w/o memory pools:
             print("No memory statistics available")
@@ -726,6 +735,29 @@ class BusManager(Node):
         sorter = Sorter(heads, rows, 'type', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
+
+        # attempt to get the qdrouterd process memory usage
+        # this may not be present on all platforms
+        rows = []
+        try:
+            objects = self.query('org.apache.qpid.dispatch.router', ['memoryUsage'])
+            mem = objects[0].memoryUsage
+        except Exception:
+            mem = None
+
+        if mem is not None:
+            hdr_format = Header.KiMiGi
+            rows.append(mem)
+        else:
+            hdr_format = Header.NONE
+            rows.append("-")
+
+        rows.append(pooled_total)
+
+        disp.formattedTable("\nSummary",
+                            [Header("VmSize", hdr_format),
+                             Header("Pooled", Header.KiMiGi)],
+                            [rows])
 
     def displayLog(self):
         log = self.get_log(limit=self.opts.limit)
