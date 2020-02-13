@@ -144,31 +144,12 @@ class Header:
     return self.numCell(value, 'g')
 
 def PlainNum(value):
-    if value < 10:
-      return "%1d" % value
-    elif value < 100:
-      return "%2d" % value
-    elif value < 1000:
-      return "%3d" % value
-    elif value < 10000:
-      return "%4d" % value
-    elif value < 100000:
-      return "%5d" % value
-    elif value < 1000000:
-      return "%6d" % value
-    elif value < 10000000:
-      return "%7d" % value
-    elif value < 100000000:
-      return "%8d" % value
-    elif value < 1000000000:
-      return "%9d" % value
-    elif value < 10000000000:
-      return "%10d" % value
-    elif value < 100000000000:
-      return "%11d" % value
-    elif value < 1000000000000:
-      return "%12d" % value
-    return "%15d" % value
+  try:
+    ret_val = "%d" % value
+    return ret_val
+  except:
+    return "%s" % value
+
 
 class BodyFormat:
   """
