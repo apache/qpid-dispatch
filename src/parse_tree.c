@@ -52,6 +52,9 @@ static void token_iterator_init(token_iterator_t *t,
                                 const char *str)
 {
     switch (type) {
+    default:  // See DISPATCH-1567: shuts up some bogus compiler warnings
+        assert(false);
+        // fall through
     case QD_PARSE_TREE_ADDRESS:
         t->separators = "./";   // accept either for backward compatibility
         t->match_1 = '*';
