@@ -584,7 +584,18 @@ void qdra_connection_update_CT(qdr_core_t      *core,
 
         bool enable_protocol_trace = !!trace_field ? qd_parse_as_bool(trace_field) : false;
 
-        qdr_connection_t *conn = 0;
+        qdr_connection_t *conn = qdr_connection_find_by_identity_CT(core, identity);
+
+        if (!conn) {
+            //
+            // The identity supplied was used to obtain the connection. If the connection was not found,
+            // it is possible that the connection went away or the wrong identity was provided.
+            // Either way we will have to let the caller know that this is a bad request.
+            //
+            qdra_connection_set_bad_request(query);
+            qdr_agent_enqueue_response_CT(core, query);
+            return;
+        }
 
         bool admin_status_bad_or_forbidden = false;
 
@@ -609,14 +620,7 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                     admin_status_bad_or_forbidden = true;
                  }
                 else {
-                    if (identity) {
-                        conn = qdr_connection_find_by_identity_CT(core, identity);
-                        qdra_connection_update_set_status(core, query, conn, admin_state);
-                    }
-                    else {
-                        qdra_connection_set_bad_request(query);
-                        admin_status_bad_or_forbidden = true;
-                    }
+                    qdra_connection_update_set_status(core, query, conn, admin_state);
                 }
             }
 
@@ -630,15 +634,11 @@ void qdra_connection_update_CT(qdr_core_t      *core,
         }
 
         if (trace_field) {
-            if (!conn) {
-                conn = qdr_connection_find_by_identity_CT(core, identity);
-            }
-
-            if (conn) {
-                //
-                // Trace logging needs to be turned on if enableProtocolTrace is true.
-                // Trace logging needs to be turned off if enableProtocolTrace is false.
-                //
+            //
+            // Trace logging needs to be turned on if enableProtocolTrace is true.
+            // Trace logging needs to be turned off if enableProtocolTrace is false.
+            //
+            if (conn->enable_protocol_trace != enable_protocol_trace) {
                 qdr_connection_work_type_t work_type = QDR_CONNECTION_WORK_TRACING_ON;
                 conn->enable_protocol_trace = enable_protocol_trace;
                 if (!enable_protocol_trace) {
@@ -648,17 +648,10 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                 ZERO(work);
                 work->work_type = work_type;
                 qdr_connection_enqueue_work_CT(core, conn, work);
-                query->status = QD_AMQP_OK;
-                qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
+
             }
-            else {
-                //
-                // The identity supplied was used to obtain the connection. If the connection was not found,
-                // it is possible that the connection went away or the wrong identity was provided.
-                // Either way we will have to let the caller know that this is a bad request.
-                //
-                qdra_connection_set_bad_request(query);
-            }
+            query->status = QD_AMQP_OK;
+            qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
         }
 
     }    // if (qd_parse_is_map(in_body) && identity)
