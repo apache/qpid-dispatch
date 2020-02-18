@@ -482,6 +482,68 @@ class LogLevelUpdateTest(TestCase):
 
 
 
+class RouterCoreModuleLogTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(RouterCoreModuleLogTest, cls).setUpClass()
+        name = "test-router"
+        LogLevelUpdateTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': LogLevelUpdateTest.listen_port}),
+
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+            ('log', {'module': 'ROUTER_CORE', 'enable': 'trace+',
+                     'includeSource': 'true',
+                     'outputFile': name + '-core.log'})
+
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
 
 
+    def test_router_core_logger(self):
+        blocking_connection = BlockingConnection(self.address)
+
+        TEST_ADDRESS = "test_multiple_log_file"
+
+        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+
+        TEST_MSG_BODY = "LOGTEST"
+        msg = Message(body=TEST_MSG_BODY)
+        blocking_sender.send(msg)
+        received_message = blocking_receiver.receive()
+        self.assertEqual(TEST_MSG_BODY, received_message.body)
+        qd_manager = QdManager(self, self.address)
+        logs = qd_manager.get_log()
+
+        router_core_found = False
+        for log in logs:
+            if u'ROUTER_CORE' in log[0]:
+                router_core_found = True
+                break
+
+        self.assertTrue(router_core_found)
+
+        core_log_file_found = True
+        all_lines_router_core = True
+        try:
+            # Before the fix to DISPATCH-1575, this file will not be
+            # created because the router core module was logging to the ROUTER
+            # module instead of the ROUTER_CORE module.
+            with open('../setUpClass/test-router-core.log', 'r') as core_log:
+                for line in core_log:
+                    # Every line in the file must log to the router core module.
+                    if not "ROUTER_CORE" in line:
+                        all_lines_router_core = False
+                        break
+        except:
+            core_log_file_found = False
+
+        self.assertTrue(core_log_file_found)
+        self.assertTrue(all_lines_router_core)
 

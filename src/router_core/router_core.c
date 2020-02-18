@@ -54,9 +54,11 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     DEQ_INIT(core->exchanges);
 
     //
-    // Set up the logging sources for the router core
+    // Set up the logging sources for the router core. The core
+    // module logs to the ROUTER_CORE module. There is no need to free the core->log as all log sources are.
+    // freed by qd_dispatch_free()
     //
-    core->log = qd->router->log_source;
+    core->log = qd_log_source("ROUTER_CORE");
 
     //
     // Set up the threading support
