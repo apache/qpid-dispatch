@@ -236,7 +236,7 @@ class TestCallTimeout(TestService):
         def on_timer_task(self, event):
             log = self.service.qm.get_log()
             for e in log:
-                if (e[0] == 'ROUTER' and e[1] == 'error'
+                if (e[0] == 'ROUTER_CORE' and e[1] == 'error'
                         and e[2] == 'client test request done '
                                     'error=Timed out'):
                     # yes this is the line you're looking for:
