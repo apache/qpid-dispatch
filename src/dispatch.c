@@ -26,6 +26,7 @@
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/discriminator.h>
 #include <stdlib.h>
+#include <inttypes.h>
 
 #include "config.h"
 #include "dispatch_private.h"
@@ -416,7 +417,7 @@ uint64_t qd_router_memory_usage()
     uint64_t my_mem_kb = 0;
     int scanned = 0;
     while (getline(&buffer, &buflen, status_fp) != -1) {
-        scanned = sscanf(buffer, "VmSize: %"PRIu64, &my_mem_kb);
+        scanned = sscanf(buffer, "VmSize: %"SCNu64, &my_mem_kb);
         if (scanned == 1)
             break;
     }
