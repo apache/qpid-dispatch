@@ -85,7 +85,7 @@ class Node(object):
                        "off"  : False}
         if isinstance(attrs, dict):
             for key in attrs.keys():
-                if attrs[key] in BOOL_VALUES.keys():
+                if isinstance(attrs[key], str) and attrs[key] in BOOL_VALUES.keys():
                     attrs[key] = BOOL_VALUES[attrs[key]]
 
         return attrs
