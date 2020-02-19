@@ -45,10 +45,10 @@ This `sslProfile` contains the locations of the private key and certificates tha
 ----
 sslProfile {
     name: service-tls
-    certFile: /etc/qpid-dispatch-certs/normal/tls.crt
-    caCertFile: /etc/qpid-dispatch-certs/client-ca/ca.crt
-    privateKeyFile: /etc/qpid-dispatch-certs/normal/tls.key
-    password: file:/etc/qpid-dispatch-certs/inter-router/password.txt
+    certFile: /etc/pki/tls/certs/tls.crt
+    caCertFile: /etc/pki/tls/certs/ca.crt
+    privateKeyFile: /etc/pki/tls/private/tls.key
+    password: file:/etc/pki/tls/private/password.txt
     ...
 }
 ----
@@ -59,6 +59,17 @@ sslProfile {
 `caCertFile`:: The absolute path to the CA certificate that was used to sign the router's certificate.
 
 `privateKeyFile`:: The absolute path to the file containing the private key for this router's public certificate.
++
+[NOTE]
+====
+Ensure that the `qdrouterd` or root user can access the private key. For example:
+
+[options="nowrap",subs="+quotes"]
+----
+chmod 0600 /etc/pki/tls/private/tls.key
+chown qdrouterd /etc/pki/tls/private/tls.key
+----
+====
 
 //`password`
 include::{FragmentDir}/fragment-password-description.adoc[]
