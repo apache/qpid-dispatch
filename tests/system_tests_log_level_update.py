@@ -29,6 +29,102 @@ import time
 
 apply_options = AtMostOnce()
 
+class ManyLogFilesTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(ManyLogFilesTest, cls).setUpClass()
+        name = "test-router"
+        LogLevelUpdateTest.listen_port = cls.tester.get_port()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': LogLevelUpdateTest.listen_port}),
+
+            ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+            ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+
+            # We are sending three different module trace logs to three different
+            # files and we will make sure that these files exist and these
+            # files contain only logs pertinent to the module in question
+            ('log', {'module': 'SERVER', 'enable': 'trace+',
+                     'includeSource': 'true', 'outputFile': name + '-server.log'}),
+            ('log', {'module': 'ROUTER_CORE', 'enable': 'trace+',
+                     'includeSource': 'true',
+                     'outputFile': name + '-core.log'}),
+            ('log', {'module': 'PROTOCOL', 'enable': 'trace+',
+                     'includeSource': 'true',
+                     'outputFile': name + '-protocol.log'}),
+
+            # try two modules to the same file.
+            # Put the ROUTER_CORE and ROUTER module logs into the same log file
+            ('log', {'module': 'ROUTER', 'enable': 'trace+',
+                     'includeSource': 'true',
+                     'outputFile': name + '-core.log'}),
+
+        ])
+        cls.router = cls.tester.qdrouterd(name, config)
+        cls.router.wait_ready()
+        cls.address = cls.router.addresses[0]
+
+    def test_multiple_log_file(self):
+        blocking_connection = BlockingConnection(self.address)
+
+        TEST_ADDRESS = "test_multiple_log_file"
+
+        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
+        blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
+
+        TEST_MSG = "LOGTEST"
+        msg = Message(body=TEST_MSG)
+        blocking_sender.send(msg)
+        received_message = blocking_receiver.receive()
+        self.assertEqual(TEST_MSG, received_message.body)
+        server_log_found = True
+        all_server_logs = True
+        try:
+            with open('../setUpClass/test-router-server.log', 'r') as server_log:
+                for line in server_log:
+                    parts = line.split(" ")
+                    if (parts[3] != "SERVER"):
+                        all_server_logs = False
+                        break;
+        except:
+            server_log_found = False
+
+        self.assertTrue(all_server_logs)
+        self.assertTrue(server_log_found)
+
+        protocol_log_found = True
+        all_protocol_logs =True
+        try:
+            with open('../setUpClass/test-router-protocol.log', 'r') as protocol_log:
+                for line in protocol_log:
+                    parts = line.split(" ")
+                    if (parts[3] != "PROTOCOL"):
+                        all_protocol_logs = False
+                        break;
+        except:
+            protocol_log_found = False
+
+        self.assertTrue(protocol_log_found)
+        self.assertTrue(all_protocol_logs)
+
+        core_router_log_found = True
+        all_core_router_logs = True
+        try:
+            with open('../setUpClass/test-router-core.log', 'r') as core_log:
+                for line in core_log:
+                    parts = line.split(" ")
+                    if parts[3] != "ROUTER_CORE" and parts[3] != "ROUTER":
+                        all_core_router_logs = False
+                        break;
+
+        except:
+            core_router_log_found = False
+
+        self.assertTrue(core_router_log_found)
+        self.assertTrue(all_core_router_logs)
+
 
 class LogModuleProtocolTest(TestCase):
     @classmethod
