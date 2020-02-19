@@ -484,8 +484,12 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
 
     case PN_SESSION_LOCAL_CLOSE :
         ssn = pn_event_session(event);
-        if (ssn == qd_conn->pn_sess)
-            qd_conn->pn_sess = 0;
+        for (int i = 0; i < QD_SSN_CLASS_COUNT; ++i) {
+            if (ssn == qd_conn->pn_sessions[i]) {
+                qd_conn->pn_sessions[i] = 0;
+                break;
+            }
+        }
         pn_link = pn_link_head(conn, PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED);
         while (pn_link) {
             if (pn_link_session(pn_link) == ssn) {
@@ -503,8 +507,12 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
 
     case PN_SESSION_REMOTE_CLOSE :
         ssn = pn_event_session(event);
-        if (ssn == qd_conn->pn_sess)
-            qd_conn->pn_sess = 0;
+        for (int i = 0; i < QD_SSN_CLASS_COUNT; ++i) {
+            if (ssn == qd_conn->pn_sessions[i]) {
+                qd_conn->pn_sessions[i] = 0;
+                break;
+            }
+        }
         if (!(pn_connection_state(conn) & PN_LOCAL_CLOSED)) {
             if (pn_session_state(ssn) == (PN_LOCAL_ACTIVE | PN_REMOTE_CLOSED)) {
 
@@ -846,7 +854,7 @@ qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node)
 }
 
 
-qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char* name)
+qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char* name, qd_session_class_t ssn_class)
 {
     qd_link_t *link = new_qd_link_t();
     if (!link) {
@@ -859,13 +867,15 @@ qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, c
     DEQ_INSERT_TAIL(node->container->links, link);
     sys_mutex_unlock(node->container->lock);
 
-    if (!conn->pn_sess) {
-        conn->pn_sess = pn_session(qd_connection_pn(conn));
-        pn_session_set_incoming_capacity(conn->pn_sess, cf->incoming_capacity);
-        pn_session_open(conn->pn_sess);
+    pn_session_t *ssn = conn->pn_sessions[ssn_class];
+    if (!ssn) {
+        ssn = pn_session(qd_connection_pn(conn));
+        conn->pn_sessions[ssn_class] = ssn;
+        pn_session_set_incoming_capacity(ssn, cf->incoming_capacity);
+        pn_session_open(ssn);
     }
 
-    link->pn_sess = conn->pn_sess;
+    link->pn_sess = ssn;
 
     if (dir == QD_OUTGOING)
         link->pn_link = pn_sender(link->pn_sess, name);

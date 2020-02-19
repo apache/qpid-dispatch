@@ -72,7 +72,8 @@ qdrc_endpoint_t *qdrc_endpoint_create_link_CT(qdr_core_t           *core,
 
     ep->desc         = desc;
     ep->link_context = link_context;
-    ep->link         = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, dir, source, target);
+    ep->link         = qdr_create_link_CT(core, conn, QD_LINK_ENDPOINT, dir, source, target,
+                                          QD_SSN_CORE_ENDPOINT);
 
     ep->link->core_endpoint = ep;
     return ep;

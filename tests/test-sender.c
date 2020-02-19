@@ -44,8 +44,8 @@
 
 #define BODY_SIZE_SMALL  100
 #define BODY_SIZE_MEDIUM 2000
-#define BODY_SIZE_LARGE  60000
-#define BODY_SIZE_HUGE   257 * 1024  // will trigger Q2/Q3
+#define BODY_SIZE_LARGE  65 * 1024
+#define BODY_SIZE_HUGE   1024 * 1024  // will trigger Q2/Q3
 
 #define DEFAULT_PRIORITY 4
 

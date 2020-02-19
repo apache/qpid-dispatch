@@ -19,6 +19,7 @@
 
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/discriminator.h>
+#include <qpid/dispatch/static_assert.h>
 #include "route_control.h"
 #include <qpid/dispatch/amqp.h>
 #include <stdio.h>
@@ -295,7 +296,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
         switch (work->work_type) {
         case QDR_CONNECTION_WORK_FIRST_ATTACH :
-            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target);
+            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target, work->ssn_class);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_ATTACH :
@@ -1046,12 +1047,13 @@ static void qdr_link_cleanup_protected_CT(qdr_core_t *core, qdr_connection_t *co
 }
 
 
-qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
-                               qdr_connection_t *conn,
-                               qd_link_type_t    link_type,
-                               qd_direction_t    dir,
-                               qdr_terminus_t   *source,
-                               qdr_terminus_t   *target)
+qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
+                               qdr_connection_t  *conn,
+                               qd_link_type_t     link_type,
+                               qd_direction_t     dir,
+                               qdr_terminus_t    *source,
+                               qdr_terminus_t    *target,
+                               qd_session_class_t ssn_class)
 {
     //
     // Create a new link, initiated by the router core.  This will involve issuing a first-attach outbound.
@@ -1093,6 +1095,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
     work->link      = link;
     work->source    = source;
     work->target    = target;
+    work->ssn_class = ssn_class;
 
     char   source_str[1000];
     char   target_str[1000];
@@ -1314,12 +1317,15 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
                     // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for
                     // routed-message transfer.
                     //
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control());
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control());
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
+                    STATIC_ASSERT((QD_SSN_ROUTER_DATA_PRI_9 - QD_SSN_ROUTER_DATA_PRI_0 + 1) == QDR_N_PRIORITIES, PRIORITY_SESSION_NOT_SAME);
 
                     for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
-                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data());
-                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data());
+                        // a session is reserved for each priority link
+                        qd_session_class_t sc = (qd_session_class_t)(QD_SSN_ROUTER_DATA_PRI_0 + priority);
+                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
+                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
                     }
                 }
             }

@@ -68,6 +68,32 @@ typedef enum {
 } qd_detach_type_t;
 
 
+/**
+ * Session Class
+ *
+ * Used when creating new links from the router.  A connection maintains a set
+ * of sessions over which links can be created.  The session class indicates
+ * which session to use when creating a link.
+ */
+typedef enum {
+    QD_SSN_ENDPOINT,          ///< client data links
+    QD_SSN_ROUTER_CONTROL,    ///< router protocol
+    QD_SSN_ROUTER_DATA_PRI_0, ///< inter-router data links (by priority)
+    QD_SSN_ROUTER_DATA_PRI_1,
+    QD_SSN_ROUTER_DATA_PRI_2,
+    QD_SSN_ROUTER_DATA_PRI_3,
+    QD_SSN_ROUTER_DATA_PRI_4,
+    QD_SSN_ROUTER_DATA_PRI_5,
+    QD_SSN_ROUTER_DATA_PRI_6,
+    QD_SSN_ROUTER_DATA_PRI_7,
+    QD_SSN_ROUTER_DATA_PRI_8,
+    QD_SSN_ROUTER_DATA_PRI_9,
+    QD_SSN_CORE_ENDPOINT,     ///< core subscriptions
+    QD_SSN_LINK_ROUTE,        ///< link routes
+    QD_SSN_CLASS_COUNT
+} qd_session_class_t;
+
+
 typedef struct qd_node_t     qd_node_t;
 typedef struct qd_link_t     qd_link_t;
 
@@ -160,7 +186,7 @@ void qd_container_node_set_context(qd_node_t *node, void *node_context);
 qd_dist_mode_t qd_container_node_get_dist_modes(const qd_node_t *node);
 qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node);
 
-qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name);
+qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name, qd_session_class_t);
 void qd_link_free(qd_link_t *link);
 
 /**
