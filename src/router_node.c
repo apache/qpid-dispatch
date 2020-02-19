@@ -1353,7 +1353,8 @@ static void CORE_link_first_attach(void             *context,
                                    qdr_connection_t *conn,
                                    qdr_link_t       *link, 
                                    qdr_terminus_t   *source,
-                                   qdr_terminus_t   *target)
+                                   qdr_terminus_t   *target,
+                                   qd_session_class_t ssn_class)
 {
     qd_router_t     *router = (qd_router_t*) context;
     qd_connection_t *qconn  = (qd_connection_t*) qdr_connection_get_context(conn);
@@ -1362,7 +1363,7 @@ static void CORE_link_first_attach(void             *context,
     //
     // Create a new link to be attached
     //
-    qd_link_t *qlink = qd_link(router->node, qconn, qdr_link_direction(link), qdr_link_name(link));
+    qd_link_t *qlink = qd_link(router->node, qconn, qdr_link_direction(link), qdr_link_name(link), ssn_class);
 
     //
     // Copy the source and target termini to the link

@@ -147,7 +147,7 @@ struct qd_connection_t {
     int                             enqueued;
     qd_timer_t                      *timer;   // Timer for initial-setup
     pn_connection_t                 *pn_conn;
-    pn_session_t                    *pn_sess;
+    pn_session_t                    *pn_sessions[QD_SSN_CLASS_CT];
     pn_ssl_t                        *ssl;
     qd_listener_t                   *listener;
     qd_connector_t                  *connector;

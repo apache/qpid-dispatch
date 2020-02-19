@@ -156,7 +156,7 @@ static void add_inlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_t
         }
 
         qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_INCOMING,
-                                              term, qdr_terminus_normal(0));
+                                              term, qdr_terminus_normal(0), QD_SSN_ENDPOINT);
         qdr_core_bind_address_link_CT(ap->core, addr, link);
         addr->edge_inlink = link;
     }
@@ -199,7 +199,7 @@ static void add_outlink(qcm_edge_addr_proxy_t *ap, const char *key, qdr_address_
         }
 
         qdr_link_t *link = qdr_create_link_CT(ap->core, ap->edge_conn, QD_LINK_ENDPOINT, QD_OUTGOING,
-                                              qdr_terminus_normal(0), term);
+                                              qdr_terminus_normal(0), term, QD_SSN_ENDPOINT);
         addr->edge_outlink = link;
     }
 }
@@ -233,7 +233,8 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
         //
         qdr_link_t *out_link = qdr_create_link_CT(ap->core, conn,
                                                   QD_LINK_ENDPOINT, QD_OUTGOING,
-                                                  qdr_terminus(0), qdr_terminus(0));
+                                                  qdr_terminus(0), qdr_terminus(0),
+                                                  QD_SSN_ROUTER_DATA);
 
         //
         // Associate the anonymous sender with the edge connection address.  This will cause
@@ -248,7 +249,8 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
         (void) qdr_create_link_CT(ap->core, conn,
                                   QD_LINK_ENDPOINT, QD_INCOMING,
                                   qdr_terminus_edge_downlink(ap->core->router_id),
-                                  qdr_terminus_edge_downlink(0));
+                                  qdr_terminus_edge_downlink(0),
+                                  QD_SSN_ROUTER_CONTROL);
 
         //
         // Attach a receiving link for edge address tracking updates.

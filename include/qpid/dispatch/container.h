@@ -68,6 +68,17 @@ typedef enum {
 } qd_detach_type_t;
 
 
+/**
+ * Session Class
+ */
+typedef enum {
+    QD_SSN_ENDPOINT,
+    QD_SSN_ROUTER_CONTROL,
+    QD_SSN_ROUTER_DATA,
+    QD_SSN_CLASS_CT
+} qd_session_class_t;
+
+
 typedef struct qd_node_t     qd_node_t;
 typedef struct qd_link_t     qd_link_t;
 
@@ -160,7 +171,7 @@ void qd_container_node_set_context(qd_node_t *node, void *node_context);
 qd_dist_mode_t qd_container_node_get_dist_modes(const qd_node_t *node);
 qd_lifetime_policy_t qd_container_node_get_life_policy(const qd_node_t *node);
 
-qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name);
+qd_link_t *qd_link(qd_node_t *node, qd_connection_t *conn, qd_direction_t dir, const char *name, qd_session_class_t);
 void qd_link_free(qd_link_t *link);
 
 /**

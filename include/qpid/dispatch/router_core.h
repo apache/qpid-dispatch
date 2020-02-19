@@ -700,8 +700,9 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
  */
 void qdr_link_set_drained(qdr_core_t *core, qdr_link_t *link);
 
-typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link, 
-                                          qdr_terminus_t *source, qdr_terminus_t *target);
+typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link,
+                                          qdr_terminus_t *source, qdr_terminus_t *target,
+                                          qd_session_class_t);
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);

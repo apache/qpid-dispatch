@@ -271,6 +271,7 @@ typedef struct qdr_connection_work_t {
     qdr_link_t                 *link;
     qdr_terminus_t             *source;
     qdr_terminus_t             *target;
+    qd_session_class_t          ssn_class;
 } qdr_connection_work_t;
 
 ALLOC_DECLARE(qdr_connection_work_t);
@@ -964,12 +965,13 @@ void qdr_link_enqueue_work_CT(qdr_core_t      *core,
                               qdr_link_t      *conn,
                               qdr_link_work_t *work);
 
-qdr_link_t *qdr_create_link_CT(qdr_core_t       *core,
-                               qdr_connection_t *conn,
-                               qd_link_type_t    link_type,
-                               qd_direction_t    dir,
-                               qdr_terminus_t   *source,
-                               qdr_terminus_t   *target);
+qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
+                               qdr_connection_t  *conn,
+                               qd_link_type_t     link_type,
+                               qd_direction_t     dir,
+                               qdr_terminus_t    *source,
+                               qdr_terminus_t    *target,
+                               qd_session_class_t ssn_class);
 
 void qdr_link_outbound_detach_CT(qdr_core_t *core, qdr_link_t *link, qdr_error_t *error, qdr_condition_t condition, bool close);
 void qdr_link_outbound_second_attach_CT(qdr_core_t *core, qdr_link_t *link, qdr_terminus_t *source, qdr_terminus_t *target);
