@@ -38,9 +38,6 @@
 #include "proton/handlers.h"
 
 
-#define MAX_SIZE (1024 * 64)
-char in_buffer[MAX_SIZE];
-
 bool stop = false;
 
 int  credit_window = 1000;

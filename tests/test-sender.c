@@ -44,11 +44,14 @@
 
 #define BODY_SIZE_SMALL  100
 #define BODY_SIZE_MEDIUM 2000
-#define BODY_SIZE_LARGE  60000  // NOTE: receiver.c max in buffer size = 64KB
+#define BODY_SIZE_LARGE  60000
+#define BODY_SIZE_HUGE   257 * 1024  // will trigger Q2/Q3
+
+#define DEFAULT_PRIORITY 4
 
 // body data - block of 0's
 //
-char _payload[BODY_SIZE_LARGE] = {0};
+char _payload[BODY_SIZE_HUGE] = {0};
 pn_bytes_t body_data = {
     .size  = 0,
     .start = _payload,
@@ -72,6 +75,7 @@ bool presettle = false;           // true = send presettled
 bool add_annotations = false;
 int body_size = BODY_SIZE_SMALL;
 bool drop_connection = false;
+unsigned int priority = DEFAULT_PRIORITY;
 
 // buffer for encoded message
 char *encode_buffer = NULL;
@@ -161,6 +165,10 @@ void generate_message(void)
 
     if (use_anonymous) {
         pn_message_set_address(out_message, target_address);
+    }
+
+    if (priority != DEFAULT_PRIORITY) {
+        pn_message_set_priority(out_message, (uint8_t)priority);
     }
 
     pn_data_t *body = pn_message_body(out_message);
@@ -331,12 +339,13 @@ static void usage(void)
   printf("-c      \t# of messages to send, 0 == nonstop [%"PRIu64"]\n", limit);
   printf("-i      \tContainer name [%s]\n", container_name);
   printf("-n      \tUse an anonymous link [%s]\n", BOOL2STR(use_anonymous));
-  printf("-s      \tBody size in bytes ('s'=%d 'm'=%d 'l'=%d) [%d]\n",
-         BODY_SIZE_SMALL, BODY_SIZE_MEDIUM, BODY_SIZE_LARGE, body_size);
+  printf("-s      \tBody size in bytes ('s'=%d 'm'=%d 'l'=%d 'x'=%d) [%d]\n",
+         BODY_SIZE_SMALL, BODY_SIZE_MEDIUM, BODY_SIZE_LARGE, BODY_SIZE_HUGE, body_size);
   printf("-t      \tTarget address [%s]\n", target_address);
   printf("-u      \tSend all messages presettled [%s]\n", BOOL2STR(presettle));
   printf("-M      \tAdd dummy Message Annotations section [off]\n");
   printf("-E      \tExit without cleanly closing the connection [off]\n");
+  printf("-p      \tMessage priority [%d]\n", priority);
   exit(1);
 }
 
@@ -345,7 +354,7 @@ int main(int argc, char** argv)
     /* command line options */
     opterr = 0;
     int c;
-    while ((c = getopt(argc, argv, "ha:c:i:ns:t:uME")) != -1) {
+    while ((c = getopt(argc, argv, "ha:c:i:ns:t:uMEp:")) != -1) {
         switch(c) {
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
@@ -360,6 +369,7 @@ int main(int argc, char** argv)
             case 's': body_size = BODY_SIZE_SMALL; break;
             case 'm': body_size = BODY_SIZE_MEDIUM; break;
             case 'l': body_size = BODY_SIZE_LARGE; break;
+            case 'x': body_size = BODY_SIZE_HUGE; break;
             default:
                 usage();
             }
@@ -368,6 +378,10 @@ int main(int argc, char** argv)
         case 'u': presettle = true;        break;
         case 'M': add_annotations = true;  break;
         case 'E': drop_connection = true;  break;
+        case 'p':
+            if (sscanf(optarg, "%u", &priority) != 1)
+                usage();
+            break;
 
         default:
             usage();
