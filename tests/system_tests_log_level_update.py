@@ -82,7 +82,7 @@ class ManyLogFilesTest(TestCase):
         server_log_found = True
         all_server_logs = True
         try:
-            with open('../setUpClass/test-router-server.log', 'r') as server_log:
+            with open(self.router.outdir + '/test-router-server.log', 'r') as server_log:
                 for line in server_log:
                     parts = line.split(" ")
                     if (parts[3] != "SERVER"):
@@ -97,7 +97,7 @@ class ManyLogFilesTest(TestCase):
         protocol_log_found = True
         all_protocol_logs =True
         try:
-            with open('../setUpClass/test-router-protocol.log', 'r') as protocol_log:
+            with open(self.router.outdir + '/test-router-protocol.log', 'r') as protocol_log:
                 for line in protocol_log:
                     parts = line.split(" ")
                     if (parts[3] != "PROTOCOL"):
@@ -112,7 +112,7 @@ class ManyLogFilesTest(TestCase):
         core_router_log_found = True
         all_core_router_logs = True
         try:
-            with open('../setUpClass/test-router-core.log', 'r') as core_log:
+            with open(self.router.outdir + '/test-router-core.log', 'r') as core_log:
                 for line in core_log:
                     parts = line.split(" ")
                     if parts[3] != "ROUTER_CORE" and parts[3] != "ROUTER":
@@ -631,7 +631,7 @@ class RouterCoreModuleLogTest(TestCase):
             # Before the fix to DISPATCH-1575, this file will not be
             # created because the router core module was logging to the ROUTER
             # module instead of the ROUTER_CORE module.
-            with open('../setUpClass/test-router-core.log', 'r') as core_log:
+            with open(self.router.outdir + '/test-router-core.log', 'r') as core_log:
                 for line in core_log:
                     # Every line in the file must log to the router core module.
                     if not "ROUTER_CORE" in line:
