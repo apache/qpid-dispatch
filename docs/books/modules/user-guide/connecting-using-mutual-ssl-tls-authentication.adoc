@@ -62,7 +62,7 @@ sslProfile {
 +
 [NOTE]
 ====
-Ensure that the `qdrouterd` user can access the private key. For example:
+Ensure that the `qdrouterd` or root user can access the private key. For example:
 
 [options="nowrap",subs="+quotes"]
 ----
