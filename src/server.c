@@ -1611,3 +1611,7 @@ sys_mutex_t *qd_server_get_activation_lock(qd_server_t * server)
 {
     return server->conn_activation_lock;
 }
+
+int qd_connection_max_message_size(const qd_connection_t *c) {
+    return (c && c->policy_settings) ? c->policy_settings->maxMessageSize : 0;
+}

@@ -27,7 +27,7 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException, Timeout, Url, symbol
 from proton.handlers import MessagingHandler
@@ -1824,6 +1824,130 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             except:
                 res = False
             self.assertFalse(res)
+
+class MaxMessageSize1(TestCase):
+    """
+    verify that maxMessageSize propagates from policy->vhost->vhostGroup
+    """
+    policy_type = "org.apache.qpid.dispatch.policy"
+    vhost_type = "org.apache.qpid.dispatch.vhost"
+    groups_type = "org.apache.qpid.dispatch.vhostUserGroupSettings"
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSize1, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'MaxMessageSize1'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': 1000000, 'defaultVhost': '$default'}),
+            ('vhost', {
+                'hostname': '$default',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'maxMessageSize': 2000000,
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostUserMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true',
+                        'maxMessageSize': 3000000
+                    }
+                )]
+            })
+
+        ])
+
+        cls.router = cls.tester.qdrouterd('MaxMessageSize1', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_40_verify_max_message_size_policy_settings(self):
+        # Verify that max message sizes get instantiated in policy
+        qd_manager = QdManager(self, self.address())
+        policy = qd_manager.query(self.policy_type)
+        self.assertTrue(policy[0]['maxMessageSize'] == 1000000)
+
+        vhost = qd_manager.query(self.vhost_type)
+
+        # vhost with no max size defs
+        ddef = vhost[0]
+        self.assertTrue(ddef['hostname'] == '$default')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in vhost but not in group
+        ddef = vhost[1]
+        self.assertTrue(ddef['hostname'] == 'vhostMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == 2000000)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in group but not in vhost
+        ddef = vhost[2]
+        self.assertTrue(ddef['hostname'] == 'vhostUserMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == 3000000)
 
 
 if __name__ == '__main__':
