@@ -2611,7 +2611,7 @@ class UptimeLastDlvChecker(object):
                         self.parent.error = "Expected lastDlvSeconds to be empty"
                 else:
                     if not last_dlv_seconds >= self.lastDlv:
-                        self.parent.error = "Connection lastDeliverySeconds must be greater than or equal to $d but is %d" % (self.lastDlv, last_dlv_seconds)
+                        self.parent.error = "Connection lastDeliverySeconds must be greater than or equal to %d but is %d" % (self.lastDlv, last_dlv_seconds)
                     else:
                         self.parent.success = True
                 self.num_connections += 1
