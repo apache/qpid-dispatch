@@ -332,10 +332,11 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
 
     qd_message_t   *msg   = qd_message_receive(pnd);
     
-    bool is_oversize      = qd_message_exceeds_max_message_size(msg);
-    if (is_oversize) {
+    int oversize = qd_message_exceeded_max_message_size(msg);
+    if (oversize > 0) {
         // message is bigger than maxMessageSize
-        if (qd_message_oversize_detected(msg)) {
+        if (oversize == 1) {
+            // went oversize on this pass
             qdr_link_t *rlink = (qdr_link_t*) qd_link_get_context(link);
             qd_log(qd_log_source("POLICY"), QD_LOG_WARNING, "[C%"PRIu64"][L%"PRIu64"] maxMessageSize exceeded",
                     rlink->conn->identity, rlink->identity);
