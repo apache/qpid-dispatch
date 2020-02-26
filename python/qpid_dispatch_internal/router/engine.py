@@ -22,7 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR
+from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR, \
+    isCompatibleVersion, getIdAndVersion
 from .hello import HelloProtocol
 from .link import LinkStateEngine
 from .path import PathEngine
@@ -36,7 +37,7 @@ import time
 ## Import the Dispatch adapters from the environment.  If they are not found
 ## (i.e. we are in a test bench, etc.), load the stub versions.
 ##
-from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_STACK_LIMIT
+from ..dispatch import IoAdapter, LogAdapter, LOG_TRACE, LOG_INFO, LOG_ERROR, LOG_WARNING, LOG_STACK_LIMIT
 from ..dispatch import TREATMENT_MULTICAST_FLOOD, TREATMENT_MULTICAST_ONCE
 
 class RouterEngine(object):
@@ -63,6 +64,7 @@ class RouterEngine(object):
         self.id             = router_id
         self.instance       = int(time.time())
         self.area           = area
+        self.incompatIds    = []
         self.log(LOG_INFO, "Router Engine Instantiated: id=%s instance=%d max_routers=%d" %
                  (self.id, self.instance, self.max_routers))
 
@@ -134,6 +136,13 @@ class RouterEngine(object):
     def handleControlMessage(self, opcode, body, link_id, cost):
         """
         """
+        if not isCompatibleVersion(body):
+            rid, version = getIdAndVersion(body)
+            if rid not in self.incompatIds:
+                self.incompatIds.append(rid)
+                self.log(LOG_WARNING, "Received %s at protocol version %d from %s.  Ignoring." % (opcode, version, rid))
+            return
+
         try:
             now = time.time()
             if   opcode == 'HELLO':
