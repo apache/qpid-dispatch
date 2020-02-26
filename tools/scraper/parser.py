@@ -237,16 +237,21 @@ class DescribedType:
         self.add_field_to_dict(fHandle)
         self.line = self.line[(len(fHandle) + 1):]
 
-        fDelId = self.line.split()[0]
-        self.add_field_to_dict(fDelId)
-        self.line = self.line[(len(fDelId) + 1):]
+        try:
+            fDelId = self.line.split()[0]
+            self.add_field_to_dict(fDelId)
+            self.line = self.line[(len(fDelId) + 1):]
 
-        # process fields from tail
-        while len(self.line) > 0 and self.process_transfer_tail_key():
+            # process fields from tail
+            while len(self.line) > 0 and self.process_transfer_tail_key():
+                pass
+
+            # the remainder, no matter how unlikely, must be the delivery-tag
+            self.add_field_to_dict(self.line, "delivery-tag")
+        except:
+            # delivery-id and delivery-tag are optional in subsequent transfers
+            # when more=true.
             pass
-
-        # the remainder, no matter how unlikely, must be the delivery-tag
-        self.add_field_to_dict(self.line, "delivery-tag")
 
     def parse_dtype_line(self, _dtype, _line):
         """
