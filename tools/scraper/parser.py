@@ -519,8 +519,8 @@ class ParsedLogLine(object):
             if state is not None:
                 res.disposition_state = state.dtype_name
             ###    colorize_dispositions_not_accepted(proto, res, global_vars, count_anomalies)
-            res.web_show_str = ("<strong>%s</strong>  [%s] (%s %s-%s)" %
-                                (res.name, res.channel, res.role, res.first, res.last))
+            res.web_show_str = ("<strong>%s</strong>  [%s] (%s %s-%s settled=%s state=%s)" %
+                                (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
 
         elif perf == 0x16:
             # Performative: detach [channel, handle]
