@@ -33,6 +33,7 @@ from system_test import QdManager
 from system_test import MgmtMsgProxy
 from system_test import unittest, QdManager
 from test_broker import FakeBroker
+from test_broker import FakeService
 
 from proton import Delivery
 from proton import Message
@@ -2369,6 +2370,144 @@ class SendReceive(MessagingHandler):
 
     def run(self):
         Container(self).run()
+
+
+class LinkRoute3Hop(TestCase):
+    """
+    Sets up a linear 3 hop router network for testing multi-hop link routes.
+
+             +---------+         +---------+         +---------+     +------------------+
+             |         | <------ |         | <-----  |         |<----| blocking_senders |
+             |  QDR.A  |         |  QDR.B  |         |  QDR.C  |     +------------------+
+             |         | ------> |         | ------> |         |     +--------------------+
+             +---------+         +---------+         +---------+---->| blocking_receivers |
+                  ^                                                  +--------------------+
+                  |
+                  V
+           +-------------+
+           | FakeService |
+           +-------------+
+
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(LinkRoute3Hop, cls).setUpClass()
+
+        b_port = cls.tester.get_port()
+        configs = [
+            # QDR.A:
+            [('router', {'mode': 'interior', 'id': 'QDR.A'}),
+             # for client access
+             ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # for fake service:
+             ('listener', {'role': 'route-container',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # to connect to the QDR.B
+             ('connector', {'role': 'inter-router',
+                            'host': '127.0.0.1',
+                            'port': b_port,
+                            'saslMechanisms': 'ANONYMOUS'}),
+             # the routes
+             ('linkRoute', {'prefix': 'closest/test-client', 'containerId': 'FakeService', 'direction': 'in'}),
+             ('linkRoute', {'prefix': 'closest/test-client', 'containerId': 'FakeService', 'direction': 'out'})
+            ],
+            # QDR.B:
+            [('router', {'mode': 'interior', 'id': 'QDR.B'}),
+             # for client connections
+             ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # for inter-router connections from QDR.A and QDR.C
+             ('listener', {'role': 'inter-router',
+                           'host': '0.0.0.0',
+                           'port': b_port,
+                           'saslMechanisms': 'ANONYMOUS'}),
+             ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'in'}),
+             ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'out'})
+            ],
+            # QDR.C
+            [('router', {'mode': 'interior', 'id': 'QDR.C'}),
+             # for client connections
+             ('listener', {'role': 'normal',
+                           'host': '0.0.0.0',
+                           'port': cls.tester.get_port(),
+                           'saslMechanisms': 'ANONYMOUS'}),
+             # to connect to the QDR.B
+             ('connector', {'role': 'inter-router',
+                            'host': '127.0.0.1',
+                            'port': b_port,
+                            'saslMechanisms': 'ANONYMOUS'}),
+             ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'in'}),
+             ('linkRoute', {'prefix': 'closest/test-client', 'direction': 'out'})
+            ]
+        ]
+
+        cls.routers=[]
+        for c in configs:
+            config = Qdrouterd.Config(c)
+            cls.routers.append(cls.tester.qdrouterd(config=config, wait=False))
+        cls.QDR_A = cls.routers[0]
+        cls.QDR_B = cls.routers[1]
+        cls.QDR_C = cls.routers[2]
+
+        cls.QDR_A.wait_router_connected('QDR.B')
+        cls.QDR_B.wait_router_connected('QDR.A')
+        cls.QDR_B.wait_router_connected('QDR.C')
+        cls.QDR_C.wait_router_connected('QDR.B')
+
+        cls.fake_service = FakeService(cls.QDR_A.addresses[1],
+                                       container_id="FakeService")
+        cls.QDR_C.wait_address("closest/test-client",
+                               remotes=1)
+
+    def test_01_parallel_link_routes(self):
+        """
+        Verify Q2/Q3 recovery in the case of multiple link-routes sharing the
+        same session.
+        """
+        send_clients = 10
+        send_batch = 25
+        total = send_clients * send_batch
+
+        start_in = self.fake_service.in_count
+        start_out = self.fake_service.out_count
+
+        rx = self.popen(["test-receiver",
+                         "-a", self.QDR_C.addresses[0],
+                         "-c", str(total),
+                         "-s", "closest/test-client"],
+                        expect=Process.EXIT_OK)
+
+        def _spawn_sender(x):
+            return self.popen( ["test-sender",
+                                "-a", self.QDR_C.addresses[0],
+                                "-c", str(send_batch),
+                                "-i", "TestSender-%s" % x,
+                                "-sx",   # huge message size to trigger Q2/Q3
+                                "-t", "closest/test-client"],
+                               expect=Process.EXIT_OK)
+
+        senders = [_spawn_sender(s) for s in range(send_clients)]
+
+        if rx.wait(timeout=TIMEOUT):
+            raise Exception("Receiver failed to consume all messages in=%s out=%s",
+                            self.fake_service.in_count,
+                            self.fake_service.out_count)
+        for tx in senders:
+            out_text, out_err = tx.communicate(timeout=TIMEOUT)
+            if tx.returncode:
+                raise Exception("Sender failed: %s %s" % (out_text, out_err))
+
+        self.assertEqual(start_in + total, self.fake_service.in_count)
+        self.assertEqual(start_out + total, self.fake_service.out_count)
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

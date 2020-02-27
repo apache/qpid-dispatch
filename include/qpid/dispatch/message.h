@@ -39,12 +39,22 @@
 // DISPATCH-807 Queue depth limits
 // upper and lower limits for bang bang hysteresis control
 //
-// Q2 defines the number of buffers allowed in a message's buffer chain
-#define QD_QLIMIT_Q2_UPPER 256
-#define QD_QLIMIT_Q2_LOWER 128
+// Q2 defines the maximum number of buffers allowed in a message's buffer
+// chain.  This limits the number of bytes that will be read from an incoming
+// link (pn_link_recv) for the current message. Once Q2 is enabled no further
+// pn_link_recv calls will be done on the link. Q2 remains in effect until enough
+// bytes have been consumed by the outgoing link(s) to drop the number of
+// buffered bytes below the lower threshold.
+#define QD_QLIMIT_Q2_UPPER 256   // disable pn_link_recv (qd_buffer_t's)
+#define QD_QLIMIT_Q2_LOWER 128   // re-enable pn_link_recv
 //
-// Q3 defines the number of bytes allowed in a session's outgoing_bytes
-#define QD_QLIMIT_Q3_UPPER (256 * 1000)
+// Q3 limits the number of bytes allowed to be buffered in a session's outgoing
+// buffer.  Once the Q3 upper limit is hit (read via pn_session_outgoing_bytes),
+// pn_link_send will no longer be called for ALL outgoing links sharing the
+// session.  When enough outgoing bytes have been drained below the lower limit
+// pn_link_sends will resume.
+#define QD_QLIMIT_Q3_UPPER  (QD_QLIMIT_Q3_LOWER * 2)  // in pn_buffer_t's
+#define QD_QLIMIT_Q3_LOWER  (QD_QLIMIT_Q2_UPPER * 2)  // 2 == a guess
 
 // Callback for status change (confirmed persistent, loaded-in-memory, etc.)
 
