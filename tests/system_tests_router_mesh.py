@@ -212,12 +212,11 @@ class ThreeRouterTest(TestCase):
     def test_06_parallel_priority(self):
         """
         Create 10 senders each with a different priority.  Send large messages
-        - large enough to trigger Qx flow control.  Ensure all messages arrive
-        as expected
+        - large enough to trigger Qx flow control (sender argument "-sx").
+        Ensure all messages arrive as expected.
         """
-
         priorities = 10
-        send_batch = 150
+        send_batch = 25
 
         total = priorities * send_batch
         rx = self.spawn_receiver(self.RouterC,

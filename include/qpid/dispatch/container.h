@@ -95,9 +95,11 @@ typedef enum {
 
 
 typedef struct qd_node_t     qd_node_t;
+typedef struct qd_session_t  qd_session_t;
 typedef struct qd_link_t     qd_link_t;
 
 ALLOC_DECLARE(qd_link_t);
+DEQ_DECLARE(qd_link_t, qd_link_list_t);
 
 typedef bool (*qd_container_delivery_handler_t)                  (void *node_context, qd_link_t *link);
 typedef void (*qd_container_disposition_handler_t)               (void *node_context, qd_link_t *link, pn_delivery_t *pnd);
@@ -226,6 +228,14 @@ void qd_link_detach(qd_link_t *link);
 void qd_link_free(qd_link_t *link);
 void *qd_link_get_node_context(const qd_link_t *link);
 void qd_link_restart_rx(qd_link_t *link);
+void qd_link_q3_block(qd_link_t *link);
+void qd_link_q3_unblock(qd_link_t *link);
+
+qd_session_t *qd_session(pn_session_t *pn_ssn);
+void qd_session_cleanup(qd_connection_t *qd_conn);
+void qd_session_free(qd_session_t *qd_ssn);
+bool qd_session_is_q3_blocked(const qd_session_t *qd_ssn);
+qd_link_list_t *qd_session_q3_blocked_links(qd_session_t *qd_ssn);
 
 ///@}
 #endif

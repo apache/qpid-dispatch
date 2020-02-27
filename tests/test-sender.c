@@ -40,22 +40,20 @@
 #include "proton/event.h"
 #include "proton/handlers.h"
 
+#include <qpid/dispatch/buffer.h>
+#include <qpid/dispatch/message.h>
+
 #define BOOL2STR(b) ((b)?"true":"false")
 
-#define BODY_SIZE_SMALL  100
-#define BODY_SIZE_MEDIUM 2000
-#define BODY_SIZE_LARGE  65 * 1024
-#define BODY_SIZE_HUGE   1024 * 1024  // will trigger Q2/Q3
+#define BODY_SIZE_SMALL  100L
+#define BODY_SIZE_MEDIUM ((long int)((4 * 1024) + 1))
+#define BODY_SIZE_LARGE  ((long int)((65 * 1024) + 1))
+#define BODY_SIZE_HUGE   ((long int)((BUFFER_SIZE * QD_QLIMIT_Q3_UPPER * 3) + 1))
 
 #define DEFAULT_PRIORITY 4
 
 // body data - block of 0's
 //
-char _payload[BODY_SIZE_HUGE] = {0};
-pn_bytes_t body_data = {
-    .size  = 0,
-    .start = _payload,
-};
 
 bool stop = false;
 
@@ -69,15 +67,16 @@ uint64_t rejected = 0;
 uint64_t modified = 0;
 uint64_t released = 0;
 
-
-bool use_anonymous = false;       // use anonymous link if true
-bool presettle = false;           // true = send presettled
+char body_data_pattern = 'B';  // fill body data
+bool use_anonymous = false;    // use anonymous link if true
+bool presettle = false;        // true = send presettled
 bool add_annotations = false;
-int body_size = BODY_SIZE_SMALL;
+long int body_size = BODY_SIZE_SMALL;
 bool drop_connection = false;
 unsigned int priority = DEFAULT_PRIORITY;
 
 // buffer for encoded message
+pn_bytes_t body_data = {0};
 char *encode_buffer = NULL;
 size_t encode_buffer_size = 0;    // size of malloced memory
 size_t encoded_data_size = 0;     // length of encoded content
@@ -173,6 +172,17 @@ void generate_message(void)
 
     pn_data_t *body = pn_message_body(out_message);
     pn_data_clear(body);
+
+    if (!body_data.start) {
+        char *ptr = malloc(BODY_SIZE_HUGE);
+        if (!ptr) {
+            perror("Out of memory!");
+            exit(-1);
+        }
+        memset(ptr, (int)body_data_pattern, BODY_SIZE_HUGE);
+        body_data.start = ptr;
+    }
+
     body_data.size = body_size;
     pn_data_put_binary(body, body_data);
 
@@ -229,6 +239,7 @@ static void delete_handler(pn_handler_t *handler)
 {
     free(encode_buffer);
     pn_message_free(out_message);
+    free((void *)body_data.start);
 }
 
 
@@ -339,13 +350,14 @@ static void usage(void)
   printf("-c      \t# of messages to send, 0 == nonstop [%"PRIu64"]\n", limit);
   printf("-i      \tContainer name [%s]\n", container_name);
   printf("-n      \tUse an anonymous link [%s]\n", BOOL2STR(use_anonymous));
-  printf("-s      \tBody size in bytes ('s'=%d 'm'=%d 'l'=%d 'x'=%d) [%d]\n",
+  printf("-s      \tBody size in bytes ('s'=%ld 'm'=%ld 'l'=%ld 'x'=%ld) [%ld]\n",
          BODY_SIZE_SMALL, BODY_SIZE_MEDIUM, BODY_SIZE_LARGE, BODY_SIZE_HUGE, body_size);
   printf("-t      \tTarget address [%s]\n", target_address);
   printf("-u      \tSend all messages presettled [%s]\n", BOOL2STR(presettle));
   printf("-M      \tAdd dummy Message Annotations section [off]\n");
   printf("-E      \tExit without cleanly closing the connection [off]\n");
   printf("-p      \tMessage priority [%d]\n", priority);
+  printf("-X      \tMessage body data pattern [%c]\n", (char)body_data_pattern);
   exit(1);
 }
 
@@ -354,7 +366,7 @@ int main(int argc, char** argv)
     /* command line options */
     opterr = 0;
     int c;
-    while ((c = getopt(argc, argv, "ha:c:i:ns:t:uMEp:")) != -1) {
+    while ((c = getopt(argc, argv, "ha:c:i:ns:t:uMEp:X:")) != -1) {
         switch(c) {
         case 'h': usage(); break;
         case 'a': host_address = optarg; break;
@@ -378,6 +390,7 @@ int main(int argc, char** argv)
         case 'u': presettle = true;        break;
         case 'M': add_annotations = true;  break;
         case 'E': drop_connection = true;  break;
+        case 'X': body_data_pattern = optarg[0];  break;
         case 'p':
             if (sscanf(optarg, "%u", &priority) != 1)
                 usage();

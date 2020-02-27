@@ -92,6 +92,7 @@ class FakeBroker(MessagingHandler):
         self.acceptor = None
         self.in_count = 0
         self.out_count = 0
+        self.link_errors = 0
         self._connections = []
         self._error = None
         self._container = Container(self)
@@ -148,6 +149,10 @@ class FakeBroker(MessagingHandler):
     def _unsubscribe(self, link):
         if link.source.address in self.queues and self.queues[link.source.address].unsubscribe(link):
             del self.queues[link.source.address]
+
+    def on_link_error(self, event):
+        self.link_errors += 1
+        self.on_link_closing(event)
 
     def on_link_closing(self, event):
         if event.link.is_sender:

@@ -1273,10 +1273,19 @@ qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *containe
 void qd_server_free(qd_server_t *qd_server)
 {
     if (!qd_server) return;
-    pn_proactor_free(qd_server->proactor);
     qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
     while (ctx) {
+        qd_log(qd_server->log_source, QD_LOG_INFO,
+               "[C%"PRIu64"] Closing connection on shutdown",
+               ctx->connection_id);
         DEQ_REMOVE_HEAD(qd_server->conn_list);
+        if (ctx->pn_conn) {
+            pn_transport_t *tport = pn_connection_transport(ctx->pn_conn);
+            if (tport)
+                pn_transport_set_context(tport, 0); /* for transport_tracer */
+            qd_session_cleanup(ctx);
+            pn_connection_set_context(ctx->pn_conn, 0);
+        }
         if (ctx->free_user_id) free((char*)ctx->user_id);
         sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->name);
@@ -1284,6 +1293,7 @@ void qd_server_free(qd_server_t *qd_server)
         free_qd_connection_t(ctx);
         ctx = DEQ_HEAD(qd_server->conn_list);
     }
+    pn_proactor_free(qd_server->proactor);
     qd_timer_finalize();
     sys_mutex_free(qd_server->lock);
     sys_mutex_free(qd_server->conn_activation_lock);
