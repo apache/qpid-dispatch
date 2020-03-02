@@ -354,7 +354,11 @@ class RouterTest(TestCase):
                      'test_64':  0,
                      'test_65':  0,
                      'test_66':  0,
-                     'test_67':  0
+                     'test_67':  0,
+                     'test_68':  0,
+                     'test_69':  0,
+                     'test_70':  0,
+                     'test_71':  0
                    }
 
     def test_01_connectivity_INTA_EA1(self):
@@ -1349,6 +1353,94 @@ class RouterTest(TestCase):
                     has_error=True
 
             self.assertTrue(has_error)
+
+    def test_70_qdstat_edge_router_option(self):
+        # Tests the --edge-router (-d) option of qdstat
+        # The goal of this test is to connect to any router in the
+        # network (interior or edge) and ask for details about a specific edge router
+        # You could not do that before DISPATCH-1580
+
+        # Makes a connection to an interior router INT.A and runs qdstat
+        # asking for all connections of an edge router EA1
+        outs = self.run_qdstat(['-d', 'EA1', '-c'],
+                               address=self.routers[0].addresses[0])
+        parts = outs.split("\n")
+        conn_found = False
+        for part in parts:
+            if "INT.A" in part and "edge" in part and "out" in part:
+                conn_found = True
+                break
+
+        self.assertTrue(conn_found)
+
+        # Makes a connection to an edge router and runs qdstat
+        # asking for all connections of an edge router EA1
+        outs = self.run_qdstat(['-d', 'EA1', '-c'],
+                               address=self.routers[2].addresses[0])
+        parts = outs.split("\n")
+        conn_found = False
+        for part in parts:
+            if "INT.A" in part and "edge" in part and "out" in part:
+                conn_found = True
+                break
+
+        self.assertTrue(conn_found)
+
+        # Makes a connection to an interior router INT.B and runs qdstat
+        # asking for all connections of an edge router EA1. The interior
+        # router INT.B is connected to edge router EA1 indirectly via
+        # interior router INT.A
+        outs = self.run_qdstat(['--edge-router', 'EA1', '-c'],
+                               address=self.routers[1].addresses[0])
+        parts = outs.split("\n")
+        conn_found = False
+        for part in parts:
+            if "INT.A" in part and "edge" in part and "out" in part:
+                conn_found = True
+                break
+
+        self.assertTrue(conn_found)
+
+    def test_71_qdmanage_edge_router_option(self):
+        # Makes a connection to an interior router INT.A and runs qdstat
+        # asking for all connections of an edge router EA1
+        mgmt = QdManager(self, address=self.routers[0].addresses[0],
+                         edge_router_id='EA1')
+        conn_found = False
+        outs = mgmt.query('org.apache.qpid.dispatch.connection')
+        for out in outs:
+            if out['container'] == 'INT.A' and out['dir'] == "out" and out['role'] == "edge":
+                conn_found = True
+                break
+        self.assertTrue(conn_found)
+
+        # Makes a connection to an edge router and runs qdstat
+        # asking for all connections of an edge router EA1
+        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+                         edge_router_id='EA1')
+        conn_found = False
+        outs = mgmt.query('org.apache.qpid.dispatch.connection')
+
+        for out in outs:
+            if out['container'] == 'INT.A' and out['dir'] == "out" and out['role'] == "edge":
+                conn_found = True
+                break
+        self.assertTrue(conn_found)
+
+        # Makes a connection to an interior router INT.B and runs qdstat
+        # asking for all connections of an edge router EA1. The interior
+        # router INT.B is connected to edge router EA1 indirectly via
+        # interior router INT.A
+        mgmt = QdManager(self, address=self.routers[1].addresses[0],
+                         edge_router_id='EA1')
+        conn_found = False
+        outs = mgmt.query('org.apache.qpid.dispatch.connection')
+
+        for out in outs:
+            if out['container'] == 'INT.A' and out['dir'] == "out" and out['role'] == "edge":
+                conn_found = True
+                break
+        self.assertTrue(conn_found)
 
 
 class LinkRouteProxyTest(TestCase):

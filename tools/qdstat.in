@@ -54,7 +54,8 @@ class BusManager(Node):
             Node.connection(opts_url(opts), opts.router,
                             timeout=opts.timeout,
                             ssl_domain=opts_ssl_domain(opts),
-                            sasl=opts_sasl(opts)))
+                            sasl=opts_sasl(opts),
+                            edge_router=opts.edge_router))
         self.show = getattr(self, opts.show)
         self.bodyFormat = BodyFormat.CSV if opts.csv else BodyFormat.CLASSIC
 

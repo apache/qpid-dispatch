@@ -83,7 +83,8 @@ class QdManage():
             raise UsageError("No operation specified")
         self.node = Node.connect(opts_url(self.opts), self.opts.router, self.opts.timeout,
                                  opts_ssl_domain(self.opts),
-                                 opts_sasl(self.opts))
+                                 opts_sasl(self.opts),
+                                 edge_router=self.opts.edge_router)
 
         operation = self.args.pop(0)
         method = operation.lower().replace('-','_')
