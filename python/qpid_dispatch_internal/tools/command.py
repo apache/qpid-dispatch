@@ -177,6 +177,8 @@ def _qdstat_parser(BusManager):
                         Can also be used in combination with other options")
     target.add_argument("-r", "--router",
                         metavar="ROUTER-ID", help="Router to be queried")
+    target.add_argument("-d", "--edge-router", metavar="EDGE-ROUTER-ID", help="Edge Router to be queried")
+
 
     # This limit can be used to limit the number of output rows and
     # can be used in conjunction with options
@@ -191,6 +193,9 @@ def _qdstat_parser(BusManager):
 def _qdmanage_add_args(parser):
     parser.add_argument("-r", "--router",
                      metavar="ROUTER-ID", help="Router to be queried")
+    # Edge routers are not part of the router network. Hence we need a separate option
+    # to be able to query edge routers
+    parser.add_argument("-d", '--edge-router', metavar="EDGE-ROUTER-ID", help='Edge Router to be queried')
     parser.add_argument('--type', help='Type of entity to operate on.') # add choices
     parser.add_argument('--name', help='Name of entity to operate on.')
     parser.add_argument('--identity', help='Identity of entity to operate on.',

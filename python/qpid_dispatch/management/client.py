@@ -91,7 +91,7 @@ class Node(object):
         return attrs
 
     @staticmethod
-    def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None):
+    def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None, edge_router=None):
         """Return a BlockingConnection suitable for connecting to a management node
         @param url: URL of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
@@ -102,6 +102,8 @@ class Node(object):
         if url.path is None:
             if router:
                 url.path = u'_topo/0/%s/$management' % router
+            elif edge_router:
+                url.path = u'_edge/%s/$management' % edge_router
             else:
                 url.path = u'$management'
 
@@ -120,9 +122,11 @@ class Node(object):
                                   password=str(sasl.password) if sasl and sasl.password != None else None)
 
     @staticmethod
-    def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None):
+    def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
+                edge_router=None):
         """Return a Node connected with the given parameters, see L{connection}"""
-        return Node(Node.connection(url, router, timeout, ssl_domain, sasl))
+        return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
+                                    edge_router=edge_router))
 
     def __init__(self, connection, locales=None):
         """

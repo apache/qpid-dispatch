@@ -995,19 +995,28 @@ class QdManager(object):
     """
     A means to invoke qdmanage during a testcase
     """
-    def __init__(self, tester=None, address=None, timeout=TIMEOUT):
+    def __init__(self, tester=None, address=None, timeout=TIMEOUT,
+                 router_id=None,
+                 edge_router_id=None):
         # 'tester' - can be 'self' when called in a test,
         # or an instance any class derived from Process (like Qdrouterd)
         self._tester = tester or Tester(None)
         self._timeout = timeout
         self._address = address
+        self.router_id = router_id
+        self.edge_router_id = edge_router_id
+        self.router = []
+        if self.router_id:
+            self.router = self.router + ['--router', self.router_id]
+        elif self.edge_router_id:
+            self.router = self.router + ['--edge-router', self.edge_router_id]
 
     def __call__(self, cmd, address=None, input=None, expect=Process.EXIT_OK,
                  timeout=None):
         assert address or self._address, "address missing"
         p = self._tester.popen(
             ['qdmanage'] + cmd.split(' ')
-            + ['--bus', address or self._address,
+            + self.router + ['--bus', address or self._address,
                '--indent=-1',
                '--timeout', str(timeout or self._timeout)],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=expect,
