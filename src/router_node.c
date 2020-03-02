@@ -27,6 +27,7 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include "delivery.h"
+#include "policy.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
@@ -329,12 +330,33 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
     bool       next_delivery = false;
 
-    //
-    // Receive the message into a local representation.
-    //
     qd_message_t   *msg   = qd_message_receive(pnd);
+    
+    int oversize = qd_message_exceeded_max_message_size(msg);
+    if (oversize > 0) {
+        // message is bigger than maxMessageSize
+        if (oversize == 1) {
+            // went oversize on this pass
+            qdr_link_t *rlink = (qdr_link_t*) qd_link_get_context(link);
+            qd_log(qd_policy_log_source(), QD_LOG_WARNING, "[C%"PRIu64"][L%"PRIu64"] DENY AMQP Transfer maxMessageSize exceeded. rhost:%s",
+                    rlink->conn->identity, rlink->identity, qd_connection_name(conn));
+            // increment policy counters
+            qd_policy_count_max_size_event(pn_link, conn);
+            // reject delivery that went oversize
+            pn_delivery_update(pnd, PN_REJECTED);
+            // Initiate link close with error.
+            pn_condition_t * cond = pn_link_condition(pn_link);
+            (void) pn_condition_set_name(cond, QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED);
+            pn_link_close(pn_link);
+            // Abort outbound deliveries that were receiving this incoming delivery
+            qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+            // If more deliveries arrive for this delivery then they will be discarded.
+        }
+        // Link was not advanced
+        return false;
+    }
+    
     bool receive_complete = qd_message_receive_complete(msg);
-
     if (receive_complete) {
         log_link_message(conn, pn_link, msg);
 

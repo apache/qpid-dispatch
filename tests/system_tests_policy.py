@@ -27,9 +27,9 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout, Url, symbol
+from proton import ConnectionException, Timeout, Url, symbol, Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, ReceiverOption
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
@@ -1824,6 +1824,280 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             except:
                 res = False
             self.assertFalse(res)
+
+class MaxMessageSize1(TestCase):
+    """
+    verify that maxMessageSize propagates from policy->vhost->vhostGroup
+    """
+    policy_type = "org.apache.qpid.dispatch.policy"
+    vhost_type = "org.apache.qpid.dispatch.vhost"
+    groups_type = "org.apache.qpid.dispatch.vhostUserGroupSettings"
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSize1, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'MaxMessageSize1'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': 1000000, 'defaultVhost': '$default'}),
+            ('vhost', {
+                'hostname': '$default',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'maxMessageSize': 2000000,
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostUserMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true',
+                        'maxMessageSize': 3000000
+                    }
+                )]
+            })
+
+        ])
+
+        cls.router = cls.tester.qdrouterd('MaxMessageSize1', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_40_verify_max_message_size_policy_settings(self):
+        # Verify that max message sizes get instantiated in policy
+        qd_manager = QdManager(self, self.address())
+        policy = qd_manager.query(self.policy_type)
+        self.assertTrue(policy[0]['maxMessageSize'] == 1000000)
+
+        vhost = qd_manager.query(self.vhost_type)
+
+        # vhost with no max size defs
+        ddef = vhost[0]
+        self.assertTrue(ddef['hostname'] == '$default')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in vhost but not in group
+        ddef = vhost[1]
+        self.assertTrue(ddef['hostname'] == 'vhostMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == 2000000)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in group but not in vhost
+        ddef = vhost[2]
+        self.assertTrue(ddef['hostname'] == 'vhostUserMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == 3000000)
+
+#
+# DISPATCH-975 Detect that an oversize message was blocked by qdr
+#
+class OversizeMessageTransferTest(MessagingHandler):
+    """
+    This test connects a sender and a receiver. Then it sends a message of the given
+    size expecting that the message will be rejected by the router and that the link
+    will be closed with a condition.
+    """
+    def __init__(self, sender_host, receiver_host, sender_address, receiver_address, msg_size):
+        super(OversizeMessageTransferTest, self).__init__()
+        self.sender_host = sender_host
+        self.receiver_host = receiver_host
+        self.sender_address = sender_address
+        self.receiver_address = receiver_address
+        self.msg_size = msg_size
+
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.error = None
+        self.sender = None
+        self.receiver = None
+        self.proxy = None
+
+        self.count = 10
+        self.n_sent = 0
+        self.n_rcvd = 0
+        self.n_accepted = 0
+
+        self.n_receiver_opened = 0
+        self.n_sender_opened = 0
+        self.logger = Logger(print_to_console=True)
+
+    def timeout(self):
+        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_accepted=%d n_receiver_opened=%d n_sender_opened=%d" % \
+                     (self.n_sent, self.n_rcvd, self.n_accepted, self.n_receiver_opened, self.n_sender_opened)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_start(self, event):
+        self.logger.log("on_start")
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.sender_conn = event.container.connect(self.sender_host)
+        self.receiver_conn = event.container.connect(self.receiver_host)
+        self.sender = event.container.create_sender(self.sender_conn, self.sender_address)
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.receiver_address)
+
+    def send(self):
+        while self.sender.credit > 0 and self.n_sent < self.count:
+            self.n_sent += 1
+            body_msg = "Message %d of %d" % (self.n_sent, self.count)
+            self.logger.log("send. size=%d, message=%s" % (self.msg_size, body_msg))
+            body_msg += "*" * self.msg_size
+            m = Message(body=body_msg)
+            self.sender.send(m)
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            self.logger.log("on_sendable")
+            self.send()
+
+    def on_message(self, event):
+        # all messages are too big and receiving any is an error
+        self.logger.log("on_message. ERROR should not get here")
+        self.error = "Received a message. Expected to receive no messages."
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_error(self, event):
+        self.logger.log("Container error")
+        self.sender_conn.close()
+        self.receiver_conn.close()
+
+    def on_link_error(self, event):
+        self.error = event.link.remote_condition.name
+        #
+        # qpid-proton master @ 6abb4ce
+        # At this point the container is wedged and closing the connections does
+        # not get the container to exit.
+        # Instead, raise an exception that bypasses normal container exit.
+        # This class then returns something for the main test to evaluate.
+        #
+        raise Exception(self.error)
+
+    def on_unhandled(self, method, *args):
+        self.logger.log("on_unhandled: method: %s, args: %s" % (method, args))
+
+    def run(self):
+        try:
+            Container(self).run()
+        except Exception as e:
+            self.logger.log("Container run exception: %s" % (e))
+
+class MaxMessageSizeBlockOversize(TestCase):
+    """
+    verify that maxMessageSize blocks oversize messages
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSizeBlockOversize, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'MaxMessageSize1'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': 100000,
+                        'defaultVhost': '$default'}),
+            ('vhost', {
+                'hostname': '$default',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            })
+        ])
+        cls.routers = []
+        cls.routers.append(cls.tester.qdrouterd('MaxMessageSizeBlockOversize', config, wait=True))
+
+    def address(self):
+        return self.routers[0].addresses[0]
+
+    def test_41_block_oversize_message(self):
+        logger = Logger(print_to_console=True)
+        test = OversizeMessageTransferTest(self.routers[0].addresses[0],
+                                           self.routers[0].addresses[0],
+                                           "examples",
+                                           "examples",
+                                           110000)
+        test.run()
+
+        self.assertEqual("amqp:link:message-size-exceeded", test.error)
+
+        qd_manager = QdManager(self, self.address())
+        num_oversize = 0
+        logs = qd_manager.get_log()
+        for log in logs:
+            if u'POLICY' in log[0]:
+                if "maxMessageSize" in log[2]:
+                    logger.log("found log messgage: %s" % (log[2]))
+                    num_oversize += 1
+        self.assertEqual(1, num_oversize)
 
 
 if __name__ == '__main__':

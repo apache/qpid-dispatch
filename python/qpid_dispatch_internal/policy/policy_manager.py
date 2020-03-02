@@ -161,6 +161,14 @@ class PolicyManager(object):
         @return: none
         """
         self._policy_local.close_connection(conn_id)
+
+    def set_max_message_size(self, size):
+        """
+        Policy has set global maxMessageSize.
+        :param size:
+        :return: none
+        """
+        self._policy_local.set_max_message_size(size)
 #
 #
 #

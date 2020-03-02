@@ -1244,7 +1244,9 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
                               qd_message_t  *msg_in)
 {
     qd_message_pvt_t *msg  = (qd_message_pvt_t*)msg_in;
-
+    if (msg->content->oversize) {
+        msg->content->oversize_detected++;
+    }
     while (1) {
 #define DISCARD_BUFFER_SIZE (128 * 1024)
         char dummy[DISCARD_BUFFER_SIZE];
@@ -1256,7 +1258,7 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
         } else if (rc == PN_EOS || rc < 0) {
             // end of message or error. Call the message complete
             msg->content->receive_complete = true;
-            msg->content->aborted = pn_delivery_aborted(delivery);
+            msg->content->aborted = pn_delivery_aborted(delivery) || msg->content->oversize;
             qd_nullify_safe_ptr(&msg->content->input_link_sp);
 
             pn_record_t *record = pn_delivery_attachments(delivery);
@@ -1301,6 +1303,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
+        msg->content->max_message_size = qd_connection_max_message_size(qdc);
     }
 
     //
@@ -1409,10 +1412,23 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             recv_error = true;
         } else if (rc > 0) {
             //
-            // We have received a positive number of bytes for the message.  Advance
-            // the cursor in the buffer.
+            // We have received a positive number of bytes for the message.  
+            // Advance the cursor in the buffer.
             //
             qd_buffer_insert(content->pending, rc);
+
+            // Handle maxMessageSize violations
+            if (content->max_message_size) {
+                content->bytes_received += rc;
+                if (content->bytes_received > content->max_message_size)
+                {
+                    content->oversize_detected += 1;
+                    content->oversize = true;
+                    content->discard = true;
+                    content->aborted = true;
+                    break;
+                }
+            }
         } else {
             //
             // We received zero bytes, and no PN_EOS.  This means that we've received
@@ -2222,4 +2238,10 @@ void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
         return;
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
     msg_pvt->content->aborted = aborted;
+}
+
+int qd_message_exceeded_max_message_size(const qd_message_t *msg)
+{
+    qd_message_content_t * mc = MSG_CONTENT(msg);
+    return mc->oversize_detected;
 }
