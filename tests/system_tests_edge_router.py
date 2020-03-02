@@ -358,7 +358,9 @@ class RouterTest(TestCase):
                      'test_68':  0,
                      'test_69':  0,
                      'test_70':  0,
-                     'test_71':  0
+                     'test_71':  0,
+                     'test_72':  0,
+                     'test_73':  0
                    }
 
     def test_01_connectivity_INTA_EA1(self):
@@ -1442,6 +1444,92 @@ class RouterTest(TestCase):
                 break
         self.assertTrue(conn_found)
 
+    def test_72_qdstat_query_interior_from_edge(self):
+
+        # Connect to Edge Router EA1 and query the connections on
+        # Interior Router INT.A
+        outs = self.run_qdstat(['-r', 'INT.A', '-c'],
+                               address=self.routers[2].addresses[0])
+
+        # The Interior Router INT.A is connected to two edge routers
+        # EA1 and EA2 and is also connected to another interior router INT.B
+        # We will connect to edge router EA1 (which has an edge
+        # uplink to INT.A) and query for connections on INT.A
+        ea1_conn_found = False
+        ea2_conn_found = False
+        int_b_inter_router_conn_found = False
+        parts = outs.split("\n")
+        for part in parts:
+            if "INT.B" in part and "inter-router" in part and "in" in part:
+                int_b_inter_router_conn_found = True
+            if "EA1" in part and "edge" in part and "in" in part:
+                ea1_conn_found = True
+            if "EA2" in part and "edge" in part and "in" in part:
+                ea2_conn_found = True
+
+        self.assertTrue(ea1_conn_found and ea2_conn_found and int_b_inter_router_conn_found)
+
+        # The Interior Router INT.B is connected  indirectly to edge router
+        # EA1 via INT.A
+        # We will connect to edge router EA1 (which has an edge
+        # uplink to INT.A) and query for connections on INT.B
+        outs = self.run_qdstat(['-r', 'INT.B', '-c'],
+                               address=self.routers[2].addresses[0])
+
+        eb1_conn_found = False
+        eb2_conn_found = False
+        int_a_inter_router_conn_found = False
+        parts = outs.split("\n")
+        for part in parts:
+            if "INT.A" in part and "inter-router" in part and "out" in part:
+                int_a_inter_router_conn_found = True
+            if "EB1" in part and "edge" in part and "in" in part:
+                eb1_conn_found = True
+            if "EB2" in part and "edge" in part and "in" in part:
+                eb2_conn_found = True
+
+        self.assertTrue(eb1_conn_found and eb2_conn_found and int_a_inter_router_conn_found)
+
+    def test_73_qdmanage_query_interior_from_edge(self):
+        # The Interior Router INT.A is connected to two edge routers
+        # EA1 and EA2 and is also connected to another interior router INT.B
+        # We will connect to edge router EA1 (which has an edge
+        # uplink to INT.A) and query for connections on INT.A
+        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+                         router_id='INT.A')
+        outs = mgmt.query('org.apache.qpid.dispatch.connection')
+        ea1_conn_found = False
+        ea2_conn_found = False
+        int_b_inter_router_conn_found = False
+        for out in outs:
+            if out['container'] == "INT.B" and out['role'] == "inter-router" and out['dir'] == "in":
+                int_b_inter_router_conn_found = True
+            if out['container'] == "EA1" and out['role'] == "edge" and out['dir'] == "in":
+                ea1_conn_found = True
+            if out['container'] == "EA2" and out['role'] == "edge" and out['dir'] == "in":
+                ea2_conn_found = True
+
+        self.assertTrue(ea1_conn_found and ea2_conn_found and int_b_inter_router_conn_found)
+
+        # The Interior Router INT.B is connected  indirectly to edge router
+        # EA1 via INT.A
+        # We will connect to edge router EA1 (which has an edge
+        # uplink to INT.A) and query for connections on INT.B
+        mgmt = QdManager(self, address=self.routers[2].addresses[0],
+                         router_id='INT.B')
+        outs = mgmt.query('org.apache.qpid.dispatch.connection')
+        eb1_conn_found = False
+        eb2_conn_found = False
+        int_a_inter_router_conn_found = False
+        for out in outs:
+            if out['container'] == "INT.A" and out['role'] == "inter-router" and out['dir'] == "out":
+                int_a_inter_router_conn_found = True
+            if out['container'] == "EB1" and out['role'] == "edge" and out['dir'] == "in":
+                eb1_conn_found = True
+            if out['container'] == "EB2" and out['role'] == "edge" and out['dir'] == "in":
+                eb2_conn_found = True
+
+        self.assertTrue(int_a_inter_router_conn_found and eb1_conn_found and eb2_conn_found)
 
 class LinkRouteProxyTest(TestCase):
     """
