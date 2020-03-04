@@ -107,13 +107,28 @@ static void event_handler(pn_handler_t *handler,
     } break;
 
     case PN_DELIVERY: {
-        // A message has been received
-        //
+
         if (stop) break;  // silently discard any further messages
 
+        bool rx_done = false;
         pn_delivery_t *dlv = pn_event_delivery(event);
-        if (pn_delivery_readable(dlv) && !pn_delivery_partial(dlv)) {
-            // A full message has arrived
+        if (pn_delivery_readable(dlv)) {
+
+             // Drain the data as it comes in rather than waiting for the
+             // entire delivery to arrive. This allows the receiver to handle
+             // messages that are way huge.
+
+             ssize_t rc;
+             static char discard_buffer[1024 * 1024];
+             do {
+                 rc = pn_link_recv(pn_delivery_link(dlv), discard_buffer, sizeof(discard_buffer));
+             } while (rc > 0);
+             rx_done = (rc == PN_EOS || rc < 0);
+        }
+
+        if (rx_done || !pn_delivery_partial(dlv)) {
+
+            // A full message has arrived (or a failure occurred)
             count += 1;
             pn_delivery_update(dlv, PN_ACCEPTED);
             pn_delivery_settle(dlv);  // dlv is now freed
