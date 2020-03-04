@@ -255,7 +255,7 @@ export function connectionPopupHTML(d, nodeInfo) {
 
 export function getSizes(id) {
   const gap = 5;
-  const sel = d3.select(`#${id}`);
+  const sel = d3.select(CSS.escape(`#${id}`));
   if (!sel.empty()) {
     const brect = sel.node().getBoundingClientRect();
     return { width: brect.width - gap, height: brect.height - gap };
@@ -331,7 +331,10 @@ function getNearestRouter(node, nodes, links) {
     if (link) {
       node.highlighted = true;
       link.highlighted = true;
-      d3.select(`path[id='hitpath-${link.uid()}']`).classed("highlighted", true);
+      d3.select(CSS.escape(`path[id='hitpath-${link.uid()}']`)).classed(
+        "highlighted",
+        true
+      );
     }
   }
   return node;
@@ -361,7 +364,10 @@ export function nextHopHighlight(selected_node, d, nodes, links, nodeInfo) {
     selected_node,
     (link, fnode, tnode) => {
       link.highlighted = true;
-      d3.select(`path[id='hitpath-${link.uid()}']`).classed("highlighted", true);
+      d3.select(CSS.escape(`path[id='hitpath-${link.uid()}']`)).classed(
+        "highlighted",
+        true
+      );
       fnode.highlighted = true;
       tnode.highlighted = true;
     }

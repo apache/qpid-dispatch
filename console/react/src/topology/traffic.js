@@ -237,7 +237,7 @@ class Congestion extends TrafficAnimation {
     // accumulate the colors/directions to be used
     for (let key in links) {
       let congestion = self.congestion(links[key]);
-      let pathId = key.replace(/\./g, "\\.").replace(/ /g, "\\ ");
+      let pathId = CSS.escape(key); //key.replace(/\./g, "\\.").replace(/ /g, "\\ ");
       let path = d3.select(pathId);
       if (path && !path.empty()) {
         // start the path with transparent white
@@ -474,12 +474,17 @@ class Dots extends TrafficAnimation {
       let foreIndex = 0;
       for (let h = 0; h < hop.length; h++) {
         let ahop = hop[h];
-        let pathId = id.replace(/\./g, "\\.").replace(/ /g, "\\ ");
+        let pathId = CSS.escape(id); //id.replace(/\./g, "\\.").replace(/ /g, "\\ ");
+        /*
         let flowId =
           id.replace(/\./g, "").replace(/ /g, "") +
           "-" +
           this.addressIndex(ahop.address) +
           (ahop.back ? "b" : "");
+          */
+        let flowId = CSS.escape(
+          `${id}-${this.addressIndex(ahop.address)}${ahop.back ? "b" : ""}`
+        );
         let path = d3.select("#path" + pathId);
         if (!path.empty()) {
           if (ahop.back) {
