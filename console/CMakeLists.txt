@@ -99,26 +99,3 @@ if(CONSOLE_INSTALL)
   endif(NPM_EXECUTABLE)
 
 endif(CONSOLE_INSTALL)
-
-##
-## Add a custom make hawtio target
-##
-find_program (MAVEN_EXE mvn DOC "Location of the maven program")
-if (MAVEN_EXE)
-       # the directory where the .war file will be built
-       set(HAWTIO_BUILD_DIR "${CMAKE_BINARY_DIR}/hawtio")
-
-       # create the console .war file
-       add_custom_target(hawtio
-           COMMAND ${MAVEN_EXE} -DbuildDirectory=${HAWTIO_BUILD_DIR} package
-           WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/console/hawtio
-       )
-
-       # install the built war file into the console dir
-       install(
-           # We don't know in advance what the name of the final .war will be because
-           # the war file name depends on the version in the pom.xml. The version will change each release
-           CODE "file( GLOB builtwar \"${HAWTIO_BUILD_DIR}/dispatch-hawtio-console*.war\" )"
-           CODE "file( INSTALL \${builtwar} DESTINATION \"${CONSOLE_INSTALL_DIR}/hawtio\" )"
-       )
-endif(MAVEN_EXE)

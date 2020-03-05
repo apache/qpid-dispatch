@@ -199,28 +199,3 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
-
-
-###############################################
-# Third Party Dependency Licensing Information:
-###############################################
-
-console/hawtio/src/main/webapp/plugin/lib/rhea-min.js is licensed under the above Apache License, Version 2.0
-
-The following 3 files are licensed under the BSD license, for details see licenses/d3.js-license
-1. console/dispatch-dashboard/dispatch/static/dashboard/dispatch/lib/d3.v3.min.js
-2. console/hawtio/src/main/webapp/plugin/lib/d3.min.js
-3. console/hawtio/src/main/webapp/plugin/lib/zd3-queue.min.js
-
-The following 2 files are covered by the MIT license, for details see licenses/jquery.tipsy-license
-1. console/hawtio/src/main/webapp/plugin/css/jquery.tipsy.css
-2. console/hawtio/src/main/webapp/plugin/lib/jquery.tipsy.js
-
-console/hawtio/src/main/webapp/plugin/css/jquery-ui.css is covered by the MIT License, for details see licenses/jquery-ui-license
-console/hawtio/src/main/webapp/plugin/lib/tooltipsy.min.js is licensed under the MIT license, for details see licenses/tooltipsy-license
-
-The following 3 files are covered by the SIL OFL 1.1, for details see licenses/fontawesome-license
-1. console/hawtio/src/main/webapp/plugin/fonts/fontawesome-webfont.woff
-2. console/hawtio/src/main/webapp/plugin/fonts/fontawesome-webfont.woff2
-3. console/hawtio/src/main/webapp/plugin/css/font-awesome.min.css
-
