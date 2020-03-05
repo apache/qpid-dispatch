@@ -104,17 +104,16 @@ class ChordData {
           for (let nodeId in results) {
             // get a map of router ids to index into ingressHistogram for the links for this router.
             // each routers has a different order for the routers
-            let ingressRouters = [];
             let routerNode = results[nodeId]["router.node"];
             if (!routerNode) {
               continue;
             }
-            let idIndex = routerNode.attributeNames.indexOf("id");
             // ingressRouters is an array of router names in the same order
             // that the ingressHistogram values will be in
-            for (let i = 0; i < routerNode.results.length; i++) {
-              ingressRouters.push(routerNode.results[i][idIndex]);
-            }
+            let ingressRouters = self.QDRService.utilities
+              .flattenAll(routerNode)
+              .sort((a, b) => (a.index < b.index ? -1 : a.index > b.index ? 1 : 0))
+              .map(n => n.id);
             // the name of the router we are working on
             let egressRouter = self.QDRService.utilities.nameFromId(nodeId);
             // loop through the router links for this router looking for
