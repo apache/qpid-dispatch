@@ -24,7 +24,7 @@ from __future__ import print_function
 
 from proton import Message, Timeout, symbol, int32
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import unittest
+from system_test import unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch_internal.compat import UNICODE
@@ -76,49 +76,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Entity(object):
-    def __init__(self, status_code, status_description, attrs):
-        self.status_code        = status_code
-        self.status_description = status_description
-        self.attrs              = attrs
-
-    def __getattr__(self, key):
-        return self.attrs[key]
-
-
-class RouterProxy(object):
-    def __init__(self, reply_addr):
-        self.reply_addr = reply_addr
-
-    def response(self, msg):
-        ap = msg.properties
-        return Entity(ap['statusCode'], ap['statusDescription'], msg.body)
-
-    def read_address(self, name):
-        ap = {'operation': 'READ', 'type': 'org.apache.qpid.dispatch.router.address', 'name': name}
-        return Message(properties=ap, reply_to=self.reply_addr)
-
-    def query_addresses(self):
-        ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.address'}
-        return Message(properties=ap, reply_to=self.reply_addr)
-
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class RejectHigherVersionHelloTest(MessagingHandler):
     def __init__(self, host):
         super(RejectHigherVersionHelloTest, self).__init__()
@@ -139,7 +96,7 @@ class RejectHigherVersionHelloTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(10, Timeout(self))
+        self.timer    = event.reactor.schedule(10, TestTimeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn)
         self.sender   = event.container.create_sender(self.conn)
