@@ -36,9 +36,9 @@ typedef struct qd_policy_denial_counts_s qd_policy_denial_counts_t;
 
 // TODO: Provide locking
 struct qd_policy_denial_counts_s {
-    int sessionDenied;
-    int senderDenied;
-    int receiverDenied;
+    uint64_t sessionDenied;
+    uint64_t senderDenied;
+    uint64_t receiverDenied;
 };
 
 typedef struct qd_policy_t qd_policy_t;

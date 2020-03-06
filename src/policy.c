@@ -42,11 +42,11 @@
 //
 static sys_mutex_t *stats_lock = 0;
 
-static int n_connections = 0;
-static int n_denied = 0;
-static int n_processed = 0;
-static int n_links_denied = 0;
-static int n_total_denials = 0;
+static uint64_t n_connections = 0;
+static uint64_t n_denied = 0;
+static uint64_t n_processed = 0;
+static uint64_t n_links_denied = 0;
+static uint64_t n_total_denials = 0;
 
 //
 // error conditions signaled to effect denial
@@ -218,7 +218,7 @@ qd_error_t qd_policy_c_counts_refresh(long ccounts, qd_entity_t *entity)
  **/
 qd_error_t qd_entity_refresh_policy(qd_entity_t* entity, void *unused) {
     // Return global stats
-    int np, nd, nc, nl, nt;
+    uint64_t np, nd, nc, nl, nt;
     sys_mutex_lock(stats_lock);
     {
         np = n_processed;
