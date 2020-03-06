@@ -29,6 +29,7 @@
 #include "compose_private.h"
 #include "connection_manager_private.h"
 #include "aprintf.h"
+#include "policy.h"
 #include <string.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -1237,14 +1238,13 @@ void qd_message_set_tag_sent(qd_message_t *in_msg, bool tag_sent)
 /**
  * Receive and discard large messages for which there is no destination.
  * Don't waste resources by putting the message into internal buffers.
- * Don't fiddle with locking as no sender is competing with reception.
+ * Message locking is not required since the message content buffers are untouched.
  */
 qd_message_t *discard_receive(pn_delivery_t *delivery,
                               pn_link_t     *link,
                               qd_message_t  *msg_in)
 {
     qd_message_pvt_t *msg  = (qd_message_pvt_t*)msg_in;
-
     while (1) {
 #define DISCARD_BUFFER_SIZE (128 * 1024)
         char dummy[DISCARD_BUFFER_SIZE];
@@ -1255,12 +1255,18 @@ qd_message_t *discard_receive(pn_delivery_t *delivery,
             break;
         } else if (rc == PN_EOS || rc < 0) {
             // end of message or error. Call the message complete
-            msg->content->receive_complete = true;
             msg->content->aborted = pn_delivery_aborted(delivery);
             qd_nullify_safe_ptr(&msg->content->input_link_sp);
-
             pn_record_t *record = pn_delivery_attachments(delivery);
             pn_record_set(record, PN_DELIVERY_CTX, 0);
+            if (msg->content->oversize) {
+                pn_delivery_update(delivery, PN_REJECTED);
+                pn_delivery_settle(delivery);
+                // Oversize messages are also marked as aborted
+                // so that downstream copies to remote receivers get aborted.
+                msg->content->aborted = true;
+            }
+            msg->content->receive_complete = true;
             break;
         } else {
             // rc was > 0. bytes were read and discarded.
@@ -1301,13 +1307,15 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         msg->strip_annotations_in  = qd_connection_strip_annotations_in(qdc);
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
+        msg->content->max_message_size = qd_connection_max_message_size(qdc);
     }
 
     //
     // The discard flag indicates we should keep reading the input stream
     // but not process the message for delivery.
+    // Messages already marked oversize are also discarded.
     //
-    if (msg->content->discard) {
+    if (msg->content->discard || msg->content->oversize) {
         return discard_receive(delivery, link, (qd_message_t *)msg);
     }
 
@@ -1409,10 +1417,25 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             recv_error = true;
         } else if (rc > 0) {
             //
-            // We have received a positive number of bytes for the message.  Advance
-            // the cursor in the buffer.
+            // We have received a positive number of bytes for the message.  
+            // Advance the cursor in the buffer.
             //
             qd_buffer_insert(content->pending, rc);
+
+            // Handle maxMessageSize violations
+            if (content->max_message_size) {
+                content->bytes_received += rc;
+                if (content->bytes_received > content->max_message_size)
+                {
+                    qd_connection_t *conn = qd_link_connection(qdl);
+                    qd_connection_log_policy_denial(qdl, "DENY AMQP Transfer maxMessageSize exceeded");
+                    // increment policy counters
+                    qd_policy_count_max_size_event(link, conn);
+
+                    content->oversize = true;
+                    return discard_receive(delivery, link, (qd_message_t*)msg);
+                }
+            }
         } else {
             //
             // We received zero bytes, and no PN_EOS.  This means that we've received
@@ -2222,4 +2245,10 @@ void qd_message_set_aborted(const qd_message_t *msg, bool aborted)
         return;
     qd_message_pvt_t * msg_pvt = (qd_message_pvt_t *)msg;
     msg_pvt->content->aborted = aborted;
+}
+
+bool qd_message_oversize(const qd_message_t *msg)
+{
+    qd_message_content_t * mc = MSG_CONTENT(msg);
+    return mc->oversize;
 }

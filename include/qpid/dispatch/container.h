@@ -200,6 +200,7 @@ void qd_link_detach(qd_link_t *link);
 void qd_link_free(qd_link_t *link);
 void *qd_link_get_node_context(const qd_link_t *link);
 void qd_link_restart_rx(qd_link_t *link);
+void qd_connection_log_policy_denial(qd_link_t *link, const char *text);
 
 ///@}
 #endif

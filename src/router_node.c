@@ -27,6 +27,7 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include "delivery.h"
+#include "policy.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
@@ -350,7 +351,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
     }
 
-    if (qd_message_is_discard(msg)) {
+    if (qd_message_is_discard(msg) && !qd_message_oversize(msg)) {
         //
         // Message has been marked for discard, no further processing necessary
         //
@@ -1883,4 +1884,13 @@ void qd_link_restart_rx(qd_link_t *in_link)
         set_safe_ptr_qd_link_t(in_link, safe_ptr);
         qd_connection_invoke_deferred(in_conn, deferred_AMQP_rx_handler, safe_ptr);
     }
+}
+
+
+// prepend formatted connection and link info to policy denial text and log it
+void qd_connection_log_policy_denial(qd_link_t *link, const char *text)
+{
+    qdr_link_t *rlink = (qdr_link_t*) qd_link_get_context(link);
+    qd_log(qd_policy_log_source(), QD_LOG_WARNING, "[C%"PRIu64"][L%"PRIu64"] %s",
+           rlink->conn->identity, rlink->identity, text);
 }

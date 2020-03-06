@@ -27,15 +27,17 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout, Url, symbol
+from proton import ConnectionException, Timeout, Url, symbol, Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, ReceiverOption
 from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
 from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
 from qpid_dispatch_internal.compat import dict_iteritems
 from test_broker import FakeBroker
+
+W_THREADS = 2
 
 class AbsoluteConnectionCountLimit(TestCase):
     """
@@ -1824,6 +1826,546 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             except:
                 res = False
             self.assertFalse(res)
+
+class MaxMessageSize1(TestCase):
+    """
+    verify that maxMessageSize propagates from policy->vhost->vhostGroup
+    """
+    policy_type = "org.apache.qpid.dispatch.policy"
+    vhost_type = "org.apache.qpid.dispatch.vhost"
+    groups_type = "org.apache.qpid.dispatch.vhostUserGroupSettings"
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSize1, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'MaxMessageSize1'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': 1000000, 'defaultVhost': '$default'}),
+            ('vhost', {
+                'hostname': '$default',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'maxMessageSize': 2000000,
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true'
+                    }
+                )]
+            }),
+            ('vhost', {
+                'hostname': 'vhostUserMaxMsgSize',
+                'allowUnknownUser': 'true',
+                'groups': [(
+                    '$default', {
+                        'users': '*',
+                        'maxConnections': 100,
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowAnonymousSender': 'true',
+                        'allowWaypointLinks': 'true',
+                        'allowDynamicSource': 'true',
+                        'maxMessageSize': 3000000
+                    }
+                )]
+            })
+
+        ])
+
+        cls.router = cls.tester.qdrouterd('MaxMessageSize1', config, wait=True)
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_40_verify_max_message_size_policy_settings(self):
+        # Verify that max message sizes get instantiated in policy
+        qd_manager = QdManager(self, self.address())
+        policy = qd_manager.query(self.policy_type)
+        self.assertTrue(policy[0]['maxMessageSize'] == 1000000)
+
+        vhost = qd_manager.query(self.vhost_type)
+
+        # vhost with no max size defs
+        ddef = vhost[0]
+        self.assertTrue(ddef['hostname'] == '$default')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in vhost but not in group
+        ddef = vhost[1]
+        self.assertTrue(ddef['hostname'] == 'vhostMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == 2000000)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == -1)
+
+        # vhost with max size defined in group but not in vhost
+        ddef = vhost[2]
+        self.assertTrue(ddef['hostname'] == 'vhostUserMaxMsgSize')
+
+        ddefmax = int(ddef.get('maxMessageSize', -1))
+        self.assertTrue(ddefmax == -1)
+
+        groups = ddef.get('groups', None)
+        gsettings = groups.get('$default', None)
+        self.assertTrue(gsettings is not None)
+
+        ddefgmax = int(gsettings.get('maxMessageSize', -1))
+        self.assertTrue(ddefgmax == 3000000)
+
+#
+# DISPATCH-975 Detect that an oversize message was blocked by qdr
+#
+class OversizeMessageTransferTest(MessagingHandler):
+    """
+    This test connects a sender and a receiver. Then it sends _count_ number  of messages
+    of the given size optionally expecting that the messages will be rejected by the router.
+
+    With expect_block=True sender messages should be rejected.
+    The receiver may receive aborted indications but that is not guaranteed.
+    The test is a success when n_rejected == count.
+
+    With expect_block=False sender messages should be received normally.
+    The test is a success when n_accepted == count.
+    """
+    def __init__(self, sender_host, receiver_host, test_address,
+                 message_size=100000, count=10, expect_block=True):
+        super(OversizeMessageTransferTest, self).__init__()
+        self.sender_host = sender_host
+        self.receiver_host = receiver_host
+        self.test_address = test_address
+        self.msg_size = message_size
+        self.count = count
+        self.expect_block = expect_block
+
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.error = None
+        self.sender = None
+        self.receiver = None
+        self.proxy = None
+
+        self.n_sent = 0
+        self.n_rcvd = 0
+        self.n_accepted = 0
+        self.n_rejected = 0
+        self.n_aborted = 0
+
+        self.logger = Logger(title=("OversizeMessageTransferTest - %s" % (self.test_address))) # (,print_to_console=True)
+        self.log_unhandled = not self.expect_block
+
+    def timeout(self):
+        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_rejected=%d n_aborted=%d" % \
+                     (self.n_sent, self.n_rcvd, self.n_rejected, self.n_aborted)
+        self.logger.log("self.timeout " + self.error)
+        self._shut_down_test()
+
+    def on_start(self, event):
+        self.logger.log("on_start")
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
+        self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
+        self.logger.log("on_start: opening   sender connection to %s" % (self.sender_host.addresses[0]))
+        self.sender_conn = event.container.connect(self.sender_host.addresses[0])
+        self.logger.log("on_start: Creating receiver")
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.test_address)
+        self.logger.log("on_start: Creating sender")
+        self.sender = event.container.create_sender(self.sender_conn, self.test_address)
+        self.logger.log("on_start: done")
+
+    def send(self):
+        while self.sender.credit > 0 and self.n_sent < self.count:
+            # construct message in indentifiable chunks
+            body_msg = ""
+            padchar = "abcdefghijklmnopqrstuvwxyz@#$%"[self.n_sent % 30]
+            while len(body_msg) < self.msg_size:
+                chunk = "[%s:%d:%d" % (self.test_address, self.n_sent, len(body_msg))
+                padlen = 50 - len(chunk)
+                chunk += padchar * padlen
+                body_msg += chunk
+            self.logger.log("send. address:%s message:%d of %s length=%d" %
+                            (self.test_address, self.n_sent, self.count, self.msg_size))
+            m = Message(body=body_msg)
+            self.sender.send(m)
+            self.n_sent += 1
+
+    def on_sendable(self, event):
+        if event.sender == self.sender:
+            self.logger.log("on_sendable")
+            self.send()
+
+    def on_message(self, event):
+        if self.expect_block:
+            # All messages should violate maxMessageSize.
+            # Receiving any is an error.
+            self.error = "Received a message. Expected to receive no messages."
+            self.logger.log(self.error)
+            self._shut_down_test()
+        else:
+            self.n_rcvd += 1
+            self._check_done()
+
+    def _shut_down_test(self):
+        if self.timer:
+            self.timer.cancel()
+            self.timer = None
+        if self.sender:
+            self.sender.close()
+            self.sender = None
+        if self.receiver:
+            self.receiver.close()
+            self.receiver = None
+        if self.sender_conn:
+            self.sender_conn.close()
+            self.sender_conn = None
+        if self.receiver_conn:
+            self.receiver_conn.close()
+            self.receiver_conn = None
+
+    def _check_done(self):
+        current = ("check_done: sent=%d rcvd=%d rejected=%d aborted=%d" %
+                   (self.n_sent, self.n_rcvd, self.n_rejected, self.n_aborted))
+        self.logger.log(current)
+
+        done = (self.n_sent == self.count and
+                self.n_rejected == self.count) if self.expect_block else \
+            (self.n_sent == self.count and
+             self.n_rcvd == self.count)
+        if done:
+            self.logger.log("TEST DONE!!!")
+            # self.log_unhandled = True # verbose debugging
+            self._shut_down_test()
+
+    def on_rejected(self, event):
+        self.logger.log("on_rejected: entry")
+        self.n_rejected += 1
+        self._check_done()
+
+    def on_aborted(self, event):
+        self.logger.log("on_aborted")
+        self.n_aborted += 1
+        self._check_done()
+
+    def on_error(self, event):
+        self.error = "Container error"
+        self.logger.log(self.error)
+        self.sender_conn.close()
+        self.receiver_conn.close()
+        self.timer.cancel()
+
+    def on_link_error(self, event):
+        self.error = event.link.remote_condition.name
+        self.logger.log("on_link_error: %s" % (self.error))
+        #
+        # qpid-proton master @ 6abb4ce
+        # At this point the container is wedged and closing the connections does
+        # not get the container to exit.
+        # Instead, raise an exception that bypasses normal container exit.
+        # This class then returns something for the main test to evaluate.
+        #
+        raise Exception(self.error)
+
+    def on_unhandled(self, method, *args):
+        if self.log_unhandled:
+            self.logger.log("on_unhandled: method: %s, args: %s" % (method, args))
+
+    def run(self):
+        try:
+            Container(self).run()
+        except Exception as e:
+            self.error = "Container run exception: %s" % (e)
+            self.logger.log(self.error)
+            self.logger.dump()
+        time.sleep(0.2)
+
+class MaxMessageSizeBlockOversize(TestCase):
+    """
+    verify that maxMessageSize blocks oversize messages
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSizeBlockOversize, cls).setUpClass()
+
+        def router(name, mode, max_size, extra):
+            config = [
+                ('router', {'mode': mode,
+                            'id': name,
+                            'allowUnsettledMulticast': 'yes',
+                            'workerThreads': W_THREADS}),
+                ('listener', {'role': 'normal',
+                              'port': cls.tester.get_port()}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+                ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': max_size, 'defaultVhost': '$default'}),
+                ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
+                    'groups': [(
+                        '$default', {
+                            'users': '*',
+                            'maxConnections': 100,
+                            'remoteHosts': '*',
+                            'sources': '*',
+                            'targets': '*',
+                            'allowAnonymousSender': 'true',
+                            'allowWaypointLinks': 'true',
+                            'allowDynamicSource': 'true'
+                        }
+                    )]}
+                )
+            ]
+
+            if extra:
+                config.extend(extra)
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            return cls.routers[-1]
+
+        # configuration:
+        # two edge routers connected via 2 interior routers.
+        #
+        #  +-------+    +---------+    +---------+    +-------+
+        #  |  EA1  |<==>|  INT.A  |<==>|  INT.B  |<==>|  EB1  |
+        #  +-------+    +---------+    +---------+    +-------+
+        #
+
+        cls.routers = []
+
+        interrouter_port = cls.tester.get_port()
+        cls.INTA_edge_port   = cls.tester.get_port()
+        cls.INTB_edge_port   = cls.tester.get_port()
+
+        router('INT.A', 'interior', 100000,
+               [('listener', {'role': 'inter-router',
+                              'port': interrouter_port}),
+                ('listener', {'role': 'edge', 'port': cls.INTA_edge_port})])
+        cls.INT_A = cls.routers[0]
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+        router('INT.B', 'interior', 100000,
+               [('connector', {'name': 'connectorToA',
+                               'role': 'inter-router',
+                               'port': interrouter_port}),
+                ('listener', {'role': 'edge',
+                              'port': cls.INTB_edge_port})])
+        cls.INT_B = cls.routers[1]
+        cls.INT_B.listener = cls.INT_B.addresses[0]
+
+        router('EA1', 'edge', 50000,
+               [('listener', {'name': 'rc', 'role': 'route-container',
+                              'port': cls.tester.get_port()}),
+                ('connector', {'name': 'uplink', 'role': 'edge',
+                               'port': cls.INTA_edge_port})])
+        cls.EA1 = cls.routers[2]
+        cls.EA1.listener = cls.EA1.addresses[0]
+
+        router('EB1', 'edge', 50000,
+               [('connector', {'name': 'uplink',
+                               'role': 'edge',
+                               'port': cls.INTB_edge_port,
+                               'maxFrameSize': 1024}),
+                ('listener', {'name': 'rc', 'role': 'route-container',
+                              'port': cls.tester.get_port()})])
+        cls.EB1 = cls.routers[3]
+        cls.EB1.listener = cls.EB1.addresses[0]
+
+        cls.INT_A.wait_router_connected('INT.B')
+        cls.INT_B.wait_router_connected('INT.A')
+        cls.EA1.wait_connectors()
+        cls.EB1.wait_connectors()
+
+    def test_41_block_oversize_INTA_INTA(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.INT_A,
+                                           "e41",
+                                           message_size=100100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_41 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_42_block_oversize_INTA_INTB(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.INT_B,
+                                           "e42",
+                                           message_size=100100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_42 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_43_block_oversize_EA1_EA1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.EA1,
+                                           "e43",
+                                           message_size=50100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_43 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_44_block_oversize_EA1_INTA(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.INT_A,
+                                           "e44",
+                                           message_size=50100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_44 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_45_block_oversize_EA1_INTB(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.INT_B,
+                                           "e45",
+                                           message_size=50100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_45 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_46_block_oversize_EA1_EB1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.EB1,
+                                           "e46",
+                                           message_size=50100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_46 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_47_block_oversize_INTA_EB1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.EB1,
+                                           "e47",
+                                           message_size=100100, expect_block=True)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_47 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    #
+    # tests under maxMessageSize should not block
+    #
+    def test_51_allow_undersize_INTA_INTA(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.INT_A,
+                                           "e51",
+                                           message_size=99900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_51 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_52_allow_undersize_INTA_INTB(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.INT_B,
+                                           "e52",
+                                           message_size=99900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_52 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_53_allow_undersize_EA1_EA1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.EA1,
+                                           "e53",
+                                           message_size=49900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_53 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_54_allow_undersize_EA1_INTA(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.INT_A,
+                                           "e54",
+                                           message_size=49900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_54 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_55_allow_undersize_EA1_INTB(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.INT_B,
+                                           "e55",
+                                           message_size=49900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_55 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_56_allow_undersize_EA1_EB1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.EA1,
+                                           MaxMessageSizeBlockOversize.EB1,
+                                           "e56",
+                                           message_size=49900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_56 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+    def test_57_allow_undersize_INTA_EB1(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.INT_A,
+                                           MaxMessageSizeBlockOversize.EB1,
+                                           "e57",
+                                           message_size=99900, expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_57 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
 
 
 if __name__ == '__main__':
