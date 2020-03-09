@@ -793,9 +793,14 @@ static int AMQP_link_flow_handler(void* context, qd_link_t *link)
 {
     qd_router_t *router  = (qd_router_t*) context;
     pn_link_t   *pnlink  = qd_link_pn(link);
-    pn_session_t *pn_ssn = pn_link_session(pnlink);
+    qdr_link_t  *rlink   = (qdr_link_t*) qd_link_get_context(link);
 
-    bool link_flowed = false;
+    if (rlink) {
+        qdr_link_flow(router->router_core, rlink, pn_link_remote_credit(pnlink), pn_link_get_drain(pnlink));
+    }
+
+    // check if Q3 can be unblocked
+    pn_session_t *pn_ssn = pn_link_session(pnlink);
     if (pn_ssn) {
         qd_session_t *qd_ssn = pn_session_get_context(pn_ssn);
         if (qd_ssn && qd_session_is_q3_blocked(qd_ssn)) {
@@ -807,27 +812,19 @@ static int AMQP_link_flow_handler(void* context, qd_link_t *link)
                 qd_link_t *blink = DEQ_HEAD(*blinks);
                 while (blink) {
                     qd_link_q3_unblock(blink);  // removes from blinks list!
-                    qdr_link_t *qdr_link = (qdr_link_t *) qd_link_get_context(blink);
-                    if (qdr_link) {
-                        pn_link_t *pn_link = qd_link_pn(blink);
-                        // signalling flow to the core causes the link to be activated
-                        qdr_link_flow(router->router_core, qdr_link, pn_link_remote_credit(pn_link), pn_link_get_drain(pn_link));
-                        if (blink == link)
-                            link_flowed = true;  // original link flowed - do not flow again
+                    if (blink != link) {        // already flowed this link
+                        rlink = (qdr_link_t *) qd_link_get_context(blink);
+                        if (rlink) {
+                            pnlink = qd_link_pn(blink);
+                            // signalling flow to the core causes the link to be re-activated
+                            qdr_link_flow(router->router_core, rlink, pn_link_remote_credit(pnlink), pn_link_get_drain(pnlink));
+                        }
                     }
                     blink = DEQ_HEAD(*blinks);
                 }
             }
         }
     }
-
-    if (!link_flowed) {
-        qdr_link_t  *rlink  = (qdr_link_t*) qd_link_get_context(link);
-        if (!rlink)
-            return 0;
-        qdr_link_flow(router->router_core, rlink, pn_link_remote_credit(pnlink), pn_link_get_drain(pnlink));
-    }
-
     return 0;
 }
 
