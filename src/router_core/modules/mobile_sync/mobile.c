@@ -54,7 +54,8 @@ static const char *HAVE_SEQ   = "have_seq";
 //
 // qdr_node_t.sync_mask bit values
 //
-#define ADDR_SYNC_ROUTER_MA_REQUESTED          0x00000001
+#define ADDR_SYNC_ROUTER_MA_REQUESTED     0x00000001
+#define ADDR_SYNC_ROUTER_VERSION_LOGGED   0x00000002
 
 #define BIT_SET(M,B)   M |= B
 #define BIT_CLEAR(M,B) M &= ~B
@@ -107,6 +108,9 @@ static bool qcm_mobile_sync_addr_is_mobile(qdr_address_t *addr)
 
 qdr_node_t *qdc_mobile_sync_router_by_id(qdrm_mobile_sync_t *msync, qd_parsed_field_t *id_field)
 {
+    if (!id_field)
+        return 0;
+
     qd_iterator_t *id_iter = qd_parse_raw(id_field);
     qdr_node_t *router = DEQ_HEAD(msync->core->routers);
     while (!!router) {
@@ -415,10 +419,25 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
     if (!!body && qd_parse_is_map(body)) {
         qd_parsed_field_t *id_field       = qd_parse_value_by_key(body, ID);
         qd_parsed_field_t *have_seq_field = qd_parse_value_by_key(body, HAVE_SEQ);
+
+        if (!id_field || !have_seq_field)
+            return;
+
         uint64_t           have_seq       = qd_parse_as_ulong(have_seq_field);
+        qd_parsed_field_t *version_field  = qd_parse_value_by_key(body, PV);
+        uint32_t           version        = version_field ? qd_parse_as_uint(version_field) : 0;
 
         qdr_node_t *router = qdc_mobile_sync_router_by_id(msync, id_field);
         if (!!router) {
+            if (version > PROTOCOL_VERSION) {
+                if (!BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED)) {
+                    BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED);
+                    qd_log(msync->log, QD_LOG_WARNING, "Received MAR at protocol version %"PRIu32" from %s.  Ignoring.",
+                           version, (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1);
+                }
+                return;
+            }
+
             qd_log(msync->log, QD_LOG_DEBUG, "Received MAR from %s, have_seq=%"PRIu64,
                    (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1, have_seq);
 
@@ -447,11 +466,27 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
     if (!!body && qd_parse_is_map(body)) {
         qd_parsed_field_t *id_field         = qd_parse_value_by_key(body, ID);
         qd_parsed_field_t *mobile_seq_field = qd_parse_value_by_key(body, MOBILE_SEQ);
+
+        if (!id_field || !mobile_seq_field)
+            return;
+
         uint64_t           mobile_seq       = qd_parse_as_ulong(mobile_seq_field);
+        qd_parsed_field_t *version_field    = qd_parse_value_by_key(body, PV);
+        uint32_t           version          = version_field ? qd_parse_as_uint(version_field) : 0;
 
         qdr_node_t *router = qdc_mobile_sync_router_by_id(msync, id_field);
         if (!!router) {
-            const char        *router_id   = (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1;
+            const char *router_id = (const char*) qd_hash_key_by_handle(router->owning_addr->hash_handle) + 1;
+
+            if (version > PROTOCOL_VERSION) {
+                if (!BIT_IS_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED)) {
+                    BIT_SET(router->sync_mask, ADDR_SYNC_ROUTER_VERSION_LOGGED);
+                    qd_log(msync->log, QD_LOG_WARNING, "Received MAU at protocol version %"PRIu32" from %s.  Ignoring.",
+                           version, router_id);
+                }
+                return;
+            }
+
             qd_parsed_field_t *add_field   = qd_parse_value_by_key(body, ADD);
             qd_parsed_field_t *del_field   = qd_parse_value_by_key(body, DEL);
             qd_parsed_field_t *exist_field = qd_parse_value_by_key(body, EXIST);

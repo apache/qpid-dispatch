@@ -57,6 +57,31 @@ def getOptional(data, key, default=None, cls=None):
     return default
 
 
+def isCompatibleVersion(body):
+    """
+    Return True iff the version of the message body is compatible with this protocol implementation.
+    """
+    version = 0
+    try:
+        version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
+    except Exception:
+        pass
+
+    return version <= ProtocolVersion
+
+
+def getIdAndVersion(body):
+    """
+    Return a tuple of id and version from a message body
+    """
+    result = ('<unknown>', 0)
+    try:
+        result = (getOptional(body, 'id', '<unknown>', PY_TEXT_TYPE), getOptional(body, 'pv', 0, PY_LONG_TYPE))
+    except Exception:
+        pass
+    return result
+
+
 class LinkState(object):
     """
     The link-state of a single router.  The link state consists of a list of neighbor routers reachable from
