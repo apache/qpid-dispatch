@@ -124,7 +124,8 @@ class RejectHigherVersionHelloTest(MessagingHandler):
             hello = Message(address='_local/qdhello',
                             properties={'opcode': 'HELLO'},
                             body={'id':'TEST', 'pv':int32(2), 'area':'0', 'instance':100, 'seen':[rid]})
-            self.sender.send(hello)
+            dlv = self.sender.send(hello)
+            dlv.settle()
 
     def run(self):
         Container(self).run()
@@ -185,7 +186,8 @@ class RejectHigherVersionMARTest(MessagingHandler):
             hello = Message(address='_local/qdhello', 
                             properties={'opcode': 'HELLO'},
                             body={'id':'TEST', 'pv':int32(1), 'area':'0', 'instance':100, 'seen':[rid]})
-            self.sender.send(hello)
+            dlv = self.sender.send(hello)
+            dlv.settle()
 
         elif opcode == 'RA':
             if self.mar_count > 2:
@@ -195,7 +197,8 @@ class RejectHigherVersionMARTest(MessagingHandler):
             mar = Message(address='_topo/0/%s/qdrouter.ma' % rid,
                           properties={'opcode': 'MAR'},
                           body={'id':'TEST', 'pv':int32(2), 'area':'0', 'have_seq':int32(0)})
-            self.sender.send(mar)
+            dlv = self.sender.send(mar)
+            dlv.settle()
             self.mar_count += 1
 
         elif opcode == 'MAU':
