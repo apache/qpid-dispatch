@@ -1180,7 +1180,7 @@ bool qd_session_is_q3_blocked(const qd_session_t *qd_ssn)
  */
 void qd_session_cleanup(qd_connection_t *qd_conn)
 {
-    pn_connection_t *pn_conn = qd_conn->pn_conn;
+    pn_connection_t *pn_conn = (qd_conn) ? qd_conn->pn_conn : 0;
     if (!pn_conn)
         return;
 
