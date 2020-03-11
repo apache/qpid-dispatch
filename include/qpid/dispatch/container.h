@@ -30,6 +30,7 @@
  */
 
 #include <proton/engine.h>
+#include <proton/version.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/ctools.h>
@@ -236,6 +237,23 @@ void qd_session_cleanup(qd_connection_t *qd_conn);
 void qd_session_free(qd_session_t *qd_ssn);
 bool qd_session_is_q3_blocked(const qd_session_t *qd_ssn);
 qd_link_list_t *qd_session_q3_blocked_links(qd_session_t *qd_ssn);
+
+
+// handy macros to get around PROTON-2184: pn_session_set_context aborts if
+// context==0  (can remove this once qdrouter requires >= proton 0.31.x)
+#if ((PN_VERSION_MAJOR == 0) && (PN_VERSON_MINOR <= 30))
+#define QD_NULL_SESSION_CONTEXT ((qd_session_t *)1)
+static inline qd_session_t *qd_session_from_pn(pn_session_t *pn_ssn)
+{
+    qd_session_t *qd_ssn = (qd_session_t *)pn_session_get_context(pn_ssn);
+    return (qd_ssn == QD_NULL_SESSION_CONTEXT) ? 0 : qd_ssn;
+}
+#else
+static inline qd_session_t *qd_session_from_pn(pn_session_t *pn_ssn)
+{
+    return (qd_session_t *)pn_session_get_context(pn_ssn);
+}
+#endif
 
 ///@}
 #endif
