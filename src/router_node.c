@@ -802,7 +802,7 @@ static int AMQP_link_flow_handler(void* context, qd_link_t *link)
     // check if Q3 can be unblocked
     pn_session_t *pn_ssn = pn_link_session(pnlink);
     if (pn_ssn) {
-        qd_session_t *qd_ssn = pn_session_get_context(pn_ssn);
+        qd_session_t *qd_ssn = qd_session_from_pn(pn_ssn);
         if (qd_ssn && qd_session_is_q3_blocked(qd_ssn)) {
             // Q3 blocked - have we drained enough outgoing bytes?
             const size_t q3_lower = BUFFER_SIZE * QD_QLIMIT_Q3_LOWER;

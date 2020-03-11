@@ -75,6 +75,28 @@ struct qd_session_t {
     qd_link_list_t  q3_blocked_links;  ///< Q3 blocked if !empty
 };
 
+// macros to work around PROTON-2184 (see container.h)
+//
+static inline void qd_session_link_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn)
+{
+    assert(qd_ssn && pn_ssn);
+    pn_session_set_context(pn_ssn, qd_ssn);
+}
+
+#ifdef QD_NULL_SESSION_CONTEXT
+static inline void qd_session_unlink_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn)
+{
+    assert(qd_ssn);
+    pn_session_set_context(pn_ssn, QD_NULL_SESSION_CONTEXT);
+}
+#else
+static inline void qd_session_unlink_pn(qd_session_t *qd_ssn, pn_session_t *pn_ssn)
+{
+    assert(qd_ssn);
+    pn_session_set_context(pn_ssn, 0);
+}
+#endif
+
 ALLOC_DECLARE(qd_session_t);
 ALLOC_DEFINE(qd_session_t);
 
@@ -500,7 +522,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
             ssn = pn_event_session(event);
             if (pn_session_state(ssn) & PN_LOCAL_UNINIT) {
                 // remote created new session
-                assert(pn_session_get_context(ssn) == 0);
+                assert(qd_session_from_pn(ssn) == 0);
                 qd_session_t *qd_ssn = qd_session(ssn);
                 if (!qd_ssn) {
                     pn_condition_t *cond = pn_session_condition(ssn);
@@ -516,7 +538,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
                     }
                     qd_conn->n_sessions++;
                 }
-                pn_session_set_context(ssn, qd_ssn);
+                qd_session_link_pn(qd_ssn, ssn);
                 qd_policy_apply_session_settings(ssn, qd_conn);
                 pn_session_open(ssn);
             }
@@ -542,7 +564,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
         }
 
         if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-            qd_session_t *qd_ssn = pn_session_get_context(ssn);
+            qd_session_t *qd_ssn = qd_session_from_pn(ssn);
             qd_session_free(qd_ssn);
             add_session_to_free_list(&qd_conn->free_link_session_list, ssn);
         }
@@ -604,7 +626,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
                 pn_session_close(ssn);
             }
             else if (pn_session_state(ssn) == (PN_LOCAL_CLOSED | PN_REMOTE_CLOSED)) {
-                qd_session_t *qd_ssn = pn_session_get_context(ssn);
+                qd_session_t *qd_ssn = qd_session_from_pn(ssn);
                 qd_session_free(qd_ssn);
                 add_session_to_free_list(&qd_conn->free_link_session_list, ssn);
             }
@@ -1109,7 +1131,7 @@ void qd_link_q3_block(qd_link_t *link)
 {
     assert(link);
     if (!link->q3_blocked && link->pn_sess) {
-        qd_session_t *qd_ssn = pn_session_get_context(link->pn_sess);
+        qd_session_t *qd_ssn = qd_session_from_pn(link->pn_sess);
         assert(qd_ssn);
         link->q3_blocked = true;
         DEQ_INSERT_TAIL_N(Q3, qd_ssn->q3_blocked_links, link);
@@ -1121,7 +1143,7 @@ void qd_link_q3_unblock(qd_link_t *link)
 {
     assert(link);
     if (link->q3_blocked) {
-        qd_session_t *qd_ssn = pn_session_get_context(link->pn_sess);
+        qd_session_t *qd_ssn = qd_session_from_pn(link->pn_sess);
         assert(qd_ssn);
         DEQ_REMOVE_N(Q3, qd_ssn->q3_blocked_links, link);
         link->q3_blocked = false;
@@ -1132,14 +1154,14 @@ void qd_link_q3_unblock(qd_link_t *link)
 qd_session_t *qd_session(pn_session_t *pn_ssn)
 {
     assert(pn_ssn);
-    qd_session_t *qd_ssn = pn_session_get_context(pn_ssn);
+    qd_session_t *qd_ssn = qd_session_from_pn(pn_ssn);
     if (!qd_ssn) {
         qd_ssn = new_qd_session_t();
         if (qd_ssn) {
             ZERO(qd_ssn);
             qd_ssn->pn_sess = pn_ssn;
             DEQ_INIT(qd_ssn->q3_blocked_links);
-            pn_session_set_context(pn_ssn, qd_ssn);
+            qd_session_link_pn(qd_ssn, pn_ssn);
         }
     }
     return qd_ssn;
@@ -1155,7 +1177,7 @@ void qd_session_free(qd_session_t *qd_ssn)
             link = DEQ_HEAD(qd_ssn->q3_blocked_links);
         }
         if (qd_ssn->pn_sess) {
-            pn_session_set_context(qd_ssn->pn_sess, 0);
+            qd_session_unlink_pn(qd_ssn, qd_ssn->pn_sess);
         }
         free_qd_session_t(qd_ssn);
     }
@@ -1186,7 +1208,7 @@ void qd_session_cleanup(qd_connection_t *qd_conn)
 
     pn_session_t *pn_ssn = pn_session_head(pn_conn, 0);
     while (pn_ssn) {
-        qd_session_t *qd_ssn = pn_session_get_context(pn_ssn);
+        qd_session_t *qd_ssn = qd_session_from_pn(pn_ssn);
         qd_session_free(qd_ssn);
         pn_ssn = pn_session_next(pn_ssn, 0);
     }
