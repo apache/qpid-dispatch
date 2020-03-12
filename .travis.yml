@@ -54,7 +54,7 @@ matrix:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.30.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
   - os: osx
-    osx_image: xcode10.1
+    osx_image: xcode11
     env:
     - PATH="/opt/local/bin:/opt/local/sbin:/usr/local/bin:$PATH" PROTON_VERSION=master
     before_install:
@@ -66,7 +66,6 @@ matrix:
     - sudo port select --set python3 python37
     - python -m venv p3venv
     - source p3venv/bin/activate
-    - pip install unittest2
 
 addons:
   apt:
