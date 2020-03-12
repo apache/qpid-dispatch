@@ -1642,10 +1642,16 @@ const char* qd_connection_remote_ip(const qd_connection_t *c) {
 }
 
 /* Expose event handling for HTTP connections */
-void qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
+bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
     handle(c->server, e, pn_conn, qd_conn);
+    if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
+        pn_connection_set_context(pn_conn, NULL);
+        qd_connection_free(qd_conn);
+        return false;
+    }
+    return true;
 }
 
 bool qd_connection_strip_annotations_in(const qd_connection_t *c) {

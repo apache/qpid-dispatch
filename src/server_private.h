@@ -43,7 +43,7 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* c
 
 qd_connector_t* qd_connection_connector(const qd_connection_t *c);
 
-void qd_connection_handle(qd_connection_t *c, pn_event_t *e);
+bool qd_connection_handle(qd_connection_t *c, pn_event_t *e);
 
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
