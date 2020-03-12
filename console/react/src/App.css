@@ -82,8 +82,15 @@ g.selected line {
 .link {
   stroke: #000;
 }
+.link.dropped {
+  stroke: #888888;
+  opacity: 0.25;
+}
 .topology-header path.link {
   stroke: #fff;
+}
+.topology-header ul.context-menu.layout-dropdown {
+  right: 0;
 }
 
 #topologyPage,
@@ -545,7 +552,20 @@ circle.node.route-container {
 circle.node.edge.multiple {
   fill: #e0e0ff;
 }
+circle.node.dropped,
+circle.node.normal.in.dropped,
+circle.node.normal.out.dropped {
+  fill: #f0f0f0;
+  stroke: #dddddd;
+  stroke-dasharray: 5 5;
+}
+circle.node.inter-router.dropped {
+  fill: #f0f0f0;
+}
 
+circle.node.dropped + text {
+  stroke: #dddddd;
+}
 text.console,
 text.on-demand,
 text.normal,
@@ -1503,4 +1523,8 @@ button.dropdown-panel-toggle.pf-c-accordion__toggle span.pf-c-accordion__toggle-
 
 .node-name {
   text-decoration: underline;
+}
+
+.menu-item-icon {
+  padding-right: 0.5em;
 }

@@ -141,8 +141,13 @@ class Topology {
             this._nodeInfo[rId][entity] = utils.copy(workInfo[rId][entity]);
           }
         }
+        // find routers that have no connection info
+        if (!workInfo[rId].connection) {
+          this._nodeInfo[rId].connection.stale = true;
+        }
       } else if (all) {
         changes.lostRouters.push(rId);
+        delete this._nodeInfo[rId];
       }
     }
     // add any new routers

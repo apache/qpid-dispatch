@@ -292,6 +292,26 @@ export function reconcileArrays(existing, newArray) {
 // to the two nodes that it is linking.
 // So we need to fix the new links' source and target
 export function reconcileLinks(existingLinks, newLinks, existingNodes) {
+  // find links that are mirror images
+  newLinks.forEach(n => {
+    existingLinks.forEach(e => {
+      if (
+        e.suid === n.tuid &&
+        e.tuid === n.suid &&
+        e.left === n.right &&
+        e.right === n.left
+      ) {
+        e.suid = n.suid;
+        e.tuid = n.tuid;
+        e.left = n.left;
+        e.right = n.right;
+        e.uuid = n.uuid;
+        const tmp = e.source;
+        e.source = e.target;
+        e.target = tmp;
+      }
+    });
+  });
   reconcileArrays(existingLinks, newLinks);
   existingLinks.forEach(e => {
     // in new links, the source and target will be a number

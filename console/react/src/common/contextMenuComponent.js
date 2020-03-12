@@ -62,6 +62,11 @@ class ContextMenuComponent extends React.Component {
             this.proxyClick(item, e);
           }}
         >
+          {this.props.suppress && item.suppressIcon && (
+            <span
+              className={`pficon pficon-${this.props.suppress} menu-item-icon`}
+            ></span>
+          )}
           {item.title}
         </li>
       );

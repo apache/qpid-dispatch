@@ -27,7 +27,9 @@ class DropdownMenu extends Component {
     handleDropdownLogout: PropTypes.func.isRequired,
     isConnected: PropTypes.func.isRequired,
     handleContextHide: PropTypes.func.isRequired,
-    parentClass: PropTypes.string.isRequired
+    parentClass: PropTypes.string.isRequired,
+    handleSuppress: PropTypes.func.isRequired,
+    suppress: PropTypes.any.isRequired
   };
   constructor(props) {
     super(props);
@@ -40,12 +42,22 @@ class DropdownMenu extends Component {
         title: "Logout",
         action: this.logout,
         enabled: this.isLoggedIn
+      },
+      {
+        title: "Suppress notifications",
+        action: this.suppress,
+        enabled: () => true,
+        suppressIcon: true
       }
     ];
   }
 
   logout = (item, data, event) => {
     this.props.handleDropdownLogout();
+  };
+
+  suppress = () => {
+    this.props.handleSuppress();
   };
 
   isLoggedIn = () => {
@@ -64,6 +76,7 @@ class DropdownMenu extends Component {
           contextEventPosition={[-1, -1]} // show in-place
           handleContextHide={this.props.handleContextHide}
           menuItems={this.contextMenuItems}
+          suppress={this.props.suppress}
           parentClass={this.props.parentClass}
         />
       )

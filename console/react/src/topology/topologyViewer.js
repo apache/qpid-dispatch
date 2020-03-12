@@ -158,16 +158,14 @@ class TopologyViewer extends Component {
           if (!this.mounted) return;
 
           // create the svg
-          this.props.service.management.topology
-            .startUpdating(null, this.getEdgeNodes())
-            .then(() => {
-              this.init().then(() => {
-                if (!this.mounted) return;
-                // get notified when a router is added/dropped and when
-                // the number of connections for a router changes
-                this.topology.addChangedAction("topology", this.topologyChanged);
-              });
+          this.topology.startUpdating(null, this.getEdgeNodes()).then(() => {
+            this.init().then(() => {
+              if (!this.mounted) return;
+              // get notified when a router is added/dropped and when
+              // the number of connections for a router changes
+              this.topology.addChangedAction("topology", this.topologyChanged);
             });
+          });
         });
       });
   };
@@ -176,6 +174,21 @@ class TopologyViewer extends Component {
     let message;
     let silent = true;
     if (changed.connections.length > 0) {
+      // see if any routers have stale info
+      const nodeInfo = this.topology.nodeInfo();
+      for (let id in nodeInfo) {
+        const ds = this.forceData.nodes.nodes.filter(n => n.key === id);
+        ds.forEach(d => {
+          d.dropped = nodeInfo[id].connection.stale;
+        });
+        const links = this.forceData.links.links.filter(
+          l => l.source.key === id || l.target.key === id
+        );
+        links.forEach(l => {
+          l.dropped = nodeInfo[id].connection.stale;
+        });
+        this.restart();
+      }
       message = `${
         changed.connections[0].from > changed.connections[0].to ? "Lost" : "New"
       } connection for ${utils.nameFromId(changed.connections[0].router)}`;
@@ -581,6 +594,7 @@ class TopologyViewer extends Component {
       .classed("selected", d => d.selected)
       .classed("highlighted", d => d.highlighted)
       .classed("unknown", d => !d.right && !d.left)
+      .classed("dropped", d => d.dropped)
       // reset the markers based on current highlighted/selected
       .attr("marker-end", d => {
         if (!this.showMarker(d)) return null;
@@ -838,38 +852,36 @@ class TopologyViewer extends Component {
 
   reInit = () => {
     return new Promise(resolve => {
-      this.props.service.management.topology
-        .startUpdating(null, this.getEdgeNodes())
-        .then(() => {
-          const nodeInfo = this.topology.nodeInfo();
-          const newNodes = new Nodes(this.QDRLog);
-          const newLinks = new Links(this.QDRLog);
-          newNodes.initialize(nodeInfo, this.width, this.height, localStorage);
-          newLinks.initialize(
-            nodeInfo,
-            newNodes,
-            this.separateContainers,
-            [],
-            this.height,
-            localStorage
-          );
-          reconcileArrays(this.forceData.nodes.nodes, newNodes.nodes);
-          reconcileLinks(
-            this.forceData.links.links,
-            newLinks.links,
-            this.forceData.nodes.nodes
-          );
+      this.topology.startUpdating(null, this.getEdgeNodes()).then(() => {
+        const nodeInfo = this.topology.nodeInfo();
+        const newNodes = new Nodes(this.QDRLog);
+        const newLinks = new Links(this.QDRLog);
+        newNodes.initialize(nodeInfo, this.width, this.height, localStorage);
+        newLinks.initialize(
+          nodeInfo,
+          newNodes,
+          this.separateContainers,
+          [],
+          this.height,
+          localStorage
+        );
+        reconcileArrays(this.forceData.nodes.nodes, newNodes.nodes);
+        reconcileLinks(
+          this.forceData.links.links,
+          newLinks.links,
+          this.forceData.nodes.nodes
+        );
 
-          this.force.nodes(this.forceData.nodes.nodes).links(this.forceData.links.links);
-          this.force.stop();
-          this.force.start();
-          this.restart();
-          this.circle.call(this.force.drag);
-          delete this.legend;
-          this.legend = new Legend(this.forceData.nodes, this.QDRLog);
-          this.updateLegend();
-          resolve();
-        });
+        this.force.nodes(this.forceData.nodes.nodes).links(this.forceData.links.links);
+        this.force.stop();
+        this.force.start();
+        this.restart();
+        this.circle.call(this.force.drag);
+        delete this.legend;
+        this.legend = new Legend(this.forceData.nodes, this.QDRLog);
+        this.updateLegend();
+        resolve();
+      });
     });
   };
 
@@ -1102,14 +1114,14 @@ class TopologyViewer extends Component {
         {this.state.showRouterInfo && (
           <RouterInfoComponent
             d={this.d}
-            topology={this.props.service.management.topology}
+            topology={this.topology}
             handleCloseRouterInfo={this.handleCloseRouterInfo}
           />
         )}
         {this.state.showClientInfo && (
           <ClientInfoComponent
             d={this.d}
-            topology={this.props.service.management.topology}
+            topology={this.topology}
             handleCloseClientInfo={this.handleCloseClientInfo}
             handleSeparate={this.handleSeparate}
           />

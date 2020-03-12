@@ -35,7 +35,8 @@ export function updateState(circle) {
     })
     .classed("multiple", function(d) {
       return d.normals;
-    });
+    })
+    .classed("dropped", d => d.dropped);
 }
 
 export function appendCircle(g) {

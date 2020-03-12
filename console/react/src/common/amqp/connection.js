@@ -357,14 +357,18 @@ class ConnectionManager {
     var _correlationId = this.correlator.corr();
     var self = this;
     return new Promise((resolve, reject) => {
-      self.correlator.register(_correlationId, resolve, reject);
-      self.sender.send({
-        body: body,
-        to: to,
-        reply_to: self.receiver.remote.attach.source.address,
-        correlation_id: _correlationId,
-        application_properties: application_properties
-      });
+      try {
+        self.correlator.register(_correlationId, resolve, reject);
+        self.sender.send({
+          body: body,
+          to: to,
+          reply_to: self.receiver.remote.attach.source.address,
+          correlation_id: _correlationId,
+          application_properties: application_properties
+        });
+      } catch (error) {
+        console.log(error);
+      }
     });
   };
   _fullAddr = toAddr => {

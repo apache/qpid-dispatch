@@ -93,7 +93,7 @@ class NotificationDrawer extends React.Component {
     });
     event.isRead = false;
     accordionSections[section].events.unshift(event);
-    if (this.alertListRef && !silent) {
+    if (this.alertListRef && !silent && this.props.suppress === false) {
       this.alertListRef.addAlert(severity, message);
     }
     this.setState({
