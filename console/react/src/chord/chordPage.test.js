@@ -22,13 +22,14 @@ import { render } from "@testing-library/react";
 import { service, login } from "../serviceTest";
 import ChordPage from "./chordPage";
 
-it("renders the ChordPage", async () => {
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+it("renders the ChordPage", () => {
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const props = {
-    service
-  };
+    const props = {
+      service
+    };
 
-  render(<ChordPage {...props} />);
+    render(<ChordPage {...props} />);
+  });
 });

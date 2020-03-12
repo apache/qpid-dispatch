@@ -24,7 +24,7 @@ import throughputChartData from "./throughputData";
 import inflightChartData from "./inflightData";
 import DashboardPage from "./dashboardPage";
 
-it("renders the DashboardPage component", async () => {
+it("renders the DashboardPage component", () => {
   const props = {
     service,
     throughputChartData: new throughputChartData(service),
@@ -32,11 +32,12 @@ it("renders the DashboardPage component", async () => {
   };
 
   if (!TEST_PORT) console.log("using mock service");
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const { getByLabelText } = render(<DashboardPage {...props} />);
+    const { getByLabelText } = render(<DashboardPage {...props} />);
 
-  // make sure it rendered the component
-  expect(getByLabelText("dashboard-page")).toBeInTheDocument();
+    // make sure it rendered the component
+    expect(getByLabelText("dashboard-page")).toBeInTheDocument();
+  });
 });

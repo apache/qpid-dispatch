@@ -23,22 +23,23 @@ import { service, login, TEST_PORT } from "../../serviceTest";
 import ThroughputChartData from "./throughputData";
 import ThroughputChart from "./throughputChart";
 
-it("renders the ThroughputChart component", async () => {
+it("renders the ThroughputChart component", () => {
   const props = {
     service,
     chartData: new ThroughputChartData(service)
   };
 
   if (!TEST_PORT) console.log("using mock service");
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const { getByLabelText, queryByLabelText } = render(<ThroughputChart {...props} />);
+    const { getByLabelText, queryByLabelText } = render(<ThroughputChart {...props} />);
 
-  // the component should initially render
-  // blank until it gets the contianer's width.
-  expect(queryByLabelText("throughput-chart")).toBe(null);
+    // the component should initially render
+    // blank until it gets the contianer's width.
+    expect(queryByLabelText("throughput-chart")).toBe(null);
 
-  // yeild, so that this componentDidMount method can fire
-  setTimeout(() => expect(getByLabelText("throughput-chart")).toBeInTheDocument(), 1);
+    // yeild, so that this componentDidMount method can fire
+    setTimeout(() => expect(getByLabelText("throughput-chart")).toBeInTheDocument(), 1);
+  });
 });

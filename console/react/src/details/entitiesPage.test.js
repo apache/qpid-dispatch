@@ -22,29 +22,32 @@ import { render, waitForElement, fireEvent } from "@testing-library/react";
 import { service, login, TEST_PORT } from "../serviceTest";
 import EntitiesPage from "./entitiesPage";
 
-it("renders an EntitiesPage", async () => {
+it("renders an EntitiesPage", () => {
   if (!TEST_PORT) {
     console.log("using mock service");
   }
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(async () => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const props = {
-    service,
-    schema: service.schema
-  };
-  let pageRef = null;
-  const { getByTestId } = render(<EntitiesPage ref={el => (pageRef = el)} {...props} />);
+    const props = {
+      service,
+      schema: service.schema
+    };
+    let pageRef = null;
+    const { getByTestId } = render(
+      <EntitiesPage ref={el => (pageRef = el)} {...props} />
+    );
 
-  // force page to show the router entity list
-  pageRef.handleSelectEntity("router");
+    // force page to show the router entity list
+    pageRef.handleSelectEntity("router");
 
-  // the router A should be in the list
-  await waitForElement(() => getByTestId("A"));
+    // the router A should be in the list
+    await waitForElement(() => getByTestId("A"));
 
-  // click on the A
-  fireEvent.click(getByTestId("A"));
+    // click on the A
+    fireEvent.click(getByTestId("A"));
 
-  // the details page should show for router A
-  await waitForElement(() => getByTestId("detail-for-A"));
+    // the details page should show for router A
+    await waitForElement(() => getByTestId("detail-for-A"));
+  });
 });

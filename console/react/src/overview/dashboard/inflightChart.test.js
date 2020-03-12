@@ -23,18 +23,19 @@ import { service, login, TEST_PORT } from "../../serviceTest";
 import InflightChart from "./inflightChart";
 import InflightChartData from "./inflightData";
 
-it("renders the InflightChart component", async () => {
+it("renders the InflightChart component", () => {
   const props = {
     service,
     chartData: new InflightChartData(service)
   };
 
   if (!TEST_PORT) console.log("using mock service");
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const { getByLabelText } = render(<InflightChart {...props} />);
+    const { getByLabelText } = render(<InflightChart {...props} />);
 
-  // make sure it rendered the component
-  setTimeout(() => expect(getByLabelText("inflight-chart")).toBeInTheDocument(), 1);
+    // make sure it rendered the component
+    setTimeout(() => expect(getByLabelText("inflight-chart")).toBeInTheDocument(), 1);
+  });
 });

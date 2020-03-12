@@ -23,7 +23,7 @@ import { service, login, TEST_PORT } from "../serviceTest";
 import { LocalStorageMock } from "@react-mock/localstorage";
 import ChordViewer from "./chordViewer";
 
-it("renders the ChordViewer component", async () => {
+it("renders the ChordViewer component", () => {
   const props = {
     service
   };
@@ -31,36 +31,37 @@ it("renders the ChordViewer component", async () => {
   if (!TEST_PORT) {
     console.log("using mock service");
   }
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(async () => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const { getByLabelText } = render(
-    <LocalStorageMock
-      items={{
-        chordOptions: JSON.stringify({
-          isRate: false,
-          byAddress: true
-        })
-      }}
-    >
-      <ChordViewer {...props} />
-    </LocalStorageMock>
-  );
+    const { getByLabelText } = render(
+      <LocalStorageMock
+        items={{
+          chordOptions: JSON.stringify({
+            isRate: false,
+            byAddress: true
+          })
+        }}
+      >
+        <ChordViewer {...props} />
+      </LocalStorageMock>
+    );
 
-  // make sure it rendered the component
-  const pfTopologyView = getByLabelText("chord-viewer");
-  expect(pfTopologyView).toBeInTheDocument();
+    // make sure it rendered the component
+    const pfTopologyView = getByLabelText("chord-viewer");
+    expect(pfTopologyView).toBeInTheDocument();
 
-  // make sure it created the svg
-  expect(getByLabelText("chord-svg")).toBeInTheDocument();
+    // make sure it created the svg
+    expect(getByLabelText("chord-svg")).toBeInTheDocument();
 
-  const optionsButton = getByLabelText("button-for-Options");
-  fireEvent.click(optionsButton);
+    const optionsButton = getByLabelText("button-for-Options");
+    fireEvent.click(optionsButton);
 
-  // turn on show by address
-  const addressButton = getByLabelText("show by address");
-  fireEvent.click(addressButton);
+    // turn on show by address
+    const addressButton = getByLabelText("show by address");
+    fireEvent.click(addressButton);
 
-  // after 1 update period, the B chord should be in the svg
-  await waitForElement(() => getByLabelText("B"));
+    // after 1 update period, the B chord should be in the svg
+    await waitForElement(() => getByLabelText("B"));
+  });
 });

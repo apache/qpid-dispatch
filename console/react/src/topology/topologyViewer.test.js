@@ -23,7 +23,7 @@ import { service, login } from "../serviceTest";
 import TopologyViewer from "./topologyViewer";
 import * as world from "../../public/data/countries.json";
 
-it("renders the TopologyViewer component", async () => {
+it("renders the TopologyViewer component", () => {
   jest.spyOn(window, "fetch").mockImplementationOnce(() => {
     return Promise.resolve({
       json: () => Promise.resolve(world)
@@ -34,62 +34,62 @@ it("renders the TopologyViewer component", async () => {
     handleAddNotification: () => {}
   };
 
-  await login();
+  login(async () => {
+    const { getByLabelText, getByText, getByTestId } = render(
+      <TopologyViewer {...props} />
+    );
 
-  const { getByLabelText, getByText, getByTestId } = render(
-    <TopologyViewer {...props} />
-  );
+    // make sure it rendered the component
+    const pfTopologyView = getByLabelText("topology-viewer");
+    expect(pfTopologyView).toBeInTheDocument();
+    expect(getByLabelText("topology-diagram")).toBeInTheDocument();
 
-  // make sure it rendered the component
-  const pfTopologyView = getByLabelText("topology-viewer");
-  expect(pfTopologyView).toBeInTheDocument();
-  expect(getByLabelText("topology-diagram")).toBeInTheDocument();
+    // make sure it created the svg
+    await waitForElement(() => getByLabelText("topology-svg"));
 
-  // make sure it created the svg
-  await waitForElement(() => getByLabelText("topology-svg"));
+    // the svg should have a router circle
+    await waitForElement(() => getByTestId("router-0"));
 
-  // the svg should have a router circle
-  await waitForElement(() => getByTestId("router-0"));
+    // "click" on the router
+    const router = getByTestId("router-0");
+    fireEvent.mouseDown(router);
+    fireEvent.mouseUp(router);
 
-  // "click" on the router
-  const router = getByTestId("router-0");
-  fireEvent.mouseDown(router);
-  fireEvent.mouseUp(router);
+    // the routerInfo modal appears
+    await waitForElement(() => getByLabelText("Close"));
+    // close the modal
+    fireEvent.click(getByLabelText("Close"));
 
-  // the routerInfo modal appears
-  await waitForElement(() => getByLabelText("Close"));
-  // close the modal
-  fireEvent.click(getByLabelText("Close"));
+    // the svg should have a client circle
+    const client = getByTestId("client-2");
+    // "click" on the client
+    fireEvent.mouseDown(client);
+    fireEvent.mouseUp(client);
 
-  // the svg should have a client circle
-  const client = getByTestId("client-2");
-  // "click" on the client
-  fireEvent.mouseDown(client);
-  fireEvent.mouseUp(client);
+    // the clientInfo modal appears
+    await waitForElement(() => getByLabelText("Close"));
+    // close the modal
+    fireEvent.click(getByLabelText("Close"));
 
-  // the clientInfo modal appears
-  await waitForElement(() => getByLabelText("Close"));
-  // close the modal
-  fireEvent.click(getByLabelText("Close"));
+    // make sure the legend opens
+    const legendButton = getByText("topology-legend");
+    expect(legendButton).toBeInTheDocument();
+    fireEvent.click(legendButton);
+    fireEvent.click(getByLabelText("Close"));
 
-  // make sure the legend opens
-  const legendButton = getByText("topology-legend");
-  expect(legendButton).toBeInTheDocument();
-  fireEvent.click(legendButton);
-  fireEvent.click(getByLabelText("Close"));
+    // turn on the traffic animation
 
-  // turn on the traffic animation
+    // dropdown the traffic panel
+    fireEvent.contextMenu(client);
+    fireEvent.click(pfTopologyView);
+    const trafficButton = getByLabelText("button-for-Traffic");
+    expect(trafficButton).toBeInTheDocument();
+    fireEvent.click(trafficButton);
 
-  // dropdown the traffic panel
-  fireEvent.contextMenu(client);
-  fireEvent.click(pfTopologyView);
-  const trafficButton = getByLabelText("button-for-Traffic");
-  expect(trafficButton).toBeInTheDocument();
-  fireEvent.click(trafficButton);
-
-  // click on the show traffic checkbox
-  const trafficCheckbox = getByLabelText("show traffic by address");
-  fireEvent.click(trafficCheckbox);
-  // the address dot should be there
-  await waitForElement(() => getByText("toB"));
+    // click on the show traffic checkbox
+    const trafficCheckbox = getByLabelText("show traffic by address");
+    fireEvent.click(trafficCheckbox);
+    // the address dot should be there
+    await waitForElement(() => getByText("toB"));
+  });
 });

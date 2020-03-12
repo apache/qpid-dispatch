@@ -23,6 +23,11 @@ import { QDRService } from "./common/qdrService";
 const TEST_PORT = process.env.TEST_PORT;
 const service = TEST_PORT ? new QDRService() : mockService({});
 
-const login = () =>
-  service.connect({ address: "localhost", port: TEST_PORT, reconnect: false });
+const login = callback =>
+  service
+    .connect({ address: "localhost", port: TEST_PORT, reconnect: false })
+    .then(() => {
+      if (callback) callback();
+    });
+
 export { service, TEST_PORT, login };

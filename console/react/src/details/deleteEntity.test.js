@@ -22,34 +22,35 @@ import { render, fireEvent } from "@testing-library/react";
 import { service, login } from "../serviceTest";
 import DeleteEntity from "./deleteEntity";
 
-it("renders DeleteEntity", async () => {
+it("renders DeleteEntity", () => {
   const entity = "listener";
   const routerName = "A";
   const recordName = "testListener";
 
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const props = {
-    entity,
-    service,
-    record: {
-      name: recordName,
-      routerId: service.utilities.idFromName(routerName, "_topo"),
-      identity: `${entity}/:amqp:${recordName}`
-    },
-    handleAddNotification: () => {}
-  };
+    const props = {
+      entity,
+      service,
+      record: {
+        name: recordName,
+        routerId: service.utilities.idFromName(routerName, "_topo"),
+        identity: `${entity}/:amqp:${recordName}`
+      },
+      handleAddNotification: () => {}
+    };
 
-  const { getByLabelText } = render(<DeleteEntity {...props} />);
-  const button = getByLabelText("delete-entity-button");
-  expect(button).toBeInTheDocument();
+    const { getByLabelText } = render(<DeleteEntity {...props} />);
+    const button = getByLabelText("delete-entity-button");
+    expect(button).toBeInTheDocument();
 
-  // so the delete confirmation popup
-  fireEvent.click(button);
-  const confirmButton = getByLabelText("confirm-delete");
-  expect(confirmButton).toBeInTheDocument();
+    // so the delete confirmation popup
+    fireEvent.click(button);
+    const confirmButton = getByLabelText("confirm-delete");
+    expect(confirmButton).toBeInTheDocument();
 
-  // try to delete
-  fireEvent.click(confirmButton);
+    // try to delete
+    fireEvent.click(confirmButton);
+  });
 });

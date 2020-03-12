@@ -22,36 +22,37 @@ import { render, fireEvent, waitForElement } from "@testing-library/react";
 import CreateTablePage from "./createTablePage";
 import { service, login, TEST_PORT } from "../serviceTest";
 
-it("renders a CreateTablePage", async () => {
+it("renders a CreateTablePage", () => {
   if (!TEST_PORT) {
     console.log("using mock service");
   }
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const listenerName = "testListener";
-  const props = {
-    entity: "listener",
-    service,
-    schema: service.schema,
-    locationState: {},
-    routerId: Object.keys(service.management.topology._nodeInfo)[0],
-    handleAddNotification: () => {},
-    handleActionCancel: () => {}
-  };
-  const { getByLabelText, getByText } = render(<CreateTablePage {...props} />);
+    const listenerName = "testListener";
+    const props = {
+      entity: "listener",
+      service,
+      schema: service.schema,
+      locationState: {},
+      routerId: Object.keys(service.management.topology._nodeInfo)[0],
+      handleAddNotification: () => {},
+      handleActionCancel: () => {}
+    };
+    const { getByLabelText, getByText } = render(<CreateTablePage {...props} />);
 
-  // the create form should be present
-  const createForm = getByLabelText("create-entity-form");
-  expect(createForm).toBeInTheDocument();
+    // the create form should be present
+    const createForm = getByLabelText("create-entity-form");
+    expect(createForm).toBeInTheDocument();
 
-  // add a listener name
-  fireEvent.change(getByLabelText(/name/i), { target: { value: listenerName } });
+    // add a listener name
+    fireEvent.change(getByLabelText(/name/i), { target: { value: listenerName } });
 
-  // there should be a create button
-  const createButton = getByText("Create");
-  expect(createButton).toBeInTheDocument();
+    // there should be a create button
+    const createButton = getByText("Create");
+    expect(createButton).toBeInTheDocument();
 
-  // clicking the create button should submit the method
-  fireEvent.click(createButton);
+    // clicking the create button should submit the method
+    fireEvent.click(createButton);
+  });
 });

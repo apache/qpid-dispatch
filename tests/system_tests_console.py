@@ -116,7 +116,7 @@ class ConsoleTest(TestCase):
         pret = 0
 
         out = ''
-        prg = ['npm',  'test', '--', '--watchAll=false', '--coverage']
+        prg = ['npm',  'test', '--', '--watchAll=false']
 
         p = self.popen(prg, 
             cwd=os.path.join(os.environ.get('BUILD_DIR'), 'console'),

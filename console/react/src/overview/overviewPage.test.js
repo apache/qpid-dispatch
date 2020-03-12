@@ -19,26 +19,10 @@ under the License.
 
 import React from "react";
 import { render } from "@testing-library/react";
-import { service, login, TEST_PORT } from "../serviceTest";
+import { service, login } from "../serviceTest";
 import OverviewPage from "./overviewPage";
 
-it("renders the overview connections page", async () => {
-  const entity = "connections";
-  const props = {
-    service,
-    location: { pathname: `/overview/${entity}` },
-    lastUpdated: () => {}
-  };
-
-  if (!TEST_PORT) console.log("using mock service");
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
-
-  const { getByLabelText } = render(<OverviewPage {...props} />);
-  expect(getByLabelText(entity)).toBeInTheDocument();
-});
-
-it("renders the overview logs page", async () => {
+it("renders the overview logs page", () => {
   const entity = "logs";
   const props = {
     service,
@@ -50,7 +34,7 @@ it("renders the overview logs page", async () => {
   expect(getByLabelText(entity)).toBeInTheDocument();
 });
 
-it("renders the overview links page", async () => {
+it("renders the overview links page", () => {
   const entity = "links";
   const props = {
     service,
@@ -62,7 +46,7 @@ it("renders the overview links page", async () => {
   expect(getByLabelText(entity)).toBeInTheDocument();
 });
 
-it("renders the overview routers page", async () => {
+it("renders the overview routers page", () => {
   const entity = "routers";
   const props = {
     service,
@@ -74,7 +58,7 @@ it("renders the overview routers page", async () => {
   expect(getByLabelText(entity)).toBeInTheDocument();
 });
 
-it("renders the overview addresses page", async () => {
+it("renders the overview addresses page", () => {
   const entity = "addresses";
   const props = {
     service,
@@ -84,4 +68,20 @@ it("renders the overview addresses page", async () => {
 
   const { getByLabelText } = render(<OverviewPage {...props} />);
   expect(getByLabelText(entity)).toBeInTheDocument();
+});
+
+it("renders the overview connections page", () => {
+  const entity = "connections";
+  const props = {
+    service,
+    location: { pathname: `/overview/${entity}` },
+    lastUpdated: () => {}
+  };
+
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
+
+    const { getByLabelText } = render(<OverviewPage {...props} />);
+    expect(getByLabelText(entity)).toBeInTheDocument();
+  });
 });

@@ -22,27 +22,28 @@ import { render } from "@testing-library/react";
 import { service, login } from "../serviceTest";
 import DetailTablesPage from "./detailsTablePage";
 
-it("renders the DetailTablesPage", async () => {
+it("renders the DetailTablesPage", () => {
   const entity = "router";
   const routerName = "A";
 
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const props = {
-    entity,
-    locationState: {
-      currentRecord: {
-        name: routerName,
-        routerId: service.utilities.idFromName(routerName, "_topo")
-      }
-    },
-    details: true,
-    service,
-    schema: service.schema
-  };
+    const props = {
+      entity,
+      locationState: {
+        currentRecord: {
+          name: routerName,
+          routerId: service.utilities.idFromName(routerName, "_topo")
+        }
+      },
+      details: true,
+      service,
+      schema: service.schema
+    };
 
-  const { getByTestId } = render(<DetailTablesPage {...props} />);
-  const header = getByTestId(`detail-for-${routerName}`);
-  expect(header).toBeInTheDocument();
+    const { getByTestId } = render(<DetailTablesPage {...props} />);
+    const header = getByTestId(`detail-for-${routerName}`);
+    expect(header).toBeInTheDocument();
+  });
 });

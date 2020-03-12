@@ -22,28 +22,29 @@ import { render, fireEvent } from "@testing-library/react";
 import { service, login, TEST_PORT } from "../serviceTest";
 import EntityList from "./entityList";
 
-it("renders a EntityList", async () => {
+it("renders a EntityList", () => {
   if (!TEST_PORT) {
     console.log("using mock service");
   }
-  await login();
-  expect(service.management.connection.is_connected()).toBe(true);
+  login(() => {
+    expect(service.management.connection.is_connected()).toBe(true);
 
-  const props = {
-    service,
-    schema: service.schema,
-    handleSelectEntity: () => {}
-  };
-  const { getByTestId } = render(<EntityList {...props} />);
+    const props = {
+      service,
+      schema: service.schema,
+      handleSelectEntity: () => {}
+    };
+    const { getByTestId } = render(<EntityList {...props} />);
 
-  // the log item should be there
-  const logEntity = getByTestId("log");
-  expect(logEntity).toBeInTheDocument();
+    // the log item should be there
+    const logEntity = getByTestId("log");
+    expect(logEntity).toBeInTheDocument();
 
-  // clicking on the log entity should not crash
-  fireEvent.click(logEntity);
+    // clicking on the log entity should not crash
+    fireEvent.click(logEntity);
 
-  fireEvent.click(getByTestId("router"));
-  fireEvent.click(getByTestId("autoLink"));
-  fireEvent.click(getByTestId("connection"));
+    fireEvent.click(getByTestId("router"));
+    fireEvent.click(getByTestId("autoLink"));
+    fireEvent.click(getByTestId("connection"));
+  });
 });
