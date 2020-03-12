@@ -33,15 +33,17 @@ matrix:
     addons:
       apt:
         packages: []
-    cache:
-      directories:
-        - $HOME/.m2/repository
-      before_cache:
-        - rm -rf $HOME/.m2/repository/org/apache/qpid/*
     install: []
     before_script: []
     script:
     - mvn apache-rat:check
+    before_cache:
+    - rm -rf $HOME/.m2/repository/org/apache/qpid/*
+    cache:
+      directories:
+      - $HOME/.m2/repository
+    after_script:
+    - cat target/rat.txt || true
   # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
   - os: linux
     env:
