@@ -120,7 +120,7 @@ script:
 - travis_fold start ctest  # [ctest
 - ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
 - travis_fold end ctest  # ctest]
-- FAILLOG=Testing/Temporary/LastTestsFailed.log; if [[ -e $FAILLOG ]]; then cat $FAILLOG && exit 1; else echo "Success!"; fi
+- FAILLOG=Testing/Temporary/LastTestsFailed.log; if [[ -e $FAILLOG ]]; then cat $FAILLOG && false; else echo "Success!"; fi
 
 after_success:
 - cd ${TRAVIS_BUILD_DIR}/build
