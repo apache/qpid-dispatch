@@ -178,7 +178,9 @@ static int handle_events(connection_t* c) {
     }
     pn_event_t *e;
     while ((e = pn_connection_driver_next_event(&c->driver))) {
-        qd_connection_handle(c->qd_conn, e);
+        if (!qd_connection_handle(c->qd_conn, e)) {
+            c->qd_conn = 0;  // connection closed
+        }
     }
     if (pn_connection_driver_write_buffer(&c->driver).size) {
         lws_callback_on_writable(c->wsi);
