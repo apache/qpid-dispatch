@@ -36,12 +36,14 @@ matrix:
     cache:
       directories:
         - $HOME/.m2/repository
-      before_cache:
-        - rm -rf $HOME/.m2/repository/org/apache/qpid/*
+    before_cache:
+      - rm -rf $HOME/.m2/repository/org/apache/qpid/*
     install: []
     before_script: []
     script:
     - mvn apache-rat:check
+    after_failure:
+    - cat target/rat.txt
   # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
   - os: linux
     env:
@@ -114,7 +116,11 @@ script:
 - popd
 # Workaround on macOS for PROTON-808 Binaries have their library locations stripped
 - if [[ "${OSTYPE}" == "darwin"* ]]; then install_name_tool -add_rpath $PREFIX/lib/. $PREFIX/lib/proton/bindings/python/_cproton.so; fi
+# Undocumented Travis feature https://github.com/travis-ci/docs-travis-ci-com/issues/949 Can I add new log fold sections?
+- travis_fold start ctest  # [ctest
 - ctest -V && if [ "$BUILD_TYPE" = "Coverage" ]; then cmake --build . --target coverage; fi
+- travis_fold end ctest  # ctest]
+- FAILLOG=Testing/Temporary/LastTestsFailed.log; if [[ -e $FAILLOG ]]; then cat $FAILLOG && exit 1; else echo "Success!"; fi
 
 after_success:
 - cd ${TRAVIS_BUILD_DIR}/build
