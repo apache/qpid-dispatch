@@ -632,6 +632,9 @@ div.qdrChord {
   text-align: center;
 }
 
+#traffic-congestion-svg text {
+  text-anchor: start;
+}
 #arrows-expand label,
 #traffic-dots label,
 #traffic-congestion label,
