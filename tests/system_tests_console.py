@@ -25,6 +25,7 @@ from __future__ import print_function
 import os
 import errno
 import re
+import time
 import unittest
 from subprocess import PIPE
 import subprocess
@@ -134,6 +135,7 @@ class ConsoleTest(TestCase):
 
         sender.stop()
         receiver.stop()
+        time.sleep(1)
 
         assert pret == 0, \
             "console test exit status %d, output:\n%s" % (pret, out)
