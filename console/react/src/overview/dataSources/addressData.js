@@ -24,6 +24,7 @@ class AddressData {
       { title: "Address", field: "address" },
       { title: "Class", field: "class" },
       { title: "Phase", field: "phase" },
+      { title: "Distribution", field: "distribution" },
       { title: "In-proc", field: "inproc", numeric: true },
       { title: "Local", field: "local", numeric: true },
       { title: "Remote", field: "remote", numeric: true },
@@ -43,13 +44,8 @@ class AddressData {
         data => {
           const record = data[currentRecord.nodeId]["router.address"];
           const identityIndex = record.attributeNames.indexOf("identity");
-          const result = record.results.find(
-            r => r[identityIndex] === currentRecord.uid
-          );
-          let address = this.service.utilities.flatten(
-            record.attributeNames,
-            result
-          );
+          const result = record.results.find(r => r[identityIndex] === currentRecord.uid);
+          let address = this.service.utilities.flatten(record.attributeNames, result);
           address = this.service.utilities.formatAttributes(
             address,
             schema.entityTypes["router.address"]
@@ -90,8 +86,8 @@ class AddressData {
               );
               // address is now an object with attribute names as keys and their values
               let uid = address.identity;
-              let identity = this.service.utilities.identity_clean(uid);
-
+              //let identity = this.service.utilities.identity_clean(uid);
+              let identity = address.identity;
               // if this is the 1st time we've seen this address:class
               if (
                 !addressObjs[
@@ -107,6 +103,7 @@ class AddressData {
                   address: this.service.utilities.addr_text(identity),
                   class: this.service.utilities.addr_class(identity),
                   phase: addr_phase(identity),
+                  distribution: address.distribution,
                   inproc: address.inProcess,
                   local: address.subscriberCount,
                   remote: address.remoteCount,
@@ -133,10 +130,7 @@ class AddressData {
                 sumObj["in"] = addNull(sumObj["in"], address.deliveriesIngress);
                 sumObj.out = addNull(sumObj.out, address.deliveriesEgress);
                 sumObj.thru = addNull(sumObj.thru, address.deliveriesTransit);
-                sumObj.toproc = addNull(
-                  sumObj.toproc,
-                  address.deliveriesToContainer
-                );
+                sumObj.toproc = addNull(sumObj.toproc, address.deliveriesToContainer);
                 sumObj.fromproc = addNull(
                   sumObj.fromproc,
                   address.deliveriesFromContainer
@@ -174,10 +168,7 @@ class AddressData {
                   addressFields[i - 1]["class"] +
                   ")";
                 addressFields[i].title =
-                  addressFields[i].address +
-                  " (" +
-                  addressFields[i]["class"] +
-                  ")";
+                  addressFields[i].address + " (" + addressFields[i]["class"] + ")";
               } else addressFields[i].title = addressFields[i].address;
             }
           }
