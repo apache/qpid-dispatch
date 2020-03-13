@@ -367,121 +367,115 @@ class TopologyViewer extends Component {
   // initialize the nodes and links array from the QDRService.topology._nodeInfo object
   init = () => {
     return new Promise((resolve, reject) => {
-      if (this.mounted) {
-        const { width, height } = getSizes("topology");
-        this.width = width;
-        this.height = height;
-        if (this.width < 768) {
-          const legendOptions = this.state.legendOptions;
-          legendOptions.map.open = false;
-          legendOptions.map.show = false;
-          this.setState({ legendOptions });
-        }
-        let nodeInfo = this.topology.nodeInfo();
-        let nodeCount = Object.keys(nodeInfo).length;
+      const { width, height } = getSizes("topology");
+      this.width = width;
+      this.height = height;
+      if (this.width < 768) {
+        const legendOptions = this.state.legendOptions;
+        legendOptions.map.open = false;
+        legendOptions.map.show = false;
+        this.setState({ legendOptions });
+      }
+      let nodeInfo = this.topology.nodeInfo();
+      let nodeCount = Object.keys(nodeInfo).length;
 
-        this.mouseover_node = null;
-        this.selected_node = null;
-        this.createSvg();
-
-        // read the map data from the data file and build the map layer
-        if (this.backgroundMap) {
-          this.backgroundMap.init(this, this.svg, this.width, this.height).then(() => {
-            this.forceData.nodes.saveLonLat(this.backgroundMap);
-            this.backgroundMap.setMapOpacity(this.state.legendOptions.map.show);
-          });
-        }
-        this.traffic.remove();
-        if (this.state.legendOptions.traffic.dots)
-          this.traffic.addAnimationType(
-            "dots",
-            separateAddresses,
-            Nodes.radius("inter-router")
-          );
-        if (this.state.legendOptions.traffic.congestion)
-          this.traffic.addAnimationType(
-            "congestion",
-            separateAddresses,
-            Nodes.radius("inter-router")
-          );
-
-        // mouse event vars
-        this.mousedown_node = null;
-
-        this.forceData.nodes.initialize(nodeInfo, this.width, this.height, localStorage);
-        this.forceData.links.initialize(
-          nodeInfo,
-          this.forceData.nodes,
-          this.separateContainers,
-          [],
-          this.height,
-          localStorage
+      this.mouseover_node = null;
+      this.selected_node = null;
+      this.createSvg();
+      // read the map data from the data file and build the map layer
+      this.backgroundMap.init(this, this.svg, this.width, this.height).then(() => {
+        this.backgroundMap.setMapOpacity(this.state.legendOptions.map.show);
+        if (this.state.legendOptions.map.show) this.backgroundMap.restartZoom();
+        this.forceData.nodes.saveLonLat(this.backgroundMap);
+        this.forceData.nodes.savePositions();
+      });
+      this.traffic.remove();
+      if (this.state.legendOptions.traffic.dots)
+        this.traffic.addAnimationType(
+          "dots",
+          separateAddresses,
+          Nodes.radius("inter-router")
         );
+      if (this.state.legendOptions.traffic.congestion)
+        this.traffic.addAnimationType(
+          "congestion",
+          separateAddresses,
+          Nodes.radius("inter-router")
+        );
+      // mouse event vars
+      this.mousedown_node = null;
 
-        this.force = d3.layout
-          .force()
-          .nodes(this.forceData.nodes.nodes)
-          .links(this.forceData.links.links)
-          .size([this.width, this.height])
-          .linkDistance(d => {
-            return this.forceData.nodes.linkDistance(d, nodeCount);
-          })
-          .charge(d => {
-            return this.forceData.nodes.charge(d, nodeCount);
-          })
-          .friction(0.1)
-          .gravity(d => {
-            return this.forceData.nodes.gravity(d, nodeCount);
-          })
-          .on("tick", this.tick)
-          .on("end", () => {
-            this.forceData.nodes.savePositions();
-            if (this.backgroundMap) this.forceData.nodes.saveLonLat(this.backgroundMap);
-          });
-        //.start();
-        this.force.stop();
-        this.force.start();
+      this.forceData.nodes.initialize(nodeInfo, this.width, this.height, localStorage);
+      this.forceData.links.initialize(
+        nodeInfo,
+        this.forceData.nodes,
+        this.separateContainers,
+        [],
+        this.height,
+        localStorage
+      );
+      this.force = d3.layout
+        .force()
+        .nodes(this.forceData.nodes.nodes)
+        .links(this.forceData.links.links)
+        .size([this.width, this.height])
+        .linkDistance(d => {
+          return this.forceData.nodes.linkDistance(d, nodeCount);
+        })
+        .charge(d => {
+          return this.forceData.nodes.charge(d, nodeCount);
+        })
+        .friction(0.1)
+        .gravity(d => {
+          return this.forceData.nodes.gravity(d, nodeCount);
+        })
+        .on("tick", this.tick)
+        .on("end", () => {
+          this.forceData.nodes.savePositions();
+          if (this.backgroundMap) this.forceData.nodes.saveLonLat(this.backgroundMap);
+        });
+      //.start();
+      this.force.stop();
+      this.force.start();
+      if (this.backgroundMap) this.forceData.nodes.saveLonLat(this.backgroundMap);
+      this.restart();
+      this.circle.call(this.force.drag);
+      this.legend = new Legend(this.forceData.nodes, this.QDRLog);
+      this.updateLegend();
 
-        if (this.backgroundMap) this.forceData.nodes.saveLonLat(this.backgroundMap);
-        this.restart();
-        this.circle.call(this.force.drag);
-        this.legend = new Legend(this.forceData.nodes, this.QDRLog);
-        this.updateLegend();
-
-        if (this.oldSelectedNode) {
-          d3.selectAll("circle.inter-router").classed("selected", function(d) {
-            if (d.key === this.oldSelectedNode.key) {
-              this.selected_node = d;
-              return true;
-            }
-            return false;
-          });
-        }
-        if (this.oldMouseoverNode && this.selected_node) {
-          d3.selectAll("circle.inter-router").each(function(d) {
-            if (d.key === this.oldMouseoverNode.key) {
-              this.mouseover_node = d;
-              this.topology.ensureAllEntities(
-                [
-                  {
-                    entity: "router.node",
-                    attrs: ["id", "nextHop"]
-                  }
-                ],
-                () => {
-                  nextHopHighlight(
-                    this.selected_node,
-                    d,
-                    this.forceData.nodes,
-                    this.forceData.links,
-                    this.topology.nodeInfo()
-                  );
-                  this.restart();
+      if (this.oldSelectedNode) {
+        d3.selectAll("circle.inter-router").classed("selected", function(d) {
+          if (d.key === this.oldSelectedNode.key) {
+            this.selected_node = d;
+            return true;
+          }
+          return false;
+        });
+      }
+      if (this.oldMouseoverNode && this.selected_node) {
+        d3.selectAll("circle.inter-router").each(function(d) {
+          if (d.key === this.oldMouseoverNode.key) {
+            this.mouseover_node = d;
+            this.topology.ensureAllEntities(
+              [
+                {
+                  entity: "router.node",
+                  attrs: ["id", "nextHop"]
                 }
-              );
-            }
-          });
-        }
+              ],
+              () => {
+                nextHopHighlight(
+                  this.selected_node,
+                  d,
+                  this.forceData.nodes,
+                  this.forceData.links,
+                  this.topology.nodeInfo()
+                );
+                this.restart();
+              }
+            );
+          }
+        });
       }
       resolve();
     });

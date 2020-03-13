@@ -138,7 +138,7 @@ export class BackgroundMap {
       .attr("height", height)
       .attr("fill", "#FFF");
 
-    if (this.options.show) {
+    if (this.options.show && this.zoom) {
       this.svg.call(this.zoom).on("dblclick.zoom", null);
     }
   }
