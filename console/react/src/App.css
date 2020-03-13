@@ -613,6 +613,10 @@ text.qpid-cpp {
 svg#svglegend {
   max-width: 280px;
 }
+#svglegend text.label {
+  text-anchor: start;
+  font-weight: normal;
+}
 #legend-expand,
 #traffic-expand,
 #map-expand,
