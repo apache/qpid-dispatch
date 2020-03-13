@@ -116,13 +116,14 @@ class OverviewTable extends React.Component {
       // the results arrived, don't call setState
       if (!this.mounted) return;
       const { rows, page, total, allRows } = sliced;
-      this.setState({
-        rows,
-        page,
-        perPage,
-        total,
-        allRows
-      });
+      if (this.mounted)
+        this.setState({
+          rows,
+          page,
+          perPage,
+          total,
+          allRows
+        });
       this.props.lastUpdated(new Date());
     });
   };

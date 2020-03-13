@@ -67,33 +67,60 @@ class RouterData {
   doFetch = (page, perPage) => {
     return new Promise(resolve => {
       this.service.management.topology.fetchAllEntities(
-        [{ entity: "connection", attrs: ["role"] }, { entity: "router" }],
+        [{ entity: "connection", attrs: ["role", "container"] }, { entity: "router" }],
         nodes => {
           // we have all the data now in the nodes object
           let allRouterFields = [];
+          const lastNode = Object.keys(nodes)[Object.keys(nodes).length - 1];
           for (let node in nodes) {
-            let connections = 0;
-            for (let i = 0; i < nodes[node]["connection"].results.length; ++i) {
-              // we only requested "role" so it will be at results[0]
-              if (nodes[node]["connection"].results[i][0] !== "inter-router")
-                ++connections;
-            }
-            let routerRow = {
-              connections,
-              nodeId: node,
-              id: this.service.utilities.nameFromId(node)
-            };
-            nodes[node]["router"].attributeNames.forEach((routerAttr, i) => {
-              if (routerAttr !== "id") {
-                routerRow[routerAttr] = nodes[node]["router"].results[0][i];
+            const connections = this.service.utilities.flattenAll(nodes[node].connection);
+            allRouterFields.push(this.routerFields(nodes, node, connections));
+            // add edge routers
+            const edgeIds = connections
+              .filter(c => c.role === "edge")
+              .map(c => this.service.utilities.idFromName(c.container, "_edge"));
+            this.service.management.topology.fetchEntities(
+              edgeIds,
+              [
+                { entity: "connection", attrs: ["role", "container"] },
+                { entity: "router" }
+              ],
+              edges => {
+                for (let edge in edges) {
+                  const connections = this.service.utilities.flattenAll(
+                    edges[edge].connection
+                  );
+                  allRouterFields.push(this.routerFields(edges, edge, connections));
+                }
+                if (node === lastNode) {
+                  resolve({ data: allRouterFields, page, perPage });
+                }
               }
-            });
-            allRouterFields.push(routerRow);
+            );
           }
-          resolve({ data: allRouterFields, page, perPage });
         }
       );
     });
+  };
+
+  routerFields = (nodes, nodeId, connections) => {
+    const routerData = nodes[nodeId].router;
+    let connectionCount = 0;
+    connections.forEach(connection => {
+      if (connection.role !== "inter-router" && connection.role !== "edge")
+        ++connectionCount;
+    });
+    let routerRow = {
+      connections: connectionCount,
+      nodeId,
+      id: this.service.utilities.nameFromId(nodeId)
+    };
+    routerData.attributeNames.forEach((routerAttr, i) => {
+      if (routerAttr !== "id") {
+        routerRow[routerAttr] = routerData.results[0][i];
+      }
+    });
+    return routerRow;
   };
 }
 

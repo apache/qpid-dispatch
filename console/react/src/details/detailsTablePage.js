@@ -89,6 +89,7 @@ class DetailTablesPage extends React.Component {
   };
 
   componentWillUnmount = () => {
+    this.unmounted = true;
     if (this.timer) {
       clearInterval(this.timer);
     }
@@ -101,11 +102,12 @@ class DetailTablesPage extends React.Component {
   update = () => {
     this.mapRows().then(
       rows => {
-        this.setState({ rows, lastUpdated: new Date() }, () => {
-          if (this.props.details) {
-            this.props.lastUpdated(this.state.lastUpdated);
-          }
-        });
+        if (!this.unmounted)
+          this.setState({ rows, lastUpdated: new Date() }, () => {
+            if (this.props.details) {
+              this.props.lastUpdated(this.state.lastUpdated);
+            }
+          });
       },
       error => {
         console.log(`detailsTablePage: ${error}`);

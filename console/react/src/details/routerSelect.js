@@ -48,14 +48,43 @@ class RouterSelect extends React.Component {
     this.nodeIdList = this.props.service.management.topology.nodeIdList();
     this.nameToId = {};
     const routers = [];
-    this.nodeIdList.forEach(id => {
+    this.nodeIdList.forEach((id, i) => {
       const name = utils.nameFromId(id);
       this.nameToId[name] = id;
       routers.push(name);
+      // find any edge routers connected to this router
+      this.props.service.management.topology.fetchEntities(
+        id,
+        [{ entity: "connection", attrs: ["role", "container"] }],
+        ids => {
+          for (let rid in ids) {
+            const connections = utils.flattenAll(ids[rid].connection);
+            // add edge routers
+            const edgeIds = connections
+              .filter(c => c.role === "edge")
+              .map(c => ({
+                name: c.container,
+                id: utils.idFromName(c.container, "_edge")
+              }));
+            edgeIds.forEach(e => {
+              const edgeName = `${name}-${e.name}`;
+              routers.push(edgeName);
+              this.nameToId[edgeName] = e.id;
+            });
+          }
+          // last one? then done
+          if (i === this.nodeIdList.length - 1 && !this.unmounted) {
+            this.setState({ routers, selectedOption: routers[0] }, () => {
+              this.props.handleRouterSelected(this.nameToId[routers[0]]);
+            });
+          }
+        }
+      );
     });
-    this.setState({ routers, selectedOption: routers[0] }, () => {
-      this.props.handleRouterSelected(this.nameToId[routers[0]]);
-    });
+  };
+
+  componentWillUnmount = () => {
+    this.unmounted = true;
   };
 
   render() {
