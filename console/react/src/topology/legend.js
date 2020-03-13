@@ -156,16 +156,18 @@ export class Legend {
         return t;
       });
     appendCircle(legendEnter, this.urlPrefix);
-    appendContent(legendEnter);
+    appendContent(legendEnter, true);
     appendTitle(legendEnter);
     legendEnter
-      .filter(d => d.nodeType !== "_edge" && d.nodeType !== "_topo")
+      //.filter(d => d.nodeType !== "_edge" && d.nodeType !== "_topo")
       .append("svg:text")
       .attr("x", 35)
       .attr("y", 6)
       .attr("class", "label")
       .text(function(d) {
-        return d.key;
+        if (d.nodeType === "_topo") return "Router";
+        else if (d.nodeType === "_edge") return "Edge Router";
+        else return d.key;
       });
 
     let svgEl = document.getElementById("svglegend");

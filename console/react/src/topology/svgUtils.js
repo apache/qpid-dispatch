@@ -102,7 +102,7 @@ export function appendCircle(g) {
   );
 }
 
-export function appendContent(g) {
+export function appendContent(g, legend) {
   // show node IDs
   g.append("svg:text")
     .attr("x", d => Nodes.textOffset(d.nodeType, d.name.length))
@@ -141,6 +141,7 @@ export function appendContent(g) {
       return utils.isQpid(d);
     })
     .text(function(d) {
+      if (legend && (d.nodeType === "_edge" || d.nodeType === "_topo")) return null;
       if (utils.isConsole(d)) {
         return "\uf108"; // icon-desktop for a console
       } else if (utils.isArtemis(d)) {
