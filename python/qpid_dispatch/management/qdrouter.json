@@ -1869,6 +1869,13 @@
                     "required": false,
                     "create": true
                 },
+                "maxMessageSize": {
+                    "type": "integer",
+                    "default": 0,
+                    "description": "The maximum size in bytes of AMQP message transfers allowed for this router. This limit is applied only to transfers over user connections and is not applied to interrouter or edge router connections. This limit may be overridden by vhost or by vhost user group settings. A value of zero disables this limit.",
+                    "required": false,
+                    "create": true
+                },
                 "enableVhostPolicy": {
                     "type": "boolean",
                     "default": false,
@@ -1905,10 +1912,11 @@
                     "graph": true,
                     "description": "The sum of all vhost sender and receiver denials."
                 },
+                "maxMessageSizeDenied": {"type": "integer", "graph": true},
                 "totalDenials": {
                     "type": "integer",
                     "graph": true,
-                    "description": "The total number of connection and link denials."
+                    "description": "The total number of connection, link, and transfer denials."
                 }
             }
         },
@@ -1932,6 +1940,11 @@
                     "required": false,
                     "create": true,
                     "update": true
+                },
+                "maxMessageSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size in bytes of AMQP message transfers allowed for connections to this vhost. This limit overrides the policy maxMessageSize value and may be overridden by vhost user group settings. A value of zero disables this limit.",
+                    "required": false
                 },
                 "maxConnectionsPerUser": {
                     "type": "integer",
@@ -1992,6 +2005,11 @@
                     "description": "Optional maximum number of concurrent connections allowed for any remote host by users in this group. This value, if specified, overrides the vhost maxConnectionsPerHost value",
                     "required": false,
                     "create": false
+                },
+                "maxMessageSize": {
+                    "type": "integer",
+                    "description": "Optional maximum size in bytes of AMQP message transfers allowed for connections created by users in this group. This limit overrides the policy and vhost maxMessageSize values. A value of zero disables this limit.",
+                    "required": false
                 },
                 "maxFrameSize": {
                     "type": "integer",
@@ -2130,7 +2148,8 @@
 
                 "sessionDenied": {"type": "integer", "graph": true},
                 "senderDenied": {"type": "integer", "graph": true},
-                "receiverDenied": {"type": "integer", "graph": true}
+                "receiverDenied": {"type": "integer", "graph": true},
+                "maxMessageSizeDenied": {"type": "integer", "graph": true}
             }
         },
 

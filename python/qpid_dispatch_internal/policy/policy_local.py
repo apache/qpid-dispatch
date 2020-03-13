@@ -120,7 +120,7 @@ class PolicyCompiler(object):
     """
     Validate incoming configuration for legal schema.
     - Warn about section options that go unused.
-    - Disallow negative max connection numbers.
+    - Disallow negative max connection/message size numbers.
     - Check that connectionOrigins resolve to IP hosts.
     - Enforce internal consistency,
     """
@@ -131,6 +131,7 @@ class PolicyCompiler(object):
         PolicyKeys.KW_IGNORED_TYPE,
         PolicyKeys.KW_VHOST_NAME,
         PolicyKeys.KW_MAXCONN,
+        PolicyKeys.KW_MAX_MESSAGE_SIZE,
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
@@ -232,7 +233,7 @@ class PolicyCompiler(object):
 
     def compile_app_settings(self, vhostname, usergroup, policy_in, policy_out, warnings, errors):
         """
-        Compile a schema from processed json format to local internal format.
+        Compile a vhostUserGroupSettings schema from processed json format to local internal format.
         @param[in] name vhost name
         @param[in] policy_in user config settings
         @param[out] policy_out validated Internal format
@@ -248,7 +249,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_REMOTE_HOSTS] = ''
         # DISPATCH-1277 - KW_MAX_FRAME_SIZE must be defaulted to 16384 not 2147483647
         policy_out[PolicyKeys.KW_MAX_FRAME_SIZE] = 16384
-        policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = 0
+        policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = None
         policy_out[PolicyKeys.KW_MAX_SESSION_WINDOW] = 2147483647
         policy_out[PolicyKeys.KW_MAX_SESSIONS] = 65536
         policy_out[PolicyKeys.KW_MAX_SENDERS] = 2147483647
@@ -411,7 +412,7 @@ class PolicyCompiler(object):
 
     def compile_access_ruleset(self, name, policy_in, policy_out, warnings, errors):
         """
-        Compile a schema from processed json format to local internal format.
+        Compile a vhost schema from processed json format to local internal format.
         @param[in] name vhost name
         @param[in] policy_in raw policy to be validated
         @param[out] policy_out validated Internal format
@@ -429,6 +430,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_MAXCONNPERUSER] = 65535
         policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT] = False
         policy_out[PolicyKeys.KW_GROUPS] = {}
+        policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = None
 
         # validate the options
         for key, val in dict_iteritems(policy_in):
@@ -441,6 +443,14 @@ class PolicyCompiler(object):
                        ]:
                 if not self.validateNumber(val, 0, 65535, cerror):
                     msg = ("Policy vhost '%s' option '%s' has error '%s'." % 
+                           (name, key, cerror[0]))
+                    errors.append(msg)
+                    return False
+                policy_out[key] = val
+            elif key in [PolicyKeys.KW_MAX_MESSAGE_SIZE
+                       ]:
+                if not self.validateNumber(val, 0, 0, cerror):
+                    msg = ("Policy vhost '%s' option '%s' has error '%s'." %
                            (name, key, cerror[0]))
                     errors.append(msg)
                     return False
@@ -609,6 +619,9 @@ class PolicyLocal(object):
         #  When true policy ruleset definitions are propagated to C code
         self.use_hostname_patterns = False
 
+        # _max_message_size
+        #  holds global value from policy config object
+        self._max_message_size = 0
     #
     # Service interfaces
     #
@@ -830,6 +843,13 @@ class PolicyLocal(object):
 
             upolicy.update(ruleset[PolicyKeys.KW_GROUPS][groupname])
 
+            maxsize = upolicy.get(PolicyKeys.KW_MAX_MESSAGE_SIZE, None)
+            if maxsize is None:
+                maxsize = ruleset.get(PolicyKeys.KW_MAX_MESSAGE_SIZE, None)
+                if maxsize is None:
+                    maxsize = self._max_message_size
+                upolicy[PolicyKeys.KW_MAX_MESSAGE_SIZE] = maxsize
+
             upolicy[PolicyKeys.KW_CSTATS] = self.statsdb[vhost].get_cstats()
             return True
         except Exception as e:
@@ -850,6 +870,15 @@ class PolicyLocal(object):
         except Exception as e:
             self._manager.log_trace(
                 "Policy internal error closing connection id %s. %s" % (conn_id, str(e)))
+
+    def set_max_message_size(self, size):
+        """
+        record max message size from policy config object
+        :param size:
+        :return:ls
+
+        """
+        self._max_message_size = size
 
     #
     #

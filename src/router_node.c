@@ -27,6 +27,7 @@
 #include "entity_cache.h"
 #include "router_private.h"
 #include "delivery.h"
+#include "policy.h"
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
@@ -287,8 +288,9 @@ static void log_link_message(qd_connection_t *conn, pn_link_t *pn_link, qd_messa
     const qd_server_config_t *cf = qd_connection_config(conn);
     if (!cf) return;
     char buf[qd_message_repr_len()];
-    const char *msg_str = qd_message_aborted(msg) ?
-        "aborted message" : qd_message_repr(msg, buf, sizeof(buf), cf->log_bits);
+    const char *msg_str = qd_message_oversize(msg) ? "oversize message" :
+                          qd_message_aborted(msg) ? "aborted message" : 
+                          qd_message_repr(msg, buf, sizeof(buf), cf->log_bits);
     if (msg_str) {
         const char *src = pn_terminus_get_address(pn_link_source(pn_link));
         const char *tgt = pn_terminus_get_address(pn_link_target(pn_link));
@@ -335,39 +337,62 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     qd_message_t   *msg   = qd_message_receive(pnd);
     bool receive_complete = qd_message_receive_complete(msg);
 
-    if (receive_complete) {
-        log_link_message(conn, pn_link, msg);
-
-        //
-        // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
-        //
-        pn_link_advance(pn_link);
-        next_delivery = pn_link_current(pn_link) != 0;
-
-        uint64_t local_disp = qdr_delivery_disposition(delivery);
-        if (local_disp != 0) {
-            pn_delivery_update(pnd, local_disp);
-        }
-    }
-
-    if (qd_message_is_discard(msg)) {
-        //
-        // Message has been marked for discard, no further processing necessary
-        //
+    if (!qd_message_oversize(msg)) {
+        // message not rejected as oversize
         if (receive_complete) {
-            // If this discarded delivery has already been settled by proton,
-            // set the presettled flag on the delivery to true if it is not already true.
-            // Since the entire message has already been received, we directly call the
-            // function to set the pre-settled flag since we cannot go thru the core-thread
-            // to do this since the delivery has been discarded.
-            // Discarded streaming deliveries are not put thru the core thread via the continue action.
-            if (pn_delivery_settled(pnd))
-                qdr_delivery_set_presettled(delivery);
+            log_link_message(conn, pn_link, msg);
+
+            //
+            // The entire message has been received and we are ready to consume the delivery by calling pn_link_advance().
+            //
+            pn_link_advance(pn_link);
+            next_delivery = pn_link_current(pn_link) != 0;
+
+            uint64_t local_disp = qdr_delivery_disposition(delivery);
+            if (local_disp != 0) {
+                pn_delivery_update(pnd, local_disp);
+            }
+        }
+
+        if (qd_message_is_discard(msg)) {
+            //
+            // Message has been marked for discard, no further processing necessary
+            //
+            if (receive_complete) {
+                // If this discarded delivery has already been settled by proton,
+                // set the presettled flag on the delivery to true if it is not already true.
+                // Since the entire message has already been received, we directly call the
+                // function to set the pre-settled flag since we cannot go thru the core-thread
+                // to do this since the delivery has been discarded.
+                // Discarded streaming deliveries are not put thru the core thread via the continue action.
+                if (pn_delivery_settled(pnd))
+                    qdr_delivery_set_presettled(delivery);
 
 
-            // note: expected that the code that set discard has handled
-            // setting disposition and updating flow!
+                // note: expected that the code that set discard has handled
+                // setting disposition and updating flow!
+                pn_delivery_settle(pnd);
+                if (delivery) {
+                    // if delivery already exists then the core thread discarded this
+                    // delivery, it will eventually free the qdr_delivery_t and its
+                    // associated message - do not free it here.
+                    qdr_node_disconnect_deliveries(router->router_core, link, delivery, pnd);
+                } else {
+                    qd_message_free(msg);
+                }
+            }
+            return next_delivery;
+        }
+    } else {
+        // message is oversize
+        if (receive_complete) {
+            // reject and settle the incoming delivery
+            pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
+            // consume the delivery incoming from proton
+            ////pn_link_advance(pn_link);
+            next_delivery = pn_link_current(pn_link) != 0;
+            // consume the delivery or deliveries outbound from this delivery
             if (delivery) {
                 // if delivery already exists then the core thread discarded this
                 // delivery, it will eventually free the qdr_delivery_t and its
@@ -378,6 +403,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             }
         }
         return next_delivery;
+        // oversize messages are not processed any further
     }
 
     //
@@ -1912,4 +1938,22 @@ void qd_link_restart_rx(qd_link_t *in_link)
         set_safe_ptr_qd_link_t(in_link, safe_ptr);
         qd_connection_invoke_deferred(in_conn, deferred_AMQP_rx_handler, safe_ptr);
     }
+}
+
+
+// Issue a warning POLICY log message with connection and link identities
+// prepended to the policy denial text string.
+void qd_connection_log_policy_denial(qd_link_t *link, const char *text)
+{
+    qdr_link_t *rlink = (qdr_link_t*) qd_link_get_context(link);
+    uint64_t l_id = 0;
+    uint64_t c_id = 0;
+    if (rlink) {
+        l_id = rlink->identity;
+        if (rlink->conn) {
+            c_id = rlink->conn->identity;
+        }
+    }    
+    qd_log(qd_policy_log_source(), QD_LOG_WARNING, "[C%"PRIu64"][L%"PRIu64"] %s",
+           c_id, l_id, text);
 }

@@ -159,7 +159,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 }
 
 
-static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
+static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link, int max_size)
 {
     qd_node_t *node = container->default_node;
 
@@ -191,6 +191,9 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link)
     link->node       = node;
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
 
+    if (max_size) {
+        pn_link_set_max_message_size(pn_link, (uint64_t)max_size);
+    }
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);
 }
@@ -652,7 +655,7 @@ void qd_container_handle_event(qd_container_t *container, pn_event_t *event,
                         }
                         qd_conn->n_senders++;
                     }
-                    setup_incoming_link(container, pn_link);
+                    setup_incoming_link(container, pn_link, qd_connection_max_message_size(qd_conn));
                 }
             } else if (pn_link_state(pn_link) & PN_LOCAL_ACTIVE)
                 handle_link_open(container, pn_link);
