@@ -213,13 +213,34 @@ class PageLayout extends React.PureComponent {
       );
 
       //this.redirect = true;
-      this.props.history.replace(connectPath);
-      this.setState({
-        activeItem,
-        activeGroup,
-        connected: true,
-        isConnectFormOpen: false
-      });
+      let user = "anonymous";
+      let parts = this.service.management.connection.getReceiverAddress().split("/");
+      parts[parts.length - 1] = "$management";
+      let router = parts.join("/");
+      // get connections for router to which console is connected
+      this.service.management.topology.fetchEntity(
+        router,
+        "connection",
+        [],
+        (_nodeId, _entity, response) => {
+          response.results.some(result => {
+            let c = utils.flatten(response.attributeNames, result);
+            if (utils.isConsole(c)) {
+              user = c.user;
+              return true;
+            }
+            return false;
+          });
+          this.props.history.replace(connectPath);
+          this.setState({
+            user,
+            activeItem,
+            activeGroup,
+            connected: true,
+            isConnectFormOpen: false
+          });
+        }
+      );
     }
   };
 
