@@ -43,8 +43,8 @@ export class QDRService {
     this.hooks.setLocation("reconnect");
   };
   onDisconnect = () => {
-    this.hooks.setLocation("disconnect");
     this.management.connection.on("connected", this.onReconnect);
+    this.hooks.setLocation("disconnect");
   };
   connect = connectOptions => {
     let self = this;
@@ -56,10 +56,7 @@ export class QDRService {
 
           self.management.getSchema().then(schema => {
             self.schema = schema;
-            //console.log("got schema after connection");
-            //console.log(schema);
             self.management.topology.setUpdateEntities([]);
-            //console.log("requesting a topology");
             self.management.topology
               .get() // gets the list of routers
               .then(t => {
@@ -80,6 +77,7 @@ export class QDRService {
   };
 
   setReconnect = reconnect => {
+    debugger;
     this.management.connection.setReconnect(reconnect);
   };
 }

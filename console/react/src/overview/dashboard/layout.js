@@ -91,8 +91,8 @@ class PageLayout extends React.PureComponent {
       visualizations: [{ name: "topology" }, { name: "flow", title: "Message flow" }],
       details: [{ name: "entities" }, { name: "schema" }]
     };
-    //this.state.connecting = true;
-    //this.tryInitialConnect();
+    this.state.connecting = true;
+    this.tryInitialConnect();
   }
 
   componentDidMount = () => {
@@ -116,15 +116,11 @@ class PageLayout extends React.PureComponent {
       address: window.location.hostname,
       port: window.location.port,
       timeout: 2000,
-      reconnect: false
+      reconnect: true
     };
     this.service.connect(connectOptions).then(
       () => {
-        this.service.setReconnect(true);
-        this.schema = this.service.schema;
-        this.props.history.replace("/dashboard");
-        this.redirect = true;
-        this.setState({ connecting: false, connected: true });
+        this.handleConnect("/dashboard");
       },
       () => {
         //this.service.disconnect();

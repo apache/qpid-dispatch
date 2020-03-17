@@ -113,7 +113,7 @@ class ConnectForm extends React.Component {
           },
           e => {
             console.log(e);
-            this.props.service.setReconnect(false);
+            //this.props.service.setReconnect(false);
             this.setState({ connecting: false, connectError: e.message });
             this.props.handleAddNotification(
               "action",

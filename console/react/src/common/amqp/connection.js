@@ -132,6 +132,7 @@ class ConnectionManager {
       this.connection = null;
     }
   };
+  /*
   restrict = (count, f) => {
     if (count) {
       var current = count;
@@ -178,7 +179,7 @@ class ConnectionManager {
       }
     }
   };
-
+*/
   on_reconnected = () => {
     const self = this;
     setTimeout(self.on_connection_open, 100);
@@ -245,10 +246,11 @@ class ConnectionManager {
           () => {
             finishConnecting.call(this);
           },
-          () => {
+          error => {
             // connect failed or timed out
-            this.disconnect();
-            this.errorText = `Unable to connect to ${options.address}:${options.port}`;
+            const message = error.message ? error.message : "";
+            const condition = error.condition ? error.condition : "";
+            this.errorText = `Unable to connect to ${options.address}:${options.port} ${message} ${condition}`;
             this.executeDisconnectActions(this.errorText);
             reject(Error(this.errorText));
           }
@@ -266,7 +268,8 @@ class ConnectionManager {
   doConnect = options => {
     return new Promise((resolve, reject) => {
       var timeout = options.timeout || 10000;
-      var reconnect = options.reconnect || false; // in case options.reconnect is undefined
+      //var reconnect = options.reconnect || false; // in case options.reconnect is undefined
+      var reconnect = false;
       var baseAddress = options.address + ":" + options.port;
       if (options.linkRouteAddress) {
         baseAddress += "/" + options.linkRouteAddress;
@@ -292,22 +295,37 @@ class ConnectionManager {
         clearTimeout(timer);
         this.rhea.removeListener("disconnected", timedOut);
         this.rhea.removeListener("connection_open", connection_open);
-        //this.connection = null;
-        var rej = "failed to connect";
+        this.rhea.removeListener("error", connection_error);
+        var rej = "failed to connect - timed out";
         reject(Error(rej));
       };
       var timer = setTimeout(timedOut, timeout);
       // the event handler for when the connection opens
+      const connection_error = error => {
+        clearTimeout(timer);
+        this.rhea.removeListener("connection_open", connection_open);
+        this.rhea.removeListener("disconnected", timedOut);
+        this.rhea.removeListener("error", connection_error);
+        reject(error);
+      };
       var connection_open = context => {
         clearTimeout(timer);
         // prevent future disconnects from calling reject
         this.rhea.removeListener("disconnected", timedOut);
+        this.rhea.removeListener("error", connection_error);
+        if (options.reconnect) this.connection.set_reconnect(true);
         resolve({ context: context });
       };
       // register an event handler for when the connection opens
       this.rhea.once("connection_open", connection_open);
       // register an event handler for if the connection fails to open
-      this.rhea.once("disconnected", timedOut);
+      this.rhea.once("disconnected", context => {
+        clearTimeout(timer);
+        this.rhea.removeListener("connection_open", connection_open);
+        this.rhea.removeListener("error", connection_error);
+        reject(context.error);
+      });
+      this.rhea.on("error", connection_error);
       // attempt the connection
       this.connection = this.rhea.connect(c);
     });
