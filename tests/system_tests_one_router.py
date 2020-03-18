@@ -2650,8 +2650,11 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
 
             # We have now sent a message that the router must have sent to the
             # receiver. We will wait for 2 seconds and once again check
-            # uptime and lastDlv
-            self.custom_timer = self.reactor.schedule(2, UptimeLastDlvChecker(self, uptime=7, lastDlv=2))
+            # uptime and lastDlv.
+            # Allow for some slop in the calculation of uptime and last delivery:
+            # * reactor.schedule needs leeway in calculating the time delta and delivering the callback
+            # * dispatch needs leeway rounding stats to whole seconds
+            self.custom_timer = self.reactor.schedule(2, UptimeLastDlvChecker(self, uptime=2, lastDlv=1))
 
     def timeout(self):
         self.error = "Timeout Expired:, Test took too long to execute. "
@@ -2667,11 +2670,11 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         self.sender = event.container.create_sender(self.sender_conn, self.dest)
         self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
 
-        # Execute a management query for connections after 5 seconds
+        # Execute a management query for connections after 1 second
         # This will help us check the uptime and lastDlv time
         # No deliveries were sent on any link yet, so the lastDlv must be "-"
         self.reactor = event.reactor
-        self.custom_timer = event.reactor.schedule(5, UptimeLastDlvChecker(self, uptime=5, lastDlv=None))
+        self.custom_timer = event.reactor.schedule(1, UptimeLastDlvChecker(self, uptime=1, lastDlv=None))
 
     def run(self):
         container = Container(self)
