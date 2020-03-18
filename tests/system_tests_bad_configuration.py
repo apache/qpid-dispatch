@@ -198,7 +198,9 @@ class RouterTestIdFailCtrlChar(TestCase):
             p.teardown()
         except Exception as e:
             raise Exception("%s\n%s" % (e, out))
-        self.assertTrue("AttributeError" in out)
+        if "AttributeError" not in out:
+            print("output: ", out)
+            assert False, "AttributeError not in process output"
 
 class RouterTestIdFailWhiteSpace(TestCase):
     """
@@ -236,4 +238,6 @@ class RouterTestIdFailWhiteSpace(TestCase):
             p.teardown()
         except Exception as e:
             raise Exception("%s\n%s" % (e, out))
-        self.assertTrue("AttributeError" in out)
+        if "AttributeError" not in out:
+            print("output: ", out)
+            assert False, "AttributeError not in process output"
