@@ -317,12 +317,14 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router')
 
         router = objects[0]
+
         if show_date_id:
             self.display_datetime_router_id()
 
-        rows.append(('Version',       router.version))
-        rows.append(('Mode',          router.mode))
-        rows.append(('Router Id',     router.id))
+        rows.append(('Version',        router.version))
+        rows.append(('Mode',           router.mode))
+        rows.append(('Router Id',      router.id))
+        rows.append(('Worker Threads', router.workerThreads))
         try:
             rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
         except:

@@ -46,10 +46,11 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     qdr_core_t *core = NEW(qdr_core_t);
     ZERO(core);
 
-    core->qd          = qd;
-    core->router_mode = mode;
-    core->router_area = area;
-    core->router_id   = id;
+    core->qd                  = qd;
+    core->router_mode         = mode;
+    core->router_area         = area;
+    core->router_id           = id;
+    core->worker_thread_count = qd->thread_count;
 
     DEQ_INIT(core->exchanges);
 

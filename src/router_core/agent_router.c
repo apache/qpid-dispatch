@@ -56,7 +56,7 @@
 #define QDR_ROUTER_LINKS_BLOCKED                       29
 #define QDR_ROUTER_UPTIME_SECONDS                      30
 #define QDR_ROUTER_MEMORY_USAGE                        31
-
+#define QDR_ROUTER_WORKER_THREADS                      32
 
 const char *qdr_router_columns[] =
     {"name",
@@ -91,6 +91,7 @@ const char *qdr_router_columns[] =
      "linksBlocked",
      "uptimeSeconds",
      "memoryUsage",
+     "workerThreads",
      0};
 
 
@@ -109,7 +110,6 @@ static const char *router_mode(qd_router_mode_t router_mode)
 
 static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_core_t *core)
 {
-
     switch(col) {
     case QDR_ROUTER_IDENTITY:
         // There is only one instance of router. Just give it an identity of 1
@@ -235,6 +235,10 @@ static void qdr_agent_write_column_CT(qd_composed_field_t *body, int col, qdr_co
 
     case QDR_ROUTER_LINKS_BLOCKED:
         qd_compose_insert_uint(body, core->links_blocked);
+        break;
+
+    case QDR_ROUTER_WORKER_THREADS:
+        qd_compose_insert_int(body, core->worker_thread_count);
         break;
 
     case QDR_ROUTER_UPTIME_SECONDS:

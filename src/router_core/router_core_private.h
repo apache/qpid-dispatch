@@ -844,6 +844,7 @@ struct qdr_core_t {
     qd_router_mode_t  router_mode;
     const char       *router_area;
     const char       *router_id;
+    int               worker_thread_count;
 
     qdr_address_config_list_t  addr_config;
     qdr_auto_link_list_t       auto_links;

@@ -33,6 +33,7 @@ from qpid_dispatch_internal.compat import dictify
 from qpid_dispatch_internal.management.qdrouter import QdSchema
 from proton.handlers import MessagingHandler
 from proton.utils import BlockingConnection
+from system_test import QdManager
 
 DUMMY = "org.apache.qpid.dispatch.dummy"
 
@@ -573,6 +574,12 @@ class QdmanageTest(TestCase):
 
         self.assertEqual(out_links, COUNT)
         self.assertEqual(in_links, COUNT)
+
+    def test_worker_threads(self):
+        long_type = 'org.apache.qpid.dispatch.router'
+        qd_manager = QdManager(self, address=self.address())
+        output = qd_manager.query('org.apache.qpid.dispatch.router')
+        self.assertEqual(output[0]['workerThreads'], 4)
 
     def test_check_memory_usage(self):
         """
