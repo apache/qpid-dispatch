@@ -70,6 +70,7 @@ class QdstatTest(system_test.TestCase):
         self.assertTrue("Nodes                            0" in out)
         self.assertTrue("Auto Links                       0" in out)
         self.assertTrue("Link Routes                      0" in out)
+        self.assertTrue("Worker Threads                   1" in out)
         self.assertTrue("Router Id                        QDR.A" in out)
         self.assertTrue("Mode                             standalone" in out)
         self.assertEqual(out.count("QDR.A"), 2)
@@ -77,6 +78,7 @@ class QdstatTest(system_test.TestCase):
     def test_general_csv(self):
         out = self.run_qdstat(['--general', '--csv'], r'(?s)Router Statistics.*Mode","Standalone')
         self.assertTrue("Connections","1" in out)
+        self.assertTrue("Worker Threads", "1" in out)
         self.assertTrue("Nodes","0" in out)
         self.assertTrue("Auto Links","0" in out)
         self.assertTrue("Link Routes","0" in out)
