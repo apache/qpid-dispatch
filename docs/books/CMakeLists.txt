@@ -22,7 +22,6 @@ find_program (ASCIIDOCTOR_EXE asciidoctor DOC "Generate books")
 set (
   books
   ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
-  ${CMAKE_CURRENT_BINARY_DIR}/old-user-guide/index.html
   )
 
 if (ASCIIDOCTOR_EXE)
@@ -34,15 +33,9 @@ if (ASCIIDOCTOR_EXE)
     execute_process (
       COMMAND ${CMAKE_COMMAND} -E copy_if_different
       ${CMAKE_CURRENT_SOURCE_DIR}/${file}
-      ${CMAKE_CURRENT_BINARY_DIR}/${file}
+      ${CMAKE_CURRENT_BINARY_DIR}/user-guide/${file}
       )
   endforeach ()
-
-  add_custom_command (
-    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/old-user-guide/index.html
-    COMMAND ${ASCIIDOCTOR_EXE} ${CMAKE_CURRENT_SOURCE_DIR}/old-user-guide/book.adoc -o old-user-guide/index.html
-    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/old-user-guide/*.adoc
-    )
 
   add_custom_command (
     OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/user-guide/index.html
