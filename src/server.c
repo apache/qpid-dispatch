@@ -1041,6 +1041,7 @@ static void *thread_run(void *arg)
 
             /* Free the connection after all other processing is complete */
             if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
+                qd_conn_event_batch_complete(qd_server->container, qd_conn, true);
                 pn_connection_set_context(pn_conn, NULL);
                 qd_connection_free(qd_conn);
                 qd_conn = 0;
