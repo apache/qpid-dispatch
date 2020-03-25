@@ -27,43 +27,22 @@ under the License
 This example shows how a link route can connect a client to a message broker that is on a different private network.
 
 .Router network with isolated clients
-----
+image::link-routing-02.png[Network isolation with link routing, align="center"]
 
-                        Public Network
-                       +-----------------+
-                       |      +-----+    |
-                       | B1   | Rp  |    |
-                       |      +/--\-+    |
-                       |      /    \     |
-                       |     /      \    |
-                       +----/--------\---+
-                           /          \
-                          /            \
-                         /              \
-         Private Net A  /                \ Private Net B
-        +--------------/--+           +---\-------------+
-        |         +---/-+ |           | +--\--+         |
-        |  B2     | Ra  | |           | | Rb  |   C1    |
-        |         +-----+ |           | +-----+         |
-        |                 |           |                 |
-        |                 |           |                 |
-        +-----------------+           +-----------------+
-----
+The client is constrained by firewall policy to connect to the router in its own network (`R3`). However, it can use a link route to access queues, topics, and any other AMQP services that are provided on message brokers `B1` and `B2` -- even though they are on different networks.
 
-Client `C1` is constrained by firewall policy to connect to the router in its own network (`Rb`). However, it can use a link route to access queues, topics, and any other AMQP services that are provided on message brokers `B1` and `B2` -- even though they are on different networks.
-
-In this example, client `C1` needs to receive messages from `b2.event-queue`, which is hosted on broker `B2` in `Private Net A`. A link route connects the client and broker even though neither of them is aware that there is a router network between them.
+In this example, the client needs to receive messages from `b2.event-queue`, which is hosted on broker `B2` in `Private Network 1`. A link route connects the client and broker even though neither of them is aware that there is a router network between them.
 
 [discrete]
 == Router configuration
 
-To enable client `C1` to receive messages from `b2.event-queue` on broker `B2`, router `Ra` must be able to do the following:
+To enable the client to receive messages from `b2.event-queue` on broker `B2`, router `R2` must be able to do the following:
 
 * Connect to broker `B2`
 * Route links to and from broker `B2`
 * Advertise itself to the router network as a valid destination for links that have a `b2.event-queue` address
 
-The relevant part of the configuration file for router `Ra` shows the following:
+The relevant part of the configuration file for router `R2` shows the following:
 
 --
 [options="nowrap"]
@@ -93,23 +72,23 @@ linkRoute {  // <3>
 <3> The outgoing link route for sending links to client receivers. Any receivers whose source address begins with `b2` will be routed to broker `B2` using the `broker` connector.
 --
 
-This configuration enables router `Ra` to advertise itself as a valid destination for targets and sources starting with `b2`. It also enables the router to connect to broker `B2`, and to route links to and from queues starting with the `b2` prefix.
+This configuration enables router `R2` to advertise itself as a valid destination for targets and sources starting with `b2`. It also enables the router to connect to broker `B2`, and to route links to and from queues starting with the `b2` prefix.
 
 [NOTE]
 ====
-While not required, routers `Rp` and `Rb` should also have the same configuration.
+While not required, routers `R1` and `R3` should also have the same configuration.
 ====
 
 [discrete]
 == How the client receives messages
 
-By using the configured link route, client `C1` can receive messages from broker `B2` even though they are on different networks.
+By using the configured link route, the client can receive messages from broker `B2` even though they are on different networks.
 
-Router `Ra` establishes a connection to broker `B2`. Once the connection is open, `Ra` tells the other routers (`Rp` and `Rb`) that it is a valid destination for link routes to the `b2` prefix. This means that sender and receiver links attached to `Rb` or `Rp` will be routed along the shortest path to `Ra`, which then routes them to broker `B2`.
+Router `R2` establishes a connection to broker `B2`. Once the connection is open, `R2` tells the other routers (`R1` and `R3`) that it is a valid destination for link routes to the `b2` prefix. This means that sender and receiver links attached to `R1` or `R3` will be routed along the shortest path to `R2`, which then routes them to broker `B2`.
 
-To receive messages from the `b2.event-queue` on broker `B2`, client `C1` attaches a receiver link with a source address of `b2.event-queue` to its local router, `Rb`. Because the address matches the `b2` prefix, `Rb` routes the link to `Rp`, which is the next hop in the route to its destination. `Rp` routes the link to `Ra`, which routes it to broker `B2`. Client `C1` now has a receiver established, and it can begin receiving messages.
+To receive messages from the `b2.event-queue` on broker `B2`, the client attaches a receiver link with a source address of `b2.event-queue` to its local router, `R3`. Because the address matches the `b2` prefix, `R3` routes the link to `R1`, which is the next hop in the route to its destination. `R1` routes the link to `R2`, which routes it to broker `B2`. The client now has a receiver established, and it can begin receiving messages.
 
 [NOTE]
 ====
-If broker `B2` is unavailable for any reason, router `Ra` will not advertise itself as a destination for `b2` addresses. In this case, routers `Rb` and `Rp` will reject link attaches that should be routed to broker `B2` with an error message indicating that there is no route available to the destination.
+If broker `B2` is unavailable for any reason, router `R2` will not advertise itself as a destination for `b2` addresses. In this case, routers `R1` and `R3` will reject link attaches that should be routed to broker `B2` with an error message indicating that there is no route available to the destination.
 ====
