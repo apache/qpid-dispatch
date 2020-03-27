@@ -30,6 +30,7 @@
 
 #ifdef QD_MEMORY_DEBUG
 #include <execinfo.h>
+#include "log_private.h"
 #endif
 
 const char *QD_ALLOCATOR_TYPE = "allocator";
@@ -50,6 +51,7 @@ struct qd_alloc_item_t {
     DEQ_LINKS(qd_alloc_item_t);
     void                 *backtrace[STACK_DEPTH];
     int                   backtrace_size;
+    struct timeval        timestamp;
     uint32_t              header;
 #endif
 };
@@ -300,6 +302,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 #ifdef QD_MEMORY_DEBUG
         item->desc   = desc;
         item->backtrace_size = backtrace(item->backtrace, STACK_DEPTH);
+        gettimeofday(&item->timestamp, NULL);
         qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
         sys_mutex_lock(desc->lock);
         DEQ_INSERT_TAIL(qtype->allocated, item);
@@ -365,6 +368,7 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
 #ifdef QD_MEMORY_DEBUG
         item->desc = desc;
         item->backtrace_size = backtrace(item->backtrace, STACK_DEPTH);
+        gettimeofday(&item->timestamp, NULL);
         qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
         sys_mutex_lock(desc->lock);
         DEQ_INSERT_TAIL(qtype->allocated, item);
@@ -545,10 +549,15 @@ void qd_alloc_finalize(void)
 #ifdef QD_MEMORY_DEBUG
             qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
             qd_alloc_item_t *item = DEQ_HEAD(qtype->allocated);
+            char buf[100];
             while (item) {
                 size_t i;
                 char **strings;
                 strings = backtrace_symbols(item->backtrace, item->backtrace_size);
+
+                qd_log_formatted_time(&item->timestamp, buf, 100);
+                fprintf(dump_file, "Allocation time: %s\n", buf);
+
                 for (i = 0; i < item->backtrace_size; i++)
                     fprintf(dump_file, "%s\n", strings[i]);
                 free(strings);
