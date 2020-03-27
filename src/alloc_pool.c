@@ -28,6 +28,10 @@
 #include "entity_cache.h"
 #include "config.h"
 
+#ifdef QD_MEMORY_DEBUG
+#include <execinfo.h>
+#endif
+
 const char *QD_ALLOCATOR_TYPE = "allocator";
 
 typedef struct qd_alloc_type_t          qd_alloc_type_t;
@@ -35,26 +39,37 @@ typedef struct qd_alloc_item_t          qd_alloc_item_t;
 typedef struct qd_alloc_chunk_t         qd_alloc_chunk_t;
 typedef struct qd_alloc_linked_stack_t  qd_alloc_linked_stack_t;
 
-struct qd_alloc_type_t {
-    DEQ_LINKS(qd_alloc_type_t);
-    qd_alloc_type_desc_t *desc;
-};
-
-DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
-
 #define PATTERN_FRONT 0xdeadbeef
 #define PATTERN_BACK  0xbabecafe
+#define STACK_DEPTH   10
 
 struct qd_alloc_item_t {
     uintmax_t             sequence;  // uintmax_t ensures proper alignment of following data
 #ifdef QD_MEMORY_DEBUG
     qd_alloc_type_desc_t *desc;
+    DEQ_LINKS(qd_alloc_item_t);
+    void                 *backtrace[STACK_DEPTH];
+    int                   backtrace_size;
     uint32_t              header;
 #endif
 };
 
+#ifdef QD_MEMORY_DEBUG
+DEQ_DECLARE(qd_alloc_item_t, qd_alloc_item_list_t);
+#endif
+
+struct qd_alloc_type_t {
+    DEQ_LINKS(qd_alloc_type_t);
+    qd_alloc_type_desc_t *desc;
+#ifdef QD_MEMORY_DEBUG
+    qd_alloc_item_list_t  allocated;
+#endif
+};
+
+DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
+
 //128 has been chosen because many CPUs arch use an
-//adiacent line prefetching optimization that load
+//adjacent line prefetching optimization that load
 //2*cache line bytes in batch
 #define CHUNK_SIZE 128/sizeof(void*)
 
@@ -234,6 +249,10 @@ static void qd_alloc_init(qd_alloc_type_desc_t *desc)
         qd_alloc_type_t *type_item = NEW(qd_alloc_type_t);
         DEQ_ITEM_INIT(type_item);
         type_item->desc = desc;
+        desc->debug = type_item;
+#ifdef QD_MEMORY_DEBUG
+        DEQ_INIT(type_item->allocated);
+#endif
         DEQ_INSERT_TAIL(type_list, type_item);
 
         desc->header  = PATTERN_FRONT;
@@ -280,6 +299,11 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     if (item) {
 #ifdef QD_MEMORY_DEBUG
         item->desc   = desc;
+        item->backtrace_size = backtrace(item->backtrace, STACK_DEPTH);
+        qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
+        sys_mutex_lock(desc->lock);
+        DEQ_INSERT_TAIL(qtype->allocated, item);
+        sys_mutex_unlock(desc->lock);
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
         QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
@@ -320,6 +344,9 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
             ALLOC_CACHE_ALIGNED(size, item);
             if (item == 0)
                 break;
+#ifdef QD_MEMORY_DEBUG
+            DEQ_ITEM_INIT(item);
+#endif
             if (!push_stack(&pool->free_list, item)) {
                 free(item);
                 break;
@@ -337,6 +364,11 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
     if (item) {
 #ifdef QD_MEMORY_DEBUG
         item->desc = desc;
+        item->backtrace_size = backtrace(item->backtrace, STACK_DEPTH);
+        qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
+        sys_mutex_lock(desc->lock);
+        DEQ_INSERT_TAIL(qtype->allocated, item);
+        sys_mutex_unlock(desc->lock);
         item->header = PATTERN_FRONT;
         *((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
         QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
@@ -360,6 +392,10 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     assert (item->header  == PATTERN_FRONT);
     assert (*((uint32_t*) (p + desc->total_size)) == PATTERN_BACK);
     assert (item->desc == desc);  // Check for double-free
+    qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
+    sys_mutex_lock(desc->lock);
+    DEQ_REMOVE(qtype->allocated, item);
+    sys_mutex_unlock(desc->lock);
     item->desc = 0;
     QD_MEMORY_FILL(p, QD_MEMORY_FREE, desc->total_size);
 #endif
@@ -501,11 +537,25 @@ void qd_alloc_finalize(void)
         // Check the stats for lost items
         //
 #if QD_MEMORY_STATS
-        if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap)
+        if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap) {
             fprintf(dump_file,
                     "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n",
                     desc->type_name,
                     desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
+#ifdef QD_MEMORY_DEBUG
+            qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
+            qd_alloc_item_t *item = DEQ_HEAD(qtype->allocated);
+            while (item) {
+                size_t i;
+                char   **strings;
+                strings = backtrace_symbols (item->backtrace, item->backtrace_size);
+                for (i = 0; i < item->backtrace_size; i++)
+                    fprintf (dump_file, "%s\n", strings[i]);
+                fprintf(dump_file, "\n");
+                item = DEQ_NEXT(item);
+            }
+#endif
+        }
 #endif
 
         //
