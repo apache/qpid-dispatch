@@ -547,10 +547,11 @@ void qd_alloc_finalize(void)
             qd_alloc_item_t *item = DEQ_HEAD(qtype->allocated);
             while (item) {
                 size_t i;
-                char   **strings;
-                strings = backtrace_symbols (item->backtrace, item->backtrace_size);
+                char **strings;
+                strings = backtrace_symbols(item->backtrace, item->backtrace_size);
                 for (i = 0; i < item->backtrace_size; i++)
-                    fprintf (dump_file, "%s\n", strings[i]);
+                    fprintf(dump_file, "%s\n", strings[i]);
+                free(strings);
                 fprintf(dump_file, "\n");
                 item = DEQ_NEXT(item);
             }
