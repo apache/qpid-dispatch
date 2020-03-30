@@ -33,7 +33,6 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <time.h>
 #include <syslog.h>
 
 #define TEXT_MAX QD_LOG_TEXT_MAX
@@ -90,6 +89,17 @@ void qd_log_global_options(const char* _format, bool _utc) {
     if (_format) format = _format;
     utc = _utc;
 }
+
+
+void qd_log_formatted_time(struct timeval *time, char *buf, size_t buflen)
+{
+    time_t sec = time->tv_sec;
+    struct tm *tm_time = utc ? gmtime(&sec) : localtime(&sec);
+    char fmt[100];
+    strftime(fmt, sizeof fmt, format, tm_time);
+    snprintf(buf, buflen, fmt, time->tv_usec);
+}
+
 
 static const char* SINK_STDOUT = "stdout";
 static const char* SINK_STDERR = "stderr";
@@ -309,11 +319,7 @@ static void write_log(qd_log_source_t *log_source, qd_log_entry_t *entry)
         char buf[100];
         buf[0] = '\0';
 
-        time_t sec = entry->time.tv_sec;
-        struct tm *time = utc ? gmtime(&sec) : localtime(&sec);
-        char fmt[100];
-        strftime(fmt, sizeof fmt, format, time);
-        snprintf(buf, 100, fmt, entry->time.tv_usec);
+        qd_log_formatted_time(&entry->time, buf, 100);
 
         aprintf(&begin, end, "%s ", buf);
     }
