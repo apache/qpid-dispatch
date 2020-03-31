@@ -201,6 +201,7 @@ extern const char * const QD_AMQP_COND_PRECONDITION_FAILED;
 extern const char * const QD_AMQP_COND_RESOURCE_DELETED;
 extern const char * const QD_AMQP_COND_ILLEGAL_STATE;
 extern const char * const QD_AMQP_COND_FRAME_SIZE_TOO_SMALL;
+extern const char * const QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED;
 
 extern const char * const QD_AMQP_COND_CONNECTION_FORCED;
 /// @};

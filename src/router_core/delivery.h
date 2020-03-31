@@ -76,6 +76,7 @@ ALLOC_DECLARE(qdr_delivery_t);
 
 bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery);
 bool qdr_delivery_send_complete(const qdr_delivery_t *delivery);
+bool qdr_delivery_oversize(const qdr_delivery_t *delivery);
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(const qdr_delivery_t *delivery);

@@ -99,6 +99,8 @@ foreach(py_test_module
     system_tests_default_distribution
     system_tests_deprecated
     system_tests_policy
+    system_tests_policy_oversize_basic
+    system_tests_policy_oversize_compound
     system_tests_protocol_family
     system_tests_protocol_settings
     system_tests_qdmanage

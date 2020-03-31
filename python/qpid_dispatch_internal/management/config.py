@@ -201,10 +201,12 @@ def configure_dispatch(dispatch, lib_handle, filename):
     policyDir           = config.by_type('policy')[0]['policyDir']
     policyDefaultVhost  = config.by_type('policy')[0]['defaultVhost']
     useHostnamePatterns = config.by_type('policy')[0]['enableVhostNamePatterns']
+    maxMessageSize      = config.by_type('policy')[0]['maxMessageSize']
     for a in config.by_type("policy"):
         configure(a)
     agent.policy.set_default_vhost(policyDefaultVhost)
     agent.policy.set_use_hostname_patterns(useHostnamePatterns)
+    agent.policy.set_max_message_size(maxMessageSize)
 
     # Remaining configuration
     for t in "sslProfile", "authServicePlugin", "listener", "connector", \

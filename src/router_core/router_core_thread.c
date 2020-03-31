@@ -209,7 +209,6 @@ void *router_core_thread(void *arg)
             qdr_post_general_work_CT(core, work);
         }
     }
-
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");
     return 0;
 }

@@ -39,6 +39,7 @@ struct qd_policy_denial_counts_s {
     uint64_t sessionDenied;
     uint64_t senderDenied;
     uint64_t receiverDenied;
+    uint64_t maxSizeMessagesDenied;
 };
 
 typedef struct qd_policy_t qd_policy_t;
@@ -49,6 +50,7 @@ struct qd_policy__settings_s {
     int  maxSessions;
     int  maxSenders;
     int  maxReceivers;
+    int  maxMessageSize;
     bool allowDynamicSource;
     bool allowAnonymousSender;
     bool allowUserIdProxy;
@@ -231,6 +233,7 @@ char * qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPatter
  * @return the ruleset string to be used in policy settings.
  */
 char * qd_policy_compile_allowed_csv(char * csv);
+
 /**
  * Approve sending of message on anonymous link based on connection's policy.
  *
@@ -238,4 +241,17 @@ char * qd_policy_compile_allowed_csv(char * csv);
  * @param[in] qd_conn dispatch connection with policy settings
  */
 bool qd_policy_approve_message_target(qd_iterator_t *address, qd_connection_t *qd_conn);
+
+/**
+ * Increment counters for a link when policy maxMessageSize limit is exceeded.
+ *
+ * @param[in] pn_link proton link being with delivery/transfer being rejected
+ * @param[in] qd_conn dispatch connection with policy settings and counts
+ **/
+void qd_policy_count_max_size_event(pn_link_t *link, qd_connection_t *qd_conn);
+
+/**
+ * Return POLICY log_source to log policy 
+ */
+qd_log_source_t* qd_policy_log_source();
 #endif
