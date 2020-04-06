@@ -271,7 +271,9 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
                 // Nullify the edge link references in case there are any left over from an earlier
                 // instance of an edge connection.
                 //
+                assert(addr->edge_inlink  == 0);
                 addr->edge_inlink  = 0;
+                assert(addr->edge_outlink == 0);
                 addr->edge_outlink = 0;
 
                 //
@@ -323,6 +325,11 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
     }
 
     case QDRC_EVENT_CONN_EDGE_LOST :
+        for (qdr_address_t *addr = DEQ_HEAD(ap->core->addrs); addr; addr = DEQ_NEXT(addr)) {
+            addr->edge_inlink  = 0;
+            addr->edge_outlink = 0;
+        }
+
         ap->edge_conn_established = false;
         ap->edge_conn             = 0;
         break;

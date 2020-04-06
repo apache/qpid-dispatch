@@ -581,6 +581,9 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
         } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
+        if (addr->edge_outlink == link) {
+            addr->edge_outlink = 0;
+        }
     } else {
         bool removed = qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (removed) {
@@ -593,6 +596,9 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
                 if (!!addr->fallback && !link->fallback)
                     qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
             }
+        }
+        if (addr->edge_inlink == link) {
+            addr->edge_inlink = 0;
         }
     }
 }
