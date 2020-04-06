@@ -99,6 +99,7 @@ class LogLineData:
 
     def __init__(self):
         self.web_show_str = ""
+        self.sdorg_str = "" # text for sequence diagram source
         self.name = ""
         self.conn_num = ""  # source router's undecorated conn num
         self.conn_id = ""  # decorated routerPrefixLetter'instanceNumber-conn_num
@@ -410,10 +411,14 @@ class ParsedLogLine(object):
             result = "<span style=\"background-color:%s\">%s</span>" % (color, name)
         return result
 
+    def unhighlighted(self, name, value):
+        return name if value else ""
+
     def extract_facts(self):
         perf = self.data.described_type.dtype_number
         res = self.data
         resdict = self.data.described_type.dict
+        res.sdorg_str = "HELP I'M A ROCK - Unknown performative: %s" % perf
 
         # the performatives
         # Note: res.channel is already populated
@@ -422,9 +427,11 @@ class ParsedLogLine(object):
             res.name = "open"
             res.channel = "0"
             res.web_show_str = "<strong>%s</strong> [%s]" % (res.name, res.channel)
+            res.sdorg_str = "OPEN"
             if res.direction == text.direction_in():
                 res.conn_peer = self.resdict_value(resdict, "container-id", "unknown")
                 res.web_show_str += (" (peer: %s)" % res.conn_peer)
+                res.sdorg_str += (" (peer: %s)" % res.conn_peer)
 
         elif perf == 0x11:
             # Performative: begin [channel,remoteChannel]
@@ -435,6 +442,7 @@ class ParsedLogLine(object):
             res.remote = self.resdict_value(resdict, "remote-channel", "None)")
             res.channel_remote = "[%s,%s]" % (res.channel, res.remote)
             res.web_show_str = "<strong>%s</strong> %s" % (res.name, res.channel_remote)
+            res.sdorg_str = "BEGIN %s" % (res.channel_remote)
 
         elif perf == 0x12:
             # Performative:  attach [channel,handle] role name (source: src, target: tgt)
@@ -490,6 +498,7 @@ class ParsedLogLine(object):
             res.web_show_str = "<strong>%s</strong> %s (%s,%s) %s" % (
                 res.name, colorize_bg(res.channel_handle), res.flow_deliverycnt, res.flow_linkcredit,
                 self.highlighted("drain", res.flow_drain, common.color_of("drain")))
+            res.sdorg_str = "FLOW %s (%s,%s)" % (res.channel_handle, res.flow_deliverycnt, res.flow_linkcredit)  # TODO: Add drain
 
         elif perf == 0x14:
             # Performative: transfer [channel,handle] (id)
@@ -521,6 +530,8 @@ class ParsedLogLine(object):
             ###    colorize_dispositions_not_accepted(proto, res, global_vars, count_anomalies)
             res.web_show_str = ("<strong>%s</strong>  [%s] (%s %s-%s settled=%s state=%s)" %
                                 (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
+            res.sdorg_str = ("%s  [%s] (%s %s-%s settled=%s state=%s)" %
+                                (res.name, res.channel, res.role, res.first, res.last, res.settled, res.disposition_state))
 
         elif perf == 0x16:
             # Performative: detach [channel, handle]
@@ -529,12 +540,14 @@ class ParsedLogLine(object):
             ### TODO: colorize_performative_error(proto, res, global_vars, count_anomalies)
             res.channel_handle = "[%s,%s]" % (res.channel, res.handle)
             res.web_show_str = "<strong>%s</strong> %s" % (res.name, colorize_bg(res.channel_handle))
+            res.sdorg_str = "DETACH %s" % (res.channel_handle)
 
         elif perf == 0x17:
             # Performative: end [channel]
             res.name = "end"
             ### TODO: colorize_performative_error(proto, res, global_vars, count_anomalies)
             res.web_show_str = "<strong>%s</strong> [%s]" % (res.name, res.channel)
+            res.sdorg_str = "END [%s]" % (res.channel)
 
         elif perf == 0x18:
             # Performative: close [0] always channel 0
@@ -542,6 +555,7 @@ class ParsedLogLine(object):
             res.name = "close"
             ### colorize_performative_error(proto, res, global_vars, count_anomalies)
             res.web_show_str = "<strong>%s</strong> [%s]" % (res.name, res.channel)
+            res.sdorg_str = "CLOSE [%s]" % (res.channel)
 
         elif perf == 0x1d:
             # transport:definitions error
@@ -725,6 +739,9 @@ class ParsedLogLine(object):
             res.web_show_str = ("<strong>%s</strong> %s %s %s (source: %s, target: %s, class: %s)" %
                                 (res.name, colorize_bg(res.channel_handle), res.role, res.link_short_name_popup,
                                  res.source, res.target, res.link_class))
+            res.sdorg_str =  ("%s %s %s %s (src: %s, tgt: %s)" %
+                                (res.name, res.channel_handle, res.role, res.link_short_name,
+                                 res.source, res.target))
         elif perf == 0x14:
             # Performative: transfer [channel,handle] (id)
             self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
@@ -736,6 +753,12 @@ class ParsedLogLine(object):
                 self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
                 self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
                 showdat, res.transfer_size)
+            res.sdorg_str = "%s %s (%s) %s %s%s%s%s" % (
+                res.name, res.channel_handle, res.delivery_id, res.transfer_size,
+                self.unhighlighted(" settled", res.transfer_settled),
+                self.unhighlighted(" more", res.transfer_more),
+                self.unhighlighted(" resume", res.transfer_resume),
+                self.unhighlighted(" aborted", res.transfer_aborted))
 
     def adverbl_link_to(self):
         """

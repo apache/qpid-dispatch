@@ -100,6 +100,9 @@ def main_except(argv):
                    help='Ignore log records earlier than this. Format: "2018-08-13 13:15:00.123456"')
     p.add_argument('--time-end', '-te',
                    help='Ignore log records later than this. Format: "2018-08-13 13:15:15.123456"')
+    p.add_argument('--sequence', '-sq',
+                   action='store_true',
+                   help='Write sequence diagram raw data to end of web page. Edit what you need for input to seq-diag-gen utility.')
     p.add_argument('--files', '-f', nargs="+")
 
     del argv[0]
@@ -922,6 +925,32 @@ def main_except(argv):
     print("</div>")
 
     print("<hr>")
+
+
+    # Emit data for source to be processed by seq-diag-gen utility
+    if comn.args.sequence:
+        print("<h3>sequencediagram.org data</h3>")
+        for plf in tree:
+            rtr = plf.router
+            rid = comn.router_display_names[rtr.log_index]
+            peer = rtr.conn_peer_display.get(plf.data.conn_id, "")
+            if peer.startswith("<"):
+                peer = peer[peer.find(">")+1:]
+                peer = peer[:peer.find("<")]
+            # TODO: differentiate between peer sender and peer receiver
+            # This is not so easy as test code uses the same container id for all connections
+            # Easiest thing to do is append peer with router_id. Does not fix tests with sender/receiver
+            # to same router.
+            if peer.startswith("peer"):
+                peer += "_" + rid
+            #TODO handle EOS, connection open/close lines
+            if (not plf.data.sdorg_str == "" and
+                not plf.data.direction == "" and
+                not plf.data.sdorg_str.startswith("HELP")):
+                print("%s|%s|%s|%s|%s|%s" % (plf.datetime, rid, plf.data.direction, peer, plf.data.sdorg_str, ("%s#%d" % (plf.prefixi, plf.lineno))))
+            #import pdb
+            #pdb.set_trace()
+        print("<hr>")
 
     print("</body>")
 

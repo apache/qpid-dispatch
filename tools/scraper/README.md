@@ -156,6 +156,33 @@ and divides the connection data. Connection names inclued the router instance ID
 * AMQP Addresses from every every AMQP Attach are indexed. A table for each address
   shows when the address was referenced and some connection details.
 
+## Sequence generator
+
+The sequence generator (switches --sequence or -sq) generates some extra output that is
+useful for making sequence diagrams from the raw data. _This is an experimental feature._
+
+When a sequence switch is set then the AMQP performatives are simplified and dumped
+into the html data stream near the end.
+
+A user then identifies what parts of the log data he needs and then edits the lines
+in question from the html data stream file. Careful attention to the start and
+end timestamps will help a user find the data more easily. Save the selected data into an
+intermediate file.
+
+Finally the intermediate file is processed by new file _tools/scraper/seq-diag-gen.py_
+to produce the sequence diagram source file.
+
+Items to do to make this a reliable feature:
+
+* In most cases the the non-instantaneous messages do not exactly line up on a precisely
+between the sender's and receiver's time lines.
+* The vertical time scale is wildly exaggerated. There is no scale: equal intervals in
+vertical space could be microseconds or days.
+* Messages from non-router actors are shown as horizontal lines. This tool has no access
+to those actors' trace logs or timestamps.
+* You may want to manually specify actors and participants to get the vertical time lines
+in an acceptable order.
+
 ## Quick Start
 
 * Enable router logging
