@@ -496,7 +496,6 @@ void qd_alloc_finalize(void)
     FILE *dump_file = 0;
     if (debug_dump) {
         dump_file = fopen(debug_dump, "w");
-        free(debug_dump);
     }
 
     while (type_item) {
@@ -556,8 +555,8 @@ void qd_alloc_finalize(void)
                 strings = backtrace_symbols(item->backtrace, item->backtrace_size);
 
                 qd_log_formatted_time(&item->timestamp, buf, 100);
-                fprintf(dump_file, "Allocation time: %s\n", buf);
-
+                fprintf(dump_file, "Leak,%s,%s,%s,%p\n",
+                        debug_dump, buf, desc->type_name, (void *)(&item[1]));
                 for (i = 0; i < item->backtrace_size; i++)
                     fprintf(dump_file, "%s\n", strings[i]);
                 free(strings);
@@ -584,7 +583,10 @@ void qd_alloc_finalize(void)
     }
 
     sys_mutex_free(init_lock);
-    if (dump_file) fclose(dump_file);
+    if (dump_file) {
+        fclose(dump_file);
+        free(debug_dump);
+    }
 }
 
 
