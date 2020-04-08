@@ -50,6 +50,12 @@ qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery)
 }
 
 
+bool qdr_delivery_oversize(const qdr_delivery_t *delivery)
+{
+    return delivery && delivery->msg && qd_message_oversize(delivery->msg);
+}
+
+
 bool qdr_delivery_send_complete(const qdr_delivery_t *delivery)
 {
     if (!delivery)

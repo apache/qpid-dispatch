@@ -76,6 +76,7 @@ ALLOC_DECLARE(qdr_delivery_t);
 
 bool qdr_delivery_receive_complete(const qdr_delivery_t *delivery);
 bool qdr_delivery_send_complete(const qdr_delivery_t *delivery);
+bool qdr_delivery_oversize(const qdr_delivery_t *delivery);
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context);
 void *qdr_delivery_get_context(const qdr_delivery_t *delivery);
@@ -89,6 +90,7 @@ uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery);
 void qdr_delivery_set_disposition(qdr_delivery_t *delivery, uint64_t disposition);
 
 void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted);
+bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery);
 
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
 qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
