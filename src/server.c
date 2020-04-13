@@ -1291,6 +1291,8 @@ void qd_server_free(qd_server_t *qd_server)
         sys_mutex_free(ctx->deferred_call_lock);
         free(ctx->name);
         free(ctx->role);
+        if (ctx->policy_settings)
+            free_qd_policy_settings_t(ctx->policy_settings);
         free_qd_connection_t(ctx);
         ctx = DEQ_HEAD(qd_server->conn_list);
     }
