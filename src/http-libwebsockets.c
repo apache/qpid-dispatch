@@ -185,7 +185,7 @@ static int handle_events(connection_t* c) {
     if (pn_connection_driver_write_buffer(&c->driver).size) {
         lws_callback_on_writable(c->wsi);
     }
-    if (pn_connection_driver_finished(&c->driver)) {
+    if (pn_connection_driver_write_closed(&c->driver)) {
         lws_close_reason(c->wsi, LWS_CLOSE_STATUS_NORMAL, NULL, 0);
         return -1;
     }
