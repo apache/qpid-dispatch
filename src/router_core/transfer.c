@@ -185,7 +185,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     DEQ_REMOVE_HEAD(link->undelivered);
                     dlv->link_work = 0;
 
-                    if (settled) {
+                    if (settled || qdr_delivery_oversize(dlv) || qdr_delivery_is_aborted(dlv)) {
                         dlv->where = QDR_DELIVERY_NOWHERE;
                         qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - remove from undelivered list");
                     } else {

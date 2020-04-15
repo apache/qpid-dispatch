@@ -238,6 +238,8 @@ void qd_session_free(qd_session_t *qd_ssn);
 bool qd_session_is_q3_blocked(const qd_session_t *qd_ssn);
 qd_link_list_t *qd_session_q3_blocked_links(qd_session_t *qd_ssn);
 
+void qd_connection_log_policy_denial(qd_link_t *link, const char *text);
+
 
 // handy macros to get around PROTON-2184: pn_session_set_context aborts if
 // context==0  (can remove this once qdrouter requires >= proton 0.31.x)
