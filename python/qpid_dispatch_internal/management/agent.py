@@ -560,13 +560,15 @@ class EntityCache(object):
                 type = self.schema.entity_type(type)
             return list(map(function, filter(lambda e: e.entity_type.is_a(type),
                                              self.entities)))
+    def validate_add(self, entity):
+        self.schema.validate_add(entity, self.entities)
 
     def add(self, entity):
         """Add an entity to the agent"""
         self.log(LOG_DEBUG, "Add entity: %s" % entity)
         entity.validate()       # Fill in defaults etc.
         # Validate in the context of the existing entities for uniqueness
-        self.schema.validate_add(entity, self.entities)
+        self.validate_add(entity)
         self.entities.append(entity)
 
     def _add_implementation(self, implementation, adapter=None):
@@ -868,6 +870,17 @@ class Agent(object):
     def _create(self, attributes):
         """Create an entity, called externally or from configuration file."""
         entity = self.create_entity(attributes)
+
+        # DISPATCH-1622 - Call validate_add() *before* calling entity.create(). If the
+        # validate_add() throws an Exception, we will save ourselves the
+        # trouble of calling entity.create()
+        self.entities.validate_add(entity)
+
+        # DISPATCH-1622 - The following entity.create() is going to call the create method
+        # of the actual entity implementation like a ConnectorEntity or a
+        # ListenerEntity and so on which in turn ends up calling the c code.
+        # The previous line calls validate_add BEFORE
+        # entity.create() is called thus preventing the C code from being called.
         pointer = entity.create()
         if pointer:
             cimplementation = CImplementation(self.qd, entity.entity_type, pointer)

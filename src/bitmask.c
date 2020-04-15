@@ -126,6 +126,12 @@ int qd_bitmask_value(qd_bitmask_t *b, int bitnum)
 
 int qd_bitmask_first_set(qd_bitmask_t *b, int *bitnum)
 {
+    //
+    // If the passed in qd_bitmask_t *b pointer is null, we want to avoid a crash by returning immediately.
+    //
+    if (!b)
+        return 0;
+
     if (b->first_set == FIRST_UNKNOWN) {
         b->first_set = FIRST_NONE;
         for (int i = 0; i < QD_BITMASK_LONGS; i++)
