@@ -47,13 +47,8 @@ The following table describes the reliability guarantees for unsettled messages 
 | Final disposition | Anycast | Multicast
 
 | `accepted`
-| The consumer received the message.
-a|
-Either:
-
-* All consumers received the message,
-
-* Or, at least one consumer received the message, but no consumers rejected it.
+| The consumer accepted the message.
+| At least one consumer accepted the message, but no consumers rejected it.
 
 | `released`
 | The message did not reach its destination.
