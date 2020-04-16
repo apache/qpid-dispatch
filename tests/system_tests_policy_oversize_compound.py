@@ -44,6 +44,9 @@ W_THREADS = 2
 OVERSIZE_CONDITION_NAME = "amqp:connection:forced"
 OVERSIZE_CONDITION_DESC = "Message size exceeded"
 
+# Internal test timeout
+TEST_TIMEOUT_SECONDS = 60
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -165,8 +168,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.logger.log("on_start")
 
         self.logger.log("on_start: secheduling reactor timeout")
-        self.timer = event.reactor.schedule(10, Timeout(self))
-
+        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
         self.logger.log("Waiting for router network to stabilize")
         self.test_class.wait_router_network_connected()
         self.network_stable = True
@@ -424,7 +426,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
         self.logger.log("on_start")
 
         self.logger.log("on_start: secheduling reactor timeout")
-        self.timer = event.reactor.schedule(10, Timeout(self))
+        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
 
         self.logger.log("Waiting for router network to stabilize")
         self.test_class.wait_router_network_connected()

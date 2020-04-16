@@ -44,6 +44,9 @@ W_THREADS = 2
 OVERSIZE_CONDITION_NAME = "amqp:connection:forced"
 OVERSIZE_CONDITION_DESC = "Message size exceeded"
 
+# Internal test timeout
+TEST_TIMEOUT_SECONDS = 60
+
 
 class Timeout(object):
     def __init__(self, parent):
@@ -111,7 +114,7 @@ class OversizeMessageTransferTest(MessagingHandler):
 
     def on_start(self, event):
         self.logger.log("on_start")
-        self.timer = event.reactor.schedule(10, Timeout(self))
+        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
         self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
         self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
         self.logger.log("on_start: opening   sender connection to %s" % (self.sender_host.addresses[0]))
