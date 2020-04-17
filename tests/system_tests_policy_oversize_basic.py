@@ -104,7 +104,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.shut_down = False
 
         self.logger = Logger(title=("OversizeMessageTransferTest - %s" % (self.test_address)), print_to_console=print_to_console)
-        self.log_unhandled = False
+        self.log_unhandled = True
 
     def timeout(self):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_rejected=%d n_aborted=%d" % \
