@@ -117,7 +117,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         Construct an instance of the unicast test
         :param test_class:    test class - has wait-connection function
         :param sender_host:   router for sender connection
-        :param receiver_host: router for receiver connection
+        :param receiver_host: router for receiver connection or None for link route test
         :param test_address:  sender/receiver AMQP address
         :param message_size:  in bytes
         :param count:         how many messages to send
@@ -169,6 +169,7 @@ class OversizeMessageTransferTest(MessagingHandler):
 
         self.logger.log("on_start: secheduling reactor timeout")
         self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
+
         self.logger.log("Waiting for router network to stabilize")
         self.test_class.wait_router_network_connected()
         self.network_stable = True
@@ -188,11 +189,12 @@ class OversizeMessageTransferTest(MessagingHandler):
             m = Message(body=body_msg)
             self.messages.append(m)
 
-        self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
-        self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
+        if not self.receiver_host is None:
+            self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
+            self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
 
-        self.logger.log("on_start: Creating receiver")
-        self.receiver = event.container.create_receiver(self.receiver_conn, self.test_address)
+            self.logger.log("on_start: Creating receiver")
+            self.receiver = event.container.create_receiver(self.receiver_conn, self.test_address)
 
         self.logger.log("on_start: opening   sender connection to %s" % (self.sender_host.addresses[0]))
         self.sender_conn = event.container.connect(self.sender_host.addresses[0])
@@ -326,7 +328,8 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.error = "Container error"
         self.logger.log(self.error)
         self.sender_conn.close()
-        self.receiver_conn.close()
+        if not self.receiver is None:
+            self.receiver_conn.close()
         self.timer.cancel()
 
     def on_link_error(self, event):
@@ -1054,6 +1057,213 @@ class MaxMessageSizeBlockOversize(TestCase):
                 (obefore, oafter, ibefore, iafter))
             test.logger.dump()
             self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+
+#
+# Link route
+#
+
+class Dummy(FakeBroker):
+    """
+    Open a link and sit there. No traffic is expected to reach this broker
+    """
+    def __init__(self, url, container_id):
+        super(Dummy, self).__init__(url, container_id)
+
+    def on_message(self, event):
+        print("ERROR did not expect a message")
+        sys.stdout.flush()
+
+
+class MaxMessageSizeLinkRouteOversize(TestCase):
+    """
+    verify that maxMessageSize blocks oversize messages over link route
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(MaxMessageSizeLinkRouteOversize, cls).setUpClass()
+
+        cls.fb_port = cls.tester.get_port()
+        cls.logger = Logger(print_to_console=True)
+
+        def router(name, mode, max_size, extra):
+            config = [
+                ('router', {'mode': mode,
+                            'id': name,
+                            'allowUnsettledMulticast': 'yes',
+                            'workerThreads': W_THREADS}),
+                ('listener', {'role': 'normal',
+                              'port': cls.tester.get_port()}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+                ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': max_size, 'defaultVhost': '$default'}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+                ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'in'}),
+                ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'out'}),
+                ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
+                    'groups': [(
+                        '$default', {
+                            'users': '*',
+                            'maxConnections': 100,
+                            'remoteHosts': '*',
+                            'sources': '*',
+                            'targets': '*',
+                            'allowAnonymousSender': 'true',
+                            'allowWaypointLinks': 'true',
+                            'allowDynamicSource': 'true'
+                        }
+                    )]}
+                )
+            ]
+
+            if extra:
+                config.extend(extra)
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=False))
+            return cls.routers[-1]
+
+        # configuration:
+        # two edge routers connected via 2 interior routers with max sizes
+        #
+        #  +-------+    +---------+    +---------+    +-------+
+        #  |  EA1  |<==>|  INT.A  |<==>|  INT.B  |<==>|  EB1  |
+        #  | 50,000|    | 100,000 |    | 150,000 |    |200,000|
+        #  +-------+    +---------+    +---------+    +-------+
+        #                                    ^
+        #                                    #
+        #                                    v
+        #                               +--------+
+        #                               |  fake  |
+        #                               | broker |
+        #                               +--------+
+        #
+        # Note:
+        #  * Messages whose senders connect to INT.A or INT.B are subject to max message size
+        #    defined for the ingress router only.
+        #  * Message whose senders connect to EA1 or EA2 are subject to max message size
+        #    defined for the ingress router. If the message is forwarded through the
+        #    connected interior router then the message is subject to another max message size
+        #    defined by the interior router.
+
+        cls.routers = []
+
+        interrouter_port = cls.tester.get_port()
+        cls.INTA_edge_port   = cls.tester.get_port()
+        cls.INTB_edge_port   = cls.tester.get_port()
+
+        router('INT.A', 'interior', INTA_MAX_SIZE,
+               [('listener', {'role': 'inter-router',
+                              'port': interrouter_port}),
+                ('listener', {'role': 'edge', 'port': cls.INTA_edge_port})])
+        cls.INT_A = cls.routers[0]
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+        router('INT.B', 'interior', INTB_MAX_SIZE,
+               [('connector', {'name': 'connectorToA',
+                               'role': 'inter-router',
+                               'port': interrouter_port}),
+                ('listener', {'role': 'edge',
+                              'port': cls.INTB_edge_port}),
+                ('connector',  {'name': 'FakeBroker',
+                               'role': 'route-container',
+                               'host': '127.0.0.1',
+                               'port': cls.fb_port,
+                               'saslMechanisms': 'ANONYMOUS'}),
+                ])
+        cls.INT_B = cls.routers[1]
+        cls.INT_B.listener = cls.INT_B.addresses[0]
+        cls.INT_B.fb_port = cls.INT_B.connector_addresses[0]
+
+        router('EA1', 'edge', EA1_MAX_SIZE,
+               [('listener', {'name': 'rc', 'role': 'route-container',
+                              'port': cls.tester.get_port()}),
+                ('connector', {'name': 'uplink', 'role': 'edge',
+                               'port': cls.INTA_edge_port})])
+        cls.EA1 = cls.routers[2]
+        cls.EA1.listener = cls.EA1.addresses[0]
+
+        router('EB1', 'edge', EB1_MAX_SIZE,
+               [('connector', {'name': 'uplink',
+                               'role': 'edge',
+                               'port': cls.INTB_edge_port,
+                               'maxFrameSize': 1024}),
+                ('listener', {'name': 'rc', 'role': 'route-container',
+                              'port': cls.tester.get_port()})])
+        cls.EB1 = cls.routers[3]
+        cls.EB1.listener = cls.EB1.addresses[0]
+
+        cls.wait_router_network_connected()
+
+        cls.fake_broker = Dummy("amqp://127.0.0.1:" + str(cls.fb_port),
+                                       container_id="FakeBroker")
+        cls.INT_B.wait_address("oversize",
+                               containers=1)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Stop the fake broker"""
+        cls.fake_broker.join()
+        # time.sleep(0.25) # Sleeping a bit here lets INT_B clean up connectors and timers
+        super(MaxMessageSizeLinkRouteOversize, cls).tearDownClass()
+
+    @classmethod
+    def wait_router_network_connected(cls):
+        cls.INT_A.wait_router_connected('INT.B')
+        cls.INT_B.wait_router_connected('INT.A')
+        cls.EA1.wait_connectors()
+        cls.EB1.wait_connectors()
+
+    def sense_n_closed_lines(self, routername):
+        """
+        Read a router's log file and count how many size-exceeded lines are in it.
+        :param routername:
+        :return: (int, int) tuple with counts of lines in and lines out
+        """
+        with  open("../setUpClass/%s.log" % routername, 'r') as router_log:
+            log_lines = router_log.read().split("\n")
+        i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "<-" in s]
+        o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "->" in s]
+        return (len(i_closed_lines), len(o_closed_lines))
+
+
+    # verify that a message can go through an edge EB1 and get blocked by interior INT.B
+    #
+    #  +-------+    +---------+    +---------+    +-------+
+    #  |  EA1  |<==>|  INT.A  |<==>|  INT.B  |<==>|  EB1  |
+    #  | 50,000|    | 100,000 |    | 150,000 |    |200,000|
+    #  +-------+    +---------+    +---------+    +-------+
+    #                                    |             ^
+    #                                    V             |
+    #                               +--------+    +-------+
+    #                               |  fake  |    |sender |
+    #                               | broker |    |200,200|
+    #                               +--------+    +-------+
+    #
+    def test_90_block_link_route_EB1_INTB(self):
+        ibefore, obefore = self.sense_n_closed_lines("EB1")
+        test = OversizeMessageTransferTest(MaxMessageSizeLinkRouteOversize,
+                                           MaxMessageSizeLinkRouteOversize.EB1,
+                                           None,
+                                           "oversize.e90",
+                                           message_size=EB1_MAX_SIZE + OVER_UNDER,
+                                           blocked_by_both=True,
+                                           print_to_console=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_90 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+        # Verify that interrouter link was shut down
+        iafter, oafter = self.sense_n_closed_lines("EB1")
+        idelta = iafter - ibefore
+        odelta = oafter - obefore
+        success = odelta == 1 and (idelta == 0 or idelta == 1)
+        if (not success):
+            test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
+                            (obefore, oafter, ibefore, iafter))
+            test.logger.dump()
+            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            MaxMessageSizeLinkRouteOversize.wait_router_network_connected()
 
 
 if __name__ == '__main__':
