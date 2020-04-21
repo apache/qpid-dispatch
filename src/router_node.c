@@ -347,11 +347,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             //
             pn_link_advance(pn_link);
             next_delivery = pn_link_current(pn_link) != 0;
-
-            uint64_t local_disp = qdr_delivery_disposition(delivery);
-            if (local_disp != 0) {
-                pn_delivery_update(pnd, local_disp);
-            }
         }
 
         if (qd_message_is_discard(msg)) {
@@ -368,6 +363,18 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 if (pn_delivery_settled(pnd))
                     qdr_delivery_set_presettled(delivery);
 
+                uint64_t local_disp = qdr_delivery_disposition(delivery);
+                //
+                // Call pn_delivery_update only if the local disposition is different than the pn_delivery's local disposition.
+                // This will make sure we call pn_delivery_update only when necessary.
+                //
+                if (local_disp != 0 && local_disp != pn_delivery_local_state(pnd)) {
+                    //
+                    // DISPATCH-1626 - This enables pn_delivery_update() and pn_delivery_settle() to be called back to back in the same function call.
+                    // CORE_delivery_update() will handle most of the other cases where we need to call pn_delivery_update() followed by pn_delivery_settle().
+                    //
+                    pn_delivery_update(pnd, local_disp);
+                }
 
                 // note: expected that the code that set discard has handled
                 // setting disposition and updating flow!
@@ -1828,12 +1835,11 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
         //
         // If the delivery is still arriving, don't push out the disposition change yet.
         //
+        assert(qdr_delivery_disposition(dlv) == disp) ;
         if (qd_message_receive_complete(msg)) {
-            pn_delivery_update(pnd, disp);
-        } else {
-            // just update the local disposition for now - AMQP_rx_handler will
-            // write this to proton once the message is fully received.
-            qdr_delivery_set_disposition(dlv, disp);
+            if (disp != pn_delivery_local_state(pnd)) {
+                pn_delivery_update(pnd, disp);
+            }
         }
     }
 
@@ -1847,17 +1853,22 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
             qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
             pn_delivery_settle(pnd);
         } else {
-            //
-            // If the delivery is settled and it is still arriving, defer the settlement
-            // until the content has fully arrived.
-            //
             if (disp == PN_RELEASED || disp == PN_MODIFIED || qdr_delivery_presettled(dlv)) {
                 //
-                // If the disposition is RELEASED or MODIFIED, set the message to discard
-                // and if it is blocked by holdoff, get the link rolling again.
+                // If the delivery is settled and it is still arriving, defer the settlement
+                // until the content has fully arrived. For now set the disposition on the qdr_delivery
+                // We will use this disposition later on to set the disposition on the proton delivery.
                 //
                 qdr_delivery_set_disposition(dlv, disp);
+                //
+                // We have set the message to be discarded. We will use this information
+                // in AMQP_rx_handler to only update the disposition on the proton delivery if the message is discarded.
+                //
                 qd_message_set_discard(msg, true);
+                //
+                // If the disposition is RELEASED or MODIFIED, set the message to discard
+                // and if it is blocked by Q2 holdoff, get the link rolling again.
+                //
                 qd_message_Q2_holdoff_disable(msg);
                 qd_link_restart_rx(link);
             }
