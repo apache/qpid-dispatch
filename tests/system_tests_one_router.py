@@ -479,6 +479,17 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_49_unexpected_release_test(self):
+        """
+        Verify that the on_released function is only called once for every
+        released message. Without the fix for DISPATCH-1626, the on_released
+        might be called twice for the same delivery.
+        This test will fail once in five runs without the fix for DISPATCH-1626
+        """
+        test = UnexpectedReleaseTest(self.address)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -523,6 +534,92 @@ class RouterProxy(object):
     def query_links(self):
         ap = {'operation': 'QUERY', 'type': 'org.apache.qpid.dispatch.router.link'}
         return Message(properties=ap, reply_to=self.reply_addr)
+
+
+class ReleasedChecker(object):
+    def __init__(self, parent):
+        self.parent = parent
+
+    def on_timer_task(self, event):
+        self.parent.released_check_timeout()
+
+class UnexpectedReleaseTest(MessagingHandler):
+    def __init__(self, address):
+        super(UnexpectedReleaseTest, self).__init__(auto_accept=False)
+        self.address = address
+        self.dest = "UnexpectedReleaseTest"
+        self.timer = None
+        self.sender_conn = None
+        self.receiver_conn = None
+        self.sender = None
+        self.receiver = None
+        self.num_messages = 250
+        self.recv_messages_max = 200
+        self.num_sent = 0
+        self.num_received = 0
+        self.num_released = 0
+        self.num_accepted = 0
+        # Send a large message
+        self.body = "123456789" * 8192
+        self.receiver_conn_closed = False
+        self.error = None
+        self.released_checker = None
+
+    def released_check_timeout(self):
+        if not self.receiver_conn_closed:
+            self.receiver_conn.close()
+        self.sender_conn.close()
+        self.timer.cancel()
+
+    def on_start(self, event):
+        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.sender_conn = event.container.connect(self.address)
+        self.receiver_conn = event.container.connect(self.address)
+        self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            # Wait for the receiver to be created and then create the sender.
+            self.sender = event.container.create_sender(self.sender_conn, self.dest)
+
+    def on_sendable(self, event):
+        if self.num_sent < self.num_messages:
+            msg = Message(body=self.body)
+            self.sender.send(msg)
+            self.num_sent += 1
+
+    def on_released(self, event):
+        self.num_released += 1
+        if self.num_released == self.num_messages - self.recv_messages_max:
+            # We have received the expected number of calls to on_released
+            # but without the fix for DISPATCH-1626 we expect the on_released
+            # to be called an additional one or more times. We will kick off
+            # a 3 second timer after which we will check if we got more
+            # calls to on_released.
+            self.released_checker = event.reactor.schedule(3, ReleasedChecker(self))
+        if self.num_released > self.num_messages - self.recv_messages_max:
+            # This if statement will be true if the client receives a 2 part
+            # dispostion from the router like the following
+            #
+            # [0x562a0083ed80]:0 <- @disposition(21) [role=true, first=981, state=@released(38) []]
+            # [0x562a0083ed80]:0 <- @disposition(21) [role=true, first=981, last=982, settled=true, state=@released(38) []]
+            #
+            self.error = "Expected %d calls to on_released but got %d" % (self.num_messages - self.recv_messages_max, self.num_released)
+
+    def on_accepted(self, event):
+        self.num_accepted +=1
+
+    def on_message(self, event):
+        if event.receiver == self.receiver:
+            self.num_received += 1
+            if self.num_received <= self.recv_messages_max:
+                event.delivery.settle()
+            if self.num_received == self.recv_messages_max:
+                self.receiver_conn.close()
+                self.receiver_conn_closed = True
+
+    def run(self):
+        Container(self).run()
 
 
 class SemanticsClosest(MessagingHandler):
