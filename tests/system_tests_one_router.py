@@ -31,7 +31,7 @@ from proton.utils import BlockingConnection, SyncRequestResponse
 from proton import VERSION as PROTON_VERSION
 from proton import Terminus
 from proton import Data
-from qpid_dispatch.management.client import Node
+from qpid_dispatch.management.client import Node, BadRequestStatus
 import os, json
 from subprocess import PIPE, STDOUT
 from time import sleep
@@ -58,6 +58,266 @@ class MultiTimeout ( object ):
 
     def on_timer_task(self, event):
         self.parent.timeout ( self.name )
+
+class StandaloneRouterQdManageTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(StandaloneRouterQdManageTest, cls).setUpClass()
+        name = "test-router"
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'})
+        ])
+        cls.router = cls.tester.qdrouterd(name, config, wait=True)
+
+    def test_49_add_interrouter_connector_to_standalone_router(self):
+        """
+        This test tries adding an inter-router connector to a stanalone router.
+        A standalone router can have a route container connector
+        but never an inter-router connector. Inter router connectors
+        are allowed only with interior routers.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.connector",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"inter-router"})
+        except Exception as e:
+            if "BadRequestStatus: role='standalone' not allowed to connect to or accept connections from other routers." in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+    def test_50_add_edge_listener_to_standalone_router(self):
+        """
+        This test tries to add an edge listener to a standalone router.
+        Since this is a standalone router, other routers (interior or edge routers)
+        cannot connect to this router.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.listener",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"edge",
+                               "authenticatePeer": "no"})
+        except Exception as e:
+            if "BadRequestStatus: role='standalone' not allowed to connect to or accept connections from other routers." in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+
+    def test_51_add_interrouter_listener_to_standalone_router(self):
+        """
+        This test tries to add an inter-router listener to a standalone router.
+        Since this is a standalone router, other routers (interior or edge routers)
+        cannot connect to this router.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.listener",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"inter-router",
+                               "authenticatePeer": "no"})
+        except Exception as e:
+            if "BadRequestStatus: role='standalone' not allowed to connect to or accept connections from other routers." in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+class EdgeRouterQdManageTest(TestCase):
+    @classmethod
+    def setUpClass(cls):
+        super(EdgeRouterQdManageTest, cls).setUpClass()
+        name = "test-router"
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'})
+        ])
+        cls.router = cls.tester.qdrouterd(name, config, wait=True)
+
+    def test_52_add_interrouter_connector_to_edge_router(self):
+        """
+        This test tries adding an inter-router connector to an edge router. An edge
+        router can have an edge connector or route container connector
+        but never an inter-router connector. Inter router connectors
+        are allowed only with interior routers.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.connector",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"inter-router"})
+        except Exception as e:
+            if "BadRequestStatus: role='inter-router' only allowed with router mode='interior'" in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+    def test_53_add_edge_listener_to_edge_router(self):
+        """
+        This test tries to add an edge listener to an edge router which means
+        an edge router can connect to another edge router and that is not
+        allowed.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.listener",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"edge",
+                               "authenticatePeer": "no"})
+        except Exception as e:
+            if "BadRequestStatus: role='edge' only allowed with router mode='interior'" in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+    def test_54_add_interrouter_listener_to_edge_router(self):
+        """
+        This test tries to add an edge listener to an edge router which means
+        an edge router can connect to another edge router and that is not
+        allowed.
+        """
+        mgmt = QdManager(self, address=self.router.addresses[0])
+        test_pass = False
+        try:
+            out = mgmt.create("org.apache.qpid.dispatch.listener",
+                              {"host": "0.0.0.0",
+                               "port": "77777",
+                               "role":"inter-router",
+                               "authenticatePeer": "no"})
+        except Exception as e:
+            if "BadRequestStatus: role='inter-router' only allowed with router mode='interior'" in str(e):
+                test_pass = True
+
+        self.assertTrue(test_pass)
+
+class StandaloneEdgeRouterConfigTest(TestCase):
+    """
+    Try to start the router with bad config and make sure the router
+    does not start and scan the log files for appropriate error messages.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(StandaloneEdgeRouterConfigTest, cls).setUpClass()
+        name = "test-router"
+
+        # A standalone router cannot have an edge listener because it cannot accept edge connections.
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'edge', 'host': '0.0.0.0'})
+        ])
+        cls.router = cls.tester.qdrouterd(name, config, wait=False, perform_teardown=False)
+
+        # A standalone router cannot have inter-router connectors.
+        name = "test-router-1"
+        config_1 = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('connector', {'port': cls.tester.get_port(), 'role': 'inter-router', 'host': '0.0.0.0'})
+        ])
+        cls.router_1 = cls.tester.qdrouterd(name, config_1, wait=False, perform_teardown=False)
+
+        # An edge router cannot have edge listeners.
+        # Edge routers can have connectors that connect to interior routers
+        # or route-containers. One edge router cannot connect to another edge router.
+        name = "test-router-2"
+        config_2 = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'edge', 'host': '0.0.0.0'})
+        ])
+        cls.router_2 = cls.tester.qdrouterd(name, config_2, wait=False, perform_teardown=False)
+
+        # Edge routers cannot have inter-router listeners. Only interior
+        # routers can have inter-router listeners.
+        name = "test-router-3"
+        config_3 = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'inter-router', 'host': '0.0.0.0'})
+        ])
+        cls.router_3 = cls.tester.qdrouterd(name, config_3, wait=False, perform_teardown=False)
+
+        # Edge routers cannot have inter-router connectors
+        # Inter-router connectors are allowed only on interior routers.
+        name = "test-router-4"
+        config_4 = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'QDR'}),
+            ('connector', {'port': cls.tester.get_port(), 'role': 'inter-router', 'host': '0.0.0.0'})
+        ])
+        cls.router_4 = cls.tester.qdrouterd(name, config_4, wait=False, perform_teardown=False)
+
+        # A standalone router cannot have an inter-router listener because
+        # it cannot accept inter-router connections.
+        name = "test-router-5"
+        config_5 = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'inter-router', 'host': '0.0.0.0'})
+        ])
+        cls.router_5 = cls.tester.qdrouterd(name, config_5, wait=False, perform_teardown=False)
+
+        # Give some time for the test to write to the .out file. Without
+        # this sleep, the tests execute too
+        # fast and find that nothing has yet been written to the .out files.
+        sleep(3)
+
+
+    def test_48_router_in_error(self):
+        test_pass = False
+        with open(self.router.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router.conf: role='standalone' not allowed to connect to or accept connections from other routers." in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
+
+        test_pass = False
+        with open(self.router_1.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router-1.conf: role='standalone' not allowed to connect to or accept connections from other routers." in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
+
+        test_pass = False
+        with open(self.router_2.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router-2.conf: role='edge' only allowed with router mode='interior'" in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
+
+        test_pass = False
+        with open(self.router_3.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router-3.conf: role='inter-router' only allowed with router mode='interior'" in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
+
+        test_pass = False
+        with open(self.router_4.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router-4.conf: role='inter-router' only allowed with router mode='interior'" in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
+
+        test_pass = False
+        with open(self.router_5.outfile + '.out', 'r') as out_file:
+            for line in out_file:
+                if "Exception: Cannot load configuration file test-router-5.conf: role='standalone' not allowed to connect to or accept connections from other routers." in line:
+                    test_pass = True
+                    break
+        self.assertTrue(test_pass)
 
 
 class OneRouterTest(TestCase):
