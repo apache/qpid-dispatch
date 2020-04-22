@@ -395,6 +395,11 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             (void) pn_condition_set_name(       cond, QD_AMQP_COND_CONNECTION_FORCED);
             (void) pn_condition_set_description(cond, "Message size exceeded");
             pn_connection_close(pn_conn);
+            if (!delivery) {
+                // this message has not been forwarded yet, so it will not be
+                // cleaned up when the link is freed.
+                qd_message_free(msg);
+            }
         }
         return false;
         // oversize messages are not processed any further
