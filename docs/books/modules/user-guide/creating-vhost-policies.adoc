@@ -32,7 +32,7 @@ Vhost policies must be enabled for the router. For more information, see xref:en
 
 .Procedure
 
-. Add a `vhost` section and define the connection limits for the messaging endpoint.
+. Add a `vhost` section and define the connection and message size limits for the messaging endpoint.
 +
 --
 The connection limits apply to all users that are connected to the vhost. These limits control the number of users that can be connected simultaneously to the vhost.
@@ -42,6 +42,7 @@ The connection limits apply to all users that are connected to the vhost. These 
 vhost {
     hostname: example.com
     maxConnections: 10000
+    maxMessageSize: 500000
     maxConnectionsPerUser: 100
     maxConnectionsPerHost: 100
     allowUnknownUser: true
@@ -55,6 +56,9 @@ If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify 
 
 `maxConnections`::
 The global maximum number of concurrent client connections allowed for this vhost. The default is 65535.
+
+`maxMessageSize`::
+The maximum size in bytes of AMQP message transfers allowed for connections to this vhost. This limit overrides the policy `maxMessageSize` value and may be overridden by vhost user group settings. A value of `0` disables this limit.
 
 `maxConnectionsPerUser`::
 The maximum number of concurrent client connections allowed for any user. The default is 65535.
@@ -111,6 +115,9 @@ The maximum number of connections that may be created by users in this user grou
 
 `maxConnectionsPerHost`::
 The maximum number of concurrent connections that may be created by users in this user group from any of the permitted remote hosts. This value, if specified, overrides the vhost `maxConnectionsPerUser` value.
+
+`maxMessageSize`::
+The maximum size in bytes of AMQP message transfers allowed for connections created by users in this group. This limit overrides the policy and vhost `maxMessageSize` values. A value of `0` disables this limit.
 
 `allowDynamicSource`::
 If `true`, connections from users in this group are permitted to attach receivers to dynamic sources. This permits creation of listeners to temporary addresses or temporary queues. If `false`, use of dynamic sources is not permitted.

@@ -22,23 +22,27 @@ under the License
 // authorizing-access-messaging-resources.adoc
 
 [id='setting-global-connection-limits-{context}']
-= Setting global connection limits
+= Setting global limits
 
-You can create a global policy to set the incoming connection limit for a router. This limit defines the total number of concurrent client connections that can be open for this router.
+You can create a global policy to set the incoming connection and message size limits for a router.
 
 .Procedure
 
-* In the `{RouterConfigFile}` configuration file, add a `policy` section and set the `maxConnections`.
+* In the `{RouterConfigFile}` configuration file, add a `policy` section and set the limits.
 +
 --
-This example sets the incoming connection limit to 10000:
+This example sets the incoming connection limit and message size:
 
 [options="nowrap",subs="+quotes"]
 ----
 policy {
     maxConnections: 10000
+    maxMessageSize: 500000
 }
 ----
 `maxConnections`::
-This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
+The total number of concurrent client connections that can be open for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
+
+`maxMessageSize`::
+The maximum size in bytes of AMQP message transfers allowed for this router. This limit is applied only to transfers over user connections and is not applied to inter-router or edge router connections. This limit may be overridden by vhost or by vhost user group settings. A value of `0` disables this limit.
 --
