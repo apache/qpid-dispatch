@@ -274,7 +274,7 @@ class ConnectionManager {
       if (options.linkRouteAddress) {
         baseAddress += "/" + options.linkRouteAddress;
       }
-      var wsprotocol = window.location.protocol === "https:" ? "wss" : "ws";
+      var wsprotocol = window.location.protocol.startsWith("https") ? "wss" : "ws";
       var ws = this.rhea.websocket_connect(WebSocket);
       var c = {
         connection_details: new ws(wsprotocol + "://" + baseAddress, ["binary"]),

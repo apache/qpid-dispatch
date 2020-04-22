@@ -753,7 +753,7 @@ class TopologyViewer extends Component {
         // circle was a broker
         if (utils.isArtemis(d)) {
           const host = d.container === "0.0.0.0" ? "localhost" : d.container;
-          const artemis = `${window.location.protocol()}://${host}:8161/console`;
+          const artemis = `${window.location.protocol}//${host}:8161/console`;
           window.open(
             artemis,
             "artemis",

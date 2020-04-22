@@ -49,9 +49,10 @@ class ConnectForm extends React.Component {
   componentDidMount = () => {
     let savedValues = localStorage.getItem(CONNECT_KEY);
     if (!savedValues) {
+      const defaultPort = window.location.protocol.startsWith("https") ? "443" : "80";
       savedValues = {
-        address: "localhost",
-        port: "5673",
+        address: window.location.hostname,
+        port: window.location.port === "" ? defaultPort : window.location.port,
         username: "",
         password: "",
         connectError: null
@@ -98,7 +99,9 @@ class ConnectForm extends React.Component {
   handleConnect = () => {
     if (this.props.isConnected) {
       // handle disconnects from the main page
-      this.props.handleConnect(this.props.fromPath);
+      this.setState({ connecting: false }, () => {
+        this.props.handleConnect(this.props.fromPath);
+      });
     } else {
       const connectOptions = JSON.parse(JSON.stringify(this.state));
       if (connectOptions.username === "") connectOptions.username = undefined;

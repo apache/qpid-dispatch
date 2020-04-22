@@ -112,9 +112,10 @@ class PageLayout extends React.PureComponent {
   };
 
   tryInitialConnect = () => {
+    const defaultPort = window.location.protocol.startsWith("https") ? "443" : "80";
     const connectOptions = {
       address: window.location.hostname,
-      port: window.location.port,
+      port: window.location.port === "" ? defaultPort : window.location.port,
       timeout: 2000,
       reconnect: true
     };
@@ -183,7 +184,7 @@ class PageLayout extends React.PureComponent {
 
   handleConnect = (connectPath, result) => {
     if (this.state.connected) {
-      this.setState({ connected: false }, () => {
+      this.setState({ connecting: false, connected: false }, () => {
         this.handleConnectCancel();
         this.service.disconnect();
         this.handleAddNotification("event", "Manually disconnected", new Date(), "info");
