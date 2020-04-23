@@ -327,6 +327,11 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     if (!pnd)
         return false;
 
+    // DISPATCH-1628 DISPATCH-975 exit if router already closed this link
+    if (pn_link_state(pn_link) & PN_LOCAL_CLOSED) {
+        return false;
+    }
+
     qd_connection_t  *conn   = qd_link_connection(link);
     qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
     bool       next_delivery = false;
@@ -367,7 +372,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 // Discarded streaming deliveries are not put thru the core thread via the continue action.
                 if (pn_delivery_settled(pnd))
                     qdr_delivery_set_presettled(delivery);
-
 
                 // note: expected that the code that set discard has handled
                 // setting disposition and updating flow!
