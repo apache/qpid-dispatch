@@ -47,9 +47,6 @@ OVERSIZE_CONDITION_DESC = "Message size exceeded"
 # Internal test timeout
 TEST_TIMEOUT_SECONDS = 60
 
-# File exists means Timeout happened
-TEST_TIMEOUT_IND = "../setUpClass/timeout.txt"
-
 
 class Timeout(object):
     def __init__(self, parent):
@@ -113,8 +110,6 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_rejected=%d n_aborted=%d" % \
                      (self.n_sent, self.n_rcvd, self.n_rejected, self.n_aborted)
         self.logger.log("self.timeout " + self.error)
-        with open(TEST_TIMEOUT_IND, "a") as tmofile:
-            tmofile.write(self.test_address + "\n")
         self._shut_down_test()
 
     def on_start(self, event):
@@ -794,18 +789,6 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("test_5f test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
-
-    def test_5g_if_any_timeout_then_dump_logs(self):
-        if os.path.exists(TEST_TIMEOUT_IND):
-            for fn in ["INT.A", "INT.B", "EA1", "EB1"]:
-                filename = "../setUpClass/%s.log" % fn
-                print("=====")
-                print("TEST_LOG_FILE:", filename)
-                print("=====")
-                with open(filename, 'r') as fin:
-                    print(fin.read())
-        else:
-            pass
 
 
 if __name__ == '__main__':
