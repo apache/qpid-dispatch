@@ -327,6 +327,10 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     if (!pnd)
         return false;
 
+    if (pn_link_state(pn_link) & PN_LOCAL_CLOSED) {
+        return false;
+    }
+
     qd_connection_t  *conn   = qd_link_connection(link);
     qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
     bool       next_delivery = false;
