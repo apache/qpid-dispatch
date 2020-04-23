@@ -649,6 +649,8 @@ static uint64_t on_reply(qdr_core_t    *core,
     if (conn == 0 || link == 0) {
         qdr_terminus_free(request->source);
         qdr_terminus_free(request->target);
+        qd_iterator_free(body);
+        qd_iterator_free(app_properties);
         return 0;
     }
 

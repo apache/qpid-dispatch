@@ -217,6 +217,9 @@ static uint64_t _mgmt_on_reply_cb_CT(qdr_core_t    *core,
                                           statusCode,
                                           statusDescription,
                                           body);
+    else
+        qd_iterator_free(body);
+    
     free(statusDescription);
     return disposition;
 }
