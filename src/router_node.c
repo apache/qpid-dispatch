@@ -330,7 +330,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     qd_connection_t  *conn   = qd_link_connection(link);
 
     // DISPATCH-1628 DISPATCH-975 exit if router already closed this connection
-    if (conn->closed) {
+    if (conn->closed_locally) {
         return false;
     }
 
@@ -416,7 +416,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 qd_message_free(msg);
             }
             // stop activity on this connection
-            conn->closed = true;
+            conn->closed_locally = true;
         }
         return false;
         // oversize messages are not processed any further

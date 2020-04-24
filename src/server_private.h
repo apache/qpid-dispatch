@@ -144,6 +144,7 @@ struct qd_connection_t {
     qd_server_t                     *server;
     bool                            opened; // An open callback was invoked for this connection
     bool                            closed;
+    bool                            closed_locally;
     int                             enqueued;
     qd_timer_t                      *timer;   // Timer for initial-setup
     pn_connection_t                 *pn_conn;
