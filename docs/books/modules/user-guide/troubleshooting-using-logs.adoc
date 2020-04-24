@@ -41,6 +41,13 @@ In this example, `ROUTER` logs show the lifecycle of a connection and a link tha
 <2> A link is attached over the connection. The link is identified with a unique ID (`L6`). The log also shows the direction of the link, and the source and target addresses.
 <3> The link is detached. The log shows the link's terminal statistics.
 <4> The connection is closed.
+
+NOTE: If necessary, you can use `qdmanage` to enable protocol-level trace logging for a particular connection. You can use this to trace the AMQP frames. For example:
+
+[options="nowrap"]
+----
+$ qdmanage update --type=connection id=C1 enableProtocolTrace=true
+----
 ====
 
 .Troubleshooting the network topology
