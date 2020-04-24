@@ -328,6 +328,12 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         return false;
 
     qd_connection_t  *conn   = qd_link_connection(link);
+
+    // DISPATCH-1628 DISPATCH-975 exit if router already closed this connection
+    if (conn->closed) {
+        return false;
+    }
+
     qdr_delivery_t *delivery = qdr_node_delivery_qdr_from_pn(pnd);
     bool       next_delivery = false;
 
@@ -396,6 +402,8 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             // reject and settle the incoming delivery
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
+            // close the link
+            pn_link_close(pn_link);
             // close the connection
             pn_connection_t * pn_conn = qd_connection_pn(conn);
             pn_condition_t * cond = pn_connection_condition(pn_conn);
@@ -407,6 +415,8 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 // cleaned up when the link is freed.
                 qd_message_free(msg);
             }
+            // stop activity on this connection
+            conn->closed = true;
         }
         return false;
         // oversize messages are not processed any further
