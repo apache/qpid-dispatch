@@ -324,11 +324,16 @@ class BusManager(Node):
         rows.append(('Version',        router.version))
         rows.append(('Mode',           router.mode))
         rows.append(('Router Id',      router.id))
-        rows.append(('Worker Threads', router.workerThreads))
+        try:
+            rows.append(('Worker Threads', router.workerThreads))
+        except:
+            pass
+
         try:
             rows.append(('Uptime',        TimeLong(router.uptimeSeconds)))
         except:
             pass
+            
         try:
             if router.memoryUsage > 0:
                 rows.append(('VmSize', NumKMG(router.memoryUsage,
