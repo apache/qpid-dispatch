@@ -851,6 +851,30 @@ void qdr_query_free(qdr_query_t *query);
 typedef void (*qdr_manage_response_t) (void *context, const qd_amqp_error_t *status, bool more);
 void qdr_manage_handler(qdr_core_t *core, qdr_manage_response_t response_handler);
 
+typedef struct {
+    uint16_t major;
+    uint16_t minor;
+    uint16_t patch;
+    uint16_t flags;
+#define QDR_ROUTER_VERSION_SNAPSHOT 0x0100
+#define QDR_ROUTER_VERSION_RC       0x0200  // lower byte == RC #
+#define QDR_ROUTER_VERSION_RC_MASK  0x00FF
+} qdr_router_version_t;
+
+// version >= (Major, Minor, Patch)
+#define QDR_ROUTER_VERSION_AT_LEAST(V, MAJOR, MINOR, PATCH)                       \
+    ((V).major > (MAJOR) || ((V).major == (MAJOR)                                 \
+                             && ((V).minor > (MINOR) || ((V).minor == (MINOR)     \
+                                                         && (V).patch >= (PATCH)) \
+                             )                                                    \
+                        )                                                         \
+    )
+
+// version < (Major, Minor, Patch)
+#define QDR_ROUTER_VERSION_LESS_THAN(V, MAJOR, MINOR, PATCH)    \
+    (!QDR_ROUTER_VERSION_AT_LEAST(V, MAJOR, MINOR, PATCH))
+
+
 qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            bool             is_authenticated,
                                            bool             opened,
@@ -863,7 +887,9 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            const char      *container,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
-                                           bool             ssl);
+                                           bool             ssl,
+                                           // set if remote is a qdrouter
+                                           const qdr_router_version_t *version);
 
 
 typedef struct {

@@ -31,6 +31,7 @@ int policy_tests(void);
 int failoverlist_tests(void);
 int parse_tree_tests(void);
 int proton_utils_tests(void);
+int version_tests(void);
 
 int main(int argc, char** argv)
 {
@@ -63,6 +64,7 @@ int main(int argc, char** argv)
     result += parse_tree_tests();
     result += proton_utils_tests();
     result += core_timer_tests();
+    result += version_tests();
 
     qd_dispatch_free(qd);       // dispatch_free last.
 

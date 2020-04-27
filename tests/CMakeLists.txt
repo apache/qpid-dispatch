@@ -36,6 +36,7 @@ set(unit_test_SOURCES
     parse_tree_tests.c
     proton_utils_tests.c
     alloc_test.c
+    version_test.c
     )
 
 add_executable(unit_tests ${unit_test_SOURCES})
