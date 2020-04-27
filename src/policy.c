@@ -311,20 +311,13 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
         qd_python_unlock(lock_state);
     }
     const char *hostname = qd_connection_name(conn);
-    uint64_t ssnDenied = 0;
-    uint64_t sndDenied = 0;
-    uint64_t rcvDenied = 0;
-    uint64_t sizDenied = 0;
     if (conn->policy_settings && conn->policy_settings->denialCounts) {
-        ssnDenied = conn->policy_settings->denialCounts->sessionDenied;
-        sndDenied = conn->policy_settings->denialCounts->senderDenied;
-        rcvDenied = conn->policy_settings->denialCounts->receiverDenied;
-        sizDenied = conn->policy_settings->denialCounts->maxSizeMessagesDenied;
+        qd_policy_denial_counts_t *qpdc = conn->policy_settings->denialCounts;
         qd_log(policy->log_source, QD_LOG_DEBUG,
            "[C%"PRIu64"] Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d, "
-           "sessions_denied=%ld, senders_denied=%ld, receivers_denied=%ld. nConnections= %ld.",
+           "sessions_denied=%ld, senders_denied=%ld, receivers_denied=%ld, max_message_size_denied:%ld, nConnections= %ld.",
             conn->connection_id, hostname, conn->n_sessions, conn->n_senders, conn->n_receivers,
-            ssnDenied, sndDenied, rcvDenied, sizDenied, n_connections);
+            qpdc->sessionDenied, qpdc->senderDenied, qpdc->receiverDenied, qpdc->maxSizeMessagesDenied, n_connections);
     }
 }
 
