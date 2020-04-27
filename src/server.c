@@ -1646,6 +1646,8 @@ const char* qd_connection_remote_ip(const qd_connection_t *c) {
 
 /* Expose event handling for HTTP connections */
 bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
+    if (!c)
+        return false;
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
     handle(c->server, e, pn_conn, qd_conn);
