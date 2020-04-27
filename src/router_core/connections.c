@@ -161,7 +161,8 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            const char      *container,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
-                                           bool             ssl)
+                                           bool             ssl,
+                                           const qdr_router_version_t *version)
 {
     qdr_connection_info_t *connection_info = new_qdr_connection_info_t();
     ZERO(connection_info);
@@ -189,6 +190,10 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
     connection_info->connection_properties = qdr_conn_properties;
     connection_info->ssl_ssf = ssl_ssf;
     connection_info->ssl     = ssl;
+
+    if (version) {  // only if peer is a router
+        connection_info->version = *version;
+    }
 
     return connection_info;
 }

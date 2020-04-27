@@ -635,6 +635,7 @@ struct qdr_connection_info_t {
     pn_data_t                  *connection_properties;
     bool                        ssl;
     int                         ssl_ssf; //ssl strength factor
+    qdr_router_version_t        version; // if role is router or edge
 };
 
 ALLOC_DECLARE(qdr_connection_info_t);

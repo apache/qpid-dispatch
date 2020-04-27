@@ -1640,6 +1640,51 @@ class LinkRouteProxyTest(TestCase):
             tr.queue.get(timeout=TIMEOUT)
         tr.stop()
 
+    def test_000_check_peer_version_info(self):
+        """
+        Not a link proxy test - ensure router correctly parses peer version
+        numbers advertised in the incoming @open frame
+        """
+        lines = None
+        with open("../setUpClass/INT.A.log") as inta_log:
+            lines = [l for l in inta_log.read().split("\n")
+                     if "] Connection Opened: " in l
+                     or "] Peer router version: " in l]
+
+        self.assertTrue(lines is not None)
+
+        for peer in ['INT.B', 'EA1']:
+
+            conn_id = None
+            open_version = None
+            parsed_version = None
+
+            # extract the version string from the incoming @open
+            for l in lines:
+                ls = l.split()
+                if "container_id=%s" % peer in ls:
+                    conn_id = ls[5]
+                    for f in ls:
+                        index = f.find(':version=')
+                        if index >= 0:
+                            open_version = f[index + len(':version='):].strip("\",")
+                            break;
+                    break;
+
+            self.assertTrue(conn_id is not None)
+            self.assertTrue(open_version is not None)
+
+            # find the debug log message where the router logs the parsed peers
+            # version on the given connection
+            for l in lines:
+                ls = l.split()
+                if ls[5] == conn_id and "version:" in ls:
+                    parsed_version = ls[9]
+                    break;
+
+            self.assertTrue(parsed_version is not None)
+            self.assertEqual(open_version, parsed_version)
+
     def test_01_immedate_detach_reattach(self):
         if self.skip [ 'test_01' ] :
             self.skipTest ( "Test skipped during development." )
