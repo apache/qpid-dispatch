@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+from time import sleep
 import os, json
 from subprocess import PIPE, STDOUT, Popen
 from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, SkipIfNeeded, Process
@@ -123,6 +124,9 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
         except:
             pass
 
+        # Give some time for connector failures to be written to the log.
+        sleep(3)
+
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_sasl_fail(self):
         passed = False
@@ -143,7 +147,6 @@ class RouterTestPlainSaslFailure(RouterTestPlainSaslCommon):
         sasl_failed = False
         file_open_failed = False
         for log in logs:
-            print (log)
             if log[0] == 'SERVER' and log[1] == "info" and "amqp:unauthorized-access Authentication failed [mech=PLAIN]" in log[2]:
                 sasl_failed = True
             if log[0] == "CONN_MGR" and log[1] == "error" and "Unable to open password file" in log[2] and "error: No such file or directory" in log[2]:
@@ -217,6 +220,9 @@ class RouterTestPlainSaslFailureUsingLiteral(RouterTestPlainSaslCommon):
             cls.routers[1].wait_connectors(timeout=5)
         except:
             pass
+
+        # Give some time for connector failures to be written to the log.
+        sleep(3)
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_sasl_fail(self):
