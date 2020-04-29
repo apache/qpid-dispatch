@@ -30,6 +30,7 @@ from __future__ import print_function
 
 
 from threading import Timer
+import os
 import re
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, TIMEOUT, Process
@@ -188,9 +189,9 @@ class RouterTestIdFailCtrlChar(TestCase):
             router_conf.write("router { \n")
             router_conf.write("    id: abc\\bdef \n")
             router_conf.write("}")
-
+        lib_include_path = os.path.join(os.environ["QPID_DISPATCH_HOME"], "python")
         p = self.popen(
-            ['qdrouterd', '-c', conf_path],
+            ['qdrouterd', '-c', conf_path, '-I', lib_include_path],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_FAIL,
             universal_newlines=True)
         out = p.communicate(timeout=5)[0]
@@ -228,9 +229,9 @@ class RouterTestIdFailWhiteSpace(TestCase):
             router_conf.write("router { \n")
             router_conf.write("    id: abc def \n")
             router_conf.write("}")
-
+        lib_include_path = os.path.join(os.environ["QPID_DISPATCH_HOME"], "python")
         p = self.popen(
-            ['qdrouterd', '-c', conf_path],
+            ['qdrouterd', '-c', conf_path, '-I', lib_include_path],
             stdin=PIPE, stdout=PIPE, stderr=STDOUT, expect=Process.EXIT_FAIL,
             universal_newlines=True)
         out = p.communicate(timeout=5)[0]
