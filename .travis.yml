@@ -107,7 +107,8 @@ before_script:
 - mkdir build
 - pushd build
 - cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=${BUILD_TYPE} ${DISPATCH_CMAKE_ARGS}
-- cmake --build . --target install -- -j $NPROC
+- . config.sh
+- make -j $NPROC
 
 script:
 - pushd ../qpid-proton
