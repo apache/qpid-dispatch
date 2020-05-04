@@ -514,6 +514,7 @@ struct qdr_address_t {
     qdr_address_config_t      *config;
     qdr_subscription_list_t    subscriptions; ///< In-process message subscribers
     qdr_connection_ref_list_t  conns;         ///< Local Connections for route-destinations
+    qdr_link_ref_list_t        pending_rlinks;///< Locally-Connected Consumers that have not yet issued credit
     qdr_link_ref_list_t        rlinks;        ///< Locally-Connected Consumers
     qdr_link_ref_list_t        inlinks;       ///< Locally-Connected Producers
     qd_bitmask_t              *rnodes;        ///< Bitmask of remote routers with connected consumers
