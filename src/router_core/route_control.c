@@ -378,9 +378,22 @@ qdr_link_route_t *qdr_route_add_link_route_CT(qdr_core_t             *core,
     }
 
     //
+    // If a name was provided, use that as the key to insert the this link route name into the hashtable so
+    // we can quickly find it later.
+    //
+    if (name) {
+        qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+        qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+        qd_hash_insert(core->addr_lr_al_hash, name, lr, &lr->hash_handle);
+        qd_iterator_reset_view(name, iter_view);
+    }
+
+    //
     // Add the link route to the core list
     //
     DEQ_INSERT_TAIL(core->link_routes, lr);
+
+
     qd_log(core->log, QD_LOG_TRACE, "Link route %spattern added: pattern=%s name=%s",
            is_prefix ? "prefix " : "", lr->pattern, lr->name);
 
@@ -440,6 +453,9 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
             cref = DEQ_NEXT(cref);
         }
     }
+
+    if (lr->hash_handle)
+        qd_hash_remove_by_handle(core->addr_lr_al_hash, lr->hash_handle);
 
     //
     // Remove the link route from the core list.
@@ -520,6 +536,17 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
     }
 
     //
+    // If a name was provided, use that as the key to insert the this auto link name into the hashtable so
+    // we can quickly find it later.
+    //
+    if (name) {
+        qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+        qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+        qd_hash_insert(core->addr_lr_al_hash, name, al, &al->hash_handle);
+        qd_iterator_reset_view(name, iter_view);
+    }
+
+    //
     // Add the auto_link to the core list
     //
     DEQ_INSERT_TAIL(core->auto_links, al);
@@ -542,6 +569,9 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
             cref = DEQ_NEXT(cref);
         }
     }
+
+    if (al->hash_handle)
+        qd_hash_remove_by_handle(core->addr_lr_al_hash, al->hash_handle);
 
     //
     // Remove the auto link from the core list.

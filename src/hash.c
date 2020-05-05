@@ -267,6 +267,11 @@ void qd_hash_retrieve_prefix_const(qd_hash_t *h, qd_iterator_t *iter, const void
 
 qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_iterator_t *key, void **val)
 {
+    if (!key) {
+        *val = 0;
+        return QD_ERROR_NONE;
+    }
+
     qd_hash_item_t *item = qd_hash_internal_retrieve(h, key);
     if (item)
         *val = item->v.val;
@@ -322,10 +327,14 @@ const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle)
 
 qd_error_t qd_hash_remove_by_handle(qd_hash_t *h, qd_hash_handle_t *handle)
 {
+    if (!handle)
+        return QD_ERROR_NONE;
+
     unsigned char *key   = 0;
     qd_error_t     error = qd_hash_remove_by_handle2(h, handle, &key);
     if (key)
         free(key);
+
     return error;
 }
 

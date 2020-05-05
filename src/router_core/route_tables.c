@@ -219,7 +219,10 @@ void qdr_route_table_setup_CT(qdr_core_t *core)
 {
     DEQ_INIT(core->addrs);
     DEQ_INIT(core->routers);
-    core->addr_hash    = qd_hash(12, 32, 0);
+    core->addr_hash       = qd_hash(12, 32, 0);
+    core->addr_lr_al_hash = qd_hash(12, 32, 0);
+
+
     core->conn_id_hash = qd_hash(6, 4, 0);
     core->cost_epoch   = 1;
     core->addr_parse_tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
