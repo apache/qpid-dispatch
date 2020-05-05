@@ -60,6 +60,7 @@ const char *qdr_config_auto_link_columns[] =
      0};
 
 const char *CONFIG_AUTOLINK_TYPE = "org.apache.qpid.dispatch.router.config.autoLink";
+const char CONFIG_AUTO_LINK_PREFIX = 'A';
 
 static void qdr_config_auto_link_insert_column_CT(qdr_auto_link_t *al, int col, qd_composed_field_t *body, bool as_map)
 {
@@ -374,12 +375,16 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         //
         // Ensure there isn't a duplicate name and that the body is a map
         //
-        qdr_auto_link_t *al = DEQ_HEAD(core->auto_links);
-        while (al) {
-            if (name && al->name && qd_iterator_equal(name, (const unsigned char*) al->name))
-                break;
-            al = DEQ_NEXT(al);
+        qdr_auto_link_t *al = 0;
+
+        if (name) {
+            qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+            qd_iterator_annotate_prefix(name, CONFIG_AUTO_LINK_PREFIX);
+            qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+            qd_hash_retrieve(core->addr_lr_al_hash, name, (void**) &al);
+            qd_iterator_reset_view(name, iter_view);
         }
+
 
         if (!!al) {
             query->status = QD_AMQP_BAD_REQUEST;

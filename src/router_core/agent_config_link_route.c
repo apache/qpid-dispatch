@@ -55,6 +55,7 @@ const char *qdr_config_link_route_columns[] =
      0};
 
 const char *CONFIG_LINKROUTE_TYPE = "org.apache.qpid.dispatch.router.config.linkRoute";
+const char CONFIG_LINK_ROUTE_PREFIX = 'L';
 
 const qd_amqp_error_t QD_AMQP_NAME_IDENTITY_MISSING = { 400, "No name or identity provided" };
 
@@ -396,12 +397,16 @@ void qdra_config_link_route_create_CT(qdr_core_t        *core,
         //
         // Ensure there isn't a duplicate name and that the body is a map
         //
-        qdr_link_route_t *lr = DEQ_HEAD(core->link_routes);
-        while (lr) {
-            if (name && lr->name && qd_iterator_equal(name, (const unsigned char*) lr->name))
-                break;
-            lr = DEQ_NEXT(lr);
+        qdr_link_route_t *lr = 0;
+
+        if (name) {
+            qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+            qd_iterator_annotate_prefix(name, CONFIG_LINK_ROUTE_PREFIX);
+            qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+            qd_hash_retrieve(core->addr_lr_al_hash, name, (void**) &lr);
+            qd_iterator_reset_view(name, iter_view);
         }
+
 
         if (!!lr) {
             query->status = QD_AMQP_BAD_REQUEST;

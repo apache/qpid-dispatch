@@ -49,6 +49,7 @@ const char *qdr_config_address_columns[] =
      0};
 
 const char *CONFIG_ADDRESS_TYPE = "org.apache.qpid.dispatch.router.config.address";
+const char CONFIG_ADDRESS_PREFIX = 'C';
 
 static void qdr_config_address_insert_column_CT(qdr_address_config_t *addr, int col, qd_composed_field_t *body, bool as_map)
 {
@@ -340,13 +341,15 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
 
     while (true) {
         //
-        // Ensure there isn't a duplicate name and that the body is a map
+        // Ensure there isn't a duplicate name
         //
-        qdr_address_config_t *addr = DEQ_HEAD(core->addr_config);
-        while (addr) {
-            if (name && addr->name && qd_iterator_equal(name, (const unsigned char*) addr->name))
-                break;
-            addr = DEQ_NEXT(addr);
+        qdr_address_config_t *addr = 0;
+        if (name) {
+            qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+            qd_iterator_annotate_prefix(name, CONFIG_ADDRESS_PREFIX);
+            qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+            qd_hash_retrieve(core->addr_lr_al_hash, name, (void**) &addr);
+            qd_iterator_reset_view(name, iter_view);
         }
 
         if (!!addr) {
@@ -356,6 +359,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
             break;
         }
 
+        // Ensure that the body is a map
         if (!qd_parse_is_map(in_body)) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = "Body of request must be a map";
@@ -476,8 +480,14 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
 
         qd_iterator_reset_view(iter, ITER_VIEW_ALL);
         qd_parse_tree_add_pattern(core->addr_parse_tree, iter, addr);
-        DEQ_INSERT_TAIL(core->addr_config, addr);
 
+        DEQ_INSERT_TAIL(core->addr_config, addr);
+        if (name) {
+            qd_iterator_view_t iter_view = qd_iterator_get_view(name);
+            qd_iterator_reset_view(name, ITER_VIEW_ADDRESS_HASH);
+            qd_hash_insert(core->addr_lr_al_hash, name, addr, &addr->hash_handle);
+            qd_iterator_reset_view(name, iter_view);
+        }
         //
         // Compose the result map for the response.
         //

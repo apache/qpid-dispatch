@@ -607,6 +607,7 @@ struct qdr_address_config_t {
     int                     in_phase;
     int                     out_phase;
     int                     priority;
+    qd_hash_handle_t        *hash_handle;
 };
 
 DEQ_DECLARE(qdr_address_config_t, qdr_address_config_list_t);
@@ -713,6 +714,7 @@ struct qdr_link_route_t {
     char                   *add_prefix;
     char                   *del_prefix;
     qdr_connection_t       *parent_conn;
+    qd_hash_handle_t       *hash_handle;
 };
 
 void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr);
@@ -760,6 +762,7 @@ struct qdr_auto_link_t {
     qdr_core_timer_t      *retry_timer; // If the auto link attach fails or gets disconnected, this timer retries the attach.
     char                  *last_error;
     bool                   fallback;   // True iff this auto-link attaches to a fallback destination for an address.
+    qd_hash_handle_t      *hash_handle;
 };
 
 DEQ_DECLARE(qdr_auto_link_t, qdr_auto_link_list_t);
@@ -847,6 +850,9 @@ struct qdr_core_t {
     int               worker_thread_count;
 
     qdr_address_config_list_t  addr_config;
+    // Hash to hold names of address configs, link routes and auto links.
+    // address config prefix = 'C', auto link prefix = 'A', link route prefix = 'L'
+    qd_hash_t                 *addr_lr_al_hash;
     qdr_auto_link_list_t       auto_links;
     qdr_link_route_list_t      link_routes;
     qd_hash_t                 *conn_id_hash;
