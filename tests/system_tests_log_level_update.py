@@ -70,7 +70,7 @@ class ManyLogFilesTest(TestCase):
 
         TEST_ADDRESS = "test_multiple_log_file"
 
-        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
+        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS, credit=1)
         blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
 
         TEST_MSG = "LOGTEST"
@@ -145,7 +145,7 @@ class LogModuleProtocolTest(TestCase):
     def create_sender_receiver(self, test_address, test_msg, blocking_connection=None):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
-        blocking_receiver = blocking_connection.create_receiver(address=test_address)
+        blocking_receiver = blocking_connection.create_receiver(address=test_address, credit=1)
         blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
@@ -273,7 +273,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         # Create a receiver and make sure the MAU update is seen on the inter-router connection log
         TEST_ADDR_1 = "EnableConnectionLevelProtocolTraceTest1"
         conn_2 = BlockingConnection(self.address)
-        blocking_receiver_1 = conn_2.create_receiver(address=TEST_ADDR_1)
+        blocking_receiver_1 = conn_2.create_receiver(address=TEST_ADDR_1, credit=1)
 
         # Give some time for the MAU to go over the inter-router link
         time.sleep(2)
@@ -293,7 +293,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
         # Create a receiver and make sure the MAU update is NOT seen on the inter-router connection log
         TEST_ADDR_2 = "EnableConnectionLevelProtocolTraceTest2"
         conn_1 = BlockingConnection(self.address)
-        blocking_receiver_2 = conn_1.create_receiver(address=TEST_ADDR_2)
+        blocking_receiver_2 = conn_1.create_receiver(address=TEST_ADDR_2, credit=1)
 
         time.sleep(1)
 
@@ -368,10 +368,10 @@ class EnableConnectionLevelProtocolTraceTest(TestCase):
         # Turn on trace logging for connection with identity conn_id
         qd_manager.update("org.apache.qpid.dispatch.connection", {"enableProtocolTrace": "true"}, identity=conn_id)
 
-        blocking_receiver_1 = conn_1.create_receiver(address=TEST_ADDR_1)
+        blocking_receiver_1 = conn_1.create_receiver(address=TEST_ADDR_1, credit=1)
         blocking_sender_1 = conn_1.create_sender(address=TEST_ADDR_1, options=apply_options)
 
-        blocking_receiver_2 = conn_2.create_receiver(address=TEST_ADDR_2)
+        blocking_receiver_2 = conn_2.create_receiver(address=TEST_ADDR_2, credit=1)
         blocking_sender_2 = conn_2.create_sender(address=TEST_ADDR_2, options=apply_options)
 
         num_attaches_1 = 0
@@ -434,7 +434,7 @@ class LogLevelUpdateTest(TestCase):
     def create_sender_receiver(self, test_address, test_msg, blocking_connection=None):
         if not blocking_connection:
             blocking_connection = BlockingConnection(self.address)
-        blocking_receiver = blocking_connection.create_receiver(address=test_address)
+        blocking_receiver = blocking_connection.create_receiver(address=test_address, credit=1)
         blocking_sender = blocking_connection.create_sender(address=test_address,  options=apply_options)
         msg = Message(body=test_msg)
         blocking_sender.send(msg)
@@ -605,7 +605,7 @@ class RouterCoreModuleLogTest(TestCase):
 
         TEST_ADDRESS = "test_multiple_log_file"
 
-        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS)
+        blocking_receiver = blocking_connection.create_receiver(address=TEST_ADDRESS, credit=1)
         blocking_sender = blocking_connection.create_sender(address=TEST_ADDRESS,  options=apply_options)
 
         TEST_MSG_BODY = "LOGTEST"

@@ -1005,7 +1005,9 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     if (link->ref[QDR_LINK_LIST_CLASS_ADDRESS]) {
         assert(link->owning_addr);
         qdr_del_link_ref((link->link_direction == QD_OUTGOING)
-                         ? &link->owning_addr->rlinks
+                         ? (link->initial_credit_received == 0
+                            ? &link->owning_addr->pending_rlinks
+                            : &link->owning_addr->rlinks)
                          : &link->owning_addr->inlinks,
                          link,  QDR_LINK_LIST_CLASS_ADDRESS);
     }
@@ -1290,6 +1292,7 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
     // deleted.
     //
     if (DEQ_SIZE(addr->subscriptions) == 0
+        && DEQ_SIZE(addr->pending_rlinks) == 0
         && DEQ_SIZE(addr->rlinks) == 0
         && DEQ_SIZE(addr->inlinks) == 0
         && qd_bitmask_cardinality(addr->rnodes) == 0
@@ -1517,7 +1520,9 @@ static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
         link->owning_addr = core->hello_addr;
-        qdr_add_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        qdr_add_link_ref(link->initial_credit_received == 0
+                         ? &core->hello_addr->pending_rlinks
+                         : &core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         core->control_links_by_mask_bit[conn->mask_bit] = link;
     }
 }
@@ -1526,7 +1531,9 @@ static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
-        qdr_del_link_ref(&core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        qdr_del_link_ref(link->initial_credit_received == 0
+                         ? &core->hello_addr->pending_rlinks
+                         : &core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         link->owning_addr = 0;
         core->control_links_by_mask_bit[conn->mask_bit] = 0;
         qdr_post_link_lost_CT(core, conn->mask_bit);

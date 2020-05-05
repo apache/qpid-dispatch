@@ -317,6 +317,13 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     bool drain_was_set    = !link->drain_mode && drain;
     qdr_link_work_t *work = 0;
 
+    //
+    // If this is an outgoing link and it is the first time credit has been issued,
+    // report it.
+    //
+    if (credit > 0 && link->link_direction == QD_OUTGOING && link->initial_credit_received == 0)
+        qdr_core_link_credit_received_CT(core, link, credit);
+
     link->drain_mode = drain;
 
     //

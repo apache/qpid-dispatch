@@ -103,7 +103,7 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
         break;
 
     case QDR_ADDRESS_SUBSCRIBER_COUNT:
-        qd_compose_insert_uint(body, DEQ_SIZE(addr->rlinks));
+        qd_compose_insert_uint(body, DEQ_SIZE(addr->rlinks) + DEQ_SIZE(addr->pending_rlinks));
         break;
 
     case QDR_ADDRESS_REMOTE_COUNT:

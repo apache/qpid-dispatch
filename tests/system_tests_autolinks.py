@@ -796,7 +796,7 @@ class AutolinkAttachTest(MessagingHandler):
 
 class AutolinkCreditTest(MessagingHandler):
     def __init__(self, normal_address, route_address):
-        super(AutolinkCreditTest, self).__init__(prefetch=0)
+        super(AutolinkCreditTest, self).__init__()
         self.normal_address = normal_address
         self.route_address  = route_address
         self.dest           = 'node.1'

@@ -509,7 +509,7 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
     // Remove the address from the list, hash index, and parse tree
     DEQ_REMOVE(core->addrs, addr);
     if (addr->hash_handle) {
-        const char *a_str = (const char *)qd_hash_key_by_handle(addr->hash_handle);
+        const char *a_str = (const char*) qd_hash_key_by_handle(addr->hash_handle);
         if (QDR_IS_LINK_ROUTE(a_str[0])) {
             qd_iterator_t *iter = qd_iterator_string(a_str, ITER_VIEW_ALL);
             qdr_link_route_unmap_pattern_CT(core, iter);
@@ -521,6 +521,7 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 
     // Free resources associated with this address
 
+    DEQ_APPEND(addr->rlinks, addr->pending_rlinks);
     DEQ_APPEND(addr->rlinks, addr->inlinks);
     qdr_link_ref_t *lref = DEQ_HEAD(addr->rlinks);
     while (lref) {
@@ -567,12 +568,20 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
         link->phase = (int) (key[1] - '0');
 
     if (link->link_direction == QD_OUTGOING) {
-        qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        if (DEQ_SIZE(addr->rlinks) == 1) {
-            qdr_addr_start_inlinks_CT(core, addr);
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
-        } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
+        if (link->initial_credit_received == 0) {
+            qdr_add_link_ref(&addr->pending_rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        } else {
+            qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+
+            //
+            // Generate core events appropriately for the new rlink.
+            //
+            if (DEQ_SIZE(addr->rlinks) == 1) {
+                qdr_addr_start_inlinks_CT(core, addr);
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
+            } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
+        }
     } else {  // link->link_direction == QD_INCOMING
         qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->inlinks) == 1) {
@@ -593,11 +602,15 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
     link->owning_addr = 0;
 
     if (link->link_direction == QD_OUTGOING) {
-        qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        if (DEQ_SIZE(addr->rlinks) == 0) {
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
-        } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
-            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
+        if (link->initial_credit_received == 0) {
+            qdr_del_link_ref(&addr->pending_rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+        } else {
+            qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            if (DEQ_SIZE(addr->rlinks) == 0) {
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
+            } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
+        }
     } else {
         bool removed = qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (removed) {
@@ -610,6 +623,32 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
                 if (!!addr->fallback && !link->fallback)
                     qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
             }
+        }
+    }
+}
+
+
+void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+{
+    if (link->link_direction == QD_OUTGOING && link->initial_credit_received == 0) {
+        link->initial_credit_received = credit;
+        qdr_address_t *addr = link->owning_addr;
+        if (addr) {
+            //
+            // Initial credit has been established for this link and the link has an address.
+            // Move the link from pending_rlinks to rlinks.
+            //
+            qdr_del_link_ref(&addr->pending_rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+            qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+
+            //
+            // Generate core events appropriately for the new rlink.
+            //
+            if (DEQ_SIZE(addr->rlinks) == 1) {
+                qdr_addr_start_inlinks_CT(core, addr);
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
+            } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
         }
     }
 }

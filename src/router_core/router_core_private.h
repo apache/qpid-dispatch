@@ -448,6 +448,7 @@ struct qdr_link_t {
     int                      credit_pending;    ///< Number of credits to be issued once consumers are available
     int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them.
     int                      credit_reported;   ///< Number of credits to expose to management
+    int                      initial_credit_received; ///< If this link is outgoing, the number of credits initially issued by peer.
     uint32_t                 zero_credit_time;  ///< Number of core ticks when credit last went to zero
     bool                     reported_as_blocked; ///< The fact that this link has been blocked with zero credit has been logged
     bool                     admin_enabled;
@@ -590,6 +591,7 @@ qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char* prefix, c
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
 void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
+void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int credit);
 void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_setup_fallback_address_CT(qdr_core_t *core, qdr_address_t *addr);
