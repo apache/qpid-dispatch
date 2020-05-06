@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+from os import path
 from time import sleep
 from threading import Event
 from threading import Timer
@@ -1646,7 +1647,7 @@ class LinkRouteProxyTest(TestCase):
         numbers advertised in the incoming @open frame
         """
         lines = None
-        with open("../setUpClass/INT.A.log") as inta_log:
+        with open(path.join(self.INT_A.outdir, "INT.A.log")) as inta_log:
             lines = [l for l in inta_log.read().split("\n")
                      if "] Connection Opened: " in l
                      or "] Peer router version: " in l]
