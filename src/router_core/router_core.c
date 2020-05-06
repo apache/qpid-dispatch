@@ -459,6 +459,7 @@ void qdr_core_delete_link_route(qdr_core_t *core, qdr_link_route_t *lr)
     free(lr->del_prefix);
     free(lr->name);
     free(lr->pattern);
+    assert(lr->hash_handle == 0);
     qd_hash_handle_free(lr->hash_handle);
     free_qdr_link_route_t(lr);
 }
@@ -476,6 +477,7 @@ void qdr_core_delete_auto_link(qdr_core_t *core, qdr_auto_link_t *al)
 
     free(al->name);
     free(al->external_addr);
+    assert(al->hash_handle == 0);
     qd_hash_handle_free(al->hash_handle);
     qdr_core_timer_free_CT(core, al->retry_timer);
     free_qdr_auto_link_t(al);
@@ -485,6 +487,7 @@ static void free_address_config(qdr_address_config_t *addr)
 {
     free(addr->name);
     free(addr->pattern);
+    assert(addr->hash_handle == 0);
     qd_hash_handle_free(addr->hash_handle);
     free_qdr_address_config_t(addr);
 }
@@ -684,8 +687,11 @@ void qdr_core_remove_address_config(qdr_core_t *core, qdr_address_config_t *addr
     qd_iterator_t *pattern = qd_iterator_string(addr->pattern, ITER_VIEW_ALL);
 
     // Remove the address from the list and the parse tree
-    if (addr->hash_handle)
+    if (addr->hash_handle) {
         qd_hash_remove_by_handle(core->addr_lr_al_hash, addr->hash_handle);
+        qd_hash_handle_free(addr->hash_handle);
+        addr->hash_handle = 0;
+    }
     DEQ_REMOVE(core->addr_config, addr);
     qd_parse_tree_remove_pattern(core->addr_parse_tree, pattern);
     addr->ref_count--;

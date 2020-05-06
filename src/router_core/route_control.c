@@ -454,8 +454,11 @@ void qdr_route_del_link_route_CT(qdr_core_t *core, qdr_link_route_t *lr)
         }
     }
 
-    if (lr->hash_handle)
+    if (lr->hash_handle) {
         qd_hash_remove_by_handle(core->addr_lr_al_hash, lr->hash_handle);
+        qd_hash_handle_free(lr->hash_handle);
+        lr->hash_handle = 0;
+    }
 
     //
     // Remove the link route from the core list.
@@ -570,8 +573,11 @@ void qdr_route_del_auto_link_CT(qdr_core_t *core, qdr_auto_link_t *al)
         }
     }
 
-    if (al->hash_handle)
+    if (al->hash_handle) {
         qd_hash_remove_by_handle(core->addr_lr_al_hash, al->hash_handle);
+        qd_hash_handle_free(al->hash_handle);
+        al->hash_handle = 0;
+    }
 
     //
     // Remove the auto link from the core list.
