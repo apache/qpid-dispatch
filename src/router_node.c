@@ -46,6 +46,8 @@ static char *node_id;
 static void deferred_AMQP_rx_handler(void *context, bool discard);
 static bool parse_failover_property_list(qd_router_t *router, qd_connection_t *conn, pn_data_t *props);
 
+const char *QD_AMQP_COND_OVERSIZE_DESCRIPTION = "Message size exceeded";
+
 //==============================================================================
 // Functions to handle the linkage between proton deliveries and qdr deliveries
 //==============================================================================
@@ -400,23 +402,26 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     } else {
         // message is oversize
         if (receive_complete) {
-            // reject and settle the incoming delivery
+            // set condition, reject, and settle the incoming delivery
+            pn_condition_t *lcond = pn_disposition_condition(pn_delivery_local(pnd));
+            (void) pn_condition_set_name(       lcond, QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED);
+            (void) pn_condition_set_description(lcond, QD_AMQP_COND_OVERSIZE_DESCRIPTION);
             pn_delivery_update(pnd, PN_REJECTED);
             pn_delivery_settle(pnd);
             // close the link
             pn_link_close(pn_link);
-            // close the connection
+            // set condition and close the connection
             pn_connection_t * pn_conn = qd_connection_pn(conn);
             pn_condition_t * cond = pn_connection_condition(pn_conn);
             (void) pn_condition_set_name(       cond, QD_AMQP_COND_CONNECTION_FORCED);
-            (void) pn_condition_set_description(cond, "Message size exceeded");
+            (void) pn_condition_set_description(cond, QD_AMQP_COND_OVERSIZE_DESCRIPTION);
             pn_connection_close(pn_conn);
             if (!delivery) {
                 // this message has not been forwarded yet, so it will not be
                 // cleaned up when the link is freed.
                 qd_message_free(msg);
             }
-            // stop activity on this connection
+            // stop all message reception on this connection
             conn->closed_locally = true;
         }
         return false;

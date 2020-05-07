@@ -44,6 +44,8 @@ W_THREADS = 2
 OVERSIZE_CONDITION_NAME = "amqp:connection:forced"
 OVERSIZE_CONDITION_DESC = "Message size exceeded"
 
+OVERSIZE_LINK_CONDITION_NAME = "amqp:link:message-size-exceeded"
+
 # Internal test timeout
 TEST_TIMEOUT_SECONDS = 60
 
@@ -772,7 +774,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             raise Exception("%s\n%s" % (e, out))
         return out
 
-    def sense_n_closed_lines(self, routername):
+    def sense_n_closed_lines(self, routername, pattern=OVERSIZE_CONDITION_NAME):
         """
         Read a router's log file and count how many size-exceeded lines are in it.
         :param routername:
@@ -780,8 +782,8 @@ class MaxMessageSizeBlockOversize(TestCase):
         """
         with  open("../setUpClass/%s.log" % routername, 'r') as router_log:
             log_lines = router_log.read().split("\n")
-        i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "<-" in s]
-        o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "->" in s]
+        i_closed_lines = [s for s in log_lines if pattern in s and "<-" in s]
+        o_closed_lines = [s for s in log_lines if pattern in s and "->" in s]
         return (len(i_closed_lines), len(o_closed_lines))
 
 
@@ -822,6 +824,15 @@ class MaxMessageSizeBlockOversize(TestCase):
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
             self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+
+        # Verfiy that a link was closed with the expected pattern(s)
+        ilink1, olink1 = self.sense_n_closed_lines("EB1", pattern=OVERSIZE_LINK_CONDITION_NAME)
+        success = olink1 > 0
+        if (not success):
+            test.logger.log("FAIL: Did not see link close in log file. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
+                            (obefore, oafter, ibefore, iafter))
+            test.logger.dump()
+            self.assertTrue(success), "Expected router to generate link close with condition: amqp:link:message-size-exceeded"
 
 
     # verify that a message can go through an edge EB1 and get blocked by interior INT.B
@@ -1220,8 +1231,8 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         """
         with  open("../setUpClass/%s.log" % routername, 'r') as router_log:
             log_lines = router_log.read().split("\n")
-        i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "<-" in s]
-        o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_DESC in s and "->" in s]
+        i_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "<-" in s]
+        o_closed_lines = [s for s in log_lines if OVERSIZE_CONDITION_NAME in s and "->" in s]
         return (len(i_closed_lines), len(o_closed_lines))
 
 
