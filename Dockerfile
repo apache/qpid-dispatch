@@ -37,8 +37,7 @@
 ################# Begin code #######
 
 # Get the latest Centos version from dockerhub
-#FROM centos:latest  NEEDS JIRA DISPATCH-1444 FIXED!
-FROM centos:7
+FROM centos:latest
 
 MAINTAINER "dev@qpid.apache.org"
 
