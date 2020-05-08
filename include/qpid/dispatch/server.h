@@ -604,7 +604,7 @@ bool qd_connection_strip_annotations_in(const qd_connection_t *c);
 
 void qd_connection_wake(qd_connection_t *ctx);
 
-int qd_connection_max_message_size(const qd_connection_t *c);
+uint64_t qd_connection_max_message_size(const qd_connection_t *c);
 
 /**
  * @}
