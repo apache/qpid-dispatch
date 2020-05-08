@@ -101,6 +101,7 @@ class PageLayout extends React.PureComponent {
     this.inflightChartData = new inflightData(this.service);
     this.updateCharts();
     document.title = this.props.config.title;
+    this.idleUnregister = idle(1000 * 60 * 60, this.handleIdleTimeout);
   };
 
   componentWillUnmount = () => {
@@ -109,6 +110,15 @@ class PageLayout extends React.PureComponent {
       this.inflightChartData.stop();
       clearInterval(this.chartTimer);
     }
+    if (this.idleUnregister) {
+      this.idleUnregister();
+    }
+  };
+
+  handleIdleTimeout = () => {
+    this.props.history.replace(
+      `${this.props.location.pathname}${this.props.location.search}`
+    );
   };
 
   tryInitialConnect = () => {
@@ -531,3 +541,22 @@ class PageLayout extends React.PureComponent {
 }
 
 export default PageLayout;
+
+const idle = (elapsed, callback) => {
+  let timer;
+  const inactive = () => {
+    callback();
+    active();
+  };
+  const active = () => {
+    clearTimeout(timer);
+    timer = setTimeout(inactive, elapsed);
+  };
+  const unload = () => {
+    clearTimeout(timer);
+    document.removeEventListener("mousemove", active);
+  };
+  document.addEventListener("mousemove", active, true);
+  active();
+  return unload;
+};
