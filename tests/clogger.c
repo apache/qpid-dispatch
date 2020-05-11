@@ -186,7 +186,7 @@ bool send_message_data()
         }
         bytes_sent += rc;
 
-        debug("message body bytes written=%"PRIu32" total=%"PRIu32" body_length=%"PRIu32"\n",
+        debug("message body bytes written=%zi total=%"PRIu32" body_length=%"PRIu32"\n",
               rc, bytes_sent, body_length);
     }
 
