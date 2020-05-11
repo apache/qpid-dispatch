@@ -249,7 +249,7 @@ stuck::
 The number of deliveries on this link that are flagged as "stuck".  A delivery is considered stuck if it has been either undelivered or unsettled for more than 10 seconds.
 
 cred::
-The number of flow credits currently available on this link.
+For outgoing links: The number of flow credits currently available on this link; for incoming links: The established credit loop based on end-to-end flow control.
 
 blkd::
 The time elapsed since the available credit for this link became zero and has remained zero.
@@ -351,6 +351,18 @@ For this router, the number of local consumers for this address, or for link-rou
 
 remote::
 The number of remote routers that have at least one consumer for this address.
+
+inLocal::
+The number of incoming links for this address attached to the local router.
+
+inRemote::
+The number of incoming links for this address on all remote interior routers.
+
+credLocal::
+The aggregate amount of credit issued for this address by locally attached receivers.  Each outgoing link's credit it limited by the configured capacity.
+
+credRemote::
+The total amount of credit issued for this address by receivers attached to remote interior routers.
 
 in::
 The number of deliveries for this address that entered the network on this router.

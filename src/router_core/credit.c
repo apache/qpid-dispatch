@@ -63,6 +63,17 @@
 // If an address is associated with an exchange, an internal endpoint, or a remote router,
 // it is considered reachable and the credit loop shall be set at the link's capacity.
 //
+//
+// Residual Credit:
+//
+// Residual credit is the amount of credit left in an incoming credit-window when that window
+// is reduced.  For example, if the window was 100 and is reduced to 80, there is a residual
+// credit of 20.  This is the difference between the in-effect window (on the wire) and the
+// desired credit-window.  When replacement credit is issued to a link and there is residual
+// credit on that link, the residual credit is consumed (reduced) without issuing actual link
+// credits.  In other words, the residual credit is the number of replacement credits that will
+// _not_ be issued in order to shrink the in-effect credit window for an incoming link.
+//
 
 static qdrc_event_subscription_t *credit_event_sub;
 
@@ -103,6 +114,11 @@ static void qdrc_credit_set_link_flow_CT(qdr_core_t *core, qdr_link_t *link, int
         //
         link->credit_residual += link->credit_window - credit;
         link->credit_window = credit;
+
+        //
+        // TODO: If the new window is zero, consider draining the link immediately.  It's not clear
+        // how the residual credit should be calculated in this case.
+        //
     }
 }
 

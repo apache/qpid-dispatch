@@ -558,7 +558,8 @@ class BusManager(Node):
 
         rows = []
         cols = ('distribution', 'inProcess', 'subscriberCount', 'remoteCount',
-                'containerCount', 'deliveriesIngress', 'deliveriesEgress', 'deliveriesRedirectedToFallback',
+                'containerCount', 'inLinksLocal', 'inLinksRemote', 'outCreditLocal', 'outCreditRemote',
+                'deliveriesIngress', 'deliveriesEgress', 'deliveriesRedirectedToFallback',
                 'deliveriesTransit', 'deliveriesToContainer', 'deliveriesFromContainer', 'name', 'priority')
 
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
@@ -580,6 +581,10 @@ class BusManager(Node):
             heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
+        heads.append(Header("inLocal", Header.COMMAS))
+        heads.append(Header("inRemote", Header.COMMAS))
+        heads.append(Header("credLocal", Header.COMMAS))
+        heads.append(Header("credRemote", Header.COMMAS))
         heads.append(Header("in", Header.COMMAS))
         heads.append(Header("out", Header.COMMAS))
         heads.append(Header("thru", Header.COMMAS))
@@ -600,6 +605,10 @@ class BusManager(Node):
                 row.append(addr.inProcess)
             row.append(PlainNum(addr.containerCount) if addr.name[0] in 'CDEF' else PlainNum(addr.subscriberCount))
             row.append(PlainNum(addr.remoteCount))
+            row.append(PlainNum(addr.inLinksLocal))
+            row.append(PlainNum(addr.inLinksRemote))
+            row.append(PlainNum(addr.outCreditLocal))
+            row.append(PlainNum(addr.outCreditRemote))
             row.append(PlainNum(addr.deliveriesIngress))
             row.append(PlainNum(addr.deliveriesEgress))
             row.append(PlainNum(addr.deliveriesTransit))

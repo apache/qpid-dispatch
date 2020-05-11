@@ -29,18 +29,22 @@
 #define QDR_ADDRESS_SUBSCRIBER_COUNT                    6
 #define QDR_ADDRESS_REMOTE_COUNT                        7
 #define QDR_ADDRESS_CONTAINER_COUNT                     8
-#define QDR_ADDRESS_REMOTE_HOST_ROUTERS                 9
-#define QDR_ADDRESS_DELIVERIES_INGRESS                 10
-#define QDR_ADDRESS_DELIVERIES_EGRESS                  11
-#define QDR_ADDRESS_DELIVERIES_TRANSIT                 12
-#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER            13
-#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER          14
-#define QDR_ADDRESS_DELIVERIES_EGRESS_ROUTE_CONTAINER  15
-#define QDR_ADDRESS_DELIVERIES_INGRESS_ROUTE_CONTAINER 16
-#define QDR_ADDRESS_TRANSIT_OUTSTANDING                17
-#define QDR_ADDRESS_TRACKED_DELIVERIES                 18
-#define QDR_ADDRESS_PRIORITY                           19
-#define QDR_ADDRESS_DELIVERIES_REDIRECTED              20
+#define QDR_ADDRESS_IN_LINKS_LOCAL                      9
+#define QDR_ADDRESS_IN_LINKS_REMOTE                    10
+#define QDR_ADDRESS_OUT_CREDIT_LOCAL                   11
+#define QDR_ADDRESS_OUT_CREDIT_REMOTE                  12
+#define QDR_ADDRESS_REMOTE_HOST_ROUTERS                13
+#define QDR_ADDRESS_DELIVERIES_INGRESS                 14
+#define QDR_ADDRESS_DELIVERIES_EGRESS                  15
+#define QDR_ADDRESS_DELIVERIES_TRANSIT                 16
+#define QDR_ADDRESS_DELIVERIES_TO_CONTAINER            17
+#define QDR_ADDRESS_DELIVERIES_FROM_CONTAINER          18
+#define QDR_ADDRESS_DELIVERIES_EGRESS_ROUTE_CONTAINER  19
+#define QDR_ADDRESS_DELIVERIES_INGRESS_ROUTE_CONTAINER 20
+#define QDR_ADDRESS_TRANSIT_OUTSTANDING                21
+#define QDR_ADDRESS_TRACKED_DELIVERIES                 22
+#define QDR_ADDRESS_PRIORITY                           23
+#define QDR_ADDRESS_DELIVERIES_REDIRECTED              24
 
 const char *qdr_address_columns[] =
     {"name",
@@ -52,6 +56,10 @@ const char *qdr_address_columns[] =
      "subscriberCount",
      "remoteCount",
      "containerCount",
+     "inLinksLocal",
+     "inLinksRemote",
+     "outCreditLocal",
+     "outCreditRemote",
      "remoteHostRouters",
      "deliveriesIngress",
      "deliveriesEgress",
@@ -112,6 +120,22 @@ static void qdr_insert_address_columns_CT(qdr_core_t          *core,
 
     case QDR_ADDRESS_CONTAINER_COUNT:
         qd_compose_insert_uint(body, DEQ_SIZE(addr->conns));
+        break;
+
+    case QDR_ADDRESS_IN_LINKS_LOCAL:
+        qd_compose_insert_uint(body, DEQ_SIZE(addr->inlinks));
+        break;
+
+    case QDR_ADDRESS_IN_LINKS_REMOTE:
+        qd_compose_insert_uint(body, addr->remote_inlinks_total);
+        break;
+
+    case QDR_ADDRESS_OUT_CREDIT_LOCAL:
+        qd_compose_insert_uint(body, addr->local_out_credit);
+        break;
+
+    case QDR_ADDRESS_OUT_CREDIT_REMOTE:
+        qd_compose_insert_uint(body, addr->remote_out_credit_total);
         break;
 
     case QDR_ADDRESS_REMOTE_HOST_ROUTERS: {

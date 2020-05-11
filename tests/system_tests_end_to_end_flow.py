@@ -87,12 +87,15 @@ class RouterTest(TestCase):
         router('EB1',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
         router('EB2',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
 
+        for i in range(6):
+            print("%d - %s" % (i, cls.routers[i].addresses[0]))
+
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
 
 
-    def test_01_initial_credit_1x7_same_interior(self):
-        test = InitialCreditTest(self.routers[0].addresses[0],
+    def test_01_initial_credit_1x1x7_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0]],
                                  [self.routers[0].addresses[0]],
                                  'address.01',
                                  7,  # receiver_credit
@@ -100,8 +103,8 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_02_initial_credit_1x500_same_interior(self):
-        test = InitialCreditTest(self.routers[0].addresses[0],
+    def test_02_initial_credit_1x1x500_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0]],
                                  [self.routers[0].addresses[0]],
                                  'address.02',
                                  500,  # receiver_credit
@@ -109,23 +112,117 @@ class RouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_03_initial_credit_4x50_same_interior(self):
-        test = InitialCreditTest(self.routers[0].addresses[0],
+    def test_03_initial_credit_1x4x50_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0]],
                                  [self.routers[0].addresses[0], self.routers[0].addresses[0],
                                   self.routers[0].addresses[0], self.routers[0].addresses[0]],
                                  'address.03',
-                                 50,  # receiver_credit
+                                 50,   # receiver_credit
                                  200)  # expected_sender_credit
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_04_initial_credit_4x80_same_interior(self):
-        test = InitialCreditTest(self.routers[0].addresses[0],
+    def test_04_initial_credit_1x4x80_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0]],
                                  [self.routers[0].addresses[0], self.routers[0].addresses[0],
                                   self.routers[0].addresses[0], self.routers[0].addresses[0]],
                                  'address.04',
-                                 80,  # receiver_credit
+                                 80,   # receiver_credit
                                  250)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_05_initial_credit_2x1x12_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0], self.routers[0].addresses[0]],
+                                 [self.routers[0].addresses[0]],
+                                 'address.05',
+                                 12, # receiver_credit
+                                 6)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_06_initial_credit_2x1x500_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0], self.routers[0].addresses[0]],
+                                 [self.routers[0].addresses[0]],
+                                 'address.06',
+                                 500,  # receiver_credit
+                                 125)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_07_initial_credit_4x1x2_same_interior(self):
+        test = InitialCreditTest([self.routers[0].addresses[0], self.routers[0].addresses[0],
+                                  self.routers[0].addresses[0], self.routers[0].addresses[0]],
+                                 [self.routers[0].addresses[0]],
+                                 'address.07',
+                                 2,  # receiver_credit
+                                 1)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_08_initial_credit_1x1x7_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0]],
+                                 'address.08',
+                                 7,  # receiver_credit
+                                 3)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_09_initial_credit_1x1x500_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0]],
+                                 'address.09',
+                                 500,  # receiver_credit
+                                 125)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_10_initial_credit_1x4x50_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0], self.routers[2].addresses[0],
+                                  self.routers[2].addresses[0], self.routers[2].addresses[0]],
+                                 'address.10',
+                                 50,   # receiver_credit
+                                 100)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_11_initial_credit_1x4x80_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0], self.routers[2].addresses[0],
+                                  self.routers[2].addresses[0], self.routers[2].addresses[0]],
+                                 'address.11',
+                                 80,   # receiver_credit
+                                 160)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_12_initial_credit_2x1x12_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0], self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0]],
+                                 'address.12',
+                                 12, # receiver_credit
+                                 4)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_13_initial_credit_2x1x500_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0], self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0]],
+                                 'address.13',
+                                 500,  # receiver_credit
+                                 83)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_14_initial_credit_4x1x2_same_edge(self):
+        test = InitialCreditTest([self.routers[2].addresses[0], self.routers[2].addresses[0],
+                                  self.routers[2].addresses[0], self.routers[2].addresses[0]],
+                                 [self.routers[2].addresses[0]],
+                                 'address.14',
+                                 2,  # receiver_credit
+                                 1)  # expected_sender_credit
         test.run()
         self.assertEqual(None, test.error)
 
@@ -139,62 +236,91 @@ class Timeout(object):
 
 
 class InitialCreditTest(MessagingHandler):
-    def __init__(self, sender_host, receiver_hosts, addr, receiver_credit, expected_sender_credit):
+    def __init__(self, sender_hosts, receiver_hosts, addr, receiver_credit, expected_sender_credit):
         """
-        Open a sender and a set of receivers for an address.  Once all receivers are open, ensure that the sender
-        remains unsendable.  Issue credit to all of the receivers and ensure that the credit given to the sender
-        is equal to the expected amount of credit.
+        Open a set of senders and a set of receivers for an address.  Once all receivers are open, ensure that the senders
+        remain unsendable.  Issue credit to all of the receivers and send enough messages through each sender to use up the
+        credit (and some extra for good measure).  Ensure that the senders equilibrated on the expected amount of credit.
         """
         super(InitialCreditTest, self).__init__(prefetch=0)
-        self.sender_host     = sender_host
+        self.sender_hosts    = sender_hosts
         self.receiver_hosts  = receiver_hosts
         self.receiver_credit = receiver_credit
         self.sender_credit   = expected_sender_credit
         self.addr            = addr
 
+        self.count                = ((receiver_credit * len(receiver_hosts)) / len(sender_hosts)) + 50
+        self.n_sent               = []
+        self.n_sender_credit      = []
         self.credit_issued        = False
-        self.n_sender_credit_seen = 0
+        self.done_sending         = False
+        self.n_senders_done       = 0
         self.open_rx_count        = 0
+        self.open_tx_count        = 0
         self.receiver_conns       = []
         self.receivers            = []
-        self.sender_conn          = None
-        self.receiver_conn        = None
+        self.sender_conns         = []
+        self.senders              = []
         self.error                = None
 
     def timeout(self):
-        self.error = "Timeout Expired (credit_issued: %r, sender_credit_seen=%d)" % (self.credit_issued, self.n_sender_credit_seen)
-        self.sender_conn.close()
-        for conn in self.receiver_conns:
-            conn.close()
+        self.error = "Timeout Expired (credit_issued: %r, n_sent=%r, n_sender_credit=%r)" % \
+            (self.credit_issued, self.n_sent, self.n_sender_credit)
+        for S in self.sender_conns:
+            S.close()
+        for R in self.receiver_conns:
+            R.close()
 
     def fail(self, error):
         self.error = error
-        self.sender_conn.close()
+        for S in self.sender_conns:
+            S.close()
         for R in self.receiver_conns:
             R.close()
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(10.0, Timeout(self))
-        self.sender_conn = event.container.connect(self.sender_host)
-        self.sender      = event.container.create_sender(self.sender_conn, self.addr)
-        for host in self.receiver_hosts:
+        self.timer = event.reactor.schedule(5.0, Timeout(self))
+        for host in self.sender_hosts:
             conn = event.container.connect(host)
-            self.receiver_conns.append(conn)
-            self.receivers.append(event.container.create_receiver(conn, self.addr))
+            self.sender_conns.append(conn)
+            self.senders.append(event.container.create_sender(conn, self.addr))
+            self.senders[len(self.senders) - 1].ordinal = len(self.senders) - 1
+            self.n_sent.append(0)
+            self.n_sender_credit.append(0)
 
     def on_sendable(self, event):
-        if event.sender == self.sender:
+        if self.done_sending:
+            # Check credit on senders
+            for sender in self.senders:
+                self.n_sender_credit[sender.ordinal] = sender.credit
+                if sender.credit != self.sender_credit:
+                    return
+            self.fail(None)
+            
+        if event.sender in self.senders:
+            ordinal = event.sender.ordinal
             if not self.credit_issued:
                 self.fail("Received sender credit before receiver credit was issued")
             else:
-                self.n_sender_credit_seen = self.sender.credit
-                if self.n_sender_credit_seen == self.sender_credit:
-                    self.fail(None)
-                if self.n_sender_credit_seen > self.sender_credit:
-                    self.fail("Excessive sender credit issued: %d, expected %d" % (self.n_sender_credit_seen, self.sender_credit))
+                while self.n_sent[ordinal] < self.count and event.sender.credit > 0:
+                    event.sender.send(Message("ord: %d count: %d" % (ordinal, self.n_sent[ordinal])))
+                    self.n_sent[ordinal] += 1
+
+    def on_message(self, event):
+        event.receiver.flow(1)
+        for c in self.n_sent:
+            if c < self.count:
+                self.done_sending = True
 
     def on_link_opened(self, event):
+        if event.sender in self.senders:
+            self.open_tx_count += 1
+            if self.open_tx_count == len(self.sender_hosts):
+                for host in self.receiver_hosts:
+                    conn = event.container.connect(host)
+                    self.receiver_conns.append(conn)
+                    self.receivers.append(event.container.create_receiver(conn, self.addr))
         if event.receiver in self.receivers:
             self.open_rx_count += 1
             if self.open_rx_count == len(self.receiver_hosts):

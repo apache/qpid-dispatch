@@ -601,6 +601,8 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
             if (!!addr->fallback && !link->fallback)
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr->fallback);
         }
+
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
     }
 }
 
@@ -638,6 +640,8 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
                 if (!!addr->fallback && !link->fallback)
                     qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
             }
+
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
         }
     }
 }

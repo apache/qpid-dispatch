@@ -274,7 +274,7 @@ static void qdr_agent_write_column_CT(qdr_core_t *core, qd_composed_field_t *bod
         break;
 
     case QDR_LINK_CREDIT_AVAILABLE:
-        qd_compose_insert_uint(body, link->credit_reported);
+        qd_compose_insert_uint(body, link->link_direction == QD_OUTGOING ? link->credit_reported : link->credit_window);
         break;
 
     case QDR_LINK_ZERO_CREDIT_SECONDS:

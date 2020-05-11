@@ -1614,6 +1614,26 @@
                     "description": "The number of attached containers that serve this route address",
                     "graph": true
                 },
+                "inLinksLocal": {
+                    "type": "integer",
+                    "description": "(Gauge) The number of incoming links for this address on the local router",
+                    "graph": true
+                },
+                "inLinksRemote": {
+                    "type": "integer",
+                    "description": "(Gauge) The total number of incoming links for this address on remote routers",
+                    "graph": true
+                },
+                "outCreditLocal": {
+                    "type": "integer",
+                    "description": "(Gauge) The aggrerate outgoing credit window for this address for links on the local router",
+                    "graph": true
+                },
+                "outCreditRemote": {
+                    "type": "integer",
+                    "description": "(Gauge) The aggrerate outgoing credit window for this address for all remote routers",
+                    "graph": true
+                },
                 "deliveriesIngress": {
                     "type": "integer",
                     "description": "The number of deliveries to this address that entered the router network on this router",
