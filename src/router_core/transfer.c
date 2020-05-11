@@ -125,11 +125,11 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
 
 
 // send up to credit pending outgoing deliveries
-int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
+int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, uint32_t credit)
 {
     qdr_connection_t *conn = link->conn;
     qdr_delivery_t   *dlv;
-    int               offer   = -1;
+    uint32_t          offer   = -1;
     bool              settled = false;
     bool              send_complete = false;
     int               num_deliveries_completed = 0;
@@ -239,7 +239,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
 }
 
 
-void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode)
+void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, uint32_t credit, bool drain_mode)
 {
     qdr_action_t *action = qdr_action(qdr_link_flow_CT, "link_flow");
 
@@ -311,11 +311,11 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     if (discard || !link)
         return;
 
-    int  credit           = action->args.connection.credit;
-    bool drain            = action->args.connection.drain;
-    bool activate         = false;
-    bool drain_was_set    = !link->drain_mode && drain;
-    qdr_link_work_t *work = 0;
+    uint32_t         credit        = action->args.connection.credit;
+    bool             drain         = action->args.connection.drain;
+    bool             activate      = false;
+    bool             drain_was_set = !link->drain_mode && drain;
+    qdr_link_work_t *work          = 0;
 
     //
     // If this is an outgoing link and it is the first time credit has been issued,
@@ -828,7 +828,7 @@ void qdr_in_process_send_to_CT(qdr_core_t *core, qd_iterator_t *address, qd_mess
 /**
  * Add link-work to provide credit to the link in an IO thread
  */
-void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain)
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, uint32_t credit, bool drain)
 {
     assert(link->link_direction == QD_INCOMING);
 

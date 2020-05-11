@@ -647,7 +647,7 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
 }
 
 
-void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, uint32_t credit)
 {
     if (link->link_direction == QD_OUTGOING && link->credit_window == 0) {
         link->credit_window = credit;

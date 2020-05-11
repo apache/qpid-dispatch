@@ -78,7 +78,7 @@
 static qdrc_event_subscription_t *credit_event_sub;
 
 
-static void qdrc_credit_set_link_flow_CT(qdr_core_t *core, qdr_link_t *link, int credit)
+static void qdrc_credit_set_link_flow_CT(qdr_core_t *core, qdr_link_t *link, uint32_t credit)
 {
     //
     // Limit the credit issued to the link's capacity.
@@ -89,7 +89,7 @@ static void qdrc_credit_set_link_flow_CT(qdr_core_t *core, qdr_link_t *link, int
         //
         // We are increasing the credit for this link.  Consume residual and issue needed credit.
         //
-        int diff = credit - link->credit_window;
+        uint32_t diff = credit - link->credit_window;
 
         if (diff > link->credit_residual) {
             //
@@ -143,7 +143,7 @@ static void qdrc_credit_flow_change_CT(void          *context,
     //
     // Compute the target credit for this address to be used in each inlink.
     //
-    int  target_credit;
+    uint32_t  target_credit;
     char addrClass = *((const char*) qd_hash_key_by_handle(addr->hash_handle));
 
     if (!!addr->exchange || DEQ_SIZE(addr->subscriptions) > 0 ||
@@ -152,7 +152,7 @@ static void qdrc_credit_flow_change_CT(void          *context,
         // The address has destinations that don't participate in credit-based flow control.  Use
         // INT_MAX as the target.  This will be reduced to the capacity for each link it is applied to.
         //
-        target_credit = INT_MAX; 
+        target_credit = UINT32_MAX; 
     } else {
         //
         // The more general case.  Compute the target based on the network-wide number of senders

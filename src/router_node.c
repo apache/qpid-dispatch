@@ -1654,7 +1654,7 @@ static void CORE_link_detach(void *context, qdr_link_t *link, qdr_error_t *error
 }
 
 
-static void CORE_link_flow(void *context, qdr_link_t *link, int credit)
+static void CORE_link_flow(void *context, qdr_link_t *link, uint32_t credit)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     if (!qlink)
@@ -1831,7 +1831,7 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
 }
 
 
-static int CORE_link_get_credit(void *context, qdr_link_t *link)
+static uint32_t CORE_link_get_credit(void *context, qdr_link_t *link)
 {
     qd_link_t *qlink = (qd_link_t*) qdr_link_get_context(link);
     pn_link_t *plink = !!qlink ? qd_link_pn(qlink) : 0;

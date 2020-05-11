@@ -206,7 +206,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
                                         bool                   strip_annotations_out,
                                         bool                   policy_allow_dynamic_link_routes,
                                         bool                   policy_allow_admin_status_update,
-                                        int                    link_capacity,
+                                        uint32_t               link_capacity,
                                         const char            *vhost,
                                         qdr_connection_info_t *connection_info,
                                         qdr_connection_bind_context_t context_binder,
@@ -688,9 +688,9 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t disposition, pn_data_t* disposition_state);
-int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
+int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, uint32_t credit);
 
-void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mode);
+void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, uint32_t credit, bool drain_mode);
 
 /**
  * Sets the link's drain flag to false and sets credit to core to zero.
@@ -708,13 +708,13 @@ typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn,
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
 typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
-typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int credit);
+typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, uint32_t credit);
 typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
 typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
 typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool mode);
 typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int limit);
 typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
-typedef int (*qdr_link_get_credit_t)     (void *context, qdr_link_t *link);
+typedef uint32_t (*qdr_link_get_credit_t) (void *context, qdr_link_t *link);
 typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
 typedef void (*qdr_connection_trace_t)   (void *context, qdr_connection_t *conn, bool trace);

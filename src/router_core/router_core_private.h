@@ -134,7 +134,7 @@ struct qdr_action_t {
             qdr_terminus_t      *target;
             qdr_error_t         *error;
             qd_detach_type_t     dt;
-            int                  credit;
+            uint32_t             credit;
             bool                 drain;
         } connection;
 
@@ -443,12 +443,12 @@ struct qdr_link_t {
     qdr_delivery_list_t      settled;            ///< Settled deliveries
     qdr_delivery_ref_list_t  updated_deliveries; ///< References to deliveries (in the unsettled list) with updates.
     qdr_link_oper_status_t   oper_status;
-    int                      capacity;
-    int                      credit_to_core;    ///< Number of the available credits incrementally given to the core
-    int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them (half-open routed links)
-    int                      credit_reported;   ///< Number of credits to expose to management
-    int                      credit_window;     ///< Outgoing: credit initially issued by peer; Incoming: current credit window
-    int                      credit_residual;   ///< Number of credit-replenishes to skip to reduce window
+    uint32_t                 capacity;
+    uint32_t                 credit_to_core;    ///< Number of the available credits incrementally given to the core
+    uint32_t                 credit_stored;     ///< Number of credits given to the link before it was ready to process them (half-open routed links)
+    uint32_t                 credit_reported;   ///< Number of credits to expose to management
+    uint32_t                 credit_window;     ///< Outgoing: credit initially issued by peer; Incoming: current credit window
+    uint32_t                 credit_residual;   ///< Number of credit-replenishes to skip to reduce window
     uint32_t                 zero_credit_time;  ///< Number of core ticks when credit last went to zero
     bool                     reported_as_blocked; ///< The fact that this link has been blocked with zero credit has been logged
     bool                     admin_enabled;
@@ -602,7 +602,7 @@ qdr_address_t *qdr_add_mobile_address_CT(qdr_core_t *core, const char* prefix, c
 void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr);
 void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
 void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link);
-void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int credit);
+void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, uint32_t credit);
 void qdr_core_bind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_core_unbind_address_conn_CT(qdr_core_t *core, qdr_address_t *addr, qdr_connection_t *conn);
 void qdr_setup_fallback_address_CT(qdr_core_t *core, qdr_address_t *addr);
@@ -949,7 +949,7 @@ void  qdr_forwarder_setup_CT(qdr_core_t *core);
 qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label);
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action);
-void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
+void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, uint32_t credit, bool drain);
 
 /**
  * Returns true if the passed in address is a mobile address, false otherwise
