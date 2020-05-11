@@ -87,8 +87,8 @@ class RouterTest(TestCase):
         router('EB1',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
         router('EB2',   'edge',     ('connector', {'name': 'edge', 'role': 'edge', 'port': edge_port_B}))
 
-        for i in range(6):
-            print("%d - %s" % (i, cls.routers[i].addresses[0]))
+        #for i in range(6):
+        #    print("%d - %s" % (i, cls.routers[i].addresses[0]))
 
         cls.routers[0].wait_router_connected('INT.B')
         cls.routers[1].wait_router_connected('INT.A')
@@ -108,7 +108,7 @@ class RouterTest(TestCase):
                                  [self.routers[0].addresses[0]],
                                  'address.02',
                                  500,  # receiver_credit
-                                 250)  # expected_sender_credit
+                                 250)  # expected_sender_credit (receiver reduced to 250 capacity)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -118,7 +118,7 @@ class RouterTest(TestCase):
                                   self.routers[0].addresses[0], self.routers[0].addresses[0]],
                                  'address.03',
                                  50,   # receiver_credit
-                                 200)  # expected_sender_credit
+                                 200)  # expected_sender_credit (4 * 50 == 200)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -128,7 +128,7 @@ class RouterTest(TestCase):
                                   self.routers[0].addresses[0], self.routers[0].addresses[0]],
                                  'address.04',
                                  80,   # receiver_credit
-                                 250)  # expected_sender_credit
+                                 250)  # expected_sender_credit (4 * 80 == 320, reduced to 250 at sender)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -137,7 +137,7 @@ class RouterTest(TestCase):
                                  [self.routers[0].addresses[0]],
                                  'address.05',
                                  12, # receiver_credit
-                                 6)  # expected_sender_credit
+                                 6)  # expected_sender_credit (12 / 2 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -146,7 +146,7 @@ class RouterTest(TestCase):
                                  [self.routers[0].addresses[0]],
                                  'address.06',
                                  500,  # receiver_credit
-                                 125)  # expected_sender_credit
+                                 125)  # expected_sender_credit (receiver reduce to 250, / 2 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -156,7 +156,7 @@ class RouterTest(TestCase):
                                  [self.routers[0].addresses[0]],
                                  'address.07',
                                  2,  # receiver_credit
-                                 1)  # expected_sender_credit
+                                 1)  # expected_sender_credit (minimum credit with consumers)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -165,7 +165,7 @@ class RouterTest(TestCase):
                                  [self.routers[2].addresses[0]],
                                  'address.08',
                                  7,  # receiver_credit
-                                 3)  # expected_sender_credit
+                                 3)  # expected_sender_credit (7 / 2, including edge inlink)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -174,7 +174,7 @@ class RouterTest(TestCase):
                                  [self.routers[2].addresses[0]],
                                  'address.09',
                                  500,  # receiver_credit
-                                 125)  # expected_sender_credit
+                                 125)  # expected_sender_credit (reduced 250 / 2 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -184,7 +184,7 @@ class RouterTest(TestCase):
                                   self.routers[2].addresses[0], self.routers[2].addresses[0]],
                                  'address.10',
                                  50,   # receiver_credit
-                                 100)  # expected_sender_credit
+                                 100)  # expected_sender_credit (200 / 2 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -194,7 +194,7 @@ class RouterTest(TestCase):
                                   self.routers[2].addresses[0], self.routers[2].addresses[0]],
                                  'address.11',
                                  80,   # receiver_credit
-                                 160)  # expected_sender_credit
+                                 160)  # expected_sender_credit ((4*80)/2 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -203,7 +203,7 @@ class RouterTest(TestCase):
                                  [self.routers[2].addresses[0]],
                                  'address.12',
                                  12, # receiver_credit
-                                 4)  # expected_sender_credit
+                                 4)  # expected_sender_credit (12/3 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -212,7 +212,7 @@ class RouterTest(TestCase):
                                  [self.routers[2].addresses[0]],
                                  'address.13',
                                  500,  # receiver_credit
-                                 83)  # expected_sender_credit
+                                 83)  # expected_sender_credit (reduced 250/3 senders)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -222,7 +222,7 @@ class RouterTest(TestCase):
                                  [self.routers[2].addresses[0]],
                                  'address.14',
                                  2,  # receiver_credit
-                                 1)  # expected_sender_credit
+                                 1)  # expected_sender_credit (minimum credit)
         test.run()
         self.assertEqual(None, test.error)
 
