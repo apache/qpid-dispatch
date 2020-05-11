@@ -1539,18 +1539,15 @@ static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 //
 static void qdr_attach_link_data_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
-    if (conn->role == QDR_ROLE_INTER_ROUTER) {
-        // When the inter-router connection is first established the connecting
-        // router opens QDR_N_PRIORITIES links for receiving priority messages.
-        // Add these to the list of priority links used to send messages to
-        // that router. Further links may be opened on demand for streaming
-        // messages but these are not stored in the priority sheaf
-        int next_slot = core->data_links_by_mask_bit[conn->mask_bit].count;
-        if (next_slot < QDR_N_PRIORITIES) {
-            link->priority = next_slot;
-            core->data_links_by_mask_bit[conn->mask_bit].links[next_slot] = link;
-            core->data_links_by_mask_bit[conn->mask_bit].count += 1;
-        }
+    assert(link->link_type == QD_LINK_ROUTER);
+    // The first QDR_N_PRIORITIES (10) QDR_LINK_ROUTER links to attach over the
+    // connection are the shared priority links.  These links are attached in
+    // priority order starting at zero.
+    int next_pri = core->data_links_by_mask_bit[conn->mask_bit].count;
+    if (next_pri < QDR_N_PRIORITIES) {
+        link->priority = next_pri;
+        core->data_links_by_mask_bit[conn->mask_bit].links[next_pri] = link;
+        core->data_links_by_mask_bit[conn->mask_bit].count += 1;
     }
 }
 

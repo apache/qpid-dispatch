@@ -38,7 +38,7 @@
 static int timer_interval     = PROD_TIMER_INTERVAL;
 static int max_free_pool_size = 128;
 
-static void action_handler_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_streaming_link_scrubber_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 typedef struct tracker_t tracker_t;
 struct tracker_t {
@@ -103,7 +103,7 @@ static void timer_handler_CT(qdr_core_t *core, void *context)
     if (!!first_ref) {
         qd_log(core->log, QD_LOG_DEBUG, "Starting streaming link scrubber scan");
         set_safe_ptr_qdr_connection_ref_t(first_ref, &tracker->next_conn_ref);
-        qdr_action_t *action = qdr_action(action_handler_CT, "streaming_link_scrubber");
+        qdr_action_t *action = qdr_action(qdr_streaming_link_scrubber_CT, "streaming_link_scrubber");
         action->args.general.context_1 = tracker;
         qdr_action_background_enqueue(core, action);
     } else
@@ -111,7 +111,7 @@ static void timer_handler_CT(qdr_core_t *core, void *context)
 }
 
 
-static void action_handler_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_streaming_link_scrubber_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
@@ -129,7 +129,7 @@ static void action_handler_CT(qdr_core_t *core, qdr_action_t *action, bool disca
             // background action to process the next connection.
             //
             set_safe_ptr_qdr_connection_ref_t(conn_ref, &tracker->next_conn_ref);
-            action = qdr_action(action_handler_CT, "streaming_link_scrubber");
+            action = qdr_action(qdr_streaming_link_scrubber_CT, "streaming_link_scrubber");
             action->args.general.context_1 = tracker;
             qdr_action_background_enqueue(core, action);
         } else
