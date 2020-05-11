@@ -204,7 +204,7 @@ static void qcm_mobile_sync_compose_diff_hint_list(qdrm_mobile_sync_t *msync, qd
 }
 
 
-static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t *msync, const char *address)
+static qd_message_t *qcm_mobile_sync_compose_differential_mau_v1(qdrm_mobile_sync_t *msync, const char *address)
 {
     qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(address, MAU);
@@ -259,7 +259,7 @@ static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t
 }
 
 
-static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *msync, const char *address)
+static qd_message_t *qcm_mobile_sync_compose_absolute_mau_v1(qdrm_mobile_sync_t *msync, const char *address)
 {
     qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(address, MAU);
@@ -327,7 +327,7 @@ static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *ms
 }
 
 
-static qd_message_t *qcm_mobile_sync_compose_mar(qdrm_mobile_sync_t *msync, qdr_node_t *router)
+static qd_message_t *qcm_mobile_sync_compose_mar_v1(qdrm_mobile_sync_t *msync, qdr_node_t *router)
 {
     qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(router->wire_address_ma, MAR);
@@ -386,7 +386,7 @@ static void qcm_mobile_sync_on_timer_CT(qdr_core_t *core, void *context)
     //
     // Prepare a differential MAU for sending to all the other routers.
     //
-    qd_message_t *mau = qcm_mobile_sync_compose_differential_mau(msync, "_topo/0/all/qdrouter.ma");
+    qd_message_t *mau = qcm_mobile_sync_compose_differential_mau_v1(msync, "_topo/0/all/qdrouter.ma");
 
     //
     // Multicast the control message.  Set the exclude_inprocess and control flags.
@@ -446,7 +446,7 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                 // The requestor's view of our mobile_seq is less than our actual mobile_sync.
                 // Send them an absolute MAU to get them caught up to the present.
                 //
-                qd_message_t *mau = qcm_mobile_sync_compose_absolute_mau(msync, router->wire_address_ma);
+                qd_message_t *mau = qcm_mobile_sync_compose_absolute_mau_v1(msync, router->wire_address_ma);
                 (void) qdr_forward_message_CT(msync->core, router->owning_addr, mau, 0, true, true);
                 qd_message_free(mau);
 
@@ -461,7 +461,7 @@ static void qcm_mobile_sync_on_mar_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
 }
 
 
-static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field_t *body)
+static void qcm_mobile_sync_on_mau_v1_CT(qdrm_mobile_sync_t *msync, qd_parsed_field_t *body)
 {
     if (!!body && qd_parse_is_map(body)) {
         qd_parsed_field_t *id_field         = qd_parse_value_by_key(body, ID);
@@ -607,7 +607,7 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
                         qd_bitmask_set_bit(addr->rnodes, router->mask_bit);
                         router->ref_count++;
                         addr->cost_epoch--;
-                        qdr_addr_start_inlinks_CT(msync->core, addr);
+                        qdrc_event_addr_raise(msync->core, QDRC_EVENT_ADDR_FLOW_REMOTE_CHANGE, addr);
        
                         //
                         // Raise an address event if this is the first destination for the address
@@ -713,7 +713,7 @@ static void qcm_mobile_sync_on_message_CT(void         *context,
             qcm_mobile_sync_on_mar_CT(msync, body_field);
 
         if (qd_iterator_equal(qd_parse_raw(opcode_field), (const unsigned char*) MAU))
-            qcm_mobile_sync_on_mau_CT(msync, body_field);
+            qcm_mobile_sync_on_mau_v1_CT(msync, body_field);
     }
 
     qd_parse_free(ap_field);
@@ -810,7 +810,7 @@ static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr
     //
     // Prepare a MAR to be sent to the router
     //
-    qd_message_t *mar = qcm_mobile_sync_compose_mar(msync, router);
+    qd_message_t *mar = qcm_mobile_sync_compose_mar_v1(msync, router);
 
     //
     // Send the control message.  Set the exclude_inprocess and control flags.

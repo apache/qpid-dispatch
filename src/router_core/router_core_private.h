@@ -445,10 +445,10 @@ struct qdr_link_t {
     qdr_link_oper_status_t   oper_status;
     int                      capacity;
     int                      credit_to_core;    ///< Number of the available credits incrementally given to the core
-    int                      credit_pending;    ///< Number of credits to be issued once consumers are available
-    int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them.
+    int                      credit_stored;     ///< Number of credits given to the link before it was ready to process them (half-open routed links)
     int                      credit_reported;   ///< Number of credits to expose to management
-    int                      initial_credit_received; ///< If this link is outgoing, the number of credits initially issued by peer.
+    int                      credit_window;     ///< Outgoing: credit initially issued by peer; Incoming: current credit window
+    int                      credit_residual;   ///< Number of credit-replenishes to skip to reduce window
     uint32_t                 zero_credit_time;  ///< Number of core ticks when credit last went to zero
     bool                     reported_as_blocked; ///< The fact that this link has been blocked with zero credit has been logged
     bool                     admin_enabled;
@@ -531,6 +531,17 @@ struct qdr_address_t {
     bool                       router_control_only; ///< If set, address is only for deliveries arriving on a control link
     uint32_t                   tracked_deliveries;
     uint64_t                   cost_epoch;
+
+    //
+    // State for MAU-v2 flow-control
+    //
+    // Note that "local_inlinks" can be gotten from DEQ_SIZE(inlinks).
+    //
+    uint32_t  local_out_credit;        ///< Aggregate initial-credit issued by all local consumers
+    uint32_t  remote_inlinks_total;    ///< Total number of inlinks in the remote_inlinks array
+    uint32_t  remote_out_credit_total; ///< Total number of out credits in the remote_out_credits array
+    uint8_t  *remote_inlinks;          ///< Number of incoming links per interior router
+    uint8_t  *remote_out_credit;       ///< Number of outgoing credits per interior router
 
     //
     // State for mobile-address synchronization
@@ -939,8 +950,6 @@ qdr_action_t *qdr_action(qdr_action_handler_t action_handler, const char *label)
 void qdr_action_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_action_background_enqueue(qdr_core_t *core, qdr_action_t *action);
 void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bool drain);
-void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr);
-void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
 
 /**
  * Returns true if the passed in address is a mobile address, false otherwise

@@ -551,7 +551,6 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     strcpy(link->name, name);
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
-    link->credit_pending = conn->link_capacity;
     link->admin_enabled  = true;
     link->oper_status    = QDR_LINK_OPER_DOWN;
     link->core_ticks     = conn->core->uptime_ticks;
@@ -1005,7 +1004,7 @@ static void qdr_link_cleanup_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_li
     if (link->ref[QDR_LINK_LIST_CLASS_ADDRESS]) {
         assert(link->owning_addr);
         qdr_del_link_ref((link->link_direction == QD_OUTGOING)
-                         ? (link->initial_credit_received == 0
+                         ? (link->credit_window == 0
                             ? &link->owning_addr->pending_rlinks
                             : &link->owning_addr->rlinks)
                          : &link->owning_addr->inlinks,
@@ -1086,7 +1085,6 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
     link->link_type      = link_type;
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
-    link->credit_pending = conn->link_capacity;
     link->name           = (char*) malloc(QD_DISCRIMINATOR_SIZE + 8);
     link->disambiguated_name = 0;
     link->terminus_addr  = 0;
@@ -1520,7 +1518,7 @@ static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
         link->owning_addr = core->hello_addr;
-        qdr_add_link_ref(link->initial_credit_received == 0
+        qdr_add_link_ref(link->credit_window == 0
                          ? &core->hello_addr->pending_rlinks
                          : &core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         core->control_links_by_mask_bit[conn->mask_bit] = link;
@@ -1531,7 +1529,7 @@ static void qdr_attach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn,
 static void qdr_detach_link_control_CT(qdr_core_t *core, qdr_connection_t *conn, qdr_link_t *link)
 {
     if (conn->role == QDR_ROLE_INTER_ROUTER) {
-        qdr_del_link_ref(link->initial_credit_received == 0
+        qdr_del_link_ref(link->credit_window == 0
                          ? &core->hello_addr->pending_rlinks
                          : &core->hello_addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         link->owning_addr = 0;
@@ -1938,11 +1936,6 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             switch (link->link_type) {
             case QD_LINK_ENDPOINT:
                 if (addr) {
-                    //
-                    // Drain the undelivered list to ensure deliveries don't get dropped by a detach.
-                    //
-                    qdr_drain_inbound_undelivered_CT(core, link, addr);
-
                     //
                     // Unbind the address and the link.
                     //

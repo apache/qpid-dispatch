@@ -321,7 +321,7 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
     // If this is an outgoing link and it is the first time credit has been issued,
     // report it.
     //
-    if (credit > 0 && link->link_direction == QD_OUTGOING && link->initial_credit_received == 0)
+    if (credit > 0 && link->link_direction == QD_OUTGOING && link->credit_window == 0)
         qdr_core_link_credit_received_CT(core, link, credit);
 
     link->drain_mode = drain;
@@ -390,10 +390,6 @@ static void qdr_link_flow_CT(qdr_core_t *core, qdr_action_t *action, bool discar
                 activate = true;
             }
             sys_mutex_unlock(link->conn->work_lock);
-        } else if (link->link_direction == QD_INCOMING) {
-            if (drain) {
-                link->credit_pending = link->capacity;
-            }
         }
     }
 
@@ -467,14 +463,13 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
 
         //
         // Credit update: since this is a targeted link to an address for which
-        // there is no consumers then do not replenish credit - drain instead.
+        // there are no consumers then do not replenish credit - drain instead.
         // However edge is a special snowflake which always has credit available.
         //
         if (link->edge) {
             qdr_link_issue_credit_CT(core, link, 1, false);
         } else {
             qdr_link_issue_credit_CT(core, link, 0, true);  // drain
-            link->credit_pending++;
         }
 
         qdr_delivery_decref_CT(core, dlv, "qdr_link_forward_CT - removed from action (no path)");
@@ -840,8 +835,16 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
     bool drain_changed = link->drain_mode ^ drain;
     link->drain_mode   = drain;
 
-    if (link->credit_pending > 0)
-        link->credit_pending = link->credit_pending > credit ? link->credit_pending - credit : 0;
+    //
+    // If there is residual credit, use that first, before providing actual credit to the link.
+    //
+    if (link->credit_residual > credit) {
+        link->credit_residual -= credit;
+        credit = 0;
+    } else {
+        credit -= link->credit_residual;
+        link->credit_residual = 0;
+    }
 
     if (!drain_changed && credit == 0)
         return;
@@ -873,67 +876,6 @@ void qdr_link_issue_credit_CT(qdr_core_t *core, qdr_link_t *link, int credit, bo
         qdr_link_enqueue_work_CT(core, link, work);
     }
 }
-
-
-/**
- * Attempt to push all of the undelivered deliveries on an incoming link downrange.
- */
-void qdr_drain_inbound_undelivered_CT(qdr_core_t *core, qdr_link_t *link, qdr_address_t *addr)
-{
-    if (DEQ_SIZE(link->undelivered) > 0) {
-        //
-        // Move all the undelivered to a local list in case not all can be delivered.
-        // We don't want to loop here forever putting the same messages on the undelivered
-        // list.
-        //
-        qdr_delivery_list_t deliveries;
-        DEQ_MOVE(link->undelivered, deliveries);
-
-        qdr_delivery_t *dlv = DEQ_HEAD(deliveries);
-        while (dlv) {
-            DEQ_REMOVE_HEAD(deliveries);
-            qdr_link_forward_CT(core, link, dlv, addr, false);
-            dlv = DEQ_HEAD(deliveries);
-        }
-    }
-}
-
-
-/**
- * This function should be called after adding a new destination (subscription, local link,
- * or remote node) to an address.  If this address now has exactly one destination (i.e. it
- * transitioned from unreachable to reachable), make sure any unstarted in-links are issued
- * initial credit.
- *
- * Also, check the inlinks to see if there are undelivered messages.  If so, drain them to
- * the forwarder.
- */
-void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr)
-{
-    if (qdr_addr_path_count_CT(addr) == 1 || (!!addr->fallback && qdr_addr_path_count_CT(addr->fallback) == 1)) {
-        qdr_link_ref_t *ref = DEQ_HEAD(addr->inlinks);
-        while (ref) {
-            qdr_link_t *link = ref->link;
-
-            //
-            // Issue credit to stalled links
-            //
-            if (link->credit_pending > 0)
-                qdr_link_issue_credit_CT(core, link, link->credit_pending, false);
-
-            //
-            // Drain undelivered deliveries via the forwarder
-            //
-            qdr_drain_inbound_undelivered_CT(core, link, addr);
-
-            ref = DEQ_NEXT(ref);
-        }
-
-        if (!!addr->fallback_for)
-            qdr_addr_start_inlinks_CT(core, addr->fallback_for);
-    }
-}
-
 
 // True if link currently has no outstanding deliveries or work.
 // Used to determine if it is safe for the core to close a link.

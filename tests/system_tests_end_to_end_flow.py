@@ -95,8 +95,37 @@ class RouterTest(TestCase):
         test = InitialCreditTest(self.routers[0].addresses[0],
                                  [self.routers[0].addresses[0]],
                                  'address.01',
-                                 7,  ## receiver_credit
-                                 7)  ## expected_sender_credit
+                                 7,  # receiver_credit
+                                 7)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_02_initial_credit_1x500_same_interior(self):
+        test = InitialCreditTest(self.routers[0].addresses[0],
+                                 [self.routers[0].addresses[0]],
+                                 'address.02',
+                                 500,  # receiver_credit
+                                 250)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03_initial_credit_4x50_same_interior(self):
+        test = InitialCreditTest(self.routers[0].addresses[0],
+                                 [self.routers[0].addresses[0], self.routers[0].addresses[0],
+                                  self.routers[0].addresses[0], self.routers[0].addresses[0]],
+                                 'address.03',
+                                 50,  # receiver_credit
+                                 200)  # expected_sender_credit
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_04_initial_credit_4x80_same_interior(self):
+        test = InitialCreditTest(self.routers[0].addresses[0],
+                                 [self.routers[0].addresses[0], self.routers[0].addresses[0],
+                                  self.routers[0].addresses[0], self.routers[0].addresses[0]],
+                                 'address.04',
+                                 80,  # receiver_credit
+                                 250)  # expected_sender_credit
         test.run()
         self.assertEqual(None, test.error)
 

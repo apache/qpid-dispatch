@@ -443,7 +443,7 @@ static void qdr_set_link_CT(qdr_core_t *core, qdr_action_t *action, bool discard
     //
     qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
     rnode->conn_mask_bit = conn_maskbit;
-    qdr_addr_start_inlinks_CT(core, rnode->owning_addr);
+    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, rnode->owning_addr);
 }
 
 
@@ -494,7 +494,7 @@ static void qdr_set_next_hop_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (router_maskbit != nh_router_maskbit) {
         qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
         rnode->next_hop   = core->routers_by_mask_bit[nh_router_maskbit];
-        qdr_addr_start_inlinks_CT(core, rnode->owning_addr);
+        qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, rnode->owning_addr);
     }
 }
 
@@ -653,7 +653,7 @@ static void qdr_subscribe_CT(qdr_core_t *core, qdr_action_t *action, bool discar
             sub->addr = addr;
             DEQ_ITEM_INIT(sub);
             DEQ_INSERT_TAIL(addr->subscriptions, sub);
-            qdr_addr_start_inlinks_CT(core, addr);
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
         }
     } else
         free(sub);

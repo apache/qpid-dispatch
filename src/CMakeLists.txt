@@ -79,6 +79,7 @@ set(qpid_dispatch_SOURCES
   router_core/core_events.c
   router_core/core_link_endpoint.c
   router_core/core_client_api.c
+  router_core/credit.c
   router_core/delivery.c
   router_core/error.c
   router_core/exchange_bindings.c

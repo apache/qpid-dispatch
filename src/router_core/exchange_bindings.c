@@ -928,11 +928,8 @@ static qdr_exchange_t *qdr_exchange(qdr_core_t *core,
             ex->alternate = next_hop(ex, alternate, alt_phase);
         }
 
-        //
-        // TODO - handle case where there was already a local dest.
-        //
-        qdr_addr_start_inlinks_CT(ex->core, ex->qdr_addr);
         qdrc_event_addr_raise(ex->core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, ex->qdr_addr);
+        qdrc_event_addr_raise(ex->core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, ex->qdr_addr);
     }
 
     return ex;

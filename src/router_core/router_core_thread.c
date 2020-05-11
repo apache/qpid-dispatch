@@ -20,6 +20,7 @@
 #include "router_core_private.h"
 #include "module.h"
 #include "dispatch_private.h"
+#include "credit.h"
 
 /**
  * Creates a thread that is dedicated to managing and using the routing table.
@@ -157,8 +158,8 @@ void *router_core_thread(void *arg)
 
     qdr_forwarder_setup_CT(core);
     qdr_route_table_setup_CT(core);
-
     qdr_modules_init(core);
+    qdrc_credit_setup_CT(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
@@ -209,6 +210,8 @@ void *router_core_thread(void *arg)
             qdr_post_general_work_CT(core, work);
         }
     }
+
+    qdrc_credit_final_CT(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread exited");
     return 0;

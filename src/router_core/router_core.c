@@ -556,6 +556,8 @@ void qdr_core_remove_address(qdr_core_t *core, qdr_address_t *addr)
 
     free(addr->add_prefix);
     free(addr->del_prefix);
+    free(addr->remote_inlinks);
+    free(addr->remote_out_credit);
     free_qdr_address_t(addr);
 }
 
@@ -568,16 +570,22 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
         link->phase = (int) (key[1] - '0');
 
     if (link->link_direction == QD_OUTGOING) {
-        if (link->initial_credit_received == 0) {
+        if (link->credit_window == 0) {
             qdr_add_link_ref(&addr->pending_rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         } else {
             qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
 
             //
+            // Account for the new credit capacity in the address record.  Don't account for more
+            // than link->capacity credits for any single consumer.
+            //
+            addr->local_out_credit += MIN(link->credit_window, link->capacity);
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
+
+            //
             // Generate core events appropriately for the new rlink.
             //
             if (DEQ_SIZE(addr->rlinks) == 1) {
-                qdr_addr_start_inlinks_CT(core, addr);
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
             } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
@@ -602,10 +610,17 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
     link->owning_addr = 0;
 
     if (link->link_direction == QD_OUTGOING) {
-        if (link->initial_credit_received == 0) {
+        if (link->credit_window == 0) {
             qdr_del_link_ref(&addr->pending_rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         } else {
             qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
+
+            //
+            // Account for the loss of credit capacity in the address record
+            //
+            addr->local_out_credit -= MIN(link->credit_window, link->capacity);
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
+
             if (DEQ_SIZE(addr->rlinks) == 0) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
             } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
@@ -630,8 +645,8 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
 
 void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int credit)
 {
-    if (link->link_direction == QD_OUTGOING && link->initial_credit_received == 0) {
-        link->initial_credit_received = credit;
+    if (link->link_direction == QD_OUTGOING && link->credit_window == 0) {
+        link->credit_window = credit;
         qdr_address_t *addr = link->owning_addr;
         if (addr) {
             //
@@ -642,10 +657,16 @@ void qdr_core_link_credit_received_CT(qdr_core_t *core, qdr_link_t *link, int cr
             qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
 
             //
+            // Account for the new credit capacity in the address record.  Don't account for more
+            // than link->capacity credits for any single consumer.
+            //
+            addr->local_out_credit += MIN(link->credit_window, link->capacity);
+            qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE, addr);
+
+            //
             // Generate core events appropriately for the new rlink.
             //
             if (DEQ_SIZE(addr->rlinks) == 1) {
-                qdr_addr_start_inlinks_CT(core, addr);
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_LOCAL_DEST, addr);
             } else if (DEQ_SIZE(addr->rlinks) == 2 && qd_bitmask_cardinality(addr->rnodes) == 0)
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
