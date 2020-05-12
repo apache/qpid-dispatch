@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .data import MessageHELLO
+from .data import MessageHELLO, ProtocolVersion, LegacyVersion
 from ..dispatch import LOG_INFO, LOG_TRACE, LOG_CRITICAL
 from ..compat import dict_keys
 from ..compat import dict_items
@@ -52,26 +52,39 @@ class HelloProtocol(object):
             msg = MessageHELLO(None, self.id, dict_keys(self.hellos), self.container.instance)
             self.container.send('amqp:/_local/qdhello', msg)
             self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
+            if self.container.neighbor_legacy_mode:
+                msg = MessageHELLO(None, self.id, dict_keys(self.hellos), self.container.instance, legacy=True)
+                self.container.send('amqp:/_local/qdhello', msg)
+                self.container.log_hello(LOG_TRACE, "SENT: %r" % msg)
 
 
-    def handle_hello(self, msg, now, link_id, cost):
+    def handle_hello(self, msg, now, link_id, cost, version):
         if msg.id == self.id:
             if not self.dup_reported and (msg.instance != self.container.instance):
                 self.dup_reported = True
                 self.container.log_hello(LOG_CRITICAL, "Detected Neighbor Router with a Duplicate ID - %s" % msg.id)
             return
-        self.hellos[msg.id] = now
+        self.hellos[msg.id] = (now, version)
         if msg.is_seen(self.id):
             self.node_tracker.neighbor_refresh(msg.id, msg.version, msg.instance, link_id, cost, now)
+        if version == LegacyVersion:
+            self.container.setNeighborLegacyMode(True)
 
 
     def _expire_hellos(self, now):
         """
         Expire local records of received hellos.  This is not involved in the
-        expiration of neighbor status for routers.
+        expiration of neighbor status for routers.  Exit legacy mode if there
+        are no more legacy neighbors.
         """
-        for key, last_seen in dict_items(self.hellos):
+        have_legacy = False
+        for key, (last_seen, version) in dict_items(self.hellos):
             if now - last_seen > self.hello_max_age:
                 self.hellos.pop(key)
                 self.container.log_hello(LOG_TRACE, "HELLO peer expired: %s" % key)
+            else:
+                if version == LegacyVersion:
+                    have_legacy = True
+        if not have_legacy:
+            self.container.setNeighborLegacyMode(have_legacy)
 

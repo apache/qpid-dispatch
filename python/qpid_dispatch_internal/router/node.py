@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from ..dispatch import LOG_INFO, LOG_TRACE, LOG_DEBUG
-from .data import LinkState, ProtocolVersion
+from .data import LinkState, ProtocolVersion, LegacyVersion
 from .address import Address
 from ..compat import dict_items
 
@@ -119,6 +119,13 @@ class NodeTracker(object):
                     if node.keep_alive_count > 2:
                         node.delete()
                         self.nodes.pop(node_id)
+                        legacy = False;
+                        for n in self.nodes:
+                            if n.version == LegacyVersion:
+                                legacy = True
+                        if not legacy:
+                            self.container.setNetworkLegacyMode(False)
+
 
 
     def tick(self, now):
@@ -185,7 +192,7 @@ class NodeTracker(object):
         ##
         for node_id, node in self.nodes.items():
             if node.link_state_requested():
-                self.container.link_state_engine.send_lsr(node_id)
+                self.container.link_state_engine.send_lsr(node_id, node.version == LegacyVersion)
             if node.mobile_address_requested():
                 self.container.router_adapter.mobile_seq_advanced(node.maskbit)
 
@@ -305,7 +312,7 @@ class NodeTracker(object):
         ## not up to date.
         ##
         if node.link_state.ls_seq < ls_seq:
-            self.container.link_state_engine.send_lsr(node_id)
+            self.container.link_state_engine.send_lsr(node_id, node.version == LegacyVersion)
 
         ##
         ## Check the mobile sequence.  Send a mobile-address-request if we are
@@ -415,6 +422,9 @@ class RouterNode(object):
         self.adapter.add_router("amqp:/_topo/0/%s/qdrouter" % self.id, self.maskbit)
         self.log(LOG_TRACE, "Node %s created: maskbit=%d" % (self.id, self.maskbit))
         self.adapter.get_agent().add_implementation(self, "router.node")
+
+        if version == LegacyVersion:
+            self.parent.container.setNetworkLegacyMode(True)
 
     def refresh_entity(self, attributes):
         """Refresh management attributes"""

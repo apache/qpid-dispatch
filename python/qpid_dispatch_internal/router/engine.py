@@ -22,8 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .data import MessageHELLO, MessageRA, MessageLSU, MessageMAU, MessageMAR, MessageLSR, \
-    isCompatibleVersion, getIdAndVersion
+from .data import MessageHELLO, MessageRA, MessageLSU, MessageLSR, \
+    isCompatibleVersion, getIdAndVersion, ProtocolVersion
 from .hello import HelloProtocol
 from .link import LinkStateEngine
 from .path import PathEngine
@@ -65,16 +65,44 @@ class RouterEngine(object):
         self.instance       = int(time.time())
         self.area           = area
         self.incompatIds    = []
-        self.log(LOG_INFO, "Router Engine Instantiated: id=%s instance=%d max_routers=%d" %
-                 (self.id, self.instance, self.max_routers))
+
+        ##
+        ## Legacy modes for backward compatibility.
+        ##
+        ## Neighbor legacy mode is enabled when at least one active neighbor is running the older version
+        ## Network legacy mode is enabled when at least one router in the network is running the older version
+        ##
+        ## Note that neighbor legacy mode implies network legacy mode
+        ##
+        self.neighbor_legacy_mode = False
+        self.network_legacy_mode  = False
+
+        self.log(LOG_INFO, "Router Engine Instantiated: id=%s instance=%d max_routers=%d protocol_version=%d" %
+                 (self.id, self.instance, self.max_routers, ProtocolVersion))
 
         ##
         ## Launch the sub-module engines
         ##
-        self.node_tracker          = NodeTracker(self, self.max_routers)
-        self.hello_protocol        = HelloProtocol(self, self.node_tracker)
-        self.link_state_engine     = LinkStateEngine(self)
-        self.path_engine           = PathEngine(self)
+        self.node_tracker      = NodeTracker(self, self.max_routers)
+        self.hello_protocol    = HelloProtocol(self, self.node_tracker)
+        self.link_state_engine = LinkStateEngine(self)
+        self.path_engine       = PathEngine(self)
+
+
+    def setNeighborLegacyMode(self, value):
+        if not self.neighbor_legacy_mode and value:
+            self.log(LOG_INFO, "Entered Neighbor-Legacy-Mode")
+        if self.neighbor_legacy_mode and not value:
+            self.log(LOG_INFO, "Exited Neighbor-Legacy-Mode")
+        self.neighbor_legacy_mode = value;
+
+
+    def setNetworkLegacyMode(self, value):
+        if not self.network_legacy_mode and value:
+            self.log(LOG_INFO, "Entered Network-Legacy-Mode")
+        if self.network_legacy_mode and not value:
+            self.log(LOG_INFO, "Exited Network-Legacy-Mode")
+        self.network_legacy_mode = value;
 
 
     ##========================================================================================
@@ -136,8 +164,8 @@ class RouterEngine(object):
     def handleControlMessage(self, opcode, body, link_id, cost):
         """
         """
+        rid, version = getIdAndVersion(body)
         if not isCompatibleVersion(body):
-            rid, version = getIdAndVersion(body)
             if rid not in self.incompatIds:
                 self.incompatIds.append(rid)
                 self.log(LOG_WARNING, "Received %s at protocol version %d from %s.  Ignoring." % (opcode, version, rid))
@@ -148,7 +176,7 @@ class RouterEngine(object):
             if   opcode == 'HELLO':
                 msg = MessageHELLO(body)
                 self.log_hello(LOG_TRACE, "RCVD: %r" % msg)
-                self.hello_protocol.handle_hello(msg, now, link_id, cost)
+                self.hello_protocol.handle_hello(msg, now, link_id, cost, version)
 
             elif opcode == 'RA':
                 msg = MessageRA(body)

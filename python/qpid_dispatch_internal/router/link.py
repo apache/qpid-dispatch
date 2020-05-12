@@ -22,7 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from .data import MessageRA, MessageLSU, MessageLSR
+from .data import MessageRA, MessageLSU, MessageLSR, LegacyVersion
 from ..dispatch import LOG_TRACE
 
 class LinkStateEngine(object):
@@ -68,13 +68,13 @@ class LinkStateEngine(object):
             return
         self.node_tracker.router_learned(msg.id, msg.version)
         my_ls = self.node_tracker.link_state
-        smsg = MessageLSU(None, self.id, my_ls.ls_seq, my_ls, self.container.instance)
+        smsg = MessageLSU(None, self.id, my_ls.ls_seq, my_ls, self.container.instance, legacy=msg.version == LegacyVersion)
         self.container.send('amqp:/_topo/%s/%s/qdrouter' % (msg.area, msg.id), smsg)
         self.container.log_ls(LOG_TRACE, "SENT: %r" % smsg)
 
 
-    def send_lsr(self, _id):
-        msg = MessageLSR(None, self.id)
+    def send_lsr(self, _id, _legacy):
+        msg = MessageLSR(None, self.id, legacy=_legacy)
         self.container.send('amqp:/_topo/0/%s/qdrouter' % _id, msg)
         self.container.log_ls(LOG_TRACE, "SENT: %r to: %s" % (msg, _id))
 
@@ -85,3 +85,7 @@ class LinkStateEngine(object):
         msg = MessageRA(None, self.id, ls_seq, self.mobile_seq, self.container.instance)
         self.container.send('amqp:/_topo/0/all/qdrouter', msg)
         self.container.log_ls(LOG_TRACE, "SENT: %r" % msg)
+        if self.container.network_legacy_mode:
+            msg = MessageRA(None, self.id, ls_seq, self.mobile_seq, self.container.instance, legacy=True)
+            self.container.send('amqp:/_topo/0/all/qdrouter', msg)
+            self.container.log_ls(LOG_TRACE, "SENT: %r" % msg)

@@ -31,7 +31,8 @@ from ..compat import PY_LONG_TYPE
 from ..compat import LONG
 from ..compat import PY_TEXT_TYPE
 
-ProtocolVersion = LONG(1)
+ProtocolVersion = LONG(2)
+LegacyVersion   = LONG(1)
 
 def getMandatory(data, key, cls=None):
     """
@@ -67,7 +68,7 @@ def isCompatibleVersion(body):
     except Exception:
         pass
 
-    return version <= ProtocolVersion
+    return version == ProtocolVersion or version == LegacyVersion
 
 
 def getIdAndVersion(body):
@@ -142,7 +143,7 @@ class MessageHELLO(object):
     This message is used by directly connected routers to determine with whom they have
     bidirectional connectivity.
     """
-    def __init__(self, body, _id=None, _seen_peers=None, _instance=LONG(0)):
+    def __init__(self, body, _id=None, _seen_peers=None, _instance=LONG(0), legacy=False):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
@@ -154,7 +155,7 @@ class MessageHELLO(object):
             self.area = '0'
             self.seen_peers = _seen_peers
             self.instance = _instance
-            self.version  = ProtocolVersion
+            self.version  = ProtocolVersion if not legacy else LegacyVersion
 
     def __repr__(self):
         return "HELLO(id=%s pv=%d area=%s inst=%d seen=%r)" % (self.id, self.version, self.area, self.instance, self.seen_peers)
@@ -180,7 +181,7 @@ class MessageRA(object):
     This message is sent periodically to indicate the originating router's sequence numbers
     for link-state and mobile-address-state.
     """
-    def __init__(self, body, _id=None, _ls_seq=None, _mobile_seq=None, _instance=LONG(0)):
+    def __init__(self, body, _id=None, _ls_seq=None, _mobile_seq=None, _instance=LONG(0), legacy=False):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
@@ -194,7 +195,7 @@ class MessageRA(object):
             self.ls_seq = LONG(_ls_seq)
             self.mobile_seq = LONG(_mobile_seq)
             self.instance = _instance
-            self.version  = ProtocolVersion
+            self.version  = ProtocolVersion if not legacy else LegacyVersion
 
     def get_opcode(self):
         return 'RA'
@@ -215,7 +216,7 @@ class MessageRA(object):
 class MessageLSU(object):
     """
     """
-    def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=LONG(0)):
+    def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=LONG(0), legacy=False):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.area = '0'
@@ -229,7 +230,7 @@ class MessageLSU(object):
             self.ls_seq = LONG(_ls_seq)
             self.ls = _ls
             self.instance = _instance
-            self.version  = ProtocolVersion
+            self.version  = ProtocolVersion if not legacy else LegacyVersion
 
     def get_opcode(self):
         return 'LSU'
@@ -250,14 +251,14 @@ class MessageLSU(object):
 class MessageLSR(object):
     """
     """
-    def __init__(self, body, _id=None):
+    def __init__(self, body, _id=None, legacy=False):
         if body:
             self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
             self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
             self.area = '0'
         else:
             self.id = _id
-            self.version = ProtocolVersion
+            self.version = ProtocolVersion if not legacy else LegacyVersion
             self.area = '0'
 
     def get_opcode(self):
@@ -272,79 +273,3 @@ class MessageLSR(object):
                 'area'    : self.area}
 
 
-class MessageMAU(object):
-    """
-    """
-    def __init__(self, body, _id=None, _seq=None, _add_list=None, _del_list=None, _exist_list=None, _hints=None):
-        if body:
-            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
-            self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
-            self.area = '0'
-            self.mobile_seq = getMandatory(body, 'mobile_seq', PY_LONG_TYPE)
-            self.add_list = getOptional(body, 'add', None, list)
-            self.del_list = getOptional(body, 'del', None, list)
-            self.exist_list = getOptional(body, 'exist', None, list)
-            self.hints = getOptional(body, 'hints', None, list)
-        else:
-            self.id = _id
-            self.version = ProtocolVersion
-            self.area = '0'
-            self.mobile_seq = LONG(_seq)
-            self.add_list = _add_list
-            self.del_list = _del_list
-            self.exist_list = _exist_list
-            self.hints = _hints
-
-    def get_opcode(self):
-        return 'MAU'
-
-    def __repr__(self):
-        _add = ''
-        _del = ''
-        _exist = ''
-        _hints = ''
-        if self.add_list != None:   _add   = ' add=%r'   % self.add_list
-        if self.del_list != None:   _del   = ' del=%r'   % self.del_list
-        if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        if self.hints != None: _hints = ' hints=%r' % self.hints
-        return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s%s)" % \
-                (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist, _hints)
-
-    def to_dict(self):
-        body = {'id'         : self.id,
-                'pv'         : self.version,
-                'area'       : self.area,
-                'mobile_seq' : self.mobile_seq }
-        if self.add_list != None:   body['add']   = self.add_list
-        if self.del_list != None:   body['del']   = self.del_list
-        if self.exist_list != None: body['exist'] = self.exist_list
-        if self.hints != None: body['hints'] = self.hints
-        return body
-
-
-class MessageMAR(object):
-    """
-    """
-    def __init__(self, body, _id=None, _have_seq=None):
-        if body:
-            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
-            self.version = getOptional(body, 'pv', 0, PY_LONG_TYPE)
-            self.area = '0'
-            self.have_seq = getMandatory(body, 'have_seq', PY_LONG_TYPE)
-        else:
-            self.id = _id
-            self.version = ProtocolVersion
-            self.area = '0'
-            self.have_seq = LONG(_have_seq)
-
-    def get_opcode(self):
-        return 'MAR'
-
-    def __repr__(self):
-        return "MAR(id=%s pv=%d area=%s have_seq=%d)" % (self.id, self.version, self.area, self.have_seq)
-
-    def to_dict(self):
-        return {'id'       : self.id,
-                'pv'       : self.version,
-                'area'     : self.area,
-                'have_seq' : self.have_seq}
