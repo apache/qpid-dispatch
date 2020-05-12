@@ -161,7 +161,7 @@ static void setup_outgoing_link(qd_container_t *container, pn_link_t *pn_link)
 }
 
 
-static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link, int max_size)
+static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link, uint64_t max_size)
 {
     qd_node_t *node = container->default_node;
 
@@ -194,7 +194,7 @@ static void setup_incoming_link(qd_container_t *container, pn_link_t *pn_link, i
     link->remote_snd_settle_mode = pn_link_remote_snd_settle_mode(pn_link);
 
     if (max_size) {
-        pn_link_set_max_message_size(pn_link, (uint64_t)max_size);
+        pn_link_set_max_message_size(pn_link, max_size);
     }
     pn_link_set_context(pn_link, link);
     node->ntype->incoming_handler(node->context, link);

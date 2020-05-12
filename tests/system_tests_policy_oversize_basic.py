@@ -262,6 +262,11 @@ INTA_MAX_SIZE = 100000
 INTB_MAX_SIZE = 150000
 EB1_MAX_SIZE = 200000
 
+# DISPATCH-1645 S32 max size is chosen to expose signed 32-bit
+# wraparound bug. Sizes with bit 31 set look negative when used as
+# C 'int' and prevent any message from passing policy checks.
+S32_MAX_SIZE = 2**31
+
 # Interior routers enforce max size directly.
 # Edge routers are also checked by the attached interior router.
 
@@ -378,6 +383,10 @@ class MaxMessageSizeBlockOversize(TestCase):
                               'port': cls.tester.get_port()})])
         cls.EB1 = cls.routers[3]
         cls.EB1.listener = cls.EB1.addresses[0]
+
+        router('S32', 'standalone', S32_MAX_SIZE, [])
+        cls.S32 = cls.routers[4]
+        cls.S32.listener = cls.S32.addresses[0]
 
         cls.INT_A.wait_router_connected('INT.B')
         cls.INT_B.wait_router_connected('INT.A')
@@ -787,6 +796,19 @@ class MaxMessageSizeBlockOversize(TestCase):
         test.run()
         if test.error is not None:
             test.logger.log("test_5f test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+
+    def test_s32_allow_gt_signed_32bit_max(self):
+        test = OversizeMessageTransferTest(MaxMessageSizeBlockOversize.S32,
+                                           MaxMessageSizeBlockOversize.S32,
+                                           "s32",
+                                           message_size=200,
+                                           expect_block=False)
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_s32 test error: %s" % (test.error))
             test.logger.dump()
         self.assertTrue(test.error is None)
 

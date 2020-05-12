@@ -109,8 +109,8 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
-    int                  max_message_size;               // configured max; 0 if no max to enforce
-    int                  bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
+    uint64_t             max_message_size;               // configured max; 0 if no max to enforce
+    uint64_t             bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
     uint32_t             fanout;                         // The number of receivers for this message, including in-process subscribers.
     qd_link_t_sp         input_link_sp;                  // message received on this link
 
