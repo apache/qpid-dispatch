@@ -565,6 +565,7 @@ class BusManager(Node):
         objects = self.query('org.apache.qpid.dispatch.router.address', cols, limit=self.opts.limit)
 
         has_priority = False
+        has_flow     = False
 
         if show_date_id:
             self.display_datetime_router_id()
@@ -574,6 +575,8 @@ class BusManager(Node):
             if first_row:
                 if hasattr(first_row, 'priority'):
                     has_priority = True
+                if hasattr(first_row, 'inLinksLocal'):
+                    has_flow = True
 
         if has_priority:
             heads.append(Header("pri"))
@@ -581,10 +584,11 @@ class BusManager(Node):
             heads.append(Header("in-proc", Header.COMMAS))
         heads.append(Header("local", Header.COMMAS))
         heads.append(Header("remote", Header.COMMAS))
-        heads.append(Header("inLocal", Header.COMMAS))
-        heads.append(Header("inRemote", Header.COMMAS))
-        heads.append(Header("credLocal", Header.COMMAS))
-        heads.append(Header("credRemote", Header.COMMAS))
+        if has_flow:
+            heads.append(Header("inLocal", Header.COMMAS))
+            heads.append(Header("inRemote", Header.COMMAS))
+            heads.append(Header("credLocal", Header.COMMAS))
+            heads.append(Header("credRemote", Header.COMMAS))
         heads.append(Header("in", Header.COMMAS))
         heads.append(Header("out", Header.COMMAS))
         heads.append(Header("thru", Header.COMMAS))
@@ -605,10 +609,11 @@ class BusManager(Node):
                 row.append(addr.inProcess)
             row.append(PlainNum(addr.containerCount) if addr.name[0] in 'CDEF' else PlainNum(addr.subscriberCount))
             row.append(PlainNum(addr.remoteCount))
-            row.append(PlainNum(addr.inLinksLocal))
-            row.append(PlainNum(addr.inLinksRemote))
-            row.append(PlainNum(addr.outCreditLocal))
-            row.append(PlainNum(addr.outCreditRemote))
+            if has_flow:
+                row.append(PlainNum(addr.inLinksLocal))
+                row.append(PlainNum(addr.inLinksRemote))
+                row.append(PlainNum(addr.outCreditLocal))
+                row.append(PlainNum(addr.outCreditRemote))
             row.append(PlainNum(addr.deliveriesIngress))
             row.append(PlainNum(addr.deliveriesEgress))
             row.append(PlainNum(addr.deliveriesTransit))
