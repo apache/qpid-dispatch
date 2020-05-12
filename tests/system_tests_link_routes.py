@@ -22,6 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import os
 from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
@@ -2461,6 +2462,8 @@ class LinkRoute3Hop(TestCase):
         cls.QDR_B.wait_router_connected('QDR.A')
         cls.QDR_B.wait_router_connected('QDR.C')
         cls.QDR_C.wait_router_connected('QDR.B')
+        cls.QDR_C.wait_router_connected('QDR.A')
+        cls.QDR_A.wait_router_connected('QDR.C')
 
         cls.fake_service = FakeService(cls.QDR_A.addresses[1],
                                        container_id="FakeService")
@@ -2479,20 +2482,24 @@ class LinkRoute3Hop(TestCase):
         start_in = self.fake_service.in_count
         start_out = self.fake_service.out_count
 
+        env = dict(os.environ, PN_TRACE_FRM="1")
+
         rx = self.popen(["test-receiver",
                          "-a", self.QDR_C.addresses[0],
                          "-c", str(total),
                          "-s", "closest/test-client"],
+                        env=env,
                         expect=Process.EXIT_OK)
 
         def _spawn_sender(x):
-            return self.popen( ["test-sender",
-                                "-a", self.QDR_C.addresses[0],
-                                "-c", str(send_batch),
-                                "-i", "TestSender-%s" % x,
-                                "-sx",   # huge message size to trigger Q2/Q3
-                                "-t", "closest/test-client"],
-                               expect=Process.EXIT_OK)
+            return self.popen(["test-sender",
+                               "-a", self.QDR_C.addresses[0],
+                               "-c", str(send_batch),
+                               "-i", "TestSender-%s" % x,
+                               "-sx",   # huge message size to trigger Q2/Q3
+                               "-t", "closest/test-client"],
+                              env=env,
+                              expect=Process.EXIT_OK)
 
         senders = [_spawn_sender(s) for s in range(send_clients)]
 
