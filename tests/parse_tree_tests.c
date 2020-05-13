@@ -152,19 +152,20 @@ static char *test_add_and_match_str(void *context)
     return NULL;
 }
 
-static char *test_usurpation_recovery_str(void *context)
+static char *test_duplicate_error_str(void *context)
 {
+    // While A and B are different strings they are semantically the same
+    // pattern and should trigger duplicate detection in the parse tree
     const char *A = "#";
     const char *B = "#.#.#.#";
     qd_parse_tree_t *node = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
     void *payload;
-    void *usurped;
-    void *deposed;
+    qd_error_t rc;
 
-    // rightful owner is ensconsced
-    if (qd_parse_tree_add_pattern_str(node, A, (void *)A)) {
+    rc = qd_parse_tree_add_pattern_str(node, A, (void *)A);
+    if (rc) {
         qd_parse_tree_free(node);
-        return "Add returned existing value (1)";
+        return (char *)qd_error_name(rc);
     }
 
     // matches on A or B both return A
@@ -188,11 +189,47 @@ static char *test_usurpation_recovery_str(void *context)
         return "Got bad pattern";
     }
 
-    // usurper comes along
-    usurped = qd_parse_tree_add_pattern_str(node, B, (void *)B);
-    if (!usurped || strcmp(A, (char *)usurped)) {
+    // attempt to add B pattern, expect duplication error
+
+    rc = qd_parse_tree_add_pattern_str(node, B, (void *)B);
+    if (!rc) {
         qd_parse_tree_free(node);
-        return "Usurper should have grabbed '#' optimized match";
+        return "Duplicate pattern NOT detected";
+    }
+
+    // matches on A or B both return B
+    if (!qd_parse_tree_retrieve_match_str(node, A, &payload)) {
+        qd_parse_tree_free(node);
+        return "Could not get pattern";
+    }
+
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
+        return "Got bad pattern";
+    }
+
+    if (!qd_parse_tree_retrieve_match_str(node, B, &payload)) {
+        qd_parse_tree_free(node);
+        return "Could not get pattern";
+    }
+
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
+        return "Got bad pattern";
+    }
+
+    // now replace A with B correctly
+
+    payload = qd_parse_tree_remove_pattern_str(node, A);
+    if (!payload || strcmp(A, (char *)payload)) {
+        qd_parse_tree_free(node);
+        return "remove pattern failed";
+    }
+
+    rc = qd_parse_tree_add_pattern_str(node, B, (void *)B);
+    if (rc) {
+        qd_parse_tree_free(node);
+        return "Replace add failed";
     }
 
     // matches on A or B both return B
@@ -212,34 +249,6 @@ static char *test_usurpation_recovery_str(void *context)
     }
 
     if (!payload || strcmp(B, (char *)payload)) {
-        qd_parse_tree_free(node);
-        return "Got bad pattern";
-    }
-
-    // Restore rightful owner
-    deposed = qd_parse_tree_add_pattern_str(node, usurped, usurped);
-    if (!deposed || strcmp(B, (char *)deposed)) {
-        qd_parse_tree_free(node);
-        return "Failed to depose B";
-    }
-
-    // matches on A or B both return A
-    if (!qd_parse_tree_retrieve_match_str(node, A, &payload)) {
-        qd_parse_tree_free(node);
-        return "Could not get pattern";
-    }
-
-    if (!payload || strcmp(A, (char *)payload)) {
-        qd_parse_tree_free(node);
-        return "Got bad pattern";
-    }
-
-    if (!qd_parse_tree_retrieve_match_str(node, B, &payload)) {
-        qd_parse_tree_free(node);
-        return "Could not get pattern";
-    }
-
-    if (!payload || strcmp(A, (char *)payload)) {
         qd_parse_tree_free(node);
         return "Got bad pattern";
     }
@@ -293,7 +302,7 @@ static char *check_normalize(const char *input,
     qd_iterator_t *iter = qd_iterator_string(input, ITER_VIEW_ALL);
     void *payload;
 
-    if (qd_parse_tree_add_pattern(node, iter, (void *)input) != NULL) {
+    if (qd_parse_tree_add_pattern(node, iter, (void *)input)) {
         qd_parse_tree_free(node);
         qd_iterator_free(iter);
         return "Unexpected duplicate pattern";
@@ -835,7 +844,7 @@ int parse_tree_tests(void)
 
     TEST_CASE(test_add_remove, 0);
     TEST_CASE(test_add_and_match_str, 0);
-    TEST_CASE(test_usurpation_recovery_str, 0);
+    TEST_CASE(test_duplicate_error_str, 0);
     TEST_CASE(test_normalization, 0);
     TEST_CASE(test_matches, 0);
     TEST_CASE(test_multiple_matches, 0);

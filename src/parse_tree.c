@@ -20,6 +20,7 @@
 
 #include "parse_tree.h"
 #include <qpid/dispatch/log.h>
+#include <qpid/dispatch/alloc.h>
 
 
 // token parsing
@@ -278,24 +279,24 @@ static qd_parse_node_t *parse_node_find_child(const qd_parse_node_t *node, const
 }
 
 
-// Add a new pattern and associated data to the tree.  Returns the old payload
-// if the pattern has already been added to the tree.
+// Add a new pattern and associated data to the tree.
+// Return QD_ERROR_ALREADY_EXISTS if the pattern is already in the tree.
 //
-static void *parse_node_add_pattern(qd_parse_node_t *node,
-                                    token_iterator_t *key,
-                                    const char *pattern,
-                                    void *payload)
+static qd_error_t parse_node_add_pattern(qd_parse_node_t *node,
+                                         token_iterator_t *key,
+                                         const char *pattern,
+                                         void *payload)
 {
-    if (token_iterator_done(key)) {
-        // this node's pattern
-        void *old;
-        if (!node->pattern) {
-            node->pattern = strdup(pattern);
+    if (token_iterator_done(key)) {  // empty leaf node?
+
+        if (node->pattern) {
+            // this node is not empty
+            return QD_ERROR_ALREADY_EXISTS;
         }
-        assert(strcmp(node->pattern, pattern) == 0);
-        old = node->payload;
+
+        node->pattern = strdup(pattern);
         node->payload = payload;
-        return old;
+        return QD_ERROR_NONE;
     }
 
     if (token_iterator_is_match_1(key)) {
@@ -608,13 +609,12 @@ void qd_parse_tree_search(qd_parse_tree_t *node,
 }
 
 
-// returns old payload or NULL if new
-void *qd_parse_tree_add_pattern(qd_parse_tree_t *node,
-                                const qd_iterator_t *pattern,
-                                void *payload)
+// Add match pattern to tree
+qd_error_t qd_parse_tree_add_pattern(qd_parse_tree_t *node,
+                                     const qd_iterator_t *pattern,
+                                     void *payload)
 {
     token_iterator_t key;
-    void *rc = NULL;
     // @TODO(kgiusti) for now:
     qd_iterator_t *dup = qd_iterator_dup(pattern);
     char *str = (char *)qd_iterator_copy(dup);
@@ -624,7 +624,7 @@ void *qd_parse_tree_add_pattern(qd_parse_tree_t *node,
            "Parse tree add address pattern '%s'", str);
 
     token_iterator_init(&key, node->type, str);
-    rc = parse_node_add_pattern(node, &key, str, payload);
+    qd_error_t rc = parse_node_add_pattern(node, &key, str, payload);
     free(str);
     qd_iterator_free(dup);
     return rc;
@@ -784,12 +784,11 @@ void qd_parse_tree_free(qd_parse_node_t *node)
 //
 
 // returns old payload or NULL if new
-void *qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
-                                    const char *pattern,
-                                    void *payload)
+qd_error_t qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
+                                         const char *pattern,
+                                         void *payload)
 {
     token_iterator_t key;
-    void *rc = NULL;
     char *str = strdup(pattern);
 
     normalize_pattern(node->type, str);
@@ -797,7 +796,7 @@ void *qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
            "Parse tree(str) add address pattern '%s'", str);
 
     token_iterator_init(&key, node->type, str);
-    rc = parse_node_add_pattern(node, &key, str, payload);
+    qd_error_t rc = parse_node_add_pattern(node, &key, str, payload);
     free(str);
     return rc;
 }
