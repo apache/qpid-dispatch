@@ -73,6 +73,17 @@ class NodeTracker(object):
         })
 
 
+    def get_legacy_list(self):
+        """
+        Return a list of IDs of known routers that are running legacy router software
+        """
+        result = []
+        for rid, node in dict_items(self.nodes):
+            if node.version == LegacyVersion:
+                result.append(rid)
+        return result
+
+
     def _do_expirations(self, now):
         """
         Run through the list of routers and check for expired conditions
@@ -120,7 +131,7 @@ class NodeTracker(object):
                         node.delete()
                         self.nodes.pop(node_id)
                         legacy = False;
-                        for n in self.nodes:
+                        for rid, n in dict_items(self.nodes):
                             if n.version == LegacyVersion:
                                 legacy = True
                         if not legacy:
@@ -289,9 +300,15 @@ class NodeTracker(object):
         node = self.nodes[node_id]
 
         ##
-        ## Add the version if we haven't already done so.
+        ## Ignore legacy messages from known current routers
         ##
-        if node.version is None:
+        if node.version == ProtocolVersion and version == LegacyVersion:
+            return
+
+        ##
+        ## If this ia a message from a current router, override any previous indication
+        ##
+        if version == ProtocolVersion:
             node.version = version
 
         ##
@@ -330,7 +347,7 @@ class NodeTracker(object):
             self.nodes[node_id] = RouterNode(self, node_id, version, None)
 
 
-    def link_state_received(self, node_id, version, link_state, instance, now):
+    def link_state_received(self, node_id, version, link_state, legacy_list, instance, now):
         """
         Invoked when a link state update is received from another router.
         """
@@ -342,9 +359,15 @@ class NodeTracker(object):
         node = self.nodes[node_id]
 
         ##
-        ## Add the version if we haven't already done so.
+        ## Ignore legacy messages from known current routers
         ##
-        if node.version is None:
+        if node.version == ProtocolVersion and version == LegacyVersion:
+            return
+
+        ##
+        ## If this ia a message from a current router, override any previous indication
+        ##
+        if version == ProtocolVersion:
             node.version = version
 
         ##
@@ -363,7 +386,7 @@ class NodeTracker(object):
             ##
             for peer in node.link_state.peers:
                 if peer not in self.nodes:
-                    self.router_learned(peer, None)
+                    self.router_learned(peer, ProtocolVersion if peer not in legacy_list else LegacyVersion)
 
 
     def router_node(self, node_id):

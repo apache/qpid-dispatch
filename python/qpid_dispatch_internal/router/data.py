@@ -216,36 +216,45 @@ class MessageRA(object):
 class MessageLSU(object):
     """
     """
-    def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _instance=LONG(0), legacy=False):
+    def __init__(self, body, _id=None, _ls_seq=None, _ls=None, _legacy=[], _instance=LONG(0), legacy=False):
         if body:
-            self.id = getMandatory(body, 'id', PY_TEXT_TYPE)
-            self.area = '0'
-            self.ls_seq = getMandatory(body, 'ls_seq', PY_LONG_TYPE)
-            self.ls = LinkState(getMandatory(body, 'ls', dict))
+            self.id       = getMandatory(body, 'id', PY_TEXT_TYPE)
+            self.area     = '0'
+            self.ls_seq   = getMandatory(body, 'ls_seq', PY_LONG_TYPE)
+            self.ls       = LinkState(getMandatory(body, 'ls', dict))
             self.instance = getOptional(body, 'instance', 0, PY_LONG_TYPE)
             self.version  = getOptional(body, 'pv', 0, PY_LONG_TYPE)
+            self.legacy   = getOptional(body, 'legacy', [], list)
         else:
-            self.id = _id
-            self.area = '0'
-            self.ls_seq = LONG(_ls_seq)
-            self.ls = _ls
+            self.id       = _id
+            self.area     = '0'
+            self.ls_seq   = LONG(_ls_seq)
+            self.ls       = _ls
             self.instance = _instance
             self.version  = ProtocolVersion if not legacy else LegacyVersion
+            self.legacy   = _legacy if not legacy else []
 
     def get_opcode(self):
         return 'LSU'
 
     def __repr__(self):
-        return "LSU(id=%s pv=%d area=%s inst=%d ls_seq=%d ls=%r)" % \
-                (self.id, self.version, self.area, self.instance, self.ls_seq, self.ls)
+        result = "LSU(id=%s pv=%d area=%s inst=%d ls_seq=%d ls=%r" % \
+            (self.id, self.version, self.area, self.instance, self.ls_seq, self.ls)
+        if self.version == ProtocolVersion:
+            result += " legacy=%r" % self.legacy
+        result += ")"
+        return result
 
     def to_dict(self):
-        return {'id'       : self.id,
-                'pv'       : self.version,
-                'area'     : self.area,
-                'instance' : self.instance,
-                'ls_seq'   : self.ls_seq,
-                'ls'       : self.ls.to_dict()}
+        d = {'id'       : self.id,
+             'pv'       : self.version,
+             'area'     : self.area,
+             'instance' : self.instance,
+             'ls_seq'   : self.ls_seq,
+             'ls'       : self.ls.to_dict()}
+        if len(self.legacy) > 0:
+            d['legacy'] = self.legacy
+        return d
 
 
 class MessageLSR(object):

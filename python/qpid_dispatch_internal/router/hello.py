@@ -64,11 +64,26 @@ class HelloProtocol(object):
                 self.dup_reported = True
                 self.container.log_hello(LOG_CRITICAL, "Detected Neighbor Router with a Duplicate ID - %s" % msg.id)
             return
-        self.hellos[msg.id] = (now, version)
+
+        reported_version = version
+        need_check       = False
+
+        if msg.id in self.hellos:
+            l, v = self.hellos[msg.id]
+            if version > v:
+                need_check = True
+            else:
+                reported_version = v
+        else:
+            need_check = True
+
+        self.hellos[msg.id] = (now, reported_version)
+
         if msg.is_seen(self.id):
-            self.node_tracker.neighbor_refresh(msg.id, msg.version, msg.instance, link_id, cost, now)
-        if version == LegacyVersion:
-            self.container.setNeighborLegacyMode(True)
+            self.node_tracker.neighbor_refresh(msg.id, reported_version, msg.instance, link_id, cost, now)
+
+        if need_check:
+            self._check_legacy_mode()
 
 
     def _expire_hellos(self, now):
@@ -77,14 +92,21 @@ class HelloProtocol(object):
         expiration of neighbor status for routers.  Exit legacy mode if there
         are no more legacy neighbors.
         """
-        have_legacy = False
+        need_check = False
         for key, (last_seen, version) in dict_items(self.hellos):
             if now - last_seen > self.hello_max_age:
                 self.hellos.pop(key)
                 self.container.log_hello(LOG_TRACE, "HELLO peer expired: %s" % key)
-            else:
-                if version == LegacyVersion:
-                    have_legacy = True
-        if not have_legacy:
-            self.container.setNeighborLegacyMode(have_legacy)
+                need_check = True
+        if need_check:
+            self._check_legacy_mode()
+
+
+    def _check_legacy_mode(self):
+        legacy = False
+        for key, (last_seen, version) in dict_items(self.hellos):
+            if version == LegacyVersion:
+                legacy = True
+                break
+        self.container.setNeighborLegacyMode(legacy)
 
