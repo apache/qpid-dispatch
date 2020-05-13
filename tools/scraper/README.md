@@ -156,6 +156,23 @@ and divides the connection data. Connection names inclued the router instance ID
 * AMQP Addresses from every every AMQP Attach are indexed. A table for each address
   shows when the address was referenced and some connection details.
 
+## AMQP performative legend
+
+Scraper decorates performative display lines with important AMQP values. 
+
+| Performative | Decorations                 |
+|--------------|-----------------------------|
+| open         | [0]                         |
+| close        | [0]                         |
+| begin        | [channel, remoteChannel]    |
+| end          | [channel]                   |
+| attach       | [channel, handle] role linkName (source: src, target: tgt) |
+| detach       | [channel, handle]           |
+| flow         | [channel, handle] (deliveryCount, linkCredit) |
+| transfer     | [channel, handle] (deliveryId) .. [flags] length (settement state)      |
+| disposition  | [channel] (role firstId-lastId settleFlags settleState) |
+ 
+
 ## Sequence generator
 
 The sequence generator (switches --sequence or -sq) generates some extra output that is
