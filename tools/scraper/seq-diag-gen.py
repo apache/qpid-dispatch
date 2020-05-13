@@ -46,6 +46,7 @@ class log_record:
         # print("DEBUG input line: ", index, line)
         dateandtime, name_left, direction, name_right, perf, router_line = line.split('|')
         self.dateandtime = dateandtime.strip()
+        self.time = self.dateandtime.split(' ')[1]
         self.index = index
         self.name_left = name_left.strip()
         self.direction = direction.strip()
@@ -77,25 +78,31 @@ class log_record:
         peer_rec.peer_log_rec = self
         return True
 
-    def show_for_sdorg(self):
+    def show_for_sdorg(self, showtime):
         # A single sd.org vector consumes one or two log lines.
         #  One if from an external actor.
         #  Two if a message goes between routers.
         # Leave space where the message is supposed to land in the receiving routers
         if self.peer_log_rec is None:
-            print("%s->%s:%s" % (self.sentby, self.rcvdby, self.performative))
+            if showtime:
+                print("%s->%s:%s %s" % (self.sentby, self.rcvdby, self.time, self.performative))
+            else:
+                print("%s->%s:%s" % (self.sentby, self.rcvdby, self.performative))
         else:
             if self.peer_log_rec.index > self.index:
                 linediff = int(self.peer_log_rec.index) - int(self.index)
                 space = -MAGIC_SPACE_NUMBER * (linediff - 1)
-                print("%s->(%s)%s:%s" %(self.sentby, str(linediff), self.rcvdby, self.performative))
+                if showtime:
+                    print("%s->(%s)%s:%s %s" %(self.sentby, str(linediff), self.rcvdby, self.time, self.performative))
+                else:
+                    print("%s->(%s)%s:%s" % (self.sentby, str(linediff), self.rcvdby, self.performative))
                 print("space %s" % (str(space)))
             else:
                 print("space %d" % MAGIC_SPACE_NUMBER)
 
     def diag_dump(self):
-        cmn = ("index: %d, sentby: %s, rcvdby: %s, performative: %s, router_line: %s" %
-               (self.index, self.sentby, self.rcvdby, self.performative, self.router_line))
+        cmn = ("index: %d, dateandtime: %s, sentby: %s, rcvdby: %s, performative: %s, router_line: %s" %
+               (self.dateandtime, self.index, self.sentby, self.rcvdby, self.performative, self.router_line))
         if self.peer_log_rec is None:
             print(cmn)
         else:
@@ -134,6 +141,9 @@ if __name__ == "__main__":
     parser = optparse.OptionParser(usage="%prog [options]",
                                    description="cooks a scraper log snippet into sequencediagram.org source")
     parser.add_option("-f", "--filename", action="append", help="logfile to use or - for stdin")
+    parser.add_option('--timestamp', '-t',
+                      action='store_true',
+                      help='Include HH:MM:SS.ssssss in output')
 
     (opts, args) = parser.parse_args()
     if not opts.filename:
@@ -153,7 +163,7 @@ if __name__ == "__main__":
 
             # process the list of records
             for log_rec in log_recs:
-                log_rec.show_for_sdorg()
+                log_rec.show_for_sdorg(opts.timestamp)
 
             # diag dump
             #print("\nDiag dump")
