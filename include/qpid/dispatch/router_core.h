@@ -79,6 +79,7 @@ void qdr_process_tick(qdr_core_t *core);
  */
 void qdr_core_add_router(qdr_core_t *core, const char *address, int router_maskbit);
 void qdr_core_del_router(qdr_core_t *core, int router_maskbit);
+void qdr_core_set_version(qdr_core_t *core, int router_maskbit, int version);
 void qdr_core_set_link(qdr_core_t *core, int router_maskbit, int link_maskbit);
 void qdr_core_remove_link(qdr_core_t *core, int router_maskbit);
 void qdr_core_set_next_hop(qdr_core_t *core, int router_maskbit, int nh_router_maskbit);

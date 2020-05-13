@@ -23,6 +23,7 @@
 
 static void qdr_add_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_del_router_CT          (qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_set_version_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_set_link_CT            (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_remove_link_CT         (qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_set_next_hop_CT        (qdr_core_t *core, qdr_action_t *action, bool discard);
@@ -52,6 +53,15 @@ void qdr_core_del_router(qdr_core_t *core, int router_maskbit)
 {
     qdr_action_t *action = qdr_action(qdr_del_router_CT, "del_router");
     action->args.route_table.router_maskbit = router_maskbit;
+    qdr_action_enqueue(core, action);
+}
+
+
+void qdr_core_set_version(qdr_core_t *core, int router_maskbit, int version)
+{
+    qdr_action_t *action = qdr_action(qdr_set_version_CT, "set_version");
+    action->args.route_table.router_maskbit = router_maskbit;
+    action->args.route_table.version        = version;
     qdr_action_enqueue(core, action);
 }
 
@@ -410,6 +420,21 @@ static void qdr_del_router_CT(qdr_core_t *core, qdr_action_t *action, bool disca
     //
     oaddr->ref_count--;
     qdr_check_addr_CT(core, oaddr);
+}
+
+
+static void qdr_set_version_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    int router_maskbit = action->args.route_table.router_maskbit;
+    int version        = action->args.route_table.version;
+
+    if (router_maskbit >= qd_bitmask_width() || router_maskbit < 0) {
+        qd_log(core->log, QD_LOG_CRITICAL, "set_version: Router maskbit out of range: %d", router_maskbit);
+        return;
+    }
+
+    qdr_node_t *rnode = core->routers_by_mask_bit[router_maskbit];
+    rnode->version = version;
 }
 
 

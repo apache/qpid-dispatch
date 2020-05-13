@@ -228,10 +228,16 @@ class NodeTracker(object):
         node = self.nodes[node_id]
 
         ##
-        ## Add the version if we haven't already done so.
+        ## Ignore legacy messages from known current routers
         ##
-        if node.version == None:
-            node.version = version
+        if node.version == ProtocolVersion and version == LegacyVersion:
+            return
+
+        ##
+        ## If this ia a message from a current router, override any previous indication
+        ##
+        if version == ProtocolVersion:
+            node.update_to_current()
 
         ##
         ## Set the link_id to indicate this is a neighbor router.  If the link_id
@@ -309,7 +315,7 @@ class NodeTracker(object):
         ## If this ia a message from a current router, override any previous indication
         ##
         if version == ProtocolVersion:
-            node.version = version
+            node.update_to_current()
 
         ##
         ## If the instance was updated (i.e. the router restarted suddenly),
@@ -368,7 +374,7 @@ class NodeTracker(object):
         ## If this ia a message from a current router, override any previous indication
         ##
         if version == ProtocolVersion:
-            node.version = version
+            node.update_to_current()
 
         ##
         ## If the new link state is more up-to-date than the stored link state,
@@ -443,7 +449,8 @@ class RouterNode(object):
         self.need_mobile_request     = False
         self.keep_alive_count        = 0
         self.adapter.add_router("amqp:/_topo/0/%s/qdrouter" % self.id, self.maskbit)
-        self.log(LOG_TRACE, "Node %s created: maskbit=%d" % (self.id, self.maskbit))
+        self.adapter.set_version(self.maskbit, self.version)
+        self.log(LOG_TRACE, "Node %s created: maskbit=%d version=%d" % (self.id, self.maskbit, self.version))
         self.adapter.get_agent().add_implementation(self, "router.node")
 
         if version == LegacyVersion:
@@ -463,6 +470,12 @@ class RouterNode(object):
             "routerLink": self.peer_link_id,
             "cost": self.cost
         })
+
+
+    def update_to_current(self):
+        self.version = ProtocolVersion
+        self.adapter.set_version(self.maskbit, self.version)
+
 
     def _logify(self, addr):
         cls   = addr[0]

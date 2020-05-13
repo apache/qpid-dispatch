@@ -117,6 +117,7 @@ struct qdr_action_t {
             int           nh_router_maskbit;
             int           cost;
             int           treatment_hint;
+            int           version;
             qd_bitmask_t *router_set;
             qdr_field_t  *address;
         } route_table;
@@ -338,7 +339,7 @@ struct qdr_query_t {
     int                      next_offset;
     bool                     more;
     qd_amqp_error_t          status;
-    uint64_t                 in_conn;  // or perhaps a pointer???
+    uint64_t                 in_conn;
 };
 
 DEQ_DECLARE(qdr_query_t, qdr_query_list_t); 
@@ -355,6 +356,7 @@ struct qdr_node_t {
     uint64_t          mobile_seq;
     char             *wire_address_ma;    ///< The address of this router's mobile-sync agent in non-hashed form
     uint32_t          sync_mask;          ///< Bitmask for mobile-address-sync
+    int               version;            ///< Protocol version this router is running
 };
 
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);

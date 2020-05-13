@@ -76,6 +76,23 @@ static PyObject* qd_del_router(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* qd_set_version(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+    int            router_maskbit;
+    int            version;
+
+    if (!PyArg_ParseTuple(args, "ii", &router_maskbit, &version))
+        return 0;
+
+    qdr_core_set_version(router->router_core, router_maskbit, version);
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 static PyObject* qd_set_link(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
@@ -292,6 +309,7 @@ static PyObject* qd_get_agent(PyObject *self, PyObject *args) {
 static PyMethodDef RouterAdapter_methods[] = {
     {"add_router",          qd_add_router,          METH_VARARGS, "A new remote/reachable router has been discovered"},
     {"del_router",          qd_del_router,          METH_VARARGS, "We've lost reachability to a remote router"},
+    {"set_version",         qd_set_version,         METH_VARARGS, "Set the version of a remote router"},
     {"set_link",            qd_set_link,            METH_VARARGS, "Set the link for a neighbor router"},
     {"remove_link",         qd_remove_link,         METH_VARARGS, "Remove the link for a neighbor router"},
     {"set_next_hop",        qd_set_next_hop,        METH_VARARGS, "Set the next hop for a remote router"},
