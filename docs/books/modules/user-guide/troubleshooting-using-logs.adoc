@@ -46,7 +46,7 @@ NOTE: If necessary, you can use `qdmanage` to enable protocol-level trace loggin
 
 [options="nowrap"]
 ----
-$ qdmanage update --type=connection id=C1 enableProtocolTrace=true
+$ qdmanage update --type=connection --id=C1 enableProtocolTrace=true
 ----
 ====
 
