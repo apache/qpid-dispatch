@@ -23,12 +23,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import unittest
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch_internal.compat import UNICODE
-from qpid_dispatch.management.client import Node
 
 
 class RouterTest(TestCase):
@@ -486,22 +484,6 @@ class RouterProxy(object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class MessageTransferTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, sender_address, receiver_address, lookup_host, lookup_address):
         super(MessageTransferTest, self).__init__()
@@ -536,7 +518,7 @@ class MessageTransferTest(MessagingHandler):
         self.lookup_conn.close()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
@@ -629,7 +611,7 @@ class MessageTransferAnonTest(MessagingHandler):
         self.poll()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.poll_timer     = None
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
@@ -757,7 +739,7 @@ class LinkRouteTest(MessagingHandler):
 
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn     = event.container.connect(self.first_host)
         self.second_conn    = event.container.connect(self.second_host)
         self.lookup_conn    = event.container.connect(self.lookup_host)
@@ -877,7 +859,7 @@ class WaypointTest(MessagingHandler):
             self.waypoint_sender.send(m)
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn  = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
 

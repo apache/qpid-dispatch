@@ -22,8 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from proton import Message
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, LinkOption
 from system_test import unittest
@@ -84,14 +84,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class DynamicSourceTest(MessagingHandler):
     def __init__(self, router_1_host, router_2_host):
         super(DynamicSourceTest, self).__init__()
@@ -121,7 +113,7 @@ class DynamicSourceTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         self.sender_1_conn = event.container.connect(self.router_1_host)
         self.sender_2_conn = event.container.connect(self.router_2_host)
@@ -201,7 +193,7 @@ class DynamicTargetTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)

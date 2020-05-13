@@ -23,10 +23,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Condition, Message, Delivery, Url, symbol, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
-from system_test import unittest, QdManager
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process, unittest, QdManager, TestTimeout
 from proton.handlers import MessagingHandler, TransactionHandler
-from proton.reactor import Container, AtMostOnce, AtLeastOnce, DynamicNodeProperties, LinkOption, ApplicationEvent, EventInjector
+from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from proton import VERSION as PROTON_VERSION
 from proton import Terminus
@@ -43,21 +42,6 @@ CONNECTION_PROPERTIES_SYMBOL = dict()
 CONNECTION_PROPERTIES_SYMBOL[symbol("connection")] = symbol("properties")
 CONNECTION_PROPERTIES_BINARY = {b'client_identifier': b'policy_server'}
 
-
-#====================================================
-# Helper classes for all tests.
-#====================================================
-
-
-# Named timers allow test code to distinguish between several
-# simultaneous timers, going off at different rates.
-class MultiTimeout ( object ):
-    def __init__(self, parent, name):
-        self.parent = parent
-        self.name   = name
-
-    def on_timer_task(self, event):
-        self.parent.timeout ( self.name )
 
 class StandaloneRouterQdManageTest(TestCase):
     @classmethod
@@ -623,7 +607,7 @@ class OneRouterTest(TestCase):
         Tests connection property that is a map of unicode strings and integers
         """
         connection = BlockingConnection(self.router.addresses[0],
-                                        timeout=60,
+                                        timeout=TIMEOUT,
                                         properties=CONNECTION_PROPERTIES_UNICODE_STRING)
         client = SyncRequestResponse(connection)
 
@@ -646,7 +630,7 @@ class OneRouterTest(TestCase):
         Tests connection property that is a map of symbols
         """
         connection = BlockingConnection(self.router.addresses[0],
-                                        timeout=60,
+                                        timeout=TIMEOUT,
                                         properties=CONNECTION_PROPERTIES_SYMBOL)
         client = SyncRequestResponse(connection)
 
@@ -825,6 +809,13 @@ class UnexpectedReleaseTest(MessagingHandler):
         self.error = None
         self.released_checker = None
 
+    def timeout(self):
+        self.error = "Timeout Expired: sent=%d accepted=%d released=%d number excpected to be released=%d" % \
+                     (self.num_sent, self.num_accepted, self.num_released, self.num_messages - self.recv_messages_max)
+        if not self.receiver_conn_closed:
+            self.receiver_conn.close()
+        self.sender_conn.close()
+
     def released_check_timeout(self):
         if not self.receiver_conn_closed:
             self.receiver_conn.close()
@@ -832,7 +823,7 @@ class UnexpectedReleaseTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.address)
         self.receiver_conn = event.container.connect(self.address)
         self.receiver = event.container.create_receiver(self.receiver_conn, self.dest)
@@ -902,7 +893,7 @@ class SemanticsClosest(MessagingHandler):
         self.rx_set = []
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn, self.dest)
         # Receiver on same router as the sender must receive all the messages. The other two
@@ -967,7 +958,7 @@ class MessageAnnotaionsPreExistingOverride(MessagingHandler):
         self.msg_not_sent = True
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
@@ -1030,7 +1021,7 @@ class SemanticsMulticast(MessagingHandler):
         self.receiver_c = None
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_1 = event.container.connect(self.address)
         self.conn_2 = event.container.connect(self.address)
         self.receiver_a = event.container.create_receiver(self.conn_2, self.dest, name="A")
@@ -1108,7 +1099,7 @@ class ManagementNotImplemented(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
@@ -1155,7 +1146,7 @@ class ManagementGetOperationsTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
@@ -1207,7 +1198,7 @@ class ManagementTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn)
         self.receiver = event.container.create_receiver(self.conn, None, dynamic=True)
@@ -1305,7 +1296,7 @@ class SemanticsBalanced(MessagingHandler):
         self.custom_timer = None
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.custom_timer = event.reactor.schedule(2, CustomTimeout(self))
         self.conn = event.container.connect(self.address)
 
@@ -1367,14 +1358,6 @@ class SemanticsBalanced(MessagingHandler):
         Container(self).run()
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class PreSettled ( MessagingHandler ) :
     def __init__ ( self,
                    addr,
@@ -1403,7 +1386,7 @@ class PreSettled ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired: %d messages received, %d expected." % (self.n_received, self.n_messages) )
 
 
@@ -1413,7 +1396,7 @@ class PreSettled ( MessagingHandler ) :
         self.sender   = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver = event.container.create_receiver ( self.send_conn, self.addr )
         self.receiver.flow ( self.n_messages )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -1502,7 +1485,7 @@ class DroppedPresettledTest(MessagingHandler):
                                                         "test_43")
         self.sender = event.container.create_sender(self.sender_conn,
                                                     "test_43")
-        self.timer = event.reactor.schedule(10, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
     def cancel_custom(self):
         self.custom_timer.cancel()
@@ -1564,7 +1547,7 @@ class MulticastUnsettled ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -1573,8 +1556,8 @@ class MulticastUnsettled ( MessagingHandler ) :
         for i in range ( self.n_receivers ) :
             rcvr = event.container.create_receiver ( self.recv_conn, self.addr, name = "receiver_" + str(i) )
             rcvr.flow ( self.n_messages )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
-        self.test_timer = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
 
     def on_link_opened(self, event):
         if event.receiver:
@@ -1651,7 +1634,7 @@ class DispositionReturnsToClosedConnection ( MessagingHandler ) :
         self.recv_conn.close ( )
 
 
-    def timeout ( self, name ) :
+    def timeout ( self ) :
         self.bail ( "Timeout Expired" )
 
 
@@ -1660,7 +1643,7 @@ class DispositionReturnsToClosedConnection ( MessagingHandler ) :
         self.recv_conn = event.container.connect ( self.addr )
         self.sender   = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer = event.reactor.schedule ( 15, MultiTimeout ( self, "test" ) )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -1727,7 +1710,7 @@ class SenderSettlesFirst ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -1737,7 +1720,7 @@ class SenderSettlesFirst ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -1790,7 +1773,7 @@ class PropagatedDisposition ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -1800,7 +1783,7 @@ class PropagatedDisposition ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     # Sender Side ================================================
@@ -1882,7 +1865,7 @@ class UsettledUndeliverable ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         if self.n_sent > 0 :
             self.bail ( "Messages sent with no receiver." )
         else :
@@ -1892,8 +1875,8 @@ class UsettledUndeliverable ( MessagingHandler ) :
     def on_start ( self, event ):
         self.send_conn = event.container.connect ( self.addr )
         self.sender    = event.container.create_sender ( self.send_conn, self.addr )
-        # Uh-oh. We are not creating a receiver! 
-        self.test_timer = event.reactor.schedule ( 5, MultiTimeout(self, "test") )
+        # Uh-oh. We are not creating a receiver!
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -1941,7 +1924,7 @@ class ThreeAck ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -1951,7 +1934,7 @@ class ThreeAck ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     # Sender Side ================================================
@@ -2031,7 +2014,7 @@ class MessageAnnotations ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2041,7 +2024,7 @@ class MessageAnnotations ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -2148,7 +2131,7 @@ class StripMessageAnnotationsCustom ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2158,7 +2141,7 @@ class StripMessageAnnotationsCustom ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -2214,7 +2197,7 @@ class StripMessageAnnotationsNo ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2224,8 +2207,7 @@ class StripMessageAnnotationsNo ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
-
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
     def on_sendable ( self, event ) :
         while self.n_sent < self.n_messages :
@@ -2285,7 +2267,7 @@ class StripMessageAnnotationsNoAddTrace ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2295,8 +2277,7 @@ class StripMessageAnnotationsNoAddTrace ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
-
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
     def on_sendable ( self, event ) :
         while self.n_sent < self.n_messages :
@@ -2381,7 +2362,7 @@ class StripMessageAnnotationsBoth ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2391,7 +2372,7 @@ class StripMessageAnnotationsBoth ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -2464,7 +2445,7 @@ class StripMessageAnnotationsOut ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2474,7 +2455,7 @@ class StripMessageAnnotationsOut ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -2533,7 +2514,7 @@ class StripMessageAnnotationsIn ( MessagingHandler ) :
         self.test_timer.cancel ( )
 
 
-    def timeout ( self, name ):
+    def timeout ( self ):
         self.bail ( "Timeout Expired" )
 
 
@@ -2543,7 +2524,7 @@ class StripMessageAnnotationsIn ( MessagingHandler ) :
 
         self.sender      = event.container.create_sender   ( self.send_conn, self.addr )
         self.receiver    = event.container.create_receiver ( self.recv_conn, self.addr )
-        self.test_timer  = event.reactor.schedule ( 15, MultiTimeout(self, "test") )
+        self.test_timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
 
     def on_sendable ( self, event ) :
@@ -2702,7 +2683,7 @@ class UnavailableSender(UnavailableBase):
         super(UnavailableSender, self).__init__(address)
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # Creating a sender to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
@@ -2714,7 +2695,7 @@ class UnavailableReceiver(UnavailableBase):
         super(UnavailableReceiver, self).__init__(address)
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # Creating a receiver to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
@@ -2747,7 +2728,7 @@ class MulticastUnsettledTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn      = event.container.connect(self.address)
         self.receiver1 = event.container.create_receiver(self.conn, self.dest,
                                                          name="A",
@@ -2812,7 +2793,7 @@ class LargeMessageStreamCloseConnTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.address)
         self.receiver_conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.sender_conn, self.dest)
@@ -2872,7 +2853,7 @@ class LargeMessageStreamTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -2917,7 +2898,7 @@ class MultiframePresettledTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn      = event.container.connect(self.address)
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -3019,7 +3000,7 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.address)
         self.receiver_conn = event.container.connect(self.address)
 
@@ -3063,7 +3044,7 @@ class AnonymousSenderNoRecvLargeMessagedTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # This sender is an anonymous sender
         self.sender = event.container.create_sender(self.conn)
@@ -3118,7 +3099,7 @@ class ReleasedVsModifiedTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn      = event.container.connect(self.address)
         self.sender    = event.container.create_sender(self.conn, self.dest)
         self.receiver  = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -3172,7 +3153,7 @@ class AppearanceOfBalanceTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn       = event.container.connect(self.address)
         self.sender     = event.container.create_sender(self.conn, self.dest)
         self.receiver_a = event.container.create_receiver(self.conn, self.dest, name="A")
@@ -3237,7 +3218,7 @@ class BatchedSettlementTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
@@ -3290,7 +3271,7 @@ class RejectCoordinatorTest(MessagingHandler, TransactionHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.container = event.container
         self.conn = self.container.connect(self.url)
         self.sender = self.container.create_sender(self.conn, self.url.path)
@@ -3337,7 +3318,7 @@ class PresettledOverflowTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.address)
         self.sender   = event.container.create_sender(self.conn, self.dest)
         self.receiver = event.container.create_receiver(self.conn, self.dest)
@@ -3479,7 +3460,7 @@ class UnsettledLargeMessageTest(MessagingHandler):
                                                         "test_42")
         self.sender = event.container.create_sender(self.sender_conn,
                                                     "test_42")
-        self.timer = event.reactor.schedule(15, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
     def on_accepted(self, event):
         self.n_accepted += 1
@@ -3646,7 +3627,7 @@ class Q2HoldoffDropTest(MessagingHandler):
 
     def on_start(self, event):
         self.reactor = event.reactor
-        self.timer = self.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = self.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         self.rx_slow_conn = event.container.connect(self.router.addresses[0])
         self.rx_fast1_conn = event.container.connect(self.router.addresses[0])
@@ -3695,6 +3676,9 @@ class Q2HoldoffDropTest(MessagingHandler):
         if self.n_rx == 3: # first will arrive, second is blocked
 
             class CloseTimer(Timeout):
+                def __init__(self, parent):
+                    self.parent = parent
+
                 def on_timer_task(self, event):
                     self.parent.close_rx_slow(event)
 

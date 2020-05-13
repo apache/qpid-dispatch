@@ -26,9 +26,7 @@ from proton import Message, Timeout, symbol, int32
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import unittest, TestTimeout
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch_internal.compat import UNICODE
-from qpid_dispatch.management.client import Node
+from proton.reactor import Container
 
 
 class RouterTest(TestCase):
@@ -96,7 +94,7 @@ class RejectHigherVersionHelloTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(10, TestTimeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn)
         self.sender   = event.container.create_sender(self.conn)
@@ -156,7 +154,7 @@ class RejectHigherVersionMARTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(10, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn        = event.container.connect(self.host)
         self.normal_conn = event.container.connect(self.normal_host)
 

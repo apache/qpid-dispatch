@@ -22,8 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from system_test import TestCase, Qdrouterd, main_module
-from system_test import unittest
+from system_test import TestCase, Qdrouterd, main_module, TestTimeout, unittest, TIMEOUT
 from system_tests_drain_support import DrainMessagesHandler, DrainOneMessageHandler
 from system_tests_drain_support import DrainNoMessagesHandler, DrainNoMoreMessagesHandler
 from system_tests_drain_support import DrainMessagesMoreHandler
@@ -148,6 +147,7 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
         self.drained = 0
         self.expected_drained = 249
         self.sender_drained = False
+        self.timer = None
 
         # Second receiver link opened.
         self.sec_recv_link_opened = False
@@ -162,6 +162,7 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
 
     def on_start(self, event):
         # Create sender and receiver in two separate connections
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.address)
         self.receiver_conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.sender_conn,
@@ -187,6 +188,7 @@ class ReceiverDropsOffSenderDrain(MessagingHandler):
                     self.receiver.close()
                     self.error = None
                     self.sender_conn.close()
+                    self.timer.cancel()
                     self.receiver_conn.close()
             else:
                 self.receiver.close()

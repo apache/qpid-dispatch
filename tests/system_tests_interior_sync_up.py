@@ -26,17 +26,11 @@ from time import sleep
 from threading import Timer
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
-from system_test import AsyncTestReceiver
-from system_test import AsyncTestSender
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, \
+    MgmtMsgProxy, TestTimeout, PollTimeout
 from system_test import unittest
-from system_tests_link_routes import ConnLinkRouteService
-from test_broker import FakeService
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE, STDOUT
-import re
+from proton.reactor import Container
 
 
 class AddrTimer(object):
@@ -91,28 +85,12 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class DelayTimeout(object):
     def __init__(self, parent):
         self.parent = parent
 
     def on_timer_task(self, event):
         self.parent.delay_timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
 
 
 class InteriorSyncUpTest(MessagingHandler):
@@ -179,7 +157,7 @@ class InteriorSyncUpTest(MessagingHandler):
     def on_start(self, event):
         self.container      = event.container
         self.reactor        = event.reactor
-        self.timer          = self.reactor.schedule(40.0, Timeout(self))
+        self.timer          = self.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_a         = self.container.connect(self.host_a)
         self.conn_b         = self.container.connect(self.host_b)
         self.probe_receiver = self.container.create_receiver(self.conn_a, dynamic=True)

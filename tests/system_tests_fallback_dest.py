@@ -22,23 +22,12 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Event
-from threading import Timer
 
-from proton import Message, Timeout, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
-from system_test import AsyncTestReceiver
-from system_test import AsyncTestSender
-from system_test import QdManager
+from proton import Message, symbol
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout
 from system_test import unittest
-from system_tests_link_routes import ConnLinkRouteService
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from proton.utils import BlockingConnection
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE, STDOUT
-import re
+from proton.reactor import Container
 
 
 class AddrTimer(object):
@@ -446,14 +435,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class SenderFirstTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, addr, rx_fallback):
         super(SenderFirstTest, self).__init__()
@@ -482,7 +463,7 @@ class SenderFirstTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender        = event.container.create_sender(self.sender_conn, self.addr)
@@ -540,7 +521,7 @@ class ReceiverFirstTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.addr)
@@ -602,7 +583,7 @@ class SwitchoverTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer              = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer              = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn        = event.container.connect(self.sender_host)
         self.primary_conn       = event.container.connect(self.primary_host)
         self.fallback_conn     = event.container.connect(self.fallback_host)
@@ -673,7 +654,7 @@ class SenderFirstAutoLinkTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.sender_host)
         self.sender      = event.container.create_sender(self.sender_conn, self.addr)
 
@@ -743,7 +724,7 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.receiver_host)
 
     def on_link_opening(self, event):

@@ -28,7 +28,7 @@ from threading import Event
 from threading import Timer
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
 from system_test import Logger
@@ -2005,22 +2005,6 @@ class LinkRouteProxyTest(TestCase):
         self._wait_address_gone(self.INT_A, "Conn/*/One")
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class ConnectivityTest(MessagingHandler):
     def __init__(self, interior_host, edge_host, edge_id):
         super(ConnectivityTest, self).__init__()
@@ -2040,7 +2024,7 @@ class ConnectivityTest(MessagingHandler):
         self.edge_conn.close()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.interior_conn  = event.container.connect(self.interior_host)
         self.edge_conn      = event.container.connect(self.edge_host)
         self.reply_receiver = event.container.create_receiver(self.interior_conn, dynamic=True)
@@ -2096,7 +2080,7 @@ class DynamicAddressTest(MessagingHandler):
         self.sender_conn.close()
 
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(5.0, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, dynamic=True)
@@ -2177,7 +2161,7 @@ class MobileAddressAnonymousTest(MessagingHandler):
 
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(15.0 if self.large_msg else 5.0, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
@@ -2307,7 +2291,7 @@ class MobileAddressTest(MessagingHandler):
 
     def on_start(self, event):
         self.logger.log("on_start address=%s" % self.address)
-        self.timer         = event.reactor.schedule(5.0, self)
+        self.timer         = event.reactor.schedule(TIMEOUT, self)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver      = event.container.create_receiver(self.receiver_conn, self.address)
@@ -2434,7 +2418,7 @@ class MobileAddressOneSenderTwoReceiversTest(MessagingHandler):
         self.sender_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(5.0, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         # Create two receivers
         self.receiver1_conn = event.container.connect(self.receiver1_host)
@@ -2597,8 +2581,7 @@ class MobileAddressMulticastTest(MessagingHandler):
                 local_node.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(20.0 if self.large_msg else 10.0,
-                                            Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         # Create two receivers
         self.receiver1_conn = event.container.connect(self.receiver1_host)
         self.receiver2_conn = event.container.connect(self.receiver2_host)
@@ -2831,7 +2814,7 @@ class MobileAddressEventTest(MessagingHandler):
             self.timeout()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(10.0, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         # Create two receivers
         self.receiver1_conn = event.container.connect(self.receiver1_host)

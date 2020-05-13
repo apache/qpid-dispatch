@@ -441,7 +441,7 @@ class TopologyFailover ( MessagingHandler ):
     def on_start ( self, event ):
         self.state_transition ( 'on_start', 'starting' )
         self.reactor = event.reactor
-        self.test_timer = event.reactor.schedule ( 60, Timeout(self, "test") )
+        self.test_timer = event.reactor.schedule ( TIMEOUT, Timeout(self, "test") )
         self.send_timer = event.reactor.schedule ( 1, Timeout(self, "sender") )
         self.send_conn  = event.container.connect ( self.client_addrs[0] ) # A
         self.recv_conn  = event.container.connect ( self.client_addrs[1] ) # B

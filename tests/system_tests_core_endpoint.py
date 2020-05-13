@@ -22,9 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import unittest
+from proton import Message
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch_internal.compat import UNICODE
@@ -90,14 +89,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class DenyLinkTest(MessagingHandler):
     def __init__(self, host, address):
         super(DenyLinkTest, self).__init__(prefetch = 0)
@@ -118,7 +109,7 @@ class DenyLinkTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(5.0, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn, self.address)
         self.sender   = event.container.create_sender(self.conn, self.address)
@@ -156,7 +147,7 @@ class DiscardTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(5.0, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn   = event.container.connect(self.host)
         self.sender = event.container.create_sender(self.conn, self.address)
 
@@ -206,7 +197,7 @@ class SourceTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn, self.address)
         self.receiver.flow(3)
@@ -254,7 +245,7 @@ class EchoTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(5.0, Timeout(self))
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn     = event.container.connect(self.host)
         self.receiver = event.container.create_receiver(self.conn, self.address)
 

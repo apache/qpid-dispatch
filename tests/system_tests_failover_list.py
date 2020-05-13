@@ -22,8 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout
 from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -72,14 +71,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class FailoverTest(MessagingHandler):
     def __init__(self, host, count, elements=[]):
         super(FailoverTest, self).__init__()
@@ -94,7 +85,7 @@ class FailoverTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn  = event.container.connect(self.host)
 
     def on_connection_opened(self, event):

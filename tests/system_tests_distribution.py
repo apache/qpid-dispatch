@@ -23,8 +23,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import sys
-from proton          import Message, Timeout
-from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded
+from proton          import Message
+from system_test     import TestCase, Qdrouterd, main_module, TIMEOUT, SkipIfNeeded, TestTimeout
 from system_test     import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor  import Container, LinkOption, ApplicationEvent, EventInjector
@@ -33,14 +33,6 @@ from proton.reactor  import Container, LinkOption, ApplicationEvent, EventInject
 #------------------------------------------------
 # Helper classes for all tests.
 #------------------------------------------------
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 
 
 class AddressCheckResponse(object):
@@ -1732,7 +1724,7 @@ class TargetedSenderTest ( MessagingHandler ):
 
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.send_conn = event.container.connect(self.send_addr)
         self.recv_conn = event.container.connect(self.recv_addr)
         self.sender   = event.container.create_sender(self.send_conn, self.dest)
@@ -1812,7 +1804,7 @@ class AnonymousSenderTest ( MessagingHandler ):
 
 
     def on_start(self, event):
-        self.timer     = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer     = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.send_conn = event.container.connect(self.send_addr)
         self.recv_conn = event.container.connect(self.recv_addr)
         self.sender    = event.container.create_sender(self.send_conn, options=DynamicTarget())
@@ -1892,7 +1884,7 @@ class DynamicReplyTo(MessagingHandler):
 
 
     def on_start ( self, event ):
-        self.timer             = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.timer             = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
         # separate connections to simulate client and server.
         self.client_connection = event.container.connect(self.client_addr)
         self.server_connection = event.container.connect(self.server_addr)
@@ -2000,7 +1992,7 @@ class LinkAttachRoutingCheckOnly ( MessagingHandler ):
 
     def on_start(self, event):
         self.debug_print ( "on_start -------------" )
-        self.timer        = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer        = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.client_cnx = event.container.connect(self.client_host)
         self.linkroute_container_cnx  = event.container.connect(self.linkroute_container_host)
 
@@ -2120,7 +2112,7 @@ class LinkAttachRouting ( MessagingHandler ):
 
 
     def on_start(self, event):
-        self.timer        = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer        = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.nearside_cnx = event.container.connect(self.nearside_host)
 
         self.farside_cnx = event.container.connect(self.farside_host)
@@ -2307,7 +2299,7 @@ class ClosestTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, Timeout(self) )
+        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
         self.send_cnx = event.container.connect ( self.router_1 )
         self.cnx_1    = event.container.connect ( self.router_1 )
         self.cnx_2    = event.container.connect ( self.router_2 )
@@ -2588,7 +2580,7 @@ class BalancedTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, Timeout(self) )
+        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
         self.cnx_3    = event.container.connect ( self.router_3 )
         self.cnx_2    = event.container.connect ( self.router_2 )
         self.cnx_1    = event.container.connect ( self.router_1 )
@@ -2749,7 +2741,7 @@ class MulticastTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer    = event.reactor.schedule  ( TIMEOUT, Timeout(self) )
+        self.timer    = event.reactor.schedule  ( TIMEOUT, TestTimeout(self) )
         self.send_cnx = event.container.connect ( self.router_1 )
         self.cnx_1    = event.container.connect ( self.router_1 )
         self.cnx_2    = event.container.connect ( self.router_2 )
@@ -3012,7 +3004,7 @@ class RoutingTest ( MessagingHandler ):
     def on_start ( self, event ):
         self.debug_print ( "\n\n%s ===========================================\n\n" % self.test_name )
         self.debug_print ( "on_start -------------" )
-        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
         event.reactor.selectable(self.event_injector)
         self.sender_cnx = event.container.connect(self.sender_host)
 
@@ -3520,7 +3512,7 @@ class WaypointTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
         self.client_connection = event.container.connect ( self.client_host_1 )
 
         # Creating this connection is what gets things started.  When we make this
@@ -3757,7 +3749,7 @@ class SerialWaypointTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
         self.sender_connections.append ( event.container.connect(self.client_host_1) )
         self.sender_connections.append ( event.container.connect(self.client_host_2) )
         # Creating this connection is what gets things started.  When we make this
@@ -4072,7 +4064,7 @@ class ParallelWaypointTest ( MessagingHandler ):
 
 
     def on_start ( self, event ):
-        self.timer = event.reactor.schedule ( TIMEOUT, Timeout(self) )
+        self.timer = event.reactor.schedule ( TIMEOUT, TestTimeout(self) )
         self.sender_connections.append ( event.container.connect(self.client_host_1) )
         self.sender_connections.append ( event.container.connect(self.client_host_2) )
         # Creating this connection is what gets things started.  When we make this

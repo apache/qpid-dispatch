@@ -24,8 +24,7 @@ from __future__ import print_function
 
 import re
 from subprocess import PIPE
-from system_test import TestCase, Qdrouterd, TIMEOUT, main_module
-from system_test import unittest
+from system_test import TestCase, Qdrouterd, TIMEOUT, main_module, unittest, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message
@@ -86,12 +85,6 @@ class DefaultDistributionTest(TestCase):
         self.assertTrue("Router Id                        QDR" in out)
         self.assertTrue("Mode                             standalone" in out)
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
 
 class UnavailableBase(MessagingHandler):
     def __init__(self, address):
@@ -132,8 +125,12 @@ class UnavailableSender(UnavailableBase):
     def __init__(self, address):
         super(UnavailableSender, self).__init__(address)
 
+    def timeout(self):
+        self.error = "Timeout Expired while while attempting to send to unavailable address"
+        self.conn.close()
+
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # Creating a sender to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
@@ -144,8 +141,12 @@ class UnavailableReceiver(UnavailableBase):
     def __init__(self, address):
         super(UnavailableReceiver, self).__init__(address)
 
+    def timeout(self):
+        self.error = "Timeout Expired while while attempting to receive from unavailable address"
+        self.conn.close()
+
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # Creating a receiver to an address with unavailable distribution
         # The router will not allow this link to be established. It will close the link with an error of
@@ -167,8 +168,12 @@ class UnavailableAnonymousSender(MessagingHandler):
         self.error_name = u'amqp:not-found'
         self.num_sent = 0
 
+    def timeout(self):
+        self.error = "Timeout Expired while attempting to send to unavailable address"
+        self.conn.close()
+
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         # Creating an anonymous sender
         self.sender = event.container.create_sender(self.conn, name=self.link_name)
