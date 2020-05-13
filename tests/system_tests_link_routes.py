@@ -29,7 +29,6 @@ from subprocess import PIPE, STDOUT
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout, \
     AsyncTestSender, AsyncTestReceiver, MgmtMsgProxy, unittest, QdManager
-from system_test import AsyncTestSender
 from test_broker import FakeBroker
 from test_broker import FakeService
 
