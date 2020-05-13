@@ -27,15 +27,10 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger
-from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout, Url, symbol, Message
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger, TestTimeout
+from proton import Timeout, Message
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, ReceiverOption
-from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
-from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
-from qpid_dispatch_internal.compat import dict_iteritems
-from test_broker import FakeBroker
+from proton.reactor import Container
 
 # How many worker threads?
 W_THREADS = 2
@@ -43,18 +38,6 @@ W_THREADS = 2
 # Define oversize denial condition
 OVERSIZE_CONDITION_NAME = "amqp:connection:forced"
 OVERSIZE_CONDITION_DESC = "Message size exceeded"
-
-# Internal test timeout
-TEST_TIMEOUT_SECONDS = 60
-
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 
 #
 # DISPATCH-975 Detect that an oversize message is blocked.
@@ -114,7 +97,7 @@ class OversizeMessageTransferTest(MessagingHandler):
 
     def on_start(self, event):
         self.logger.log("on_start")
-        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.logger.log("on_start: opening receiver connection to %s" % (self.receiver_host.addresses[0]))
         self.receiver_conn = event.container.connect(self.receiver_host.addresses[0])
         self.logger.log("on_start: opening   sender connection to %s" % (self.sender_host.addresses[0]))

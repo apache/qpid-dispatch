@@ -426,7 +426,7 @@ class AddRouter ( MessagingHandler ):
         self.reactor   = event.reactor
         self.container = event.container
 
-        self.test_timer  = self.reactor.schedule(30, Timeout(self, "test"))
+        self.test_timer  = self.reactor.schedule(TIMEOUT, Timeout(self, "test"))
         self.send_timer  = self.reactor.schedule(1, Timeout(self, "send"))
 
         self.send_conn   = event.container.connect(self.send_addr)

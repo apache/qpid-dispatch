@@ -32,7 +32,6 @@ from proton import Message
 
 from system_test import TestCase
 from system_test import Qdrouterd
-from system_test import QdManager
 from system_test import main_module
 from system_test import TIMEOUT
 from system_test import Process

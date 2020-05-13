@@ -36,15 +36,7 @@ from proton import Connection
 from proton import Link
 from proton import Message
 from proton import Delivery
-from qpid_dispatch.management.client import Node
-from system_test import AsyncTestSender
-from system_test import AsyncTestReceiver
-from system_test import TestCase
-from system_test import Qdrouterd
-from system_test import main_module
-from system_test import TIMEOUT
-from system_test import TestTimeout
-from system_test import unittest
+from system_test import AsyncTestSender, AsyncTestReceiver, TestCase, Qdrouterd, main_module, TIMEOUT, TestTimeout, unittest
 
 
 MAX_FRAME=1023

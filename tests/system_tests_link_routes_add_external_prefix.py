@@ -20,7 +20,7 @@
 from time import sleep, time
 from subprocess import PIPE, STDOUT
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout
 from system_test import unittest
 
 from proton import Message
@@ -215,13 +215,6 @@ class LinkRouteTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 
 class SendReceive(MessagingHandler):
     def __init__(self, send_url, recv_url, message=None):
@@ -247,7 +240,7 @@ class SendReceive(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.container.container_id = "SendReceiveTestClient"
         self.sender = event.container.create_sender(self.send_url)
         self.receiver = event.container.create_receiver(self.recv_url)

@@ -16,9 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-import os
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, DIR, Process
+from system_test import TestCase, Qdrouterd, TIMEOUT
 from system_test import QdManager
 from proton.utils import BlockingConnection
 from proton import Message

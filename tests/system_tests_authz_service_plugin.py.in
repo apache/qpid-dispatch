@@ -24,7 +24,7 @@ from __future__ import print_function
 
 import os, json
 from subprocess import PIPE, Popen, STDOUT
-from system_test import TestCase, Qdrouterd, main_module, DIR, TIMEOUT, Process, SkipIfNeeded
+from system_test import TestCase, Qdrouterd, main_module, DIR, Process, SkipIfNeeded
 from system_test import unittest
 from proton import Array, Data, Message, SASL, symbol, UNDESCRIBED
 from proton.handlers import MessagingHandler

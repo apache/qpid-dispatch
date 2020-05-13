@@ -22,10 +22,8 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from proton import Message, Timeout
-from system_test import Logger
-from system_test import TestCase, Qdrouterd, main_module
-from system_test import unittest
+from proton import Message
+from system_test import Logger, TestCase, Qdrouterd, main_module, unittest, TIMEOUT, TestTimeout, PollTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch_internal.compat import BINARY
@@ -159,22 +157,6 @@ class RouterProxy(object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class MessageRouteTruncateTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, address):
         super(MessageRouteTruncateTest, self).__init__()
@@ -207,7 +189,7 @@ class MessageRouteTruncateTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer         = event.reactor.schedule(10.0, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender1       = event.container.create_sender(self.sender_conn, self.address, name="S1")
@@ -310,7 +292,7 @@ class LinkRouteTruncateTest(MessagingHandler):
             self.poll_timer.cancel()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.query_conn     = event.container.connect(self.query_host)
@@ -426,7 +408,7 @@ class MessageRouteAbortTest(MessagingHandler):
 
     def on_start(self, event):
         self.logger.log("on_start")
-        self.timer         = event.reactor.schedule(10.0, Timeout(self))
+        self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
         self.sender1       = event.container.create_sender(self.sender_conn, self.address, name="S1")
@@ -534,7 +516,7 @@ class MulticastTruncateTest(MessagingHandler):
         self.receiver2_conn.close()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver1_conn = event.container.connect(self.receiver_host1)
         self.receiver2_conn = event.container.connect(self.receiver_host2)

@@ -33,7 +33,6 @@ from proton import Message, Timeout
 from proton.reactor import AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SendException
 
-#TIMEOUT=5
 _EXCHANGE_TYPE = "org.apache.qpid.dispatch.router.config.exchange"
 _BINDING_TYPE  = "org.apache.qpid.dispatch.router.config.binding"
 

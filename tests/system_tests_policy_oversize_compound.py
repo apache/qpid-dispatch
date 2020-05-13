@@ -27,14 +27,11 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, QdManager, Logger, TestTimeout
 from subprocess import PIPE, STDOUT
-from proton import ConnectionException, Timeout, Url, symbol, Message
+from proton import Message
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, ReceiverOption
-from proton.utils import BlockingConnection, LinkDetached, SyncRequestResponse
-from qpid_dispatch_internal.policy.policy_util import is_ipv6_enabled
-from qpid_dispatch_internal.compat import dict_iteritems
+from proton.reactor import Container
 from test_broker import FakeBroker
 
 # How many worker threads?
@@ -45,18 +42,6 @@ OVERSIZE_CONDITION_NAME = "amqp:connection:forced"
 OVERSIZE_CONDITION_DESC = "Message size exceeded"
 
 OVERSIZE_LINK_CONDITION_NAME = "amqp:link:message-size-exceeded"
-
-# Internal test timeout
-TEST_TIMEOUT_SECONDS = 60
-
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 
 # For the next test case define max sizes for each router.
 # These are the configured maxMessageSize values
@@ -170,7 +155,7 @@ class OversizeMessageTransferTest(MessagingHandler):
         self.logger.log("on_start")
 
         self.logger.log("on_start: secheduling reactor timeout")
-        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         self.logger.log("Waiting for router network to stabilize")
         self.test_class.wait_router_network_connected()
@@ -431,7 +416,7 @@ class OversizeMulticastTransferTest(MessagingHandler):
         self.logger.log("on_start")
 
         self.logger.log("on_start: secheduling reactor timeout")
-        self.timer = event.reactor.schedule(TEST_TIMEOUT_SECONDS, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         self.logger.log("Waiting for router network to stabilize")
         self.test_class.wait_router_network_connected()

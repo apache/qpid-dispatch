@@ -25,15 +25,8 @@ from __future__ import print_function
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from proton import Message, Endpoint
-from system_test import main_module, TIMEOUT
+from system_test import main_module, TIMEOUT, TestTimeout
 from system_test import unittest
-
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
 
 
 class DrainMessagesHandler(MessagingHandler):
@@ -53,7 +46,7 @@ class DrainMessagesHandler(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
 
         # Create a sender and a receiver. They are both listening on the same address
@@ -144,7 +137,7 @@ class DrainNoMessagesHandler(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
 
         # Create a sender and a receiver. They are both listening on the same address
@@ -182,7 +175,7 @@ class DrainNoMoreMessagesHandler(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
 
         # Create a sender and a receiver. They are both listening on the same address
@@ -269,7 +262,7 @@ class DrainMessagesMoreHandler(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
 
         # Create a sender and a receiver. They are both listening on the same address

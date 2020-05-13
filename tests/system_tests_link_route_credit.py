@@ -22,21 +22,10 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from time import sleep
-from threading import Timer
-
-from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
-from system_test import AsyncTestReceiver
-from system_test import AsyncTestSender
-from system_test import unittest
-from system_tests_link_routes import ConnLinkRouteService
-from test_broker import FakeService
+from proton import Message
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout, unittest
 from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from qpid_dispatch.management.client import Node
-from subprocess import PIPE, STDOUT
-import re
+from proton.reactor import Container
 
 
 class AddrTimer(object):
@@ -352,22 +341,6 @@ class RouterProxy(object):
         return Message(properties=ap, reply_to=self.reply_addr)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class LRDestSenderFlowTest(MessagingHandler):
     def __init__(self, receiver_host, sender_host, probe_host, address, initial_credit):
         super(LRDestSenderFlowTest, self).__init__(prefetch=0)
@@ -409,7 +382,7 @@ class LRDestSenderFlowTest(MessagingHandler):
 
     def on_start(self, event):
         self.reactor        = event.reactor
-        self.timer          = event.reactor.schedule(7.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.sender_conn    = event.container.connect(self.sender_host)
         self.probe_conn     = event.container.connect(self.probe_host)
@@ -517,7 +490,7 @@ class LRDestReceiverFlowTest(MessagingHandler):
 
     def on_start(self, event):
         self.reactor        = event.reactor
-        self.timer          = event.reactor.schedule(7.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn  = event.container.connect(self.receiver_host)
         self.sender_conn    = event.container.connect(self.sender_host)
         self.probe_conn     = event.container.connect(self.probe_host)
@@ -606,7 +579,7 @@ class LRFastTeardownTest(MessagingHandler):
 
     def on_start(self, event):
         self.reactor     = event.reactor
-        self.timer       = event.reactor.schedule(7.0, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn        = event.container.connect(self.host)
         self.last_action = "on_start"
 

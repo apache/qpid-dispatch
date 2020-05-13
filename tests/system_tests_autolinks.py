@@ -26,7 +26,7 @@ from __future__ import print_function
 import json
 from threading import Timer
 from proton import Message
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout
 from system_test import unittest
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
@@ -55,7 +55,7 @@ class AutoLinkDetachAfterAttachTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
 
     def on_link_opened(self, event):
@@ -433,7 +433,7 @@ class WaypointTest(MessagingHandler):
         self.second_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
         self.receiver1 = event.container.create_receiver(self.first_conn, self.dest, name="AAA")
@@ -683,14 +683,6 @@ class AutolinkTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
 class AutolinkAttachTestWithListenerName(MessagingHandler):
     def __init__(self, address, node_addr):
         super(AutolinkAttachTestWithListenerName, self).__init__(prefetch=0)
@@ -712,7 +704,7 @@ class AutolinkAttachTestWithListenerName(MessagingHandler):
         self.conn1.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         # We create teo connections to the same listener here and we expect attaches to be sent on both connections
         self.conn = event.container.connect(self.address)
@@ -770,7 +762,7 @@ class AutolinkAttachTest(MessagingHandler):
         self.conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn  = event.container.connect(self.address)
 
     def on_connection_closed(self, event):
@@ -822,7 +814,7 @@ class AutolinkCreditTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.normal_conn = event.container.connect(self.normal_address)
         self.sender      = event.container.create_sender(self.normal_conn, self.dest)
         self.last_action = "Attached normal sender"
@@ -885,7 +877,7 @@ class AutolinkSenderTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.route_conn  = event.container.connect(self.route_address)
         self.last_action = "Connected route container"
 
@@ -951,7 +943,7 @@ class AutolinkReceiverTest(MessagingHandler):
             self.route_conn.close()
 
     def on_start(self, event):
-        self.timer       = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.route_conn  = event.container.connect(self.route_address)
         self.last_action = "Connected route container"
 
@@ -1027,7 +1019,7 @@ class AutolinkMultipleReceiverUsingMyListenerTest(MessagingHandler):
         if self.count % 2 != 0:
             self.error = "Count must be a multiple of 2"
             return
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.normal_conn = event.container.connect(self.normal_address)
         self.route_conn1 = event.container.connect(self.route_address)
         self.route_conn2 = event.container.connect(self.route_address)
@@ -1093,7 +1085,7 @@ class InterContainerTransferTest(MessagingHandler):
         self.conn_2.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.container.container_id = 'container.2'
         self.conn_1 = event.container.connect(self.route_address)
         event.container.container_id = 'container.3'
@@ -1150,7 +1142,7 @@ class ManageAutolinksTest(MessagingHandler):
         self.route_conn.close()
 
     def on_start(self, event):
-        self.timer  = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.container.container_id = 'container.new'
         self.route_conn  = event.container.connect(self.route_address)
         self.normal_conn = event.container.connect(self.normal_address)

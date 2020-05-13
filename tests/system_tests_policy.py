@@ -27,7 +27,7 @@ import os, json, re, signal
 import sys
 import time
 
-from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR
+from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, TestTimeout
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException, Timeout, Url, symbol
 from proton.handlers import MessagingHandler
@@ -1383,7 +1383,7 @@ class ConnectorPolicyMisconfiguredClient(FakeBroker):
             self._thread.join(timeout=5)
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(10.0, Timeout(self))        
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.acceptor = event.container.listen(self.url)
 
     def timeout(self):
@@ -1529,7 +1529,7 @@ class ConnectorPolicyClient(FakeBroker):
             self._thread.join(timeout=5)
 
     def on_start(self, event):
-        self.timer    = event.reactor.schedule(60, Timeout(self))        
+        self.timer    = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.acceptor = event.container.listen(self.url)
 
     def timeout(self):

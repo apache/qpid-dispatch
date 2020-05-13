@@ -27,12 +27,8 @@ from time import sleep, time
 from threading import Event
 from subprocess import PIPE, STDOUT
 
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process
-from system_test import AsyncTestSender
-from system_test import AsyncTestReceiver
-from system_test import QdManager
-from system_test import MgmtMsgProxy
-from system_test import unittest, QdManager
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, TestTimeout, \
+    AsyncTestSender, AsyncTestReceiver, MgmtMsgProxy, unittest, QdManager
 from test_broker import FakeBroker
 from test_broker import FakeService
 
@@ -849,13 +845,6 @@ class LinkRouteTest(TestCase):
                                       'containerId': 'FakeBroker'})
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 class DeliveryTagsTest(MessagingHandler):
     def __init__(self, sender_address, listening_address, qdstat_address):
         super(DeliveryTagsTest, self).__init__()
@@ -886,7 +875,7 @@ class DeliveryTagsTest(MessagingHandler):
             self.sender_connection.close()
 
     def on_start(self, event):
-        self.timer               = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer               = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_connection = event.container.connect(self.listening_address)
 
     def on_connection_remote_open(self, event):
@@ -958,7 +947,7 @@ class CloseWithUnsettledTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1006,7 +995,7 @@ class DynamicSourceTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1063,7 +1052,7 @@ class DynamicTargetTest(MessagingHandler):
         self.conn_route.close()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1118,7 +1107,7 @@ class DetachNoCloseTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1181,7 +1170,7 @@ class DetachMixedCloseTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_route = event.container.connect(self.route_addr)
 
     def on_connection_opened(self, event):
@@ -1254,7 +1243,7 @@ class EchoDetachReceived(MessagingHandler):
                   % (self.msgs_sent, self.msgs_received, self.num_detaches_echoed))
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
 
         # Create two separate connections for sender and receivers
         self.receiver_conn = event.container.connect(self.recv_address)
@@ -1509,7 +1498,7 @@ class MultiLinkSendReceive(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.container.container_id = None
         for u in self.send_urls:
             s = self.SendState(event.container.create_sender(u, name=self.name))
@@ -1677,7 +1666,7 @@ class DrainReceiver(MessagingHandler):
                 # Step 4: The response drain received from the FakeBroker
                 # Step 5: Send second flow of 1000 credits. This is forwarded to the FakeBroker
                 self.receiver.flow(1000)
-                self.timer = event.reactor.schedule(3, Timeout(self))
+                self.timer = event.reactor.schedule(3, TestTimeout(self))
             elif self.num_flows == 2:
                 if not self.fake_broker.success:
                     self.error = "The FakeBroker did not receive correct credit of 1000"
@@ -2180,7 +2169,7 @@ class InvalidTagTest(MessagingHandler):
             self.test_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.test_conn = event.container.connect(self.test_address)
         rx = event.container.create_receiver(self.test_conn, "org.apache.foo")
 
@@ -2320,13 +2309,6 @@ class Dispatch1428(TestCase):
         third.run()
         self.assertEqual(None, third.error)
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
 
 class SendReceive(MessagingHandler):
     def __init__(self, send_url, recv_url, message=None):
@@ -2352,7 +2334,7 @@ class SendReceive(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer      = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer      = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         event.container.container_id = "SendReceiveTestClient"
         self.sender = event.container.create_sender(self.send_url)
         self.receiver = event.container.create_receiver(self.recv_url)

@@ -19,10 +19,9 @@
 
 from time import sleep
 
-from proton import Condition, Message, Delivery,  Timeout
-from system_test import TestCase, Qdrouterd, TIMEOUT
-from system_test import get_link_info, get_inter_router_links, has_mobile_dest_in_address_table
-from system_test import PollTimeout
+from proton import Condition, Message, Delivery
+from system_test import TestCase, Qdrouterd, TIMEOUT, get_link_info, \
+    get_inter_router_links, has_mobile_dest_in_address_table, PollTimeout, TestTimeout
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from qpid_dispatch.management.client import Node
@@ -360,7 +359,7 @@ class LargePresettledLinkCounterTest(MessagingHandler):
 
     def on_start(self, event):
         self.container = event.container
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         # Step 1: Create a receiver with name ReceiverA to address LargePresettledLinkCounterTest
         # This receiver is attached to router B. Later a sender will be
         # created which will be connected to Router A. The sender will send
@@ -460,7 +459,7 @@ class LargePresettledReleasedLinkCounterTest(MessagingHandler):
 
     def on_start(self, event):
         self.container = event.container
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         # Step 1: Create a receiver with name ReceiverA to address LargePresettledReleasedLinkCounterTest
         # This receiver is attached to router B. Later a sender will be
         # created which will be connected to Router A. The sender will send
@@ -1015,7 +1014,7 @@ class OneRouterLinkCountersTest(TestCase):
 
         def on_start(self, event):
             self.reactor = event.reactor
-            self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+            self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
             self.poll_timer = event.reactor.schedule(0.5, PollTimeout(self))
             self.conn = event.container.connect(self.router_addr)
             self.receiver = event.container.create_receiver(self.conn,
@@ -1299,7 +1298,7 @@ class IngressEgressTwoRouterTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn_recv = event.container.connect(self.receiver_address)
         self.receiver = event.container.create_receiver(self.conn_recv,
                                                         source=self.dest,
@@ -1366,7 +1365,7 @@ class IngressEgressOneRouterTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn = event.container.connect(self.address)
         self.sender = event.container.create_sender(self.conn,
                                                     target=self.dest,
@@ -1425,7 +1424,7 @@ class RouteContainerEgressTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.route_container_addr)
         self.receiver = event.container.create_receiver(self.receiver_conn,
                                                         source=self.dest,
@@ -1500,7 +1499,7 @@ class RouteContainerIngressTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.receiver_addr)
         self.receiver = event.container.create_receiver(self.receiver_conn,
                                                         source=self.dest,
@@ -1583,7 +1582,7 @@ class IngressEgressTransitLinkRouteTest(MessagingHandler):
             self.timer.cancel()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.receiver_conn = event.container.connect(self.receiver_addr)
         self.receiver = event.container.create_receiver(self.receiver_conn,
                                                         source=self.dest,
@@ -1650,7 +1649,7 @@ class ReleasedDroppedPresettledCountTest(MessagingHandler):
         self.sender_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.sender_addr)
 
         # Note that this is an anonymous link which will be granted credit w/o
@@ -1710,7 +1709,7 @@ class RejectedDeliveriesTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.addr)
         self.sender = event.container.create_sender(self.sender_conn,
                                                     target=self.dest,
@@ -1772,7 +1771,7 @@ class ModifiedDeliveriesTest(MessagingHandler):
         self.receiver_conn.close()
 
     def on_start(self, event):
-        self.timer = event.reactor.schedule(TIMEOUT, Timeout(self))
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.addr)
         self.sender = event.container.create_sender(self.sender_conn,
                                                     target=self.dest,

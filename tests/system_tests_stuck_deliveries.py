@@ -27,7 +27,7 @@ from threading import Event
 from threading import Timer
 
 from proton import Message, Timeout, symbol
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
 from system_test import QdManager
@@ -164,22 +164,6 @@ class RouterTest(TestCase):
         self.assertEqual(None, test.error)
 
 
-class Timeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.timeout()
-
-
-class PollTimeout(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.poll_timeout()
-
-
 class DelayedSettlementTest(MessagingHandler):
     def __init__(self, sender_host, receiver_host, query_host, addr, dlv_count, stuck_list, close_link):
         super(DelayedSettlementTest, self).__init__(auto_accept = False)
@@ -220,7 +204,7 @@ class DelayedSettlementTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(30.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.poll_timer     = None
         self.sender_conn    = event.container.connect(self.sender_host)
         self.receiver_conn  = event.container.connect(self.receiver_host)
@@ -310,7 +294,7 @@ class RxLinkCreditTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(30.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.poll_timer     = None
         self.receiver_conn  = event.container.connect(self.host)
         self.query_conn     = event.container.connect(self.host)
@@ -441,7 +425,7 @@ class TxLinkCreditTest(MessagingHandler):
         self.timer.cancel()
 
     def on_start(self, event):
-        self.timer          = event.reactor.schedule(30.0, Timeout(self))
+        self.timer          = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.poll_timer     = None
         self.sender_conn    = event.container.connect(self.host)
         self.query_conn     = event.container.connect(self.host)

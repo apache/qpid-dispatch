@@ -22,10 +22,7 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
-from system_test import TestCase
-from system_test import Qdrouterd
-from system_test import QdManager
-from system_test import TIMEOUT
+from system_test import TestCase, Qdrouterd, QdManager, TIMEOUT
 
 from proton import Message
 from proton import Endpoint
