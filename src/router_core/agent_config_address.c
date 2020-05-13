@@ -337,7 +337,6 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
                                    qd_parsed_field_t  *in_body)
 {
     char *pattern = NULL;
-    qd_iterator_t *iter = NULL;
 
     while (true) {
         //
@@ -399,7 +398,7 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         if (fallback && (waypoint || in_phase > 0 || out_phase > 0)) {
             msg = "Fallback cannot be specified with waypoint or non-zero ingress and egress phases";
         }
-            
+
         if (msg) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = msg;
@@ -414,19 +413,6 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         if (!pattern) {
             query->status = QD_AMQP_BAD_REQUEST;
             query->status.description = msg;
-            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
-            break;
-        }
-
-        iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
-
-        //
-        // Ensure that there isn't another configured address with the same pattern
-        //
-
-        if (qd_parse_tree_get_pattern(core->addr_parse_tree, iter, (void **)&addr)) {
-            query->status = QD_AMQP_BAD_REQUEST;
-            query->status.description = "Address prefix conflicts with an existing entity";
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
             break;
         }
@@ -461,11 +447,34 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         }
 
         //
-        // The request is good.  Create the entity and insert it into the hash index and list.
+        // The request is valid.  Attempt to insert the address pattern into
+        // the parse tree, fail if there is already an entry for that pattern
+        //
+        addr = new_qdr_address_config_t();
+        if (!addr) {
+            query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = "Out of memory";
+            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
+            break;
+        }
+        ZERO(addr);
+
+        //
+        // Insert the uninitialized address to check if it already exists in
+        // the parse tree.  On success initialize it.  This is thread safe
+        // since the current thread (core) is the only thread allowed to use
+        // the parse tree
         //
 
-        addr = new_qdr_address_config_t();
-        ZERO(addr);
+        qd_error_t rc = qd_parse_tree_add_pattern_str(core->addr_parse_tree, pattern, addr);
+        if (rc) {
+            free_qdr_address_config_t(addr);
+            query->status = QD_AMQP_BAD_REQUEST;
+            query->status.description = qd_error_name(rc);
+            qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_ADDRESS_TYPE, query->status.description);
+            break;
+        }
+
         addr->ref_count = 1; // Represents the reference from the addr_config list
         addr->name      = name ? (char*) qd_iterator_copy(name) : 0;
         addr->identity  = qdr_identifier(core);
@@ -477,9 +486,6 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         addr->priority  = priority;
         addr->fallback  = fallback;
         pattern = 0;
-
-        qd_iterator_reset_view(iter, ITER_VIEW_ALL);
-        qd_parse_tree_add_pattern(core->addr_parse_tree, iter, addr);
 
         DEQ_INSERT_TAIL(core->addr_config, addr);
         if (name) {
@@ -517,7 +523,6 @@ void qdra_config_address_create_CT(qdr_core_t         *core,
         qdr_query_free(query);
 
     free(pattern);
-    qd_iterator_free(iter);
 }
 
 

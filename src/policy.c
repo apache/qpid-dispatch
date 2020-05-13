@@ -1350,21 +1350,18 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern)
 {
     void *payload = strdup(hostPattern);
     sys_mutex_lock(policy->tree_lock);
-    void *oldp = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, payload);
-    if (oldp) {
-        void *recovered = qd_parse_tree_add_pattern_str(policy->hostname_tree, (char *)oldp, oldp);
-        assert (recovered);
-        (void)recovered;        /* Silence compiler complaints of unused variable */
-    }
+    qd_error_t rc = qd_parse_tree_add_pattern_str(policy->hostname_tree, hostPattern, payload);
     sys_mutex_unlock(policy->tree_lock);
-    if (oldp) {
+
+    if (rc != QD_ERROR_NONE) {
+        const char *err = qd_error_name(rc);
         free(payload);
         qd_log(policy->log_source,
-            QD_LOG_WARNING,
-            "vhost hostname pattern '%s' failed to replace optimized pattern '%s'",
-            hostPattern, (char *)oldp);
+               QD_LOG_WARNING,
+               "vhost hostname pattern '%s' add failed: %s",
+               hostPattern, err ? err : "unknown error");
     }
-    return oldp == 0;
+    return rc == QD_ERROR_NONE;
 }
 
 

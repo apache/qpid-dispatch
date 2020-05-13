@@ -20,10 +20,8 @@
  */
 
 #include <stdbool.h>
-
-#include <qpid/dispatch/ctools.h>
+#include <qpid/dispatch/error.h>
 #include <qpid/dispatch/iterator.h>
-#include <qpid/dispatch/alloc.h>
 
 
 typedef struct qd_parse_node qd_parse_tree_t;
@@ -58,17 +56,28 @@ const char *qd_parse_address_token_sep();
 bool qd_parse_tree_validate_pattern(const qd_parse_tree_t *tree,
                                     const qd_iterator_t *pattern);
 
-// returns old payload or NULL if new
-void *qd_parse_tree_add_pattern(qd_parse_tree_t *node,
-                                const qd_iterator_t *pattern,
-                                void *payload);
+// Inserts payload in tree using pattern as the lookup key
+//
+// @param node root of parse tree
+// @param pattern match pattern (copied)
+// @param payload stored in tree (referenced)
+// @return QD_ERROR_NONE (0) on success else qd_error_t code
+//
+qd_error_t qd_parse_tree_add_pattern(qd_parse_tree_t *node,
+                                     const qd_iterator_t *pattern,
+                                     void *payload);
 
 // returns old payload or NULL if not present
+//
+// @param node root of parse tree
+// @param pattern match pattern of payload to remove
+//
 void *qd_parse_tree_remove_pattern(qd_parse_tree_t *node,
                                    const qd_iterator_t *pattern);
 
 // retrieves the payload pointer
-// returns true if pattern found
+// returns true if pattern found and sets *payload
+//
 bool qd_parse_tree_get_pattern(qd_parse_tree_t *tree,
                                const qd_iterator_t *pattern,
                                void **payload);
@@ -114,10 +123,16 @@ bool qd_parse_tree_walk(qd_parse_tree_t *tree, qd_parse_tree_visit_t *callback, 
 // parse tree functions using string interface
 //
 
-// returns old payload or NULL if new
-void *qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
-                                    const char *pattern,
-                                    void *payload);
+// Inserts payload in tree using pattern as the lookup key
+//
+// @param node root of parse tree
+// @param pattern match pattern (copied)
+// @param payload stored in tree (referenced)
+// @return QD_ERROR_NONE (0) on success else qd_error_t code
+//
+qd_error_t qd_parse_tree_add_pattern_str(qd_parse_tree_t *node,
+                                         const char *pattern,
+                                         void *payload);
 
 // returns true on match and sets *payload
 bool qd_parse_tree_retrieve_match_str(qd_parse_tree_t *tree,

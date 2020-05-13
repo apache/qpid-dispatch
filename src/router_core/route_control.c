@@ -702,20 +702,15 @@ void qdr_link_route_map_pattern_CT(qdr_core_t *core, qd_iterator_t *address, qdr
 {
     qd_direction_t dir;
     char *pattern = qdr_address_to_link_route_pattern(address, &dir);
-    qd_iterator_t *iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
 
-    qdr_address_t *other_addr;
-    bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&other_addr);
-    if (!found) {
-        qd_parse_tree_add_pattern(core->link_route_tree[dir], iter, addr);
-    } else {
+    qd_error_t rc = qd_parse_tree_add_pattern_str(core->link_route_tree[dir], pattern, addr); 
+    if (rc) {
         // the pattern is mapped once when the address is added to the hash
         // table.  It should not be mapped twice
-        qd_log(core->log, QD_LOG_CRITICAL, "Link route %s mapped redundantly!",
-               pattern);
+        qd_log(core->log, QD_LOG_CRITICAL, "Link route %s mapped redundantly: %s!",
+               pattern, qd_error_name(rc));
     }
 
-    qd_iterator_free(iter);
     free(pattern);
 }
 
@@ -727,19 +722,15 @@ void qdr_link_route_unmap_pattern_CT(qdr_core_t *core, qd_iterator_t *address)
 {
     qd_direction_t dir;
     char *pattern = qdr_address_to_link_route_pattern(address, &dir);
-    qd_iterator_t *iter = qd_iterator_string(pattern, ITER_VIEW_ALL);
-    qdr_address_t *addr;
-    bool found = qd_parse_tree_get_pattern(core->link_route_tree[dir], iter, (void **)&addr);
-    if (found) {
-        qd_parse_tree_remove_pattern(core->link_route_tree[dir], iter);
-    } else {
-        // expected that the pattern is removed when the address is deleted.
-        // Attempting to remove it twice is unexpected
+    qdr_address_t *addr = (qdr_address_t *) qd_parse_tree_remove_pattern_str(core->link_route_tree[dir],
+                                                                             pattern);
+    if (!addr) {
+        // expected that the pattern is in the tree.
+        // unexpected if it hasn't been mapped or has already been removed
         qd_log(core->log, QD_LOG_CRITICAL, "link route pattern ummap: Pattern '%s' not found",
                pattern);
     }
 
-    qd_iterator_free(iter);
     free(pattern);
 }
 
