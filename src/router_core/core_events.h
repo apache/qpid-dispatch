@@ -42,9 +42,9 @@ typedef uint32_t qdrc_event_t;
  * QDRC_EVENT_CONN_IR_LOST               (not implemented)
  *
  * QDRC_EVENT_LINK_IN_ATTACHED           (not implemented)
- * QDRC_EVENT_LINK_IN_DETACHED           (not implemented)
+ * QDRC_EVENT_LINK_IN_DETACHED           An inlink has been detached
  * QDRC_EVENT_LINK_OUT_ATTACHED          (not implemented)
- * QDRC_EVENT_LINK_OUT_DETACHED          (not implemented)
+ * QDRC_EVENT_LINK_OUT_DETACHED          An outlink has been detached
  * QDRC_EVENT_LINK_EDGE_DATA_ATTACHED    An edge-data link has been attached (incoming only)
  * QDRC_EVENT_LINK_EDGE_DATA_DETACHED    An edge-data link has been detached (incoming only)
  *

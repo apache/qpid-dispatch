@@ -215,6 +215,50 @@ static void del_outlink(qcm_edge_addr_proxy_t *ap, qdr_address_t *addr)
     }
 }
 
+static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
+{
+    if (!link || !link->conn)
+        return;
+
+    //
+    // We only care if the link event is on an edge connection.
+    //
+    if (link->conn->role != QDR_ROLE_EDGE_CONNECTION)
+            return;
+
+    switch (event) {
+        case QDRC_EVENT_LINK_OUT_DETACHED: {
+            qdr_address_t *addr = link->owning_addr;
+            if (addr && link == addr->edge_outlink) {
+                //
+                // The link is being detached. If the detaching link is the same as the link's owning_addr's edge_outlink,
+                // set the edge_outlink on the address to be zero. We do this because this link is going to be freed
+                // and we don't want anyone dereferencing the addr->edge_outlink
+                //
+                addr->edge_outlink = 0;
+            }
+            break;
+        }
+
+        case QDRC_EVENT_LINK_IN_DETACHED: {
+            qdr_address_t *addr = link->owning_addr;
+            if (addr && link == addr->edge_inlink) {
+                //
+                // The link is being detached. If the detaching link is the same as the link's owning_addr's edge_inlink,
+                // set the edge_inlink on the address to be zero. We do this because this link is going to be freed
+                // and we don't want anyone dereferencing the addr->edge_inlink
+                //
+                addr->edge_inlink = 0;
+            }
+            break;
+        }
+
+        default:
+            assert(false);
+            break;
+    }
+}
+
 
 static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *conn)
 {
@@ -325,11 +369,6 @@ static void on_conn_event(void *context, qdrc_event_t event, qdr_connection_t *c
     }
 
     case QDRC_EVENT_CONN_EDGE_LOST :
-        for (qdr_address_t *addr = DEQ_HEAD(ap->core->addrs); addr; addr = DEQ_NEXT(addr)) {
-            addr->edge_inlink  = 0;
-            addr->edge_outlink = 0;
-        }
-
         ap->edge_conn_established = false;
         ap->edge_conn             = 0;
         break;
@@ -531,9 +570,11 @@ qcm_edge_addr_proxy_t *qcm_edge_addr_proxy(qdr_core_t *core)
                                             | QDRC_EVENT_ADDR_BECAME_SOURCE
                                             | QDRC_EVENT_ADDR_NO_LONGER_SOURCE
                                             | QDRC_EVENT_ADDR_TWO_SOURCE
-                                            | QDRC_EVENT_ADDR_ONE_SOURCE,
+                                            | QDRC_EVENT_ADDR_ONE_SOURCE
+                                            | QDRC_EVENT_LINK_IN_DETACHED
+                                            | QDRC_EVENT_LINK_OUT_DETACHED,
                                             on_conn_event,
-                                            0,
+                                            on_link_event,
                                             on_addr_event,
                                             0,
                                             ap);                                            

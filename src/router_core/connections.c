@@ -1924,6 +1924,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
         }
 
         if (link->link_direction == QD_INCOMING) {
+            qdrc_event_link_raise(core, QDRC_EVENT_LINK_IN_DETACHED, link);
             //
             // Handle incoming link cases
             //
@@ -1963,6 +1964,7 @@ static void qdr_link_inbound_detach_CT(qdr_core_t *core, qdr_action_t *action, b
             //
             // Handle outgoing link cases
             //
+            qdrc_event_link_raise(core, QDRC_EVENT_LINK_OUT_DETACHED, link);
             switch (link->link_type) {
             case QD_LINK_ENDPOINT:
             case QD_LINK_EDGE_DOWNLINK:
