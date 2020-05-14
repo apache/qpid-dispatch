@@ -324,6 +324,17 @@ class BusManager(Node):
         rows.append(('Version',        router.version))
         rows.append(('Mode',           router.mode))
         rows.append(('Router Id',      router.id))
+
+        try:
+            rows.append(('Neighbor Legacy Mode', 'on' if router.neighborLegacyMode else 'off'))
+        except:
+            pass
+
+        try:
+            rows.append(('Network Legacy Mode', 'on' if router.networkLegacyMode else 'off'))
+        except:
+            pass
+
         try:
             rows.append(('Worker Threads', router.workerThreads))
         except:

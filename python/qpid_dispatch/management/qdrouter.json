@@ -619,6 +619,14 @@
                     "type": "integer",
                     "graph": true,
                     "description": "The current amount of memory in use by the qdrouterd process in bytes.  This includes memory provisioned for stack, data, and code (VmSize).  This value is set to Null if the platform does not provide access to the process memory size."
+                },
+                "neighborLegacyMode": {
+                    "type": "boolean",
+                    "description": "Set if this router has at least one neighbor router that is running an older version of the routing protocol."
+                },
+                "networkLegacyMode": {
+                    "type": "boolean",
+                    "description": "Set if the router network has at least router that is running an older version of the routing protocol.  This means that backward-compatibility is in effect which will add some operational overhead to the network."
                 }
             }
         },

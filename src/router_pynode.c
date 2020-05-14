@@ -254,6 +254,21 @@ static PyObject* qd_set_radius(PyObject *self, PyObject *args)
 }
 
 
+static PyObject* qd_set_legacy_mode(PyObject *self, PyObject *args)
+{
+    RouterAdapter *adapter = (RouterAdapter*) self;
+    qd_router_t   *router  = adapter->router;
+
+    if (!PyArg_ParseTuple(args, "pp",
+                          &router->neighbor_legacy_mode,
+                          &router->network_legacy_mode))
+        return 0;
+
+    Py_INCREF(Py_None);
+    return Py_None;
+}
+
+
 static PyObject* qd_flush_destinations(PyObject *self, PyObject *args)
 {
     RouterAdapter *adapter = (RouterAdapter*) self;
@@ -317,6 +332,7 @@ static PyMethodDef RouterAdapter_methods[] = {
     {"set_cost",            qd_set_cost,            METH_VARARGS, "Set the cost to reach a remote router"},
     {"set_valid_origins",   qd_set_valid_origins,   METH_VARARGS, "Set the valid origins for a remote router"},
     {"set_radius",          qd_set_radius,          METH_VARARGS, "Set the current topology radius"},
+    {"set_legacy_mode",     qd_set_legacy_mode,     METH_VARARGS, "Set this router's legacy-compatibilty mode"},
     {"flush_destinations",  qd_flush_destinations,  METH_VARARGS, "Remove all mapped destinations from a router"},
     {"mobile_seq_advanced", qd_mobile_seq_advanced, METH_VARARGS, "Mobile sequence for a router moved ahead of the local value"},
     {"get_agent",           qd_get_agent,           METH_VARARGS, "Get the management agent"},

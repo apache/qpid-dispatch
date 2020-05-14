@@ -90,19 +90,29 @@ class RouterEngine(object):
 
 
     def setNeighborLegacyMode(self, value):
+        post = False
         if not self.neighbor_legacy_mode and value:
+            post = True
             self.log(LOG_INFO, "Entered Neighbor-Legacy-Mode")
         if self.neighbor_legacy_mode and not value:
+            post = True
             self.log(LOG_INFO, "Exited Neighbor-Legacy-Mode")
         self.neighbor_legacy_mode = value;
+        if post:
+            self.router_adapter.set_legacy_mode(self.neighbor_legacy_mode, self.network_legacy_mode)
 
 
     def setNetworkLegacyMode(self, value):
+        post = False
         if not self.network_legacy_mode and value:
+            post = True
             self.log(LOG_INFO, "Entered Network-Legacy-Mode")
         if self.network_legacy_mode and not value:
+            post = True
             self.log(LOG_INFO, "Exited Network-Legacy-Mode")
         self.network_legacy_mode = value;
+        if post:
+            self.router_adapter.set_legacy_mode(self.neighbor_legacy_mode, self.network_legacy_mode)
 
 
     ##========================================================================================

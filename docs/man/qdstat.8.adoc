@@ -56,6 +56,12 @@ The router's operating mode:
 Router Id::
 The router's ID.
 
+Neighbor Legacy Mode::
+If this is 'on', this router has at least one connected neighbor that is running an older version of the routing protocol.
+
+Network Legacy Mode::
+If this is 'on', there is at least one interior router in the network that is running an older version of the routing protocol.  This means that the interior routers are running in legacy-compatibility mode which adds some overhead to the operation of the network.
+
 Uptime::
 Time this router has been up. Displayed in the days:hours:minutes:seconds format.
 

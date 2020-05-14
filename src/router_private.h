@@ -70,7 +70,9 @@ struct qd_router_t {
     // distance in hops (not cost) from the local router to the most distant known
     // router in the topology.
     //
-    int topology_radius;
+    int  topology_radius;
+    bool neighbor_legacy_mode; ///< We have at least one neighbor running and old protocol version
+    bool network_legacy_mode;  ///< There is at least one router in the network running the old version
 };
 
 #endif
