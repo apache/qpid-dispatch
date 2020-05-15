@@ -37,7 +37,6 @@
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 
-
 #include "entity.h"
 #include "entity_cache.h"
 #include "dispatch_private.h"
@@ -1043,29 +1042,33 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     return true;
 }
 
-static void *thread_run(void *arg)
-{
-    qd_server_t      *qd_server = (qd_server_t*)arg;
+static void *thread_run(void *arg) {
+    qd_server_t *qd_server = (qd_server_t*)arg;
     bool running = true;
+
     while (running) {
         pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
-        pn_event_t * e;
-        qd_connection_t *qd_conn = 0;
+        pn_event_t *e;
         pn_connection_t *pn_conn = 0;
+        qd_connection_t *qd_conn = 0;
 
         while (running && (e = pn_event_batch_next(events))) {
             pn_connection_t *conn = pn_event_connection(e);
 
-            if (!pn_conn)
+            if (!pn_conn) {
                 pn_conn = conn;
+            }
+
             assert(pn_conn == conn);
 
-            if (!qd_conn)
+            if (!qd_conn) {
                 qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
+            }
 
             running = handle(qd_server, e, conn, qd_conn);
 
-            /* Free the connection after all other processing is complete */
+            // Free the connection after all other processing is
+            // complete
             if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
                 qd_conn_event_batch_complete(qd_server->container, qd_conn, true);
                 pn_connection_set_context(pn_conn, NULL);
@@ -1074,15 +1077,15 @@ static void *thread_run(void *arg)
             }
         }
 
-        //
-        // Notify the container that the batch is complete so it can do after-batch
-        // processing.
-        //
-        if (qd_conn)
+        // Notify the container that the batch is complete so it can
+        // do after-batch processing
+        if (qd_conn) {
             qd_conn_event_batch_complete(qd_server->container, qd_conn, false);
+        }
 
         pn_proactor_done(qd_server->proactor, events);
     }
+
     return NULL;
 }
 
