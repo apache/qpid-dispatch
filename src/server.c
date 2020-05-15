@@ -1043,7 +1043,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
 }
 
 static void *thread_run(void *arg) {
-    qd_server_t *qd_server = (qd_server_t*)arg;
+    qd_server_t *qd_server = (qd_server_t*) arg;
     bool running = true;
 
     while (running) {
@@ -1053,19 +1053,12 @@ static void *thread_run(void *arg) {
         qd_connection_t *qd_conn = 0;
 
         while (running && (e = pn_event_batch_next(events))) {
-            pn_connection_t *conn = pn_event_connection(e);
-
             if (!pn_conn) {
-                pn_conn = conn;
+                pn_conn = pn_event_connection(e);
+                qd_conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
             }
 
-            assert(pn_conn == conn);
-
-            if (!qd_conn) {
-                qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
-            }
-
-            running = handle(qd_server, e, conn, qd_conn);
+            running = handle(qd_server, e, pn_conn, qd_conn);
 
             // Free the connection after all other processing is
             // complete
