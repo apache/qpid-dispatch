@@ -1049,8 +1049,8 @@ static void *thread_run(void *arg) {
     while (running) {
         pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
         pn_event_t *e;
-        pn_connection_t *pn_conn = 0;
-        qd_connection_t *qd_conn = 0;
+        pn_connection_t *pn_conn = NULL;
+        qd_connection_t *qd_conn = NULL;
 
         while (running && (e = pn_event_batch_next(events))) {
             if (!pn_conn) {
@@ -1066,7 +1066,7 @@ static void *thread_run(void *arg) {
                 qd_conn_event_batch_complete(qd_server->container, qd_conn, true);
                 pn_connection_set_context(pn_conn, NULL);
                 qd_connection_free(qd_conn);
-                qd_conn = 0;
+                qd_conn = NULL;
             }
         }
 
