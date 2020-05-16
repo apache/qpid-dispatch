@@ -574,42 +574,26 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     return ctx;
 }
 
-
-static void on_accept(pn_event_t *e)
-{
-    assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
-    pn_listener_t *pn_listener = pn_event_listener(e);
-    qd_listener_t *listener = pn_listener_get_context(pn_listener);
-    qd_connection_t *ctx = qd_server_connection(listener->server, &listener->config);
-    if (!ctx) {
-        qd_log(listener->server->log_source, QD_LOG_CRITICAL,
-               "Allocation failure during accept to %s", listener->config.host_port);
-        return;
-    }
-    ctx->listener = listener;
-    qd_log(listener->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"]: Accepting incoming connection to '%s'",
-           ctx->connection_id, ctx->listener->config.host_port);
-    /* Asynchronous accept, configure the transport on PN_CONNECTION_BOUND */
-    pn_listener_accept(pn_listener, ctx->pn_conn);
- }
-
-/* Log the description, set the transport condition (name, description) close the transport tail. */
-void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...)
-{
+// Log the description, set the transport condition (name,
+// description), and close the transport tail
+void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...) {
     va_list ap;
     va_start(ap, description);
     qd_verror(QD_ERROR_RUNTIME, description, ap);
     va_end(ap);
+
     if (ctx->pn_conn) {
         pn_transport_t *t = pn_connection_transport(ctx->pn_conn);
-        /* Normally this is closing the transport but if not bound close the connection. */
+        // Normally this is closing the transport, but if not bound,
+        // close the connection
         pn_condition_t *cond = t ? pn_transport_condition(t) : pn_connection_condition(ctx->pn_conn);
+
         if (cond && !pn_condition_is_set(cond)) {
             va_start(ap, description);
             pn_condition_vformat(cond, name, description, ap);
             va_end(ap);
         }
+
         if (t) {
             pn_transport_close_tail(t);
         } else {
@@ -618,12 +602,12 @@ void connect_fail(qd_connection_t *ctx, const char *name, const char *descriptio
     }
 }
 
-
-/* Get the host IP address for the remote end */
+// Get the host IP address for the remote end
 static void set_rhost_port(qd_connection_t *ctx) {
     pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
     const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(tport));
     size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(tport));
+
     if (sa && salen) {
         char rport[NI_MAXSERV] = "";
         int err = getnameinfo(sa, salen,
@@ -658,6 +642,28 @@ static void startup_timer_handler(void *context) {
     qd_timer_free(ctx->timer);
     ctx->timer = 0;
     qd_connection_invoke_deferred(ctx, timeout_on_handshake, context);
+}
+
+static void on_listener_accept(pn_event_t *e) {
+    pn_listener_t *pn_listener = pn_event_listener(e);
+    qd_listener_t *listener = pn_listener_get_context(pn_listener);
+    qd_connection_t *ctx = qd_server_connection(listener->server, &listener->config);
+
+    if (!ctx) {
+        qd_log(listener->server->log_source, QD_LOG_CRITICAL,
+               "Allocation failure during accept to %s", listener->config.host_port);
+        return;
+    }
+
+    ctx->listener = listener;
+
+    qd_log(listener->server->log_source, QD_LOG_TRACE,
+           "[%"PRIu64"]: Accepting incoming connection to '%s'",
+           ctx->connection_id, ctx->listener->config.host_port);
+
+    // Asynchronous accept.  Configure the transport on
+    // PN_CONNECTION_BOUND.
+    pn_listener_accept(pn_listener, ctx->pn_conn);
 }
 
 static void on_connection_init(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
@@ -911,7 +917,7 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
 
     case PN_LISTENER_ACCEPT:
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
-        on_accept(e);
+        on_listener_accept(e);
         break;
 
     case PN_LISTENER_CLOSE:
@@ -1001,10 +1007,10 @@ static void qd_connection_free(qd_connection_t *ctx)
     /* Note: pn_conn is freed by the proactor */
 }
 
-/* Events involving a connection or listener are serialized by the proactor so
- * only one event per connection / listener will be processed at a time.
- */
-static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx) {
+// Events involving a connection or listener are serialized by the
+// proactor so only one event per connection or listener is processed
+// at a time
+static bool handle_event(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx) {
     if (qdr_is_authentication_service_connection(pn_conn)) {
         qdr_handle_authentication_service_connection_event(e);
         return true;
@@ -1013,9 +1019,8 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     switch (pn_event_type(e)) {
 
     case PN_PROACTOR_INTERRUPT:
-        /* Interrupt the next thread */
+        // Interrupt the next thread and stop the current thread
         pn_proactor_interrupt(qd_server->proactor);
-        /* Stop the current thread */
         return false;
 
     case PN_PROACTOR_TIMEOUT:
@@ -1028,10 +1033,9 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         handle_listener(e, qd_server);
         break;
 
-    case PN_CONNECTION_INIT: {
+    case PN_CONNECTION_INIT:
         on_connection_init(qd_server, e, ctx);
         break;
-    }
 
     case PN_CONNECTION_BOUND:
         on_connection_bound(qd_server, e);
@@ -1075,7 +1079,7 @@ static void *thread_run(void *arg) {
                 qd_conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
             }
 
-            running = handle(qd_server, e, pn_conn, qd_conn);
+            running = handle_event(qd_server, e, pn_conn, qd_conn);
 
             // Free the connection after all other processing is
             // complete
@@ -1683,18 +1687,25 @@ const char* qd_connection_remote_ip(const qd_connection_t *c) {
     return c->rhost;
 }
 
-/* Expose event handling for HTTP connections */
+// Expose event handling for HTTP connections
 bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
-    if (!c)
+    // XXX What's going on with c versus qd_conn here?
+
+    if (!c) {
         return false;
+    }
+
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
-    handle(c->server, e, pn_conn, qd_conn);
+
+    handle_event(c->server, e, pn_conn, qd_conn);
+
     if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
         pn_connection_set_context(pn_conn, NULL);
         qd_connection_free(qd_conn);
         return false;
     }
+
     return true;
 }
 
