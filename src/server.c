@@ -938,26 +938,23 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
 void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
 
-static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server) {
-    qd_log_source_t *log = qd_server->log_source;
+static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
+    qd_log_source_t *log = server->log_source;
+    qd_listener_t *listener = (qd_listener_t*) pn_listener_get_context(pn_event_listener(event));
+    const char *host_port = listener->config.host_port;
+    const char *port = listener->config.port;
 
-    qd_listener_t *li = (qd_listener_t*) pn_listener_get_context(pn_event_listener(e));
-    const char *host_port = li->config.host_port;
-    const char *port = li->config.port;
-
-    switch (pn_event_type(e)) {
-
+    switch (pn_event_type(event)) {
     case PN_LISTENER_OPEN: {
-
         if (strcmp(port, "0") == 0) {
             // If a 0 (zero) is specified for a port, get the actual listening port from the listener.
-            pn_listener_t *l = pn_event_listener(e);
+            pn_listener_t *l = pn_event_listener(event);
             const pn_netaddr_t *na = pn_listener_addr(l);
             char str[PN_MAX_ADDR] = "";
             pn_netaddr_str(na, str, sizeof(str));
             // "str" contains the host and port on which this listener is listening.
-            if (li->config.name)
-                qd_log(log, QD_LOG_NOTICE, "Listening on %s (%s)", str, li->config.name);
+            if (listener->config.name)
+                qd_log(log, QD_LOG_NOTICE, "Listening on %s (%s)", str, listener->config.name);
             else
                 qd_log(log, QD_LOG_NOTICE, "Listening on %s", str);
         }
@@ -970,17 +967,17 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server) {
 
     case PN_LISTENER_ACCEPT:
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
-        on_listener_accept(e);
+        on_listener_accept(event);
         break;
 
     case PN_LISTENER_CLOSE:
-        if (li->pn_listener) {
-            pn_condition_t *cond = pn_listener_condition(li->pn_listener);
+        if (listener->pn_listener) {
+            pn_condition_t *cond = pn_listener_condition(listener->pn_listener);
             if (pn_condition_is_set(cond)) {
                 qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
                        pn_condition_get_description(cond),
                        pn_condition_get_name(cond));
-                if (li->exit_on_error) {
+                if (listener->exit_on_error) {
                     qd_log(log, QD_LOG_CRITICAL, "Shutting down, required listener failed %s",
                            host_port);
                     exit(1);
@@ -988,9 +985,9 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server) {
             } else {
                 qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
             }
-            pn_listener_set_context(li->pn_listener, 0);
-            li->pn_listener = 0;
-            qd_listener_decref(li);
+            pn_listener_set_context(listener->pn_listener, 0);
+            listener->pn_listener = 0;
+            qd_listener_decref(listener);
         }
         break;
 
@@ -1083,7 +1080,7 @@ static bool handle_event(qd_server_t *qd_server, pn_event_t *e, pn_connection_t 
     case PN_LISTENER_OPEN:
     case PN_LISTENER_ACCEPT:
     case PN_LISTENER_CLOSE:
-        handle_listener_event(e, qd_server);
+        handle_listener_event(qd_server, e);
         break;
 
     case PN_CONNECTION_INIT:
