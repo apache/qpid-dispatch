@@ -594,7 +594,6 @@ static void on_accept(pn_event_t *e)
     pn_listener_accept(pn_listener, ctx->pn_conn);
  }
 
-
 /* Log the description, set the transport condition (name, description) close the transport tail. */
 void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...)
 {
@@ -750,6 +749,55 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 }
 
+static void on_transport_error(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
+    pn_transport_t *transport = pn_event_transport(e);
+    pn_condition_t *condition = pn_transport_condition(transport);
+
+    if (ctx->connector) {
+        // Outgoing connection
+
+        qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+
+        if (item->retries == 1) {
+            // Increment the connection index
+
+            ctx->connector->conn_index += 1;
+
+            if (ctx->connector->conn_index > DEQ_SIZE(ctx->connector->conn_info_list)) {
+                ctx->connector->conn_index = 1;
+            }
+
+            item->retries = 0;
+        } else {
+            item->retries += 1;
+        }
+
+        const qd_server_config_t *config = &ctx->connector->config;
+        ctx->connector->state = CXTR_STATE_FAILED;
+        char conn_msg[300];
+
+        if (condition && pn_condition_is_set(condition)) {
+            qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s",
+                             ctx->connection_id, config->host_port, pn_condition_get_name(condition),
+                             pn_condition_get_description(condition));
+            strcpy(ctx->connector->conn_msg, conn_msg);
+            qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+        } else {
+            qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed",
+                             ctx->connection_id, config->host_port);
+            strcpy(ctx->connector->conn_msg, conn_msg);
+            qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+        }
+    } else if (ctx->listener) {
+        // Incoming connection
+
+        if (condition && pn_condition_is_set(condition)) {
+            qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
+                   ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port,
+                   pn_condition_get_name(condition), pn_condition_get_description(condition));
+        }
+    }
+}
 
 static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 {
@@ -922,24 +970,6 @@ static void startup_timer_handler(void *context)
     qd_connection_invoke_deferred(ctx, timeout_on_handhsake, context);
 }
 
-static void qd_increment_conn_index(qd_connection_t *ctx)
-{
-    if (ctx->connector) {
-        qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
-
-        if (item->retries == 1) {
-            ctx->connector->conn_index += 1;
-            if (ctx->connector->conn_index > DEQ_SIZE(ctx->connector->conn_info_list))
-                ctx->connector->conn_index = 1;
-            item->retries = 0;
-        }
-        else
-            item->retries += 1;
-    }
-
-}
-
-
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
@@ -1008,35 +1038,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         break;
 
     case PN_TRANSPORT_ERROR:
-        {
-            pn_transport_t *transport = pn_event_transport(e);
-            pn_condition_t* condition = transport ? pn_transport_condition(transport) : NULL;
-
-            if (ctx->connector) { /* Outgoing connection */
-                qd_increment_conn_index(ctx);
-                const qd_server_config_t *config = &ctx->connector->config;
-                ctx->connector->state = CXTR_STATE_FAILED;
-                char conn_msg[300];
-                if (condition && pn_condition_is_set(condition)) {
-                    qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
-                                     pn_condition_get_name(condition), pn_condition_get_description(condition));
-                    strcpy(ctx->connector->conn_msg, conn_msg);
-
-                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
-                } else {
-                    qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed", ctx->connection_id, config->host_port);
-                    strcpy(ctx->connector->conn_msg, conn_msg);
-                    qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
-                }
-            } else if (ctx->listener) { /* Incoming connection */
-                if (condition && pn_condition_is_set(condition)) {
-                    qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
-                           ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
-                           pn_condition_get_description(condition));
-                }
-            }
-        }
-
+        on_transport_error(qd_server, e, ctx);
         break;
 
     default:
