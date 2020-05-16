@@ -539,82 +539,120 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     pn_data_exit(pn_connection_properties(conn));
 }
 
-/* Wake function for proactor-manaed connections */
-static void connection_wake(qd_connection_t *ctx) {
-    if (ctx->pn_conn) pn_connection_wake(ctx->pn_conn);
+// Wake function for proactor-managed connections
+static void connection_wake(qd_connection_t *conn) {
+    if (conn->pn_conn) {
+        pn_connection_wake(conn->pn_conn);
+    }
 }
 
-/* Construct a new qd_connection. Thread safe. */
-qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config)
-{
-    qd_connection_t *ctx = new_qd_connection_t();
-    if (!ctx) return NULL;
-    ZERO(ctx);
-    ctx->pn_conn       = pn_connection();
-    ctx->deferred_call_lock = sys_mutex();
-    ctx->role = strdup(config->role);
-    if (!ctx->pn_conn || !ctx->deferred_call_lock || !ctx->role) {
-        if (ctx->pn_conn) pn_connection_free(ctx->pn_conn);
-        if (ctx->deferred_call_lock) sys_mutex_free(ctx->deferred_call_lock);
-        free(ctx->role);
-        free(ctx);
+// Construct a new qd_connection. Thread safe.
+qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config) {
+    qd_connection_t *conn = new_qd_connection_t();
+
+    // XXX When does this happen?
+    if (!conn) {
         return NULL;
     }
-    ctx->server = server;
-    ctx->wake = connection_wake; /* Default, over-ridden for HTTP connections */
-    pn_connection_set_context(ctx->pn_conn, ctx);
-    DEQ_ITEM_INIT(ctx);
-    DEQ_INIT(ctx->deferred_calls);
-    DEQ_INIT(ctx->free_link_session_list);
+
+    ZERO(conn);
+
+    conn->pn_conn = pn_connection();
+    conn->deferred_call_lock = sys_mutex();
+    conn->role = strdup(config->role);
+
+    // XXX This tests for null pn_conn, but didn't it just assign it above?
+    if (!conn->pn_conn || !conn->deferred_call_lock || !conn->role) {
+        if (conn->pn_conn) {
+            pn_connection_free(conn->pn_conn);
+        }
+
+        if (conn->deferred_call_lock) {
+            sys_mutex_free(conn->deferred_call_lock);
+        }
+
+        free(conn->role);
+        free(conn);
+
+        return NULL;
+    }
+
+    conn->server = server;
+
+    // The default.  It is overridden for HTTP connections.
+    conn->wake = connection_wake;
+
+    pn_connection_set_context(conn->pn_conn, conn);
+
+    DEQ_ITEM_INIT(conn);
+    DEQ_INIT(conn->deferred_calls);
+    DEQ_INIT(conn->free_link_session_list);
+
     sys_mutex_lock(server->lock);
-    ctx->connection_id = server->next_connection_id++;
-    DEQ_INSERT_TAIL(server->conn_list, ctx);
+    conn->connection_id = server->next_connection_id++;
+    DEQ_INSERT_TAIL(server->conn_list, conn);
     sys_mutex_unlock(server->lock);
-    decorate_connection(ctx->server, ctx->pn_conn, config);
-    return ctx;
+
+    decorate_connection(conn->server, conn->pn_conn, config);
+
+    return conn;
 }
 
 // Log the description, set the transport condition (name,
 // description), and close the transport tail
-void connect_fail(qd_connection_t *ctx, const char *name, const char *description, ...) {
+//
+// XXX Should this be a static function?
+void connection_fail(qd_connection_t *conn, const char *name, const char *description, ...) {
     va_list ap;
     va_start(ap, description);
     qd_verror(QD_ERROR_RUNTIME, description, ap);
     va_end(ap);
 
-    if (ctx->pn_conn) {
-        pn_transport_t *t = pn_connection_transport(ctx->pn_conn);
+    if (conn->pn_conn) {
         // Normally this is closing the transport, but if not bound,
         // close the connection
-        pn_condition_t *cond = t ? pn_transport_condition(t) : pn_connection_condition(ctx->pn_conn);
 
-        if (cond && !pn_condition_is_set(cond)) {
+        pn_transport_t *transport = pn_connection_transport(conn->pn_conn);
+        pn_condition_t *condition = NULL;
+
+        if (transport) {
+            condition = pn_transport_condition(transport);
+        } else {
+            condition = pn_connection_condition(conn->pn_conn);
+        }
+
+        // XXX Is cond ever going to be null?
+        if (condition && !pn_condition_is_set(condition)) {
             va_start(ap, description);
-            pn_condition_vformat(cond, name, description, ap);
+            pn_condition_vformat(condition, name, description, ap);
             va_end(ap);
         }
 
-        if (t) {
-            pn_transport_close_tail(t);
+        if (transport) {
+            pn_transport_close_tail(transport);
         } else {
-            pn_connection_close(ctx->pn_conn);
+            pn_connection_close(conn->pn_conn);
         }
     }
 }
 
 // Get the host IP address for the remote end
-static void set_rhost_port(qd_connection_t *ctx) {
-    pn_transport_t *tport  = pn_connection_transport(ctx->pn_conn);
-    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(tport));
-    size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(tport));
+//
+// XXX Where does "setting" happen in this function?
+static void set_rhost_port(qd_connection_t *conn) {
+    pn_transport_t *transport  = pn_connection_transport(conn->pn_conn);
+    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
+    size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
 
+    // XXX When is sa null?
     if (sa && salen) {
         char rport[NI_MAXSERV] = "";
         int err = getnameinfo(sa, salen,
-                              ctx->rhost, sizeof(ctx->rhost), rport, sizeof(rport),
+                              conn->rhost, sizeof(conn->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
+
         if (!err) {
-            snprintf(ctx->rhost_port, sizeof(ctx->rhost_port), "%s:%s", ctx->rhost, rport);
+            snprintf(conn->rhost_port, sizeof(conn->rhost_port), "%s:%s", conn->rhost, rport);
         }
     }
 }
@@ -624,11 +662,11 @@ static void timeout_on_handshake(void *context, bool discard) {
         return;
     }
 
-    qd_connection_t *ctx = (qd_connection_t*) context;
-    pn_transport_t *tport = pn_connection_transport(ctx->pn_conn);
+    qd_connection_t *conn = (qd_connection_t*) context;
+    pn_transport_t *transport = pn_connection_transport(conn->pn_conn);
 
-    pn_transport_close_head(tport);
-    connect_fail(ctx, QD_AMQP_COND_NOT_ALLOWED, "Timeout waiting for initial handshake");
+    pn_transport_close_head(transport);
+    connection_fail(conn, QD_AMQP_COND_NOT_ALLOWED, "Timeout waiting for initial handshake");
 }
 
 static void startup_timer_handler(void *context) {
@@ -637,58 +675,62 @@ static void startup_timer_handler(void *context) {
     // event.  Close down the transport in an IO thread reserved for
     // that connection.
 
-    qd_connection_t *ctx = (qd_connection_t*) context;
+    qd_connection_t *conn = (qd_connection_t*) context;
 
-    qd_timer_free(ctx->timer);
-    ctx->timer = 0;
-    qd_connection_invoke_deferred(ctx, timeout_on_handshake, context);
+    qd_timer_free(conn->timer);
+    conn->timer = 0;
+    qd_connection_invoke_deferred(conn, timeout_on_handshake, context);
 }
 
-static void on_listener_accept(pn_event_t *e) {
-    pn_listener_t *pn_listener = pn_event_listener(e);
+// XXX Is there already a connection in the scope that called this?
+static void on_listener_accept(pn_event_t *event) {
+    pn_listener_t *pn_listener = pn_event_listener(event);
     qd_listener_t *listener = pn_listener_get_context(pn_listener);
-    qd_connection_t *ctx = qd_server_connection(listener->server, &listener->config);
+    qd_connection_t *conn = qd_server_connection(listener->server, &listener->config);
 
-    if (!ctx) {
+    if (!conn) {
         qd_log(listener->server->log_source, QD_LOG_CRITICAL,
                "Allocation failure during accept to %s", listener->config.host_port);
         return;
     }
 
-    ctx->listener = listener;
+    conn->listener = listener;
 
     qd_log(listener->server->log_source, QD_LOG_TRACE,
            "[%"PRIu64"]: Accepting incoming connection to '%s'",
-           ctx->connection_id, ctx->listener->config.host_port);
+           conn->connection_id, conn->listener->config.host_port);
 
-    // Asynchronous accept.  Configure the transport on
+    // Accept is asynchronous.  Configure the transport on
     // PN_CONNECTION_BOUND.
-    pn_listener_accept(pn_listener, ctx->pn_conn);
+    pn_listener_accept(pn_listener, conn->pn_conn);
 }
 
-static void on_connection_init(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
-    const qd_server_config_t *config = ctx->listener ? &ctx->listener->config : NULL;
+static void on_connection_init(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
+    const qd_server_config_t *config = conn->listener ? &conn->listener->config : NULL;
 
+    // XXX When is config going to be null?  Seems like all of this
+    // logic is predicated on listener-ness.
     if (config && config->initial_handshake_timeout_seconds > 0) {
-        ctx->timer = qd_timer(qd_server->qd, startup_timer_handler, ctx);
-        qd_timer_schedule(ctx->timer, config->initial_handshake_timeout_seconds * 1000);
+        conn->timer = qd_timer(qd_server->qd, startup_timer_handler, conn);
+        qd_timer_schedule(conn->timer, config->initial_handshake_timeout_seconds * 1000);
     }
 }
 
-/* Configure the transport once it is bound to the connection */
+// Configure the transport once it is bound to the connection
 static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
+    // XXX The other handler functions pass in a qd_connection.
+    // What's happening here?
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *ctx = pn_connection_get_context(pn_conn);
     pn_transport_t *tport  = pn_connection_transport(pn_conn);
     pn_transport_set_context(tport, ctx); /* for transport_tracer */
 
-    //
-    // Proton pushes out its trace to transport_tracer() which in turn writes a trace
-    // message to the qdrouter log
-    // If trace level logging is enabled on the PROTOCOL module, set PN_TRACE_FRM as the transport trace
-    // and also set the transport tracer callback.
-    // Note here that if trace level logging is enabled on the DEFAULT module, all modules are logging at trace level too.
-    //
+    // Proton pushes out its trace to transport_tracer() which in turn
+    // writes a trace message to the qdrouter log.  If trace level
+    // logging is enabled on the PROTOCOL module, set PN_TRACE_FRM as
+    // the transport trace and also set the transport tracer callback.
+    // Note here that if trace level logging is enabled on the DEFAULT
+    // module, all modules are logging at trace level too.
     if (qd_log_enabled(ctx->server->protocol_log_source, QD_LOG_TRACE)) {
         pn_transport_trace(tport, PN_TRACE_FRM);
         pn_transport_set_tracer(tport, transport_tracer);
@@ -714,7 +756,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         if (config->ssl_profile)  {
             qd_log(ctx->server->log_source, QD_LOG_TRACE, "Configuring SSL on %s", name);
             if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
-                connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
+                connection_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
                 return;
             }
         }
@@ -776,7 +818,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         setup_ssl_sasl_and_open(ctx);
 
     } else {                    /* No connector and no listener */
-        connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "unknown Connection");
+        connection_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "Unknown connection");
         return;
     }
 
@@ -885,7 +927,7 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
 void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
 
-static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
+static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server) {
     qd_log_source_t *log = qd_server->log_source;
 
     qd_listener_t *li = (qd_listener_t*) pn_listener_get_context(pn_event_listener(e));
@@ -1030,7 +1072,7 @@ static bool handle_event(qd_server_t *qd_server, pn_event_t *e, pn_connection_t 
     case PN_LISTENER_OPEN:
     case PN_LISTENER_ACCEPT:
     case PN_LISTENER_CLOSE:
-        handle_listener(e, qd_server);
+        handle_listener_event(e, qd_server);
         break;
 
     case PN_CONNECTION_INIT:
