@@ -749,6 +749,30 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 }
 
+static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
+    // If we are transitioning to the open state, notify the client
+    // via callback
+    if (ctx->timer) {
+        qd_timer_free(ctx->timer);
+        ctx->timer = 0;
+    }
+
+    if (!ctx->opened) {
+        ctx->opened = true;
+
+        if (ctx->connector) {
+            // Delay re-connect in case there is a recurring error
+            ctx->connector->delay = 2000;
+
+            qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+
+            if (item) {
+                item->retries = 0;
+            }
+        }
+    }
+}
+
 static void on_transport_error(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
     pn_transport_t *transport = pn_event_transport(e);
     pn_condition_t *condition = pn_transport_condition(transport);
@@ -1013,24 +1037,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         break;
 
     case PN_CONNECTION_REMOTE_OPEN:
-        // If we are transitioning to the open state, notify the client via callback.
-        if (ctx->timer) {
-            qd_timer_free(ctx->timer);
-            ctx->timer = 0;
-        }
-
-        if (!ctx->opened) {
-            ctx->opened = true;
-
-            if (ctx->connector) {
-                ctx->connector->delay = 2000;  // Delay re-connect in case there is a recurring error
-                qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
-
-                if (item)
-                    item->retries = 0;
-            }
-        }
-
+        on_connection_remote_open(qd_server, e, ctx);
         break;
 
     case PN_CONNECTION_WAKE:
