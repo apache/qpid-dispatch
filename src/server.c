@@ -682,6 +682,28 @@ static void startup_timer_handler(void *context) {
     qd_connection_invoke_deferred(conn, timeout_on_handshake, context);
 }
 
+static void on_listener_open(qd_server_t *server, pn_event_t *event, qd_listener_t *listener) {
+    qd_log_source_t *log = server->log_source;
+    const char *port = listener->config.port;
+
+    if (strcmp(port, "0") == 0) {
+        // If a 0 (zero) is specified for a port, get the actual
+        // listening port from the listener
+        const pn_netaddr_t *addr = pn_listener_addr(pn_event_listener(event));
+        char addr_str[PN_MAX_ADDR] = "";
+        pn_netaddr_str(addr, addr_str, sizeof(addr_str));
+
+        if (listener->config.name) {
+            qd_log(log, QD_LOG_NOTICE, "Listening on %s (%s)", addr_str, listener->config.name);
+        } else {
+            qd_log(log, QD_LOG_NOTICE, "Listening on %s", addr_str);
+        }
+    } else {
+        const char *host_port = listener->config.host_port;
+        qd_log(log, QD_LOG_NOTICE, "Listening on %s", host_port);
+    }
+}
+
 // XXX Is there already a connection in the scope that called this?
 static void on_listener_accept(pn_event_t *event) {
     pn_listener_t *pn_listener = pn_event_listener(event);
@@ -935,37 +957,22 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
     sys_mutex_unlock(conn->deferred_call_lock);
 }
 
-void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
-void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
+void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *conn);
+void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *conn, bool conn_closed);
 
 static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
     qd_log_source_t *log = server->log_source;
     qd_listener_t *listener = (qd_listener_t*) pn_listener_get_context(pn_event_listener(event));
     const char *host_port = listener->config.host_port;
-    const char *port = listener->config.port;
 
     switch (pn_event_type(event)) {
     case PN_LISTENER_OPEN: {
-        if (strcmp(port, "0") == 0) {
-            // If a 0 (zero) is specified for a port, get the actual listening port from the listener.
-            pn_listener_t *l = pn_event_listener(event);
-            const pn_netaddr_t *na = pn_listener_addr(l);
-            char str[PN_MAX_ADDR] = "";
-            pn_netaddr_str(na, str, sizeof(str));
-            // "str" contains the host and port on which this listener is listening.
-            if (listener->config.name)
-                qd_log(log, QD_LOG_NOTICE, "Listening on %s (%s)", str, listener->config.name);
-            else
-                qd_log(log, QD_LOG_NOTICE, "Listening on %s", str);
-        }
-        else {
-            qd_log(log, QD_LOG_NOTICE, "Listening on %s", host_port);
-        }
-
+        on_listener_open(server, event, listener);
         break;
     }
 
     case PN_LISTENER_ACCEPT:
+        // XXX Move this
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
         on_listener_accept(event);
         break;
