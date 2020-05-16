@@ -635,6 +635,39 @@ static void set_rhost_port(qd_connection_t *ctx) {
     }
 }
 
+static void timeout_on_handshake(void *context, bool discard) {
+    if (discard) {
+        return;
+    }
+
+    qd_connection_t *ctx = (qd_connection_t*) context;
+    pn_transport_t *tport = pn_connection_transport(ctx->pn_conn);
+
+    pn_transport_close_head(tport);
+    connect_fail(ctx, QD_AMQP_COND_NOT_ALLOWED, "Timeout waiting for initial handshake");
+}
+
+static void startup_timer_handler(void *context) {
+    // This timer fires for a connection if it has not had a
+    // REMOTE_OPEN event in a time interval from the CONNECTION_INIT
+    // event.  Close down the transport in an IO thread reserved for
+    // that connection.
+
+    qd_connection_t *ctx = (qd_connection_t*) context;
+
+    qd_timer_free(ctx->timer);
+    ctx->timer = 0;
+    qd_connection_invoke_deferred(ctx, timeout_on_handshake, context);
+}
+
+static void on_connection_init(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
+    const qd_server_config_t *config = ctx->listener ? &ctx->listener->config : NULL;
+
+    if (config && config->initial_handshake_timeout_seconds > 0) {
+        ctx->timer = qd_timer(qd_server->qd, startup_timer_handler, ctx);
+        qd_timer_schedule(ctx->timer, config->initial_handshake_timeout_seconds * 1000);
+    }
+}
 
 /* Configure the transport once it is bound to the connection */
 static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
@@ -968,32 +1001,6 @@ static void qd_connection_free(qd_connection_t *ctx)
     /* Note: pn_conn is freed by the proactor */
 }
 
-
-static void timeout_on_handhsake(void *context, bool discard)
-{
-    if (discard)
-        return;
-
-    qd_connection_t *ctx   = (qd_connection_t*) context;
-    pn_transport_t  *tport = pn_connection_transport(ctx->pn_conn);
-    pn_transport_close_head(tport);
-    connect_fail(ctx, QD_AMQP_COND_NOT_ALLOWED, "Timeout waiting for initial handshake");
-}
-
-
-static void startup_timer_handler(void *context)
-{
-    //
-    // This timer fires for a connection if it has not had a REMOTE_OPEN
-    // event in a time interval from the CONNECTION_INIT event.  Close
-    // down the transport in an IO thread reserved for that connection.
-    //
-    qd_connection_t *ctx = (qd_connection_t*) context;
-    qd_timer_free(ctx->timer);
-    ctx->timer = 0;
-    qd_connection_invoke_deferred(ctx, timeout_on_handhsake, context);
-}
-
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
@@ -1022,13 +1029,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         break;
 
     case PN_CONNECTION_INIT: {
-        const qd_server_config_t *config = ctx->listener ? &ctx->listener->config : 0;
-
-        if (config && config->initial_handshake_timeout_seconds > 0) {
-            ctx->timer = qd_timer(qd_server->qd, startup_timer_handler, ctx);
-            qd_timer_schedule(ctx->timer, config->initial_handshake_timeout_seconds * 1000);
-        }
-
+        on_connection_init(qd_server, e, ctx);
         break;
     }
 
