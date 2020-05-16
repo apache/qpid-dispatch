@@ -717,10 +717,10 @@ static void on_connection_init(qd_server_t *qd_server, pn_event_t *event, qd_con
 }
 
 // Configure the transport once it is bound to the connection
-static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
+static void on_connection_bound(qd_server_t *server, pn_event_t *event) {
     // XXX The other handler functions pass in a qd_connection.
     // What's happening here?
-    pn_connection_t *pn_conn = pn_event_connection(e);
+    pn_connection_t *pn_conn = pn_event_connection(event);
     qd_connection_t *ctx = pn_connection_get_context(pn_conn);
     pn_transport_t *tport  = pn_connection_transport(pn_conn);
     pn_transport_set_context(tport, ctx); /* for transport_tracer */
@@ -830,22 +830,24 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
 }
 
-static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
+static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
     // If we are transitioning to the open state, notify the client
     // via callback
-    if (ctx->timer) {
-        qd_timer_free(ctx->timer);
-        ctx->timer = 0;
+    //
+    // XXX Where does the calling back happen?
+    if (conn->timer) {
+        qd_timer_free(conn->timer);
+        conn->timer = 0;
     }
 
-    if (!ctx->opened) {
-        ctx->opened = true;
+    if (!conn->opened) {
+        conn->opened = true;
 
-        if (ctx->connector) {
-            // Delay re-connect in case there is a recurring error
-            ctx->connector->delay = 2000;
+        if (conn->connector) {
+            // Delay reconnect in case there is a recurring error
+            conn->connector->delay = 2000;
 
-            qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+            qd_failover_item_t *item = qd_connector_get_conn_info(conn->connector);
 
             if (item) {
                 item->retries = 0;
@@ -854,22 +856,25 @@ static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *e, qd_
     }
 }
 
-static void on_transport_error(qd_server_t *qd_server, pn_event_t *e, qd_connection_t *ctx) {
-    pn_transport_t *transport = pn_event_transport(e);
+static void on_transport_error(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
+    pn_transport_t *transport = pn_event_transport(event);
     pn_condition_t *condition = pn_transport_condition(transport);
 
-    if (ctx->connector) {
+    // XXX I think pn_transport_condition always returns a condition
+    assert(condition);
+
+    if (conn->connector) {
         // Outgoing connection
 
-        qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+        qd_failover_item_t *item = qd_connector_get_conn_info(conn->connector);
 
         if (item->retries == 1) {
             // Increment the connection index
 
-            ctx->connector->conn_index += 1;
+            conn->connector->conn_index += 1;
 
-            if (ctx->connector->conn_index > DEQ_SIZE(ctx->connector->conn_info_list)) {
-                ctx->connector->conn_index = 1;
+            if (conn->connector->conn_index > DEQ_SIZE(conn->connector->conn_info_list)) {
+                conn->connector->conn_index = 1;
             }
 
             item->retries = 0;
@@ -877,50 +882,56 @@ static void on_transport_error(qd_server_t *qd_server, pn_event_t *e, qd_connect
             item->retries += 1;
         }
 
-        const qd_server_config_t *config = &ctx->connector->config;
-        ctx->connector->state = CXTR_STATE_FAILED;
+        const qd_server_config_t *config = &conn->connector->config;
+        conn->connector->state = CXTR_STATE_FAILED;
         char conn_msg[300];
 
-        if (condition && pn_condition_is_set(condition)) {
+        if (pn_condition_is_set(condition)) {
             qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s",
-                             ctx->connection_id, config->host_port, pn_condition_get_name(condition),
+                             conn->connection_id, config->host_port, pn_condition_get_name(condition),
                              pn_condition_get_description(condition));
-            strcpy(ctx->connector->conn_msg, conn_msg);
+            strcpy(conn->connector->conn_msg, conn_msg);
             qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
         } else {
             qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed",
-                             ctx->connection_id, config->host_port);
-            strcpy(ctx->connector->conn_msg, conn_msg);
+                             conn->connection_id, config->host_port);
+            strcpy(conn->connector->conn_msg, conn_msg);
             qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
         }
-    } else if (ctx->listener) {
+    } else if (conn->listener) {
         // Incoming connection
 
-        if (condition && pn_condition_is_set(condition)) {
-            qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
-                   ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port,
+        if (pn_condition_is_set(condition)) {
+            qd_log(conn->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
+                   conn->connection_id, conn->rhost_port, conn->listener->config.host_port,
                    pn_condition_get_name(condition), pn_condition_get_description(condition));
         }
     }
 }
 
-static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
-{
-    if (!conn)
+static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
+    // XXX When does this happen?
+    if (!conn) {
         return;
+    }
 
-    // Lock access to deferred_calls, other threads may concurrently add to it.  Invoke
-    // the calls outside of the critical section.
-    //
+    // Lock access to deferred_calls.  Other threads may concurrently
+    // add to it.  Invoke the calls outside of the critical section.
+
     sys_mutex_lock(conn->deferred_call_lock);
+
+    // XXX Does this need to be inside the lock?
     qd_deferred_call_t *dc;
+
     while ((dc = DEQ_HEAD(conn->deferred_calls))) {
         DEQ_REMOVE_HEAD(conn->deferred_calls);
+
         sys_mutex_unlock(conn->deferred_call_lock);
         dc->call(dc->context, discard);
         free_qd_deferred_call_t(dc);
         sys_mutex_lock(conn->deferred_call_lock);
     }
+
     sys_mutex_unlock(conn->deferred_call_lock);
 }
 
