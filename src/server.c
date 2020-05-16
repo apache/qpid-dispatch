@@ -943,9 +943,8 @@ static void qd_increment_conn_index(qd_connection_t *ctx)
 /* Events involving a connection or listener are serialized by the proactor so
  * only one event per connection / listener will be processed at a time.
  */
-static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx)
-{
-    if (pn_conn && qdr_is_authentication_service_connection(pn_conn)) {
+static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx) {
+    if (qdr_is_authentication_service_connection(pn_conn)) {
         qdr_handle_authentication_service_connection_event(e);
         return true;
     }
@@ -969,11 +968,13 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         break;
 
     case PN_CONNECTION_INIT: {
-        const qd_server_config_t *config = ctx && ctx->listener ? &ctx->listener->config : 0;
+        const qd_server_config_t *config = ctx->listener ? &ctx->listener->config : 0;
+
         if (config && config->initial_handshake_timeout_seconds > 0) {
             ctx->timer = qd_timer(qd_server->qd, startup_timer_handler, ctx);
             qd_timer_schedule(ctx->timer, config->initial_handshake_timeout_seconds * 1000);
         }
+
         break;
     }
 
@@ -983,19 +984,23 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
 
     case PN_CONNECTION_REMOTE_OPEN:
         // If we are transitioning to the open state, notify the client via callback.
-        if (ctx && ctx->timer) {
+        if (ctx->timer) {
             qd_timer_free(ctx->timer);
             ctx->timer = 0;
         }
-        if (ctx && !ctx->opened) {
+
+        if (!ctx->opened) {
             ctx->opened = true;
+
             if (ctx->connector) {
                 ctx->connector->delay = 2000;  // Delay re-connect in case there is a recurring error
                 qd_failover_item_t *item = qd_connector_get_conn_info(ctx->connector);
+
                 if (item)
                     item->retries = 0;
             }
         }
+
         break;
 
     case PN_CONNECTION_WAKE:
@@ -1006,14 +1011,15 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         {
             pn_transport_t *transport = pn_event_transport(e);
             pn_condition_t* condition = transport ? pn_transport_condition(transport) : NULL;
-            if (ctx && ctx->connector) { /* Outgoing connection */
+
+            if (ctx->connector) { /* Outgoing connection */
                 qd_increment_conn_index(ctx);
                 const qd_server_config_t *config = &ctx->connector->config;
                 ctx->connector->state = CXTR_STATE_FAILED;
                 char conn_msg[300];
-                if (condition  && pn_condition_is_set(condition)) {
+                if (condition && pn_condition_is_set(condition)) {
                     qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed: %s %s", ctx->connection_id, config->host_port,
-                            pn_condition_get_name(condition), pn_condition_get_description(condition));
+                                     pn_condition_get_name(condition), pn_condition_get_description(condition));
                     strcpy(ctx->connector->conn_msg, conn_msg);
 
                     qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
@@ -1022,7 +1028,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
                     strcpy(ctx->connector->conn_msg, conn_msg);
                     qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
                 }
-            } else if (ctx && ctx->listener) { /* Incoming connection */
+            } else if (ctx->listener) { /* Incoming connection */
                 if (condition && pn_condition_is_set(condition)) {
                     qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
                            ctx->connection_id, ctx->rhost_port, ctx->listener->config.host_port, pn_condition_get_name(condition),
@@ -1030,6 +1036,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
                 }
             }
         }
+
         break;
 
     default:
