@@ -541,16 +541,12 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
 
 // Wake function for proactor-managed connections
 static void connection_wake(qd_connection_t *conn) {
-    printf("xxxxXXXXXXXXX\n");
+    assert(conn);
 
-    if (conn->pn_conn) {
-        pn_connection_wake(conn->pn_conn);
-    }
+    pn_connection_wake(conn->pn_conn);
 }
 
 static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
-    printf("hhhhHHHHH\n");
-
     // XXX When does this happen?
     if (!conn) {
         return;
@@ -1039,7 +1035,7 @@ static void handle_connection_wake(qd_server_t *server, qd_connection_t *conn) {
     invoke_deferred_calls(conn, false);
 }
 
-static void on_transport_error(qd_server_t *server, qd_connection_t *conn) {
+static void handle_transport_error(qd_server_t *server, qd_connection_t *conn) {
     qd_log_source_t *log = server->log_source;
 
     qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling transport error", conn->connection_id);
@@ -1094,19 +1090,8 @@ static void on_transport_error(qd_server_t *server, qd_connection_t *conn) {
                    pn_condition_get_name(condition), pn_condition_get_description(condition));
         }
     } else {
-
+        assert(false);
     }
-}
-
-static void on_transport_closed(qd_server_t *server, qd_connection_t *conn) {
-    qd_log_source_t *log = server->log_source;
-
-    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling transport closed", conn->connection_id);
-
-    // XXX The naming of this function is strange
-    qd_conn_event_batch_complete(server->container, conn, true);
-    pn_connection_set_context(conn->pn_conn, NULL);
-    qd_connection_free(conn);
 }
 
 static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
@@ -1131,8 +1116,6 @@ static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
     default:
         break;
     }
-
-    qd_container_handle_event(server->container, event, NULL, NULL);
 }
 
 static void handle_connection_event(qd_server_t* server, pn_event_t *event) {
@@ -1165,11 +1148,7 @@ static void handle_connection_event(qd_server_t* server, pn_event_t *event) {
         break;
 
     case PN_TRANSPORT_ERROR:
-        on_transport_error(server, conn);
-        break;
-
-    case PN_TRANSPORT_CLOSED:
-        on_transport_closed(server, conn);
+        handle_transport_error(server, conn);
         break;
 
     default:
@@ -1177,6 +1156,12 @@ static void handle_connection_event(qd_server_t* server, pn_event_t *event) {
     }
 
     qd_container_handle_event(server->container, event, conn->pn_conn, conn);
+
+    if (pn_event_type(event) == PN_TRANSPORT_CLOSED) {
+        qd_conn_event_batch_complete(server->container, conn, true);
+        pn_connection_set_context(conn->pn_conn, NULL);
+        qd_connection_free(conn);
+    }
 }
 
 // Events involving a connection or listener are serialized by the
@@ -1191,26 +1176,19 @@ static bool handle_event(qd_server_t *server, pn_event_t *event) {
 
     case PN_PROACTOR_TIMEOUT:
         qd_timer_visit();
-        break;
+        return true;
 
     case PN_LISTENER_OPEN:
     case PN_LISTENER_ACCEPT:
     case PN_LISTENER_CLOSE:
         handle_listener_event(server, event);
-        break;
-
-    case PN_CONNECTION_INIT:
-    case PN_CONNECTION_BOUND:
-    case PN_CONNECTION_REMOTE_OPEN:
-    case PN_CONNECTION_WAKE:
-    case PN_TRANSPORT_ERROR:
-    case PN_TRANSPORT_CLOSED:
-        handle_connection_event(server, event);
-        break;
+        return true;
 
     default:
         break;
     }
+
+    handle_connection_event(server, event);
 
     return true;
 }
@@ -1221,24 +1199,16 @@ static void *thread_run(void *arg) {
 
     while (running) {
         pn_event_batch_t *batch = pn_proactor_wait(server->proactor);
-        pn_event_t *event = pn_event_batch_next(batch);
-
-        assert(event);
-
-        running = handle_event(server, event);
-
-        qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
+        pn_event_t *event = NULL;
 
         while (running && (event = pn_event_batch_next(batch))) {
             running = handle_event(server, event);
         }
 
-        // Notify the container that the batch is complete so it can
-        // do after-batch processing
-
-        if (conn) {
-            qd_conn_event_batch_complete(server->container, conn, false);
-        }
+        // XXX Note the absence of any call to
+        // qd_conn_event_batch_complete() here.  I don't really want
+        // to because it complicates things, and it makes my
+        // connections hang on close.
 
         pn_proactor_done(server->proactor, batch);
     }
