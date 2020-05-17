@@ -547,10 +547,11 @@ static void connection_wake(qd_connection_t *conn) {
 }
 
 // Construct a new qd_connection. Thread safe.
+//
+// XXX Ask about the allocation-failure handling here
 qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config) {
     qd_connection_t *conn = new_qd_connection_t();
 
-    // XXX When does this happen?
     if (!conn) {
         return NULL;
     }
@@ -561,7 +562,6 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     conn->deferred_call_lock = sys_mutex();
     conn->role = strdup(config->role);
 
-    // XXX This tests for null pn_conn, but didn't it just assign it above?
     if (!conn->pn_conn || !conn->deferred_call_lock || !conn->role) {
         if (conn->pn_conn) {
             pn_connection_free(conn->pn_conn);
@@ -703,7 +703,6 @@ static void on_listener_open(qd_server_t *server, pn_event_t *event, qd_listener
     }
 }
 
-// XXX Is there already a connection in the scope that called this?
 static void on_listener_accept(qd_server_t *server, pn_event_t *event, qd_listener_t *listener) {
     qd_log_source_t *log = server->log_source;
 
@@ -723,9 +722,6 @@ static void on_listener_accept(qd_server_t *server, pn_event_t *event, qd_listen
 
     // Accept is asynchronous.  Configure the transport on
     // PN_CONNECTION_BOUND.
-    //
-    // XXX pn_listener_accept(pn_event_listener(event), pn_event_connection(event));
-    // XXX Something weird is going on with the proton-versus-router conn binding
     pn_listener_accept(pn_event_listener(event), conn->pn_conn);
 }
 
@@ -1069,17 +1065,21 @@ static void qd_connection_free(qd_connection_t *ctx)
 // Events involving a connection or listener are serialized by the
 // proactor so only one event per connection or listener is processed
 // at a time
-static bool handle_event(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_conn, qd_connection_t *ctx) {
+static bool handle_event(qd_server_t *server, pn_event_t *event, qd_connection_t *conn) {
+    pn_connection_t *pn_conn = pn_event_connection(event);
+
+    // XXX Is it right to have a qdr_ function here?
+    // XXX Why does this take a pn_conn?
     if (qdr_is_authentication_service_connection(pn_conn)) {
-        qdr_handle_authentication_service_connection_event(e);
+        //fprintf(stderr, "Yowser\n");
+        qdr_handle_authentication_service_connection_event(event);
         return true;
     }
 
-    switch (pn_event_type(e)) {
-
+    switch (pn_event_type(event)) {
     case PN_PROACTOR_INTERRUPT:
         // Interrupt the next thread and stop the current thread
-        pn_proactor_interrupt(qd_server->proactor);
+        pn_proactor_interrupt(server->proactor);
         return false;
 
     case PN_PROACTOR_TIMEOUT:
@@ -1089,74 +1089,76 @@ static bool handle_event(qd_server_t *qd_server, pn_event_t *e, pn_connection_t 
     case PN_LISTENER_OPEN:
     case PN_LISTENER_ACCEPT:
     case PN_LISTENER_CLOSE:
-        handle_listener_event(qd_server, e);
+        handle_listener_event(server, event);
         break;
 
     case PN_CONNECTION_INIT:
-        on_connection_init(qd_server, e, ctx);
+        on_connection_init(server, event, conn);
         break;
 
     case PN_CONNECTION_BOUND:
-        on_connection_bound(qd_server, e);
+        on_connection_bound(server, event);
         break;
 
     case PN_CONNECTION_REMOTE_OPEN:
-        on_connection_remote_open(qd_server, e, ctx);
+        on_connection_remote_open(server, event, conn);
         break;
 
     case PN_CONNECTION_WAKE:
-        invoke_deferred_calls(ctx, false);
+        invoke_deferred_calls(conn, false);
         break;
 
     case PN_TRANSPORT_ERROR:
-        on_transport_error(qd_server, e, ctx);
+        on_transport_error(server, event, conn);
         break;
 
     default:
         break;
-    } // Switch event type
+    }
 
-    if (ctx)
-        qd_container_handle_event(qd_server->container, e, pn_conn, ctx);
+    if (conn) {
+        qd_container_handle_event(server->container, event, pn_conn, conn);
+    }
 
     return true;
 }
 
 static void *thread_run(void *arg) {
-    qd_server_t *qd_server = (qd_server_t*) arg;
+    qd_server_t *server = (qd_server_t*) arg;
     bool running = true;
 
     while (running) {
-        pn_event_batch_t *events = pn_proactor_wait(qd_server->proactor);
-        pn_event_t *e;
-        pn_connection_t *pn_conn = NULL;
-        qd_connection_t *qd_conn = NULL;
+        pn_event_batch_t *batch = pn_proactor_wait(server->proactor);
+        pn_event_t *event;
+        qd_connection_t *conn = NULL;
 
-        while (running && (e = pn_event_batch_next(events))) {
-            if (!pn_conn) {
-                pn_conn = pn_event_connection(e);
-                qd_conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
+        while (running && (event = pn_event_batch_next(batch))) {
+            if (!conn) {
+                conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
             }
 
-            running = handle_event(qd_server, e, pn_conn, qd_conn);
+            running = handle_event(server, event, conn);
 
             // Free the connection after all other processing is
             // complete
-            if (pn_event_type(e) == PN_TRANSPORT_CLOSED) {
-                qd_conn_event_batch_complete(qd_server->container, qd_conn, true);
-                pn_connection_set_context(pn_conn, NULL);
-                qd_connection_free(qd_conn);
-                qd_conn = NULL;
+            if (pn_event_type(event) == PN_TRANSPORT_CLOSED) {
+                // XXX The naming of this function is strange
+                qd_conn_event_batch_complete(server->container, conn, true);
+                pn_connection_set_context(pn_event_connection(event), NULL);
+                // XXX Is this needed?
+                pn_connection_set_context(conn->pn_conn, NULL);
+                qd_connection_free(conn);
+                conn = NULL;
             }
         }
 
         // Notify the container that the batch is complete so it can
         // do after-batch processing
-        if (qd_conn) {
-            qd_conn_event_batch_complete(qd_server->container, qd_conn, false);
+        if (conn) {
+            qd_conn_event_batch_complete(server->container, conn, false);
         }
 
-        pn_proactor_done(qd_server->proactor, events);
+        pn_proactor_done(server->proactor, batch);
     }
 
     return NULL;
@@ -1757,7 +1759,7 @@ bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
 
-    handle_event(c->server, e, pn_conn, qd_conn);
+    handle_event(c->server, e, qd_conn);
 
     if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
         pn_connection_set_context(pn_conn, NULL);
