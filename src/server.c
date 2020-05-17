@@ -637,17 +637,16 @@ void connection_fail(qd_connection_t *conn, const char *name, const char *descri
 }
 
 // Get the host IP address for the remote end
-//
-// XXX Where does "setting" happen in this function?
 static void set_rhost_port(qd_connection_t *conn) {
     pn_transport_t *transport  = pn_connection_transport(conn->pn_conn);
-    const struct sockaddr* sa = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
-    size_t salen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
 
-    // XXX When is sa null?
-    if (sa && salen) {
+    const struct sockaddr *addr = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
+    size_t addrlen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
+
+    // XXX When is addr null?
+    if (addr && addrlen) {
         char rport[NI_MAXSERV] = "";
-        int err = getnameinfo(sa, salen,
+        int err = getnameinfo(addr, addrlen,
                               conn->rhost, sizeof(conn->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
 
@@ -705,26 +704,29 @@ static void on_listener_open(qd_server_t *server, pn_event_t *event, qd_listener
 }
 
 // XXX Is there already a connection in the scope that called this?
-static void on_listener_accept(pn_event_t *event) {
-    pn_listener_t *pn_listener = pn_event_listener(event);
-    qd_listener_t *listener = pn_listener_get_context(pn_listener);
+static void on_listener_accept(qd_server_t *server, pn_event_t *event, qd_listener_t *listener) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", listener->config.host_port);
+
     qd_connection_t *conn = qd_server_connection(listener->server, &listener->config);
 
     if (!conn) {
-        qd_log(listener->server->log_source, QD_LOG_CRITICAL,
-               "Allocation failure during accept to %s", listener->config.host_port);
+        qd_log(log, QD_LOG_CRITICAL, "Allocation failure during accept to %s", listener->config.host_port);
         return;
     }
 
     conn->listener = listener;
 
-    qd_log(listener->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"]: Accepting incoming connection to '%s'",
-           conn->connection_id, conn->listener->config.host_port);
+    qd_log(log, QD_LOG_TRACE, "[%"PRIu64"]: Accepting incoming connection to '%s'",
+           conn->connection_id, listener->config.host_port);
 
     // Accept is asynchronous.  Configure the transport on
     // PN_CONNECTION_BOUND.
-    pn_listener_accept(pn_listener, conn->pn_conn);
+    //
+    // XXX pn_listener_accept(pn_event_listener(event), pn_event_connection(event));
+    // XXX Something weird is going on with the proton-versus-router conn binding
+    pn_listener_accept(pn_event_listener(event), conn->pn_conn);
 }
 
 static void on_connection_init(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
@@ -859,7 +861,7 @@ static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *event,
     // XXX Where does the calling back happen?
     if (conn->timer) {
         qd_timer_free(conn->timer);
-        conn->timer = 0;
+        conn->timer = NULL;
     }
 
     if (!conn->opened) {
@@ -974,7 +976,7 @@ static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
     case PN_LISTENER_ACCEPT:
         // XXX Move this
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
-        on_listener_accept(event);
+        on_listener_accept(server, event, listener);
         break;
 
     case PN_LISTENER_CLOSE:
