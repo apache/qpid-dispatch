@@ -541,9 +541,39 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
 
 // Wake function for proactor-managed connections
 static void connection_wake(qd_connection_t *conn) {
+    printf("xxxxXXXXXXXXX\n");
+
     if (conn->pn_conn) {
         pn_connection_wake(conn->pn_conn);
     }
+}
+
+static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
+    printf("hhhhHHHHH\n");
+
+    // XXX When does this happen?
+    if (!conn) {
+        return;
+    }
+
+    // Lock access to deferred_calls.  Other threads may concurrently
+    // add to it.  Invoke the calls outside of the critical section.
+
+    sys_mutex_lock(conn->deferred_call_lock);
+
+    // XXX Does this need to be inside the lock?
+    qd_deferred_call_t *dc;
+
+    while ((dc = DEQ_HEAD(conn->deferred_calls))) {
+        DEQ_REMOVE_HEAD(conn->deferred_calls);
+
+        sys_mutex_unlock(conn->deferred_call_lock);
+        dc->call(dc->context, discard);
+        free_qd_deferred_call_t(dc);
+        sys_mutex_lock(conn->deferred_call_lock);
+    }
+
+    sys_mutex_unlock(conn->deferred_call_lock);
 }
 
 // Construct a new qd_connection. Thread safe.
@@ -598,11 +628,72 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     return conn;
 }
 
+bool qd_connector_has_failover_info(qd_connector_t* ct)
+{
+    if (ct && DEQ_SIZE(ct->conn_info_list) > 1)
+        return true;
+    return false;
+}
+
+
+static void qd_connection_free(qd_connection_t *ctx)
+{
+    qd_server_t *qd_server = ctx->server;
+
+    // If this is a dispatch connector, schedule the re-connect timer
+    if (ctx->connector) {
+        long delay = ctx->connector->delay;
+        sys_mutex_lock(ctx->connector->lock);
+        ctx->connector->ctx = 0;
+        // Increment the connection index by so that we can try connecting to the failover url (if any).
+        bool has_failover = qd_connector_has_failover_info(ctx->connector);
+
+        if (has_failover) {
+            // Go thru the failover list round robin.
+            // IMPORTANT: Note here that we set the re-try timer to 1 second.
+            // We want to quickly keep cycling thru the failover urls every second.
+            delay = 1000;
+        }
+
+        ctx->connector->state = CXTR_STATE_CONNECTING;
+        sys_mutex_unlock(ctx->connector->lock);
+
+        //
+        // Increment the ref-count to account for the timer's reference to the connector.
+        //
+        sys_atomic_inc(&ctx->connector->ref_count);
+        qd_timer_schedule(ctx->connector->timer, delay);
+    }
+
+    sys_mutex_lock(qd_server->lock);
+    DEQ_REMOVE(qd_server->conn_list, ctx);
+
+    // If counted for policy enforcement, notify it has closed
+    if (ctx->policy_counted) {
+        qd_policy_socket_close(qd_server->qd->policy, ctx);
+    }
+    sys_mutex_unlock(qd_server->lock);
+
+    invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
+    sys_mutex_free(ctx->deferred_call_lock);
+    qd_policy_settings_free(ctx->policy_settings);
+    if (ctx->free_user_id) free((char*)ctx->user_id);
+    if (ctx->timer) qd_timer_free(ctx->timer);
+    free(ctx->name);
+    free(ctx->role);
+    sys_mutex_lock(qd_server->conn_activation_lock);
+    free_qd_connection_t(ctx);
+    sys_mutex_unlock(qd_server->conn_activation_lock);
+
+    /* Note: pn_conn is freed by the proactor */
+}
+
+void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *conn);
+void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *conn, bool conn_closed);
+
 // Log the description, set the transport condition (name,
 // description), and close the transport tail
-//
-// XXX Should this be a static function?
-void connection_fail(qd_connection_t *conn, const char *name, const char *description, ...) {
+static void connection_fail(qd_connection_t *conn, const char *name, const char *description, ...) {
     va_list ap;
     va_start(ap, description);
     qd_verror(QD_ERROR_RUNTIME, description, ap);
@@ -681,14 +772,17 @@ static void startup_timer_handler(void *context) {
     qd_connection_invoke_deferred(conn, timeout_on_handshake, context);
 }
 
-static void on_listener_open(qd_server_t *server, pn_event_t *event, qd_listener_t *listener) {
+static void handle_listener_open(qd_server_t *server, qd_listener_t *listener) {
     qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "Handling listener open");
+
     const char *port = listener->config.port;
 
     if (strcmp(port, "0") == 0) {
         // If a 0 (zero) is specified for a port, get the actual
         // listening port from the listener
-        const pn_netaddr_t *addr = pn_listener_addr(pn_event_listener(event));
+        const pn_netaddr_t *addr = pn_listener_addr(listener->pn_listener);
         char addr_str[PN_MAX_ADDR] = "";
         pn_netaddr_str(addr, addr_str, sizeof(addr_str));
 
@@ -703,10 +797,10 @@ static void on_listener_open(qd_server_t *server, pn_event_t *event, qd_listener
     }
 }
 
-static void on_listener_accept(qd_server_t *server, pn_event_t *event, qd_listener_t *listener) {
+static void handle_listener_accept(qd_server_t *server, qd_listener_t *listener) {
     qd_log_source_t *log = server->log_source;
 
-    qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", listener->config.host_port);
+    qd_log(log, QD_LOG_TRACE, "Handling listener accept");
 
     qd_connection_t *conn = qd_server_connection(listener->server, &listener->config);
 
@@ -715,35 +809,68 @@ static void on_listener_accept(qd_server_t *server, pn_event_t *event, qd_listen
         return;
     }
 
-    conn->listener = listener;
-
-    qd_log(log, QD_LOG_TRACE, "[%"PRIu64"]: Accepting incoming connection to '%s'",
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Accepting connection on %s",
            conn->connection_id, listener->config.host_port);
+
+    conn->listener = listener;
 
     // Accept is asynchronous.  Configure the transport on
     // PN_CONNECTION_BOUND.
-    pn_listener_accept(pn_event_listener(event), conn->pn_conn);
+    pn_listener_accept(listener->pn_listener, conn->pn_conn);
 }
 
-static void on_connection_init(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
+static void handle_listener_close(qd_server_t *server, qd_listener_t *listener) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "Handling listener close");
+
+    pn_condition_t *cond = pn_listener_condition(listener->pn_listener);
+    const char *host_port = listener->config.host_port;
+
+    if (pn_condition_is_set(cond)) {
+        qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
+               pn_condition_get_description(cond),
+               pn_condition_get_name(cond));
+
+        if (listener->exit_on_error) {
+            qd_log(log, QD_LOG_CRITICAL, "Shutting down: Required listener %s failed",
+                   host_port);
+            exit(1);
+        }
+    } else {
+        qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
+    }
+
+    pn_listener_set_context(listener->pn_listener, 0);
+
+    // XXX Shouldn't stuff like this happen in a listener cleanup function?
+    listener->pn_listener = 0;
+    qd_listener_decref(listener);
+}
+
+static void handle_connection_init(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling connection init", conn->connection_id);
+
     const qd_server_config_t *config = conn->listener ? &conn->listener->config : NULL;
 
     // XXX When is config going to be null?  Seems like all of this
     // logic is predicated on listener-ness.
     if (config && config->initial_handshake_timeout_seconds > 0) {
-        conn->timer = qd_timer(qd_server->qd, startup_timer_handler, conn);
+        conn->timer = qd_timer(server->qd, startup_timer_handler, conn);
         qd_timer_schedule(conn->timer, config->initial_handshake_timeout_seconds * 1000);
     }
 }
 
 // Configure the transport once it is bound to the connection
-static void on_connection_bound(qd_server_t *server, pn_event_t *event) {
-    // XXX The other handler functions pass in a qd_connection.
-    // What's happening here?
-    pn_connection_t *pn_conn = pn_event_connection(event);
-    qd_connection_t *ctx = pn_connection_get_context(pn_conn);
-    pn_transport_t *tport  = pn_connection_transport(pn_conn);
-    pn_transport_set_context(tport, ctx); /* for transport_tracer */
+static void handle_connection_bound(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling connection bound", conn->connection_id);
+
+    pn_transport_t *transport  = pn_connection_transport(conn->pn_conn);
+    pn_transport_set_context(transport, conn); /* for transport_tracer */
 
     // Proton pushes out its trace to transport_tracer() which in turn
     // writes a trace message to the qdrouter log.  If trace level
@@ -751,48 +878,62 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *event) {
     // the transport trace and also set the transport tracer callback.
     // Note here that if trace level logging is enabled on the DEFAULT
     // module, all modules are logging at trace level too.
-    if (qd_log_enabled(ctx->server->protocol_log_source, QD_LOG_TRACE)) {
-        pn_transport_trace(tport, PN_TRACE_FRM);
-        pn_transport_set_tracer(tport, transport_tracer);
+    if (qd_log_enabled(log, QD_LOG_TRACE)) {
+        pn_transport_trace(transport, PN_TRACE_FRM);
+        pn_transport_set_tracer(transport, transport_tracer);
     }
 
     const qd_server_config_t *config = NULL;
-    if (ctx->listener) {        /* Accepting an incoming connection */
-        config = &ctx->listener->config;
+
+    if (conn->listener) {
+        // Incoming connection
+
+        config = &conn->listener->config;
         const char *name = config->host_port;
-        pn_transport_set_server(tport);
-        set_rhost_port(ctx);
+        pn_transport_set_server(transport);
+        set_rhost_port(conn);
 
         sys_mutex_lock(server->lock); /* Policy check is not thread safe */
-        ctx->policy_counted = qd_policy_socket_accept(server->qd->policy, ctx->rhost);
+        conn->policy_counted = qd_policy_socket_accept(server->qd->policy, conn->rhost);
         sys_mutex_unlock(server->lock);
-        if (!ctx->policy_counted) {
-            pn_transport_close_tail(tport);
-            pn_transport_close_head(tport);
+
+        if (!conn->policy_counted) {
+            pn_transport_close_tail(transport);
+            pn_transport_close_head(transport);
             return;
         }
 
         // Set up SSL
+
         if (config->ssl_profile)  {
-            qd_log(ctx->server->log_source, QD_LOG_TRACE, "Configuring SSL on %s", name);
-            if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
-                connection_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
+            qd_log(log, QD_LOG_TRACE, "Configuring SSL on %s", name);
+
+            if (listener_setup_ssl(conn, config, transport) != QD_ERROR_NONE) {
+                connection_fail(conn, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
                 return;
             }
         }
-        //
+
         // Set up SASL
-        //
-        sys_mutex_lock(ctx->server->lock);
-        pn_sasl_t *sasl = pn_sasl(tport);
-        if (ctx->server->sasl_config_path)
-            pn_sasl_config_path(sasl, ctx->server->sasl_config_path);
-        pn_sasl_config_name(sasl, ctx->server->sasl_config_name);
-        if (config->sasl_mechanisms)
+
+        sys_mutex_lock(conn->server->lock);
+
+        pn_sasl_t *sasl = pn_sasl(transport);
+
+        if (conn->server->sasl_config_path) {
+            pn_sasl_config_path(sasl, conn->server->sasl_config_path);
+        }
+
+        pn_sasl_config_name(sasl, conn->server->sasl_config_name);
+
+        if (config->sasl_mechanisms) {
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
+        }
+
         if (config->sasl_plugin_config.auth_service) {
-            qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->sasl_plugin_config.auth_service);
+            qd_log(log, QD_LOG_INFO, "enabling remote authentication service %s", config->sasl_plugin_config.auth_service);
             pn_ssl_domain_t* plugin_ssl_domain = NULL;
+
             if (config->sasl_plugin_config.use_ssl) {
                 plugin_ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 
@@ -801,56 +942,70 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *event) {
                                                       config->sasl_plugin_config.ssl_certificate_file,
                                                       config->sasl_plugin_config.ssl_private_key_file,
                                                       config->sasl_plugin_config.ssl_password)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL credentials for authentication service");
+                        qd_log(log, QD_LOG_ERROR, "Cannot set SSL credentials for authentication service");
                     }
                 }
+
                 if (config->sasl_plugin_config.ssl_trusted_certificate_db) {
                     if (pn_ssl_domain_set_trusted_ca_db(plugin_ssl_domain, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set trusted SSL certificate db for authentication service" );
+                        qd_log(log, QD_LOG_ERROR, "Cannot set trusted SSL certificate db for authentication service" );
                     } else {
-                        if (pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_VERIFY_PEER, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                            qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL peer verification for authentication service");
+                        if (pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_VERIFY_PEER,
+                                                                  config->sasl_plugin_config.ssl_trusted_certificate_db)) {
+                            qd_log(log, QD_LOG_ERROR, "Cannot set SSL peer verification for authentication service");
                         }
                     }
                 }
+
                 if (config->sasl_plugin_config.ssl_ciphers) {
                     if (pn_ssl_domain_set_ciphers(plugin_ssl_domain, config->sasl_plugin_config.ssl_ciphers)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set ciphers for authentication service");
+                        qd_log(log, QD_LOG_ERROR, "Cannot set ciphers for authentication service");
                     }
                 }
+
                 if (config->sasl_plugin_config.ssl_protocols) {
                     if (pn_ssl_domain_set_protocols(plugin_ssl_domain, config->sasl_plugin_config.ssl_protocols)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set protocols for authentication service");
+                        qd_log(log, QD_LOG_ERROR, "Cannot set protocols for authentication service");
                     }
                 }
             }
-            qdr_use_remote_authentication_service(tport, config->sasl_plugin_config.auth_service, config->sasl_plugin_config.sasl_init_hostname, plugin_ssl_domain, server->proactor);
+
+            qdr_use_remote_authentication_service(transport, config->sasl_plugin_config.auth_service,
+                                                  config->sasl_plugin_config.sasl_init_hostname,
+                                                  plugin_ssl_domain, server->proactor);
         }
-        pn_transport_require_auth(tport, config->requireAuthentication);
-        pn_transport_require_encryption(tport, config->requireEncryption);
+
+        pn_transport_require_auth(transport, config->requireAuthentication);
+        pn_transport_require_encryption(transport, config->requireEncryption);
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
-        sys_mutex_unlock(ctx->server->lock);
 
-        qd_log(ctx->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Accepted connection to %s from %s",
-               ctx->connection_id, name, ctx->rhost_port);
-    } else if (ctx->connector) { /* Establishing an outgoing connection */
-        config = &ctx->connector->config;
-        setup_ssl_sasl_and_open(ctx);
+        sys_mutex_unlock(conn->server->lock);
 
-    } else {                    /* No connector and no listener */
-        connection_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "Unknown connection");
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted connection to %s from %s",
+               conn->connection_id, name, conn->rhost_port);
+    } else if (conn->connector) {
+        // Outgoing connection
+
+        config = &conn->connector->config;
+        setup_ssl_sasl_and_open(conn);
+    } else {
+        // No connector and no listener
+
+        connection_fail(conn, QD_AMQP_COND_INTERNAL_ERROR, "Unknown connection");
         return;
     }
 
-    //
     // Common transport configuration.
-    //
-    pn_transport_set_max_frame(tport, config->max_frame_size);
-    pn_transport_set_channel_max(tport, config->max_sessions - 1);
-    pn_transport_set_idle_timeout(tport, config->idle_timeout_seconds * 1000);
+    pn_transport_set_max_frame(transport, config->max_frame_size);
+    pn_transport_set_channel_max(transport, config->max_sessions - 1);
+    pn_transport_set_idle_timeout(transport, config->idle_timeout_seconds * 1000);
 }
 
-static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
+static void handle_connection_remote_open(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling connection remote open", conn->connection_id);
+
     // If we are transitioning to the open state, notify the client
     // via callback
     //
@@ -876,8 +1031,20 @@ static void on_connection_remote_open(qd_server_t *qd_server, pn_event_t *event,
     }
 }
 
-static void on_transport_error(qd_server_t *qd_server, pn_event_t *event, qd_connection_t *conn) {
-    pn_transport_t *transport = pn_event_transport(event);
+static void handle_connection_wake(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling connection wake", conn->connection_id);
+
+    invoke_deferred_calls(conn, false);
+}
+
+static void on_transport_error(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling transport error", conn->connection_id);
+
+    pn_transport_t *transport = pn_connection_transport(conn->pn_conn);
     pn_condition_t *condition = pn_transport_condition(transport);
 
     // XXX I think pn_transport_condition always returns a condition
@@ -911,171 +1078,111 @@ static void on_transport_error(qd_server_t *qd_server, pn_event_t *event, qd_con
                              conn->connection_id, config->host_port, pn_condition_get_name(condition),
                              pn_condition_get_description(condition));
             strcpy(conn->connector->conn_msg, conn_msg);
-            qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+            qd_log(log, QD_LOG_INFO, conn_msg);
         } else {
             qd_format_string(conn_msg, 300, "[C%"PRIu64"] Connection to %s failed",
                              conn->connection_id, config->host_port);
             strcpy(conn->connector->conn_msg, conn_msg);
-            qd_log(qd_server->log_source, QD_LOG_INFO, conn_msg);
+            qd_log(log, QD_LOG_INFO, conn_msg);
         }
     } else if (conn->listener) {
         // Incoming connection
 
         if (pn_condition_is_set(condition)) {
-            qd_log(conn->server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection from %s (to %s) failed: %s %s",
                    conn->connection_id, conn->rhost_port, conn->listener->config.host_port,
                    pn_condition_get_name(condition), pn_condition_get_description(condition));
         }
+    } else {
+
     }
 }
 
-static void invoke_deferred_calls(qd_connection_t *conn, bool discard) {
-    // XXX When does this happen?
-    if (!conn) {
-        return;
-    }
+static void on_transport_closed(qd_server_t *server, qd_connection_t *conn) {
+    qd_log_source_t *log = server->log_source;
 
-    // Lock access to deferred_calls.  Other threads may concurrently
-    // add to it.  Invoke the calls outside of the critical section.
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Handling transport closed", conn->connection_id);
 
-    sys_mutex_lock(conn->deferred_call_lock);
-
-    // XXX Does this need to be inside the lock?
-    qd_deferred_call_t *dc;
-
-    while ((dc = DEQ_HEAD(conn->deferred_calls))) {
-        DEQ_REMOVE_HEAD(conn->deferred_calls);
-
-        sys_mutex_unlock(conn->deferred_call_lock);
-        dc->call(dc->context, discard);
-        free_qd_deferred_call_t(dc);
-        sys_mutex_lock(conn->deferred_call_lock);
-    }
-
-    sys_mutex_unlock(conn->deferred_call_lock);
+    // XXX The naming of this function is strange
+    qd_conn_event_batch_complete(server->container, conn, true);
+    pn_connection_set_context(conn->pn_conn, NULL);
+    qd_connection_free(conn);
 }
-
-void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *conn);
-void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *conn, bool conn_closed);
 
 static void handle_listener_event(qd_server_t *server, pn_event_t *event) {
-    qd_log_source_t *log = server->log_source;
     qd_listener_t *listener = (qd_listener_t*) pn_listener_get_context(pn_event_listener(event));
-    const char *host_port = listener->config.host_port;
+
+    assert(listener);
 
     switch (pn_event_type(event)) {
     case PN_LISTENER_OPEN: {
-        on_listener_open(server, event, listener);
+        handle_listener_open(server, listener);
         break;
     }
 
     case PN_LISTENER_ACCEPT:
-        // XXX Move this
-        qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
-        on_listener_accept(server, event, listener);
+        handle_listener_accept(server, listener);
         break;
 
     case PN_LISTENER_CLOSE:
-        if (listener->pn_listener) {
-            pn_condition_t *cond = pn_listener_condition(listener->pn_listener);
-            if (pn_condition_is_set(cond)) {
-                qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
-                       pn_condition_get_description(cond),
-                       pn_condition_get_name(cond));
-                if (listener->exit_on_error) {
-                    qd_log(log, QD_LOG_CRITICAL, "Shutting down, required listener failed %s",
-                           host_port);
-                    exit(1);
-                }
-            } else {
-                qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
-            }
-            pn_listener_set_context(listener->pn_listener, 0);
-            listener->pn_listener = 0;
-            qd_listener_decref(listener);
-        }
+        handle_listener_close(server, listener);
         break;
 
     default:
         break;
     }
+
+    qd_container_handle_event(server->container, event, NULL, NULL);
 }
 
+static void handle_connection_event(qd_server_t* server, pn_event_t *event) {
+    qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
 
-bool qd_connector_has_failover_info(qd_connector_t* ct)
-{
-    if (ct && DEQ_SIZE(ct->conn_info_list) > 1)
-        return true;
-    return false;
-}
+    assert(conn);
 
-
-static void qd_connection_free(qd_connection_t *ctx)
-{
-    qd_server_t *qd_server = ctx->server;
-
-    // If this is a dispatch connector, schedule the re-connect timer
-    if (ctx->connector) {
-        long delay = ctx->connector->delay;
-        sys_mutex_lock(ctx->connector->lock);
-        ctx->connector->ctx = 0;
-        // Increment the connection index by so that we can try connecting to the failover url (if any).
-        bool has_failover = qd_connector_has_failover_info(ctx->connector);
-
-        if (has_failover) {
-            // Go thru the failover list round robin.
-            // IMPORTANT: Note here that we set the re-try timer to 1 second.
-            // We want to quickly keep cycling thru the failover urls every second.
-            delay = 1000;
-        }
-
-        ctx->connector->state = CXTR_STATE_CONNECTING;
-        sys_mutex_unlock(ctx->connector->lock);
-
-        //
-        // Increment the ref-count to account for the timer's reference to the connector.
-        //
-        sys_atomic_inc(&ctx->connector->ref_count);
-        qd_timer_schedule(ctx->connector->timer, delay);
+    // XXX Is it right to have a qdr_ function here?
+    // XXX Why does this take a pn_conn?
+    if (qdr_is_authentication_service_connection(conn->pn_conn)) {
+        qdr_handle_authentication_service_connection_event(event);
+        return;
     }
 
-    sys_mutex_lock(qd_server->lock);
-    DEQ_REMOVE(qd_server->conn_list, ctx);
+    switch (pn_event_type(event)) {
+    case PN_CONNECTION_INIT:
+        handle_connection_init(server, conn);
+        break;
 
-    // If counted for policy enforcement, notify it has closed
-    if (ctx->policy_counted) {
-        qd_policy_socket_close(qd_server->qd->policy, ctx);
+    case PN_CONNECTION_BOUND:
+        handle_connection_bound(server, conn);
+        break;
+
+    case PN_CONNECTION_REMOTE_OPEN:
+        handle_connection_remote_open(server, conn);
+        break;
+
+    case PN_CONNECTION_WAKE:
+        handle_connection_wake(server, conn);
+        break;
+
+    case PN_TRANSPORT_ERROR:
+        on_transport_error(server, conn);
+        break;
+
+    case PN_TRANSPORT_CLOSED:
+        on_transport_closed(server, conn);
+        break;
+
+    default:
+        break;
     }
-    sys_mutex_unlock(qd_server->lock);
 
-    invoke_deferred_calls(ctx, true);  // Discard any pending deferred calls
-    sys_mutex_free(ctx->deferred_call_lock);
-    qd_policy_settings_free(ctx->policy_settings);
-    if (ctx->free_user_id) free((char*)ctx->user_id);
-    if (ctx->timer) qd_timer_free(ctx->timer);
-    free(ctx->name);
-    free(ctx->role);
-    sys_mutex_lock(qd_server->conn_activation_lock);
-    free_qd_connection_t(ctx);
-    sys_mutex_unlock(qd_server->conn_activation_lock);
-
-    /* Note: pn_conn is freed by the proactor */
+    qd_container_handle_event(server->container, event, conn->pn_conn, conn);
 }
 
 // Events involving a connection or listener are serialized by the
 // proactor so only one event per connection or listener is processed
 // at a time
-static bool handle_event(qd_server_t *server, pn_event_t *event, qd_connection_t *conn) {
-    pn_connection_t *pn_conn = pn_event_connection(event);
-
-    // XXX Is it right to have a qdr_ function here?
-    // XXX Why does this take a pn_conn?
-    if (qdr_is_authentication_service_connection(pn_conn)) {
-        //fprintf(stderr, "Yowser\n");
-        qdr_handle_authentication_service_connection_event(event);
-        return true;
-    }
-
+static bool handle_event(qd_server_t *server, pn_event_t *event) {
     switch (pn_event_type(event)) {
     case PN_PROACTOR_INTERRUPT:
         // Interrupt the next thread and stop the current thread
@@ -1093,31 +1200,16 @@ static bool handle_event(qd_server_t *server, pn_event_t *event, qd_connection_t
         break;
 
     case PN_CONNECTION_INIT:
-        on_connection_init(server, event, conn);
-        break;
-
     case PN_CONNECTION_BOUND:
-        on_connection_bound(server, event);
-        break;
-
     case PN_CONNECTION_REMOTE_OPEN:
-        on_connection_remote_open(server, event, conn);
-        break;
-
     case PN_CONNECTION_WAKE:
-        invoke_deferred_calls(conn, false);
-        break;
-
     case PN_TRANSPORT_ERROR:
-        on_transport_error(server, event, conn);
+    case PN_TRANSPORT_CLOSED:
+        handle_connection_event(server, event);
         break;
 
     default:
         break;
-    }
-
-    if (conn) {
-        qd_container_handle_event(server->container, event, pn_conn, conn);
     }
 
     return true;
@@ -1129,31 +1221,21 @@ static void *thread_run(void *arg) {
 
     while (running) {
         pn_event_batch_t *batch = pn_proactor_wait(server->proactor);
-        pn_event_t *event;
-        qd_connection_t *conn = NULL;
+        pn_event_t *event = pn_event_batch_next(batch);
+
+        assert(event);
+
+        running = handle_event(server, event);
+
+        qd_connection_t *conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
 
         while (running && (event = pn_event_batch_next(batch))) {
-            if (!conn) {
-                conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
-            }
-
-            running = handle_event(server, event, conn);
-
-            // Free the connection after all other processing is
-            // complete
-            if (pn_event_type(event) == PN_TRANSPORT_CLOSED) {
-                // XXX The naming of this function is strange
-                qd_conn_event_batch_complete(server->container, conn, true);
-                pn_connection_set_context(pn_event_connection(event), NULL);
-                // XXX Is this needed?
-                pn_connection_set_context(conn->pn_conn, NULL);
-                qd_connection_free(conn);
-                conn = NULL;
-            }
+            running = handle_event(server, event);
         }
 
         // Notify the container that the batch is complete so it can
         // do after-batch processing
+
         if (conn) {
             qd_conn_event_batch_complete(server->container, conn, false);
         }
@@ -1163,7 +1245,6 @@ static void *thread_run(void *arg) {
 
     return NULL;
 }
-
 
 static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
 
@@ -1759,7 +1840,7 @@ bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
     pn_connection_t *pn_conn = pn_event_connection(e);
     qd_connection_t *qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : 0;
 
-    handle_event(c->server, e, qd_conn);
+    handle_event(c->server, e);
 
     if (qd_conn && pn_event_type(e) == PN_TRANSPORT_CLOSED) {
         pn_connection_set_context(pn_conn, NULL);
