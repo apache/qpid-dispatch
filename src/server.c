@@ -456,8 +456,6 @@ static void connection_wake(qd_connection_t *conn) {
 
 
 // Construct a new qd_connection. Thread safe.
-//
-// XXX Ask about the allocation-failure handling here
 qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *config) {
     qd_connection_t *conn = new_qd_connection_t();
 
@@ -507,26 +505,8 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
     return conn;
 }
 
-qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
-    qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
-
-    if (DEQ_SIZE(ct->conn_info_list) > 1) {
-        for (int i=1; i < ct->conn_index; i++) {
-            item = DEQ_NEXT(item);
-        }
-    }
-
-    return item;
-}
-
-bool qd_connector_has_failover_info(qd_connector_t* ct)
-{
-    if (ct && DEQ_SIZE(ct->conn_info_list) > 1)
-        return true;
-    return false;
-}
-
 void invoke_deferred_calls(qd_connection_t *conn, bool discard);
+bool qd_connector_has_failover_info(qd_connector_t* connector);
 
 void qd_connection_free(qd_connection_t *ctx)
 {
@@ -926,133 +906,185 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
     qd_server_activate(conn);
 }
 
+// Listener functions
 
-qd_listener_t *qd_server_listener(qd_server_t *server)
-{
-    qd_listener_t *li = new_qd_listener_t();
-    if (!li) return 0;
-    ZERO(li);
-    sys_atomic_init(&li->ref_count, 1);
-    li->server      = server;
-    li->http = NULL;
-    return li;
+qd_listener_t *qd_server_listener(qd_server_t *server) {
+    qd_listener_t *listener = new_qd_listener_t();
+
+    if (!listener) {
+        return 0;
+    }
+
+    ZERO(listener);
+    sys_atomic_init(&listener->ref_count, 1);
+
+    listener->server = server;
+    listener->http = NULL;
+
+    return listener;
 }
 
-static bool qd_listener_listen_pn(qd_listener_t *li) {
-   li->pn_listener = pn_listener();
-    if (li->pn_listener) {
-        pn_listener_set_context(li->pn_listener, li);
-        pn_proactor_listen(li->server->proactor, li->pn_listener, li->config.host_port,
-                           BACKLOG);
-        sys_atomic_inc(&li->ref_count); /* In use by proactor, PN_LISTENER_CLOSE will dec */
-        /* Listen is asynchronous, log "listening" message on PN_LISTENER_OPEN event */
+static bool listener_listen_pn(qd_listener_t *listener);
+static bool listener_listen_http(qd_listener_t *listener);
+
+bool qd_listener_listen(qd_listener_t *listener) {
+    if (listener->pn_listener || listener->http) /* Already listening */
+        return true;
+    return listener->config.http ? listener_listen_http(listener) : listener_listen_pn(listener);
+}
+
+void qd_listener_decref(qd_listener_t* listener) {
+    if (listener && sys_atomic_dec(&listener->ref_count) == 1) {
+        qd_server_config_free(&listener->config);
+        free_qd_listener_t(listener);
+    }
+}
+
+qd_http_listener_t *qd_listener_http(qd_listener_t *listener) {
+    return listener->http;
+}
+
+static bool listener_listen_pn(qd_listener_t *listener) {
+    listener->pn_listener = pn_listener();
+
+    if (listener->pn_listener) {
+        pn_listener_set_context(listener->pn_listener, listener);
+        pn_proactor_listen(listener->server->proactor, listener->pn_listener, listener->config.host_port, BACKLOG);
+
+        // In use by the proactor.  PN_LISTENER_CLOSE will decrement
+        // this.
+        sys_atomic_inc(&listener->ref_count);
+
+        // Listen is asynchronous.  Log the "listening" message on
+        // PN_LISTENER_OPEN.
     } else {
-        qd_log(li->server->log_source, QD_LOG_CRITICAL, "No memory listening on %s",
-               li->config.host_port);
-     }
-    return li->pn_listener;
+        qd_log(listener->server->log_source, QD_LOG_CRITICAL, "No memory listening on %s",
+               listener->config.host_port);
+    }
+
+    return listener->pn_listener;
 }
 
-static bool qd_listener_listen_http(qd_listener_t *li) {
-    if (li->server->http) {
+static bool listener_listen_http(qd_listener_t *listener) {
+    if (listener->server->http) {
         /* qd_http_listener holds a reference to li, will decref when closed */
-        qd_http_server_listen(li->server->http, li);
-        return li->http;
+        qd_http_server_listen(listener->server->http, listener);
+        return listener->http;
     } else {
-        qd_log(li->server->log_source, QD_LOG_ERROR, "No HTTP support to listen on %s",
-               li->config.host_port);
+        qd_log(listener->server->log_source, QD_LOG_ERROR, "No HTTP support to listen on %s",
+               listener->config.host_port);
         return false;
     }
 }
 
+// Connector functions
 
-bool qd_listener_listen(qd_listener_t *li) {
-    if (li->pn_listener || li->http) /* Already listening */
-        return true;
-    return li->config.http ? qd_listener_listen_http(li) : qd_listener_listen_pn(li);
-}
+qd_connector_t *qd_server_connector(qd_server_t *server) {
+    qd_connector_t *connector = new_qd_connector_t();
 
-
-void qd_listener_decref(qd_listener_t* li)
-{
-    if (li && sys_atomic_dec(&li->ref_count) == 1) {
-        qd_server_config_free(&li->config);
-        free_qd_listener_t(li);
+    if (!connector) {
+        return NULL;
     }
-}
 
+    ZERO(connector);
+    sys_atomic_init(&connector->ref_count, 1);
 
-qd_connector_t *qd_server_connector(qd_server_t *server)
-{
-    qd_connector_t *ct = new_qd_connector_t();
-    if (!ct) return 0;
-    ZERO(ct);
-    sys_atomic_init(&ct->ref_count, 1);
-    ct->server  = server;
+    connector->server = server;
     qd_failover_item_list_t conn_info_list;
     DEQ_INIT(conn_info_list);
-    ct->conn_info_list = conn_info_list;
-    ct->conn_index = 1;
-    ct->state   = CXTR_STATE_INIT;
-    ct->lock = sys_mutex();
-    ct->conn_msg = (char*) malloc(300);
-    memset(ct->conn_msg, 0, 300);
-    ct->timer = qd_timer(ct->server->qd, try_open_handler, ct);
-    if (!ct->lock || !ct->timer) {
-        qd_connector_decref(ct);
-        return 0;
+    connector->conn_info_list = conn_info_list;
+    connector->conn_index = 1;
+    connector->state = CXTR_STATE_INIT;
+    connector->lock = sys_mutex();
+    connector->conn_msg = (char*) malloc(300);
+    memset(connector->conn_msg, 0, 300);
+    connector->timer = qd_timer(connector->server->qd, try_open_handler, connector);
+
+    if (!connector->lock || !connector->timer) {
+        qd_connector_decref(connector);
+        return NULL;
     }
-    return ct;
+
+    return connector;
 }
 
-
-const char *qd_connector_policy_vhost(qd_connector_t* ct)
-{
-    return ct->policy_vhost;
+const char *qd_connector_policy_vhost(qd_connector_t* connector) {
+    return connector->policy_vhost;
 }
 
+bool qd_connector_connect(qd_connector_t *connector) {
+    sys_mutex_lock(connector->lock);
 
-bool qd_connector_connect(qd_connector_t *ct)
-{
-    sys_mutex_lock(ct->lock);
-    ct->ctx     = 0;
-    ct->delay   = 0;
-    /* Referenced by timer */
-    sys_atomic_inc(&ct->ref_count);
-    qd_timer_schedule(ct->timer, ct->delay);
-    sys_mutex_unlock(ct->lock);
+    connector->ctx = NULL;
+    connector->delay = 0;
+
+    // Referenced by timer
+    sys_atomic_inc(&connector->ref_count);
+    qd_timer_schedule(connector->timer, connector->delay);
+
+    sys_mutex_unlock(connector->lock);
+
     return true;
 }
 
+bool qd_connector_decref(qd_connector_t* connector) {
+    if (connector && sys_atomic_dec(&connector->ref_count) == 1) {
+        sys_mutex_lock(connector->lock);
 
-bool qd_connector_decref(qd_connector_t* ct)
-{
-    if (ct && sys_atomic_dec(&ct->ref_count) == 1) {
-        sys_mutex_lock(ct->lock);
-        if (ct->ctx) {
-            ct->ctx->connector = 0;
+        if (connector->ctx) {
+            connector->ctx->connector = NULL;
         }
-        sys_mutex_unlock(ct->lock);
-        qd_server_config_free(&ct->config);
-        qd_timer_free(ct->timer);
 
-        qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
+        sys_mutex_unlock(connector->lock);
+
+        qd_server_config_free(&connector->config);
+        qd_timer_free(connector->timer);
+
+        qd_failover_item_t *item = DEQ_HEAD(connector->conn_info_list);
+
         while (item) {
-            DEQ_REMOVE_HEAD(ct->conn_info_list);
+            DEQ_REMOVE_HEAD(connector->conn_info_list);
             free(item->scheme);
             free(item->host);
             free(item->port);
             free(item->hostname);
             free(item->host_port);
             free(item);
-            item = DEQ_HEAD(ct->conn_info_list);
+            item = DEQ_HEAD(connector->conn_info_list);
         }
-        sys_mutex_free(ct->lock);
-        if (ct->policy_vhost) free(ct->policy_vhost);
-        free(ct->conn_msg);
-        free_qd_connector_t(ct);
+
+        sys_mutex_free(connector->lock);
+
+        if (connector->policy_vhost) {
+            free(connector->policy_vhost);
+        }
+
+        free(connector->conn_msg);
+        free_qd_connector_t(connector);
+
         return true;
     }
+
+    return false;
+}
+
+qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *connector) {
+    qd_failover_item_t *item = DEQ_HEAD(connector->conn_info_list);
+
+    if (DEQ_SIZE(connector->conn_info_list) > 1) {
+        for (int i = 1; i < connector->conn_index; i++) {
+            item = DEQ_NEXT(item);
+        }
+    }
+
+    return item;
+}
+
+bool qd_connector_has_failover_info(qd_connector_t* connector) {
+    if (connector && DEQ_SIZE(connector->conn_info_list) > 1) {
+        return true;
+    }
+
     return false;
 }
 
@@ -1077,10 +1109,6 @@ qd_connector_t* qd_connection_connector(const qd_connection_t *c) {
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c) {
     return &c->config;
-}
-
-qd_http_listener_t *qd_listener_http(qd_listener_t *li) {
-    return li->http;
 }
 
 const char* qd_connection_remote_ip(const qd_connection_t *c) {
