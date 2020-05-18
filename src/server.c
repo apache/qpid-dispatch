@@ -98,7 +98,18 @@ char *COMPONENT_SEPARATOR = ";";
 static const int BACKLOG = 50;  /* Listening backlog */
 
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
-static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
+
+static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
+    qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
+
+    if (DEQ_SIZE(ct->conn_info_list) > 1) {
+        for (int i=1; i < ct->conn_index; i++) {
+            item = DEQ_NEXT(item);
+        }
+    }
+
+    return item;
+}
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
@@ -1216,70 +1227,6 @@ static void *thread_run(void *arg) {
     return NULL;
 }
 
-static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct) {
-
-    qd_failover_item_t *item = DEQ_HEAD(ct->conn_info_list);
-
-    if (DEQ_SIZE(ct->conn_info_list) > 1) {
-        for (int i=1; i < ct->conn_index; i++) {
-            item = DEQ_NEXT(item);
-        }
-    }
-    return item;
-}
-
-
-/* Timer callback to try/retry connection open */
-static void try_open_lh(qd_connector_t *ct)
-{
-    if (ct->state != CXTR_STATE_CONNECTING && ct->state != CXTR_STATE_INIT) {
-        /* No longer referenced by pn_connection or timer */
-        qd_connector_decref(ct);
-        return;
-    }
-
-    qd_connection_t *ctx = qd_server_connection(ct->server, &ct->config);
-    if (!ctx) {                 /* Try again later */
-        qd_log(ct->server->log_source, QD_LOG_CRITICAL, "Allocation failure connecting to %s",
-               ct->config.host_port);
-        ct->delay = 10000;
-        sys_atomic_inc(&ct->ref_count);
-        qd_timer_schedule(ct->timer, ct->delay);
-        return;
-    }
-
-    ctx->connector    = ct;
-    const qd_server_config_t *config = &ct->config;
-
-    //
-    // Set the hostname on the pn_connection. This hostname will be used by proton as the
-    // hostname in the open frame.
-    //
-
-    qd_failover_item_t *item = qd_connector_get_conn_info(ct);
-
-    char *current_host = item->host;
-    char *host_port = item->host_port;
-
-    pn_connection_set_hostname(ctx->pn_conn, current_host);
-
-    // Set the sasl user name and password on the proton connection object. This has to be
-    // done before pn_proactor_connect which will bind a transport to the connection
-    if(config->sasl_username)
-        pn_connection_set_user(ctx->pn_conn, config->sasl_username);
-    if (config->sasl_password)
-        pn_connection_set_password(ctx->pn_conn, config->sasl_password);
-
-    ctx->connector->state = CXTR_STATE_OPEN;
-    ct->ctx   = ctx;
-    ct->delay = 5000;
-
-    qd_log(ct->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"] Connecting to %s", ctx->connection_id, host_port);
-    /* Note: the transport is configured in the PN_CONNECTION_BOUND event */
-    pn_proactor_connect(ct->server->proactor, ctx->pn_conn, host_port);
-}
-
 static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
 {
     qd_connector_t *ct = ctx->connector;
@@ -1375,15 +1322,72 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
     pn_connection_open(ctx->pn_conn);
 }
 
-static void try_open_cb(void *context) {
-    qd_connector_t *ct = (qd_connector_t*) context;
-    if (!qd_connector_decref(ct)) {
-        sys_mutex_lock(ct->lock);   /* TODO aconway 2017-05-09: this lock looks too big */
-        try_open_lh(ct);
-        sys_mutex_unlock(ct->lock);
+// Timer callback to try and retry connection open
+static void try_open_lh(qd_connector_t *connector) {
+    qd_log_source_t *log = connector->server->log_source;
+
+    if (connector->state != CXTR_STATE_CONNECTING && connector->state != CXTR_STATE_INIT) {
+        // No longer referenced by pn_connection or timer
+        qd_connector_decref(connector);
+        return;
     }
+
+    qd_connection_t *conn = qd_server_connection(connector->server, &connector->config);
+
+    if (!conn) {
+        // Try again later
+        qd_log(log, QD_LOG_CRITICAL, "Allocation failure connecting to %s", connector->config.host_port);
+        connector->delay = 10000;
+        sys_atomic_inc(&connector->ref_count);
+        qd_timer_schedule(connector->timer, connector->delay);
+        return;
+    }
+
+    conn->connector = connector;
+    const qd_server_config_t *config = &connector->config;
+
+    // Set the hostname on the pn_connection. This hostname will be
+    // used by proton as the hostname in the open frame.
+
+    qd_failover_item_t *item = qd_connector_get_conn_info(connector);
+    char *current_host = item->host;
+    char *host_port = item->host_port;
+
+    pn_connection_set_hostname(conn->pn_conn, current_host);
+
+    // Set the sasl user name and password on the proton connection
+    // object. This has to be done before pn_proactor_connect, which
+    // will bind a transport to the connection.
+
+    if (config->sasl_username) {
+        pn_connection_set_user(conn->pn_conn, config->sasl_username);
+    }
+
+    if (config->sasl_password) {
+        pn_connection_set_password(conn->pn_conn, config->sasl_password);
+    }
+
+    conn->connector->state = CXTR_STATE_OPEN;
+    connector->ctx = conn;
+    connector->delay = 5000;
+
+    qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Connecting to %s", conn->connection_id, host_port);
+
+    // Note: The transport is configured in the PN_CONNECTION_BOUND
+    // event
+    pn_proactor_connect(connector->server->proactor, conn->pn_conn, host_port);
 }
 
+static void try_open_handler(void *context) {
+    qd_connector_t *connector = (qd_connector_t*) context;
+
+    if (!qd_connector_decref(connector)) {
+        // TODO aconway 2017-05-09: this lock looks too big
+        sys_mutex_lock(connector->lock);
+        try_open_lh(connector);
+        sys_mutex_unlock(connector->lock);
+    }
+}
 
 qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name,
                        const char *sasl_config_path, const char *sasl_config_name)
@@ -1709,7 +1713,7 @@ qd_connector_t *qd_server_connector(qd_server_t *server)
     ct->lock = sys_mutex();
     ct->conn_msg = (char*) malloc(300);
     memset(ct->conn_msg, 0, 300);
-    ct->timer = qd_timer(ct->server->qd, try_open_cb, ct);
+    ct->timer = qd_timer(ct->server->qd, try_open_handler, ct);
     if (!ct->lock || !ct->timer) {
         qd_connector_decref(ct);
         return 0;
