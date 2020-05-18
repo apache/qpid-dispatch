@@ -106,6 +106,7 @@ set(qpid_dispatch_SOURCES
   router_node.c
   router_pynode.c
   schema_enum.c
+  server_event_handlers.c
   server.c
   timer.c
   trace_mask.c

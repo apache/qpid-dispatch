@@ -62,7 +62,6 @@ typedef enum {
     CXTR_STATE_FAILED
 } cxtr_state_t;
 
-
 typedef struct qd_deferred_call_t {
     DEQ_LINKS(struct qd_deferred_call_t);
     qd_deferred_t  call;
@@ -124,7 +123,7 @@ struct qd_connector_t {
     /* This conn_list contains all the connection information needed to make a connection. It also includes failover connection information */
     qd_failover_item_list_t   conn_info_list;
     int                       conn_index; // Which connection in the connection list to connect to next.
-    
+
     /* Optional policy vhost name */
     char                     *policy_vhost;
 
@@ -183,10 +182,38 @@ ALLOC_DECLARE(qd_connector_t);
 ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_pn_free_link_session_t);
 
+struct qd_server_t {
+    qd_dispatch_t            *qd;
+    const int                 thread_count; /* Immutable */
+    const char               *container_name;
+    const char               *sasl_config_path;
+    const char               *sasl_config_name;
+    pn_proactor_t            *proactor;
+    qd_container_t           *container;
+    qd_log_source_t          *log_source;
+    qd_log_source_t          *protocol_log_source; // Log source for the PROTOCOL module
+    void                     *start_context;
+    sys_cond_t               *cond;
+    sys_mutex_t              *lock;
+    qd_connection_list_t      conn_list;
+    int                       pause_requests;
+    int                       threads_paused;
+    int                       pause_next_sequence;
+    int                       pause_now_serving;
+    uint64_t                  next_connection_id;
+    void                     *py_displayname_obj;
+    qd_http_server_t         *http;
+    sys_mutex_t              *conn_activation_lock;
+};
+
 /**
  * For every connection on the server's connection list, call pn_transport_set_tracer and enable trace logging
  */
 void qd_server_trace_all_connections();
+
+qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *connector);
+
+void qd_connection_free(qd_connection_t *conn);
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer
