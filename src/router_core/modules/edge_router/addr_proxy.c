@@ -229,7 +229,7 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
     switch (event) {
         case QDRC_EVENT_LINK_OUT_DETACHED: {
             qdr_address_t *addr = link->owning_addr;
-            if (addr && addr->edge_outlink && link == addr->edge_outlink) {
+            if (addr && link == addr->edge_outlink) {
                 //
                 // The link is being detached. If the detaching link is the same as the link's owning_addr's edge_outlink,
                 // set the edge_outlink on the address to be zero. We do this because this link is going to be freed
@@ -242,7 +242,7 @@ static void on_link_event(void *context, qdrc_event_t event, qdr_link_t *link)
 
         case QDRC_EVENT_LINK_IN_DETACHED: {
             qdr_address_t *addr = link->owning_addr;
-            if (addr && addr->edge_inlink && link == addr->edge_inlink) {
+            if (addr && link == addr->edge_inlink) {
                 //
                 // The link is being detached. If the detaching link is the same as the link's owning_addr's edge_inlink,
                 // set the edge_inlink on the address to be zero. We do this because this link is going to be freed
