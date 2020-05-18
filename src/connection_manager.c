@@ -1007,6 +1007,9 @@ void qd_connection_manager_delete_listener(qd_dispatch_t *qd, void *impl)
         if (li->pn_listener) {
             pn_listener_close(li->pn_listener);
         }
+        else if (li->http) {
+            qd_http_listener_close(li->http);
+        }
         DEQ_REMOVE(qd->connection_manager->listeners, li);
         qd_listener_decref(li);
     }

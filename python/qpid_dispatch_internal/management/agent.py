@@ -393,8 +393,6 @@ class ListenerEntity(EntityAdapter):
         return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
 
     def _delete(self):
-        if self.http:
-            raise BadRequestStatus("HTTP listeners cannot be deleted")
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
 class ConnectorEntity(EntityAdapter):
