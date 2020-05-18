@@ -68,7 +68,8 @@ const char CERT_FINGERPRINT_SHA256 = '2';
 const char CERT_FINGERPRINT_SHA512 = '5';
 char* COMPONENT_SEPARATOR = ";";
 
-static const int BACKLOG = 50; /* Listening backlog */
+// Listening backlog
+static const int BACKLOG = 50;
 
 //
 // Tracer functions
@@ -982,7 +983,8 @@ static bool listener_listen_pn(qd_listener_t* listener);
 static bool listener_listen_http(qd_listener_t* listener);
 
 bool qd_listener_listen(qd_listener_t* listener) {
-    if (listener->pn_listener || listener->http) { /* Already listening */
+    if (listener->pn_listener || listener->http) {
+        // Already listening
         return true;
     }
 
@@ -1022,7 +1024,8 @@ static bool listener_listen_pn(qd_listener_t* listener) {
 
 static bool listener_listen_http(qd_listener_t* listener) {
     if (listener->server->http) {
-        /* qd_http_listener holds a reference to li, will decref when closed */
+        // qd_http_listener holds a reference to listener.  It will
+        // decref when closed.
         qd_http_server_listen(listener->server->http, listener);
         return listener->http;
     } else {

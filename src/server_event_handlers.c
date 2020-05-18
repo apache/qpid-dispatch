@@ -134,7 +134,8 @@ static void handle_connection_bound(qd_server_t* server, qd_connection_t* conn) 
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection bound", conn->connection_id);
 
     pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
-    pn_transport_set_context(transport, conn); /* for transport_tracer */
+    // For transport_tracer
+    pn_transport_set_context(transport, conn);
 
     // Proton pushes out its trace to transport_tracer() which in turn
     // writes a trace message to the qdrouter log.  If trace level
@@ -157,7 +158,8 @@ static void handle_connection_bound(qd_server_t* server, qd_connection_t* conn) 
         pn_transport_set_server(transport);
         set_rhost_port(conn);
 
-        sys_mutex_lock(server->lock); /* Policy check is not thread safe */
+        // Policy check is not thread safe
+        sys_mutex_lock(server->lock);
         conn->policy_counted = qd_policy_socket_accept(server->qd->policy, conn->rhost);
         sys_mutex_unlock(server->lock);
 
