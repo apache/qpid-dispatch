@@ -178,7 +178,7 @@ qd_connection_t* qd_server_connection(qd_server_t* server, qd_server_config_t* c
     return conn;
 }
 
-void invoke_deferred_calls(qd_connection_t* conn, bool discard);
+void connection_invoke_deferred_calls(qd_connection_t* conn, bool discard);
 bool qd_connector_has_failover_info(qd_connector_t* connector);
 
 void qd_connection_free(qd_connection_t* conn) {
@@ -222,7 +222,7 @@ void qd_connection_free(qd_connection_t* conn) {
     sys_mutex_unlock(server->lock);
 
     // Discard any pending deferred calls
-    invoke_deferred_calls(conn, true);
+    connection_invoke_deferred_calls(conn, true);
 
     sys_mutex_free(conn->deferred_call_lock);
     qd_policy_settings_free(conn->policy_settings);
