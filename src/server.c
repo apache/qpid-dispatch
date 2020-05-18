@@ -675,8 +675,246 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tra
 }
 
 //
-// Event handling
+// Server functions
 //
+
+qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name,
+                       const char *sasl_config_path, const char *sasl_config_name) {
+    // Initialize const members. Zero initialize all others.
+
+    qd_server_t tmp = { .thread_count = thread_count };
+    // XXX This type contructor is different from what I see elsewhere.
+    qd_server_t *server = NEW(qd_server_t);
+
+    if (!server) {
+        return NULL;
+    }
+
+    memcpy(server, &tmp, sizeof(tmp));
+
+    server->qd                     = qd;
+    server->log_source             = qd_log_source("SERVER");
+    server->protocol_log_source    = qd_log_source("PROTOCOL");
+    server->container_name         = container_name;
+    server->sasl_config_path       = sasl_config_path;
+    server->sasl_config_name       = sasl_config_name;
+    server->proactor               = pn_proactor();
+    server->container              = NULL;
+    server->start_context          = 0; // XXX Should be NULL?
+    server->lock                   = sys_mutex();
+    server->conn_activation_lock   = sys_mutex();
+    server->cond                   = sys_cond();
+
+    DEQ_INIT(server->conn_list);
+    qd_timer_initialize(server->lock);
+
+    server->pause_requests         = 0;
+    server->threads_paused         = 0;
+    server->pause_next_sequence    = 0;
+    server->pause_now_serving      = 0;
+    server->next_connection_id     = 1;
+    server->py_displayname_obj     = 0;
+
+    server->http = qd_http_server(server, server->log_source);
+
+    qd_log(server->log_source, QD_LOG_INFO, "Container Name: %s", server->container_name);
+
+    return server;
+}
+
+void qd_server_free(qd_server_t *server) {
+    if (!server) {
+        return;
+    }
+
+    qd_connection_t *conn = DEQ_HEAD(server->conn_list);
+
+    while (conn) {
+        qd_log(server->log_source, QD_LOG_INFO,
+               "[C%"PRIu64"] Closing connection on shutdown",
+               conn->connection_id);
+
+        DEQ_REMOVE_HEAD(server->conn_list);
+
+        if (conn->pn_conn) {
+            pn_transport_t *transport = pn_connection_transport(conn->pn_conn);
+
+            if (transport) {
+                // For the transport tracer
+                pn_transport_set_context(transport, 0);
+            }
+
+            qd_session_cleanup(conn);
+            pn_connection_set_context(conn->pn_conn, 0);
+        }
+
+        if (conn->free_user_id) {
+            free((char*)conn->user_id);
+        }
+
+        sys_mutex_free(conn->deferred_call_lock);
+
+        free(conn->name);
+        free(conn->role);
+
+        if (conn->policy_settings) {
+            free_qd_policy_settings_t(conn->policy_settings);
+        }
+
+        free_qd_connection_t(conn);
+
+        conn = DEQ_HEAD(server->conn_list);
+    }
+
+    pn_proactor_free(server->proactor);
+    qd_timer_finalize();
+    sys_mutex_free(server->lock);
+    sys_mutex_free(server->conn_activation_lock);
+    sys_cond_free(server->cond);
+    Py_XDECREF((PyObject *)server->py_displayname_obj);
+
+    free(server);
+}
+
+void qd_server_set_container(qd_dispatch_t *qd, qd_container_t *container) {
+    qd->server->container = container;
+}
+
+void qd_server_trace_all_connections() {
+    qd_dispatch_t *qd = qd_dispatch_get_dispatch();
+
+    if (qd->server) {
+        sys_mutex_lock(qd->server->lock);
+
+        qd_connection_list_t conn_list = qd->server->conn_list;
+        qd_connection_t *conn = DEQ_HEAD(conn_list);
+
+        while(conn) {
+            // If there is already a tracer on the transport, nothing
+            // to do, move on to the next connection.
+            pn_transport_t *tport  = pn_connection_transport(conn->pn_conn);
+
+            if (! pn_transport_get_tracer(tport)) {
+                pn_transport_trace(tport, PN_TRACE_FRM);
+                pn_transport_set_tracer(tport, transport_tracer);
+            }
+
+            conn = DEQ_NEXT(conn);
+        }
+
+        sys_mutex_unlock(qd->server->lock);
+    }
+}
+
+static double normalize_memory_size(const uint64_t bytes, const char **suffix);
+static void *thread_run(void *arg);
+
+void qd_server_run(qd_dispatch_t *qd) {
+    qd_server_t *server = qd->server;
+    int i;
+
+    assert(server);
+    // Server can't run without a container
+    assert(server->container);
+
+    qd_log(server->log_source,
+           QD_LOG_NOTICE, "Operational, %d Threads Running (process ID %ld)",
+           server->thread_count, (long) getpid());
+
+    const uintmax_t ram_size = qd_platform_memory_size();
+    const uint64_t  vm_size = qd_router_memory_usage();
+
+    if (ram_size && vm_size) {
+        const char *suffix_vm = 0;
+        const char *suffix_ram = 0;
+        double vm = normalize_memory_size(vm_size, &suffix_vm);
+        double ram = normalize_memory_size(ram_size, &suffix_ram);
+
+        qd_log(server->log_source, QD_LOG_NOTICE,
+               "Process VmSize %.2f %s (%.2f %s available memory)",
+               vm, suffix_vm, ram, suffix_ram);
+    }
+
+#ifndef NDEBUG
+    qd_log(server->log_source, QD_LOG_INFO, "Running in DEBUG Mode");
+#endif
+
+    // Start count - 1 threads and use the current thread
+
+    int n = server->thread_count - 1;
+    sys_thread_t **threads = (sys_thread_t**) calloc(n, sizeof(sys_thread_t*));
+
+    for (i = 0; i < n; i++) {
+        threads[i] = sys_thread(thread_run, server);
+    }
+
+    // Use the current thread
+    thread_run(server);
+
+    for (i = 0; i < n; i++) {
+        sys_thread_join(threads[i]);
+        sys_thread_free(threads[i]);
+    }
+
+    free(threads);
+
+    // Stop HTTP threads immediately
+    qd_http_server_stop(server->http);
+    qd_http_server_free(server->http);
+
+    qd_log(server->log_source, QD_LOG_NOTICE, "Shut Down");
+}
+
+void qd_server_stop(qd_dispatch_t *qd) {
+    // Interrupt the proactor.  Async-signal safe.
+    pn_proactor_interrupt(qd->server->proactor);
+}
+
+void qd_server_activate(qd_connection_t *conn) {
+    if (conn) {
+        conn->wake(conn);
+    }
+}
+
+qd_dispatch_t *qd_server_dispatch(qd_server_t *server) {
+    return server->qd;
+}
+
+// Permit replacement by dummy implementation in unit_tests
+__attribute__((noinline))
+void qd_server_timeout(qd_server_t *server, qd_duration_t duration) {
+    pn_proactor_set_timeout(server->proactor, duration);
+}
+
+sys_mutex_t *qd_server_get_activation_lock(qd_server_t *server) {
+    return server->conn_activation_lock;
+}
+
+static double normalize_memory_size(const uint64_t bytes, const char **suffix) {
+    static const char * const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
+    const int units_ct = 5;
+    const double base = 1024.0;
+
+    double value = (double) bytes;
+
+    for (int i = 0; i < units_ct; ++i) {
+        if (value < base) {
+            if (suffix) {
+                *suffix = units[i];
+            }
+
+            return value;
+        }
+
+        value /= base;
+    }
+
+    if (suffix) {
+        *suffix = units[units_ct - 1];
+    }
+
+    return value;
+}
 
 static void *thread_run(void *arg) {
     qd_server_t *server = (qd_server_t*) arg;
@@ -766,200 +1004,6 @@ static void try_open_handler(void *context) {
         try_open_lh(connector);
         sys_mutex_unlock(connector->lock);
     }
-}
-
-//
-// Server functions
-//
-
-qd_server_t *qd_server(qd_dispatch_t *qd, int thread_count, const char *container_name,
-                       const char *sasl_config_path, const char *sasl_config_name)
-{
-    /* Initialize const members, 0 initialize all others. */
-    qd_server_t tmp = { .thread_count = thread_count };
-    qd_server_t *qd_server = NEW(qd_server_t);
-    if (qd_server == 0)
-        return 0;
-    memcpy(qd_server, &tmp, sizeof(tmp));
-
-    qd_server->qd               = qd;
-    qd_server->log_source       = qd_log_source("SERVER");
-    qd_server->protocol_log_source = qd_log_source("PROTOCOL");
-    qd_server->container_name   = container_name;
-    qd_server->sasl_config_path = sasl_config_path;
-    qd_server->sasl_config_name = sasl_config_name;
-    qd_server->proactor         = pn_proactor();
-    qd_server->container        = 0;
-    qd_server->start_context    = 0;
-    qd_server->lock             = sys_mutex();
-    qd_server->conn_activation_lock = sys_mutex();
-    qd_server->cond             = sys_cond();
-    DEQ_INIT(qd_server->conn_list);
-
-    qd_timer_initialize(qd_server->lock);
-
-    qd_server->pause_requests         = 0;
-    qd_server->threads_paused         = 0;
-    qd_server->pause_next_sequence    = 0;
-    qd_server->pause_now_serving      = 0;
-    qd_server->next_connection_id     = 1;
-    qd_server->py_displayname_obj     = 0;
-
-    qd_server->http = qd_http_server(qd_server, qd_server->log_source);
-
-    qd_log(qd_server->log_source, QD_LOG_INFO, "Container Name: %s", qd_server->container_name);
-
-    return qd_server;
-}
-
-
-void qd_server_free(qd_server_t *qd_server)
-{
-    if (!qd_server) return;
-    qd_connection_t *ctx = DEQ_HEAD(qd_server->conn_list);
-    while (ctx) {
-        qd_log(qd_server->log_source, QD_LOG_INFO,
-               "[C%"PRIu64"] Closing connection on shutdown",
-               ctx->connection_id);
-        DEQ_REMOVE_HEAD(qd_server->conn_list);
-        if (ctx->pn_conn) {
-            pn_transport_t *tport = pn_connection_transport(ctx->pn_conn);
-            if (tport)
-                pn_transport_set_context(tport, 0); /* for transport_tracer */
-            qd_session_cleanup(ctx);
-            pn_connection_set_context(ctx->pn_conn, 0);
-        }
-        if (ctx->free_user_id) free((char*)ctx->user_id);
-        sys_mutex_free(ctx->deferred_call_lock);
-        free(ctx->name);
-        free(ctx->role);
-        if (ctx->policy_settings)
-            free_qd_policy_settings_t(ctx->policy_settings);
-        free_qd_connection_t(ctx);
-        ctx = DEQ_HEAD(qd_server->conn_list);
-    }
-    pn_proactor_free(qd_server->proactor);
-    qd_timer_finalize();
-    sys_mutex_free(qd_server->lock);
-    sys_mutex_free(qd_server->conn_activation_lock);
-    sys_cond_free(qd_server->cond);
-    Py_XDECREF((PyObject *)qd_server->py_displayname_obj);
-    free(qd_server);
-}
-
-void qd_server_set_container(qd_dispatch_t *qd, qd_container_t *container)
-{
-    qd->server->container = container;
-}
-
-void qd_server_trace_all_connections()
-{
-    qd_dispatch_t *qd = qd_dispatch_get_dispatch();
-    if (qd->server) {
-        sys_mutex_lock(qd->server->lock);
-        qd_connection_list_t  conn_list = qd->server->conn_list;
-        qd_connection_t *conn = DEQ_HEAD(conn_list);
-        while(conn) {
-            //
-            // If there is already a tracer on the transport, nothing to do, move on to the next connection.
-            //
-            pn_transport_t *tport  = pn_connection_transport(conn->pn_conn);
-            if (! pn_transport_get_tracer(tport)) {
-                pn_transport_trace(tport, PN_TRACE_FRM);
-                pn_transport_set_tracer(tport, transport_tracer);
-            }
-            conn = DEQ_NEXT(conn);
-        }
-        sys_mutex_unlock(qd->server->lock);
-    }
-}
-
-static double normalize_memory_size(const uint64_t bytes, const char **suffix)
-{
-    static const char * const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
-    const int units_ct = 5;
-    const double base = 1024.0;
-
-    double value = (double)bytes;
-    for (int i = 0; i < units_ct; ++i) {
-        if (value < base) {
-            if (suffix)
-                *suffix = units[i];
-            return value;
-        }
-        value /= base;
-    }
-    if (suffix)
-        *suffix = units[units_ct - 1];
-    return value;
-}
-
-void qd_server_run(qd_dispatch_t *qd)
-{
-    qd_server_t *qd_server = qd->server;
-    int i;
-    assert(qd_server);
-    assert(qd_server->container); // Server can't run without a container
-    qd_log(qd_server->log_source,
-           QD_LOG_NOTICE, "Operational, %d Threads Running (process ID %ld)",
-           qd_server->thread_count, (long)getpid());
-
-    const uintmax_t ram_size = qd_platform_memory_size();
-    const uint64_t  vm_size = qd_router_memory_usage();
-    if (ram_size && vm_size) {
-        const char *suffix_vm = 0;
-        const char *suffix_ram = 0;
-        double vm = normalize_memory_size(vm_size, &suffix_vm);
-        double ram = normalize_memory_size(ram_size, &suffix_ram);
-        qd_log(qd_server->log_source, QD_LOG_NOTICE,
-               "Process VmSize %.2f %s (%.2f %s available memory)",
-               vm, suffix_vm, ram, suffix_ram);
-    }
-
-#ifndef NDEBUG
-    qd_log(qd_server->log_source, QD_LOG_INFO, "Running in DEBUG Mode");
-#endif
-    int n = qd_server->thread_count - 1; /* Start count-1 threads + use current thread */
-    sys_thread_t **threads = (sys_thread_t **)calloc(n, sizeof(sys_thread_t*));
-    for (i = 0; i < n; i++) {
-        threads[i] = sys_thread(thread_run, qd_server);
-    }
-    thread_run(qd_server);      /* Use the current thread */
-    for (i = 0; i < n; i++) {
-        sys_thread_join(threads[i]);
-        sys_thread_free(threads[i]);
-    }
-    free(threads);
-    qd_http_server_stop(qd_server->http); /* Stop HTTP threads immediately */
-    qd_http_server_free(qd_server->http);
-
-    qd_log(qd_server->log_source, QD_LOG_NOTICE, "Shut Down");
-}
-
-
-void qd_server_stop(qd_dispatch_t *qd)
-{
-    /* Interrupt the proactor, async-signal-safe */
-    pn_proactor_interrupt(qd->server->proactor);
-}
-
-void qd_server_activate(qd_connection_t *ctx)
-{
-    if (ctx) ctx->wake(ctx);
-}
-
-qd_dispatch_t *qd_server_dispatch(qd_server_t *server) {
-    return server->qd;
-}
-
-// Permit replacement by dummy implementation in unit_tests
-__attribute__((noinline))
-void qd_server_timeout(qd_server_t *server, qd_duration_t duration) {
-    pn_proactor_set_timeout(server->proactor, duration);
-}
-
-sys_mutex_t *qd_server_get_activation_lock(qd_server_t *server) {
-    return server->conn_activation_lock;
 }
 
 //
