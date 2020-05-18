@@ -38,5 +38,7 @@ void qd_http_server_stop(qd_http_server_t *h) {}
 
 qd_http_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener_t *li) { return 0; }
 
+void qd_http_listener_close(qd_http_listener_t *hl) {}
+
 
 

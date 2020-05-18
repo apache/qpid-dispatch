@@ -40,4 +40,9 @@ void qd_http_server_free(qd_http_server_t*);
 /* Listening for HTTP, thread safe. */
 qd_http_listener_t *qd_http_server_listen(qd_http_server_t *s, struct qd_listener_t *li);
 
+/**
+ * Closes an open http listener.
+ */
+void qd_http_listener_close(qd_http_listener_t *hl);
+
 #endif // QD_HTTP_H
