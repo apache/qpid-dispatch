@@ -387,7 +387,7 @@ static void handle_listener_event(qd_server_t* server, pn_event_t* event) {
             break;
 
         default:
-            break;
+            assert(false);
     }
 }
 
