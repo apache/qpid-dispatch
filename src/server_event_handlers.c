@@ -97,7 +97,7 @@ static void handle_listener_close(qd_server_t* server, qd_listener_t* listener) 
     pn_listener_set_context(listener->pn_listener, 0);
 
     // XXX Shouldn't stuff like this happen in a listener cleanup function?
-    listener->pn_listener = 0;
+    listener->pn_listener = NULL;
     qd_listener_decref(listener);
 }
 
