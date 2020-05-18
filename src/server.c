@@ -1192,6 +1192,6 @@ bool qd_connector_has_failover_info(qd_connector_t* connector) {
     return false;
 }
 
-const qd_server_config_t *qd_connector_config(const qd_connector_t *c) {
-    return &c->config;
+const qd_server_config_t *qd_connector_config(const qd_connector_t *connector) {
+    return &connector->config;
 }
