@@ -3012,6 +3012,8 @@ class StreamingMessageTest(TestCase):
         cls.INT_B.wait_router_connected('INT.A')
         cls.EA1.wait_connectors()
 
+        cls._container_index = 0
+
         cls.skip = { 'test_01' : 0,
                      'test_02' : 0,
                      'test_03' : 0,
@@ -3044,9 +3046,11 @@ class StreamingMessageTest(TestCase):
         if expect is None:
             expect = Process.EXIT_OK
         cmd = ["test-receiver",
+               "-i", "TestReceiver-%d" % self._container_index,
                "-a", router.listener,
                "-c", str(count),
                "-s", address]
+        self._container_index += 1
         env = dict(os.environ, PN_TRACE_FRM="1")
         return self.popen(cmd, expect=expect, env=env)
 
@@ -3056,10 +3060,12 @@ class StreamingMessageTest(TestCase):
         if size is None:
             size = "-sm"
         cmd = ["test-sender",
+               "-i", "TestSender-%d" % self._container_index,
                "-a", router.listener,
                "-c", str(count),
                "-t", address,
                size]
+        self._container_index += 1
         env = dict(os.environ, PN_TRACE_FRM="1")
         return self.popen(cmd, expect=expect, env=env)
 
@@ -3111,8 +3117,6 @@ class StreamingMessageTest(TestCase):
         self._wait_address_gone(self.INT_A, "MyLinkRoute")
         self._wait_address_gone(self.INT_B, "MyLinkRoute")
 
-
-
     def _streaming_test(self, address):
 
         # send a streaming message to address across the routers
@@ -3134,12 +3138,16 @@ class StreamingMessageTest(TestCase):
         if rx.returncode:
             raise Exception("receiver failed: %s %s" % (out_text, out_error))
 
+        self._wait_address_gone(self.INT_B, address)
+        self._wait_address_gone(self.INT_A, address)
+        self._wait_address_gone(self.EA1, address)
+        self._wait_address_gone(self.EB1, address)
+
     def test_02_streaming_closest(self):
         """
         Verify that a streaming message with closest treatment is forwarded
         correctly.
         """
-
         self._streaming_test("closest/test-address")
 
     def test_03_streaming_multicast(self):
@@ -3147,15 +3155,14 @@ class StreamingMessageTest(TestCase):
         Verify a streaming multicast message is forwarded correctly
         """
 
-        routers = [self.EA1, self.EB1, self.INT_A, self.INT_B]
+        routers = [self.EB1, self.INT_B, self.INT_A]
         streaming_rx = [self.spawn_receiver(router,
                                             count=1,
                                             address="multicast/test-address")
                         for router in routers]
-        self.INT_A.wait_address("multicast/test-address", subscribers=2, remotes=1)
-        self.INT_B.wait_address("multicast/test-address", subscribers=2, remotes=1)
-        self.EA1.wait_address("multicast/test-address", subscribers=1)
         self.EB1.wait_address("multicast/test-address", subscribers=1)
+        self.INT_B.wait_address("multicast/test-address", subscribers=2, remotes=1)
+        self.INT_A.wait_address("multicast/test-address", subscribers=1, remotes=1)
 
         # This sender will end up multicasting the message to ALL receivers.
         tx = self.spawn_sender(self.EA1,
@@ -3172,6 +3179,11 @@ class StreamingMessageTest(TestCase):
             out_text, out_error = rx.communicate(timeout=TIMEOUT)
             if rx.returncode:
                 raise Exception("receiver failed: %s %s" % (out_text, out_error))
+
+        self._wait_address_gone(self.EA1, "multicast/test_address")
+        self._wait_address_gone(self.EB1, "multicast/test_address")
+        self._wait_address_gone(self.INT_A, "multicast/test_address")
+        self._wait_address_gone(self.INT_B, "multicast/test_address")
 
     def test_04_streaming_balanced(self):
         """
@@ -3194,6 +3206,11 @@ class StreamingMessageTest(TestCase):
             out_text, out_error = rx.communicate(timeout=TIMEOUT)
             if rx.returncode:
                 raise Exception("receiver failed: %s %s" % (out_text, out_error))
+
+        self._wait_address_gone(self.EA1, "balanced/test-address")
+        self._wait_address_gone(self.EB1,  "balanced/test-address")
+        self._wait_address_gone(self.INT_A,  "balanced/test-address")
+        self._wait_address_gone(self.INT_B,  "balanced/test-address")
 
     def test_10_streaming_link_route_parallel(self):
         """
@@ -3275,6 +3292,10 @@ class StreamingMessageTest(TestCase):
         clogger.terminate()
         clogger.wait()
 
+        self._wait_address_gone(self.EA1, "closest/test-address")
+        self._wait_address_gone(self.EB1,  "closest/test-address")
+        self._wait_address_gone(self.INT_A,  "closest/test-address")
+        self._wait_address_gone(self.INT_B,  "closest/test-address")
 
     def test_12_streaming_multicast_parallel(self):
         """
@@ -3286,16 +3307,16 @@ class StreamingMessageTest(TestCase):
         that the second group properly receives the non-streaming message.
         """
 
-        routers = [self.EA1, self.EB1, self.INT_A, self.INT_B]
+        routers = [self.EB1, self.INT_A, self.INT_B]
         streaming_rx = [self.spawn_receiver(router,
                                             count=1,
                                             address="multicast/test-address",
                                             expect=self.SIG_TERM)
                         for router in routers]
-        self.INT_A.wait_address("multicast/test-address", subscribers=2, remotes=1)
-        self.INT_B.wait_address("multicast/test-address", subscribers=2, remotes=1)
-        self.EA1.wait_address("multicast/test-address", subscribers=1)
+
         self.EB1.wait_address("multicast/test-address", subscribers=1)
+        self.INT_B.wait_address("multicast/test-address", subscribers=2, remotes=1)
+        self.INT_A.wait_address("multicast/test-address", subscribers=1, remotes=1)
 
         # this will block all of the above receivers with a streaming message
 
@@ -3314,10 +3335,10 @@ class StreamingMessageTest(TestCase):
                                            count=1,
                                            address="multicast/test-address")
                        for router in routers]
-        self.INT_A.wait_address("multicast/test-address", subscribers=3, remotes=1)
-        self.INT_B.wait_address("multicast/test-address", subscribers=3, remotes=1)
-        self.EA1.wait_address("multicast/test-address", subscribers=2)
+
         self.EB1.wait_address("multicast/test-address", subscribers=2)
+        self.INT_B.wait_address("multicast/test-address", subscribers=3, remotes=1)
+        self.INT_A.wait_address("multicast/test-address", subscribers=2, remotes=1)
 
         # This sender will end up multicasting the message to ALL receivers.
         # Expect it to block since the first set of receivers will never get
@@ -3343,6 +3364,11 @@ class StreamingMessageTest(TestCase):
 
         clogger.terminate()
         clogger.wait()
+
+        self._wait_address_gone(self.EA1, "multicast/test-address")
+        self._wait_address_gone(self.EB1,  "multicast/test-address")
+        self._wait_address_gone(self.INT_A,  "multicast/test-address")
+        self._wait_address_gone(self.INT_B,  "multicast/test-address")
 
     def test_13_streaming_balanced_parallel(self):
         """
@@ -3385,6 +3411,10 @@ class StreamingMessageTest(TestCase):
         clogger.terminate()
         clogger.wait()
 
+        self._wait_address_gone(self.EA1, "balanced/test-address")
+        self._wait_address_gone(self.EB1,  "balanced/test-address")
+        self._wait_address_gone(self.INT_A,  "balanced/test-address")
+        self._wait_address_gone(self.INT_B,  "balanced/test-address")
 
 if __name__== '__main__':
     unittest.main(main_module())
