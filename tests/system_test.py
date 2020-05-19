@@ -68,7 +68,9 @@ from proton.utils import BlockingConnection
 from proton.reactor import AtLeastOnce, Container
 from proton.reactor import AtMostOnce
 from qpid_dispatch.management.client import Node
-from qpid_dispatch_internal.compat import dict_iteritems
+from qpid_dispatch_internal.compat import dict_iteritems, PY_STRING_TYPE
+from qpid_dispatch_internal.compat import PY_TEXT_TYPE
+
 
 # Optional modules
 MISSING_MODULES = []
@@ -344,7 +346,25 @@ class Qdrouterd(Process):
 
     class Config(list, Config):
         """
-        List of ('section', {'name':'value', ...}).
+        A router configuration.
+
+        The Config class is a list of tuples in the following format:
+
+        [ ('section-name', {attribute-map}), ...]
+
+        where attribute-map is a dictionary of key+value pairs.  Key is an
+        attribute name (string), value can be any of [scalar | string | dict]
+
+        When written to a configuration file to be loaded by the router:
+        o) there is no ":' between the section-name and the opening brace
+        o) attribute keys are separated by a ":" from their values
+        o) attribute values that are scalar or string follow the ":" on the
+        same line.
+        o) attribute values do not have trailing commas
+        o) The section-name and attribute keywords are written
+        without enclosing quotes
+        o) string type attribute values are not enclosed in quotes
+        o) attribute values of type dict are written in their JSON representation.
 
         Fills in some default values automatically, see Qdrouterd.DEFAULTS
         """
@@ -373,21 +393,33 @@ class Qdrouterd(Process):
         def __str__(self):
             """Generate config file content. Calls default() first."""
             def tabs(level):
-                return "    " * level
+                if level:
+                    return "    " * level
+                return ""
 
-            def sub_elem(l, level):
-                return "".join(["%s%s: {\n%s%s}\n" % (tabs(level), n, props(p, level + 1), tabs(level)) for n, p in l])
+            def value(item, level):
+                if isinstance(item, dict):
+                    result = "{\n"
+                    result += "".join(["%s%s: %s,\n" % (tabs(level + 1),
+                                                        json.dumps(k),
+                                                        json.dumps(v))
+                                       for k,v in item.items()])
+                    result += "%s}" % tabs(level)
+                    return result
+                return "%s" %  item
 
-            def child(v, level):
-                return "{\n%s%s}" % (sub_elem(v, level), tabs(level - 1))
-
-            def props(p, level):
-                return "".join(
-                    ["%s%s: %s\n" % (tabs(level), k, v if not isinstance(v, list) else child(v, level + 1)) for k, v in
-                     dict_iteritems(p)])
+            def attributes(e, level):
+                assert(isinstance(e, dict))
+                # k = attribute name
+                # v = string | scalar | dict
+                return "".join(["%s%s: %s\n" % (tabs(level),
+                                                k,
+                                                value(v, level + 1))
+                                for k, v in dict_iteritems(e)])
 
             self.defaults()
-            return "".join(["%s {\n%s}\n"%(n, props(p, 1)) for n, p in self])
+            # top level list of tuples ('section-name', dict)
+            return "".join(["%s {\n%s}\n"%(n, attributes(p, 1)) for n, p in self])
 
     def __init__(self, name=None, config=Config(), pyinclude=None, wait=True,
                  perform_teardown=True, cl_args=None, expect=Process.RUNNING):

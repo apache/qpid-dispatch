@@ -146,6 +146,7 @@ foreach(py_test_module
     system_tests_stuck_deliveries
     system_tests_log_level_update
     system_tests_routing_protocol
+    system_tests_open_properties
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})

@@ -390,10 +390,11 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->sasl_password        = qd_entity_opt_string(entity, "saslPassword", 0);   CHECK();
     config->sasl_mechanisms      = qd_entity_opt_string(entity, "saslMechanisms", 0); CHECK();
     config->ssl_profile          = qd_entity_opt_string(entity, "sslProfile", 0);     CHECK();
-    config->sasl_plugin          = qd_entity_opt_string(entity, "saslPlugin", 0);   CHECK();
+    config->sasl_plugin          = qd_entity_opt_string(entity, "saslPlugin", 0);     CHECK();
     config->link_capacity        = qd_entity_opt_long(entity, "linkCapacity", 0);     CHECK();
     config->multi_tenant         = qd_entity_opt_bool(entity, "multiTenant", false);  CHECK();
     config->policy_vhost         = qd_entity_opt_string(entity, "policyVhost", 0);    CHECK();
+    config->conn_props           = qd_entity_opt_map(entity, "openProperties");       CHECK();
     set_config_host(config, entity);
 
     if (config->sasl_password) {

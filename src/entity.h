@@ -66,6 +66,10 @@ long qd_entity_opt_long(qd_entity_t *entity, const char *attribute, long default
  */
 bool qd_entity_opt_bool(qd_entity_t *entity, const char *attribute, bool default_value);
 
+/** Get a map in pn_data_t format.  Return NULL if map not present or error parsing out map
+ * Caller must free pn_data_t when no longer in use.
+ */
+struct pn_data_t *qd_entity_opt_map(qd_entity_t *entity, const char *attribute);
 
 /** Set a string valued attribute, entity makes a copy.
  * If value is NULL clear the attribute.

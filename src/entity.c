@@ -20,6 +20,7 @@
 #include "python_private.h"  // must be first!
 
 #include <qpid/dispatch/error.h>
+#include <qpid/dispatch/python_embedded.h>
 #include "dispatch_private.h"
 #include "entity.h"
 
@@ -101,6 +102,40 @@ bool qd_entity_opt_bool(qd_entity_t *entity, const char* attribute, bool default
             return result;
     }
     return default_value;
+}
+
+
+pn_data_t *qd_entity_opt_map(qd_entity_t *entity, const char *attribute)
+{
+    if (!qd_entity_has(entity, attribute))
+        return NULL;
+
+    PyObject *py_obj = qd_entity_get_py(entity, attribute);
+    assert(py_obj); // qd_entity_has() indicates py_obj != NULL
+
+    if (!PyDict_Check(py_obj)) {
+        qd_error(QD_ERROR_CONFIG, "Invalid type: map expected");
+        Py_XDECREF(py_obj);
+        return NULL;
+    }
+
+    pn_data_t *pn_map = pn_data(0);
+    if (!pn_map) {
+        qd_error(QD_ERROR_ALLOC, "Map allocation failure");
+        Py_XDECREF(py_obj);
+        return NULL;
+    }
+
+    qd_error_t rc = qd_py_to_pn_data(py_obj, pn_map);
+    Py_XDECREF(py_obj);
+
+    if (rc != QD_ERROR_NONE) {
+        qd_error(QD_ERROR_ALLOC, "Failed to convert python map");
+        pn_data_free(pn_map);
+        return NULL;
+    }
+
+    return pn_map;
 }
 
 

@@ -159,6 +159,27 @@ class EnumType(Type):
         """String description of enum type."""
         return "One of [%s]" % ', '.join([("'%s'" %tag) for tag in self.tags])
 
+
+class PropertiesType(Type):
+    """
+    A PropertiesType is a restricted map: keys must be AMQP 1.0 Symbol types.
+    See the "fields" type in:
+    http://docs.oasis-open.org/amqp/core/v1.0/os/amqp-core-transport-v1.0-os.html#type-fields
+    """
+    def __init__(self):
+        super(PropertiesType, self).__init__("properties", dict)
+
+    def validate(self, value):
+        if not isinstance(value, dict):
+            raise ValidationError("Properties must be a map");
+
+        for key in value.keys():
+            if (not isinstance(key, PY_STRING_TYPE)
+                or any(ord(x) > 127 for x in key)):
+                raise ValidationError("Property keys must be ASCII encoded")
+        return value
+
+
 BUILTIN_TYPES = OrderedDict(
     (t.name, t) for t in [Type("string", str),
                           Type("path", str),
@@ -167,6 +188,7 @@ BUILTIN_TYPES = OrderedDict(
                           Type("list", list),
                           Type("map", dict),
                           Type("dict", dict),
+                          PropertiesType(),
                           BooleanType()])
 
 def get_type(rep):

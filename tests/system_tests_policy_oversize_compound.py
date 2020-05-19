@@ -657,19 +657,19 @@ class MaxMessageSizeBlockOversize(TestCase):
                 ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': max_size, 'defaultVhost': '$default'}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
                 ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
-                    'groups': [(
-                        '$default', {
+                    'groups': {
+                        '$default': {
                             'users': '*',
                             'maxConnections': 100,
                             'remoteHosts': '*',
                             'sources': '*',
                             'targets': '*',
-                            'allowAnonymousSender': 'true',
-                            'allowWaypointLinks': 'true',
-                            'allowDynamicSource': 'true'
+                            'allowAnonymousSender': True,
+                            'allowWaypointLinks': True,
+                            'allowDynamicSource': True
                         }
-                    )]}
-                )
+                    }
+                })
             ]
 
             if extra:
@@ -1096,19 +1096,19 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
                 ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'in'}),
                 ('linkRoute', {'prefix': 'oversize', 'containerId': 'FakeBroker', 'direction': 'out'}),
                 ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
-                    'groups': [(
-                        '$default', {
+                    'groups': {
+                        '$default': {
                             'users': '*',
                             'maxConnections': 100,
                             'remoteHosts': '*',
                             'sources': '*',
                             'targets': '*',
-                            'allowAnonymousSender': 'true',
-                            'allowWaypointLinks': 'true',
-                            'allowDynamicSource': 'true'
+                            'allowAnonymousSender': True,
+                            'allowWaypointLinks': True,
+                            'allowDynamicSource': True
                         }
-                    )]}
-                )
+                    }
+                })
             ]
 
             if extra:

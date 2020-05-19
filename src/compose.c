@@ -559,3 +559,17 @@ void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
     bump_count_by_n(field, count);
     bump_length(field, size);
 }
+
+
+void qd_compose_insert_double(qd_composed_field_t *field, double value)
+{
+    union {
+        uint64_t l;
+        double d;
+    } converter;
+    converter.d = value;
+
+    qd_insert_8(field, QD_AMQP_DOUBLE);
+    qd_insert_64(field, converter.l);
+    bump_count(field);
+}

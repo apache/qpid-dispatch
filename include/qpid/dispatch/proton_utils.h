@@ -30,5 +30,15 @@
  */
 char *qdpn_data_as_string(pn_data_t *data);
 
+
+/**
+ * Copy the data node at src to dest.  Both src and dest are advanced after this call.
+ *
+ * @param src A proton data field
+ * @param dest A proton data field to which src will be added
+ * @return 0 on success
+ */
+int qdpn_data_insert(pn_data_t *dest, pn_data_t *src);
+
 #endif
 

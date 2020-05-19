@@ -178,6 +178,9 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
             qd_compose_insert_long(field, ival);
         }
     }
+    else if (PyFloat_Check(value)) {
+        qd_compose_insert_double(field, PyFloat_AS_DOUBLE(value));
+    }
     else if (PyUnicode_Check(value)) {
         char *data = py_string_2_c(value);
         if (data) {
@@ -266,6 +269,120 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field)
     }
     return qd_error_code();
 }
+
+
+// like qd_py_to_composed, but output to a pn_data_t
+//
+qd_error_t qd_py_to_pn_data(PyObject *value, pn_data_t *data)
+{
+    qd_python_check_lock();
+    qd_error_clear();
+    if (value == Py_None) {
+        pn_data_put_null(data);
+    }
+    else if (PyBool_Check(value)) {
+        pn_data_put_bool(data, !!PyLong_AsLong(value));
+    }
+    else if (QD_PY_INT_CHECK(value)) {
+        // We are now sure that the value is an integer type
+        int64_t ival = QD_PY_INT_2_INT64(value);
+        if (INT32_MIN <= ival && ival <= INT32_MAX) {
+            pn_data_put_int(data, (int32_t) ival);
+        } else {
+            pn_data_put_long(data, ival);
+        }
+    }
+    else if (PyFloat_Check(value)) {
+        pn_data_put_double(data, PyFloat_AS_DOUBLE(value));
+    }
+    else if (PyUnicode_Check(value)) {
+        char *str = py_string_2_c(value);
+        if (str) {
+            pn_bytes_t pb = {.size = strlen(str),
+                             .start = str};
+            pn_data_put_string(data, pb);
+            free(str);
+        } else {
+            QD_ERROR_PY_RET();
+        }
+    }
+    else if (PyBytes_Check(value)) {
+        // Note: In python 2.X PyBytes is simply an alias for the PyString
+        // type. In python 3.x PyBytes is a distinct type (may contain zeros),
+        // and all strings are PyUnicode types.  Historically
+        // this code has just assumed this data is always a null terminated
+        // UTF8 string. We continue that tradition for Python2, but ending up
+        // here in Python3 means this is actually binary data which may have
+        // embedded zeros.
+        pn_bytes_t pb;
+        char *str;
+        Py_ssize_t p_size;
+        PyBytes_AsStringAndSize(value, &str, &p_size); QD_ERROR_PY_RET();
+        pb.start = str;
+        pb.size = p_size;
+        if (PY_MAJOR_VERSION <= 2) {
+            pn_data_put_string(data, pb);
+        } else {
+            pn_data_put_binary(data, pb);
+        }
+    }
+    else if (PyDict_Check(value)) {
+        Py_ssize_t  iter = 0;
+        PyObject   *key;
+        PyObject   *val;
+        pn_data_put_map(data);
+        pn_data_enter(data);
+        while (PyDict_Next(value, &iter, &key, &val)) {
+            qd_py_to_pn_data(key, data); QD_ERROR_RET();
+            qd_py_to_pn_data(val, data); QD_ERROR_RET();
+        }
+        QD_ERROR_PY_RET();
+        pn_data_exit(data);
+    }
+    else if (PyList_Check(value)) {
+        pn_data_put_list(data);
+        pn_data_enter(data);
+        Py_ssize_t count = PyList_Size(value);
+        for (Py_ssize_t idx = 0; idx < count; idx++) {
+            PyObject *item = PyList_GetItem(value, idx); QD_ERROR_PY_RET();
+            qd_py_to_pn_data(item, data); QD_ERROR_RET();
+        }
+        pn_data_exit(data);
+    }
+    else if (PyTuple_Check(value)) {
+        pn_data_put_list(data);
+        pn_data_enter(data);
+        Py_ssize_t count = PyTuple_Size(value);
+        for (Py_ssize_t idx = 0; idx < count; idx++) {
+            PyObject *item = PyTuple_GetItem(value, idx); QD_ERROR_PY_RET();
+            qd_py_to_pn_data(item, data); QD_ERROR_RET();
+        }
+        pn_data_exit(data);
+    }
+    else {
+        PyObject *type=0, *typestr=0, *repr=0;
+        if ((type = PyObject_Type(value)) &&
+            (typestr = PyObject_Str(type)) &&
+            (repr = PyObject_Repr(value))) {
+            char *t_str = py_string_2_c(typestr);
+            char *r_str = py_string_2_c(repr);
+            qd_error(QD_ERROR_TYPE, "Can't compose object of type %s: %s",
+                     t_str ? t_str : "Unknown",
+                     r_str ? r_str : "Unknown");
+            free(t_str);
+            free(r_str);
+        } else
+            qd_error(QD_ERROR_TYPE, "Can't compose python object of unknown type");
+
+        Py_XDECREF(type);
+        Py_XDECREF(typestr);
+        Py_XDECREF(repr);
+
+        pn_data_put_null(data);
+    }
+    return qd_error_code();
+}
+
 
 void qd_py_attr_to_composed(PyObject *object, const char *attr, qd_composed_field_t *field)
 {
