@@ -43,6 +43,8 @@ set(qpid_dispatch_SOURCES
   bitmask.c
   buffer.c
   error.c
+  connection.c
+  connector.c
   compose.c
   connection_manager.c
   container.c
@@ -53,6 +55,7 @@ set(qpid_dispatch_SOURCES
   failoverlist.c
   hash.c
   iterator.c
+  listener.c
   log.c
   message.c
   parse.c
