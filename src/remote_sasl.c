@@ -20,6 +20,7 @@
  */
 
 #include "remote_sasl.h"
+#include "connection_private.h"
 #include "server_private.h"
 
 #include <stdio.h>

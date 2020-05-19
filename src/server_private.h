@@ -1,5 +1,6 @@
 #ifndef __server_private_h__
 #define __server_private_h__ 1
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -40,16 +41,10 @@ qd_dispatch_t* qd_server_dispatch(qd_server_t *server);
 void qd_server_timeout(qd_server_t *server, qd_duration_t delay);
 
 qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* config);
-
-qd_connector_t* qd_connection_connector(const qd_connection_t *c);
-
-bool qd_connection_handle(qd_connection_t *c, pn_event_t *e);
-
-
-const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
-
 qd_listener_t *qd_server_listener(qd_server_t *server);
 qd_connector_t *qd_server_connector(qd_server_t *server);
+
+const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 
 bool qd_connector_decref(qd_connector_t* ct);
 void qd_listener_decref(qd_listener_t* ct);
@@ -102,7 +97,6 @@ struct qd_listener_t {
 
 DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
 
-
 /**
  * Connector objects represent the desire to create and maintain an outgoing transport connection.
  */
@@ -134,53 +128,13 @@ DEQ_DECLARE(qd_connector_t, qd_connector_list_t);
 
 const char *qd_connector_policy_vhost(qd_connector_t* ct);
 
-/**
- * Connection objects wrap Proton connection objects.
- */
-struct qd_connection_t {
-    DEQ_LINKS(qd_connection_t);
-    char                            *name;
-    qd_server_t                     *server;
-    bool                            opened; // An open callback was invoked for this connection
-    bool                            closed;
-    bool                            closed_locally;
-    int                             enqueued;
-    qd_timer_t                      *timer;   // Timer for initial-setup
-    pn_connection_t                 *pn_conn;
-    pn_session_t                    *pn_sessions[QD_SSN_CLASS_COUNT];
-    pn_ssl_t                        *ssl;
-    qd_listener_t                   *listener;
-    qd_connector_t                  *connector;
-    void                            *context; // context from listener or connector
-    void                            *user_context;
-    void                            *link_context; // Context shared by this connection's links
-    uint64_t                        connection_id; // A unique identifier for the qd_connection_t. The underlying pn_connection already has one but it is long and clunky.
-    const char                      *user_id; // A unique identifier for the user on the connection. This is currently populated  from the client ssl cert. See ssl_uid_format in server.h for more info
-    bool                            free_user_id;
-    qd_policy_settings_t            *policy_settings;
-    int                             n_sessions;
-    int                             n_senders;
-    int                             n_receivers;
-    void                            *open_container;
-    qd_deferred_call_list_t         deferred_calls;
-    sys_mutex_t                     *deferred_call_lock;
-    bool                            policy_counted;
-    char                            *role;  //The specified role of the connection, e.g. "normal", "inter-router", "route-container" etc.
-    qd_pn_free_link_session_list_t  free_link_session_list;
-    bool                            strip_annotations_in;
-    bool                            strip_annotations_out;
-    void (*wake)(qd_connection_t*); /* Wake method, different for HTTP vs. proactor */
-    char rhost[NI_MAXHOST];     /* Remote host numeric IP for incoming connections */
-    char rhost_port[NI_MAXHOST+NI_MAXSERV]; /* Remote host:port for incoming connections */
-};
-
-DEQ_DECLARE(qd_connection_t, qd_connection_list_t);
 
 ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_connector_t);
-ALLOC_DECLARE(qd_connection_t);
 ALLOC_DECLARE(qd_pn_free_link_session_t);
+
+DEQ_DECLARE(qd_connection_t, qd_connection_list_t); // XXX JRR
 
 struct qd_server_t {
     qd_dispatch_t            *qd;
@@ -212,8 +166,6 @@ struct qd_server_t {
 void qd_server_trace_all_connections();
 
 qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *connector);
-
-void qd_connection_free(qd_connection_t *conn);
 
 /**
  * This function is set as the pn_transport->tracer and is invoked when proton tries to write the log message to pn_transport->tracer

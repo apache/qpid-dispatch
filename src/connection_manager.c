@@ -23,6 +23,7 @@
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/failoverlist.h>
 #include <proton/listener.h>
+#include "connection_private.h"
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
 #include "server_private.h"
@@ -443,7 +444,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         uint64_t limit    = (sizeof(size_t) < 8) ? (1ll << 31) - 1 : 0;
         if (limit == 0 || trial_ic < limit) {
             // Silently promote incoming capacity of zero to one
-            config->incoming_capacity = 
+            config->incoming_capacity =
                 (trial_ic < QD_AMQP_MIN_MAX_FRAME_SIZE ? QD_AMQP_MIN_MAX_FRAME_SIZE : trial_ic);
         } else {
             config->incoming_capacity = limit;
@@ -1059,4 +1060,3 @@ const char *qd_connector_name(qd_connector_t *ct)
 {
     return ct ? ct->config.name : 0;
 }
-

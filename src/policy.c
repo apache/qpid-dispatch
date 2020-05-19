@@ -23,6 +23,7 @@
 #include "parse_tree.h"
 #include <stdio.h>
 #include <string.h>
+#include "connection_private.h"
 #include "dispatch_private.h"
 #include "qpid/dispatch/container.h"
 #include "qpid/dispatch/server.h"
@@ -62,7 +63,7 @@ static char* LINK_DISALLOWED               = "link disallowed by local policy";
 
 //
 // username substitution key shared with configuration files and python code
-// substitution triplet keys shared with python code 
+// substitution triplet keys shared with python code
 //
 static const char * const user_subst_key        = "${user}";
 static const char * const user_subst_i_absent   = "a";
@@ -402,7 +403,7 @@ qd_parse_tree_t * qd_policy_parse_tree(const char *config_spec)
 //
 // Functions related to authenticated connection denial.
 // An AMQP Open has been received over some connection.
-// * Evaluate the connection auth and the Open fields to allow or deny the Open. 
+// * Evaluate the connection auth and the Open fields to allow or deny the Open.
 // * If allowed then return the settings from the python vhost database.
 //
 
@@ -456,8 +457,8 @@ bool qd_policy_lookup_vhost_alias(
 
 
 /** Look up user/host/vhost in python vhost database and give the AMQP Open
- *  a go-no_go decision. 
- *  * Return false if the mechanics of calling python fails or if name buf is blank. 
+ *  a go-no_go decision.
+ *  * Return false if the mechanics of calling python fails or if name buf is blank.
  *  * Deny the connection by returning a blank usergroup name in the name buffer.
  *  Connection and connection denial counting is done in the python code.
  * @param[in]  policy pointer to policy
@@ -756,13 +757,13 @@ bool is_token_sep(char testc)
 #define MIN(a,b) (((a)<(b))?(a):(b))
 
 /**
- * Given a username and a list of allowed link names 
+ * Given a username and a list of allowed link names
  * decide if the proposed link name is approved.
  * @param[in] username the user name
  * @param[in] allowed csv of (key, prefix, suffix) tuples
  * @param[in] proposed the link source/target name to be approved
  * @return true if the user is allowed to open this link source/target name
- * 
+ *
  * Concrete example
  * user: 'bob', allowed (from spec): 'A,B,tmp-${user},C', proposed: 'tmp-bob'
  * note that allowed above is now a tuple and not simple string fron the spec.
@@ -866,9 +867,9 @@ bool _qd_policy_approve_link_name(const char *username, const char *allowed, con
             break;
         }
 
-        size_t rule_len = MIN(snpN, sName); 
+        size_t rule_len = MIN(snpN, sName);
         if (pName[rule_len-1] != QPALN_WILDCARD) {
-            // Rule clauses that do not end with wildcard 
+            // Rule clauses that do not end with wildcard
             // must match entire proposed name string.
             // pName=tmp-bob-5, proposed can be only 'tmp-bob-5'
             result = strcmp(proposed, pName) == 0;
@@ -1456,7 +1457,7 @@ char * qd_policy_host_pattern_lookup(qd_policy_t *policy, const char *hostPatter
     if (!matched) {
         payload = 0;
     }
-    qd_log(policy->log_source, QD_LOG_TRACE, "vhost hostname pattern '%s' lookup returned '%s'", 
+    qd_log(policy->log_source, QD_LOG_TRACE, "vhost hostname pattern '%s' lookup returned '%s'",
            hostPattern, (payload ? (char *)payload : "null"));
     return payload;
 }

@@ -40,6 +40,7 @@
 #include <string.h>
 
 #include "config.h"
+#include "connection_private.h"
 #include "dispatch_private.h"
 #include "entity.h"
 #include "entity_cache.h"

@@ -20,6 +20,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include "connection_private.h"
 #include "dispatch_private.h"
 #include "policy.h"
 #include <qpid/dispatch/container.h>

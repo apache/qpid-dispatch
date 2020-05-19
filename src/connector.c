@@ -19,6 +19,7 @@
 
 #include <proton/connection.h>
 
+#include "connection_private.h"
 #include "server_private.h"
 
 const char* qd_connector_policy_vhost(qd_connector_t* connector) {
