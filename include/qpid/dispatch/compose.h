@@ -254,6 +254,15 @@ void qd_compose_insert_opaque_elements(qd_composed_field_t *field,
                                        uint32_t             count,
                                        uint32_t             size);
 
+/**
+ * Insert a double floating point (64 bits) into the field.
+ *
+ * @param field A field created by qd_compose.
+ * @param value The double value to be inserted.
+ */
+void qd_compose_insert_double(qd_composed_field_t *field, double value);
+
+
 ///@}
 
 #endif

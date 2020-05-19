@@ -911,6 +911,12 @@
                     "required": false,
                     "description": "A listener may optionally define a virtual host to index to a specific policy to restrict the remote container to access only specific resources. This attribute defines the name of the policy vhost for this listener.  If multi-tenancy is enabled for the listener, this vhost will override the peer-supplied vhost for the purposes of identifying the desired policy settings for the connections.",
                     "create": true
+                },
+                "openProperties": {
+                    "description": "A JSON map containing connection properties.  These will be sent to the peer on connection open.  All map keys are restricted to strings containing only valid ASCII characters, Keys must not start with prefixes 'qd.' or 'x-opt-qd.'.  The following key values are also reserved: 'product', 'version', 'failover-server-list', 'network-host', 'port', 'scheme' 'hostname'",
+                    "type": "properties",
+                    "required": false,
+                    "create": true
                 }
             }
         },
@@ -1060,6 +1066,12 @@
                     "type": "string",
                     "required": false,
                     "description": "A connector may optionally define a policy to restrict the remote container to access only specific resources. This attribute defines the name of the policy vhost for this connector. Within the vhost the connector will use the vhost policy settings from user group '$connector'. If the vhost policy is absent or if the user group '$connector' within that policy is absent then the connector will fail to start.  In policy specified via connector attribute 'policyVhost' the following vhostUserGroupSettings attributes are unused:  'users', 'remoteHosts', 'maxFrameSize', 'maxSessionWindow', 'maxSessions'.",
+                    "create": true
+                },
+                "openProperties": {
+                    "description": "A JSON map containing connection properties.  These will be sent to the peer on connection open.  All map keys are restricted to strings containing only valid ASCII characters, Keys must not start with prefixes 'qd.' or 'x-opt-qd.'.  The following key values are also reserved: 'product', 'version', 'failover-server-list', 'network-host', 'port', 'scheme' 'hostname'",
+                    "type": "properties",
+                    "required": false,
                     "create": true
                 }
             }

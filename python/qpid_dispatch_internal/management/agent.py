@@ -380,7 +380,41 @@ class AuthServicePluginEntity(EntityAdapter):
     def __str__(self):
         return super(AuthServicePluginEntity, self).__str__().replace("Entity(", "AuthServicePluginEntity(")
 
-class ListenerEntity(EntityAdapter):
+class ConnectionBaseEntity(EntityAdapter):
+    """
+    Provides validation of the openProperties attribute shared by Listener and
+    Connector entities
+    """
+    # qdrouterd reserves a set of connection-property keys as well as any key
+    # that starts with certain prefixes
+    _RESERVED_KEYS=['product',
+                    'version',
+                    'failover-server-list',
+                    'network-host',
+                    'port',
+                    'scheme'
+                    'hostname']
+    _RESERVED_PREFIXES=['qd.', 'x-opt-qd.']
+
+    def validate(self, **kwargs):
+        super(ConnectionBaseEntity, self).validate(**kwargs)
+        op = self.attributes.get('openProperties')
+        if op:
+            msg = "Reserved key '%s' not allowed in openProperties"
+            try:
+                for key in op.keys():
+                    if key in self._RESERVED_KEYS:
+                        raise ValidationError(msg % key)
+                    for prefix in self._RESERVED_PREFIXES:
+                        if key.startswith(prefix):
+                            raise ValidationError(msg % key)
+            except ValidationError:
+                raise
+            except Exception as exc:
+                raise ValidationError(str(exc))
+
+
+class ListenerEntity(ConnectionBaseEntity):
     def create(self):
         config_listener = self._qd.qd_dispatch_configure_listener(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)
@@ -395,7 +429,12 @@ class ListenerEntity(EntityAdapter):
     def _delete(self):
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
-class ConnectorEntity(EntityAdapter):
+
+class ConnectorEntity(ConnectionBaseEntity):
+    def __init__(self, agent, entity_type, attributes=None, validate=True):
+        super(ConnectorEntity, self).__init__(agent, entity_type, attributes,
+                                              validate)
+
     def create(self):
         config_connector = self._qd.qd_dispatch_configure_connector(self._dispatch, self)
         self._qd.qd_connection_manager_start(self._dispatch)

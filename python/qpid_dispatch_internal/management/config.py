@@ -28,6 +28,7 @@ from __future__ import print_function
 
 import json, re, sys
 import os
+import traceback
 from copy import copy
 from qpid_dispatch.management.entity import camelcase
 
@@ -38,16 +39,23 @@ from qpid_dispatch_internal.compat import dict_iteritems
 from qpid_dispatch_internal.compat import PY_STRING_TYPE
 from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 
+try:
+    from ..dispatch import LogAdapter, LOG_WARNING
+    _log_imported = True
+except ImportError:
+    # unit test cannot import since LogAdapter not set up
+    _log_imported = False
+
+
 class Config(object):
     """Load config entities from qdrouterd.conf and validated against L{QdSchema}."""
-
-    # static property to control depth level while reading the entities
-    child_level = 0
 
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
         self.schema = schema
         self.config_types = [et for et in dict_itervalues(schema.entity_types)
                              if schema.is_configuration(et)]
+        self._log_adapter = LogAdapter("AGENT") if _log_imported else None
+
         if filename:
             try:
                 self.load(filename, raw_json)
@@ -56,6 +64,11 @@ class Config(object):
                                 % (filename, e))
         else:
             self.entities = []
+
+    def _log(self, level, text):
+        if self._log_adapter is not None:
+            info = traceback.extract_stack(limit=2)[0] # Caller frame info
+            self._log_adapter.log(level, text, info[0], info[1])
 
     @staticmethod
     def transform_sections(sections):
@@ -68,13 +81,37 @@ class Config(object):
             if s[0] == "exchange":  s[0] = "router.config.exchange"
             if s[0] == "binding":   s[0] = "router.config.binding"
 
-    @staticmethod
-    def _parse(lines):
-        """Parse config file format into a section list"""
-        begin = re.compile(r'([\w-]+)[ \t]*{[ \t]*($|#)')             # WORD {
-        end = re.compile(r'^}')                                       # }
-        attr = re.compile(r'([\w-]+)[ \t]*:[ \t]*(.+)')               # WORD1: VALUE
-        child = re.compile(r'([\$]*[\w-]+)[ \t]*:[ \t]*{[ \t]*($|#)') # WORD: {
+    def _parse(self, lines):
+        """
+        Parse config file format into a section list
+
+        The config file format is a text file in JSON-ish syntax.  It allows
+        the user to define a set of Entities which contain Attributes.
+        Attributes may be either a single item or a map of nested attributes.
+
+        Entities and map Attributes start with a single open brace on a line by
+        itself (no non-comment text after the opening brace!)
+
+        Entities and map Attributes are terminated by a single closing brace
+        that appears on a line by itself (no trailing comma and no non-comment
+        trailing text!)
+
+        Entity names and Attribute names and items are NOT enclosed in quotes
+        nor are they terminated with commas, however some select Attributes
+        have values which are expected to be valid JSON (double quoted
+        strings, etc)
+
+        Unlike JSON the config file also allows comments.  A comment begins
+        with the '#' character and is terminated at the end of line.
+        """
+
+        # note: these regexes expect that trailing comment and leading and
+        # trailing whitespace has been removed
+        #
+        entity = re.compile(r'([\w-]+)[ \t]*{[ \t]*$')                    # WORD {
+        attr_map = re.compile(r'([\$]*[\w-]+)[ \t]*:[ \t]*{[ \t]*$')      # WORD: {
+        attr_item = re.compile(r'([\w-]+)[ \t]*:[ \t]*([^ \t{]+.*)$')     # WORD1: VALUE
+        end = re.compile(r'^}$')                                          # }
 
         # The 'pattern:' and 'bindingKey:' attributes in the schema are special
         # snowflakes. They allow '#' characters in their value, so they cannot
@@ -82,29 +119,74 @@ class Config(object):
         special_snowflakes = ['pattern', 'bindingKey']
         hash_ok = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
 
+        # the 'openProperties' and 'groups' attributes are also special
+        # snowflakes in that their value is expected to be valid JSON.  These
+        # values do allow single line comments which are stripped out, but the
+        # remaining content is expected to be valid JSON.
+        json_snowflakes = ['openProperties', 'groups']
+
+        self._line_num = 1
+        self._child_level = 0
+        self._in_json = False
+
         def sub(line):
             """Do substitutions to make line json-friendly"""
             line = line.strip()
-            if line.startswith("#"):
+
+            # ignore empty and comment lines
+            if not line or line.startswith("#"):
+                self._line_num += 1
                 return ""
-            if line.split(':')[0].strip() in special_snowflakes:
-                line = re.sub(hash_ok, r'"\1": "\2",', line)
-            elif child.search(line):
-                line = line.split('#')[0].strip()
-                line = re.sub(child, r'"\1": {', line)
-                Config.child_level += 1
-            elif end.search(line) and Config.child_level > 0:
-                line = line.split('#')[0].strip()
-                line = re.sub(end, r'},', line)
-                Config.child_level -= 1
+
+            # just pass JSON values along
+            if self._in_json and not end.search(line.split('#')[0].strip()):
+                self._line_num += 1
+                return line
+
+            # filter off pattern items before stripping comments
+            if attr_item.search(line):
+                if re.sub(attr_item, r'\1', line) in special_snowflakes:
+                    self._line_num += 1
+                    return re.sub(hash_ok, r'"\1": "\2",', line)
+
+            # now trim trailing comment
+            line = line.split('#')[0].strip()
+
+            if entity.search(line):
+                # WORD {  --> ["WORD", {
+                line = re.sub(entity, r'["\1", {', line)
+            elif attr_map.search(line):
+                # WORD: {  --> ["WORD": {
+                key = re.sub(attr_map, r'\1', line)
+                line = re.sub(attr_map, r'"\1": {', line)
+                self._child_level += 1
+                if key in json_snowflakes:
+                    self._in_json = True
+            elif attr_item.search(line):
+                # WORD: VALUE --> "WORD": "VALUE"
+                line = re.sub(attr_item, r'"\1": "\2",', line)
+            elif end.search(line):
+                # }  --> "}," or "}]," depending on nesting level
+                if self._child_level > 0:
+                    line = re.sub(end, r'},', line)
+                    self._child_level -= 1
+                    self._in_json = False
+                else:
+                    # end top level entity list item
+                    line = re.sub(end, r'}],', line)
             else:
-                line = line.split('#')[0].strip()
-                line = re.sub(begin, r'["\1", {', line)
-                line = re.sub(end, r'}],', line)
-                line = re.sub(attr, r'"\1": "\2",', line)
+                # unexpected syntax, let json parser figure it out
+                self._log(LOG_WARNING,
+                          "Invalid config file syntax (line %d):\n"
+                          ">>> %s"
+                          % (self._line_num, line))
+            self._line_num += 1
             return line
 
         js_text = "[%s]"%("\n".join([sub(l) for l in lines]))
+        if self._in_json or self._child_level != 0:
+            self._log(LOG_WARNING,
+                      "Configuration file: invalid entity nesting detected.")
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
         # Convert dictionary keys to camelCase

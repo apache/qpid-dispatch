@@ -24,6 +24,7 @@
  */
 
 #include <Python.h>
+#include <proton/codec.h>
 #include <qpid/dispatch/dispatch.h>
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/parse.h>
@@ -75,6 +76,14 @@ qd_error_t qd_py_to_composed(PyObject *value, qd_composed_field_t *field);
  * @return A generated Python object
  */
 PyObject *qd_field_to_py(qd_parsed_field_t *field);
+
+/**
+ * Convert a Python object to a proton pn_data_t object
+ *
+ * @param value A Python Object
+ * @param data A proton pn_data_t object
+ */
+qd_error_t qd_py_to_pn_data(PyObject *value, pn_data_t *data);
 
 /**
  * These are temporary and will eventually be replaced by having an internal python

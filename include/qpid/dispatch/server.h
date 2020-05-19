@@ -434,6 +434,11 @@ typedef struct qd_server_config_t {
     qd_failover_list_t *failover_list;
 
     /**
+     * Extra connection properties to include in the outgoing Open frame.  Stored as a map.
+     */
+    pn_data_t *conn_props;
+
+    /**
      * @name These fields are not primary configuration, they are computed.
      * @{
      */

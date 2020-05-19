@@ -289,20 +289,21 @@ class MaxMessageSizeBlockOversize(TestCase):
                               'port': cls.tester.get_port()}),
                 ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
                 ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'maxMessageSize': max_size, 'defaultVhost': '$default'}),
-                ('vhost', {'hostname': '$default', 'allowUnknownUser': 'true',
-                    'groups': [(
-                        '$default', {
-                            'users': '*',
-                            'maxConnections': 100,
-                            'remoteHosts': '*',
-                            'sources': '*',
-                            'targets': '*',
-                            'allowAnonymousSender': 'true',
-                            'allowWaypointLinks': 'true',
-                            'allowDynamicSource': 'true'
-                        }
-                    )]}
-                )
+                ('vhost', {'hostname': '$default',
+                           'allowUnknownUser': 'true',
+                           'groups': {
+                               '$default': {
+                                   'users': '*',
+                                   'maxConnections': 100,
+                                   'remoteHosts': '*',
+                                   'sources': '*',
+                                   'targets': '*',
+                                   'allowAnonymousSender': 'true',
+                                   'allowWaypointLinks': 'true',
+                                   'allowDynamicSource': 'true'
+                               }
+                           }
+                })
             ]
 
             if extra:

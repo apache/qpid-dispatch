@@ -1112,21 +1112,23 @@ class VhostPolicyFromRouterConfig(TestCase):
             ('vhost', {
                 'hostname': '0.0.0.0', 'maxConnections': 2,
                 'allowUnknownUser': 'true',
-                'groups': [(
-                    '$default', {
-                        'users': '*', 'remoteHosts': '*',
-                        'sources': '*', 'targets': '*',
-                        'allowDynamicSource': 'true'
-                    }
-                ), (
-                    'anonymous', {
-                        'users': 'anonymous', 'remoteHosts': '*',
+                'groups': {
+                    '$default': {
+                        'users': '*',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True
+                    },
+                    'anonymous': {
+                        'users': 'anonymous',
+                        'remoteHosts': '*',
                         'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
                         'targets': 'addr/*, simpleaddress, queue.${user}',
-                        'allowDynamicSource': 'true',
-                        'allowAnonymousSender': 'true'
+                        'allowDynamicSource': True,
+                        'allowAnonymousSender': True
                     }
-                )]
+                }
             })
         ])
 
@@ -1215,23 +1217,25 @@ class VhostPolicyConnLimit(TestCase):
                 'hostname': '0.0.0.0', 'maxConnections': 100,
                 'maxConnectionsPerUser': 2,
                 'allowUnknownUser': 'true',
-                'groups': [(
-                    '$default', {
-                        'users': '*', 'remoteHosts': '*',
-                        'sources': '*', 'targets': '*',
-                        'allowDynamicSource': 'true',
+                'groups': {
+                    '$default': {
+                        'users': '*',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True,
                         'maxConnectionsPerUser': 3
-                    }
-                ), (
-                    'anonymous', {
-                        'users': 'anonymous', 'remoteHosts': '*',
+                    },
+                    'anonymous': {
+                        'users': 'anonymous',
+                        'remoteHosts': '*',
                         'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
                         'targets': 'addr/*, simpleaddress, queue.${user}',
-                        'allowDynamicSource': 'true',
-                        'allowAnonymousSender': 'true',
+                        'allowDynamicSource': True,
+                        'allowAnonymousSender': True,
                         'maxConnectionsPerUser': 3
                     }
-                )]
+                }
             })
         ])
 
@@ -1439,21 +1443,23 @@ class ConnectorPolicyMisconfigured(TestCase):
             ('vhost', {
                 'hostname': '0.0.0.0', 'maxConnections': 2,
                 'allowUnknownUser': 'true',
-                'groups': [(
-                    '$default', {
-                        'users': '*', 'remoteHosts': '*',
-                        'sources': '*', 'targets': '*',
-                        'allowDynamicSource': 'true'
-                    }
-                ), (
-                    'anonymous', {
-                        'users': 'anonymous', 'remoteHosts': '*',
+                'groups': {
+                    '$default': {
+                        'users': '*',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True
+                    },
+                    'anonymous': {
+                        'users': 'anonymous',
+                        'remoteHosts': '*',
                         'sourcePattern': 'addr/*/queue/*, simpleaddress, queue.${user}',
                         'targets': 'addr/*, simpleaddress, queue.${user}',
-                        'allowDynamicSource': 'true',
-                        'allowAnonymousSender': 'true'
+                        'allowDynamicSource': True,
+                        'allowAnonymousSender': True
                     }
-                )]
+                }
             })
         ])
 
@@ -1634,12 +1640,12 @@ class ConnectorPolicySrcTgt(TestCase):
             ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
-                'groups': [(
-                    '$connector', {
+                'groups': {
+                    '$connector': {
                         'sources': 'test,examples,work*',
                         'targets': 'examples,$management,play*',
                     }
-                )]
+                }
             })
         ])
 
@@ -1731,16 +1737,16 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             ('autoLink', {'address': 'node.1', 'containerId': 'container.1', 'direction': 'out'}),
             ('vhost', {
                 'hostname': 'test',
-                'groups': [(
-                    '$connector', {
+                'groups': {
+                    '$connector': {
                         'sources': '*',
                         'targets': '*',
                         'maxSenders': cls.MAX_SENDERS,
                         'maxReceivers': cls.MAX_RECEIVERS,
-                        'allowAnonymousSender': 'true',
-                        'allowWaypointLinks': 'true'
+                        'allowAnonymousSender': True,
+                        'allowWaypointLinks': True
                     }
-                )]
+                }
             })
         ])
 
