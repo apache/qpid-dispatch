@@ -17,7 +17,9 @@
  * under the License.
  */
 
+// clang-format off
 #include "python_private.h" // Must be first! XXX Why?
+// clang-format on
 
 #include <errno.h>
 #include <inttypes.h>
@@ -443,6 +445,10 @@ static void connection_wake(qd_connection_t* conn) {
     pn_connection_wake(conn->pn_conn);
 }
 
+static void data_put_symbol(pn_data_t* data, const char* value);
+static void data_put_string(pn_data_t* data, const char* value);
+static void data_put_map_entry(pn_data_t* data, const char* key, const char* value);
+
 static void connection_decorate(qd_server_t* server, qd_connection_t* conn, const qd_server_config_t* config) {
     pn_connection_t* pn_conn = conn->pn_conn;
 
@@ -461,19 +467,15 @@ static void connection_decorate(qd_server_t* server, qd_connection_t* conn, cons
     pn_data_put_map(props);
     pn_data_enter(props);
 
-    pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_KEY), QD_CONNECTION_PROPERTY_PRODUCT_KEY));
-    pn_data_put_string(props,
-                       pn_bytes(strlen(QD_CONNECTION_PROPERTY_PRODUCT_VALUE), QD_CONNECTION_PROPERTY_PRODUCT_VALUE));
+    data_put_map_entry(props, QD_CONNECTION_PROPERTY_PRODUCT_KEY, QD_CONNECTION_PROPERTY_PRODUCT_VALUE);
+    data_put_map_entry(props, QD_CONNECTION_PROPERTY_VERSION_KEY, QPID_DISPATCH_VERSION);
 
-    pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_VERSION_KEY), QD_CONNECTION_PROPERTY_VERSION_KEY));
-    pn_data_put_string(props, pn_bytes(strlen(QPID_DISPATCH_VERSION), QPID_DISPATCH_VERSION));
-
-    pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_CONN_ID), QD_CONNECTION_PROPERTY_CONN_ID));
+    data_put_symbol(props, QD_CONNECTION_PROPERTY_CONN_ID);
     pn_data_put_int(props, conn->connection_id);
 
     // XXX When is config going to be null?
     if (config && config->inter_router_cost > 1) {
-        pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_COST_KEY), QD_CONNECTION_PROPERTY_COST_KEY));
+        data_put_symbol(props, QD_CONNECTION_PROPERTY_COST_KEY);
         pn_data_put_int(props, config->inter_router_cost);
     }
 
@@ -481,8 +483,7 @@ static void connection_decorate(qd_server_t* server, qd_connection_t* conn, cons
         qd_failover_list_t* fol = config->failover_list;
 
         if (fol) {
-            pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY),
-                                               QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY));
+            data_put_symbol(props, QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY);
             pn_data_put_list(props);
 
             pn_data_enter(props);
@@ -493,28 +494,17 @@ static void connection_decorate(qd_server_t* server, qd_connection_t* conn, cons
                 pn_data_put_map(props);
                 pn_data_enter(props);
 
-                pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY),
-                                                   QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY));
-                pn_data_put_string(props,
-                                   pn_bytes(strlen(qd_failover_list_host(fol, i)), qd_failover_list_host(fol, i)));
-
-                pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY),
-                                                   QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY));
-                pn_data_put_string(props,
-                                   pn_bytes(strlen(qd_failover_list_port(fol, i)), qd_failover_list_port(fol, i)));
+                data_put_map_entry(props, QD_CONNECTION_PROPERTY_FAILOVER_NETHOST_KEY, qd_failover_list_host(fol, i));
+                data_put_map_entry(props, QD_CONNECTION_PROPERTY_FAILOVER_PORT_KEY, qd_failover_list_port(fol, i));
 
                 if (qd_failover_list_scheme(fol, i)) {
-                    pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY),
-                                                       QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY));
-                    pn_data_put_string(
-                        props, pn_bytes(strlen(qd_failover_list_scheme(fol, i)), qd_failover_list_scheme(fol, i)));
+                    data_put_map_entry(props, QD_CONNECTION_PROPERTY_FAILOVER_SCHEME_KEY,
+                                       qd_failover_list_scheme(fol, i));
                 }
 
                 if (qd_failover_list_hostname(fol, i)) {
-                    pn_data_put_symbol(props, pn_bytes(strlen(QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY),
-                                                       QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY));
-                    pn_data_put_string(
-                        props, pn_bytes(strlen(qd_failover_list_hostname(fol, i)), qd_failover_list_hostname(fol, i)));
+                    data_put_map_entry(props, QD_CONNECTION_PROPERTY_FAILOVER_HOSTNAME_KEY,
+                                       qd_failover_list_hostname(fol, i));
                 }
 
                 pn_data_exit(props);
@@ -525,6 +515,19 @@ static void connection_decorate(qd_server_t* server, qd_connection_t* conn, cons
     }
 
     pn_data_exit(props);
+}
+
+static void data_put_symbol(pn_data_t* data, const char* value) {
+    pn_data_put_symbol(data, pn_bytes(strlen(value), value));
+}
+
+static void data_put_string(pn_data_t* data, const char* value) {
+    pn_data_put_string(data, pn_bytes(strlen(value), value));
+}
+
+static void data_put_map_entry(pn_data_t* data, const char* key, const char* value) {
+    data_put_symbol(data, key);
+    data_put_string(data, value);
 }
 
 // Timer callback to try or retry connection open
