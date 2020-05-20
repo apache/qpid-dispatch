@@ -20,6 +20,15 @@
  * under the License.
  */
 
+#include <qpid/dispatch/atomic.h>
+#include <qpid/dispatch/server.h>
+#include <qpid/dispatch/threading.h>
+#include <qpid/dispatch/timer.h>
+
+#include "server_private.h"
+
+typedef enum { CXTR_STATE_INIT = 0, CXTR_STATE_CONNECTING, CXTR_STATE_OPEN, CXTR_STATE_FAILED } cxtr_state_t;
+
 // Connector objects represent the desire to create and maintain an
 // outgoing transport connection
 struct qd_connector_t {

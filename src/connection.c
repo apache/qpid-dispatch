@@ -17,13 +17,12 @@
  * under the License.
  */
 
-#include "connection.h"
-
 #include <proton/connection.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
 #include <qpid/dispatch/python_embedded.h>
 
+#include "connection.h"
 #include "connector.h"
 #include "listener.h"
 #include "python_private.h"

@@ -17,7 +17,7 @@
  * under the License.
  */
 
-#include "python_private.h"  // must be first!
+#include "python_private.h" // Must be first! XXX Why?
 
 #include <errno.h>
 #include <inttypes.h>
@@ -43,9 +43,9 @@
 #include "connection.h"
 #include "connector.h"
 #include "dispatch_private.h"
-#include "listener.h"
 #include "entity.h"
 #include "entity_cache.h"
+#include "listener.h"
 #include "policy.h"
 #include "remote_sasl.h"
 #include "server_private.h"
@@ -54,35 +54,6 @@
 #define HEARTBEAT_INTERVAL 1000
 
 ALLOC_DEFINE(qd_deferred_call_t);
-
-//
-// Tracer functions
-//
-
-// This function is set as the pn_transport->tracer and is invoked
-// when proton tries to write the log message to pn_transport->tracer
-void transport_tracer(pn_transport_t* transport, const char* message) {
-    qd_connection_t* conn = (qd_connection_t*) pn_transport_get_context(transport);
-
-    if (conn) {
-        // The PROTOCOL module is used exclusively for logging
-        // protocol related tracing. The protocol could be AMQP, HTTP,
-        // TCP, etc.
-        qd_log(conn->server->protocol_log_source, QD_LOG_TRACE, "[C%" PRIu64 "]:%s", conn->connection_id, message);
-    }
-}
-
-// XXX I don't see how connection_ clarifies this function's distinct purpose
-void connection_transport_tracer(pn_transport_t* transport, const char* message) {
-    qd_connection_t* conn = (qd_connection_t*) pn_transport_get_context(transport);
-
-    if (conn) {
-        // Unconditionally write the log at TRACE level to the log
-        // file
-        qd_log_impl_v1(conn->server->protocol_log_source, QD_LOG_TRACE, __FILE__, __LINE__, "[C%" PRIu64 "]:%s",
-                       conn->connection_id, message);
-    }
-}
 
 // Save displayNameService object instance and ImportModule address.
 // Called with qd_python_lock held.
@@ -120,28 +91,28 @@ qd_server_t* qd_server(qd_dispatch_t* qd, int thread_count, const char* containe
 
     memcpy(server, &tmp, sizeof(tmp));
 
-    server->qd = qd;
-    server->log_source = qd_log_source("SERVER");
-    server->protocol_log_source = qd_log_source("PROTOCOL");
-    server->container_name = container_name;
-    server->sasl_config_path = sasl_config_path;
-    server->sasl_config_name = sasl_config_name;
-    server->proactor = pn_proactor();
-    server->container = NULL;
-    server->start_context = 0;  // XXX Should be NULL?
-    server->lock = sys_mutex();
+    server->qd                   = qd;
+    server->log_source           = qd_log_source("SERVER");
+    server->protocol_log_source  = qd_log_source("PROTOCOL");
+    server->container_name       = container_name;
+    server->sasl_config_path     = sasl_config_path;
+    server->sasl_config_name     = sasl_config_name;
+    server->proactor             = pn_proactor();
+    server->container            = NULL;
+    server->start_context        = 0;  // XXX Should be NULL?
+    server->lock                 = sys_mutex();
     server->conn_activation_lock = sys_mutex();
-    server->cond = sys_cond();
+    server->cond                 = sys_cond();
 
     DEQ_INIT(server->conn_list);
     qd_timer_initialize(server->lock);
 
-    server->pause_requests = 0;
-    server->threads_paused = 0;
+    server->pause_requests      = 0;
+    server->threads_paused      = 0;
     server->pause_next_sequence = 0;
-    server->pause_now_serving = 0;
-    server->next_connection_id = 1;
-    server->py_displayname_obj = 0;
+    server->pause_now_serving   = 0;
+    server->next_connection_id  = 1;
+    server->py_displayname_obj  = 0;
 
     server->http = qd_http_server(server, server->log_source);
 
@@ -213,7 +184,7 @@ void qd_server_trace_all_connections() {
         sys_mutex_lock(qd->server->lock);
 
         qd_connection_list_t conn_list = qd->server->conn_list;
-        qd_connection_t* conn = DEQ_HEAD(conn_list);
+        qd_connection_t*     conn      = DEQ_HEAD(conn_list);
 
         while (conn) {
             // If there is already a tracer on the transport, nothing
@@ -233,11 +204,11 @@ void qd_server_trace_all_connections() {
 }
 
 static double normalize_memory_size(const uint64_t bytes, const char** suffix);
-static void* server_thread_run(void* arg);
+static void*  server_thread_run(void* arg);
 
 void qd_server_run(qd_dispatch_t* qd) {
     qd_server_t* server = qd->server;
-    int i;
+    int          i;
 
     assert(server);
     // Server can't run without a container
@@ -247,13 +218,13 @@ void qd_server_run(qd_dispatch_t* qd) {
            (long) getpid());
 
     const uintmax_t ram_size = qd_platform_memory_size();
-    const uint64_t vm_size = qd_router_memory_usage();
+    const uint64_t  vm_size  = qd_router_memory_usage();
 
     if (ram_size && vm_size) {
-        const char* suffix_vm = 0;
+        const char* suffix_vm  = 0;
         const char* suffix_ram = 0;
-        double vm = normalize_memory_size(vm_size, &suffix_vm);
-        double ram = normalize_memory_size(ram_size, &suffix_ram);
+        double      vm         = normalize_memory_size(vm_size, &suffix_vm);
+        double      ram        = normalize_memory_size(ram_size, &suffix_ram);
 
         qd_log(server->log_source, QD_LOG_NOTICE, "Process VmSize %.2f %s (%.2f %s available memory)", vm, suffix_vm,
                ram, suffix_ram);
@@ -265,7 +236,7 @@ void qd_server_run(qd_dispatch_t* qd) {
 
     // Start count - 1 threads and use the current thread
 
-    int n = server->thread_count - 1;
+    int            n       = server->thread_count - 1;
     sys_thread_t** threads = (sys_thread_t**) calloc(n, sizeof(sys_thread_t*));
 
     for (i = 0; i < n; i++) {
@@ -326,9 +297,9 @@ qd_connection_t* qd_server_connection(qd_server_t* server, qd_server_config_t* c
 
     ZERO(conn);
 
-    conn->pn_conn = pn_connection();
+    conn->pn_conn            = pn_connection();
     conn->deferred_call_lock = sys_mutex();
-    conn->role = strdup(config->role);
+    conn->role               = strdup(config->role);
 
     if (!conn->pn_conn || !conn->deferred_call_lock || !conn->role) {
         if (conn->pn_conn) {
@@ -377,7 +348,7 @@ qd_listener_t* qd_server_listener(qd_server_t* server) {
     sys_atomic_init(&listener->ref_count, 1);
 
     listener->server = server;
-    listener->http = NULL;
+    listener->http   = NULL;
 
     return listener;
 }
@@ -398,12 +369,13 @@ qd_connector_t* qd_server_connector(qd_server_t* server) {
     qd_failover_item_list_t conn_info_list;
     DEQ_INIT(conn_info_list);
     connector->conn_info_list = conn_info_list;
-    connector->conn_index = 1;
-    connector->state = CXTR_STATE_INIT;
-    connector->lock = sys_mutex();
+    connector->conn_index     = 1;
+    connector->state          = CXTR_STATE_INIT;
+    connector->lock           = sys_mutex();
+    connector->timer          = qd_timer(connector->server->qd, connector_try_open_handler, connector);
+
     connector->conn_msg = (char*) malloc(300);
     memset(connector->conn_msg, 0, 300);
-    connector->timer = qd_timer(connector->server->qd, connector_try_open_handler, connector);
 
     if (!connector->lock || !connector->timer) {
         qd_connector_decref(connector);
@@ -414,11 +386,10 @@ qd_connector_t* qd_server_connector(qd_server_t* server) {
 }
 
 static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
-    static const char* const units[] = {"B", "KiB", "MiB", "GiB", "TiB"};
-    const int units_ct = 5;
-    const double base = 1024.0;
-
-    double value = (double) bytes;
+    static const char* const units[]  = {"B", "KiB", "MiB", "GiB", "TiB"};
+    const int                units_ct = 5;
+    const double             base     = 1024.0;
+    double                   value    = (double) bytes;
 
     for (int i = 0; i < units_ct; ++i) {
         if (value < base) {
@@ -443,12 +414,12 @@ static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
 bool server_handle_event(qd_server_t* server, pn_event_t* event);
 
 static void* server_thread_run(void* arg) {
-    qd_server_t* server = (qd_server_t*) arg;
-    bool running = true;
+    qd_server_t* server  = (qd_server_t*) arg;
+    bool         running = true;
 
     while (running) {
         pn_event_batch_t* batch = pn_proactor_wait(server->proactor);
-        pn_event_t* event = NULL;
+        pn_event_t*       event = NULL;
 
         while (running && (event = pn_event_batch_next(batch))) {
             running = server_handle_event(server, event);
@@ -577,15 +548,15 @@ static void connector_try_open_lh(qd_connector_t* connector) {
         return;
     }
 
-    conn->connector = connector;
+    conn->connector                  = connector;
     const qd_server_config_t* config = &connector->config;
 
     // Set the hostname on the pn_connection. This hostname will be
     // used by proton as the hostname in the open frame.
 
-    qd_failover_item_t* item = qd_connector_get_conn_info(connector);
-    char* current_host = item->host;
-    char* host_port = item->host_port;
+    qd_failover_item_t* item         = qd_connector_get_conn_info(connector);
+    char*               current_host = item->host;
+    char*               host_port    = item->host_port;
 
     pn_connection_set_hostname(conn->pn_conn, current_host);
 
@@ -602,8 +573,8 @@ static void connector_try_open_lh(qd_connector_t* connector) {
     }
 
     conn->connector->state = CXTR_STATE_OPEN;
-    connector->ctx = conn;
-    connector->delay = 5000;
+    connector->ctx         = conn;
+    connector->delay       = 5000;
 
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Connecting to %s", conn->connection_id, host_port);
 
@@ -620,5 +591,30 @@ static void connector_try_open_handler(void* context) {
         sys_mutex_lock(connector->lock);
         connector_try_open_lh(connector);
         sys_mutex_unlock(connector->lock);
+    }
+}
+
+// This function is set as the pn_transport->tracer and is invoked
+// when proton tries to write the log message to pn_transport->tracer
+void transport_tracer(pn_transport_t* transport, const char* message) {
+    qd_connection_t* conn = (qd_connection_t*) pn_transport_get_context(transport);
+
+    if (conn) {
+        // The PROTOCOL module is used exclusively for logging
+        // protocol related tracing. The protocol could be AMQP, HTTP,
+        // TCP, etc.
+        qd_log(conn->server->protocol_log_source, QD_LOG_TRACE, "[C%" PRIu64 "]:%s", conn->connection_id, message);
+    }
+}
+
+// XXX I don't see how connection_ clarifies this function's distinct purpose
+void connection_transport_tracer(pn_transport_t* transport, const char* message) {
+    qd_connection_t* conn = (qd_connection_t*) pn_transport_get_context(transport);
+
+    if (conn) {
+        // Unconditionally write the log at TRACE level to the log
+        // file
+        qd_log_impl_v1(conn->server->protocol_log_source, QD_LOG_TRACE, __FILE__, __LINE__, "[C%" PRIu64 "]:%s",
+                       conn->connection_id, message);
     }
 }

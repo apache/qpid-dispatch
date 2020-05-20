@@ -20,13 +20,21 @@
  * under the License.
  */
 
+#include <netdb.h>  // For NI_MAXHOST/NI_MAXSERV
 #include <proton/engine.h>
 #include <proton/event.h>
 #include <proton/ssl.h>
-#include <qpid/dispatch/container.h>
 #include <qpid/dispatch/server.h>
 
 #include "server_private.h"
+
+#ifndef NI_MAXHOST
+#define NI_MAXHOST 1025
+#endif
+
+#ifndef NI_MAXSERV
+#define NI_MAXSERV 32
+#endif
 
 // Connection objects wrap Proton connection objects.
 struct qd_connection_t {

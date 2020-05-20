@@ -42,8 +42,8 @@ static void server_handle_listener_open(qd_server_t* server, qd_listener_t* list
     if (strcmp(port, "0") == 0) {
         // If a 0 (zero) is specified for a port, get the actual
         // listening port from the listener
-        const pn_netaddr_t* addr = pn_listener_addr(listener->pn_listener);
-        char addr_str[PN_MAX_ADDR] = "";
+        const pn_netaddr_t* addr                  = pn_listener_addr(listener->pn_listener);
+        char                addr_str[PN_MAX_ADDR] = "";
         pn_netaddr_str(addr, addr_str, sizeof(addr_str));
 
         if (listener->config.name) {
@@ -82,8 +82,8 @@ static void server_handle_listener_close(qd_server_t* server, qd_listener_t* lis
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "Handling listener close");
 
-    pn_condition_t* cond = pn_listener_condition(listener->pn_listener);
-    const char* host_port = listener->config.host_port;
+    pn_condition_t* cond      = pn_listener_condition(listener->pn_listener);
+    const char*     host_port = listener->config.host_port;
 
     if (pn_condition_is_set(cond)) {
         qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port, pn_condition_get_description(cond),
@@ -120,12 +120,12 @@ static void server_handle_connection_init(qd_server_t* server, qd_connection_t* 
     }
 }
 
-static void connection_set_rhost_port(qd_connection_t* conn);
+static void       connection_set_rhost_port(qd_connection_t* conn);
 static qd_error_t listener_setup_ssl(qd_connection_t* conn, const qd_server_config_t* config,
                                      pn_transport_t* transport);
-static void connection_setup_ssl(qd_connection_t* conn);
-static void connection_setup_sasl(qd_connection_t* conn);
-static void connection_fail(qd_connection_t* conn, const char* name, const char* description, ...);
+static void       connection_setup_ssl(qd_connection_t* conn);
+static void       connection_setup_sasl(qd_connection_t* conn);
+static void       connection_fail(qd_connection_t* conn, const char* name, const char* description, ...);
 
 // Configure the transport once it is bound to the connection
 static void server_handle_connection_bound(qd_server_t* server, qd_connection_t* conn) {
@@ -152,7 +152,7 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
     if (conn->listener) {
         // Incoming connection
 
-        config = &conn->listener->config;
+        config           = &conn->listener->config;
         const char* name = config->host_port;
         pn_transport_set_server(transport);
         connection_set_rhost_port(conn);
@@ -343,7 +343,7 @@ static void server_handle_transport_error(qd_server_t* server, qd_connection_t* 
         }
 
         const qd_server_config_t* config = &conn->connector->config;
-        conn->connector->state = CXTR_STATE_FAILED;
+        conn->connector->state           = CXTR_STATE_FAILED;
         char conn_msg[300];
 
         if (pn_condition_is_set(condition)) {
@@ -475,8 +475,8 @@ static void connection_timeout_on_handshake(void* context, bool discard) {
         return;
     }
 
-    qd_connection_t* conn = (qd_connection_t*) context;
-    pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
+    qd_connection_t* conn      = (qd_connection_t*) context;
+    pn_transport_t*  transport = pn_connection_transport(conn->pn_conn);
 
     pn_transport_close_head(transport);
     connection_fail(conn, QD_AMQP_COND_NOT_ALLOWED, "Timeout waiting for initial handshake");
@@ -499,13 +499,13 @@ static void connection_startup_timer_handler(void* context) {
 static void connection_set_rhost_port(qd_connection_t* conn) {
     pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
 
-    const struct sockaddr* addr = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
-    size_t addrlen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
+    const struct sockaddr* addr    = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
+    size_t                 addrlen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
 
     // XXX When is addr null?
     if (addr && addrlen) {
         char rport[NI_MAXSERV] = "";
-        int err = getnameinfo(addr, addrlen, conn->rhost, sizeof(conn->rhost), rport, sizeof(rport),
+        int  err               = getnameinfo(addr, addrlen, conn->rhost, sizeof(conn->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
 
         if (!err) {
@@ -629,9 +629,9 @@ static void connection_setup_ssl(qd_connection_t* conn) {
     qd_log_source_t* log = conn->server->log_source;
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Setting up SSL", conn->connection_id);
 
-    qd_connector_t* connector = conn->connector;
-    const qd_server_config_t* config = &connector->config;
-    pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
+    qd_connector_t*           connector = conn->connector;
+    const qd_server_config_t* config    = &connector->config;
+    pn_transport_t*           transport = pn_connection_transport(conn->pn_conn);
 
     if (!config->ssl_profile) {
         return;
@@ -699,9 +699,9 @@ static void connection_setup_ssl(qd_connection_t* conn) {
 static void connection_setup_sasl(qd_connection_t* conn) {
     qd_log(conn->server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Setting up SASL", conn->connection_id);
 
-    qd_connector_t* connector = conn->connector;
-    const qd_server_config_t* config = &connector->config;
-    pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
+    qd_connector_t*           connector = conn->connector;
+    const qd_server_config_t* config    = &connector->config;
+    pn_transport_t*           transport = pn_connection_transport(conn->pn_conn);
 
     sys_mutex_lock(connector->server->lock);
 
