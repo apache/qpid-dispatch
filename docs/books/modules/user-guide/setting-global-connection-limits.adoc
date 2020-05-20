@@ -37,12 +37,12 @@ This example sets the incoming connection limit and message size:
 ----
 policy {
     maxConnections: 10000
-    maxMessageSize: 500000
+    maxMessageSize: 2000000
 }
 ----
 `maxConnections`::
 The total number of concurrent client connections that can be open for this router. This limit is always enforced, even if no other policy settings have been defined. The limit is applied to all incoming connections regardless of remote host, authenticated user, or targeted vhost. The default (and the maximum) value is `65535`.
 
 `maxMessageSize`::
-The maximum size in bytes of AMQP message transfers allowed for this router. This limit is applied only to transfers over user connections and is not applied to inter-router or edge router connections. This limit may be overridden by vhost or by vhost user group settings. A value of `0` disables this limit.
+The maximum size in bytes of AMQP message transfers allowed for this router as messages enter the router network. This limit is applied to transfers over user connections and to transfers to interior routers from edge routers. This limit is not applied to interior-to-interior router connections. This limit may be overridden by vhost or by vhost user group settings. A value of `0` disables this limit. Administrators are advised not set interior router maximum message sizes so low that edge router management requests or responses are blocked. Administrators are also advised to set edge router maximum message sizes lower than the attached interior router maximum message size.
 --
