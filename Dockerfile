@@ -37,7 +37,7 @@
 ################# Begin code #######
 
 # Get the latest Centos version from dockerhub
-FROM centos:latest
+FROM centos:7
 
 MAINTAINER "dev@qpid.apache.org"
 
