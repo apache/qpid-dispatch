@@ -101,34 +101,51 @@ class RouterTestHttp(TestCase):
 
     def test_http_listener_delete(self):
         name = 'delete_listener'
+        name_1 = 'delete_listener_1'
         normal_listen_port = self.get_port()
-        http_delete_listen_port = self.get_port()
+        #
+        # Open listeners on two HTTP enabled ports. Delete one of the
+        # HTTP listeners and make sure that it is really gone and also
+        # make sure that the other HTTP listener is still working.
+        #
+        http_delete_listen_port_1 = self.get_port()
+        http_delete_listen_port_2 = self.get_port()
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'A'}),
             ('listener', {'port': normal_listen_port}),
-            ('listener', {'httpRootDir': os.path.dirname(__file__), 'name': name, 'port': http_delete_listen_port, 'http': True})])
+            ('listener', {'httpRootDir': os.path.dirname(__file__), 'name': name, 'port': http_delete_listen_port_1, 'http': True}),
+            ('listener', {'httpRootDir': os.path.dirname(__file__), 'name': name_1, 'port': http_delete_listen_port_2, 'http': True})])
         router = self.qdrouterd(name="expect_fail_1", config=config, wait=True)
 
         def address():
             return router.addresses[0]
 
-        # Perform a GET request on the http_delete_listen_port just to make
+        # Perform a GET request on the http_delete_listen_port_1 just to make
         # sure that it is up and running.
-        url = "%s/system_tests_http.txt" % "http://localhost:%d" % http_delete_listen_port
-        out = self.get(url, use_ca=False)
+        url_1 = "%s/system_tests_http.txt" % "http://localhost:%d" % http_delete_listen_port_1
+        out = self.get(url_1, use_ca=False)
 
+        # Perform a GET request on the http_delete_listen_port_2 just to make
+        # sure that it is up and running.
+        url_2 = "%s/system_tests_http.txt" % "http://localhost:%d" % http_delete_listen_port_2
+        out = self.get(url_2, use_ca=False)
+
+        # Now both http_delete_listen_port_1 and http_delete_listen_port_2
+        # are working.
+
+        # Delete the listener on port http_delete_listen_port_1
         long_type = 'org.apache.qpid.dispatch.listener'
         mgmt = QdManager(self, address=address())
         mgmt.delete(long_type, name=name)
 
-        # Wait for 2 seconds for the router to delete the listener
+        # Wait for 5 seconds for the router to delete the listener
         # This is required in slower systems running this test.
         # Once again try to perform a GET request. Now since the listener
         # is gone, the GET will fail.
         sleep(5)
         deleted = False
         try:
-            out = self.get(url, use_ca=False)
+            out = self.get(url_1, use_ca=False)
         except Exception as e:
             # Connection is refused because the HTTP listener is gone
             if "[Errno 111] Connection refused" in str(e):
@@ -136,6 +153,11 @@ class RouterTestHttp(TestCase):
             if "[Errno 104] Connection reset by peer" in str(e):
                 deleted = True
         self.assertTrue(deleted)
+
+        # HTTP listener on port http_delete_listen_port_1 has been
+        # deleted successfully. Make sure that the listener on port
+        # http_delete_listen_port_2 is still working.
+        out = self.get(url_2, use_ca=False)
 
     def test_http_get(self):
         config = Qdrouterd.Config([
@@ -243,11 +265,17 @@ class RouterTestHttp(TestCase):
             if t.ex: raise t.ex
 
     def test_https_get(self):
-        def listener(**kwargs):
+        def http_listener(**kwargs):
             args = dict(kwargs)
-            args.update({'port': self.get_port(), 'httpRootDir': os.path.dirname(__file__)})
+            args.update({'port': self.get_port(), 'http': 'yes', 'httpRootDir': os.path.dirname(__file__)})
             return ('listener', args)
 
+        def listener(**kwargs):
+            args = dict(kwargs)
+            args.update({'port': self.get_port()})
+            return ('listener', args)
+
+        name = 'delete-me'
         config = Qdrouterd.Config([
             ('router', {'id': 'QDR.HTTPS'}),
             ('sslProfile', {'name': 'simple-ssl',
@@ -257,13 +285,18 @@ class RouterTestHttp(TestCase):
                             'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
                             'password': 'server-password'
             }),
-            listener(sslProfile='simple-ssl', requireSsl=False, authenticatePeer=False),
-            listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=False),
-            listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=True)])
+            http_listener(sslProfile='simple-ssl', requireSsl=False, authenticatePeer=False),
+            http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=False),
+            http_listener(sslProfile='simple-ssl', requireSsl=True, authenticatePeer=True),
+            http_listener(name=name, sslProfile='simple-ssl', requireSsl=True, authenticatePeer=True),
+            listener(name='mgmt_listener', authenticatePeer=False)])
         # saslMechanisms='EXTERNAL'
 
         r = self.qdrouterd('https-test-router', config)
         r.wait_ready()
+
+        def address():
+            return r.addresses[4]
 
         self.assert_get("https://localhost:%s" % r.ports[0])
         # requireSsl=false Allows simple-ssl HTTP
@@ -283,6 +316,22 @@ class RouterTestHttp(TestCase):
         if sys.version_info >= (2, 7):
             # Provide client cert
             self.assert_get_cert("https://localhost:%d" % r.ports[2])
+
+            # Try a get on the HTTP listener we are going to delete
+            self.assert_get_cert("https://localhost:%d" % r.ports[3])
+            
+            # Delete the listener with name 'delete-me'
+            long_type = 'org.apache.qpid.dispatch.listener'
+            mgmt = QdManager(self, address=address())
+            mgmt.delete(long_type, name=name)
+            sleep(5)
+            # Make sure that the listener got deleted.
+            self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[3])
+
+            # Make sure other ports are working normally after the above delete.
+            self.assert_get_cert("https://localhost:%d" % r.ports[2])
+
+
 
 
 if __name__ == '__main__':
