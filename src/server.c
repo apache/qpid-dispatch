@@ -445,9 +445,18 @@ static void connection_wake(qd_connection_t* conn) {
     pn_connection_wake(conn->pn_conn);
 }
 
-static void data_put_symbol(pn_data_t* data, const char* value);
-static void data_put_string(pn_data_t* data, const char* value);
-static void data_put_map_entry(pn_data_t* data, const char* key, const char* value);
+static void data_put_symbol(pn_data_t* data, const char* value) {
+    pn_data_put_symbol(data, pn_bytes(strlen(value), value));
+}
+
+static void data_put_string(pn_data_t* data, const char* value) {
+    pn_data_put_string(data, pn_bytes(strlen(value), value));
+}
+
+static void data_put_map_entry(pn_data_t* data, const char* key, const char* value) {
+    data_put_symbol(data, key);
+    data_put_string(data, value);
+}
 
 static void connection_decorate(qd_server_t* server, qd_connection_t* conn, const qd_server_config_t* config) {
     pn_connection_t* pn_conn = conn->pn_conn;
@@ -515,19 +524,6 @@ static void connection_decorate(qd_server_t* server, qd_connection_t* conn, cons
     }
 
     pn_data_exit(props);
-}
-
-static void data_put_symbol(pn_data_t* data, const char* value) {
-    pn_data_put_symbol(data, pn_bytes(strlen(value), value));
-}
-
-static void data_put_string(pn_data_t* data, const char* value) {
-    pn_data_put_string(data, pn_bytes(strlen(value), value));
-}
-
-static void data_put_map_entry(pn_data_t* data, const char* key, const char* value) {
-    data_put_symbol(data, key);
-    data_put_string(data, value);
 }
 
 // Timer callback to try or retry connection open
