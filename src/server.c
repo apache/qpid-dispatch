@@ -440,7 +440,7 @@ static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
 }
 
 // The entry point for the handlers defined in server_event_handlers.c
-bool handle_event(qd_server_t* server, pn_event_t* event);
+bool server_handle_event(qd_server_t* server, pn_event_t* event);
 
 static void* server_thread_run(void* arg) {
     qd_server_t* server = (qd_server_t*) arg;
@@ -451,7 +451,7 @@ static void* server_thread_run(void* arg) {
         pn_event_t* event = NULL;
 
         while (running && (event = pn_event_batch_next(batch))) {
-            running = handle_event(server, event);
+            running = server_handle_event(server, event);
         }
 
         // XXX Note the absence of any call to

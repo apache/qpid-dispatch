@@ -33,7 +33,7 @@
 #include "remote_sasl.h"
 #include "server_private.h"
 
-static void handle_listener_open(qd_server_t* server, qd_listener_t* listener) {
+static void server_handle_listener_open(qd_server_t* server, qd_listener_t* listener) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "Handling listener open");
 
@@ -57,7 +57,7 @@ static void handle_listener_open(qd_server_t* server, qd_listener_t* listener) {
     }
 }
 
-static void handle_listener_accept(qd_server_t* server, qd_listener_t* listener) {
+static void server_handle_listener_accept(qd_server_t* server, qd_listener_t* listener) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "Handling listener accept");
 
@@ -78,7 +78,7 @@ static void handle_listener_accept(qd_server_t* server, qd_listener_t* listener)
     pn_listener_accept(listener->pn_listener, conn->pn_conn);
 }
 
-static void handle_listener_close(qd_server_t* server, qd_listener_t* listener) {
+static void server_handle_listener_close(qd_server_t* server, qd_listener_t* listener) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "Handling listener close");
 
@@ -106,7 +106,7 @@ static void handle_listener_close(qd_server_t* server, qd_listener_t* listener) 
 
 static void connection_startup_timer_handler(void* context);
 
-static void handle_connection_init(qd_server_t* server, qd_connection_t* conn) {
+static void server_handle_connection_init(qd_server_t* server, qd_connection_t* conn) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection init", conn->connection_id);
 
@@ -128,7 +128,7 @@ static void connection_setup_sasl(qd_connection_t* conn);
 static void connection_fail(qd_connection_t* conn, const char* name, const char* description, ...);
 
 // Configure the transport once it is bound to the connection
-static void handle_connection_bound(qd_server_t* server, qd_connection_t* conn) {
+static void server_handle_connection_bound(qd_server_t* server, qd_connection_t* conn) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection bound", conn->connection_id);
 
@@ -277,7 +277,7 @@ static void handle_connection_bound(qd_server_t* server, qd_connection_t* conn) 
     pn_transport_set_idle_timeout(transport, config->idle_timeout_seconds * 1000);
 }
 
-static void handle_connection_remote_open(qd_server_t* server, qd_connection_t* conn) {
+static void server_handle_connection_remote_open(qd_server_t* server, qd_connection_t* conn) {
     qd_log(server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection remote open", conn->connection_id);
 
     // If we are transitioning to the open state, notify the client
@@ -307,13 +307,13 @@ static void handle_connection_remote_open(qd_server_t* server, qd_connection_t* 
 
 void connection_invoke_deferred_calls(qd_connection_t* conn, bool discard);
 
-static void handle_connection_wake(qd_server_t* server, qd_connection_t* conn) {
+static void server_handle_connection_wake(qd_server_t* server, qd_connection_t* conn) {
     qd_log(server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection wake", conn->connection_id);
 
     connection_invoke_deferred_calls(conn, false);
 }
 
-static void handle_transport_error(qd_server_t* server, qd_connection_t* conn) {
+static void server_handle_transport_error(qd_server_t* server, qd_connection_t* conn) {
     qd_log_source_t* log = server->log_source;
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling transport error", conn->connection_id);
 
@@ -371,22 +371,22 @@ static void handle_transport_error(qd_server_t* server, qd_connection_t* conn) {
     }
 }
 
-static void handle_listener_event(qd_server_t* server, pn_event_t* event) {
+static void server_handle_listener_event(qd_server_t* server, pn_event_t* event) {
     qd_listener_t* listener = (qd_listener_t*) pn_listener_get_context(pn_event_listener(event));
 
     assert(listener);
 
     switch (pn_event_type(event)) {
         case PN_LISTENER_OPEN:
-            handle_listener_open(server, listener);
+            server_handle_listener_open(server, listener);
             break;
 
         case PN_LISTENER_ACCEPT:
-            handle_listener_accept(server, listener);
+            server_handle_listener_accept(server, listener);
             break;
 
         case PN_LISTENER_CLOSE:
-            handle_listener_close(server, listener);
+            server_handle_listener_close(server, listener);
             break;
 
         default:
@@ -398,7 +398,7 @@ void qd_container_handle_event(qd_container_t* container, pn_event_t* event, pn_
                                qd_connection_t* conn);
 void qd_conn_event_batch_complete(qd_container_t* container, qd_connection_t* conn, bool conn_closed);
 
-static void handle_connection_event(qd_server_t* server, pn_event_t* event) {
+static void server_handle_connection_event(qd_server_t* server, pn_event_t* event) {
     qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
 
     assert(conn);
@@ -412,23 +412,23 @@ static void handle_connection_event(qd_server_t* server, pn_event_t* event) {
 
     switch (pn_event_type(event)) {
         case PN_CONNECTION_INIT:
-            handle_connection_init(server, conn);
+            server_handle_connection_init(server, conn);
             break;
 
         case PN_CONNECTION_BOUND:
-            handle_connection_bound(server, conn);
+            server_handle_connection_bound(server, conn);
             break;
 
         case PN_CONNECTION_REMOTE_OPEN:
-            handle_connection_remote_open(server, conn);
+            server_handle_connection_remote_open(server, conn);
             break;
 
         case PN_CONNECTION_WAKE:
-            handle_connection_wake(server, conn);
+            server_handle_connection_wake(server, conn);
             break;
 
         case PN_TRANSPORT_ERROR:
-            handle_transport_error(server, conn);
+            server_handle_transport_error(server, conn);
             break;
 
         default:
@@ -447,7 +447,7 @@ static void handle_connection_event(qd_server_t* server, pn_event_t* event) {
 // Events involving a connection or listener are serialized by the
 // proactor so only one event per connection or listener is processed
 // at a time
-bool handle_event(qd_server_t* server, pn_event_t* event) {
+bool server_handle_event(qd_server_t* server, pn_event_t* event) {
     switch (pn_event_type(event)) {
         case PN_PROACTOR_INTERRUPT:
             // Interrupt the next thread and stop the current thread
@@ -461,16 +461,13 @@ bool handle_event(qd_server_t* server, pn_event_t* event) {
         case PN_LISTENER_OPEN:
         case PN_LISTENER_ACCEPT:
         case PN_LISTENER_CLOSE:
-            handle_listener_event(server, event);
+            server_handle_listener_event(server, event);
             return true;
 
         default:
-            break;
+            server_handle_connection_event(server, event);
+            return true;
     }
-
-    handle_connection_event(server, event);
-
-    return true;
 }
 
 static void connection_timeout_on_handshake(void* context, bool discard) {

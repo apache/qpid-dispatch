@@ -209,7 +209,7 @@ qd_connector_t* qd_connection_connector(const qd_connection_t* conn) {
 }
 
 // The entry point for the handlers defined in server_event_handlers.c
-bool handle_event(qd_server_t* server, pn_event_t* event);
+bool server_handle_event(qd_server_t* server, pn_event_t* event);
 
 // Expose event handling for HTTP connections
 bool qd_connection_handle(qd_connection_t* conn, pn_event_t* event) {
@@ -222,7 +222,7 @@ bool qd_connection_handle(qd_connection_t* conn, pn_event_t* event) {
     pn_connection_t* pn_conn = pn_event_connection(event);
     qd_connection_t* qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
 
-    handle_event(conn->server, event);
+    server_handle_event(conn->server, event);
 
     if (qd_conn && pn_event_type(event) == PN_TRANSPORT_CLOSED) {
         pn_connection_set_context(pn_conn, NULL);
