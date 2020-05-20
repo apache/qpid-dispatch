@@ -17,10 +17,10 @@
  * under the License.
  */
 
+#include "listener.h"
+
 #include <proton/condition.h>
 #include <proton/proactor.h>
-
-#include "listener.h"
 
 // Listening backlog
 static const int BACKLOG = 50;

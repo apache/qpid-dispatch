@@ -29,13 +29,13 @@
 /// connections.
 struct qd_listener_t {
     // May be referenced by connection_manager and pn_listener_t
-    sys_atomic_t              ref_count;
-    qd_server_t              *server;
-    qd_server_config_t        config;
-    pn_listener_t            *pn_listener;
-    qd_http_listener_t       *http;
+    sys_atomic_t        ref_count;
+    qd_server_t*        server;
+    qd_server_config_t  config;
+    pn_listener_t*      pn_listener;
+    qd_http_listener_t* http;
     DEQ_LINKS(qd_listener_t);
-    bool                      exit_on_error;
+    bool exit_on_error;
 };
 
 DEQ_DECLARE(qd_listener_t, qd_listener_list_t);

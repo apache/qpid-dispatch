@@ -17,12 +17,13 @@
  * under the License.
  */
 
+#include "connection.h"
+
 #include <proton/connection.h>
-#include <proton/sasl.h>
 #include <proton/proactor.h>
+#include <proton/sasl.h>
 #include <qpid/dispatch/python_embedded.h>
 
-#include "connection.h"
 #include "connector.h"
 #include "listener.h"
 #include "python_private.h"
@@ -30,16 +31,16 @@
 const char* MECH_EXTERNAL = "EXTERNAL";
 
 // Allowed uidFormat fields
-const char CERT_COUNTRY_CODE = 'c';
-const char CERT_STATE = 's';
-const char CERT_CITY_LOCALITY = 'l';
-const char CERT_ORGANIZATION_NAME = 'o';
-const char CERT_ORGANIZATION_UNIT = 'u';
-const char CERT_COMMON_NAME = 'n';
-const char CERT_FINGERPRINT_SHA1 = '1';
+const char CERT_COUNTRY_CODE       = 'c';
+const char CERT_STATE              = 's';
+const char CERT_CITY_LOCALITY      = 'l';
+const char CERT_ORGANIZATION_NAME  = 'o';
+const char CERT_ORGANIZATION_UNIT  = 'u';
+const char CERT_COMMON_NAME        = 'n';
+const char CERT_FINGERPRINT_SHA1   = '1';
 const char CERT_FINGERPRINT_SHA256 = '2';
 const char CERT_FINGERPRINT_SHA512 = '5';
-char* COMPONENT_SEPARATOR = ";";
+char*      COMPONENT_SEPARATOR     = ";";
 
 ALLOC_DEFINE(qd_connection_t);
 
@@ -113,11 +114,11 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
 
 void qd_connection_set_user(qd_connection_t* conn) {
     pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
-    pn_sasl_t* sasl = pn_sasl(transport);
+    pn_sasl_t*      sasl      = pn_sasl(transport);
 
     if (sasl) {
         const char* mech = pn_sasl_get_mech(sasl);
-        conn->user_id = pn_transport_get_user(transport);
+        conn->user_id    = pn_transport_get_user(transport);
 
         // We want to set the user name only if it is not already set and the selected sasl mechanism is EXTERNAL
         if (mech && strcmp(mech, MECH_EXTERNAL) == 0) {
@@ -182,7 +183,7 @@ void qd_connection_invoke_deferred(qd_connection_t* conn, qd_deferred_t call, vo
 
     qd_deferred_call_t* dc = new_qd_deferred_call_t();
     DEQ_ITEM_INIT(dc);
-    dc->call = call;
+    dc->call    = call;
     dc->context = context;
 
     sys_mutex_lock(conn->deferred_call_lock);
@@ -268,20 +269,20 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
         // pointed to by dest
         strncpy(components, config->ssl_uid_format, 7);
 
-        const char* country_code = 0;
-        const char* state = 0;
+        const char* country_code  = 0;
+        const char* state         = 0;
         const char* locality_city = 0;
-        const char* organization = 0;
-        const char* org_unit = 0;
-        const char* common_name = 0;
+        const char* organization  = 0;
+        const char* org_unit      = 0;
+        const char* common_name   = 0;
 
         // SHA1 is 20 octets (40 hex characters); SHA256 is 32 octets (64 hex characters).
         // SHA512 is 64 octets (128 hex characters)
         char fingerprint[129] = "\0";
 
-        int uid_length = 0;
+        int uid_length       = 0;
         int semi_colon_count = -1;
-        int component_count = strlen(components);
+        int component_count  = strlen(components);
 
         for (int x = 0; x < component_count; x++) {
             // accumulate the length into uid_length on each pass so we definitively know the number of octets to
@@ -333,7 +334,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
             } else if (components[x] == CERT_FINGERPRINT_SHA1 || components[x] == CERT_FINGERPRINT_SHA256 ||
                        components[x] == CERT_FINGERPRINT_SHA512) {
                 // Allocate the memory for message digest
-                int out = 0;
+                int out                = 0;
                 int fingerprint_length = 0;
 
                 if (components[x] == CERT_FINGERPRINT_SHA1) {

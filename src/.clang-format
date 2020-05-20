@@ -5,3 +5,6 @@ AllowShortFunctionsOnASingleLine: false
 SpaceAfterCStyleCast: true
 DerivePointerAlignment: false
 PointerAlignment: Left
+AlignConsecutiveAssignments: true
+AlignConsecutiveDeclarations: true
+KeepEmptyLinesAtTheStartOfBlocks: false

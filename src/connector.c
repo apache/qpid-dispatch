@@ -17,10 +17,11 @@
  * under the License.
  */
 
+#include "connector.h"
+
 #include <proton/connection.h>
 
 #include "connection.h"
-#include "connector.h"
 #include "server_private.h"
 
 ALLOC_DEFINE(qd_connector_t);
@@ -32,7 +33,7 @@ const char* qd_connector_policy_vhost(qd_connector_t* connector) {
 bool qd_connector_connect(qd_connector_t* connector) {
     sys_mutex_lock(connector->lock);
 
-    connector->ctx = NULL;
+    connector->ctx   = NULL;
     connector->delay = 0;
 
     // Referenced by timer
