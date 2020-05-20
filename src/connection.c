@@ -208,31 +208,6 @@ qd_connector_t* qd_connection_connector(const qd_connection_t* conn) {
     return conn->connector;
 }
 
-// The entry point for the handlers defined in server_event_handlers.c
-bool server_handle_event(qd_server_t* server, pn_event_t* event);
-
-// Expose event handling for HTTP connections
-bool qd_connection_handle(qd_connection_t* conn, pn_event_t* event) {
-    // XXX What's going on with conn versus qd_conn here?
-
-    if (!conn) {
-        return false;
-    }
-
-    pn_connection_t* pn_conn = pn_event_connection(event);
-    qd_connection_t* qd_conn = !!pn_conn ? (qd_connection_t*) pn_connection_get_context(pn_conn) : NULL;
-
-    server_handle_event(conn->server, event);
-
-    if (qd_conn && pn_event_type(event) == PN_TRANSPORT_CLOSED) {
-        pn_connection_set_context(pn_conn, NULL);
-        qd_connection_free(qd_conn);
-        return false;
-    }
-
-    return true;
-}
-
 bool qd_connection_strip_annotations_in(const qd_connection_t* conn) {
     return conn->strip_annotations_in;
 }

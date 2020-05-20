@@ -179,8 +179,8 @@ static int handle_events(connection_t* c) {
     pn_event_t *e;
     while ((e = pn_connection_driver_next_event(&c->driver))) {
         if (c->qd_conn && e) {
-            if (!qd_connection_handle(c->qd_conn, e)) {
-                c->qd_conn = 0;  // connection closed
+            if (!qd_server_handle_event(c->qd_conn->server, e)) {
+                c->qd_conn = NULL;  // connection closed
             }
         }
     }
@@ -293,7 +293,7 @@ static qd_http_listener_t *qd_http_listener(qd_http_server_t *hs, qd_listener_t 
     return hl;
 }
 
-/* Linked list: first entry on each line should point to next, last line should be the 
+/* Linked list: first entry on each line should point to next, last line should be the
  * octet-stream default.
  */
 static const struct lws_protocol_vhost_options mime_types[] = {

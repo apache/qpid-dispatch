@@ -84,19 +84,24 @@ qd_connection_t* qd_server_connection(qd_server_t* server, qd_server_config_t* c
 qd_connector_t*  qd_server_connector(qd_server_t* server);
 qd_dispatch_t*   qd_server_dispatch(qd_server_t* server);
 qd_listener_t*   qd_server_listener(qd_server_t* server);
-void             qd_server_config_free(qd_server_config_t* config);
 void             qd_server_timeout(qd_server_t* server, qd_duration_t delay);
 
-/// For every connection on the server's connection list, call
-/// pn_transport_set_tracer and enable trace logging
+void qd_server_config_free(qd_server_config_t* config);
+
+// The entry point for Proton-driven event handling in the router.
+// The event handlers are defined in server_event_handlers.c.
+bool qd_server_handle_event(qd_server_t* server, pn_event_t* event);
+
+// For every connection on the server's connection list, call
+// pn_transport_set_tracer and enable trace logging
 void qd_server_trace_all_connections();
 
-/// This function is set as the pn_transport->tracer and is invoked
-/// when proton tries to write the log message to pn_transport->tracer
+// This function is set as the pn_transport->tracer and is invoked
+// when proton tries to write the log message to pn_transport->tracer
 void transport_tracer(pn_transport_t* transport, const char* message);
 
-/// This is similar to the transport_tracer, but it writes the message
-/// to the log at the trace level even if trace level is not enabled
+// This is similar to the transport_tracer, but it writes the message
+// to the log at the trace level even if trace level is not enabled
 void connection_transport_tracer(pn_transport_t* transport, const char* message);
 
 #endif

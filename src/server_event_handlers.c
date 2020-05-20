@@ -449,7 +449,7 @@ static void server_handle_connection_event(qd_server_t* server, pn_event_t* even
 // Events involving a connection or listener are serialized by the
 // proactor so only one event per connection or listener is processed
 // at a time
-bool server_handle_event(qd_server_t* server, pn_event_t* event) {
+bool qd_server_handle_event(qd_server_t* server, pn_event_t* event) {
     switch (pn_event_type(event)) {
         case PN_PROACTOR_INTERRUPT:
             // Interrupt the next thread and stop the current thread

@@ -160,6 +160,7 @@ static qd_config_sasl_plugin_t *qd_find_sasl_plugin(qd_connection_manager_t *cm,
     return 0;
 }
 
+// XXX Should this move to server.c or its own server_config.c?
 void qd_server_config_free(qd_server_config_t *cf)
 {
     if (!cf) return;
