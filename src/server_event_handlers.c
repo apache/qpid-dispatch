@@ -44,6 +44,7 @@ static void server_handle_listener_open(qd_server_t* server, qd_listener_t* list
         // listening port from the listener
         const pn_netaddr_t* addr                  = pn_listener_addr(listener->pn_listener);
         char                addr_str[PN_MAX_ADDR] = "";
+
         pn_netaddr_str(addr, addr_str, sizeof(addr_str));
 
         if (listener->config.name) {
@@ -133,6 +134,7 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
     qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection bound", conn->connection_id);
 
     pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
+
     // For transport_tracer
     pn_transport_set_context(transport, conn);
 
