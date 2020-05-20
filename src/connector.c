@@ -20,7 +20,10 @@
 #include <proton/connection.h>
 
 #include "connection_private.h"
+#include "connector_private.h"
 #include "server_private.h"
+
+ALLOC_DEFINE(qd_connector_t);
 
 const char* qd_connector_policy_vhost(qd_connector_t* connector) {
     return connector->policy_vhost;

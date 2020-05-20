@@ -23,6 +23,7 @@
 #include <qpid/dispatch/python_embedded.h>
 
 #include "connection_private.h"
+#include "connector_private.h"
 #include "python_private.h"
 
 const char* MECH_EXTERNAL = "EXTERNAL";
@@ -42,7 +43,6 @@ char* COMPONENT_SEPARATOR = ";";
 ALLOC_DEFINE(qd_connection_t);
 
 void connection_invoke_deferred_calls(qd_connection_t* conn, bool discard);
-bool qd_connector_has_failover_info(qd_connector_t* connector);
 
 void qd_connection_free(qd_connection_t* conn) {
     qd_server_t* server = conn->server;

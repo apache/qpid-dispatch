@@ -24,6 +24,7 @@
 #include <stdlib.h>
 #include <qpid/dispatch.h>
 #include "connection_private.h"
+#include "connector_private.h"
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"

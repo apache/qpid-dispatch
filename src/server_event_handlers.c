@@ -27,8 +27,9 @@
 #include <qpid/dispatch/server.h>
 #include <stdio.h>
 
-#include "remote_sasl.h"
 #include "connection_private.h"
+#include "connector_private.h"
+#include "remote_sasl.h"
 #include "server_private.h"
 
 static void handle_listener_open(qd_server_t* server, qd_listener_t* listener) {

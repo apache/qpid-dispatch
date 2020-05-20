@@ -41,6 +41,7 @@
 
 #include "config.h"
 #include "connection_private.h"
+#include "connector_private.h"
 #include "dispatch_private.h"
 #include "entity.h"
 #include "entity_cache.h"
@@ -51,7 +52,6 @@
 
 #define HEARTBEAT_INTERVAL 1000
 
-ALLOC_DEFINE(qd_connector_t);
 ALLOC_DEFINE(qd_deferred_call_t);
 
 //
@@ -71,6 +71,7 @@ void transport_tracer(pn_transport_t* transport, const char* message) {
     }
 }
 
+// XXX I don't see how connection_ clarifies this function's distinct purpose
 void connection_transport_tracer(pn_transport_t* transport, const char* message) {
     qd_connection_t* conn = (qd_connection_t*) pn_transport_get_context(transport);
 
