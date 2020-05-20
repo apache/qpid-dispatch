@@ -77,7 +77,7 @@ struct qd_connection_t {
     char rhost_port[NI_MAXHOST + NI_MAXSERV];  // Remote host:port for incoming connections
 };
 
-// DEQ_DECLARE(qd_connection_t, qd_connection_list_t); // XXX JRR
+//DEQ_DECLARE(qd_connection_t, qd_connection_list_t); // XXX JRR
 ALLOC_DECLARE(qd_connection_t);
 
 qd_connector_t* qd_connection_connector(const qd_connection_t* conn);

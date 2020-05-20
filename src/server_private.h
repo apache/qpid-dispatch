@@ -47,6 +47,7 @@ typedef struct qd_pn_free_link_session_t {
     pn_link_t*    pn_link;
 } qd_pn_free_link_session_t;
 
+// XXX I don't want this here, but I have a cycle if I move it
 DEQ_DECLARE(qd_connection_t, qd_connection_list_t);  // XXX JRR
 
 struct qd_server_t {
