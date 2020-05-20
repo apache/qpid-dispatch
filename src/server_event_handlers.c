@@ -401,16 +401,18 @@ void qd_container_handle_event(qd_container_t* container, pn_event_t* event, pn_
 void qd_conn_event_batch_complete(qd_container_t* container, qd_connection_t* conn, bool conn_closed);
 
 static void server_handle_connection_event(qd_server_t* server, pn_event_t* event) {
-    qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_event_connection(event));
+    pn_connection_t* pn_conn = pn_event_connection(event);
 
-    assert(conn);
+    assert(pn_conn);
 
-    // XXX Is it right to have a qdr_ function here?
-    // XXX Why does this take a pn_conn?
-    if (qdr_is_authentication_service_connection(conn->pn_conn)) {
+    if (qdr_is_authentication_service_connection(pn_conn)) {
         qdr_handle_authentication_service_connection_event(event);
         return;
     }
+
+    qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
+
+    assert(conn);
 
     switch (pn_event_type(event)) {
         case PN_CONNECTION_INIT:
