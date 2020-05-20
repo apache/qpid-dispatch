@@ -43,6 +43,7 @@
 #include "connection_private.h"
 #include "connector_private.h"
 #include "dispatch_private.h"
+#include "listener_private.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "policy.h"

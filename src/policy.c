@@ -26,6 +26,7 @@
 #include "connection_private.h"
 #include "connector_private.h"
 #include "dispatch_private.h"
+#include "listener_private.h"
 #include "qpid/dispatch/container.h"
 #include "qpid/dispatch/server.h"
 #include <proton/message.h>

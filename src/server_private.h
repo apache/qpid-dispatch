@@ -44,7 +44,6 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t* c
 qd_listener_t *qd_server_listener(qd_server_t *server);
 qd_connector_t *qd_server_connector(qd_server_t *server);
 
-void qd_listener_decref(qd_listener_t* ct);
 void qd_server_config_free(qd_server_config_t *cf);
 
 typedef enum {
@@ -78,23 +77,6 @@ DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
 # define NI_MAXSERV 32
 #endif
 
-/**
- * Listener objects represent the desire to accept incoming transport connections.
- */
-struct qd_listener_t {
-    /* May be referenced by connection_manager and pn_listener_t */
-    sys_atomic_t              ref_count;
-    qd_server_t              *server;
-    qd_server_config_t        config;
-    pn_listener_t            *pn_listener;
-    qd_http_listener_t       *http;
-    DEQ_LINKS(qd_listener_t);
-    bool                      exit_on_error;
-};
-
-DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
-
-ALLOC_DECLARE(qd_listener_t);
 ALLOC_DECLARE(qd_deferred_call_t);
 ALLOC_DECLARE(qd_pn_free_link_session_t);
 

@@ -27,6 +27,7 @@
 #include "connector_private.h"
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
+#include "listener_private.h"
 #include "server_private.h"
 #include "entity.h"
 #include "entity_cache.h"

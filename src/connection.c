@@ -24,6 +24,7 @@
 
 #include "connection_private.h"
 #include "connector_private.h"
+#include "listener_private.h"
 #include "python_private.h"
 
 const char* MECH_EXTERNAL = "EXTERNAL";

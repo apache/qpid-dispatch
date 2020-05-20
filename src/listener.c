@@ -21,7 +21,7 @@
 #include <proton/listener.h>
 #include <proton/proactor.h>
 
-#include "server_private.h"
+#include "listener_private.h"
 
 // Listening backlog
 static const int BACKLOG = 50;

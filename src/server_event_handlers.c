@@ -29,6 +29,7 @@
 
 #include "connection_private.h"
 #include "connector_private.h"
+#include "listener_private.h"
 #include "remote_sasl.h"
 #include "server_private.h"
 
