@@ -18,10 +18,9 @@
  */
 
 #include <proton/condition.h>
-#include <proton/listener.h>
 #include <proton/proactor.h>
 
-#include "listener_private.h"
+#include "listener.h"
 
 // Listening backlog
 static const int BACKLOG = 50;

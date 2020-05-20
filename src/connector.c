@@ -19,8 +19,8 @@
 
 #include <proton/connection.h>
 
-#include "connection_private.h"
-#include "connector_private.h"
+#include "connection.h"
+#include "connector.h"
 #include "server_private.h"
 
 ALLOC_DEFINE(qd_connector_t);

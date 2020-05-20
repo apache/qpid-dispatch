@@ -1,5 +1,5 @@
-#ifndef __connector_private_h__
-#define __connector_private_h__ 1
+#ifndef __connector_h__
+#define __connector_h__ 1
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one

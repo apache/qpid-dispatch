@@ -40,10 +40,10 @@
 #include <string.h>
 
 #include "config.h"
-#include "connection_private.h"
-#include "connector_private.h"
+#include "connection.h"
+#include "connector.h"
 #include "dispatch_private.h"
-#include "listener_private.h"
+#include "listener.h"
 #include "entity.h"
 #include "entity_cache.h"
 #include "policy.h"

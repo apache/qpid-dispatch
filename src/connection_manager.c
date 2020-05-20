@@ -23,11 +23,11 @@
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/failoverlist.h>
 #include <proton/listener.h>
-#include "connection_private.h"
-#include "connector_private.h"
+#include "connection.h"
+#include "connector.h"
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
-#include "listener_private.h"
+#include "listener.h"
 #include "server_private.h"
 #include "entity.h"
 #include "entity_cache.h"

@@ -27,9 +27,9 @@
 #include <qpid/dispatch/server.h>
 #include <stdio.h>
 
-#include "connection_private.h"
-#include "connector_private.h"
-#include "listener_private.h"
+#include "connection.h"
+#include "connector.h"
+#include "listener.h"
 #include "remote_sasl.h"
 #include "server_private.h"
 

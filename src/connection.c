@@ -22,9 +22,9 @@
 #include <proton/proactor.h>
 #include <qpid/dispatch/python_embedded.h>
 
-#include "connection_private.h"
-#include "connector_private.h"
-#include "listener_private.h"
+#include "connection.h"
+#include "connector.h"
+#include "listener.h"
 #include "python_private.h"
 
 const char* MECH_EXTERNAL = "EXTERNAL";

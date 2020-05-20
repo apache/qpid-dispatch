@@ -1,5 +1,5 @@
-#ifndef __listener_private_h__
-#define __listener_private_h__ 1
+#ifndef __listener_h__
+#define __listener_h__ 1
 
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
@@ -20,6 +20,7 @@
  * under the License.
  */
 
+#include <proton/listener.h>
 #include <qpid/dispatch/atomic.h>
 
 #include "server_private.h"
@@ -40,6 +41,6 @@ struct qd_listener_t {
 DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
 ALLOC_DECLARE(qd_listener_t);
 
-void qd_listener_decref(qd_listener_t* ct);
+void qd_listener_decref(qd_listener_t* listener);
 
 #endif

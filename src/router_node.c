@@ -23,8 +23,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 #include <qpid/dispatch.h>
-#include "connection_private.h"
-#include "connector_private.h"
+#include "connection.h"
+#include "connector.h"
 #include "dispatch_private.h"
 #include "entity_cache.h"
 #include "router_private.h"
