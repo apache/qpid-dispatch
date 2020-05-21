@@ -143,7 +143,7 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
     // the transport trace and also set the transport tracer callback.
     // Note here that if trace level logging is enabled on the DEFAULT
     // module, all modules are logging at trace level too.
-    if (qd_log_enabled(log, QD_LOG_TRACE)) {
+    if (qd_log_enabled(server->protocol_log_source, QD_LOG_TRACE)) {
         pn_transport_trace(transport, PN_TRACE_FRM);
         pn_transport_set_tracer(transport, transport_tracer);
     }
@@ -376,6 +376,7 @@ static void server_handle_listener_event(qd_server_t* server, pn_event_t* event)
     qd_listener_t* listener = (qd_listener_t*) pn_listener_get_context(pn_event_listener(event));
 
     assert(listener);
+    assert(listener->pn_listener == pn_event_listener(event));
 
     switch (pn_event_type(event)) {
         case PN_LISTENER_OPEN:
