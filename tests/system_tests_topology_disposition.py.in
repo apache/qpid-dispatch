@@ -197,11 +197,11 @@ class TopologyDispositionTests ( TestCase ):
         # Any of the connections may be used and the others are
         # ignored. The multiple connections do not act as a
         # "hot standby" nor as a "trunking" setup where the
-        # traffic between the routers is shared across the 
+        # traffic between the routers is shared across the
         # connections.
         # If the active connection is lost then the multiple
         # connections are all considered for election and one
-        # of them is chosen. The router does not seamlessly 
+        # of them is chosen. The router does not seamlessly
         # transfer the load to the unaffected connection.
 
         cls.cost [ 'AD2' ] =  11
@@ -406,7 +406,7 @@ class TopologyDispositionTests ( TestCase ):
         error = None
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
-        st_key = "PROTOCOL (trace) ["
+        st_key = "PROTOCOL (trace) [C"
         qc_key = "qd.conn-id\"="
         for letter in ['A', 'B', 'C', 'D']:
             log_name = ('../setUpClass/%s.log' % letter)
@@ -447,7 +447,7 @@ class TopologyDispositionTests ( TestCase ):
         except ImportError:
             # scraper requires ast which is not installed by default on all platforms
             self.skipTest ( "Python ast module is not available on this platform." )
-        
+
         scraper_path = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
 
         # aggregate all the log files
