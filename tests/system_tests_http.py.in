@@ -25,7 +25,6 @@ import os
 import threading
 import sys
 import ssl
-from time import sleep
 
 try:
     from urllib2 import urlopen, build_opener, HTTPSHandler
