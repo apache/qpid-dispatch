@@ -99,6 +99,20 @@ class RouterTestHttp(TestCase):
         r = Qdrouterd(name="expect_fail", config=config, wait=False)
         self.assertEqual(1, r.wait())
 
+    def is_get_request_failing(self, url, use_ca=True, use_get_cert=False):
+        try:
+            if use_get_cert:
+                self.get_cert(url)
+            else:
+                self.get(url, use_ca=use_ca)
+            return False
+        except Exception as e:
+            if "[Errno 111] Connection refused" in str(e):
+                return True
+            if "[Errno 104] Connection reset by peer" in str(e):
+                return True
+            raise e
+
     def test_http_listener_delete(self):
         name = 'delete_listener'
         name_1 = 'delete_listener_1'
@@ -138,20 +152,10 @@ class RouterTestHttp(TestCase):
         mgmt = QdManager(self, address=address())
         mgmt.delete(long_type, name=name)
 
-        # Wait for 5 seconds for the router to delete the listener
-        # This is required in slower systems running this test.
         # Once again try to perform a GET request. Now since the listener
         # is gone, the GET will fail.
-        deleted = False
-        try:
-            retry(self.get(url_1, use_ca=False), delay=2, max_delay=10)
-        except Exception as e:
-            # Connection is refused because the HTTP listener is gone
-            if "[Errno 111] Connection refused" in str(e):
-                deleted = True
-            if "[Errno 104] Connection reset by peer" in str(e):
-                deleted = True
-        self.assertTrue(deleted)
+        ret_val = retry(lambda: self.is_get_request_failing(url_1, use_ca=False), timeout=10, delay=2)
+        self.assertTrue(ret_val)
 
         # HTTP listener on port http_delete_listen_port_1 has been
         # deleted successfully. Make sure that the listener on port
@@ -323,19 +327,10 @@ class RouterTestHttp(TestCase):
             long_type = 'org.apache.qpid.dispatch.listener'
             mgmt = QdManager(self, address=address())
             mgmt.delete(long_type, name=name)
-            # Make sure that the listener got deleted.
-            #self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[3])
 
-            deleted = False
-            try:
-                retry(self.assert_get("http://localhost:%s" % r.ports[3]), delay=2, max_delay=10)
-            except Exception as e:
-                # Connection is refused because the HTTP listener is gone
-                if "[Errno 111] Connection refused" in str(e):
-                    deleted = True
-                if "[Errno 104] Connection reset by peer" in str(e):
-                    deleted = True
-            self.assertTrue(deleted)
+            # Make sure that the listener got deleted.
+            ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
+            self.assertTrue(ret_val)
 
             # Make sure other ports are working normally after the above delete.
             self.assert_get_cert("https://localhost:%d" % r.ports[2])
