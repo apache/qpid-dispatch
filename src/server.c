@@ -414,33 +414,53 @@ static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
 
 void qd_conn_event_batch_complete(qd_container_t* container, qd_connection_t* conn, bool conn_closed);
 
+// static void* server_thread_run(void* arg) {
+//     qd_server_t* server  = (qd_server_t*) arg;
+//     bool         running = true;
+
+//     while (running) {
+//         pn_event_batch_t* batch = pn_proactor_wait(server->proactor);
+//         pn_event_t*       event = NULL;
+
+//         while (running && (event = pn_event_batch_next(batch))) {
+//             running = qd_server_handle_event(server, event);
+//         }
+
+//         // XXX Ugh.  Don't want this, and my testing suggests it may
+//         // not be necessary.
+//         if (event) {
+//             pn_connection_t* pn_conn = pn_event_connection(event);
+
+//             if (pn_conn) {
+//                 qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
+
+//                 if (conn) {
+//                     qd_conn_event_batch_complete(server->container, conn, false);
+//                 }
+//             }
+//         }
+
+//         pn_proactor_done(server->proactor, batch);
+//     }
+
+//     return NULL;
+// }
+
 static void* server_thread_run(void* arg) {
-    qd_server_t* server  = (qd_server_t*) arg;
-    bool         running = true;
+    qd_server_t*   server   = (qd_server_t*) arg;
+    pn_proactor_t* proactor = server->proactor;
+    bool           running  = true;
 
     while (running) {
-        pn_event_batch_t* batch = pn_proactor_wait(server->proactor);
-        pn_event_t*       event = NULL;
+        pn_event_batch_t* batch = pn_proactor_wait(proactor);
+        pn_event_t*       event;
 
-        while (running && (event = pn_event_batch_next(batch))) {
+        // XXX Discuss the absence of a running check here
+        while ((event = pn_event_batch_next(batch))) {
             running = qd_server_handle_event(server, event);
         }
 
-        // XXX Ugh.  Don't want this, and my testing suggests it may
-        // not be necessary.
-        if (event) {
-            pn_connection_t* pn_conn = pn_event_connection(event);
-
-            if (pn_conn) {
-                qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
-
-                if (conn) {
-                    qd_conn_event_batch_complete(server->container, conn, false);
-                }
-            }
-        }
-
-        pn_proactor_done(server->proactor, batch);
+        pn_proactor_done(proactor, batch);
     }
 
     return NULL;
