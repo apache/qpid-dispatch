@@ -37,7 +37,7 @@ except ImportError:
     from urllib.error import HTTPError, URLError
     import urllib
 
-from system_test import TIMEOUT, Process, QdManager
+from system_test import TIMEOUT, Process, QdManager, retry
 from subprocess import PIPE, STDOUT
 from system_test import TestCase, Qdrouterd, main_module, DIR
 from system_test import unittest
@@ -142,10 +142,9 @@ class RouterTestHttp(TestCase):
         # This is required in slower systems running this test.
         # Once again try to perform a GET request. Now since the listener
         # is gone, the GET will fail.
-        sleep(5)
         deleted = False
         try:
-            out = self.get(url_1, use_ca=False)
+            retry(self.get(url_1, use_ca=False), delay=2, max_delay=10)
         except Exception as e:
             # Connection is refused because the HTTP listener is gone
             if "[Errno 111] Connection refused" in str(e):
@@ -324,9 +323,19 @@ class RouterTestHttp(TestCase):
             long_type = 'org.apache.qpid.dispatch.listener'
             mgmt = QdManager(self, address=address())
             mgmt.delete(long_type, name=name)
-            sleep(5)
             # Make sure that the listener got deleted.
-            self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[3])
+            #self.assertRaises(Exception, self.assert_get, "http://localhost:%s" % r.ports[3])
+
+            deleted = False
+            try:
+                retry(self.assert_get("http://localhost:%s" % r.ports[3]), delay=2, max_delay=10)
+            except Exception as e:
+                # Connection is refused because the HTTP listener is gone
+                if "[Errno 111] Connection refused" in str(e):
+                    deleted = True
+                if "[Errno 104] Connection reset by peer" in str(e):
+                    deleted = True
+            self.assertTrue(deleted)
 
             # Make sure other ports are working normally after the above delete.
             self.assert_get_cert("https://localhost:%d" % r.ports[2])
