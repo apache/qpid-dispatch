@@ -108,8 +108,7 @@ static void server_handle_listener_close(qd_server_t* server, qd_listener_t* lis
 static void connection_startup_timer_handler(void* context);
 
 static void server_handle_connection_init(qd_server_t* server, qd_connection_t* conn) {
-    qd_log_source_t* log = server->log_source;
-    qd_log(log, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection init", conn->connection_id);
+    qd_log(server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection init", conn->connection_id);
 
     const qd_server_config_t* config = conn->listener ? &conn->listener->config : NULL;
 
@@ -413,6 +412,7 @@ static void server_handle_connection_event(qd_server_t* server, pn_event_t* even
     qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
 
     assert(conn);
+    assert(conn->pn_conn == pn_conn);
 
     switch (pn_event_type(event)) {
         case PN_CONNECTION_INIT:
@@ -439,7 +439,7 @@ static void server_handle_connection_event(qd_server_t* server, pn_event_t* even
             break;
     }
 
-    qd_container_handle_event(server->container, event, conn->pn_conn, conn);
+    qd_container_handle_event(server->container, event, pn_conn, conn);
 
     if (pn_event_type(event) == PN_TRANSPORT_CLOSED) {
         qd_conn_event_batch_complete(server->container, conn, true);
@@ -495,7 +495,7 @@ static void connection_startup_timer_handler(void* context) {
     qd_connection_t* conn = (qd_connection_t*) context;
 
     qd_timer_free(conn->timer);
-    conn->timer = 0;
+    conn->timer = NULL;
     qd_connection_invoke_deferred(conn, connection_timeout_on_handshake, context);
 }
 

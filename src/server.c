@@ -191,11 +191,11 @@ void qd_server_trace_all_connections() {
         while (conn) {
             // If there is already a tracer on the transport, nothing
             // to do, move on to the next connection.
-            pn_transport_t* tport = pn_connection_transport(conn->pn_conn);
+            pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
 
-            if (!pn_transport_get_tracer(tport)) {
-                pn_transport_trace(tport, PN_TRACE_FRM);
-                pn_transport_set_tracer(tport, transport_tracer);
+            if (!pn_transport_get_tracer(transport)) {
+                pn_transport_trace(transport, PN_TRACE_FRM);
+                pn_transport_set_tracer(transport, transport_tracer);
             }
 
             conn = DEQ_NEXT(conn);
@@ -412,6 +412,8 @@ static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
     return value;
 }
 
+void qd_conn_event_batch_complete(qd_container_t* container, qd_connection_t* conn, bool conn_closed);
+
 static void* server_thread_run(void* arg) {
     qd_server_t* server  = (qd_server_t*) arg;
     bool         running = true;
@@ -424,10 +426,19 @@ static void* server_thread_run(void* arg) {
             running = qd_server_handle_event(server, event);
         }
 
-        // XXX Note the absence of any call to
-        // qd_conn_event_batch_complete() here.  I don't really want
-        // to because it complicates things, and it makes my
-        // connections hang on close.
+        // XXX Ugh.  Don't want this, and my testing suggests it may
+        // not be necessary.
+        if (event) {
+            pn_connection_t* pn_conn = pn_event_connection(event);
+
+            if (pn_conn) {
+                qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
+
+                if (conn) {
+                    qd_conn_event_batch_complete(server->container, conn, false);
+                }
+            }
+        }
 
         pn_proactor_done(server->proactor, batch);
     }
