@@ -176,10 +176,7 @@ const qd_server_config_t* qd_connection_config(const qd_connection_t* conn) {
 }
 
 void qd_connection_invoke_deferred(qd_connection_t* conn, qd_deferred_t call, void* context) {
-    // XXX Is this really what we want?
-    if (!conn) {
-        return;
-    }
+    assert(conn);
 
     qd_deferred_call_t* dc = new_qd_deferred_call_t();
     DEQ_ITEM_INIT(dc);

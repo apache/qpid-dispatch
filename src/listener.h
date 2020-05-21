@@ -27,11 +27,11 @@
 
 #include "server_private.h"
 
-/// Listener objects represent the desire to accept incoming transport
-/// connections.
-///
-/// A listener may be referenced by connection_manager and
-/// pn_listener_t.
+// Listener objects represent the desire to accept incoming transport
+// connections.
+//
+// A listener may be referenced by connection_manager and
+// pn_listener_t.
 struct qd_listener_t {
     sys_atomic_t        ref_count;
     qd_server_t*        server;

@@ -50,6 +50,8 @@ void qd_listener_decref(qd_listener_t* listener) {
     }
 }
 
+// XXX Functions like this one tend not to be used much in the router
+// source code
 qd_http_listener_t* qd_listener_http(qd_listener_t* listener) {
     return listener->http;
 }

@@ -444,7 +444,7 @@ static void server_handle_connection_event(qd_server_t* server, pn_event_t* even
 
     if (pn_event_type(event) == PN_TRANSPORT_CLOSED) {
         qd_conn_event_batch_complete(server->container, conn, true);
-        pn_connection_set_context(conn->pn_conn, NULL);
+        pn_connection_set_context(pn_conn, NULL);
         qd_connection_free(conn);
     }
 }
