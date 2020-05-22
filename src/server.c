@@ -420,8 +420,8 @@ static void* server_thread_run(void* arg) {
     bool           running  = true;
 
     while (running) {
-        pn_event_batch_t* batch = pn_proactor_wait(proactor);
-        pn_event_t*       event = pn_event_batch_next(batch);
+        pn_event_batch_t* batch   = pn_proactor_wait(proactor);
+        pn_event_t*       event   = pn_event_batch_next(batch);
         pn_connection_t*  pn_conn = pn_event_connection(event);
 
         do {
