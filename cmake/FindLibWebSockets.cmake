@@ -51,7 +51,7 @@ if(LIBWEBSOCKETS_INCLUDE_DIRS AND EXISTS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_conf
   unset(lws_version_str)
 endif()
 
-set(lws_required "2.1.0")
+set(lws_required "2.4.2")
 if (LIBWEBSOCKETS_VERSION_STRING AND (LIBWEBSOCKETS_VERSION_STRING VERSION_LESS lws_required))
   message(STATUS "Found libwebsockets version ${LIBWEBSOCKETS_VERSION_STRING} but need at least ${lws_required}")
 else()
