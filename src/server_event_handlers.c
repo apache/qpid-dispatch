@@ -98,9 +98,8 @@ static void server_handle_listener_close(qd_server_t* server, qd_listener_t* lis
         qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
     }
 
-    pn_listener_set_context(listener->pn_listener, 0);
-
     // XXX Shouldn't stuff like this happen in a listener cleanup function?
+    pn_listener_set_context(listener->pn_listener, NULL);
     listener->pn_listener = NULL;
     qd_listener_decref(listener);
 }
@@ -110,13 +109,15 @@ static void connection_startup_timer_handler(void* context);
 static void server_handle_connection_init(qd_server_t* server, qd_connection_t* conn) {
     qd_log(server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection init", conn->connection_id);
 
-    const qd_server_config_t* config = conn->listener ? &conn->listener->config : NULL;
+    if (conn->listener) {
+        const qd_server_config_t* config = &conn->listener->config;
 
-    // XXX When is config going to be null?  Seems like all of this
-    // logic is predicated on listener-ness.
-    if (config && config->initial_handshake_timeout_seconds > 0) {
-        conn->timer = qd_timer(server->qd, connection_startup_timer_handler, conn);
-        qd_timer_schedule(conn->timer, config->initial_handshake_timeout_seconds * 1000);
+        assert(config);
+
+        if (config->initial_handshake_timeout_seconds > 0) {
+            conn->timer = qd_timer(server->qd, connection_startup_timer_handler, conn);
+            qd_timer_schedule(conn->timer, config->initial_handshake_timeout_seconds * 1000);
+        }
     }
 }
 
@@ -155,6 +156,7 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
 
         config           = &conn->listener->config;
         const char* name = config->host_port;
+
         pn_transport_set_server(transport);
         connection_set_rhost_port(conn);
 

@@ -52,7 +52,7 @@ DEQ_DECLARE(qd_connection_t, qd_connection_list_t);  // XXX JRR
 
 struct qd_server_t {
     qd_dispatch_t*       qd;
-    const int            thread_count;  // Immutable
+    const int            thread_count;  // Immutable (XXX Doesn't const say that?)
     const char*          container_name;
     const char*          sasl_config_path;
     const char*          sasl_config_name;
