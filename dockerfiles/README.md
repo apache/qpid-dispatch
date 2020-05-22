@@ -51,6 +51,32 @@ The dockerfiles follow these steps before launching the dispatch router
 ####Running unit tests
 Uncomment the line *RUN ctest -VV*  to run the dispatch unit and system tests.
 
+####Getting core dumps and backtraces from qdrouterd crashes and asserts
+
+* Install gdb. Add another step to the Docker build file and rebuild.
+
+    RUN dnf -y install gdb
+
+* Run the docker image shell prompt in a container with extended privileges
+
+    sudo docker run --privileged -i -t docker-image-name /bin/bash
+
+* At the container shell prompt enable crash dumps (as appropriate for your container host)
+
+    $ ulimit -c unlimited
+    
+    $ echo "coredump.%e.%p" > /proc/sys/kernel/core_pattern
+
+* From the build directory run ctest
+
+    $ ctest -VV -R some_test
+
+* From the build directory examine core file in test setUpClass directory of the failed router. The core file is in the same directory as the router log file. The example shown here is for a policy oversize basic test failure while using the MaxMessageSizeBlockOversize class.
+
+    $ gdb router/qdrouterd ./tests/system_test.dir/system_tests_policy_oversize_basic/MaxMessageSizeBlockOversize/setUpClass/coredump.nnn.mmm
+    
+    (gdb) bt
+
 ####Note
 These dockerfiles are provided for developers to quickly get started with the dispatch router and are not intended for use in production environments.
 
