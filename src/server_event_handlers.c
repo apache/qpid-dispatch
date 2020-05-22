@@ -286,10 +286,6 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
 static void server_handle_connection_remote_open(qd_server_t* server, qd_connection_t* conn) {
     qd_log(server->log_source, QD_LOG_TRACE, "[C%" PRIu64 "] Handling connection remote open", conn->connection_id);
 
-    // If we are transitioning to the open state, notify the client
-    // via callback
-    //
-    // XXX Where does the calling back happen?
     if (conn->timer) {
         qd_timer_free(conn->timer);
         conn->timer = NULL;
