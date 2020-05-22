@@ -34,11 +34,11 @@ Follow this process if you want to make a quick fix or simple addition to the us
 
 . Click the file name to open it in GitHub.
 
-. Click the pencil icon near the top right of the page contents. 
+. Click the pencil icon near the top right of the page contents.
 
 . Make your edits.
 +
-For more information, see link:style-guide.adoc[Style guidelines].
+For more information, see link:doc-style-guide.adoc[Style guidelines].
 
 . In the `Propose file change` section at the bottom of the page, enter a title and description of your changes. Enter enough detail for reviewers to know what you have changed and why.
 
@@ -150,7 +150,7 @@ The branch name should include the ID of the JIRA for which you are creating the
 
 . Make your changes to the documentation.
 +
-For more information, see link:style-guide.adoc[Style guidelines].
+For more information, see link:doc-style-guide.adoc[Style guidelines].
 
 . Build the documentation locally to test your changes.
 +

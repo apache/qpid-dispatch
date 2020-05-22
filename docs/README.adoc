@@ -31,7 +31,7 @@ This directory contains the documentation for Qpid Dispatch Router. The document
 
 == Contributing to the documentation
 
-Apache Qpid welcomes contributions from the community. To contribute to the documentation, see the link:notes/contrib-guide.adoc[Contributor's Guide].
+Apache Qpid welcomes contributions from the community. To contribute to the documentation, see the link:notes/doc-contrib-guide.adoc[Contributor's Guide].
 
 To file a documentation bug or tell us about any other issue with the documentation, visit the link:https://issues.apache.org/jira/projects/DISPATCH[Apache Dispatch JIRA project]. When creating the issue, be sure to select the `Documentation` component, and be as specific as possible about the changes you would like to see.
 
