@@ -27,29 +27,34 @@
 
 #include "server_private.h"
 
-typedef enum { CXTR_STATE_INIT = 0, CXTR_STATE_CONNECTING, CXTR_STATE_OPEN, CXTR_STATE_FAILED } cxtr_state_t;
+typedef enum {
+    CXTR_STATE_INIT = 0,
+    CXTR_STATE_CONNECTING,
+    CXTR_STATE_OPEN,
+    CXTR_STATE_FAILED,
+} cxtr_state_t;
 
 // Connector objects represent the desire to create and maintain an
 // outgoing transport connection
+//
+// Connectors may be referenced by connection_manager, timer and pn_connection_t.
+//
+// The `conn_info_list` contains all the connection information needed
+// to make a connection.  It also includes failover connection
+// information.
 struct qd_connector_t {
-    // May be referenced by connection_manager, timer and pn_connection_t
-    sys_atomic_t       ref_count;
-    qd_server_t*       server;
-    qd_server_config_t config;
-    qd_timer_t*        timer;
-    long               delay;
-    // Connector state and ctx can be modified in proactor or management threads
-    sys_mutex_t*     lock;
-    cxtr_state_t     state;
-    char*            conn_msg;
-    qd_connection_t* ctx;
-    // This conn_list contains all the connection information needed
-    // to make a connection. It also includes failover connection
-    // information
+    sys_atomic_t            ref_count;
+    qd_server_t*            server;
+    qd_server_config_t      config;
+    qd_timer_t*             timer;
+    long                    delay;
+    sys_mutex_t*            lock;  // Connector state and ctx can be modified in proactor or management threads
+    cxtr_state_t            state;
+    char*                   conn_msg;
+    qd_connection_t*        ctx;
     qd_failover_item_list_t conn_info_list;
-    int                     conn_index;  // Which connection in the connection list to connect to next
-    // Optional policy vhost name
-    char* policy_vhost;
+    int                     conn_index;    // Which connection in the list is next
+    char*                   policy_vhost;  // Optional policy vhost name
     DEQ_LINKS(qd_connector_t);
 };
 

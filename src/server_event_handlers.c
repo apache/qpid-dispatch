@@ -184,9 +184,6 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
 
         // Set up SASL
 
-        // XXX This appears to hold the server lock while calling out
-        // to a remote service on the network
-
         sys_mutex_lock(server->lock);
 
         pn_sasl_t* sasl = pn_sasl(transport);
