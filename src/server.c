@@ -442,28 +442,6 @@ static void* server_thread_run(void* arg) {
     return NULL;
 }
 
-// The version I would prefer to have
-//
-// static void* server_thread_run(void* arg) {
-//     qd_server_t*   server   = (qd_server_t*) arg;
-//     pn_proactor_t* proactor = server->proactor;
-//     bool           running  = true;
-
-//     while (running) {
-//         pn_event_batch_t* batch = pn_proactor_wait(proactor);
-//         pn_event_t*       event;
-
-//         // XXX Discuss the absence of a running check here
-//         while ((event = pn_event_batch_next(batch))) {
-//             running = qd_server_handle_event(server, event);
-//         }
-
-//         pn_proactor_done(proactor, batch);
-//     }
-
-//     return NULL;
-// }
-
 // Wake function for proactor-managed connections
 static void connection_wake(qd_connection_t* conn) {
     assert(conn);
