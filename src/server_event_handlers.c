@@ -184,15 +184,18 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
 
         // Set up SASL
 
-        sys_mutex_lock(conn->server->lock);
+        // XXX This appears to hold the server lock while calling out
+        // to a remote service on the network
+
+        sys_mutex_lock(server->lock);
 
         pn_sasl_t* sasl = pn_sasl(transport);
 
-        if (conn->server->sasl_config_path) {
-            pn_sasl_config_path(sasl, conn->server->sasl_config_path);
+        if (server->sasl_config_path) {
+            pn_sasl_config_path(sasl, server->sasl_config_path);
         }
 
-        pn_sasl_config_name(sasl, conn->server->sasl_config_name);
+        pn_sasl_config_name(sasl, server->sasl_config_name);
 
         if (config->sasl_mechanisms) {
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
@@ -255,7 +258,7 @@ static void server_handle_connection_bound(qd_server_t* server, qd_connection_t*
         pn_transport_require_encryption(transport, config->requireEncryption);
         pn_sasl_set_allow_insecure_mechs(sasl, config->allowInsecureAuthentication);
 
-        sys_mutex_unlock(conn->server->lock);
+        sys_mutex_unlock(server->lock);
 
         qd_log(log, QD_LOG_INFO, "[C%" PRIu64 "] Accepted connection to %s from %s", conn->connection_id, name,
                conn->rhost_port);
@@ -322,9 +325,6 @@ static void server_handle_transport_error(qd_server_t* server, qd_connection_t* 
 
     pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
     pn_condition_t* condition = pn_transport_condition(transport);
-
-    // XXX I think pn_transport_condition always returns a condition
-    assert(condition);
 
     if (conn->connector) {
         // Outgoing connection
@@ -509,8 +509,9 @@ static void connection_set_rhost_port(qd_connection_t* conn) {
     const struct sockaddr* addr    = pn_netaddr_sockaddr(pn_transport_remote_addr(transport));
     size_t                 addrlen = pn_netaddr_socklen(pn_transport_remote_addr(transport));
 
-    // XXX When is addr null?
-    if (addr && addrlen) {
+    assert(addr);
+
+    if (addrlen) {
         char rport[NI_MAXSERV] = "";
         int  err               = getnameinfo(addr, addrlen, conn->rhost, sizeof(conn->rhost), rport, sizeof(rport),
                               NI_NUMERICHOST | NI_NUMERICSERV);
@@ -617,8 +618,7 @@ static void connection_fail(qd_connection_t* conn, const char* name, const char*
             condition = pn_connection_condition(conn->pn_conn);
         }
 
-        // XXX Is cond ever going to be null?
-        if (condition && !pn_condition_is_set(condition)) {
+        if (!pn_condition_is_set(condition)) {
             va_start(ap, description);
             pn_condition_vformat(condition, name, description, ap);
             va_end(ap);
@@ -724,18 +724,14 @@ static void connection_setup_sasl(qd_connection_t* conn) {
 }
 
 void connection_invoke_deferred_calls(qd_connection_t* conn, bool discard) {
-    // XXX When does this happen?
-    if (!conn) {
-        return;
-    }
+    assert(conn);
 
     // Lock access to deferred_calls.  Other threads may concurrently
     // add to it.  Invoke the calls outside of the critical section.
 
-    sys_mutex_lock(conn->deferred_call_lock);
-
-    // XXX Does this need to be inside the lock?
     qd_deferred_call_t* dc;
+
+    sys_mutex_lock(conn->deferred_call_lock);
 
     while ((dc = DEQ_HEAD(conn->deferred_calls))) {
         DEQ_REMOVE_HEAD(conn->deferred_calls);

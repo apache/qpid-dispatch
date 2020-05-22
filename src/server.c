@@ -414,6 +414,16 @@ static double normalize_memory_size(const uint64_t bytes, const char** suffix) {
 
 void qd_conn_event_batch_complete(qd_container_t* container, qd_connection_t* conn, bool conn_closed);
 
+static qd_connection_t* event_get_connection(pn_event_t* event) {
+    pn_connection_t* pn_conn = pn_event_connection(event);
+
+    if (!pn_conn) {
+        return NULL;
+    }
+
+    return (qd_connection_t*) pn_connection_get_context(pn_conn);
+}
+
 static void* server_thread_run(void* arg) {
     qd_server_t*   server   = (qd_server_t*) arg;
     pn_proactor_t* proactor = server->proactor;
@@ -422,24 +432,18 @@ static void* server_thread_run(void* arg) {
     while (running) {
         pn_event_batch_t* batch = pn_proactor_wait(proactor);
         pn_event_t*       event = pn_event_batch_next(batch);
+        qd_connection_t*  conn = NULL;
 
-        assert(event);
+        if (event) {
+            conn = event_get_connection(event);
 
-        pn_connection_t* pn_conn = pn_event_connection(event);
-
-        qd_server_handle_event(server, event);
-
-        // XXX Discuss the absence of a running check here
-        while ((event = pn_event_batch_next(batch))) {
-            running = qd_server_handle_event(server, event);
+            do {
+                running = qd_server_handle_event(server, event);
+            } while ((event = pn_event_batch_next(batch)));
         }
 
-        if (pn_conn) {
-            qd_connection_t* conn = (qd_connection_t*) pn_connection_get_context(pn_conn);
-
-            if (conn) {
-                qd_conn_event_batch_complete(server->container, conn, false);
-            }
+        if (conn) {
+            qd_conn_event_batch_complete(server->container, conn, false);
         }
 
         pn_proactor_done(proactor, batch);
@@ -457,8 +461,9 @@ static void* server_thread_run(void* arg) {
 
 //     while (running) {
 //         pn_event_batch_t* batch = pn_proactor_wait(proactor);
-//         pn_event_t*       event = pn_event_batch_next(batch);
+//         pn_event_t*       event;
 
+//         // XXX Discuss the absence of a running check here
 //         while ((event = pn_event_batch_next(batch))) {
 //             running = qd_server_handle_event(server, event);
 //         }
