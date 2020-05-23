@@ -427,9 +427,9 @@ int main(int argc, char** argv)
     pn_reactor_free(reactor);
 
     if (not_accepted) {
-        printf("Sent: %ld  Accepted: %ld Not Accepted: %ld\n", sent, accepted, not_accepted);
+        printf("Sent: %" PRIu64 "  Accepted: %" PRIu64 " Not Accepted: %" PRIu64 "\n", sent, accepted, not_accepted);
         if (accepted + not_accepted != sent) {
-            printf("FAILURE! Sent: %ld  Acked: %ld\n", sent, accepted + not_accepted);
+            printf("FAILURE! Sent: %" PRIu64 "  Acked: %" PRIu64 "\n", sent, accepted + not_accepted);
             return 1;
         }
     }
