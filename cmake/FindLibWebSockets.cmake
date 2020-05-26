@@ -51,15 +51,21 @@ if(LIBWEBSOCKETS_INCLUDE_DIRS AND EXISTS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_conf
   unset(lws_version_str)
 endif()
 
+# LWS_MIN_AVAILABLE will be TRUE if at least the minimum required version of LibWebSockets is available AND
+# USE_LIBWEBSOCKETS is also TRUE
+# which means that the version of LibWebSockets library in your system is equal to or greater than lws_required
+set(LWS_MIN_REQUIRED_AVAILABLE FALSE)
 set(lws_required "2.4.2")
 if (LIBWEBSOCKETS_VERSION_STRING AND (LIBWEBSOCKETS_VERSION_STRING VERSION_LESS lws_required))
   message(STATUS "Found libwebsockets version ${LIBWEBSOCKETS_VERSION_STRING} but need at least ${lws_required}")
 else()
+  if (USE_LIBWEBSOCKETS)
+    set(LWS_MIN_REQUIRED_AVAILABLE TRUE)
+  endif(USE_LIBWEBSOCKETS)
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(
     LibWebSockets DEFAULT_MSG LIBWEBSOCKETS_VERSION_STRING LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
 endif()
-
 
 if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
   # This is a fix for DISPATCH-1513. libwebsockets versions 3.2.0 introduces a new flag called LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER

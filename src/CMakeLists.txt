@@ -127,14 +127,15 @@ set(qpid_dispatch_LIBRARIES
   ${PYTHON_LIBRARIES}
   )
 
-# USE_LIBWEBSOCKETS is true only if LIBWEBSOCKETS_FOUND
-if(USE_LIBWEBSOCKETS)
+# LWS_MIN_REQUIRED_AVAILABLE is true only if the min required version of LibWebSockets is found
+# and USE_LIBWEBSOCKETS is also TRUE
+if(LWS_MIN_REQUIRED_AVAILABLE)
   list(APPEND qpid_dispatch_SOURCES http-libwebsockets.c)
   list(APPEND qpid_dispatch_INCLUDES ${LIBWEBSOCKETS_INCLUDE_DIRS})
   list(APPEND qpid_dispatch_LIBRARIES ${LIBWEBSOCKETS_LIBRARIES})
-else(USE_LIBWEBSOCKETS)
+else(LWS_MIN_REQUIRED_AVAILABLE)
   list(APPEND qpid_dispatch_SOURCES http-none.c)
-endif(USE_LIBWEBSOCKETS)
+endif(LWS_MIN_REQUIRED_AVAILABLE)
 
 # DISPATCH-654 There are, in fact, no strict-aliasing violations and newer compilers don't complain.
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")

@@ -81,7 +81,7 @@ add_test(management_test       ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v management
 add_test(router_policy_test    ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v router_policy_test)
 add_test(test_command    ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v test_command)
 
-if(USE_LIBWEBSOCKETS)
+if(LWS_MIN_REQUIRED_AVAILABLE)
   set(SYSTEM_TESTS_HTTP system_tests_http)
 endif()
 
