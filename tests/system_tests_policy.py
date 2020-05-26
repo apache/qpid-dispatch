@@ -28,6 +28,7 @@ import sys
 import time
 
 from system_test import TestCase, Qdrouterd, main_module, Process, TIMEOUT, DIR, TestTimeout
+from system_test import Logger
 from subprocess import PIPE, STDOUT
 from proton import ConnectionException, Timeout, Url, symbol
 from proton.handlers import MessagingHandler
@@ -344,6 +345,18 @@ class SenderReceiverLimits(TestCase):
             print("system_tests_policy, SenderReceiverLimits, test_verify_z_connection_stats: delay to wait for log to be written")
             sys.stdout.flush()
             time.sleep(1)
+        if not verified:
+            deny_lines = [s for s in log_lines if "DENY" in s]
+            resources_lines = [s for s in log_lines if "closed with resources" in s]
+            logger = Logger(title="Policy SenderReceiverLimits test_verify_z_connection_stats")
+            logger.log("Did not see log line containing: 'senders_denied=1, receivers_denied=1'")
+            logger.log("Policy DENY events")
+            for dl in deny_lines:
+                logger.log("  " + dl)
+            logger.log("Policy resources report")
+            for rl in resources_lines:
+                logger.log("  " + rl)
+            logger.dump()
         self.assertTrue(verified, msg='Policy did not log sender and receiver denials.')
 
 

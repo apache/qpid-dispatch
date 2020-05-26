@@ -315,7 +315,7 @@ void qd_policy_socket_close(qd_policy_t *policy, const qd_connection_t *conn)
         qd_policy_denial_counts_t *qpdc = conn->policy_settings->denialCounts;
         qd_log(policy->log_source, QD_LOG_DEBUG,
            "[C%"PRIu64"] Connection '%s' closed with resources n_sessions=%d, n_senders=%d, n_receivers=%d, "
-           "sessions_denied=%ld, senders_denied=%ld, receivers_denied=%ld, max_message_size_denied:%ld, nConnections= %ld.",
+           "sessions_denied=%"PRIu64", senders_denied=%"PRIu64", receivers_denied=%"PRIu64", max_message_size_denied:%"PRIu64", nConnections= %"PRIu64".",
             conn->connection_id, hostname, conn->n_sessions, conn->n_senders, conn->n_receivers,
             qpdc->sessionDenied, qpdc->senderDenied, qpdc->receiverDenied, qpdc->maxSizeMessagesDenied, n_connections);
     }
