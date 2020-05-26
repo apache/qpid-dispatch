@@ -1922,6 +1922,9 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(1, fs.in_count)
         self.assertEqual(1, fs.out_count)
 
+        bc_a.close()
+        bc_b.close()
+
     def test_51_link_route_proxy_configured(self):
         """
         Activate the configured link routes via a FakeService, verify proxies
