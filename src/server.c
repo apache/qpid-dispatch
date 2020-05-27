@@ -17,8 +17,10 @@
  * under the License.
  */
 
+// This must be first to work around a Python bug
+//
 // clang-format off
-#include "python_private.h" // Must be first! XXX Why?
+#include "python_private.h"
 // clang-format on
 
 #include <errno.h>

@@ -32,7 +32,9 @@
 #include <errno.h>
 #include <inttypes.h>
 
+#include "connection.h"
 #include "http.h"
+#include "listener.h"
 #include "server_private.h"
 #include "config.h"
 

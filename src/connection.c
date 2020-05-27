@@ -17,6 +17,12 @@
  * under the License.
  */
 
+// This must be first to work around a Python bug
+//
+// clang-format off
+#include "python_private.h"
+// clang-format on
+
 #include "connection.h"
 
 #include <proton/connection.h>
@@ -26,7 +32,6 @@
 
 #include "connector.h"
 #include "listener.h"
-#include "python_private.h"
 
 const char* MECH_EXTERNAL = "EXTERNAL";
 
