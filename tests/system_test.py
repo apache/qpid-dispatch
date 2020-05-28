@@ -438,8 +438,12 @@ class Qdrouterd(Process):
         self.config.sections('router')[0]['debugDumpFile'] = self.dumpfile
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
+            self.logfile = "%s.log" % name
             config.append(
-                ('log', {'module':'DEFAULT', 'enable':'trace+', 'includeSource': 'true', 'outputFile':name+'.log'}))
+                ('log', {'module':'DEFAULT', 'enable':'trace+',
+                         'includeSource': 'true', 'outputFile': self.logfile}))
+        else:
+            self.logfile = default_log[0][1].get('outputfile')
         args = ['qdrouterd', '-c', config.write(name)] + cl_args
         env_home = os.environ.get('QPID_DISPATCH_HOME')
         if pyinclude:
@@ -471,21 +475,67 @@ class Qdrouterd(Process):
         if not self.perform_teardown:
             return
 
-        super(Qdrouterd, self).teardown()
+        teardown_exc = None
+        try:
+            super(Qdrouterd, self).teardown()
+        except Exception as exc:
+            # re-raise _after_ dumping all the state we can
+            teardown_exc = exc
 
         # check router's debug dump file for anything interesting (should be
         # empty) and dump it to stderr for perusal by organic lifeforms
         try:
             if os.stat(self.dumpfile).st_size > 0:
                 with open(self.dumpfile) as f:
-                    sys.stderr.write("\nRouter %s debug dump file:\n" % self.config.router_id)
+                    sys.stderr.write("\nRouter %s debug dump file:\n>>>>\n" %
+                                     self.config.router_id)
                     sys.stderr.write(f.read())
+                    sys.stderr.write("\n<<<<\n")
                     sys.stderr.flush()
         except OSError:
             # failed to open file.  This can happen when an individual test
             # spawns a temporary router (i.e. not created as part of the
             # TestCase setUpClass method) that gets cleaned up by the test.
             pass
+
+        if teardown_exc:
+            # teardown failed - possible router crash?
+            # dump extra stuff (command line, output, log)
+
+            def tail_file(fname, line_count=50):
+                "Tail a file to a list"
+                out = []
+                with open(fname) as f:
+                    line = f.readline()
+                    while line:
+                        out.append(line)
+                        if len(out) > line_count:
+                            out.pop(0)
+                        line = f.readline()
+                return out
+
+            try:
+                for fname in [("output", self.outfile + '.out'),
+                              ("command", self.outfile + '.cmd')]:
+                    with open(fname[1]) as f:
+                        sys.stderr.write("\nRouter %s %s file:\n>>>>\n" %
+                                         (self.config.router_id, fname[0]))
+                        sys.stderr.write(f.read())
+                        sys.stderr.write("\n<<<<\n")
+
+                if self.logfile:
+                    sys.stderr.write("\nRouter %s log file tail:\n>>>>\n" %
+                                     self.config.router_id)
+                    tail = tail_file(os.path.join(self.outdir, self.logfile))
+                    for ln in tail:
+                        sys.stderr.write("%s" % ln);
+                    sys.stderr.write("\n<<<<\n")
+                sys.stderr.flush()
+            except OSError:
+                # ignore file not found in case test never opens these
+                pass
+
+            raise teardown_exc
 
     @property
     def ports_family(self):
