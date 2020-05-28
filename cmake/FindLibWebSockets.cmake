@@ -32,6 +32,8 @@
 #   CMAKE_INSTALL_PREFIX           - Install location for the current project.
 #   LIBWEBSOCKETS_INCLUDEDIR       - Preferred include directory e.g. <prefix>/include
 
+set(LIBWEBSOCKETS_FOUND FALSE)
+
 find_library(LIBWEBSOCKETS_LIBRARIES
   NAMES websockets libwebsockets
   HINTS "${LIBWEBSOCKETS_LIBRARYDIR}" "${LIBWEBSOCKETS_ROOT}" "${CMAKE_INSTALL_PREFIX}"
@@ -51,26 +53,13 @@ if(LIBWEBSOCKETS_INCLUDE_DIRS AND EXISTS "${LIBWEBSOCKETS_INCLUDE_DIRS}/lws_conf
   unset(lws_version_str)
 endif()
 
-set(lws_required "2.4.2")
-if (LIBWEBSOCKETS_VERSION_STRING AND (LIBWEBSOCKETS_VERSION_STRING VERSION_LESS lws_required))
-  message(STATUS "Found libwebsockets version ${LIBWEBSOCKETS_VERSION_STRING} but need at least ${lws_required}")
+if (LIBWEBSOCKETS_VERSION_STRING AND LibWebSockets_FIND_VERSION AND (LIBWEBSOCKETS_VERSION_STRING VERSION_LESS LibWebSockets_FIND_VERSION))
+  message(STATUS "Found libwebsockets version ${LIBWEBSOCKETS_VERSION_STRING} but least ${LibWebSockets_FIND_VERSION} is required. WebSocket support disabled.")
 else()
   include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(
     LibWebSockets DEFAULT_MSG LIBWEBSOCKETS_VERSION_STRING LIBWEBSOCKETS_LIBRARIES LIBWEBSOCKETS_INCLUDE_DIRS)
 endif()
-
-
-if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
-  # This is a fix for DISPATCH-1513. libwebsockets versions 3.2.0 introduces a new flag called LWS_SERVER_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER
-  # The new flag allows (as the flag says) HTTP pver HTTPS listeners. Since this flag is not available before lws 3.2.0 we need
-  # to selectively comment out a test.
-  set(TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER "#")
-  set(LWS_VERSION_WITH_SSL_FIX "3.2.0")
-  if ((LIBWEBSOCKETS_VERSION_STRING STREQUAL LWS_VERSION_WITH_SSL_FIX) OR (LIBWEBSOCKETS_VERSION_STRING STRGREATER  LWS_VERSION_WITH_SSL_FIX))
-    set(TEST_OPTION_ALLOW_HTTP_ON_HTTPS_LISTENER "")
-  endif()
-endif(LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
 
 if(NOT LIBWEBSOCKETS_FOUND)
   unset(LIBWEBSOCKETS_LIBRARIES)
