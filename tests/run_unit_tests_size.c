@@ -21,6 +21,7 @@
 #include <qpid/dispatch/alloc.h>
 
 void qd_log_initialize(void);
+void qd_log_finalize(void);
 void qd_error_initialize();
 
 int message_tests();
@@ -49,6 +50,7 @@ int main(int argc, char** argv)
     result += parse_tests();
     result += buffer_tests();
 
+    qd_log_finalize();
     qd_alloc_finalize();
     return result;
 }

@@ -1849,12 +1849,8 @@ class ConnectionLinkRouteTest(TestCase):
         ]
 
         cfg = Qdrouterd.Config(config)
-        router = self.tester.qdrouterd("X", cfg, wait=False)
         # we expect the router to fail
-        while router.poll() is None:
-            sleep(0.1)
-        self.assertRaises(RuntimeError, router.teardown)
-        self.assertNotEqual(0, router.returncode)
+        router = self.tester.qdrouterd("X", cfg, wait=False, expect=Process.EXIT_FAIL)
 
     def test_mgmt(self):
         # test create, delete, and query

@@ -17,17 +17,15 @@
 # under the License
 #
 
-sudo: true
 language: c
 cache: ccache
-matrix:
+jobs:
   fast_finish: true
   allow_failures:
     - os: osx
   include:
   - name: "apache-rat:check"
     os: linux
-    sudo: false
     env: []
     language: java
     addons:
@@ -45,16 +43,24 @@ matrix:
     after_script:
     - cat target/rat.txt || true
   # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
-  - os: linux
+  - name: "qdrouterd:Debug"
+    os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=Debug
-  - os: linux
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
+  - name: "qdrouterd:Coverage"
+    os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.31.0 BUILD_TYPE=Coverage
-  - os: linux
+  - name: "qdrouterd:RelWithDebInfo+MemoryDebug"
+    os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.31.0 BUILD_TYPE=RelWithDebInfo
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan'
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
+  - name: "qdrouterd:Default Build"
+    os: linux
+    env:
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.31.0
   - os: osx
     osx_image: xcode11
     env:

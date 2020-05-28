@@ -70,6 +70,46 @@ struct qd_alloc_type_t {
 
 DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 
+
+// Leak Suppressions
+// A list of items that are known to leak.
+//
+// Be a Good Citizen when adding unexpected leaks to this list and include the
+// corresponding JIRA in a comment!
+//
+#ifdef QD_MEMORY_DEBUG
+static const char *leaking_types[] = {
+    // DISPATCH-1679:
+    "qd_timer_t", "qd_connector_t",
+
+    "qd_hash_handle_t",       // DISPATCH-1696
+    "qdr_conn_identifier_t",  // DISPATCH-1697
+    "qdr_connection_ref_t",   // DISPATCH-1698
+
+    // system_tests_edge_router (centos7)
+    // DISPATCH-1699
+
+    "qd_message_t",
+    "qd_message_content_t",
+    "qdr_delivery_t",
+    "qd_link_ref_t",
+
+    // system_tests_priority (centos7)
+    // DISPATCH-1700
+
+    "qd_iterator_t",
+    "qdr_action_t",
+    "qdr_field_t",
+    "qdr_link_work_t",
+    "qd_buffer_t",
+    "qd_bitmask_t",
+
+    "qd_parsed_field_t",  // DISPATCH-1701
+    "qdr_delivery_ref_t", // DISPATCH-1702
+
+    0};
+#endif
+
 //128 has been chosen because many CPUs arch use an
 //adjacent line prefetching optimization that load
 //2*cache line bytes in batch
@@ -88,6 +128,7 @@ struct qd_alloc_linked_stack_t {
     uint64_t              size;
     qd_alloc_chunk_t      base_chunk;
 };
+
 
 static inline void init_stack(qd_alloc_linked_stack_t *stack)
 {
@@ -492,11 +533,20 @@ void qd_alloc_finalize(void)
 
     qd_alloc_item_t *item;
     qd_alloc_type_t *type_item = DEQ_HEAD(type_list);
+#ifdef QD_MEMORY_DEBUG
+    const char *last_leak = 0;
+#endif
 
     FILE *dump_file = 0;
     if (debug_dump) {
         dump_file = fopen(debug_dump, "w");
     }
+#if QD_MEMORY_DEBUG
+    // For memory debug builds make it very hard to ignore leaks
+    else {
+        dump_file = stderr;
+    }
+#endif
 
     while (type_item) {
         qd_entity_cache_remove(QD_ALLOCATOR_TYPE, type_item);
@@ -550,18 +600,35 @@ void qd_alloc_finalize(void)
             qd_alloc_item_t *item = DEQ_HEAD(qtype->allocated);
             char buf[100];
             while (item) {
-                size_t i;
-                char **strings;
-                strings = backtrace_symbols(item->backtrace, item->backtrace_size);
+                DEQ_REMOVE_HEAD(qtype->allocated);
+                char **strings = backtrace_symbols(item->backtrace, item->backtrace_size);
+
+                // is this leak suppressed?
+                bool suppress = false;
+                for (int i = 0; leaking_types[i]; ++i) {
+                    if (strcmp(desc->type_name, leaking_types[i]) == 0) {
+                        suppress = true;
+                        break;
+                    }
+                }
+                if (!suppress)
+                    last_leak = desc->type_name;
 
                 qd_log_formatted_time(&item->timestamp, buf, 100);
-                fprintf(dump_file, "Leak,%s,%s,%s,%p\n",
-                        debug_dump, buf, desc->type_name, (void *)(&item[1]));
-                for (i = 0; i < item->backtrace_size; i++)
+                fprintf(dump_file, "Leak: %s type: %s address: %p%s\n",
+                        buf, desc->type_name, (void *)(&item[1]),
+                        (suppress) ? " (suppressed)" : "");
+                for (size_t i = 0; i < item->backtrace_size; i++)
                     fprintf(dump_file, "%s\n", strings[i]);
                 free(strings);
                 fprintf(dump_file, "\n");
-                item = DEQ_NEXT(item);
+
+                // free the item to prevent ASAN from also reporting this leak.
+                // Since this is a custom heap ASAN will dump the first
+                // malloc() of the object - not the last time it was allocated
+                // from the pool.
+                free(item);
+                item = DEQ_HEAD(qtype->allocated);
             }
 #endif
         }
@@ -583,10 +650,18 @@ void qd_alloc_finalize(void)
     }
 
     sys_mutex_free(init_lock);
-    if (dump_file) {
+    if (debug_dump) {
         fclose(dump_file);
         free(debug_dump);
     }
+
+#ifdef QD_MEMORY_DEBUG
+    if (last_leak) {
+        fprintf(stderr, "ERROR: Aborted due to unexpected alloc pool leak of type '%s'\n", last_leak);
+        fflush(0);
+        abort();
+    }
+#endif
 }
 
 

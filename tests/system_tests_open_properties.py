@@ -28,7 +28,7 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from test_broker import FakeBroker
 from system_test import TestCase, unittest, main_module, Qdrouterd
-from system_test import retry, TIMEOUT, wait_port, QdManager
+from system_test import retry, TIMEOUT, wait_port, QdManager, Process
 
 
 def strip_default_options(options):
@@ -351,9 +351,10 @@ class OpenPropertiesBadConfigTest(TestCase):
                       })
             ]
 
-            router = self.tester.qdrouterd(name, Qdrouterd.Config(config), wait=False)
+            router = self.tester.qdrouterd(name, Qdrouterd.Config(config),
+                                           wait=False,
+                                           expect=Process.EXIT_FAIL)
             router.wait(timeout=TIMEOUT)
-            self.assertRaises(RuntimeError, router.teardown)
             self.assertTrue(self._find_in_output(router.outfile + '.out', err))
 
 
@@ -377,9 +378,10 @@ class OpenPropertiesBadConfigTest(TestCase):
                           })
                 ]
 
-                router = self.tester.qdrouterd(name, Qdrouterd.Config(config), wait=False)
+                router = self.tester.qdrouterd(name, Qdrouterd.Config(config),
+                                               wait=False,
+                                               expect=Process.EXIT_FAIL)
                 router.wait(timeout=TIMEOUT)
-                self.assertRaises(RuntimeError, router.teardown)
                 err = "ValidationError: openProperties not allowed for role %s" % role
                 self.assertTrue(self._find_in_output(router.outfile + '.out', err))
 
