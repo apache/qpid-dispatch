@@ -308,7 +308,7 @@ class OpenPropertiesBadConfigTest(TestCase):
         invalid_properties = [
             (
                 {9: "invalid key type"},
-                "Expecting property name enclosed in double quotes"
+                "Expecting property name"
             ),
             (
                 [1, 2, "not a map"],
@@ -324,7 +324,7 @@ class OpenPropertiesBadConfigTest(TestCase):
             ),
             (
                 {None: None},
-                "Expecting property name enclosed in double quotes"
+                "Expecting property name"
             ),
             (
                 {'product': "reserved keyword"},
