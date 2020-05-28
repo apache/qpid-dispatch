@@ -357,6 +357,33 @@ class OpenPropertiesBadConfigTest(TestCase):
             self.assertTrue(self._find_in_output(router.outfile + '.out', err))
 
 
+    def test_02_invalid_role_check(self):
+        """
+        Ensure that attempting to set openProperties on inter-router/edge
+        connections fails
+        """
+        for role in ['inter-router', 'edge']:
+            for entity in ['listener', 'connector']:
+                name = "%s-%s" % (entity, role)
+
+                config = [('router', {'id': name,
+                                      'mode': 'interior'}),
+                          (entity, {
+                              'role': role,
+                              'port': self.tester.get_port(),
+                              'openProperties': {
+                                  "foo": "bar",
+                              }
+                          })
+                ]
+
+                router = self.tester.qdrouterd(name, Qdrouterd.Config(config), wait=False)
+                router.wait(timeout=TIMEOUT)
+                self.assertRaises(RuntimeError, router.teardown)
+                err = "ValidationError: openProperties not allowed for role %s" % role
+                self.assertTrue(self._find_in_output(router.outfile + '.out', err))
+
+
 if __name__== '__main__':
     unittest.main(main_module())
 

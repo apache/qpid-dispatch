@@ -383,7 +383,7 @@ class AuthServicePluginEntity(EntityAdapter):
 class ConnectionBaseEntity(EntityAdapter):
     """
     Provides validation of the openProperties attribute shared by Listener and
-    Connector entities
+    Connector entities.
     """
     # qdrouterd reserves a set of connection-property keys as well as any key
     # that starts with certain prefixes
@@ -400,6 +400,7 @@ class ConnectionBaseEntity(EntityAdapter):
         super(ConnectionBaseEntity, self).validate(**kwargs)
         op = self.attributes.get('openProperties')
         if op:
+            # key check
             msg = "Reserved key '%s' not allowed in openProperties"
             try:
                 for key in op.keys():
@@ -412,6 +413,13 @@ class ConnectionBaseEntity(EntityAdapter):
                 raise
             except Exception as exc:
                 raise ValidationError(str(exc))
+
+            # role check - cannot allow user properties on router-2-router
+            # connections
+            role = self.attributes.get('role', 'normal')
+            if role in ['inter-router', 'edge']:
+                raise ValidationError("openProperties not allowed for role %s"
+                                      % role);
 
 
 class ListenerEntity(ConnectionBaseEntity):
