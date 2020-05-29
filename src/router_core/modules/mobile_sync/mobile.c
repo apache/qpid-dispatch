@@ -71,6 +71,7 @@ typedef struct {
     uint64_t                   mobile_seq;
     qdr_address_list_t         added_addrs;
     qdr_address_list_t         deleted_addrs;
+    qdr_address_list_t         updated_addrs;
 } qdrm_mobile_sync_t;
 
 static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr_node_t *router);
@@ -82,17 +83,12 @@ static void qcm_mobile_sync_on_router_advanced_CT(qdrm_mobile_sync_t *msync, qdr
 static qd_address_treatment_t qcm_mobile_sync_default_treatment(qdr_core_t *core, int hint) {
     switch (hint) {
     case QD_TREATMENT_MULTICAST_FLOOD:
-        return QD_TREATMENT_MULTICAST_FLOOD;
     case QD_TREATMENT_MULTICAST_ONCE:
-        return QD_TREATMENT_MULTICAST_ONCE;
     case QD_TREATMENT_ANYCAST_CLOSEST:
-        return QD_TREATMENT_ANYCAST_CLOSEST;
     case QD_TREATMENT_ANYCAST_BALANCED:
-        return QD_TREATMENT_ANYCAST_BALANCED;
     case QD_TREATMENT_LINK_BALANCED:
-        return QD_TREATMENT_LINK_BALANCED;
     case QD_TREATMENT_UNAVAILABLE:
-        return QD_TREATMENT_UNAVAILABLE;
+        return (qd_address_treatment_t) hint;
     default:
         return core->qd->default_treatment == QD_TREATMENT_UNAVAILABLE ? QD_TREATMENT_ANYCAST_BALANCED : core->qd->default_treatment;
     }
@@ -840,6 +836,9 @@ static void qcm_mobile_sync_on_addr_event_CT(void          *context,
     case QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST:
         qcm_mobile_sync_on_no_longer_local_dest_CT(msync, addr);
         break;
+
+    case QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE:
+        break;
         
     default:
         break;
@@ -882,19 +881,21 @@ static void qcm_mobile_sync_init_CT(qdr_core_t *core, void **module_context)
 {
     qdrm_mobile_sync_t *msync = NEW(qdrm_mobile_sync_t);
     ZERO(msync);
-    msync->core      = core;
+    msync->core = core;
 
     //
     // Subscribe to core events:
     //
     //  - ADDR_BECAME_LOCAL_DEST     - Indicates a new address needs to tbe sync'ed with other routers
     //  - ADDR_NO_LONGER_LOCAL_DEST  - Indicates an address needs to be un-sync'd with other routers
+    //  - ADDR_FLOW_LOCAL_CHANGE     - Indicates local changes to an address's flow data
     //  - ROUTER_MOBILE_FLUSH        - All addresses associated with the router must be unmapped
     //  - ROUTER_MOBILE_SEQ_ADVANCED - A router has an advanced mobile-seq and needs to be queried
     //
     msync->event_sub = qdrc_event_subscribe_CT(core,
                                                QDRC_EVENT_ADDR_BECAME_LOCAL_DEST
                                                | QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST
+                                               | QDRC_EVENT_ADDR_FLOW_LOCAL_CHANGE
                                                | QDRC_EVENT_ROUTER_MOBILE_FLUSH
                                                | QDRC_EVENT_ROUTER_MOBILE_SEQ_ADVANCED,
                                                0,

@@ -346,17 +346,17 @@ DEQ_DECLARE(qdr_query_t, qdr_query_list_t);
 
 struct qdr_node_t {
     DEQ_LINKS(qdr_node_t);
-    qdr_address_t    *owning_addr;
-    int               mask_bit;
-    qdr_node_t       *next_hop;           ///< Next hop node _if_ this is not a neighbor node
-    int               conn_mask_bit;      ///< qdr_connection_t->mask_bit inter-router conn if this is a neighbor node
-    uint32_t          ref_count;
-    qd_bitmask_t     *valid_origins;
-    int               cost;
-    uint64_t          mobile_seq;
-    char             *wire_address_ma;    ///< The address of this router's mobile-sync agent in non-hashed form
-    uint32_t          sync_mask;          ///< Bitmask for mobile-address-sync
-    int               version;            ///< Protocol version this router is running
+    qdr_address_t *owning_addr;
+    int            mask_bit;
+    qdr_node_t    *next_hop;           ///< Next hop node _if_ this is not a neighbor node
+    int            conn_mask_bit;      ///< qdr_connection_t->mask_bit inter-router conn if this is a neighbor node
+    uint32_t       ref_count;
+    qd_bitmask_t  *valid_origins;
+    int            cost;
+    uint64_t       mobile_seq;
+    char          *wire_address_ma;    ///< The address of this router's mobile-sync agent in non-hashed form
+    uint32_t       sync_mask;          ///< Bitmask for mobile-address-sync
+    int            version;            ///< Protocol version this router is running
 };
 
 DEQ_DECLARE(qdr_node_t, qdr_node_list_t);
