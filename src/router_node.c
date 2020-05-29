@@ -1398,7 +1398,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                 " auth=%s user=%s container_id=%s",
                 connection_id, inbound ? "in" : "out", host, vhost ? vhost : "", encrypted ? proto : "no",
                         authenticated ? mech : "no", (char*) user, container);
+        sys_mutex_lock(conn->connector->lock);
         strcpy(conn->connector->conn_msg, conn_msg);
+        sys_mutex_unlock(conn->connector->lock);
     }
 }
 
