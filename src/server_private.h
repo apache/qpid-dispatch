@@ -54,7 +54,7 @@ const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 qd_listener_t *qd_server_listener(qd_server_t *server);
 qd_connector_t *qd_server_connector(qd_server_t *server);
 
-bool qd_connector_decref(qd_connector_t* ct);
+void qd_connector_decref(qd_connector_t* ct);
 void qd_listener_decref(qd_listener_t* ct);
 void qd_server_config_free(qd_server_config_t *cf);
 
@@ -62,7 +62,8 @@ typedef enum {
     CXTR_STATE_INIT = 0,
     CXTR_STATE_CONNECTING,
     CXTR_STATE_OPEN,
-    CXTR_STATE_FAILED
+    CXTR_STATE_FAILED,
+    CXTR_STATE_DELETED  // by management
 } cxtr_state_t;
 
 
@@ -123,23 +124,23 @@ DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
  * Connector objects represent the desire to create and maintain an outgoing transport connection.
  */
 struct qd_connector_t {
-    /* May be referenced by connection_manager, timer and pn_connection_t */
+    /* Referenced by connection_manager and pn_connection_t */
     sys_atomic_t              ref_count;
     qd_server_t              *server;
     qd_server_config_t        config;
     qd_timer_t               *timer;
     long                      delay;
 
-    /* Connector state and ctx can be modified in proactor or management threads. */
+    /* Connector state and ctx can be modified by I/O or management threads. */
     sys_mutex_t              *lock;
     cxtr_state_t              state;
     char                     *conn_msg;
-    qd_connection_t          *ctx;
+    qd_connection_t          *qd_conn;
 
     /* This conn_list contains all the connection information needed to make a connection. It also includes failover connection information */
     qd_failover_item_list_t   conn_info_list;
     int                       conn_index; // Which connection in the connection list to connect to next.
-    
+
     /* Optional policy vhost name */
     char                     *policy_vhost;
 
