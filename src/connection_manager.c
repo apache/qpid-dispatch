@@ -790,6 +790,8 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
     int i = 1;
     int num_items = 0;
 
+    sys_mutex_lock(ct->lock);
+
     qd_failover_item_list_t   conn_info_list = ct->conn_info_list;
 
     int conn_info_len = DEQ_SIZE(conn_info_list);
@@ -859,16 +861,23 @@ qd_error_t qd_entity_refresh_connector(qd_entity_t* entity, void *impl)
     case CXTR_STATE_INIT:
       state_info = "INITIALIZING";
       break;
+    case CXTR_STATE_DELETED:
+      state_info = "DELETED";
+      break;
     default:
       state_info = "UNKNOWN";
       break;
     }
 
     if (qd_entity_set_string(entity, "failoverUrls", failover_info) == 0
-            && qd_entity_set_string(entity, "connectionStatus", state_info) == 0
-            && qd_entity_set_string(entity, "connectionMsg", ct->conn_msg) == 0)
-        return QD_ERROR_NONE;
+        && qd_entity_set_string(entity, "connectionStatus", state_info) == 0
+        && qd_entity_set_string(entity, "connectionMsg", ct->conn_msg) == 0) {
 
+        sys_mutex_unlock(ct->lock);
+        return QD_ERROR_NONE;
+    }
+
+    sys_mutex_unlock(ct->lock);
     return qd_error_code();
 }
 
@@ -955,11 +964,21 @@ void qd_connection_manager_free(qd_connection_manager_t *cm)
         li = DEQ_HEAD(cm->listeners);
     }
 
-    qd_connector_t *c = DEQ_HEAD(cm->connectors);
-    while (c) {
+    qd_connector_t *connector = DEQ_HEAD(cm->connectors);
+    while (connector) {
         DEQ_REMOVE_HEAD(cm->connectors);
-        qd_connector_decref(c);
-        c = DEQ_HEAD(cm->connectors);
+        sys_mutex_lock(connector->lock);
+        // setting DELETED below ensures the timer callback
+        // will not initiate a re-connect once we drop
+        // the lock
+        connector->state = CXTR_STATE_DELETED;
+        sys_mutex_unlock(connector->lock);
+        // cannot cancel timer while holding lock since the
+        // callback takes the lock
+        qd_timer_cancel(connector->timer);
+        qd_connector_decref(connector);
+
+        connector = DEQ_HEAD(cm->connectors);
     }
 
     qd_config_ssl_profile_t *sslp = DEQ_HEAD(cm->config_ssl_profiles);
@@ -1049,18 +1068,27 @@ static void deferred_close(void *context, bool discard) {
 }
 
 
+// threading: called by management thread while I/O thread may be
+// referencing the qd_connector_t via the qd_connection_t
+//
 void qd_connection_manager_delete_connector(qd_dispatch_t *qd, void *impl)
 {
     qd_connector_t *ct = (qd_connector_t*) impl;
     if (ct) {
+        // cannot free the timer while holding ct->lock since the
+        // timer callback may be running during the call to qd_timer_free
+        qd_timer_t *timer = 0;
         sys_mutex_lock(ct->lock);
-        if (ct->ctx) {
-            ct->ctx->connector = 0;
-            if(ct->ctx->pn_conn)
-                qd_connection_invoke_deferred(ct->ctx, deferred_close, ct->ctx->pn_conn);
-
+        timer = ct->timer;
+        ct->timer = 0;
+        ct->state = CXTR_STATE_DELETED;
+        qd_connection_t *conn = ct->qd_conn;
+        if (conn && conn->pn_conn) {
+            qd_connection_invoke_deferred(conn, deferred_close, conn->pn_conn);
         }
         sys_mutex_unlock(ct->lock);
+
+        qd_timer_free(timer);
         DEQ_REMOVE(qd->connection_manager->connectors, ct);
         qd_connector_decref(ct);
     }
