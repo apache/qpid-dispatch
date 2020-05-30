@@ -20,10 +20,8 @@
 BasedOnStyle: Google
 IndentWidth: 4
 ColumnLimit: 120
+BreakBeforeBraces: Linux
 AllowShortFunctionsOnASingleLine: false
 SpaceAfterCStyleCast: true
-DerivePointerAlignment: false
-PointerAlignment: Left
 AlignConsecutiveAssignments: true
-AlignConsecutiveDeclarations: true
 KeepEmptyLinesAtTheStartOfBlocks: false

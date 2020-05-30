@@ -43,28 +43,28 @@ typedef enum {
 // to make a connection.  It also includes failover connection
 // information.
 struct qd_connector_t {
-    sys_atomic_t            ref_count;
-    qd_server_t*            server;
-    qd_server_config_t      config;
-    qd_timer_t*             timer;
-    long                    delay;
-    sys_mutex_t*            lock;  // Connector state and ctx can be modified in proactor or management threads
-    cxtr_state_t            state;
-    char*                   conn_msg;
-    qd_connection_t*        ctx;
+    sys_atomic_t ref_count;
+    qd_server_t *server;
+    qd_server_config_t config;
+    qd_timer_t *timer;
+    long delay;
+    sys_mutex_t *lock;  // Connector state and ctx can be modified in proactor or management threads
+    cxtr_state_t state;
+    char *conn_msg;
+    qd_connection_t *ctx;
     qd_failover_item_list_t conn_info_list;
-    int                     conn_index;    // Which connection in the list is next
-    char*                   policy_vhost;  // Optional policy vhost name
+    int conn_index;      // Which connection in the list is next
+    char *policy_vhost;  // Optional policy vhost name
     DEQ_LINKS(qd_connector_t);
 };
 
 DEQ_DECLARE(qd_connector_t, qd_connector_list_t);
 ALLOC_DECLARE(qd_connector_t);
 
-const char*               qd_connector_policy_vhost(qd_connector_t* connector);
-const qd_server_config_t* qd_connector_config(const qd_connector_t* connector);
-bool                      qd_connector_decref(qd_connector_t* connector);
-qd_failover_item_t*       qd_connector_get_conn_info(qd_connector_t* connector);
-bool                      qd_connector_has_failover_info(qd_connector_t* connector);
+const char *qd_connector_policy_vhost(qd_connector_t *connector);
+const qd_server_config_t *qd_connector_config(const qd_connector_t *connector);
+bool qd_connector_decref(qd_connector_t *connector);
+qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *connector);
+bool qd_connector_has_failover_info(qd_connector_t *connector);
 
 #endif

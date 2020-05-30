@@ -33,11 +33,11 @@
 // A listener may be referenced by connection_manager and
 // pn_listener_t.
 struct qd_listener_t {
-    sys_atomic_t        ref_count;
-    qd_server_t*        server;
-    qd_server_config_t  config;
-    pn_listener_t*      pn_listener;
-    qd_http_listener_t* http;
+    sys_atomic_t ref_count;
+    qd_server_t *server;
+    qd_server_config_t config;
+    pn_listener_t *pn_listener;
+    qd_http_listener_t *http;
     DEQ_LINKS(qd_listener_t);
     bool exit_on_error;
 };
@@ -45,6 +45,6 @@ struct qd_listener_t {
 DEQ_DECLARE(qd_listener_t, qd_listener_list_t);
 ALLOC_DECLARE(qd_listener_t);
 
-void qd_listener_decref(qd_listener_t* listener);
+void qd_listener_decref(qd_listener_t *listener);
 
 #endif

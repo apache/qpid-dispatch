@@ -26,11 +26,13 @@
 
 ALLOC_DEFINE(qd_connector_t);
 
-const char* qd_connector_policy_vhost(qd_connector_t* connector) {
+const char *qd_connector_policy_vhost(qd_connector_t *connector)
+{
     return connector->policy_vhost;
 }
 
-bool qd_connector_connect(qd_connector_t* connector) {
+bool qd_connector_connect(qd_connector_t *connector)
+{
     sys_mutex_lock(connector->lock);
 
     connector->ctx   = NULL;
@@ -45,7 +47,8 @@ bool qd_connector_connect(qd_connector_t* connector) {
     return true;
 }
 
-bool qd_connector_decref(qd_connector_t* connector) {
+bool qd_connector_decref(qd_connector_t *connector)
+{
     if (connector && sys_atomic_dec(&connector->ref_count) == 1) {
         sys_mutex_lock(connector->lock);
 
@@ -58,7 +61,7 @@ bool qd_connector_decref(qd_connector_t* connector) {
         qd_server_config_free(&connector->config);
         qd_timer_free(connector->timer);
 
-        qd_failover_item_t* item = DEQ_HEAD(connector->conn_info_list);
+        qd_failover_item_t *item = DEQ_HEAD(connector->conn_info_list);
 
         while (item) {
             DEQ_REMOVE_HEAD(connector->conn_info_list);
@@ -86,8 +89,9 @@ bool qd_connector_decref(qd_connector_t* connector) {
     return false;
 }
 
-qd_failover_item_t* qd_connector_get_conn_info(qd_connector_t* connector) {
-    qd_failover_item_t* item = DEQ_HEAD(connector->conn_info_list);
+qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *connector)
+{
+    qd_failover_item_t *item = DEQ_HEAD(connector->conn_info_list);
 
     if (DEQ_SIZE(connector->conn_info_list) > 1) {
         for (int i = 1; i < connector->conn_index; i++) {
@@ -98,7 +102,8 @@ qd_failover_item_t* qd_connector_get_conn_info(qd_connector_t* connector) {
     return item;
 }
 
-bool qd_connector_has_failover_info(qd_connector_t* connector) {
+bool qd_connector_has_failover_info(qd_connector_t *connector)
+{
     if (connector && DEQ_SIZE(connector->conn_info_list) > 1) {
         return true;
     }
@@ -106,6 +111,7 @@ bool qd_connector_has_failover_info(qd_connector_t* connector) {
     return false;
 }
 
-const qd_server_config_t* qd_connector_config(const qd_connector_t* connector) {
+const qd_server_config_t *qd_connector_config(const qd_connector_t *connector)
+{
     return &connector->config;
 }

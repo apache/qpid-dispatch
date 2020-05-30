@@ -33,7 +33,7 @@
 #include "connector.h"
 #include "listener.h"
 
-const char* MECH_EXTERNAL = "EXTERNAL";
+const char *MECH_EXTERNAL = "EXTERNAL";
 
 // Allowed uidFormat fields
 const char CERT_COUNTRY_CODE       = 'c';
@@ -45,14 +45,15 @@ const char CERT_COMMON_NAME        = 'n';
 const char CERT_FINGERPRINT_SHA1   = '1';
 const char CERT_FINGERPRINT_SHA256 = '2';
 const char CERT_FINGERPRINT_SHA512 = '5';
-char*      COMPONENT_SEPARATOR     = ";";
+char *COMPONENT_SEPARATOR          = ";";  // XXX Should be const?
 
 ALLOC_DEFINE(qd_connection_t);
 
-void connection_invoke_deferred_calls(qd_connection_t* conn, bool discard);
+void connection_invoke_deferred_calls(qd_connection_t *conn, bool discard);
 
-void qd_connection_free(qd_connection_t* conn) {
-    qd_server_t* server = conn->server;
+void qd_connection_free(qd_connection_t *conn)
+{
+    qd_server_t *server = conn->server;
 
     // If this is a dispatch connector, schedule the re-connect timer
     if (conn->connector) {
@@ -98,7 +99,7 @@ void qd_connection_free(qd_connection_t* conn) {
     qd_policy_settings_free(conn->policy_settings);
 
     if (conn->free_user_id) {
-        free((char*) conn->user_id);
+        free((char *) conn->user_id);
     }
 
     if (conn->timer) {
@@ -115,19 +116,20 @@ void qd_connection_free(qd_connection_t* conn) {
     // Note: pn_conn is freed by the proactor
 }
 
-static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* transport);
+static const char *connection_get_user(qd_connection_t *conn, pn_transport_t *transport);
 
-void qd_connection_set_user(qd_connection_t* conn) {
-    pn_transport_t* transport = pn_connection_transport(conn->pn_conn);
-    pn_sasl_t*      sasl      = pn_sasl(transport);
+void qd_connection_set_user(qd_connection_t *conn)
+{
+    pn_transport_t *transport = pn_connection_transport(conn->pn_conn);
+    pn_sasl_t *sasl           = pn_sasl(transport);
 
     if (sasl) {
-        const char* mech = pn_sasl_get_mech(sasl);
+        const char *mech = pn_sasl_get_mech(sasl);
         conn->user_id    = pn_transport_get_user(transport);
 
         // We want to set the user name only if it is not already set and the selected sasl mechanism is EXTERNAL
         if (mech && strcmp(mech, MECH_EXTERNAL) == 0) {
-            const char* user_id = connection_get_user(conn, transport);
+            const char *user_id = connection_get_user(conn, transport);
 
             if (user_id) {
                 conn->user_id = user_id;
@@ -136,39 +138,48 @@ void qd_connection_set_user(qd_connection_t* conn) {
     }
 }
 
-void qd_connection_set_context(qd_connection_t* conn, void* context) {
+void qd_connection_set_context(qd_connection_t *conn, void *context)
+{
     conn->user_context = context;
 }
 
-void* qd_connection_get_context(qd_connection_t* conn) {
+void *qd_connection_get_context(qd_connection_t *conn)
+{
     return conn->user_context;
 }
 
-void* qd_connection_get_config_context(qd_connection_t* conn) {
+void *qd_connection_get_config_context(qd_connection_t *conn)
+{
     return conn->context;
 }
 
-void qd_connection_set_link_context(qd_connection_t* conn, void* context) {
+void qd_connection_set_link_context(qd_connection_t *conn, void *context)
+{
     conn->link_context = context;
 }
 
-void* qd_connection_get_link_context(qd_connection_t* conn) {
+void *qd_connection_get_link_context(qd_connection_t *conn)
+{
     return conn->link_context;
 }
 
-pn_connection_t* qd_connection_pn(qd_connection_t* conn) {
+pn_connection_t *qd_connection_pn(qd_connection_t *conn)
+{
     return conn->pn_conn;
 }
 
-bool qd_connection_inbound(qd_connection_t* conn) {
+bool qd_connection_inbound(qd_connection_t *conn)
+{
     return conn->listener != NULL;
 }
 
-uint64_t qd_connection_connection_id(qd_connection_t* conn) {
+uint64_t qd_connection_connection_id(qd_connection_t *conn)
+{
     return conn->connection_id;
 }
 
-const qd_server_config_t* qd_connection_config(const qd_connection_t* conn) {
+const qd_server_config_t *qd_connection_config(const qd_connection_t *conn)
+{
     if (conn->listener) {
         return &conn->listener->config;
     }
@@ -180,10 +191,11 @@ const qd_server_config_t* qd_connection_config(const qd_connection_t* conn) {
     return NULL;
 }
 
-void qd_connection_invoke_deferred(qd_connection_t* conn, qd_deferred_t call, void* context) {
+void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, void *context)
+{
     assert(conn);
 
-    qd_deferred_call_t* dc = new_qd_deferred_call_t();
+    qd_deferred_call_t *dc = new_qd_deferred_call_t();
     DEQ_ITEM_INIT(dc);
     dc->call    = call;
     dc->context = context;
@@ -195,11 +207,13 @@ void qd_connection_invoke_deferred(qd_connection_t* conn, qd_deferred_t call, vo
     qd_server_activate(conn);
 }
 
-const char* qd_connection_remote_ip(const qd_connection_t* conn) {
+const char *qd_connection_remote_ip(const qd_connection_t *conn)
+{
     return conn->rhost;
 }
 
-const char* qd_connection_name(const qd_connection_t* conn) {
+const char *qd_connection_name(const qd_connection_t *conn)
+{
     if (conn->connector) {
         return conn->connector->config.host_port;
     } else {
@@ -207,15 +221,18 @@ const char* qd_connection_name(const qd_connection_t* conn) {
     }
 }
 
-qd_connector_t* qd_connection_connector(const qd_connection_t* conn) {
+qd_connector_t *qd_connection_connector(const qd_connection_t *conn)
+{
     return conn->connector;
 }
 
-bool qd_connection_strip_annotations_in(const qd_connection_t* conn) {
+bool qd_connection_strip_annotations_in(const qd_connection_t *conn)
+{
     return conn->strip_annotations_in;
 }
 
-uint64_t qd_connection_max_message_size(const qd_connection_t* conn) {
+uint64_t qd_connection_max_message_size(const qd_connection_t *conn)
+{
     if (conn && conn->policy_settings) {
         return conn->policy_settings->maxMessageSize;
     }
@@ -227,8 +244,9 @@ uint64_t qd_connection_max_message_size(const qd_connection_t* conn) {
 // components specified in the config->ssl_uid_format.  Parses through
 // each component and builds a semi-colon delimited string which is
 // returned as the user id.
-static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* transport) {
-    const qd_server_config_t* config = conn->connector ? &conn->connector->config : &conn->listener->config;
+static const char *connection_get_user(qd_connection_t *conn, pn_transport_t *transport)
+{
+    const qd_server_config_t *config = conn->connector ? &conn->connector->config : &conn->listener->config;
 
     if (config->ssl_uid_format) {
         // The ssl_uid_format length cannot be greater that 7
@@ -246,12 +264,12 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
         // pointed to by dest
         strncpy(components, config->ssl_uid_format, 7);
 
-        const char* country_code  = 0;
-        const char* state         = 0;
-        const char* locality_city = 0;
-        const char* organization  = 0;
-        const char* org_unit      = 0;
-        const char* common_name   = 0;
+        const char *country_code  = 0;
+        const char *state         = 0;
+        const char *locality_city = 0;
+        const char *organization  = 0;
+        const char *org_unit      = 0;
+        const char *common_name   = 0;
 
         // SHA1 is 20 octets (40 hex characters); SHA256 is 32 octets (64 hex characters).
         // SHA512 is 64 octets (128 hex characters)
@@ -268,14 +286,14 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                 country_code = pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_COUNTRY_NAME);
 
                 if (country_code) {
-                    uid_length += strlen((const char*) country_code);
+                    uid_length += strlen((const char *) country_code);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_STATE) {
                 state = pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_STATE_OR_PROVINCE);
 
                 if (state) {
-                    uid_length += strlen((const char*) state);
+                    uid_length += strlen((const char *) state);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_CITY_LOCALITY) {
@@ -283,7 +301,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                     pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_CITY_OR_LOCALITY);
 
                 if (locality_city) {
-                    uid_length += strlen((const char*) locality_city);
+                    uid_length += strlen((const char *) locality_city);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_ORGANIZATION_NAME) {
@@ -291,21 +309,21 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                     pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_ORGANIZATION_NAME);
 
                 if (organization) {
-                    uid_length += strlen((const char*) organization);
+                    uid_length += strlen((const char *) organization);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_ORGANIZATION_UNIT) {
                 org_unit = pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_ORGANIZATION_UNIT);
 
                 if (org_unit) {
-                    uid_length += strlen((const char*) org_unit);
+                    uid_length += strlen((const char *) org_unit);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_COMMON_NAME) {
                 common_name = pn_ssl_get_remote_subject_subfield(pn_ssl(transport), PN_SSL_CERT_SUBJECT_COMMON_NAME);
 
                 if (common_name) {
-                    uid_length += strlen((const char*) common_name);
+                    uid_length += strlen((const char *) common_name);
                     semi_colon_count++;
                 }
             } else if (components[x] == CERT_FINGERPRINT_SHA1 || components[x] == CERT_FINGERPRINT_SHA256 ||
@@ -346,7 +364,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
 
         if (uid_length > 0) {
             // The +1 is for the '\0' character
-            char* user_id = malloc((uid_length + semi_colon_count + 1) * sizeof(char));
+            char *user_id = malloc((uid_length + semi_colon_count + 1) * sizeof(char));
 
             // We have allocated memory for user_id. We are
             // responsible for freeing this memory. Set
@@ -364,7 +382,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) country_code);
+                        strcat(user_id, (char *) country_code);
                     }
                 } else if (components[x] == CERT_STATE) {
                     if (state) {
@@ -372,7 +390,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) state);
+                        strcat(user_id, (char *) state);
                     }
                 } else if (components[x] == CERT_CITY_LOCALITY) {
                     if (locality_city) {
@@ -380,7 +398,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) locality_city);
+                        strcat(user_id, (char *) locality_city);
                     }
                 } else if (components[x] == CERT_ORGANIZATION_NAME) {
                     if (organization) {
@@ -388,7 +406,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) organization);
+                        strcat(user_id, (char *) organization);
                     }
                 } else if (components[x] == CERT_ORGANIZATION_UNIT) {
                     if (org_unit) {
@@ -396,7 +414,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) org_unit);
+                        strcat(user_id, (char *) org_unit);
                     }
                 } else if (components[x] == CERT_COMMON_NAME) {
                     if (common_name) {
@@ -404,16 +422,16 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) common_name);
+                        strcat(user_id, (char *) common_name);
                     }
                 } else if (components[x] == CERT_FINGERPRINT_SHA1 || components[x] == CERT_FINGERPRINT_SHA256 ||
                            components[x] == CERT_FINGERPRINT_SHA512) {
-                    if (strlen((char*) fingerprint) > 0) {
+                    if (strlen((char *) fingerprint) > 0) {
                         if (*user_id != '\0') {
                             strcat(user_id, COMPONENT_SEPARATOR);
                         }
 
-                        strcat(user_id, (char*) fingerprint);
+                        strcat(user_id, (char *) fingerprint);
                     }
                 }
             }
@@ -422,7 +440,7 @@ static const char* connection_get_user(qd_connection_t* conn, pn_transport_t* tr
                 // Translate extracted id into display name
 
                 qd_python_lock_state_t lock_state = qd_python_lock();
-                PyObject* result = PyObject_CallMethod((PyObject*) conn->server->py_displayname_obj, "query", "(ss)",
+                PyObject *result = PyObject_CallMethod((PyObject *) conn->server->py_displayname_obj, "query", "(ss)",
                                                        config->ssl_profile, user_id);
 
                 if (result) {

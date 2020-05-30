@@ -27,10 +27,11 @@ static const int BACKLOG = 50;
 
 ALLOC_DEFINE(qd_listener_t);
 
-static bool listener_listen_pn(qd_listener_t* listener);
-static bool listener_listen_http(qd_listener_t* listener);
+static bool listener_listen_pn(qd_listener_t *listener);
+static bool listener_listen_http(qd_listener_t *listener);
 
-bool qd_listener_listen(qd_listener_t* listener) {
+bool qd_listener_listen(qd_listener_t *listener)
+{
     if (listener->pn_listener || listener->http) {
         // Already listening
         return true;
@@ -43,7 +44,8 @@ bool qd_listener_listen(qd_listener_t* listener) {
     }
 }
 
-void qd_listener_decref(qd_listener_t* listener) {
+void qd_listener_decref(qd_listener_t *listener)
+{
     if (listener && sys_atomic_dec(&listener->ref_count) == 1) {
         qd_server_config_free(&listener->config);
         free_qd_listener_t(listener);
@@ -52,11 +54,13 @@ void qd_listener_decref(qd_listener_t* listener) {
 
 // XXX Functions like this one tend not to be used much in the router
 // source code
-qd_http_listener_t* qd_listener_http(qd_listener_t* listener) {
+qd_http_listener_t *qd_listener_http(qd_listener_t *listener)
+{
     return listener->http;
 }
 
-static bool listener_listen_pn(qd_listener_t* listener) {
+static bool listener_listen_pn(qd_listener_t *listener)
+{
     listener->pn_listener = pn_listener();
 
     if (listener->pn_listener) {
@@ -76,7 +80,8 @@ static bool listener_listen_pn(qd_listener_t* listener) {
     return listener->pn_listener;
 }
 
-static bool listener_listen_http(qd_listener_t* listener) {
+static bool listener_listen_http(qd_listener_t *listener)
+{
     if (listener->server->http) {
         // qd_http_listener holds a reference to listener.  It will
         // decref when closed.
