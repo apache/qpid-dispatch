@@ -19,7 +19,7 @@
 
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/amqp.h>
-#include <qpid/dispatch/router_core.h>
+#include <qpid/dispatch/protocol_adaptor.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/timer.h>
 
