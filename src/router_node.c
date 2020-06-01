@@ -28,7 +28,7 @@
 #include "router_private.h"
 #include "delivery.h"
 #include "policy.h"
-#include <qpid/dispatch/router_core.h>
+#include <qpid/dispatch/protocol_adaptor.h>
 #include <qpid/dispatch/proton_utils.h>
 #include <proton/sasl.h>
 #include <inttypes.h>
