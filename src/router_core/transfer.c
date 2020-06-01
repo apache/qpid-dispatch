@@ -157,7 +157,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                 do {
                     settled = dlv->settled;
                     sys_mutex_unlock(conn->work_lock);
-                    new_disp = core->deliver_handler(core->user_context, link, dlv, settled);
+                    new_disp = conn->protocol_adaptor->deliver_handler(conn->protocol_adaptor->user_context, link, dlv, settled);
                     sys_mutex_lock(conn->work_lock);
                 } while (settled != dlv->settled);  // oops missed the settlement
                 send_complete = qdr_delivery_send_complete(dlv);
@@ -232,7 +232,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
         }
 
         if (offer != -1)
-            core->offer_handler(core->user_context, link, offer);
+            conn->protocol_adaptor->offer_handler(conn->protocol_adaptor->user_context, link, offer);
     }
 
     return num_deliveries_completed;
