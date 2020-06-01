@@ -916,6 +916,7 @@ static void qdr_global_stats_request_CT(qdr_core_t *core, qdr_action_t *action, 
     qdr_post_general_work_CT(core, work);
 }
 
+
 void qdr_request_global_stats(qdr_core_t *core, qdr_global_stats_t *stats, qdr_global_stats_handler_t callback, void *context)
 {
     qdr_action_t *action = qdr_action(qdr_global_stats_request_CT, "global_stats_request");
@@ -925,3 +926,51 @@ void qdr_request_global_stats(qdr_core_t *core, qdr_global_stats_t *stats, qdr_g
     qdr_action_enqueue(core, action);
 }
 
+
+qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
+                                             const char                *name,
+                                             void                      *context,
+                                             qdr_connection_activate_t  activate,
+                                             qdr_link_first_attach_t    first_attach,
+                                             qdr_link_second_attach_t   second_attach,
+                                             qdr_link_detach_t          detach,
+                                             qdr_link_flow_t            flow,
+                                             qdr_link_offer_t           offer,
+                                             qdr_link_drained_t         drained,
+                                             qdr_link_drain_t           drain,
+                                             qdr_link_push_t            push,
+                                             qdr_link_deliver_t         deliver,
+                                             qdr_link_get_credit_t      get_credit,
+                                             qdr_delivery_update_t      delivery_update,
+                                             qdr_connection_close_t     conn_close,
+                                             qdr_connection_trace_t     conn_trace)
+{
+    qdr_protocol_adaptor_t *adaptor = NEW(qdr_protocol_adaptor_t);
+
+    DEQ_ITEM_INIT(adaptor);
+    adaptor->name                    = name;
+    adaptor->user_context            = context;
+    adaptor->first_attach_handler    = first_attach;
+    adaptor->second_attach_handler   = second_attach;
+    adaptor->detach_handler          = detach;
+    adaptor->flow_handler            = flow;
+    adaptor->offer_handler           = offer;
+    adaptor->drained_handler         = drained;
+    adaptor->drain_handler           = drain;
+    adaptor->push_handler            = push;
+    adaptor->deliver_handler         = deliver;
+    adaptor->get_credit_handler      = get_credit;
+    adaptor->delivery_update_handler = delivery_update;
+    adaptor->conn_close_handler      = conn_close;
+    adaptor->conn_trace_handler      = conn_trace;
+
+    DEQ_INSERT_TAIL(core->protocol_adaptors, adaptor);
+    return adaptor;
+}
+
+
+void qdr_protocol_adaptor_free(qdr_core_t *core, qdr_protocol_adaptor_t *adaptor)
+{
+    DEQ_REMOVE(core->protocol_adaptors, adaptor);
+    free(adaptor);
+}

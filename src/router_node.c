@@ -37,6 +37,8 @@ const char *QD_ROUTER_NODE_TYPE = "router.node";
 const char *QD_ROUTER_ADDRESS_TYPE = "router.address";
 const char *QD_ROUTER_LINK_TYPE = "router.link";
 
+static qdr_protocol_adaptor_t *amqp_direct_adaptor = 0;
+
 static char *router_role    = "inter-router";
 static char *container_role = "route-container";
 static char *edge_role      = "edge";
@@ -1209,7 +1211,13 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                                                  rversion,
                                                                  streaming_links);
 
-    qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
+    qdr_connection_opened(router->router_core,
+                          amqp_direct_adaptor,
+                          inbound,
+                          role,
+                          cost,
+                          connection_id,
+                          name,
                           pn_connection_remote_container(pn_conn),
                           conn->strip_annotations_in,
                           conn->strip_annotations_out,
@@ -1218,7 +1226,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                           link_capacity,
                           vhost,
                           connection_info,
-                          bind_connection_context, conn);
+                          bind_connection_context,
+                          conn);
 
     char   props_str[1000];
     size_t props_len = 1000;
@@ -1978,21 +1987,23 @@ void qd_router_setup_late(qd_dispatch_t *qd)
     qd->router->tracemask   = qd_tracemask();
     qd->router->router_core = qdr_core(qd, qd->router->router_mode, qd->router->router_area, qd->router->router_id);
 
-    qdr_connection_handlers(qd->router->router_core, (void*) qd->router,
-                            CORE_connection_activate,
-                            CORE_link_first_attach,
-                            CORE_link_second_attach,
-                            CORE_link_detach,
-                            CORE_link_flow,
-                            CORE_link_offer,
-                            CORE_link_drained,
-                            CORE_link_drain,
-                            CORE_link_push,
-                            CORE_link_deliver,
-                            CORE_link_get_credit,
-                            CORE_delivery_update,
-                            CORE_close_connection,
-                            CORE_conn_trace);
+    amqp_direct_adaptor = qdr_protocol_adaptor(qd->router->router_core,
+                                               "amqp-direct",
+                                               (void*) qd->router,
+                                               CORE_connection_activate,
+                                               CORE_link_first_attach,
+                                               CORE_link_second_attach,
+                                               CORE_link_detach,
+                                               CORE_link_flow,
+                                               CORE_link_offer,
+                                               CORE_link_drained,
+                                               CORE_link_drain,
+                                               CORE_link_push,
+                                               CORE_link_deliver,
+                                               CORE_link_get_credit,
+                                               CORE_delivery_update,
+                                               CORE_close_connection,
+                                               CORE_conn_trace);
 
     qd_router_python_setup(qd->router);
     qd_timer_schedule(qd->router->timer, 1000);
@@ -2011,6 +2022,7 @@ void qd_router_free(qd_router_t *router)
 
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
+    qdr_protocol_adaptor_free(router->router_core, amqp_direct_adaptor);
     qdr_core_free(router->router_core);
     qd_tracemask_free(router->tracemask);
     qd_timer_free(router->timer);
