@@ -26,26 +26,27 @@
 #define QDR_CONNECTION_IDENTITY               1
 #define QDR_CONNECTION_HOST                   2
 #define QDR_CONNECTION_ROLE                   3
-#define QDR_CONNECTION_DIR                    4
-#define QDR_CONNECTION_CONTAINER_ID           5
-#define QDR_CONNECTION_SASL_MECHANISMS        6
-#define QDR_CONNECTION_IS_AUTHENTICATED       7
-#define QDR_CONNECTION_USER                   8
-#define QDR_CONNECTION_IS_ENCRYPTED           9
-#define QDR_CONNECTION_SSLPROTO              10
-#define QDR_CONNECTION_SSLCIPHER             11
-#define QDR_CONNECTION_PROPERTIES            12
-#define QDR_CONNECTION_SSLSSF                13
-#define QDR_CONNECTION_TENANT                14
-#define QDR_CONNECTION_TYPE                  15
-#define QDR_CONNECTION_SSL                   16
-#define QDR_CONNECTION_OPENED                17
-#define QDR_CONNECTION_ACTIVE                18
-#define QDR_CONNECTION_ADMIN_STATUS          19
-#define QDR_CONNECTION_OPER_STATUS           20
-#define QDR_CONNECTION_UPTIME_SECONDS        21
-#define QDR_CONNECTION_LAST_DLV_SECONDS      22
-#define QDR_CONNECTION_ENABLE_PROTOCOL_TRACE 23
+#define QDR_CONNECTION_PROTOCOL               4
+#define QDR_CONNECTION_DIR                    5
+#define QDR_CONNECTION_CONTAINER_ID           6
+#define QDR_CONNECTION_SASL_MECHANISMS        7
+#define QDR_CONNECTION_IS_AUTHENTICATED       8
+#define QDR_CONNECTION_USER                   9
+#define QDR_CONNECTION_IS_ENCRYPTED          10
+#define QDR_CONNECTION_SSLPROTO              11
+#define QDR_CONNECTION_SSLCIPHER             12
+#define QDR_CONNECTION_PROPERTIES            13
+#define QDR_CONNECTION_SSLSSF                14
+#define QDR_CONNECTION_TENANT                15
+#define QDR_CONNECTION_TYPE                  16
+#define QDR_CONNECTION_SSL                   17
+#define QDR_CONNECTION_OPENED                18
+#define QDR_CONNECTION_ACTIVE                19
+#define QDR_CONNECTION_ADMIN_STATUS          20
+#define QDR_CONNECTION_OPER_STATUS           21
+#define QDR_CONNECTION_UPTIME_SECONDS        22
+#define QDR_CONNECTION_LAST_DLV_SECONDS      23
+#define QDR_CONNECTION_ENABLE_PROTOCOL_TRACE 24
 
 
 const char * const QDR_CONNECTION_DIR_IN  = "in";
@@ -70,6 +71,7 @@ const char *qdr_connection_columns[] =
      "identity",
      "host",
      "role",
+     "protocol",
      "dir",
      "container",
      "sasl",
@@ -145,6 +147,10 @@ static void qdr_connection_insert_column_CT(qdr_core_t *core, qdr_connection_t *
 
     case QDR_CONNECTION_ROLE:
         qd_compose_insert_string(body, qdr_connection_roles[conn->connection_info->role]);
+        break;
+
+    case QDR_CONNECTION_PROTOCOL:
+        qd_compose_insert_string(body, conn->protocol_adaptor->name);
         break;
 
     case QDR_CONNECTION_DIR:

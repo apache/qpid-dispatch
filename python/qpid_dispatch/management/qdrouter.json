@@ -1742,6 +1742,10 @@
                 "operStatus": {
                     "type": ["up", "closing"]
                 },
+                "protocol": {
+                    "type": "string",
+                    "description": "The protocol adaptor that is handling this connection"
+                },
                 "container": {
                     "description": "The container for this connection",
                     "type": "string"
