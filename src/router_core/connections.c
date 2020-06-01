@@ -67,27 +67,29 @@ qdr_terminus_t *qdr_terminus_router_data(void)
 // Interface Functions
 //==================================================================================
 
-qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
-                                        bool                   incoming,
-                                        qdr_connection_role_t  role,
-                                        int                    cost,
-                                        uint64_t               management_id,
-                                        const char            *label,
-                                        const char            *remote_container_id,
-                                        bool                   strip_annotations_in,
-                                        bool                   strip_annotations_out,
-                                        bool                   policy_allow_dynamic_link_routes,
-                                        bool                   policy_allow_admin_status_update,
-                                        int                    link_capacity,
-                                        const char            *vhost,
-                                        qdr_connection_info_t *connection_info,
+qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
+                                        qdr_protocol_adaptor_t       *protocol_adaptor,
+                                        bool                          incoming,
+                                        qdr_connection_role_t         role,
+                                        int                           cost,
+                                        uint64_t                      management_id,
+                                        const char                   *label,
+                                        const char                   *remote_container_id,
+                                        bool                          strip_annotations_in,
+                                        bool                          strip_annotations_out,
+                                        bool                          policy_allow_dynamic_link_routes,
+                                        bool                          policy_allow_admin_status_update,
+                                        int                           link_capacity,
+                                        const char                   *vhost,
+                                        qdr_connection_info_t        *connection_info,
                                         qdr_connection_bind_context_t context_binder,
-                                        void                  *bind_token)
+                                        void                         *bind_token)
 {
     qdr_action_t     *action = qdr_action(qdr_connection_opened_CT, "connection_opened");
     qdr_connection_t *conn   = new_qdr_connection_t();
 
     ZERO(conn);
+    conn->protocol_adaptor      = protocol_adaptor;
     conn->identity              = management_id;
     conn->connection_info       = connection_info;
     conn->core                  = core;
@@ -236,26 +238,28 @@ void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
     //
     // Get Proton's view of this link's available credit.
     //
-    int pn_credit = core->get_credit_handler(core->user_context, link);
+    if (link && link->conn && link->conn->protocol_adaptor) {
+        int pn_credit = link->conn->protocol_adaptor->get_credit_handler(link->conn->protocol_adaptor->user_context, link);
 
-    if (link->credit_reported > 0 && pn_credit == 0) {
-        //
-        // The link has transitioned from positive credit to zero credit.
-        //
-        link->zero_credit_time = core->uptime_ticks;
-    } else if (link->credit_reported == 0 && pn_credit > 0) {
-        //
-        // The link has transitioned from zero credit to positive credit.
-        // Clear the recorded time.
-        //
-        link->zero_credit_time = 0;
-        if (link->reported_as_blocked) {
-            link->reported_as_blocked = false;
-            core->links_blocked--;
+        if (link->credit_reported > 0 && pn_credit == 0) {
+            //
+            // The link has transitioned from positive credit to zero credit.
+            //
+            link->zero_credit_time = core->uptime_ticks;
+        } else if (link->credit_reported == 0 && pn_credit > 0) {
+            //
+            // The link has transitioned from zero credit to positive credit.
+            // Clear the recorded time.
+            //
+            link->zero_credit_time = 0;
+            if (link->reported_as_blocked) {
+                link->reported_as_blocked = false;
+                core->links_blocked--;
+            }
         }
-    }
 
-    link->credit_reported = pn_credit;
+        link->credit_reported = pn_credit;
+    }
 }
 
 
@@ -273,7 +277,7 @@ int qdr_connection_process(qdr_connection_t *conn)
     int event_count = 0;
 
     if (conn->closed) {
-        core->conn_close_handler(core->user_context, conn, conn->error);
+        conn->protocol_adaptor->conn_close_handler(conn->protocol_adaptor->user_context, conn, conn->error);
         return 0;
     }
 
@@ -302,19 +306,19 @@ int qdr_connection_process(qdr_connection_t *conn)
 
         switch (work->work_type) {
         case QDR_CONNECTION_WORK_FIRST_ATTACH :
-            core->first_attach_handler(core->user_context, conn, work->link, work->source, work->target, work->ssn_class);
+            conn->protocol_adaptor->first_attach_handler(conn->protocol_adaptor->user_context, conn, work->link, work->source, work->target, work->ssn_class);
             break;
 
         case QDR_CONNECTION_WORK_SECOND_ATTACH :
-            core->second_attach_handler(core->user_context, work->link, work->source, work->target);
+            conn->protocol_adaptor->second_attach_handler(conn->protocol_adaptor->user_context, work->link, work->source, work->target);
             break;
 
         case QDR_CONNECTION_WORK_TRACING_ON :
-            core->conn_trace_handler(core->user_context, conn, true);
+            conn->protocol_adaptor->conn_trace_handler(conn->protocol_adaptor->user_context, conn, true);
             break;
 
         case QDR_CONNECTION_WORK_TRACING_OFF :
-            core->conn_trace_handler(core->user_context, conn, false);
+            conn->protocol_adaptor->conn_trace_handler(conn->protocol_adaptor->user_context, conn, false);
             break;
 
         }
@@ -353,7 +357,7 @@ int qdr_connection_process(qdr_connection_t *conn)
 
             qdr_delivery_ref_t *dref = DEQ_HEAD(updated_deliveries);
             while (dref) {
-                core->delivery_update_handler(core->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
+                conn->protocol_adaptor->delivery_update_handler(conn->protocol_adaptor->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
                 qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
                 qdr_del_delivery_ref(&updated_deliveries, dref);
                 dref = DEQ_HEAD(updated_deliveries);
@@ -364,7 +368,7 @@ int qdr_connection_process(qdr_connection_t *conn)
                 switch (link_work->work_type) {
                 case QDR_LINK_WORK_DELIVERY :
                     {
-                        int count = core->push_handler(core->user_context, link, link_work->value);
+                        int count = conn->protocol_adaptor->push_handler(conn->protocol_adaptor->user_context, link, link_work->value);
                         assert(count <= link_work->value);
                         link_work->value -= count;
                         break;
@@ -372,20 +376,20 @@ int qdr_connection_process(qdr_connection_t *conn)
 
                 case QDR_LINK_WORK_FLOW :
                     if (link_work->value > 0)
-                        core->flow_handler(core->user_context, link, link_work->value);
+                        conn->protocol_adaptor->flow_handler(conn->protocol_adaptor->user_context, link, link_work->value);
                     if      (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_SET)
-                        core->drain_handler(core->user_context, link, true);
+                        conn->protocol_adaptor->drain_handler(conn->protocol_adaptor->user_context, link, true);
                     else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_CLEAR)
-                        core->drain_handler(core->user_context, link, false);
+                        conn->protocol_adaptor->drain_handler(conn->protocol_adaptor->user_context, link, false);
                     else if (link_work->drain_action == QDR_LINK_WORK_DRAIN_ACTION_DRAINED)
-                        core->drained_handler(core->user_context, link);
+                        conn->protocol_adaptor->drained_handler(conn->protocol_adaptor->user_context, link);
                     break;
 
                 case QDR_LINK_WORK_FIRST_DETACH :
                 case QDR_LINK_WORK_SECOND_DETACH :
-                    core->detach_handler(core->user_context, link, link_work->error,
-                                         link_work->work_type == QDR_LINK_WORK_FIRST_DETACH,
-                                         link_work->close_link);
+                    conn->protocol_adaptor->detach_handler(conn->protocol_adaptor->user_context, link, link_work->error,
+                                                           link_work->work_type == QDR_LINK_WORK_FIRST_DETACH,
+                                                           link_work->close_link);
                     detach_sent = true;
                     break;
                 }
@@ -630,40 +634,6 @@ static void qdr_link_processing_complete(qdr_core_t *core, qdr_link_t *link)
     qdr_action_enqueue(core, action);
 }
 
-
-
-void qdr_connection_handlers(qdr_core_t                *core,
-                             void                      *context,
-                             qdr_connection_activate_t  activate,
-                             qdr_link_first_attach_t    first_attach,
-                             qdr_link_second_attach_t   second_attach,
-                             qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow,
-                             qdr_link_offer_t           offer,
-                             qdr_link_drained_t         drained,
-                             qdr_link_drain_t           drain,
-                             qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver,
-                             qdr_link_get_credit_t      get_credit,
-                             qdr_delivery_update_t      delivery_update,
-                             qdr_connection_close_t     conn_close,
-                             qdr_connection_trace_t     conn_trace)
-{
-    core->user_context            = context;
-    core->first_attach_handler    = first_attach;
-    core->second_attach_handler   = second_attach;
-    core->detach_handler          = detach;
-    core->flow_handler            = flow;
-    core->offer_handler           = offer;
-    core->drained_handler         = drained;
-    core->drain_handler           = drain;
-    core->push_handler            = push;
-    core->deliver_handler         = deliver;
-    core->get_credit_handler      = get_credit;
-    core->delivery_update_handler = delivery_update;
-    core->conn_close_handler      = conn_close;
-    core->conn_trace_handler      = conn_trace;
-}
 
 
 //==================================================================================

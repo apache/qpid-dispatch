@@ -657,6 +657,7 @@ typedef enum {
 struct qdr_connection_t {
     DEQ_LINKS(qdr_connection_t);
     DEQ_LINKS_N(ACTIVATE, qdr_connection_t);
+    qdr_protocol_adaptor_t     *protocol_adaptor;
     uint64_t                    identity;
     qdr_core_t                 *core;
     bool                        incoming;
@@ -785,6 +786,33 @@ typedef struct qdr_priority_sheaf_t {
     int count;
 } qdr_priority_sheaf_t;
 
+
+struct qdr_protocol_adaptor_t {
+    DEQ_LINKS(qdr_protocol_adaptor_t);
+    const char *name;
+
+    //
+    // Callbacks
+    //
+    void                     *user_context;
+    qdr_link_first_attach_t   first_attach_handler;
+    qdr_link_second_attach_t  second_attach_handler;
+    qdr_link_detach_t         detach_handler;
+    qdr_link_flow_t           flow_handler;
+    qdr_link_offer_t          offer_handler;
+    qdr_link_drained_t        drained_handler;
+    qdr_link_drain_t          drain_handler;
+    qdr_link_push_t           push_handler;
+    qdr_link_deliver_t        deliver_handler;
+    qdr_link_get_credit_t     get_credit_handler;
+    qdr_delivery_update_t     delivery_update_handler;
+    qdr_connection_close_t    conn_close_handler;
+    qdr_connection_trace_t    conn_trace_handler;
+};
+
+DEQ_DECLARE(qdr_protocol_adaptor_t, qdr_protocol_adaptor_list_t);
+
+
 struct qdr_core_t {
     qd_dispatch_t     *qd;
     qd_log_source_t   *log;
@@ -802,11 +830,12 @@ struct qdr_core_t {
     qd_timer_t              *work_timer;
     uint32_t                 uptime_ticks;
 
-    qdr_connection_list_t      open_connections;
-    qdr_connection_t          *active_edge_connection;
-    qdr_connection_list_t      connections_to_activate;
-    qdr_link_list_t            open_links;
-    qdr_connection_ref_list_t  streaming_connections;
+    qdr_protocol_adaptor_list_t  protocol_adaptors;
+    qdr_connection_list_t        open_connections;
+    qdr_connection_t            *active_edge_connection;
+    qdr_connection_list_t        connections_to_activate;
+    qdr_link_list_t              open_links;
+    qdr_connection_ref_list_t    streaming_connections;
 
     qdrc_attach_addr_lookup_t  addr_lookup_handler;
     void                      *addr_lookup_context;
@@ -820,24 +849,6 @@ struct qdr_core_t {
     qdr_set_mobile_seq_t     rt_set_mobile_seq;
     qdr_set_my_mobile_seq_t  rt_set_my_mobile_seq;
     qdr_link_lost_t          rt_link_lost;
-
-    //
-    // Connection section
-    //
-    void                     *user_context;
-    qdr_link_first_attach_t   first_attach_handler;
-    qdr_link_second_attach_t  second_attach_handler;
-    qdr_link_detach_t         detach_handler;
-    qdr_link_flow_t           flow_handler;
-    qdr_link_offer_t          offer_handler;
-    qdr_link_drained_t        drained_handler;
-    qdr_link_drain_t          drain_handler;
-    qdr_link_push_t           push_handler;
-    qdr_link_deliver_t        deliver_handler;
-    qdr_link_get_credit_t     get_credit_handler;
-    qdr_delivery_update_t     delivery_update_handler;
-    qdr_connection_close_t    conn_close_handler;
-    qdr_connection_trace_t    conn_trace_handler;
 
     //
     // Events section

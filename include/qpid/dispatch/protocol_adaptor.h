@@ -50,22 +50,73 @@ typedef struct qdr_connection_info_t   qdr_connection_info_t;
  */
 typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn);
 
-typedef void (*qdr_link_first_attach_t)  (void *context, qdr_connection_t *conn, qdr_link_t *link,
-                                          qdr_terminus_t *source, qdr_terminus_t *target,
-                                          qd_session_class_t);
+/**
+ * qdr_link_first_attach_t callback
+ */
+typedef void (*qdr_link_first_attach_t) (void *context, qdr_connection_t *conn, qdr_link_t *link,
+                                         qdr_terminus_t *source, qdr_terminus_t *target,
+                                         qd_session_class_t);
+
+/**
+ * qdr_link_second_attach_t callback
+ */
 typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
                                           qdr_terminus_t *source, qdr_terminus_t *target);
-typedef void (*qdr_link_detach_t)        (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
-typedef void (*qdr_link_flow_t)          (void *context, qdr_link_t *link, int credit);
-typedef void (*qdr_link_offer_t)         (void *context, qdr_link_t *link, int delivery_count);
-typedef void (*qdr_link_drained_t)       (void *context, qdr_link_t *link);
-typedef void (*qdr_link_drain_t)         (void *context, qdr_link_t *link, bool mode);
-typedef int  (*qdr_link_push_t)          (void *context, qdr_link_t *link, int limit);
-typedef uint64_t (*qdr_link_deliver_t)   (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
-typedef int (*qdr_link_get_credit_t)     (void *context, qdr_link_t *link);
-typedef void (*qdr_delivery_update_t)    (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
-typedef void (*qdr_connection_close_t)   (void *context, qdr_connection_t *conn, qdr_error_t *error);
-typedef void (*qdr_connection_trace_t)   (void *context, qdr_connection_t *conn, bool trace);
+
+/**
+ * qdr_link_detach_t callback
+ */
+typedef void (*qdr_link_detach_t) (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
+
+/**
+ * qdr_link_flow_t callback
+ */
+typedef void (*qdr_link_flow_t) (void *context, qdr_link_t *link, int credit);
+
+/**
+ * qdr_link_offer_t callback
+ */
+typedef void (*qdr_link_offer_t) (void *context, qdr_link_t *link, int delivery_count);
+
+/**
+ * qdr_link_drained_t callback
+ */
+typedef void (*qdr_link_drained_t) (void *context, qdr_link_t *link);
+
+/**
+ * qdr_link_drain_t callback
+ */
+typedef void (*qdr_link_drain_t) (void *context, qdr_link_t *link, bool mode);
+
+/**
+ * qdr_link_push_t callback
+ */
+typedef int  (*qdr_link_push_t) (void *context, qdr_link_t *link, int limit);
+
+/**
+ * qdr_link_deliver_t callback
+ */
+typedef uint64_t (*qdr_link_deliver_t) (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
+
+/**
+ * qdr_link_get_credit_t callback
+ */
+typedef int (*qdr_link_get_credit_t) (void *context, qdr_link_t *link);
+
+/**
+ * qdr_delivery_update_t callback
+ */
+typedef void (*qdr_delivery_update_t) (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
+
+/**
+ * qdr_connection_close_t callback
+ */
+typedef void (*qdr_connection_close_t) (void *context, qdr_connection_t *conn, qdr_error_t *error);
+
+/**
+ * qdr_connection_trace_t callback
+ */
+typedef void (*qdr_connection_trace_t) (void *context, qdr_connection_t *conn, bool trace);
 
 
 /**
@@ -73,6 +124,26 @@ typedef void (*qdr_connection_trace_t)   (void *context, qdr_connection_t *conn,
  * Protocol adaptor plugin functions
  ******************************************************************************
  */
+
+qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
+                                             const char                *name,
+                                             void                      *context,
+                                             qdr_connection_activate_t  activate,
+                                             qdr_link_first_attach_t    first_attach,
+                                             qdr_link_second_attach_t   second_attach,
+                                             qdr_link_detach_t          detach,
+                                             qdr_link_flow_t            flow,
+                                             qdr_link_offer_t           offer,
+                                             qdr_link_drained_t         drained,
+                                             qdr_link_drain_t           drain,
+                                             qdr_link_push_t            push,
+                                             qdr_link_deliver_t         deliver,
+                                             qdr_link_get_credit_t      get_credit,
+                                             qdr_delivery_update_t      delivery_update,
+                                             qdr_connection_close_t     conn_close,
+                                             qdr_connection_trace_t     conn_trace);
+
+void qdr_protocol_adaptor_free(qdr_core_t *core, qdr_protocol_adaptor_t *adaptor);
 
 
 /**
@@ -104,6 +175,7 @@ typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* 
  * Once a new connection has been both remotely and locally opened, the core must be notified.
  *
  * @param core Pointer to the core object
+ * @param protocol_adaptor Pointer to the protocol adaptor handling the connection
  * @param incoming True iff this connection is associated with a listener, False if a connector
  * @param role The configured role of this connection
  * @param cost If the role is inter_router, this is the configured cost for the connection.
@@ -118,22 +190,23 @@ typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* 
  * @param vhost If non-null, this is the vhost of the connection to be used for multi-tenancy.
  * @return Pointer to a connection object that can be used to refer to this connection over its lifetime.
  */
-qdr_connection_t *qdr_connection_opened(qdr_core_t            *core,
-                                        bool                   incoming,
-                                        qdr_connection_role_t  role,
-                                        int                    cost,
-                                        uint64_t               management_id,
-                                        const char            *label,
-                                        const char            *remote_container_id,
-                                        bool                   strip_annotations_in,
-                                        bool                   strip_annotations_out,
-                                        bool                   policy_allow_dynamic_link_routes,
-                                        bool                   policy_allow_admin_status_update,
-                                        int                    link_capacity,
-                                        const char            *vhost,
-                                        qdr_connection_info_t *connection_info,
-                                        qdr_connection_bind_context_t context_binder,
-                                        void* bind_token);
+qdr_connection_t *qdr_connection_opened(qdr_core_t                    *core,
+                                        qdr_protocol_adaptor_t        *protocol_adaptor,
+                                        bool                           incoming,
+                                        qdr_connection_role_t          role,
+                                        int                            cost,
+                                        uint64_t                       management_id,
+                                        const char                    *label,
+                                        const char                    *remote_container_id,
+                                        bool                           strip_annotations_in,
+                                        bool                           strip_annotations_out,
+                                        bool                           policy_allow_dynamic_link_routes,
+                                        bool                           policy_allow_admin_status_update,
+                                        int                            link_capacity,
+                                        const char                    *vhost,
+                                        qdr_connection_info_t         *connection_info,
+                                        qdr_connection_bind_context_t  context_binder,
+                                        void                          *bind_token);
 
 /**
  * qdr_connection_closed
