@@ -510,30 +510,30 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
             }
             pn_data_exit(pn_connection_properties(conn));
         }
-    }
 
-    // Append any user-configured properties. conn_props is a pn_data_t PN_MAP
-    // type. Append the map elements - not the map itself!
-    //
-    if (config->conn_props) {
-        pn_data_t *outp = pn_connection_properties(conn);
+        // Append any user-configured properties. conn_props is a pn_data_t PN_MAP
+        // type. Append the map elements - not the map itself!
+        //
+        if (config->conn_props) {
+            pn_data_t *outp = pn_connection_properties(conn);
 
-        pn_data_rewind(config->conn_props);
-        pn_data_next(config->conn_props);
-        assert(pn_data_type(config->conn_props) == PN_MAP);
-        const size_t count = pn_data_get_map(config->conn_props);
-        pn_data_enter(config->conn_props);
-        for (size_t i = 0; i < count / 2; ++i) {
-            // key: the key must be of type Symbol.  The python agent has
-            // validated the keys as ASCII strings, but the JSON converter does
-            // not provide a Symbol type so all the keys in conn_props are
-            // PN_STRING.
+            pn_data_rewind(config->conn_props);
             pn_data_next(config->conn_props);
-            assert(pn_data_type(config->conn_props) == PN_STRING);
-            pn_data_put_symbol(outp, pn_data_get_string(config->conn_props));
-            // put value
-            pn_data_next(config->conn_props);
-            qdpn_data_insert(outp, config->conn_props);
+            assert(pn_data_type(config->conn_props) == PN_MAP);
+            const size_t count = pn_data_get_map(config->conn_props);
+            pn_data_enter(config->conn_props);
+            for (size_t i = 0; i < count / 2; ++i) {
+                // key: the key must be of type Symbol.  The python agent has
+                // validated the keys as ASCII strings, but the JSON converter does
+                // not provide a Symbol type so all the keys in conn_props are
+                // PN_STRING.
+                pn_data_next(config->conn_props);
+                assert(pn_data_type(config->conn_props) == PN_STRING);
+                pn_data_put_symbol(outp, pn_data_get_string(config->conn_props));
+                // put value
+                pn_data_next(config->conn_props);
+                qdpn_data_insert(outp, config->conn_props);
+            }
         }
     }
 
