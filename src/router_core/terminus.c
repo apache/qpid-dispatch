@@ -299,6 +299,12 @@ bool qdr_terminus_is_coordinator(qdr_terminus_t *term)
 }
 
 
+void qdr_terminus_set_dynamic(qdr_terminus_t *term)
+{
+    term->dynamic = true;
+}
+
+
 bool qdr_terminus_is_dynamic(qdr_terminus_t *term)
 {
     return term->dynamic;
