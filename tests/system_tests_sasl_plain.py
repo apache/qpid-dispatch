@@ -500,19 +500,19 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
 
         """
         local_node = Node.connect(self.routers[0].addresses[1], timeout=TIMEOUT)
-        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
 
         # sslProto should be TLSv1.x
-        self.assertIn(u'TLSv1', results[0][10])
+        self.assertIn(u'TLSv1', results[0].sslProto)
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', results[0][3])
+        self.assertEqual(u'inter-router', results[0].role)
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', results[0][6])
+        self.assertEqual(u'PLAIN', results[0].sasl)
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', results[0][8])
+        self.assertEqual(u'test@domain.com', results[0].user)
 
 
 class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
@@ -595,15 +595,16 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
         due to setting 'verifyHostname': 'yes'
         """
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
-        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
+
         # There should be only two connections.
         # There will be no inter-router connection
         self.assertEqual(2, len(results))
-        self.assertEqual('in', results[0][4])
-        self.assertEqual('normal', results[0][3])
-        self.assertEqual('anonymous', results[0][8])
-        self.assertEqual('normal', results[1][3])
-        self.assertEqual('anonymous', results[1][8])
+        self.assertEqual('in', results[0].dir)
+        self.assertEqual('normal', results[0].role)
+        self.assertEqual('anonymous', results[0].user)
+        self.assertEqual('normal', results[1].role)
+        self.assertEqual('anonymous', results[1].user)
 
 class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
 
@@ -689,23 +690,23 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         found = False
 
         for N in range(0, len(results)):
-            if results[N][5] == search:
+            if results[N].container == search:
                 found = True
                 break
 
         self.assertTrue(found, "Connection to %s not found" % search)
 
         # sslProto should be TLSv1.x
-        self.assertIn(u'TLSv1', results[N][10])
+        self.assertIn(u'TLSv1', results[N].sslProto)
 
         # role should be inter-router
-        self.assertEqual(u'inter-router', results[N][3])
+        self.assertEqual(u'inter-router', results[N].role)
 
         # sasl must be plain
-        self.assertEqual(u'PLAIN', results[N][6])
+        self.assertEqual(u'PLAIN', results[N].sasl)
 
         # user must be test@domain.com
-        self.assertEqual(u'test@domain.com', results[N][8])
+        self.assertEqual(u'test@domain.com', results[N].user)
 
     @SkipIfNeeded(not SASL.extended(), "Cyrus library not available. skipping test")
     def test_inter_router_plain_over_ssl_exists(self):
@@ -714,7 +715,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         """
         local_node = Node.connect(self.routers[1].addresses[0], timeout=TIMEOUT)
 
-        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
 
         self.common_asserts(results)
 
@@ -752,7 +753,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                      'saslUsername': 'test@domain.com',
                      'saslPassword': 'password'})
         self.routers[1].wait_connectors()
-        results = local_node.query(type='org.apache.qpid.dispatch.connection').results
+        results = local_node.query(type='org.apache.qpid.dispatch.connection').get_entities()
 
         self.common_asserts(results)
 
