@@ -1586,12 +1586,12 @@ static void CORE_link_second_attach(void *context, qdr_link_t *link, qdr_terminu
 
 static void CORE_conn_trace(void *context, qdr_connection_t *qdr_conn, bool trace)
 {
-    qd_connection_t      *qconn  = (qd_connection_t*) qdr_connection_get_context(qdr_conn);
+    qd_connection_t *qconn = (qd_connection_t*) qdr_connection_get_context(qdr_conn);
 
     if (!qconn)
         return;
 
-    pn_transport_t *tport  = pn_connection_transport(qconn->pn_conn);
+    pn_transport_t *tport = pn_connection_transport(qconn->pn_conn);
 
     if (!tport)
         return;
@@ -1599,7 +1599,6 @@ static void CORE_conn_trace(void *context, qdr_connection_t *qdr_conn, bool trac
     if (trace) {
         pn_transport_trace(tport, PN_TRACE_FRM);
         pn_transport_set_tracer(tport, connection_transport_tracer);
-
     }
     else {
         pn_transport_trace(tport, PN_TRACE_OFF);
