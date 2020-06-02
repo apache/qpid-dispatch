@@ -141,7 +141,8 @@ Use `sources` to specify one or more literal addresses. To specify multiple addr
 +
 Alternatively, you can use `sourcePattern` to match one or more addresses that correspond to a pattern. A pattern is a sequence of words delimited by either a `.` or `/` character. You can use wildcard characters to represent a word. The  `*` character matches exactly one word, and the `#` character matches any sequence of zero or more words.
 +
-To specify multiple address ranges, use a comma-separated list of address patterns. For more information, see xref:address-pattern-matching-{context}[]. To allow access to address ranges that are specific to a particular user, specify the `${user}` token. For more information, see xref:methods-specifying-vhost-policy-source-target-addresses-{context}[].
+To specify multiple address ranges, use a comma-separated list of address patterns. For more information, see xref:address-pattern-matching-{context}[].
+To allow access to address ranges that are specific to a particular user, specify the `${user}` token. For more information, see xref:methods-specifying-vhost-policy-source-target-addresses-{context}[].
 
 `targets` | `targetPattern`::
 A list of AMQP target addresses from which users in this group may send messages. You can specify multiple AMQP addresses and use user name substitution and address patterns the same way as with source addresses.
