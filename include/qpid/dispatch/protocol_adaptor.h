@@ -537,6 +537,15 @@ bool qdr_terminus_is_anonymous(qdr_terminus_t *term);
 bool qdr_terminus_is_coordinator(qdr_terminus_t *term);
 
 /**
+ * qdr_terminus_set_dynamic
+ *
+ * Set this terminus to be dynamic.
+ *
+ * @param term A qdr_terminus pointer returned by qdr_terminus()
+ */
+void qdr_terminus_set_dynamic(qdr_terminus_t *term);
+
+/**
  * qdr_terminus_is_dynamic
  *
  * Indicate whether this terminus represents a dynamic endpoint.
