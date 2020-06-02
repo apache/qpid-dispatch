@@ -334,7 +334,7 @@ typedef enum {
     QDR_ROLE_EDGE_CONNECTION
 } qdr_connection_role_t;
 
-typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void* token);
+typedef void (*qdr_connection_bind_context_t) (qdr_connection_t *context, void *token);
 
 /**
  * qdr_connection_opened
