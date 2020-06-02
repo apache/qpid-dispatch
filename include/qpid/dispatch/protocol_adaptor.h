@@ -54,7 +54,7 @@ typedef void (*qdr_adaptor_final_t) (void *adaptor_context);
 /**
  * Declaration of a protocol adaptor
  *
- * A protocol adaptor must declare itself by invoking the QDR_CORE_ADAPTOR_DECLARE macro in its body.
+ * A protocol adaptor may declare itself by invoking the QDR_CORE_ADAPTOR_DECLARE macro in its body.
  *
  * @param name A null-terminated literal string naming the module
  * @param on_init Pointer to a function for adaptor initialization, called at core thread startup
@@ -66,6 +66,7 @@ typedef void (*qdr_adaptor_final_t) (void *adaptor_context);
 void qdr_register_adaptor(const char         *name,
                           qdr_adaptor_init_t  on_init,
                           qdr_adaptor_final_t on_final);
+
 
 /**
  ******************************************************************************
@@ -90,69 +91,177 @@ typedef void (*qdr_connection_activate_t) (void *context, qdr_connection_t *conn
 
 /**
  * qdr_link_first_attach_t callback
+ *
+ * This function is invoked when the core requires that a new link be attached over a
+ * connection.  Such a link is either being initiated from the core or is the propagation
+ * of a link route from an originator somewhere in the network.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param conn The connection over which the first attach is to be sent
+ * @param link The link object for the new link
+ * @param source The source terminus for the attach
+ * @param target The target terminus for the attach
+ * @param ssn_class The session class to be used to allocate this link to a session
  */
-typedef void (*qdr_link_first_attach_t) (void *context, qdr_connection_t *conn, qdr_link_t *link,
-                                         qdr_terminus_t *source, qdr_terminus_t *target,
-                                         qd_session_class_t);
+typedef void (*qdr_link_first_attach_t) (void               *context,
+                                         qdr_connection_t   *conn,
+                                         qdr_link_t         *link,
+                                         qdr_terminus_t     *source,
+                                         qdr_terminus_t     *target,
+                                         qd_session_class_t  ssn_class);
 
 /**
  * qdr_link_second_attach_t callback
+ *
+ * This function is invoked when the core is responding to an incoming attach from an
+ * external container.  The function must send the responding (second) attach to the
+ * remote container to complete the attachment of the link.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being attached
+ * @param source The source terminus for the attach
+ * @param target The target terminus for the attach
  */
-typedef void (*qdr_link_second_attach_t) (void *context, qdr_link_t *link,
-                                          qdr_terminus_t *source, qdr_terminus_t *target);
+typedef void (*qdr_link_second_attach_t) (void           *context,
+                                          qdr_link_t     *link,
+                                          qdr_terminus_t *source,
+                                          qdr_terminus_t *target);
 
 /**
  * qdr_link_detach_t callback
+ *
+ * A DETACH performative must be sent for a link that is being closed or detached.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being detached
+ * @param error Error record if the detach is the result of an error condition, null otherwise
+ * @param first True if this is the first detach (i.e. initiated outbound), False if this is the
+ *              the response to a remotely initiated detach
+ * @param close True if this is a link close, False if this is a link detach
  */
 typedef void (*qdr_link_detach_t) (void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close);
 
 /**
  * qdr_link_flow_t callback
+ *
+ * Credit is being issued for an incoming link.  Credit is issued incrementally, being added
+ * to credit may have been issued in the past.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link for which credit is being issued
+ * @param credit The number of new credits being issued to the link
  */
 typedef void (*qdr_link_flow_t) (void *context, qdr_link_t *link, int credit);
 
 /**
  * qdr_link_offer_t callback
+ *
+ * This function is invoked when the core wishes to inform the remote terminus of an outoing link
+ * that it is willing and ready to transfer a certain number of deliveries over that link.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being affected
+ * @param delivery_count The number of deliveries available to be sent over this link
  */
 typedef void (*qdr_link_offer_t) (void *context, qdr_link_t *link, int delivery_count);
 
 /**
  * qdr_link_drained_t callback
+ *
+ * This function is invoked when the core wishes to inform the remote terminus of an outgoing link
+ * that it has drained its outgoing deliveries and removed any residual credit.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being affected
  */
 typedef void (*qdr_link_drained_t) (void *context, qdr_link_t *link);
 
 /**
  * qdr_link_drain_t callback
+ *
+ * This functino is invoked when the core wishes to inform the remote terminus of a link
+ * that the drain mode of the link has changed.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being affected
+ * @param mode True for enabling drain mode, False for disabling drain mode
  */
 typedef void (*qdr_link_drain_t) (void *context, qdr_link_t *link, bool mode);
 
 /**
  * qdr_link_push_t callback
+ *
+ * The core invokes this function when it wishes to transfer deliveries on an outgoing link.
+ * This function, in turn, calls qdr_link_process_deliveries with the desired number of
+ * deliveries (up to limit) that should be transferred from the core.  Typically, this
+ * function will call qdr_link_process_deliveries with MIN(limit, available-credit).
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link over which deliveries should be transfered
+ * @param limit The maximum number of deliveries that should be transferred
+ * @return The number of deliveries transferred
  */
 typedef int (*qdr_link_push_t) (void *context, qdr_link_t *link, int limit);
 
 /**
  * qdr_link_deliver_t callback
+ *
+ * This function is invoked by the core during the execution of qdr_link_process_deliveries.  There
+ * is one invocation for each delivery to be transferred.  If this function returns a non-zero
+ * disposition, the core will settle the delivery with that disposition back to the sender.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link over which deliveries should be transfered
+ * @param delivery The delivery (which contains the message) to be transferred
+ * @param settled True iff the delivery is already settled
+ * @return The disposition of the delivery to be sent back to the sender, or 0 if no disposition
  */
 typedef uint64_t (*qdr_link_deliver_t) (void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled);
 
 /**
  * qdr_link_get_credit_t callback
+ *
+ * Query a link for the current amount of available credit.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param link The link being queried
+ * @return The number of credits available on this link
  */
 typedef int (*qdr_link_get_credit_t) (void *context, qdr_link_t *link);
 
 /**
  * qdr_delivery_update_t callback
+ *
+ * This function is invoked by the core when a delivery's disposition and settlement are being
+ * changed.  This fuction must send the updated delivery state to the remote terminus.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param dlv The delivery being updated
+ * @param disp The new disposition for the delivery
+ * @param settled True iff the delivery is being settled
  */
 typedef void (*qdr_delivery_update_t) (void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled);
 
 /**
  * qdr_connection_close_t callback
+ *
+ * The core invokes this function when a connection to a remote container is to be closed.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param conn The connection being closed
+ * @param error If the close is a result of an error, this is the error record to be used, else it's null
  */
 typedef void (*qdr_connection_close_t) (void *context, qdr_connection_t *conn, qdr_error_t *error);
 
 /**
  * qdr_connection_trace_t callback
+ *
+ * This callback is invoked when per-connection tracing is being turned on of off.  The new tracing
+ * state must be propagated down into the tracing capabilities of the lower layers of connection processing.
+ *
+ * @param context The context supplied when the callback was registered
+ * @param conn The connection being affected
+ * @param trace True to enable tracing for this connection, False to disable tracing for this connection
  */
 typedef void (*qdr_connection_trace_t) (void *context, qdr_connection_t *conn, bool trace);
 
@@ -163,6 +272,17 @@ typedef void (*qdr_connection_trace_t) (void *context, qdr_connection_t *conn, b
  ******************************************************************************
  */
 
+/**
+ * qdr_protocol_adaptor
+ *
+ * Register a new protocol adaptor with the router core.
+ *
+ * @param core Pointer to the core object
+ * @param name The name of this adaptor's protocol
+ * @param context The context to be used in all of the callbacks
+ * @param callbacks Pointers to all of the callback functions used in the adaptor
+ * @return Pointer to a protocol adaptor object
+ */
 qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
                                              const char                *name,
                                              void                      *context,
@@ -181,6 +301,16 @@ qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
                                              qdr_connection_close_t     conn_close,
                                              qdr_connection_trace_t     conn_trace);
 
+
+/**
+ * qdr_protocol_adaptor_free
+ *
+ * Free the resources used for a protocol adaptor.  This should be called during adaptor
+ * finalization.
+ * 
+ * @param core Pointer to the core object
+ * @param adaptor Pointer to a protocol adaptor object returned by qdr_protocol_adaptor
+ */
 void qdr_protocol_adaptor_free(qdr_core_t *core, qdr_protocol_adaptor_t *adaptor);
 
 
