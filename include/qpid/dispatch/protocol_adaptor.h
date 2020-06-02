@@ -31,6 +31,44 @@ typedef struct qdr_connection_info_t   qdr_connection_info_t;
 
 /**
  ******************************************************************************
+ * Protocol adaptor declaration macro
+ ******************************************************************************
+ */
+/**
+ * Callback to initialize a protocol adaptor at core thread startup
+ *
+ * @param core Pointer to the core object
+ * @param adaptor_context [out] Returned adaptor context
+ */
+typedef void (*qdr_adaptor_init_t) (qdr_core_t *core, void **adaptor_context);
+
+
+/**
+ * Callback to finalize a protocol adaptor at core thread shutdown
+ *
+ * @param adaptor_context The context returned by the adaptor during the on_init call
+ */
+typedef void (*qdr_adaptor_final_t) (void *adaptor_context);
+
+
+/**
+ * Declaration of a protocol adaptor
+ *
+ * A protocol adaptor must declare itself by invoking the QDR_CORE_ADAPTOR_DECLARE macro in its body.
+ *
+ * @param name A null-terminated literal string naming the module
+ * @param on_init Pointer to a function for adaptor initialization, called at core thread startup
+ * @param on_final Pointer to a function for adaptor finalization, called at core thread shutdown
+ */
+#define QDR_CORE_ADAPTOR_DECLARE(name,on_init,on_final)      \
+    static void adaptorstart() __attribute__((constructor)); \
+    void adaptorstart() { qdr_register_adaptor(name, on_init, on_final); }
+void qdr_register_adaptor(const char         *name,
+                          qdr_adaptor_init_t  on_init,
+                          qdr_adaptor_final_t on_final);
+
+/**
+ ******************************************************************************
  * Callback function definitions
  ******************************************************************************
  */
@@ -91,7 +129,7 @@ typedef void (*qdr_link_drain_t) (void *context, qdr_link_t *link, bool mode);
 /**
  * qdr_link_push_t callback
  */
-typedef int  (*qdr_link_push_t) (void *context, qdr_link_t *link, int limit);
+typedef int (*qdr_link_push_t) (void *context, qdr_link_t *link, int limit);
 
 /**
  * qdr_link_deliver_t callback
@@ -703,7 +741,7 @@ void qdr_delivery_set_remote_extension_state(qdr_delivery_t *dlv, uint64_t remot
 pn_data_t *qdr_delivery_take_local_extension_state(qdr_delivery_t *dlv, uint64_t *dispo);
 
 
-void qdr_connection_handlers(qdr_core_t             *core,
+void qdr_connection_handlers(qdr_core_t                *core,
                              void                      *context,
                              qdr_connection_activate_t  activate,
                              qdr_link_first_attach_t    first_attach,

@@ -221,6 +221,7 @@ void qdr_core_free(qdr_core_t *core)
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
 
+    qdr_adaptors_finalize(core);
     qdr_modules_finalize(core);
 
     qdr_agent_free(core->mgmt_agent);
@@ -946,6 +947,8 @@ qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
                                              qdr_connection_trace_t     conn_trace)
 {
     qdr_protocol_adaptor_t *adaptor = NEW(qdr_protocol_adaptor_t);
+
+    qd_log(core->log, QD_LOG_INFO, "Protocol adaptor registered: %s", name);
 
     DEQ_ITEM_INIT(adaptor);
     adaptor->name                    = name;

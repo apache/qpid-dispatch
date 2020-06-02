@@ -1008,6 +1008,7 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        qd_composed_field_t     *body,
                        uint64_t                 conn_id);
 void qdr_modules_finalize(qdr_core_t *core);
+void qdr_adaptors_finalize(qdr_core_t *core);
 
 /**
  * Create a new timer which will only be used inside the code thread.
