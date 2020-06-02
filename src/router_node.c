@@ -1987,7 +1987,7 @@ void qd_router_setup_late(qd_dispatch_t *qd)
     qd->router->router_core = qdr_core(qd, qd->router->router_mode, qd->router->router_area, qd->router->router_id);
 
     amqp_direct_adaptor = qdr_protocol_adaptor(qd->router->router_core,
-                                               "amqp-direct",
+                                               "amqp",
                                                (void*) qd->router,
                                                CORE_connection_activate,
                                                CORE_link_first_attach,

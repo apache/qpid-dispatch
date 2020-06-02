@@ -112,9 +112,9 @@ static void qdr_tcp_adaptor_init(qdr_core_t *core, void **adaptor_context)
     qdr_tcp_adaptor_t *adaptor = NEW(qdr_tcp_adaptor_t);
     adaptor->core    = core;
     adaptor->adaptor = qdr_protocol_adaptor(core,
-                                            "tcp",
-                                            adaptor,
-                                            0,      // activate
+                                            "tcp",                // name
+                                            adaptor,              // context
+                                            0,                    // activate
                                             qdr_tcp_first_attach,
                                             qdr_tcp_second_attach,
                                             qdr_tcp_detach,
