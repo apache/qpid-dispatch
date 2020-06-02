@@ -19,6 +19,7 @@
 
 #include "router_core_private.h"
 #include "module.h"
+#include <qpid/dispatch/protocol_adaptor.h>
 #include "dispatch_private.h"
 
 /**
@@ -54,6 +55,28 @@ void qdr_register_core_module(const char *name, qdrc_module_enable_t enable, qdr
     module->on_init  = on_init;
     module->on_final = on_final;
     DEQ_INSERT_TAIL(registered_modules, module);
+}
+
+
+typedef struct qdrc_adaptor_t {
+    DEQ_LINKS(struct qdrc_adaptor_t);
+    const char          *name;
+    qdr_adaptor_init_t   on_init;
+    qdr_adaptor_final_t  on_final;
+    void                *context;
+} qdrc_adaptor_t;
+
+DEQ_DECLARE(qdrc_adaptor_t, qdrc_adaptor_list_t);
+static qdrc_adaptor_list_t registered_adaptors = {0,0};
+
+void qdr_register_adaptor(const char *name, qdr_adaptor_init_t on_init, qdr_adaptor_final_t on_final)
+{
+    qdrc_adaptor_t *adaptor = NEW(qdrc_adaptor_t);
+    ZERO(adaptor);
+    adaptor->name     = name;
+    adaptor->on_init  = on_init;
+    adaptor->on_final = on_final;
+    DEQ_INSERT_TAIL(registered_adaptors, adaptor);
 }
 
 
@@ -123,6 +146,33 @@ void qdr_modules_finalize(qdr_core_t *core)
 }
 
 
+void qdr_adaptors_init(qdr_core_t *core)
+{
+    //
+    // Initialize registered adaptors
+    //
+    qdrc_adaptor_t *adaptor = DEQ_HEAD(registered_adaptors);
+    while (adaptor) {
+        adaptor->on_init(core, &adaptor->context);
+        adaptor = DEQ_NEXT(adaptor);
+    }
+}
+
+
+void qdr_adaptors_finalize(qdr_core_t *core)
+{
+    //
+    // Finalize registered adaptors
+    //
+    qdrc_adaptor_t *adaptor = DEQ_TAIL(registered_adaptors);
+    while (adaptor) {
+        adaptor->on_final(adaptor->context);
+        adaptor = DEQ_PREV(adaptor);
+    }
+
+}
+
+
 /*
  * router_core_process_background_action_LH
  *
@@ -159,6 +209,7 @@ void *router_core_thread(void *arg)
     qdr_route_table_setup_CT(core);
 
     qdr_modules_init(core);
+    qdr_adaptors_init(core);
 
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
