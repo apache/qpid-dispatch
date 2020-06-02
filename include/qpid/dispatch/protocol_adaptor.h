@@ -852,25 +852,6 @@ void qdr_link_flow(qdr_core_t *core, qdr_link_t *link, int credit, bool drain_mo
 void qdr_link_set_drained(qdr_core_t *core, qdr_link_t *link);
 
 
-void qdr_connection_handlers(qdr_core_t                *core,
-                             void                      *context,
-                             qdr_connection_activate_t  activate,
-                             qdr_link_first_attach_t    first_attach,
-                             qdr_link_second_attach_t   second_attach,
-                             qdr_link_detach_t          detach,
-                             qdr_link_flow_t            flow,
-                             qdr_link_offer_t           offer,
-                             qdr_link_drained_t         drained,
-                             qdr_link_drain_t           drain,
-                             qdr_link_push_t            push,
-                             qdr_link_deliver_t         deliver,
-                             qdr_link_get_credit_t      get_credit,
-                             qdr_delivery_update_t      delivery_update,
-                             qdr_connection_close_t     conn_close,
-                             qdr_connection_trace_t     conn_trace);
-
-
-
 qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            bool             is_authenticated,
                                            bool             opened,
