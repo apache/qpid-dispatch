@@ -795,6 +795,7 @@ struct qdr_protocol_adaptor_t {
     // Callbacks
     //
     void                     *user_context;
+    qdr_connection_activate_t activate_handler;
     qdr_link_first_attach_t   first_attach_handler;
     qdr_link_second_attach_t  second_attach_handler;
     qdr_link_detach_t         detach_handler;

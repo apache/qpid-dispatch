@@ -953,6 +953,7 @@ qdr_protocol_adaptor_t *qdr_protocol_adaptor(qdr_core_t                *core,
     DEQ_ITEM_INIT(adaptor);
     adaptor->name                    = name;
     adaptor->user_context            = context;
+    adaptor->activate_handler        = activate;
     adaptor->first_attach_handler    = first_attach;
     adaptor->second_attach_handler   = second_attach;
     adaptor->detach_handler          = detach;
