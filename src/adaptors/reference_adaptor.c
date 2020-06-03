@@ -61,19 +61,20 @@ static void qdr_ref_first_attach(void *context, qdr_connection_t *conn, qdr_link
 static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                   qdr_terminus_t *source, qdr_terminus_t *target)
 {
-    char ftarget[100];
-    char fsource[100];
+#define TERM_SIZE 200
+    char ftarget[TERM_SIZE];
+    char fsource[TERM_SIZE];
 
     ftarget[0] = '\0';
     fsource[0] = '\0';
 
     if (!!source) {
-        size_t size = 100;
+        size_t size = TERM_SIZE;
         qdr_terminus_format(source, fsource, &size);
     }
 
     if (!!target) {
-        size_t size = 100;
+        size_t size = TERM_SIZE;
         qdr_terminus_format(target, ftarget, &size);
     }
 
@@ -285,4 +286,4 @@ void qdr_ref_adaptor_final(void *adaptor_context)
 /**
  * Declare the adaptor so that it will self-register on process startup.
  */
-QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
+//QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
