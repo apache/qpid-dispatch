@@ -25,6 +25,8 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+static char *address = "echo-service";
+
 typedef struct qdr_ref_adaptor_t {
     qdr_core_t             *core;
     qdr_protocol_adaptor_t *adaptor;
@@ -33,6 +35,7 @@ typedef struct qdr_ref_adaptor_t {
     qdr_connection_t       *conn;
     qdr_link_t             *out_link;
     qdr_link_t             *in_link;
+    char                   *reply_to;
 } qdr_ref_adaptor_t;
 
 
@@ -61,6 +64,7 @@ static void qdr_ref_first_attach(void *context, qdr_connection_t *conn, qdr_link
 static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                   qdr_terminus_t *source, qdr_terminus_t *target)
 {
+    qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
 #define TERM_SIZE 200
     char ftarget[TERM_SIZE];
     char fsource[TERM_SIZE];
@@ -79,6 +83,25 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
     }
 
     printf("qdr_ref_second_attach: source=%s target=%s\n", fsource, ftarget);
+
+    if (link == adaptor->in_link) {
+        uint64_t        link_id;
+        qdr_terminus_t *target = qdr_terminus(0);
+
+        qdr_terminus_set_address(target, address);
+
+        adaptor->out_link = qdr_link_first_attach(adaptor->conn,
+                                                  QD_INCOMING,
+                                                  qdr_terminus(0),  //qdr_terminus_t   *source,
+                                                  target,           //qdr_terminus_t   *target,
+                                                  "ref.1",          //const char       *name,
+                                                  0,                //const char       *terminus_addr,
+                                                  &link_id);
+
+        qd_iterator_t *reply_iter = qdr_terminus_get_address(source);
+        adaptor->reply_to = (char*) qd_iterator_copy(reply_iter);
+        printf("qdr_ref_second_attach: reply-to=%s\n", adaptor->reply_to);
+    }
 }
 
 
@@ -95,16 +118,40 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
     
     printf("qdr_ref_flow: %d credits issued\n", credit);
 
-    qd_message_t *msg = qd_message();
-    DEQ_INIT(buffers);
-    buf = qd_buffer();
-    char *insert = (char*) qd_buffer_cursor(buf);
-    strcpy(insert, "Test Payload");
-    qd_buffer_insert(buf, 13);
-    DEQ_INSERT_HEAD(buffers, buf);
-    qd_message_compose_1(msg, "echo-service", &buffers);
+    if (link == adaptor->out_link) {
+        qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
+        qd_compose_start_list(props);
+        qd_compose_insert_null(props);                      // message-id
+        qd_compose_insert_null(props);                      // user-id
+        qd_compose_insert_null(props);                      // to
+        qd_compose_insert_null(props);                      // subject
+        qd_compose_insert_string(props, adaptor->reply_to); // reply-to
+        /*
+        qd_compose_insert_null(props);                      // correlation-id
+        qd_compose_insert_null(props);                      // content-type
+        qd_compose_insert_null(props);                      // content-encoding
+        qd_compose_insert_timestamp(props, 0);              // absolute-expiry-time
+        qd_compose_insert_timestamp(props, 0);              // creation-time
+        qd_compose_insert_null(props);                      // group-id
+        qd_compose_insert_uint(props, 0);                   // group-sequence
+        qd_compose_insert_null(props);                      // reply-to-group-id
+        */
+        qd_compose_end_list(props);
 
-    qdr_link_deliver(adaptor->out_link, msg, 0, false, 0, 0);
+        qd_message_t *msg = qd_message();
+        DEQ_INIT(buffers);
+        buf = qd_buffer();
+        char *insert = (char*) qd_buffer_cursor(buf);
+        strcpy(insert, "Test Payload");
+        qd_buffer_insert(buf, 13);
+        DEQ_INSERT_HEAD(buffers, buf);
+
+        qd_message_compose_5(msg, props, 0, &buffers, true);
+        qd_compose_free(props);
+
+        qdr_delivery_t *dlv = qdr_link_deliver(adaptor->out_link, msg, 0, false, 0, 0);
+        qdr_delivery_decref(adaptor->core, dlv, "release protection of return from deliver");
+    }
 }
 
 
@@ -208,16 +255,7 @@ static void on_startup(void *context)
     uint64_t link_id;
     qdr_terminus_t *dynamic_source = qdr_terminus(0);
     qdr_terminus_set_dynamic(dynamic_source);
-    qdr_terminus_t *target = qdr_terminus(0);
-    qdr_terminus_set_address(target, "echo-service");
 
-    adaptor->out_link = qdr_link_first_attach(adaptor->conn,
-                                              QD_INCOMING,
-                                              qdr_terminus(0),  //qdr_terminus_t   *source,
-                                              target,           //qdr_terminus_t   *target,
-                                              "ref.1",          //const char       *name,
-                                              0,                //const char       *terminus_addr,
-                                              &link_id);
     adaptor->in_link = qdr_link_first_attach(adaptor->conn,
                                              QD_OUTGOING,
                                              dynamic_source,   //qdr_terminus_t   *source,
@@ -246,6 +284,7 @@ static void on_activate(void *context)
 void qdr_ref_adaptor_init(qdr_core_t *core, void **adaptor_context)
 {
     qdr_ref_adaptor_t *adaptor = NEW(qdr_ref_adaptor_t);
+    ZERO(adaptor);
     adaptor->core    = core;
     adaptor->adaptor = qdr_protocol_adaptor(core,
                                             "reference", // name
@@ -280,6 +319,7 @@ void qdr_ref_adaptor_final(void *adaptor_context)
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     qd_timer_free(adaptor->startup_timer);
     qd_timer_free(adaptor->activate_timer);
+    free(adaptor->reply_to);
     free(adaptor);
 }
 
