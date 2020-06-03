@@ -21,6 +21,7 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/alloc.h>
 #include <qpid/dispatch/amqp.h>
+#include <qpid/dispatch/hash.h>
 #include "message_private.h"
 #include <stdio.h>
 #include <string.h>
@@ -86,7 +87,6 @@ static char *my_area   = "";
 static char *my_router = "";
 
 static const char    *SEPARATORS = "./";
-static const uint32_t HASH_INIT  = 5381;
 
 
 // returns true if the current iterator view has no transformations and is
@@ -1038,7 +1038,7 @@ uint32_t qd_iterator_hash_view(qd_iterator_t *iter)
 
     qd_iterator_reset(iter);
     while (!iterator_at_end(iter))
-        hash = ((hash << 5) + hash) + (uint32_t) qd_iterator_octet(iter); /* hash * 33 + c */
+        hash = HASH_COMPUTE(hash, qd_iterator_octet(iter));
 
     return hash;
 }
@@ -1048,7 +1048,7 @@ void qd_iterator_hash_view_segments(qd_iterator_t *iter)
 {
     if (!iter)
         return;
-    
+
     // Reset the pointers in the iterator
     qd_iterator_reset(iter);
     uint32_t hash = HASH_INIT;
@@ -1066,7 +1066,7 @@ void qd_iterator_hash_view_segments(qd_iterator_t *iter)
             qd_insert_hash_segment(iter, &hash, segment_length-1);
         }
 
-        hash = ((hash << 5) + hash) + octet; /* hash * 33 + c */
+        hash = HASH_COMPUTE(hash, octet);
     }
 
     // Segments should never end with a separator. see view_initialize which in turn calls

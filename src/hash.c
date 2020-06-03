@@ -63,6 +63,24 @@ ALLOC_DECLARE(qd_hash_handle_t);
 ALLOC_DEFINE(qd_hash_handle_t);
 
 
+static bucket_t *qd_hash_get_bucket_iter(qd_hash_t *h, qd_iterator_t *key)
+{
+    uint32_t idx = qd_iterator_hash_view(key) & h->bucket_mask;
+    return &h->buckets[idx];
+}
+
+
+static bucket_t *qd_hash_get_bucket_str(qd_hash_t *h, const unsigned char *key)
+{
+    uint32_t hash = HASH_INIT;
+    while (*key) {
+        hash = HASH_COMPUTE(hash, *key++);
+    }
+
+    return &h->buckets[(hash & h->bucket_mask)];
+}
+
+
 qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const)
 {
     int i;
@@ -120,13 +138,13 @@ size_t qd_hash_size(qd_hash_t *h)
 }
 
 
-static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_iterator_t *key, int *exists, qd_hash_handle_t **handle)
+// ownership of key is transfered to the qd_hash_item_t
+static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, bucket_t *bucket, unsigned char *key, int *exists, qd_hash_handle_t **handle)
 {
-    unsigned long   idx  = qd_iterator_hash_view(key) & h->bucket_mask;
-    qd_hash_item_t *item = DEQ_HEAD(h->buckets[idx].items);
+    qd_hash_item_t *item = DEQ_HEAD(bucket->items);
 
     while (item) {
-        if (qd_iterator_equal(key, item->key))
+        if (strcmp((const char *) key, (const char *) item->key) == 0)
             break;
         item = DEQ_NEXT(item);
     }
@@ -143,9 +161,9 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_iterator_t *key,
         return 0;
 
     DEQ_ITEM_INIT(item);
-    item->key = qd_iterator_copy(key);
+    item->key = key;
 
-    DEQ_INSERT_TAIL(h->buckets[idx].items, item);
+    DEQ_INSERT_TAIL(bucket->items, item);
     h->size++;
     *exists = 0;
 
@@ -154,7 +172,7 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_iterator_t *key,
     //
     if (handle) {
         *handle = new_qd_hash_handle_t();
-        (*handle)->bucket = &h->buckets[idx];
+        (*handle)->bucket = bucket;
         (*handle)->item   = item;
     }
 
@@ -164,14 +182,24 @@ static qd_hash_item_t *qd_hash_internal_insert(qd_hash_t *h, qd_iterator_t *key,
 
 qd_error_t qd_hash_insert(qd_hash_t *h, qd_iterator_t *key, void *val, qd_hash_handle_t **handle)
 {
-    int             exists = 0;
-    qd_hash_item_t *item   = qd_hash_internal_insert(h, key, &exists, handle);
+    int       exists = 0;
+    bucket_t *bucket = qd_hash_get_bucket_iter(h, key);
+    unsigned char *k = qd_iterator_copy(key);
 
-    if (!item)
+    if (!k)
         return QD_ERROR_ALLOC;
 
-    if (exists)
+    qd_hash_item_t *item   = qd_hash_internal_insert(h, bucket, k, &exists, handle);
+
+    if (!item) {
+        free(k);
+        return QD_ERROR_ALLOC;
+    }
+
+    if (exists) {
+        free(k);
         return QD_ERROR_ALREADY_EXISTS;
+    }
 
     item->v.val = val;
 
@@ -183,16 +211,53 @@ qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_iterator_t *key, const void *va
 {
     assert(h->is_const);
 
-    int             exists = 0;
-    qd_hash_item_t *item  = qd_hash_internal_insert(h, key, &exists, handle);
+    int       exists = 0;
+    bucket_t *bucket = qd_hash_get_bucket_iter(h, key);
+    unsigned char *k = qd_iterator_copy(key);
 
-    if (!item)
+    if (!k)
         return QD_ERROR_ALLOC;
 
-    if (exists)
+    qd_hash_item_t *item  = qd_hash_internal_insert(h, bucket, k, &exists, handle);
+
+    if (!item) {
+        free(k);
+        return QD_ERROR_ALLOC;
+    }
+
+    if (exists) {
+        free(k);
         return QD_ERROR_ALREADY_EXISTS;
+    }
 
     item->v.val_const = val;
+
+    return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_hash_insert_str(qd_hash_t *h, const unsigned char *key, void *val, qd_hash_handle_t **handle)
+{
+    int       exists = 0;
+    bucket_t *bucket = qd_hash_get_bucket_str(h, key);
+    unsigned char *k = (unsigned char *) strdup((const char *) key);
+
+    if (!k)
+        return QD_ERROR_ALLOC;
+
+    qd_hash_item_t *item   = qd_hash_internal_insert(h, bucket, k, &exists, handle);
+
+    if (!item) {
+        free(k);
+        return QD_ERROR_ALLOC;
+    }
+
+    if (exists) {
+        free(k);
+        return QD_ERROR_ALREADY_EXISTS;
+    }
+
+    item->v.val = val;
 
     return QD_ERROR_NONE;
 }
@@ -296,6 +361,35 @@ qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_iterator_t *key, const void *
 }
 
 
+static qd_hash_item_t *qd_hash_internal_get_item_str(qd_hash_t *h, bucket_t *bucket, const unsigned char *key)
+{
+	qd_hash_item_t *item = DEQ_HEAD(bucket->items);
+
+	while (item) {
+		if (strcmp((const char *) key, (const char *) item->key) == 0) {
+            return item;
+        }
+		item = DEQ_NEXT(item);
+	}
+
+	return 0;
+}
+
+
+qd_error_t qd_hash_retrieve_str(qd_hash_t *h, const unsigned char *key, void **val)
+{
+	qd_hash_item_t *item = qd_hash_internal_get_item_str(h,
+                                                         qd_hash_get_bucket_str(h, key),
+                                                         key);
+    if (item) {
+        *val = item->v.val;
+	} else {
+        *val = 0;
+    }
+	return QD_ERROR_NONE;
+}
+
+
 qd_error_t qd_hash_remove(qd_hash_t *h, qd_iterator_t *key)
 {
     //the retrieve function will re-apply the bucket_mask, but that is ok
@@ -306,6 +400,18 @@ qd_error_t qd_hash_remove(qd_hash_t *h, qd_iterator_t *key)
         return QD_ERROR_NOT_FOUND;
 
     qd_hash_internal_remove_item(h, &h->buckets[idx], item, 0);
+    return QD_ERROR_NONE;
+}
+
+
+qd_error_t qd_hash_remove_str(qd_hash_t *h, const unsigned char *key)
+{
+    bucket_t     *bucket = qd_hash_get_bucket_str(h, key);
+    qd_hash_item_t *item = qd_hash_internal_get_item_str(h, bucket, key);
+    if (!item)
+        return QD_ERROR_NOT_FOUND;
+
+    qd_hash_internal_remove_item(h, bucket, item, 0);
     return QD_ERROR_NONE;
 }
 

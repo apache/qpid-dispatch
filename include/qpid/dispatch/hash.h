@@ -27,6 +27,9 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/error.h>
 
+#define HASH_INIT ((uint32_t) 5381)
+#define HASH_COMPUTE(HASH, OCTET) ((((HASH)<<5) + (HASH)) + (uint32_t)(OCTET))  // hash * 33 + octet
+
 typedef struct qd_hash_t        qd_hash_t;
 typedef struct qd_hash_handle_t qd_hash_handle_t;
 
@@ -34,11 +37,17 @@ qd_hash_t *qd_hash(int bucket_exponent, int batch_size, int value_is_const);
 void qd_hash_free(qd_hash_t *h);
 
 size_t qd_hash_size(qd_hash_t *h);
+
 qd_error_t qd_hash_insert(qd_hash_t *h, qd_iterator_t *key, void *val, qd_hash_handle_t **handle);
 qd_error_t qd_hash_insert_const(qd_hash_t *h, qd_iterator_t *key, const void *val, qd_hash_handle_t **handle);
+qd_error_t qd_hash_insert_str(qd_hash_t *h, const unsigned char *key, void *val, qd_hash_handle_t **handle);
+
 qd_error_t qd_hash_retrieve(qd_hash_t *h, qd_iterator_t *key, void **val);
 qd_error_t qd_hash_retrieve_const(qd_hash_t *h, qd_iterator_t *key, const void **val);
+qd_error_t qd_hash_retrieve_str(qd_hash_t *h, const unsigned char *key, void **val);
+
 qd_error_t qd_hash_remove(qd_hash_t *h, qd_iterator_t *key);
+qd_error_t qd_hash_remove_str(qd_hash_t *h, const unsigned char *key);
 
 void qd_hash_handle_free(qd_hash_handle_t *handle);
 const unsigned char *qd_hash_key_by_handle(const qd_hash_handle_t *handle);
