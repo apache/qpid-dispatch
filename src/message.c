@@ -2179,6 +2179,33 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 }
 
 
+void qd_message_compose_5(qd_message_t        *msg,
+                          qd_composed_field_t *properties,
+                          qd_composed_field_t *application_properties,
+                          qd_buffer_list_t    *body,
+                          bool                 complete)
+{
+    qd_message_content_t *content                        = MSG_CONTENT(msg);
+    qd_buffer_list_t     *properties_buffers             = properties             ? qd_compose_buffers(properties)             : 0;
+    qd_buffer_list_t     *application_properties_buffers = application_properties ? qd_compose_buffers(application_properties) : 0;
+
+    DEQ_INIT(content->buffers);
+    if (properties_buffers)
+        DEQ_APPEND(content->buffers, (*properties_buffers));
+    if (application_properties_buffers)
+        DEQ_APPEND(content->buffers, (*application_properties_buffers));
+
+    if (body) {
+        qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+        qd_compose_insert_binary_buffers(field, body);
+        DEQ_APPEND(content->buffers, (*qd_compose_buffers(field)));
+        qd_compose_free(field);
+    }
+
+    content->receive_complete = complete;
+}
+
+
 qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg)
 {
     return ((qd_message_pvt_t*)msg)->content->ma_pf_ingress;
