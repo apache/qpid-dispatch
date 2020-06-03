@@ -1360,6 +1360,7 @@ bool qd_policy_host_pattern_add(qd_policy_t *policy, const char *hostPattern)
                QD_LOG_WARNING,
                "vhost hostname pattern '%s' add failed: %s",
                hostPattern, err ? err : "unknown error");
+        qd_error_clear();  // allow policy agent to raise PolicyError
     }
     return rc == QD_ERROR_NONE;
 }

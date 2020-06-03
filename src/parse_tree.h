@@ -24,7 +24,7 @@
 #include <qpid/dispatch/iterator.h>
 
 
-typedef struct qd_parse_node qd_parse_tree_t;
+typedef struct qd_parse_tree qd_parse_tree_t;
 
 // Pattern matching algorithms
 // ADDRESS - configured address prefix/pattern matching

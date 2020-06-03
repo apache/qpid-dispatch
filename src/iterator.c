@@ -988,6 +988,17 @@ unsigned char *qd_iterator_copy(qd_iterator_t *iter)
 }
 
 
+unsigned char *qd_iterator_copy_const(const qd_iterator_t *iter)
+{
+    if (!iter)
+        return 0;
+
+    qd_iterator_t temp = *iter;
+    DEQ_INIT(temp.hash_segments);
+    return qd_iterator_copy(&temp);
+}
+
+
 qd_iterator_t *qd_iterator_dup(const qd_iterator_t *iter)
 {
     if (!iter)
