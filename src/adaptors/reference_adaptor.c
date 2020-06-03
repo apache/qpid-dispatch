@@ -146,7 +146,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_buffer_insert(buf, 13);
         DEQ_INSERT_HEAD(buffers, buf);
 
-        qd_message_compose_5(msg, props, 0, &buffers, true);
+        qd_message_compose_5(msg, props, &buffers, true);
         qd_compose_free(props);
 
         qdr_delivery_t *dlv = qdr_link_deliver(adaptor->out_link, msg, 0, false, 0, 0);
