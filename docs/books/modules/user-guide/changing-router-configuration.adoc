@@ -24,7 +24,7 @@ under the License
 [id='changing-router-configuration-{context}']
 = Changing a router's configuration
 
-You can make a permanent change to a router’s configuration by editing the router’s configuration file directly. You must restart the router for the changes to take effect, but the changes will be saved even if the router is stopped.
+You can make a permanent change to a router's configuration by editing the router's configuration file directly. You must restart the router for the changes to take effect, but the changes will be saved even if the router is stopped.
 
 .Procedure
 

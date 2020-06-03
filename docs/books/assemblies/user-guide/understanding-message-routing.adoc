@@ -24,7 +24,7 @@ under the License
 [id='understanding-message-routing-{context}']
 = Understanding message routing
 
-With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message’s _address_ and _routing pattern_.
+With message routing, routing is performed on messages as producers send them to a router. When a message arrives on a router, the router routes the message and its _settlement_ based on the message's _address_ and _routing pattern_.
 
 // Message routing flow control
 include::../../modules/user-guide/message-routing-flow-control.adoc[leveloffset=+1]

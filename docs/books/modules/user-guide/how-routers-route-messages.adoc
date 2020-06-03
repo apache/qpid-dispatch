@@ -42,7 +42,7 @@ Message routing supports both anycast and multicast routing patterns. You can lo
 
 * Sharding messages across multiple message brokers when message delivery order is not important
 +
-Sharding messages from one producer might cause that producer’s messages to be received in a different order than the order in which they were sent.
+Sharding messages from one producer might cause that producer's messages to be received in a different order than the order in which they were sent.
 --
 
 Link routing::
@@ -55,7 +55,7 @@ Link routing supports local transactions to a single broker. Distributed transac
 
 * Guaranteed message delivery order
 +
-Link routing to a sharded queue preserves the delivery order of the producer’s messages by causing all messages on that link to go to the same broker instance.
+Link routing to a sharded queue preserves the delivery order of the producer's messages by causing all messages on that link to go to the same broker instance.
 
 * End-to-end flow control
 +

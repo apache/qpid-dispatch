@@ -24,7 +24,7 @@ under the License
 [id='securing-network-connections-{context}']
 = Securing network connections
 
-You can configure {RouterName} to communicate with clients, routers, and brokers in a secure way by authenticating and encrypting the router’s connections. {RouterName} supports the following security protocols:
+You can configure {RouterName} to communicate with clients, routers, and brokers in a secure way by authenticating and encrypting the router's connections. {RouterName} supports the following security protocols:
 
 * SSL/TLS for certificate-based encryption and mutual authentication
 * SASL for authentication with mechanisms

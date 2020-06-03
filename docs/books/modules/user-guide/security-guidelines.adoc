@@ -44,4 +44,4 @@ Each interior router can be configured to use the CA to authenticate connections
 Connections from edge routers and clients can use different levels of security, depending on your requirements.
 ====
 
-By using these recommendations, a new interior router cannot join the network until the owner of the CA issues a new certificate for the new router. In addition, an intruder wishing to spoof an interior router cannot do so because it would not have a valid X.509 certificate issued by the network’s CA.
+By using these recommendations, a new interior router cannot join the network until the owner of the CA issues a new certificate for the new router. In addition, an intruder wishing to spoof an interior router cannot do so because it would not have a valid X.509 certificate issued by the network's CA.
