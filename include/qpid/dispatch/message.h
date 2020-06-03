@@ -279,8 +279,7 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_c
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3);
 
 void qd_message_compose_5(qd_message_t        *msg,
-                          qd_composed_field_t *properties,
-                          qd_composed_field_t *application_properties,
+                          qd_composed_field_t *headers,
                           qd_buffer_list_t    *body,
                           bool                 complete);
 
