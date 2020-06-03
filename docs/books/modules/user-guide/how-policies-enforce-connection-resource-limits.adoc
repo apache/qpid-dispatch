@@ -28,8 +28,8 @@ under the License
 
 When a client creates a connection to a router, the router first determines whether to allow or deny the connection. This decision is based on the following criteria:
 
-* Whether the connection will exceed the router’s global connection limit (defined in the global policy)
+* Whether the connection will exceed the router's global connection limit (defined in the global policy)
 
-* Whether the connection will exceed the vhost’s connection limits (defined in the vhost policy that matches the host to which the connection is directed)
+* Whether the connection will exceed the vhost's connection limits (defined in the vhost policy that matches the host to which the connection is directed)
 
-If the connection is allowed, the router assigns the user (the authenticated user name from the connection) to a user group, and enforces the user group’s resource limits for the lifetime of the connection.
+If the connection is allowed, the router assigns the user (the authenticated user name from the connection) to a user group, and enforces the user group's resource limits for the lifetime of the connection.

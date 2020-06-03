@@ -194,7 +194,7 @@ class::
 The class of the address bound to the link:
   - 'local' - The address that is local to this router (temporary).
   - 'topo' - A topological address used for router control messages.
-  - 'router' - A summary router address used to route messages to a remote router’s local addresses.
+  - 'router' - A summary router address used to route messages to a remote router's local addresses.
   - 'mobile' - A mobile address for an attached consumer or producer.
   - 'link-in' - The address match for incoming routed links.
   - 'link-out' - The address match for outgoing routed links.
