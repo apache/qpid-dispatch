@@ -133,6 +133,12 @@ static char *test_add_and_match_str(void *context)
         return "Failed to get expected match (2)";
     }
 
+    if (qd_parse_tree_retrieve_match_str(node, "I", &payload) ||
+        qd_parse_tree_retrieve_match_str(node, "I.am", &payload)) {
+        qd_parse_tree_free(node);
+        return "Should not match part of a pattern";
+    }
+
     if (qd_parse_tree_retrieve_match_str(node, "notSoFast", &payload)) {
         qd_parse_tree_free(node);
         return "Match pattern should not match but did match";
@@ -354,7 +360,6 @@ static char *test_normalization(void *context)
     char *rc = NULL;
     char *patterns[][2] = {
         // normalized  raw
-        {"",          ""},
         {"a.b.c",     "a.b.c"},
         {"a.*.c",     "a.*.c"},
         {"#",         "#"},
@@ -390,7 +395,7 @@ static char *match_test(qd_parse_tree_type_t type,
     if (qd_parse_tree_add_pattern(node, piter, payload)) {
         qd_parse_tree_free(node);
         qd_iterator_free(piter);
-        return "Unexpected payload when adding pattern";
+        return "Unexpected error when adding pattern";
     }
 
     for (int i = 0; tests[i].address && !rc; i++) {
@@ -427,20 +432,6 @@ static char *test_matches(void *context)
     };
 
     char *rc = match_test(QD_PARSE_TREE_ADDRESS, "ab.cd.e", test1);
-    if (rc) return rc;
-
-    match_test_t test2[] = {
-        {"", true},
-        {NULL, false},
-    };
-    rc = match_test(QD_PARSE_TREE_ADDRESS, "", test2);
-    if (rc) return rc;
-
-    match_test_t test3[] = {
-        {".", true},
-        {NULL, false},
-    };
-    rc = match_test(QD_PARSE_TREE_ADDRESS, ".", test3);
     if (rc) return rc;
 
     match_test_t test4[] = {
@@ -795,7 +786,10 @@ static char *test_validation(void *context)
 {
     qd_iterator_t *iter = qd_iterator_string("sam.*.am.#", ITER_VIEW_ALL);
     qd_iterator_t *iter_good = qd_iterator_string("sam/+/a.#.m/#", ITER_VIEW_ALL);
-    qd_iterator_t *iter_bad = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);
+    qd_iterator_t *iter_bad  = qd_iterator_string("", ITER_VIEW_ALL);  // no tokens
+    qd_iterator_t *iter_bad_slash = qd_iterator_string("/", ITER_VIEW_ALL);  // just separators
+    qd_iterator_t *iter_bad_dot = qd_iterator_string(".", ITER_VIEW_ALL);  // just separators
+    qd_iterator_t *iter_bad_mqtt = qd_iterator_string("sam/#/am/+", ITER_VIEW_ALL);  // glob must be last
     qd_iterator_t *iter_const = qd_iterator_string("sam/I/am", ITER_VIEW_ALL);
     qd_parse_tree_t *mqtt_tree = qd_parse_tree_new(QD_PARSE_TREE_MQTT);
     qd_parse_tree_t *addr_tree = qd_parse_tree_new(QD_PARSE_TREE_ADDRESS);
@@ -805,7 +799,28 @@ static char *test_validation(void *context)
 
     if (!qd_parse_tree_validate_pattern(addr_tree, iter) ||
         !qd_parse_tree_validate_pattern(amqp_tree, iter)) {
-        error = "expected to skip validation";
+        error = "expected valid pattern";
+        goto cleanup;
+    }
+
+
+    if (qd_parse_tree_validate_pattern(addr_tree, iter_bad) ||
+        qd_parse_tree_validate_pattern(mqtt_tree, iter_bad) ||
+        qd_parse_tree_validate_pattern(amqp_tree, iter_bad)) {
+        error = "expected null pattern to be invalid";
+        goto cleanup;
+    }
+
+
+    if (qd_parse_tree_validate_pattern(addr_tree, iter_bad_dot) ||
+        qd_parse_tree_validate_pattern(amqp_tree, iter_bad_dot)) {
+        error = "expected separator dot pattern to be invalid";
+        goto cleanup;
+    }
+
+    if (qd_parse_tree_validate_pattern(addr_tree, iter_bad_slash) ||
+        qd_parse_tree_validate_pattern(mqtt_tree, iter_bad_slash)) {
+        error = "expected separator slash pattern to be invalid";
         goto cleanup;
     }
 
@@ -814,7 +829,7 @@ static char *test_validation(void *context)
         goto cleanup;
     }
 
-    if (qd_parse_tree_validate_pattern(mqtt_tree, iter_bad)) {
+    if (qd_parse_tree_validate_pattern(mqtt_tree, iter_bad_mqtt)) {
         error = "expected to fail mqtt validation";
         goto cleanup;
     }

@@ -329,6 +329,11 @@ int qd_iterator_ncopy(qd_iterator_t *iter, unsigned char* buffer, int n);
  */
 unsigned char *qd_iterator_copy(qd_iterator_t *iter);
 
+/**
+ * A version of qd_iterator_copy that does NOT modify the iterator
+ */
+unsigned char *qd_iterator_copy_const(const qd_iterator_t *iter);
+
 uint8_t qd_iterator_uint8(qd_iterator_t *iter);
 
 /**
