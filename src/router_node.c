@@ -1509,11 +1509,15 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
 
 static void CORE_connection_activate(void *context, qdr_connection_t *conn)
 {
+    qd_router_t *router = (qd_router_t*) context;
+
     //
     // IMPORTANT:  This is the only core callback that is invoked on the core
     //             thread itself. It must not take locks that could deadlock the core.
     //
+    sys_mutex_lock(qd_server_get_activation_lock(router->qd->server));
     qd_server_activate((qd_connection_t*) qdr_connection_get_context(conn));
+    sys_mutex_unlock(qd_server_get_activation_lock(router->qd->server));
 }
 
 
