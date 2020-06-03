@@ -278,6 +278,12 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2);
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3);
 
+void qd_message_compose_5(qd_message_t        *msg,
+                          qd_composed_field_t *properties,
+                          qd_composed_field_t *application_properties,
+                          qd_buffer_list_t    *body,
+                          bool                 complete);
+
 /** Put string representation of a message suitable for logging in buffer.
  * @return buffer
  */
