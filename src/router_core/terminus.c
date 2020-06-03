@@ -92,13 +92,17 @@ void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
             break;
         }
 
-        if (term->dynamic)
-            len = safe_snprintf(output, *size, "<dynamic>");
-        else if (term->address && term->address->iterator) {
+        if (term->dynamic) {
+            len = safe_snprintf(output, *size, "(dyn)");
+            output += len;
+            *size  -= len;
+        }
+
+        if (term->address && term->address->iterator) {
             qd_iterator_reset_view(term->address->iterator, ITER_VIEW_ALL);
             len = qd_iterator_ncopy(term->address->iterator, (unsigned char*) output, *size - 1);
             output[len] = 0;
-        } else if (term->address == 0)
+        } else
             len = safe_snprintf(output, *size, "<none>");
 
         output += len;
