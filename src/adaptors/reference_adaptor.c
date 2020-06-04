@@ -25,17 +25,23 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static char *address = "examples";
+static char *address1 = "examples";
+static char *address2 = "stream";
 
 typedef struct qdr_ref_adaptor_t {
     qdr_core_t             *core;
     qdr_protocol_adaptor_t *adaptor;
     qd_timer_t             *startup_timer;
     qd_timer_t             *activate_timer;
+    qd_timer_t             *stream_timer;
     qdr_connection_t       *conn;
-    qdr_link_t             *out_link;
-    qdr_link_t             *in_link;
+    qdr_link_t             *out_link_1;
+    qdr_link_t             *out_link_2;
+    qdr_link_t             *dynamic_in_link;
     char                   *reply_to;
+    qd_message_t           *streaming_message;
+    qdr_delivery_t         *streaming_delivery;
+    int                     stream_count;
 } qdr_ref_adaptor_t;
 
 
@@ -84,25 +90,39 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
 
     printf("qdr_ref_second_attach: source=%s target=%s\n", fsource, ftarget);
 
-    if (link == adaptor->in_link) {
-        uint64_t        link_id;
-        qdr_terminus_t *target = qdr_terminus(0);
-
-        qdr_terminus_set_address(target, address);
-
-        adaptor->out_link = qdr_link_first_attach(adaptor->conn,
-                                                  QD_INCOMING,
-                                                  qdr_terminus(0),  //qdr_terminus_t   *source,
-                                                  target,           //qdr_terminus_t   *target,
-                                                  "ref.1",          //const char       *name,
-                                                  0,                //const char       *terminus_addr,
-                                                  &link_id);
-
-        qdr_link_flow(adaptor->core, adaptor->out_link, 10, false);
-
+    if (link == adaptor->dynamic_in_link) {
+        //
+        // The dynamic in-link has been attached.  Get the reply-to address and open
+        // a couple of out-links.
+        //
         qd_iterator_t *reply_iter = qdr_terminus_get_address(source);
         adaptor->reply_to = (char*) qd_iterator_copy(reply_iter);
         printf("qdr_ref_second_attach: reply-to=%s\n", adaptor->reply_to);
+
+        //
+        // Open an out-link for each address
+        //
+        uint64_t        link_id;
+        qdr_terminus_t *target = qdr_terminus(0);
+
+        qdr_terminus_set_address(target, address1);
+        adaptor->out_link_1 = qdr_link_first_attach(adaptor->conn,
+                                                    QD_INCOMING,
+                                                    qdr_terminus(0),  //qdr_terminus_t   *source,
+                                                    target,           //qdr_terminus_t   *target,
+                                                    "ref.1",          //const char       *name,
+                                                    0,                //const char       *terminus_addr,
+                                                    &link_id);
+
+        target = qdr_terminus(0);
+        qdr_terminus_set_address(target, address2);
+        adaptor->out_link_2 = qdr_link_first_attach(adaptor->conn,
+                                                    QD_INCOMING,
+                                                    qdr_terminus(0),  //qdr_terminus_t   *source,
+                                                    target,           //qdr_terminus_t   *target,
+                                                    "ref.2",          //const char       *name,
+                                                    0,                //const char       *terminus_addr,
+                                                    &link_id);
     }
 }
 
@@ -120,7 +140,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
     
     printf("qdr_ref_flow: %d credits issued\n", credit);
 
-    if (link == adaptor->out_link) {
+    if (link == adaptor->out_link_1) {
         qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
         qd_compose_start_list(props);
         qd_compose_insert_null(props);                      // message-id
@@ -151,8 +171,34 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_message_compose_5(msg, props, &buffers, true);
         qd_compose_free(props);
 
-        qdr_delivery_t *dlv = qdr_link_deliver(adaptor->out_link, msg, 0, false, 0, 0);
-        qdr_delivery_decref(adaptor->core, dlv, "release protection of return from deliver");
+        qdr_link_deliver(adaptor->out_link_1, msg, 0, false, 0, 0);
+        // Keep return-protection delivery reference as the adaptor's reference
+    } else if (link == adaptor->out_link_2) {
+        //
+        // Begin streaming a long message on the link.
+        //
+        qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
+        qd_compose_start_list(props);
+        qd_compose_insert_null(props);                      // message-id
+        qd_compose_insert_null(props);                      // user-id
+        qd_compose_insert_null(props);                      // to
+        qd_compose_insert_null(props);                      // subject
+        qd_compose_insert_string(props, adaptor->reply_to); // reply-to
+        qd_compose_end_list(props);
+
+        props = qd_compose(QD_PERFORMATIVE_BODY_DATA, props);
+
+        adaptor->streaming_message = qd_message();
+
+        qd_message_compose_5(adaptor->streaming_message, props, 0, false);
+        qd_compose_free(props);
+
+        adaptor->streaming_delivery =
+            qdr_link_deliver(adaptor->out_link_2, adaptor->streaming_message, 0, false, 0, 0);
+        adaptor->stream_count = 0;
+        // Keep return-protection delivery reference as the adaptor's reference
+
+        qd_timer_schedule(adaptor->stream_timer, 1000);
     }
 }
 
@@ -210,7 +256,8 @@ static int qdr_ref_get_credit(void *context, qdr_link_t *link)
 
 static void qdr_ref_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
-    char *dispname;
+    qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
+    char              *dispname;
 
     switch (disp) {
     case PN_ACCEPTED: dispname = "ACCEPTED"; break;
@@ -221,6 +268,9 @@ static void qdr_ref_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
         dispname = "<UNKNOWN>";
     }
     printf("qdr_ref_delivery_update: disp=%s settled=%s\n", dispname, settled ? "true" : "false");
+
+    if (settled && qdr_delivery_link(dlv) == adaptor->out_link_1)
+        qdr_delivery_decref(adaptor->core, dlv, "qdr_ref_delivery_update - settled delivery");
 }
 
 
@@ -272,16 +322,20 @@ static void on_startup(void *context)
                                           0);               // bind_token
 
     uint64_t link_id;
+
+    //
+    // Create a dynamic receiver
+    //
     qdr_terminus_t *dynamic_source = qdr_terminus(0);
     qdr_terminus_set_dynamic(dynamic_source);
 
-    adaptor->in_link = qdr_link_first_attach(adaptor->conn,
-                                             QD_OUTGOING,
-                                             dynamic_source,   //qdr_terminus_t   *source,
-                                             qdr_terminus(0),  //qdr_terminus_t   *target,
-                                             "ref.2",          //const char       *name,
-                                             0,                //const char       *terminus_addr,
-                                             &link_id);
+    adaptor->dynamic_in_link = qdr_link_first_attach(adaptor->conn,
+                                                     QD_OUTGOING,
+                                                     dynamic_source,   //qdr_terminus_t   *source,
+                                                     qdr_terminus(0),  //qdr_terminus_t   *target,
+                                                     "ref.0",          //const char       *name,
+                                                     0,                //const char       *terminus_addr,
+                                                     &link_id);
 }
 
 
@@ -290,6 +344,32 @@ static void on_activate(void *context)
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
 
     while (qdr_connection_process(adaptor->conn)) {}
+}
+
+
+static void on_stream(void *context)
+{
+    qdr_ref_adaptor_t *adaptor        = (qdr_ref_adaptor_t*) context;
+    const char        *content        = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const size_t       content_length = strlen(content);
+    qd_buffer_t       *buf            = qd_buffer();
+    qd_buffer_list_t   buffers;
+
+    DEQ_INIT(buffers);
+    DEQ_INSERT_TAIL(buffers, buf);
+
+    memcpy(qd_buffer_cursor(buf), content, content_length);
+    qd_buffer_insert(buf, content_length);
+    qd_message_extend(adaptor->streaming_message, &buffers);
+    qdr_delivery_continue(adaptor->core, adaptor->streaming_delivery, false);
+
+    if (adaptor->stream_count < 30) {
+        qd_timer_schedule(adaptor->stream_timer, 1000);
+        adaptor->stream_count++;
+    } else {
+        qd_message_set_receive_complete(adaptor->streaming_message);
+        adaptor->streaming_message = 0;
+    }
 }
 
 
@@ -329,6 +409,7 @@ void qdr_ref_adaptor_init(qdr_core_t *core, void **adaptor_context)
     qd_timer_schedule(adaptor->startup_timer, 0);
 
     adaptor->activate_timer = qd_timer(core->qd, on_activate, adaptor);
+    adaptor->stream_timer   = qd_timer(core->qd, on_stream, adaptor);
 }
 
 

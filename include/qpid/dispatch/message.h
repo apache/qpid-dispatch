@@ -278,10 +278,26 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2);
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3);
 
+/**
+ * Send a message with optional headers and an optional raw body with the option of starting
+ * a streaming transfer.
+ *
+ * @param msg The message being composed
+ * @param headers A composed field with 1 or more header sections (incl body performative) or NULL
+ * @param body A buffer list of raw body content or NULL
+ * @param complete True if the message is to be receive-complete.
+ *        False if more content will arrive later.
+ */
 void qd_message_compose_5(qd_message_t        *msg,
                           qd_composed_field_t *headers,
                           qd_buffer_list_t    *body,
                           bool                 complete);
+
+/**
+ * Extend the content of a streaming message with more buffers.
+ */
+void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers);
+
 
 /** Put string representation of a message suitable for logging in buffer.
  * @return buffer
@@ -366,6 +382,12 @@ bool qd_message_send_complete(qd_message_t *msg);
  * Flag the message as being send-complete.
  */
 void qd_message_set_send_complete(qd_message_t *msg);
+
+
+/**
+ * Flag the message as being receive-complete.
+ */
+void qd_message_set_receive_complete(qd_message_t *msg);
 
 
 /**
