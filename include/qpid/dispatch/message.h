@@ -363,6 +363,12 @@ bool qd_message_receive_complete(qd_message_t *msg);
 bool qd_message_send_complete(qd_message_t *msg);
 
 /**
+ * Flag the message as being send-complete.
+ */
+void qd_message_set_send_complete(qd_message_t *msg);
+
+
+/**
  * Returns true if the delivery tag has already been sent.
  */
 bool qd_message_tag_sent(qd_message_t *msg);
