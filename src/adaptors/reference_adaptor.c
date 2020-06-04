@@ -25,7 +25,7 @@
 #include <stdio.h>
 #include <inttypes.h>
 
-static char *address = "echo-service";
+static char *address = "examples";
 
 typedef struct qdr_ref_adaptor_t {
     qdr_core_t             *core;
@@ -98,6 +98,8 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                                   0,                //const char       *terminus_addr,
                                                   &link_id);
 
+        qdr_link_flow(adaptor->core, adaptor->out_link, 10, false);
+
         qd_iterator_t *reply_iter = qdr_terminus_get_address(source);
         adaptor->reply_to = (char*) qd_iterator_copy(reply_iter);
         printf("qdr_ref_second_attach: reply-to=%s\n", adaptor->reply_to);
@@ -142,8 +144,8 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         DEQ_INIT(buffers);
         buf = qd_buffer();
         char *insert = (char*) qd_buffer_cursor(buf);
-        strcpy(insert, "Test Payload");
-        qd_buffer_insert(buf, 13);
+        memcpy(insert, "\x00\x53\x77\xa1\x0cTest Payload", 17);
+        qd_buffer_insert(buf, 17);
         DEQ_INSERT_HEAD(buffers, buf);
 
         qd_message_compose_5(msg, props, &buffers, true);
@@ -172,19 +174,37 @@ static void qdr_ref_drain(void *context, qdr_link_t *link, bool mode)
 
 static int qdr_ref_push(void *context, qdr_link_t *link, int limit)
 {
-    return 0;
+    qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
+    printf("qdr_ref_push: limit=%d\n", limit);
+    return qdr_link_process_deliveries(adaptor->core, link, limit);
 }
 
 
 static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t *delivery, bool settled)
 {
-    return 0;
+    qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
+    qd_message_t      *msg     = qdr_delivery_message(delivery);
+
+    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_BODY);
+
+    if (status == QD_MESSAGE_DEPTH_OK) {
+        qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+        char *body = (char*) qd_iterator_copy(body_iter);
+        printf("qdr_ref_deliver: message received, body=%s\n", body);
+        free(body);
+        qd_iterator_free(body_iter);
+        qd_message_set_send_complete(msg);
+    }
+
+    qdr_link_flow(adaptor->core, link, 1, false);
+
+    return PN_ACCEPTED; // This will cause the delivery to be settled
 }
 
 
 static int qdr_ref_get_credit(void *context, qdr_link_t *link)
 {
-    return 0;
+    return 8;
 }
 
 
