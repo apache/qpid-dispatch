@@ -45,6 +45,8 @@ qd_connector_t* qd_connection_connector(const qd_connection_t *c);
 
 bool qd_connection_handle(qd_connection_t *c, pn_event_t *e);
 
+uint64_t qd_server_allocate_connection_id(qd_server_t *server);
+
 
 const qd_server_config_t *qd_connector_config(const qd_connector_t *c);
 

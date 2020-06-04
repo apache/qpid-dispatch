@@ -1724,6 +1724,17 @@ bool qd_connection_handle(qd_connection_t *c, pn_event_t *e) {
     return true;
 }
 
+
+uint64_t qd_server_allocate_connection_id(qd_server_t *server)
+{
+    uint64_t id;
+    sys_mutex_lock(server->lock);
+    id = server->next_connection_id++;
+    sys_mutex_unlock(server->lock);
+    return id;
+}
+
+
 bool qd_connection_strip_annotations_in(const qd_connection_t *c) {
     return c->strip_annotations_in;
 }

@@ -128,6 +128,18 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     action->args.connection.container_id     = qdr_field(remote_container_id);
     qdr_action_enqueue(core, action);
 
+    char   props_str[1000];
+    size_t props_len = 1000;
+
+    pn_data_format(connection_info->connection_properties, props_str, &props_len);
+
+    qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection Opened: dir=%s host=%s vhost=%s encrypted=%s"
+           " auth=%s user=%s container_id=%s props=%s",
+           management_id, incoming ? "in" : "out",
+           connection_info->host, vhost ? vhost : "", connection_info->is_encrypted ? connection_info->ssl_proto : "no",
+           connection_info->is_authenticated ? connection_info->sasl_mechanisms : "no",
+           connection_info->user, connection_info->container, props_str);
+
     return conn;
 }
 
