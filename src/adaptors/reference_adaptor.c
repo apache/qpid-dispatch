@@ -238,39 +238,38 @@ static void on_startup(void *context)
 {
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
 
-    qdr_connection_info_t *info = qdr_connection_info(false, //bool             is_encrypted,
-                                                      false, //bool             is_authenticated,
-                                                      true,  //bool             opened,
-                                                      "",   //char            *sasl_mechanisms,
-                                                      QD_INCOMING, //qd_direction_t   dir,
-                                                      "127.0.0.1:47756",    //const char      *host,
-                                                      "",    //const char      *ssl_proto,
-                                                      "",    //const char      *ssl_cipher,
-                                                      "",    //const char      *user,
-                                                      "",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
-                                                      0,     //int              ssl_ssf,
-                                                      false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+    qdr_connection_info_t *info = qdr_connection_info(false,               //bool            is_encrypted,
+                                                      false,               //bool            is_authenticated,
+                                                      true,                //bool            opened,
+                                                      "",                  //char           *sasl_mechanisms,
+                                                      QD_INCOMING,         //qd_direction_t  dir,
+                                                      "",                  //const char     *host,
+                                                      "",                  //const char     *ssl_proto,
+                                                      "",                  //const char     *ssl_cipher,
+                                                      "",                  //const char     *user,
+                                                      "reference-adaptor", //const char     *container,
+                                                      pn_data(0),          //pn_data_t      *connection_properties,
+                                                      0,                   //int             ssl_ssf,
+                                                      false,               //bool            ssl,
+                                                      0);                  //const qdr_router_version_t *version)
 
-    adaptor->conn = qdr_connection_opened(adaptor->core,
-                                          adaptor->adaptor,
-                                          true,
-                                          QDR_ROLE_NORMAL,
-                                          1,
-                                          10000,  // get this from qd_connection_t
-                                          0,
-                                          0,
-                                          false,
-                                          false,
-                                          false,
-                                          false,
-                                          250,
-                                          0,
-                                          info,
-                                          0,
-                                          0);
+    adaptor->conn = qdr_connection_opened(adaptor->core,    // core
+                                          adaptor->adaptor, // protocol_adaptor
+                                          true,             // incoming
+                                          QDR_ROLE_NORMAL,  // role
+                                          1,                // cost
+                                          qd_server_allocate_connection_id(adaptor->core->qd->server),
+                                          0,                // label
+                                          0,                // remote_container_id
+                                          false,            // strip_annotations_in
+                                          false,            // strip_annotations_out
+                                          false,            // policy_allow_dynamic_link_routes
+                                          false,            // policy_allow_admin_status_update
+                                          250,              // link_capacity
+                                          0,                // vhost
+                                          info,             // connection_info
+                                          0,                // context_binder
+                                          0);               // bind_token
 
     uint64_t link_id;
     qdr_terminus_t *dynamic_source = qdr_terminus(0);
