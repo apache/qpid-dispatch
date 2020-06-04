@@ -1222,6 +1222,16 @@ bool qd_message_send_complete(qd_message_t *in_msg)
     return msg->send_complete;
 }
 
+
+void qd_message_set_send_complete(qd_message_t *in_msg)
+{
+    if (!!in_msg) {
+        qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
+        msg->send_complete = true;
+    }
+}
+
+
 bool qd_message_tag_sent(qd_message_t *in_msg)
 {
     if (!in_msg)
@@ -2192,10 +2202,7 @@ void qd_message_compose_5(qd_message_t        *msg,
         DEQ_APPEND(content->buffers, (*headers_buffers));
 
     if (body) {
-        qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(field, body);
-        DEQ_APPEND(content->buffers, (*qd_compose_buffers(field)));
-        qd_compose_free(field);
+        DEQ_APPEND(content->buffers, (*body));
     }
 
     content->receive_complete = complete;
