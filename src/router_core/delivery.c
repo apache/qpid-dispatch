@@ -25,7 +25,7 @@ ALLOC_DEFINE(qdr_delivery_t);
 
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
                                          qdr_delivery_t *peer, uint64_t new_disp, bool settled,
@@ -211,10 +211,10 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
 }
 
 
-qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core,qdr_delivery_t *in_dlv, bool settled)
+qdr_delivery_t *qdr_delivery_continue(qdr_core_t *core,qdr_delivery_t *in_dlv, bool settled)
 {
 
-    qdr_action_t   *action = qdr_action(qdr_deliver_continue_CT, "deliver_continue");
+    qdr_action_t   *action = qdr_action(qdr_delivery_continue_CT, "delivery_continue");
     action->args.delivery.delivery = in_dlv;
 
     qd_message_t *msg = qdr_delivery_message(in_dlv);
@@ -222,7 +222,7 @@ qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core,qdr_delivery_t *in_dlv, bo
     action->args.delivery.presettled = settled;
 
     // This incref is for the action reference
-    qdr_delivery_incref(in_dlv, "qdr_deliver_continue - add to action list");
+    qdr_delivery_incref(in_dlv, "qdr_delivery_continue - add to action list");
     qdr_action_enqueue(core, action);
     return in_dlv;
 }
@@ -1050,7 +1050,7 @@ static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 }
 
 
-void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bool more)
+void qdr_delivery_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bool more)
 {
     qdr_delivery_t *peer = qdr_delivery_first_peer_CT(in_dlv);
 
@@ -1100,7 +1100,7 @@ void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, boo
 }
 
 
-static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     if (discard)
         return;
@@ -1123,7 +1123,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
     // If it is already in the undelivered list, don't try to deliver this again.
     //
     if (!!link && in_dlv->where != QDR_DELIVERY_IN_UNDELIVERED) {
-        qdr_deliver_continue_peers_CT(core, in_dlv, more);
+        qdr_delivery_continue_peers_CT(core, in_dlv, more);
 
         qd_message_t *msg = qdr_delivery_message(in_dlv);
 
@@ -1147,7 +1147,7 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
                 // We dont want to deal with such deliveries.
                 //
                 if (in_dlv->settled && in_dlv->where == QDR_DELIVERY_NOWHERE) {
-                    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action 1");
+                    qdr_delivery_decref_CT(core, in_dlv, "qdr_delivery_continue_CT - remove from action 1");
                     return;
                 }
 
@@ -1179,13 +1179,13 @@ static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool
                 DEQ_REMOVE(link->settled, in_dlv);
                 // expect: action holds a ref to in_dlv, so it should not be freed here
                 assert(sys_atomic_get(&in_dlv->ref_count) > 1);
-                qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from settled list");
+                qdr_delivery_decref_CT(core, in_dlv, "qdr_delivery_continue_CT - remove from settled list");
             }
         }
     }
 
     // This decref is for the action reference
-    qdr_delivery_decref_CT(core, in_dlv, "qdr_deliver_continue_CT - remove from action 2");
+    qdr_delivery_decref_CT(core, in_dlv, "qdr_delivery_continue_CT - remove from action 2");
 }
 
 

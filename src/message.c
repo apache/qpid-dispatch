@@ -1232,6 +1232,15 @@ void qd_message_set_send_complete(qd_message_t *in_msg)
 }
 
 
+void qd_message_set_receive_complete(qd_message_t *in_msg)
+{
+    if (!!in_msg) {
+        qd_message_content_t *content = MSG_CONTENT(in_msg);
+        content->receive_complete = true;
+    }
+}
+
+
 bool qd_message_tag_sent(qd_message_t *in_msg)
 {
     if (!in_msg)
@@ -2206,6 +2215,13 @@ void qd_message_compose_5(qd_message_t        *msg,
     }
 
     content->receive_complete = complete;
+}
+
+
+void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
+{
+    qd_message_content_t *content = MSG_CONTENT(msg);
+    DEQ_APPEND(content->buffers, (*buffers));
 }
 
 

@@ -436,7 +436,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     //
 
     if (delivery) {
-        qdr_deliver_continue(router->router_core, delivery, pn_delivery_settled(pnd));
+        qdr_delivery_continue(router->router_core, delivery, pn_delivery_settled(pnd));
         return next_delivery;
     }
 

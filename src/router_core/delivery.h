@@ -124,7 +124,7 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
                                        bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given);
 
 /* invoked when incoming message data arrives - schedule core thread */
-qdr_delivery_t *qdr_deliver_continue(qdr_core_t *core, qdr_delivery_t *delivery, bool settled);
+qdr_delivery_t *qdr_delivery_continue(qdr_core_t *core, qdr_delivery_t *delivery, bool settled);
 
 
 //
@@ -153,7 +153,7 @@ qdr_delivery_t *qdr_delivery_first_peer_CT(qdr_delivery_t *dlv);
 qdr_delivery_t *qdr_delivery_next_peer_CT(qdr_delivery_t *dlv);
 
 /* schedules all peer deliveries with work for I/O processing */
-void qdr_deliver_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bool more);
+void qdr_delivery_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bool more);
 
 /* update the links counters with respect to its delivery */
 void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delivery);

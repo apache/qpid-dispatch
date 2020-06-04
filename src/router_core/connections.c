@@ -824,7 +824,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
 
         if (!qdr_delivery_receive_complete(dlv)) {
             qdr_delivery_set_aborted(dlv, true);
-            qdr_deliver_continue_peers_CT(core, dlv, false);
+            qdr_delivery_continue_peers_CT(core, dlv, false);
         }
 
         if (dlv->multicast) {
@@ -873,7 +873,7 @@ static void qdr_link_cleanup_deliveries_CT(qdr_core_t *core, qdr_connection_t *c
 
         if (!qdr_delivery_receive_complete(dlv)) {
             qdr_delivery_set_aborted(dlv, true);
-            qdr_deliver_continue_peers_CT(core, dlv, false);
+            qdr_delivery_continue_peers_CT(core, dlv, false);
         }
 
         peer = qdr_delivery_first_peer_CT(dlv);
