@@ -2221,7 +2221,16 @@ void qd_message_compose_5(qd_message_t        *msg,
 void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
+    qd_buffer_t          *buf     = DEQ_HEAD(*buffers);
+
+    LOCK(content->lock);
+    while (buf) {
+        qd_buffer_set_fanout(buf, content->fanout);
+        buf = DEQ_NEXT(buf);
+    }
+
     DEQ_APPEND(content->buffers, (*buffers));
+    UNLOCK(content->lock);
 }
 
 
