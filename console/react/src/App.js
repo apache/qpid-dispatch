@@ -22,9 +22,8 @@ import { HashRouter as Router, Route } from "react-router-dom";
 
 import "@patternfly/patternfly/patternfly.css";
 import "@patternfly/patternfly/patternfly-addons.css";
-
-import "patternfly/dist/css/patternfly.css";
-import "patternfly/dist/css/patternfly-additions.css";
+import "./patternfly.css";
+import "font-awesome/css/font-awesome.min.css";
 import "@patternfly/patternfly/components/Nav/nav.css";
 import { QDRService } from "./common/qdrService";
 import "./App.css";

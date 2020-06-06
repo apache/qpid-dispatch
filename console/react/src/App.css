@@ -20,6 +20,9 @@ under the License.
 #root {
   height: 100vh;
 }
+.pf-c-check__input {
+  --pf-c-check__input--MarginTop: 0.5em;
+}
 
 .App {
   text-align: center;

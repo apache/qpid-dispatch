@@ -256,7 +256,7 @@ class NotificationDrawer extends React.Component {
                         <div className="blank-slate-pf-icon">
                           <span className="pficon pficon-info"></span>
                         </div>
-                        <h1>There are no notifications to display.</h1>
+                        <h5>There are no notifications to display.</h5>
                       </div>
                       <div
                         className={`drawer-pf-action ${
