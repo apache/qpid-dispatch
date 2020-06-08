@@ -294,9 +294,15 @@ void qd_message_compose_5(qd_message_t        *msg,
                           bool                 complete);
 
 /**
+ * qd_message_extend
+ *
  * Extend the content of a streaming message with more buffers.
+ *
+ * @param msg Pointer to a message
+ * @param buffers A list of buffers to be appended to the end of the message's stream
+ * @return The number of buffers stored in the message's content
  */
-void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers);
+int qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers);
 
 
 /** Put string representation of a message suitable for logging in buffer.
