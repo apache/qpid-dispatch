@@ -184,4 +184,4 @@ static void qcm_streaming_link_scrubber_final_CT(void *module_context)
 }
 
 
-QDR_CORE_MODULE_DECLARE("streaming_link_scruber", qcm_streaming_link_scrubber_enable_CT, qcm_streaming_link_scrubber_init_CT, qcm_streaming_link_scrubber_final_CT)
+QDR_CORE_MODULE_DECLARE("streaming_link_scrubber", qcm_streaming_link_scrubber_enable_CT, qcm_streaming_link_scrubber_init_CT, qcm_streaming_link_scrubber_final_CT)
