@@ -843,6 +843,9 @@ cleanup:
     qd_iterator_free(iter);
     qd_iterator_free(iter_good);
     qd_iterator_free(iter_bad);
+    qd_iterator_free(iter_bad_slash);
+    qd_iterator_free(iter_bad_dot);
+    qd_iterator_free(iter_bad_mqtt);
     qd_iterator_free(iter_const);
 
     qd_parse_tree_free(mqtt_tree);

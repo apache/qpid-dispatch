@@ -374,8 +374,9 @@ static qd_error_t parse_node_add_pattern(qd_parse_tree_t *tree, char *pattern, v
     const size_t buf_size = HKEY_PREFIX_LEN + strlen(pattern) + 1;
     char *hkey = malloc(buf_size);
     if (!hkey) {
+        result = qd_error(QD_ERROR_ALLOC, "Pattern '%s' not added to parse tree", pattern);
         free(pattern);
-        return qd_error(QD_ERROR_ALLOC, "Pattern '%s' not added to parse tree", pattern);
+        return result;
     }
 
     token_iterator_init(&iterator, tree->type, pattern);
