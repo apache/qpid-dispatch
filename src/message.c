@@ -2217,10 +2217,11 @@ void qd_message_compose_5(qd_message_t        *msg,
 }
 
 
-void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
+int qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
     qd_buffer_t          *buf     = DEQ_HEAD(*buffers);
+    int                   count;
 
     LOCK(content->lock);
     while (buf) {
@@ -2229,7 +2230,9 @@ void qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
     }
 
     DEQ_APPEND(content->buffers, (*buffers));
+    count = DEQ_SIZE(content->buffers);
     UNLOCK(content->lock);
+    return count;
 }
 
 

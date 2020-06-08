@@ -37,6 +37,7 @@ typedef struct qdr_ref_adaptor_t {
     qdr_connection_t       *conn;
     qdr_link_t             *out_link_1;
     qdr_link_t             *out_link_2;
+    qdr_link_t             *in_link_2;
     qdr_link_t             *dynamic_in_link;
     char                   *reply_to;
     qd_message_t           *streaming_message;
@@ -123,6 +124,16 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                                     "ref.2",          //const char       *name,
                                                     0,                //const char       *terminus_addr,
                                                     &link_id);
+
+        source = qdr_terminus(0);
+        qdr_terminus_set_address(source, address2);
+        adaptor->in_link_2 = qdr_link_first_attach(adaptor->conn,
+                                                   QD_OUTGOING,
+                                                   source,           //qdr_terminus_t   *source,
+                                                   qdr_terminus(0),  //qdr_terminus_t   *target,
+                                                   "ref.3",          //const char       *name,
+                                                   0,                //const char       *terminus_addr,
+                                                   &link_id);
     }
 }
 
@@ -193,6 +204,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_message_compose_5(adaptor->streaming_message, props, 0, false);
         qd_compose_free(props);
 
+        printf("qdr_ref_flow: Starting a streaming delivery\n");
         adaptor->streaming_delivery =
             qdr_link_deliver(adaptor->out_link_2, adaptor->streaming_message, 0, false, 0, 0);
         adaptor->stream_count = 0;
@@ -231,20 +243,34 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
     qd_message_t      *msg     = qdr_delivery_message(delivery);
 
-    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_BODY);
+    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_APPLICATION_PROPERTIES);
 
-    if (status == QD_MESSAGE_DEPTH_OK) {
-        qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
-        char *body = (char*) qd_iterator_copy(body_iter);
-        printf("qdr_ref_deliver: message received, body=%s\n", body);
-        free(body);
-        qd_iterator_free(body_iter);
-        qd_message_set_send_complete(msg);
+    switch (status) {
+    case QD_MESSAGE_DEPTH_OK: {
+        if (qd_message_receive_complete(msg)) {
+            qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+            char *body = (char*) qd_iterator_copy(body_iter);
+            printf("qdr_ref_deliver: complete message received, body=%s\n", body);
+            free(body);
+            qd_iterator_free(body_iter);
+            qd_message_set_send_complete(msg);
+            qdr_link_flow(adaptor->core, link, 1, false);
+            return PN_ACCEPTED; // This will cause the delivery to be settled
+        }
+        break;
     }
 
-    qdr_link_flow(adaptor->core, link, 1, false);
+    case QD_MESSAGE_DEPTH_INVALID:
+        printf("qdr_ref_deliver: message invalid\n");
+        qdr_link_flow(adaptor->core, link, 1, false);
+        break;
 
-    return PN_ACCEPTED; // This will cause the delivery to be settled
+    case QD_MESSAGE_DEPTH_INCOMPLETE:
+        printf("qdr_ref_deliver: message incomplete\n");
+        break;
+    }
+
+    return 0;
 }
 
 
@@ -269,7 +295,12 @@ static void qdr_ref_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
     }
     printf("qdr_ref_delivery_update: disp=%s settled=%s\n", dispname, settled ? "true" : "false");
 
-    if (settled && qdr_delivery_link(dlv) == adaptor->out_link_1)
+    if (qdr_delivery_link(dlv) == adaptor->out_link_2 && qdr_delivery_message(dlv) == adaptor->streaming_message) {
+        adaptor->streaming_message = 0;
+        adaptor->stream_count      = 0;
+    }
+
+    if (settled)
         qdr_delivery_decref(adaptor->core, dlv, "qdr_ref_delivery_update - settled delivery");
 }
 
@@ -352,23 +383,30 @@ static void on_stream(void *context)
     qdr_ref_adaptor_t *adaptor        = (qdr_ref_adaptor_t*) context;
     const char        *content        = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const size_t       content_length = strlen(content);
-    qd_buffer_t       *buf            = qd_buffer();
-    qd_buffer_list_t   buffers;
+
+    if (!adaptor->streaming_message)
+        return;
+
+    qd_buffer_t      *buf = qd_buffer();
+    qd_buffer_list_t  buffers;
 
     DEQ_INIT(buffers);
     DEQ_INSERT_TAIL(buffers, buf);
 
     memcpy(qd_buffer_cursor(buf), content, content_length);
     qd_buffer_insert(buf, content_length);
-    qd_message_extend(adaptor->streaming_message, &buffers);
+    int depth = qd_message_extend(adaptor->streaming_message, &buffers);
     qdr_delivery_continue(adaptor->core, adaptor->streaming_delivery, false);
 
-    if (adaptor->stream_count < 30) {
-        qd_timer_schedule(adaptor->stream_timer, 1000);
+    if (adaptor->stream_count < 10) {
+        qd_timer_schedule(adaptor->stream_timer, 100);
         adaptor->stream_count++;
+        printf("on_stream: sent streamed frame %d, depth=%d\n", adaptor->stream_count, depth);
     } else {
         qd_message_set_receive_complete(adaptor->streaming_message);
         adaptor->streaming_message = 0;
+        adaptor->stream_count      = 0;
+        printf("on_stream: completed streaming send, depth=%d\n", depth);
     }
 }
 
@@ -404,7 +442,6 @@ void qdr_ref_adaptor_init(qdr_core_t *core, void **adaptor_context)
                                             qdr_ref_conn_trace);
     *adaptor_context = adaptor;
 
-    // TEMPORARY //
     adaptor->startup_timer = qd_timer(core->qd, on_startup, adaptor);
     qd_timer_schedule(adaptor->startup_timer, 0);
 
