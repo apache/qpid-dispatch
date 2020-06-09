@@ -26,6 +26,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <memory.h>
+#include <string.h>
 
 #define CT_ASSERT(exp) { assert(exp); }
 
@@ -216,5 +217,42 @@ do {                                    \
 
 #define MIN(a,b) (((a)<(b))?(a):(b))
 #define MAX(a,b) (((a)>(b))?(a):(b))
+
+//
+// Heap allocation with abort() on failure
+//
+
+static inline void *qd_malloc(size_t size)
+{
+    void *ptr = malloc(size);
+    if (!ptr)
+        abort();
+    return ptr;
+}
+
+static inline void *qd_calloc(size_t nmemb, size_t size)
+{
+    void *ptr = calloc(nmemb, size);
+    if (!ptr)
+        abort();
+    return ptr;
+}
+
+static inline void *qd_realloc(void *buf, size_t size)
+{
+    void *ptr = realloc(buf, size);
+    if (!ptr)
+        abort();
+    return ptr;
+}
+
+static inline char *qd_strdup(const char *s)
+{
+    char *ptr = strdup(s);
+    if (!ptr)
+        abort();
+    return ptr;
+}
+
 
 #endif
