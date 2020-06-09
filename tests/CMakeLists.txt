@@ -38,6 +38,7 @@ set(unit_test_SOURCES
     alloc_test.c
     version_test.c
     hash_test.c
+    thread_test.c
     )
 
 add_executable(unit_tests ${unit_test_SOURCES})

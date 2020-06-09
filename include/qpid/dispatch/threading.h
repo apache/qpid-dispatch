@@ -54,8 +54,6 @@ typedef struct sys_thread_t sys_thread_t;
 sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg);
 void          sys_thread_free(sys_thread_t *thread);
 void          sys_thread_join(sys_thread_t *thread);
-
-/** Return the OS identifier for this thread */
-long sys_thread_id(sys_thread_t *thread);
+sys_thread_t *sys_thread_self(void);
 
 #endif
