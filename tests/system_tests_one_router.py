@@ -2975,6 +2975,9 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         self.dest = dest
         self.reactor = None
         self.success = False
+        self.receiver_link_opened = False
+        self.sender_link_opened = False
+        self.custom_timer_created = False
 
     def cancel_custom(self):
         self.custom_timer.cancel()
@@ -3001,6 +3004,8 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+
+        # Create separate sender and receiver connections.
         self.sender_conn = event.container.connect(self.address)
         self.receiver_conn = event.container.connect(self.address)
 
@@ -3012,7 +3017,23 @@ class ConnectionUptimeLastDlvTest(MessagingHandler):
         # This will help us check the uptime and lastDlv time
         # No deliveries were sent on any link yet, so the lastDlv must be "-"
         self.reactor = event.reactor
-        self.custom_timer = event.reactor.schedule(1, UptimeLastDlvChecker(self, uptime=1, lastDlv=None))
+
+
+    def on_link_opened(self, event):
+        # Schedule the UptimeLastDlvChecker only after the sender and
+        # receiver links have been opened on those connections. This
+        # will help the test pass 100% of the time in slow systems.
+        if self.receiver == event.receiver:
+            self.receiver_link_opened = True
+        if event.sender == self.sender:
+            self.sender_link_opened = True
+
+        if self.receiver_link_opened and self.sender_link_opened:
+            if not self.custom_timer_created:
+                self.custom_timer_created = True
+                self.custom_timer = event.reactor.schedule(1, UptimeLastDlvChecker(self, uptime=1,
+                                                                                   lastDlv=None))
+
 
     def run(self):
         container = Container(self)
