@@ -26,6 +26,7 @@
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/container.h>
 #include <qpid/dispatch/log.h>
+#include <proton/raw_connection.h>
 
 /**@file
  * Message representation. 
@@ -303,6 +304,34 @@ void qd_message_compose_5(qd_message_t        *msg,
  * @return The number of buffers stored in the message's content
  */
 int qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers);
+
+
+/**
+ * qd_message_read_body
+ *
+ * Populate Proton raw buffers from the body section in a streaming fashion (i.e. repeated 
+ * invocations yield new seqments of the content stream).  The buffers will be left in place
+ * in the message until they are explicitly released.
+ *
+ * @param msg Pointer to a message
+ * @param buffers An array of raw-buffer descriptors to be written
+ * @param buffer_count The number of descriptors supplied in buffers
+ * @return The number of raw buffers written.
+ */
+int qd_message_read_body(qd_message_t *msg, pn_raw_buffer_t *buffers, int buffer_count);
+
+
+/**
+ * qd_message_release_body
+ *
+ * Release buffers that were aliased by Proton raw buffers.  The buffers in the message that
+ * have been fully read will have their reference counts decreased so they may be freed
+ *
+ * @param msg Pointer to a message
+ * @param buffers An array of raw-buffer descriptors previously returned by qd_message_read_body
+ * @param buffer_count The number of descriptors in the array that contained data
+ */
+void qd_message_release_body(qd_message_t *msg, pn_raw_buffer_t *buffers, int buffer_count);
 
 
 /** Put string representation of a message suitable for logging in buffer.
