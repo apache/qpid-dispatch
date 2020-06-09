@@ -33,6 +33,7 @@ int parse_tree_tests(void);
 int proton_utils_tests(void);
 int version_tests(void);
 int hash_tests(void);
+int thread_tests(void);
 
 
 int main(int argc, char** argv)
@@ -68,6 +69,7 @@ int main(int argc, char** argv)
     result += core_timer_tests();
     result += version_tests();
     result += hash_tests();
+    result += thread_tests();
 
     qd_dispatch_free(qd);       // dispatch_free last.
 

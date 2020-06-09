@@ -150,18 +150,37 @@ void sys_rwlock_unlock(sys_rwlock_t *lock)
 
 struct sys_thread_t {
     pthread_t thread;
+    void *(*f)(void *);
+    void *arg;
 };
+
+static __thread sys_thread_t *_self;
+
+
+// bootstrap _self before calling main thread function
+//
+static void *_thread_init(void *arg)
+{
+    _self = (sys_thread_t *)arg;
+    return _self->f(_self->arg);
+}
+
 
 sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg)
 {
     sys_thread_t *thread = NEW(sys_thread_t);
-    pthread_create(&(thread->thread), 0, run_function, arg);
+    thread->f = run_function;
+    thread->arg = arg;
+    pthread_create(&(thread->thread), 0, _thread_init, (void *)thread);
     return thread;
 }
 
-long sys_thread_id(sys_thread_t *thread) {
-    return (long) thread->thread;
+
+sys_thread_t *sys_thread_self()
+{
+    return _self;
 }
+
 
 void sys_thread_free(sys_thread_t *thread)
 {
