@@ -42,7 +42,8 @@ typedef int64_t qd_duration_t;
 /**
  * Timer Callback
  *
- * Callback invoked after a timer's interval expires and the timer fires.
+ * Callback invoked after a timer's interval expires and the timer fires.  This
+ * may be invoked on any server thread.
  *
  * @param context The context supplied in qd_timer
  */
@@ -51,7 +52,7 @@ typedef void (*qd_timer_cb_t)(void* context);
 
 /**
  * Create a new timer object.
- * 
+ *
  * @param qd Pointer to the dispatch instance.
  * @param cb The callback function to be invoked when the timer expires.
  * @param context An opaque, user-supplied context to be passed into the callback.
@@ -61,9 +62,17 @@ qd_timer_t *qd_timer(qd_dispatch_t *qd, qd_timer_cb_t cb, void* context);
 
 
 /**
- * Free the resources for a timer object.  If the timer was scheduled, it will be canceled 
- * prior to freeing.  After this function returns, the callback will not be invoked for this
- * timer.
+ * Free a timer.
+ *
+ * If the timer was scheduled, it will be canceled prior to freeing.  If the
+ * callback is currently running on another server thread the caller will block
+ * until the callback completes.  On return the caller is guaranteed that the
+ * timer callback will never run again.  This may be called during the timer
+ * callback - in that case the call will not block.
+ *
+ * Note Well:
+ * Since this call may block until the timer callback completes, it is critical
+ * that the caller MUST NOT be holding any lock that the timer callback takes.
  *
  * @param timer Pointer to the timer object returned by qd_timer.
  */
@@ -73,9 +82,10 @@ void qd_timer_free(qd_timer_t *timer);
 /**
  * Schedule a timer to fire in the future.
  *
- * Note that the timer callback will never be invoked synchronously during the execution
- * of qd_timer_schedule.  Even if the interval is immediate (0), the callback invocation will
- * be asynchronous and after the return of this function.
+ * Note that the timer callback will never be invoked synchronously during the
+ * execution of qd_timer_schedule.  Even if the interval is immediate (0), the
+ * callback invocation will be asynchronous and after the return of this
+ * function.  This may be called during the timer callback.
  *
  * @param timer Pointer to the timer object returned by qd_timer.
  * @param msec The minimum number of milliseconds of delay until the timer fires.
@@ -85,9 +95,18 @@ void qd_timer_schedule(qd_timer_t *timer, qd_duration_t msec);
 
 
 /**
- * Attempt to cancel a scheduled timer.  Since the timer callback can be invoked on any
- * server thread, it is always possible that a last-second cancel attempt may arrive too late
- * to stop the timer from firing (i.e. the cancel is concurrent with the fire callback).
+ * Cancel a scheduled timer.
+ *
+ * If the timer is scheduled it will be canceled and the callback will not be
+ * invoked.  If the timer callback is currently executing on another thread
+ * this call will block until the callback completes.  On return the caller is
+ * guaranteed that the callback will not execute unless it is rescheduled using
+ * qd_timer_schedule.  This call must not be invoked from within the callback
+ * itself.
+ *
+ * Note Well:
+ * Since this call may block until the timer callback completes, it is critical
+ * that the caller MUST NOT be holding any lock that the timer callback takes.
  *
  * @param timer Pointer to the timer object returned by qd_timer.
  */

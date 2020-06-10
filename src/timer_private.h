@@ -19,20 +19,8 @@
  * under the License.
  */
 
-#include "qpid/dispatch/ctools.h"
-#include "qpid/dispatch/threading.h"
 #include "qpid/dispatch/timer.h"
-
-struct qd_timer_t {
-    DEQ_LINKS(qd_timer_t);
-    qd_server_t      *server;
-    qd_timer_cb_t     handler;
-    void             *context;
-    qd_timestamp_t    delta_time;
-    bool              scheduled; /* true means on scheduled list, false on idle list */
-};
-
-DEQ_DECLARE(qd_timer_t, qd_timer_list_t);
+#include "qpid/dispatch/threading.h"
 
 void qd_timer_initialize(sys_mutex_t *server_lock);
 void qd_timer_finalize(void);

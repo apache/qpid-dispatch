@@ -416,23 +416,20 @@ static void _do_reconnect(void *context)
     }
     sys_mutex_unlock(qdr_http1_adaptor->lock);
 
-    if (hconn->qdr_conn) {
+    // handle any qdr_connection_t processing requests that occurred since
+    // this raw connection dropped.
+    while (hconn->qdr_conn && qdr_connection_process(hconn->qdr_conn))
+        ;
 
-        // handle any qdr_connection_t processing requests that occurred since
-        // this raw connection dropped.
-        while (qdr_connection_process(hconn->qdr_conn))
-            ;
-
-        if (!hconn->qdr_conn) {
-            // the qdr_connection_t has been closed
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-                   "[C%"PRIu64"] HTTP/1.x server connection closed", hconn->conn_id);
-            qdr_http1_connection_free(hconn);
-            return;
-        }
-
-        _process_request((_server_request_t*) DEQ_HEAD(hconn->requests));
+    if (!hconn->qdr_conn) {
+        // the qdr_connection_t has been closed
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"] HTTP/1.x server connection closed", hconn->conn_id);
+        qdr_http1_connection_free(hconn);
+        return;
     }
+
+    _process_request((_server_request_t*) DEQ_HEAD(hconn->requests));
 
     // Do not attempt to re-connect if the current request is still in
     // progress. This happens when the server has closed the connection before
@@ -597,7 +594,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         // prevent core activation
         sys_mutex_lock(qdr_http1_adaptor->lock);
         hconn->raw_conn = 0;
-        if (reconnect)
+        if (reconnect && hconn->server.reconnect_timer)
             qd_timer_schedule(hconn->server.reconnect_timer, hconn->server.reconnect_pause);
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 

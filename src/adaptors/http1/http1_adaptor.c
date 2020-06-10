@@ -82,16 +82,16 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 {
     if (hconn) {
         pn_raw_connection_t *rconn = 0;
+        qd_timer_t *timer = 0;
 
         // prevent core from activating this connection while it is being torn
         // down. Also prevent timer callbacks from running. see
-        // _core_connection_activate_CT, and _do_reconnect/_do_activate in
-        // http1_server.c
+        // _core_connection_activate_CT and _do_reconnect in http1_server.c
         //
         sys_mutex_lock(qdr_http1_adaptor->lock);
         {
             DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
-            qd_timer_free(hconn->server.reconnect_timer);
+            timer = hconn->server.reconnect_timer;
             hconn->server.reconnect_timer = 0;
             rconn = hconn->raw_conn;
             hconn->raw_conn = 0;
@@ -104,6 +104,10 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             hconn->qdr_conn = 0;
         }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+        // must free timer outside of lock since callback
+        // attempts to take lock:
+        qd_timer_free(timer);
 
         // cleanup outstanding requests
         //
