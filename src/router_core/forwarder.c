@@ -660,23 +660,25 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
                 qd_bitmask_first_set(addr->closest_remotes, &addr->next_remote);
 
             // get the inter-router connection associated with path to rnode:
-            int conn_bit = (rnode->next_hop) ? rnode->next_hop->conn_mask_bit : rnode->conn_mask_bit;
-            qdr_link_t *out_link;
-            if (control) {
-                out_link = peer_router_control_link(core, conn_bit);
-            } else if (!receive_complete) {
-                out_link = get_outgoing_streaming_link(core, core->rnode_conns_by_mask_bit[conn_bit]);
-            } else {
-                out_link = peer_router_data_link(core, conn_bit, qdr_forward_effective_priority(msg, addr));
-            }
+            const int conn_bit = (rnode->next_hop) ? rnode->next_hop->conn_mask_bit : rnode->conn_mask_bit;
+            if (conn_bit >= 0) {
+                qdr_link_t *out_link;
+                if (control) {
+                    out_link = peer_router_control_link(core, conn_bit);
+                } else if (!receive_complete) {
+                    out_link = get_outgoing_streaming_link(core, core->rnode_conns_by_mask_bit[conn_bit]);
+                } else {
+                    out_link = peer_router_data_link(core, conn_bit, qdr_forward_effective_priority(msg, addr));
+                }
 
-            if (out_link) {
-                qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
-                qdr_forward_deliver_CT(core, out_link, out_delivery);
-                addr->deliveries_transit++;
-                if (out_link->link_type == QD_LINK_ROUTER)
-                    core->deliveries_transit++;
-                return 1;
+                if (out_link) {
+                    qdr_delivery_t *out_delivery = qdr_forward_new_delivery_CT(core, in_delivery, out_link, msg);
+                    qdr_forward_deliver_CT(core, out_link, out_delivery);
+                    addr->deliveries_transit++;
+                    if (out_link->link_type == QD_LINK_ROUTER)
+                        core->deliveries_transit++;
+                    return 1;
+                }
             }
         }
     }
