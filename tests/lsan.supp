@@ -38,6 +38,9 @@ leak:qdr_subscribe_CT
 leak:router_annotate_message
 leak:qd_container_register_node_type
 
+# DISPATCH-1663
+leak:^qdr_send_to2$
+
 # Ubuntu 18.04 (Bionic)
 leak:qdr_link_issue_credit_CT
 leak:qdr_delivery_push_CT
