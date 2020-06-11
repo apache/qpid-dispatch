@@ -138,6 +138,9 @@ class Router():
         :return:
         '''
         for item in self.lines:
+            if item.data.is_scraper:
+                # scraper lines are pass-through
+                continue
             conn_num = int(item.data.conn_num)
             id = item.data.conn_id           # full name A0_3
             if conn_num not in self.conn_list:
