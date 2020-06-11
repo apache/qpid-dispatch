@@ -2458,7 +2458,7 @@ class LinkRoute3Hop(TestCase):
         same session.
         """
         send_clients = 10
-        send_batch = 25
+        send_batch = 10
         total = send_clients * send_batch
 
         start_in = self.fake_service.in_count
@@ -2485,14 +2485,15 @@ class LinkRoute3Hop(TestCase):
 
         senders = [_spawn_sender(s) for s in range(send_clients)]
 
-        if rx.wait(timeout=TIMEOUT):
-            raise Exception("Receiver failed to consume all messages in=%s out=%s",
-                            self.fake_service.in_count,
-                            self.fake_service.out_count)
         for tx in senders:
             out_text, out_err = tx.communicate(timeout=TIMEOUT)
             if tx.returncode:
                 raise Exception("Sender failed: %s %s" % (out_text, out_err))
+
+        if rx.wait(timeout=TIMEOUT):
+            raise Exception("Receiver failed to consume all messages in=%s out=%s",
+                            self.fake_service.in_count,
+                            self.fake_service.out_count)
 
         self.assertEqual(start_in + total, self.fake_service.in_count)
         self.assertEqual(start_out + total, self.fake_service.out_count)
