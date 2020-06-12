@@ -35,6 +35,7 @@
 #include <proton/listener.h>
 #include <proton/netaddr.h>
 #include <proton/proactor.h>
+#include <proton/raw_connection.h>
 #include <proton/sasl.h>
 
 
@@ -576,11 +577,10 @@ qd_connection_t *qd_server_connection(qd_server_t *server, qd_server_config_t *c
 }
 
 
-static void on_accept(pn_event_t *e)
+static void on_accept(pn_event_t *e, qd_listener_t *listener)
 {
     assert(pn_event_type(e) == PN_LISTENER_ACCEPT);
     pn_listener_t *pn_listener = pn_event_listener(e);
-    qd_listener_t *listener = pn_listener_get_context(pn_listener);
     qd_connection_t *ctx = qd_server_connection(listener->server, &listener->config);
     if (!ctx) {
         qd_log(listener->server->log_source, QD_LOG_CRITICAL,
@@ -775,10 +775,32 @@ static void invoke_deferred_calls(qd_connection_t *conn, bool discard)
 void qd_container_handle_event(qd_container_t *container, pn_event_t *event, pn_connection_t *pn_conn, qd_connection_t *qd_conn);
 void qd_conn_event_batch_complete(qd_container_t *container, qd_connection_t *qd_conn, bool conn_closed);
 
-static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
+static void handle_event_with_context(pn_event_t *e, qd_server_t *qd_server, qd_handler_context_t *context)
+{
+    if (context && context->handler) {
+        context->handler(e, qd_server, context->context);
+    }
+}
+
+static void do_handle_raw_connection_event(pn_event_t *e, qd_server_t *qd_server)
+{
+    handle_event_with_context(e, qd_server, (qd_handler_context_t*) pn_raw_connection_get_context(pn_event_raw_connection(e)));
+}
+
+static void do_handle_listener(pn_event_t *e, qd_server_t *qd_server)
+{
+    handle_event_with_context(e, qd_server, (qd_handler_context_t*) pn_listener_get_context(pn_event_listener(e)));
+}
+
+pn_proactor_t *qd_server_proactor(qd_server_t *qd_server)
+{
+    return qd_server->proactor;
+}
+
+static void handle_listener(pn_event_t *e, qd_server_t *qd_server, void *context) {
     qd_log_source_t *log = qd_server->log_source;
 
-    qd_listener_t *li = (qd_listener_t*) pn_listener_get_context(pn_event_listener(e));
+    qd_listener_t *li = (qd_listener_t*) context;
     const char *host_port = li->config.host_port;
     const char *port = li->config.port;
 
@@ -807,7 +829,7 @@ static void handle_listener(pn_event_t *e, qd_server_t *qd_server) {
 
     case PN_LISTENER_ACCEPT:
         qd_log(log, QD_LOG_TRACE, "Accepting connection on %s", host_port);
-        on_accept(e);
+        on_accept(e, li);
         break;
 
     case PN_LISTENER_CLOSE:
@@ -966,7 +988,7 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
     case PN_LISTENER_OPEN:
     case PN_LISTENER_ACCEPT:
     case PN_LISTENER_CLOSE:
-        handle_listener(e, qd_server);
+        do_handle_listener(e, qd_server);
         break;
 
     case PN_CONNECTION_INIT: {
@@ -1033,6 +1055,17 @@ static bool handle(qd_server_t *qd_server, pn_event_t *e, pn_connection_t *pn_co
         }
         break;
 
+    case PN_RAW_CONNECTION_CONNECTED:
+    case PN_RAW_CONNECTION_CLOSED_READ:
+    case PN_RAW_CONNECTION_CLOSED_WRITE:
+    case PN_RAW_CONNECTION_DISCONNECTED:
+    case PN_RAW_CONNECTION_NEED_READ_BUFFERS:
+    case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS:
+    case PN_RAW_CONNECTION_READ:
+    case PN_RAW_CONNECTION_WRITTEN:
+    case PN_RAW_CONNECTION_WAKE:
+        do_handle_raw_connection_event(e, qd_server);
+        break;
     default:
         break;
     } // Switch event type
@@ -1518,13 +1551,15 @@ qd_listener_t *qd_server_listener(qd_server_t *server)
     sys_atomic_init(&li->ref_count, 1);
     li->server      = server;
     li->http = NULL;
+    li->type.context = li;
+    li->type.handler = &handle_listener;
     return li;
 }
 
 static bool qd_listener_listen_pn(qd_listener_t *li) {
    li->pn_listener = pn_listener();
     if (li->pn_listener) {
-        pn_listener_set_context(li->pn_listener, li);
+        pn_listener_set_context(li->pn_listener, &li->type);
         pn_proactor_listen(li->server->proactor, li->pn_listener, li->config.host_port,
                            BACKLOG);
         sys_atomic_inc(&li->ref_count); /* In use by proactor, PN_LISTENER_CLOSE will dec */
