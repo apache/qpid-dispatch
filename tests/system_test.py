@@ -341,6 +341,44 @@ class Config(object):
             f.write(str(self))
         return name
 
+
+class HttpServer(Process):
+    def __init__(self, args, name=None, expect=Process.RUNNING):
+        super(HttpServer, self).__init__(args, name=name, expect=expect)
+
+# A HTTP2 Server that will respond to requests made via the router
+class Http2Server(HttpServer):
+    def __init__(self, name=None, listen_port=None, wait=True,
+                 py_string='python3', perform_teardown=True, cl_args=None,
+                 server_file=None,
+                 expect=Process.RUNNING):
+        self.name = name
+        self.listen_port = listen_port
+        self.ports_family = {self.listen_port: 'IPv4'}
+        self.py_string = py_string
+        self.cl_args = cl_args
+        self.perform_teardown = perform_teardown
+        self.server_file = server_file
+        self._wait_ready = False
+        self.args = ['/usr/bin/env', self.py_string, os.path.join(os.path.dirname(os.path.abspath(__file__)), self.server_file)]
+        if self.cl_args:
+            self.args += self.cl_args
+        super(Http2Server, self).__init__(self.args, name=name, expect=expect)
+        if wait:
+            self.wait_ready()
+
+    def wait_ready(self, **retry_kwargs):
+        """
+        Wait for ports to be ready
+        """
+        if not self._wait_ready:
+            self._wait_ready = True
+            self.wait_ports(**retry_kwargs)
+
+    def wait_ports(self, **retry_kwargs):
+        wait_ports(self.ports_family, **retry_kwargs)
+
+
 class Qdrouterd(Process):
     """Run a Qpid Dispatch Router Daemon"""
 
@@ -731,6 +769,9 @@ class Tester(object):
     def qdrouterd(self, *args, **kwargs):
         """Return a Qdrouterd that will be cleaned up on teardown"""
         return self.cleanup(Qdrouterd(*args, **kwargs))
+
+    def httpserver(self, *args, **kwargs):
+        return self.cleanup(Http2Server(*args, **kwargs))
 
     port_range = (20000, 30000)
     next_port = random.randint(port_range[0], port_range[1])

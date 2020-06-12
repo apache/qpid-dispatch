@@ -89,11 +89,21 @@ DEQ_DECLARE(qd_pn_free_link_session_t, qd_pn_free_link_session_list_t);
 # define NI_MAXSERV 32
 #endif
 
+pn_proactor_t* qd_server_proactor(qd_server_t *s);
+
+typedef void (*qd_server_event_handler_t) (pn_event_t *e, qd_server_t *qd_server, void *context);
+
+typedef struct qd_handler_context_t {
+    void                      *context;
+    qd_server_event_handler_t  handler;
+} qd_handler_context_t;
+
 /**
  * Listener objects represent the desire to accept incoming transport connections.
  */
 struct qd_listener_t {
     /* May be referenced by connection_manager and pn_listener_t */
+    qd_handler_context_t      type;
     sys_atomic_t              ref_count;
     qd_server_t              *server;
     qd_server_config_t        config;

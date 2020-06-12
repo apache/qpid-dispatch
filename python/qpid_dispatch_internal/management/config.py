@@ -322,7 +322,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     for t in "sslProfile", "authServicePlugin", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "router.config.exchange", "router.config.binding", \
-             "vhost":
+             "vhost", "httpListener", "httpConnector":
         for a in config.by_type(t):
             configure(a)
             if t == "sslProfile":

@@ -18,6 +18,7 @@ packages installed:
 - python-devel
 - cyrus-sasl-plain
 - cyrus-sasl-devel
+- nghttp2-devel
 - asciidoc (for building docs)
 - asciidoctor (for building docs)
 
