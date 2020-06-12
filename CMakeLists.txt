@@ -66,6 +66,7 @@ message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERS
 
 # Web Sockets
 find_package(LibWebSockets 2.4.2)
+find_package(libnghttp2 1.4.0)
 CMAKE_DEPENDENT_OPTION(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ON
                          "LIBWEBSOCKETS_FOUND" OFF)
 if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
