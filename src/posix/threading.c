@@ -161,7 +161,7 @@ static __thread sys_thread_t *_self;
 //
 static void *_thread_init(void *arg)
 {
-    _self = (sys_thread_t *)arg;
+    _self = (sys_thread_t*) arg;
     return _self->f(_self->arg);
 }
 
@@ -171,7 +171,7 @@ sys_thread_t *sys_thread(void *(*run_function) (void *), void *arg)
     sys_thread_t *thread = NEW(sys_thread_t);
     thread->f = run_function;
     thread->arg = arg;
-    pthread_create(&(thread->thread), 0, _thread_init, (void *)thread);
+    pthread_create(&(thread->thread), 0, _thread_init, (void*) thread);
     return thread;
 }
 
