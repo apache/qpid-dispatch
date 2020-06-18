@@ -116,7 +116,7 @@ class Config(object):
         # The 'pattern:' and 'bindingKey:' attributes in the schema are special
         # snowflakes. They allow '#' characters in their value, so they cannot
         # be treated as comment delimiters
-        special_snowflakes = ['pattern', 'bindingKey']
+        special_snowflakes = ['pattern', 'bindingKey', 'hostname']
         hash_ok = re.compile(r'([\w-]+)[ \t]*:[ \t]*([\S]+).*')
 
         # the 'openProperties' and 'groups' attributes are also special

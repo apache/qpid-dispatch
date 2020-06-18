@@ -1815,5 +1815,48 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             self.assertFalse(res)
 
 
+class VhostPolicyConfigHashPattern(TestCase):
+    """
+    Verify that a vhost with a '#' symbol in the hostname does
+    not crash the router.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(VhostPolicyConfigHashPattern, cls).setUpClass()
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true', 'enableVhostNamePatterns': 'true'}),
+            ('vhost', {
+                'hostname': '#.example.com', 'maxConnections': 2,
+                'allowUnknownUser': 'true',
+                'groups': {
+                    '$default': {
+                        'users': '*',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True
+                    }
+                }
+            })
+        ])
+
+        cls.router = cls.tester.qdrouterd('vhost-policy-config-hash-pattern', config, wait=False)
+        cls.timed_out = False
+        try:
+            cls.router.wait_ready(timeout = 5)
+        except Exception:
+            cls.timed_out = True
+
+    def address(self):
+        return self.router.addresses[0]
+
+    def test_vhost_created(self):
+        # If the test fails then the router does not start
+        self.assertEqual(False, VhostPolicyConfigHashPattern.timed_out)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
