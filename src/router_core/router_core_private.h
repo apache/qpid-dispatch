@@ -136,6 +136,7 @@ struct qdr_action_t {
             qd_detach_type_t     dt;
             int                  credit;
             bool                 drain;
+            qdr_delivery_t      *initial_delivery;
         } connection;
 
         //
@@ -464,6 +465,7 @@ struct qdr_link_t {
     bool                     streaming;         ///< True if this link can be reused for streaming msgs
     bool                     in_streaming_pool; ///< True if this link is in the connections standby pool STREAMING_POOL
     bool                     terminus_survives_disconnect;
+    bool                     no_route;          ///< True if this link is to not receive routed deliveries
     char                    *strip_prefix;
     char                    *insert_prefix;
 

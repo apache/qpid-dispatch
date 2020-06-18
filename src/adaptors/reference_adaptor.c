@@ -113,6 +113,8 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                                     target,           //qdr_terminus_t   *target,
                                                     "ref.1",          //const char       *name,
                                                     0,                //const char       *terminus_addr,
+                                                    false,            //bool              no_route
+                                                    0,                //qdr_delivery_t   *initial_delivery
                                                     &link_id);
 
         target = qdr_terminus(0);
@@ -123,6 +125,8 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                                     target,           //qdr_terminus_t   *target,
                                                     "ref.2",          //const char       *name,
                                                     0,                //const char       *terminus_addr,
+                                                    false,            //bool              no_route
+                                                    0,                //qdr_delivery_t   *initial_delivery
                                                     &link_id);
 
         source = qdr_terminus(0);
@@ -133,6 +137,8 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
                                                    qdr_terminus(0),  //qdr_terminus_t   *target,
                                                    "ref.3",          //const char       *name,
                                                    0,                //const char       *terminus_addr,
+                                                   false,            //bool              no_route
+                                                   0,                //qdr_delivery_t   *initial_delivery
                                                    &link_id);
     }
 }
@@ -366,6 +372,8 @@ static void on_startup(void *context)
                                                      qdr_terminus(0),  //qdr_terminus_t   *target,
                                                      "ref.0",          //const char       *name,
                                                      0,                //const char       *terminus_addr,
+                                                     false,            //bool              no_route
+                                                     0,                //qdr_delivery_t   *initial_delivery
                                                      &link_id);
 }
 

@@ -775,6 +775,8 @@ const char *qdr_link_name(const qdr_link_t *link);
  * @param target Target terminus of the attach
  * @param name - name of the link
  * @param terminus_addr - terminus address if any
+ * @param no_route If true, new deliveries are not to be routed to this link
+ * @param initial_delivery (optional) Move this delivery from its existing link to the head of this link's buffer
  * @param link_id - set to the management id of the new link
  * @return A pointer to a new qdr_link_t object to track the link
  */
@@ -784,6 +786,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
                                   qdr_terminus_t   *target,
                                   const char       *name,
                                   const char       *terminus_addr,
+                                  bool              no_route,
+                                  qdr_delivery_t   *initial_delivery,
                                   uint64_t         *link_id);
 
 /**

@@ -575,6 +575,13 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
     if (key && (*key == QD_ITER_HASH_PREFIX_MOBILE))
         link->phase = (int) (key[1] - '0');
 
+    //
+    // If this link is configured as no-route, don't create any functional linkage between the
+    // link and the address beyond the owning_addr.
+    //
+    if (link->no_route)
+        return;
+
     if (link->link_direction == QD_OUTGOING) {
         qdr_add_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (DEQ_SIZE(addr->rlinks) == 1) {
@@ -606,6 +613,13 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
 void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_link_t *link)
 {
     link->owning_addr = 0;
+
+    //
+    // If the link is configured as no_route, there will be no further link/address
+    // linkage to disconnect.
+    //
+    if (link->no_route)
+        return;
 
     if (link->link_direction == QD_OUTGOING) {
         qdr_del_link_ref(&addr->rlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
