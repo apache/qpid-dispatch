@@ -929,7 +929,8 @@ def main_except(argv):
 
     # Emit data for source to be processed by seq-diag-gen utility
     if comn.args.sequence:
-        print("<h3>sequencediagram.org data</h3>")
+        print("<a name=\"c_sequence\"></a>")
+        print("<h3>sequence diagram data</h3>")
         for plf in tree:
             rtr = plf.router
             rid = comn.router_display_names[rtr.log_index]
@@ -947,7 +948,11 @@ def main_except(argv):
             if (not plf.data.sdorg_str == "" and
                 not plf.data.direction == "" and
                 not plf.data.sdorg_str.startswith("HELP")):
-                print("%s|%s|%s|%s|%s|%s" % (plf.datetime, rid, plf.data.direction, peer, plf.data.sdorg_str, ("%s#%d" % (plf.prefixi, plf.lineno))))
+                print("%s|%s|%s|%s|%s|%s|<br>" % (plf.datetime, rid, plf.data.direction, peer, plf.data.sdorg_str, ("%s#%d" % (plf.prefixi, plf.lineno))))
+            else:
+                if plf.data.is_scraper:
+                    print("%s|%s|%s|%s|%s|%s|<br>" % (plf.datetime, rid, "->", rid, plf.data.sdorg_str,
+                                                 ("%s#%d" % (plf.prefixi, plf.lineno))))
             #import pdb
             #pdb.set_trace()
         print("<hr>")

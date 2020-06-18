@@ -130,6 +130,7 @@ def web_page_toc():
 <tr><td><a href=\"#c_linkdump\"       >Link name index</a></td>       <td>Short vs. long link names</td></tr>
 <tr><td><a href=\"#c_msgdump\"        >Transfer name index</a></td>   <td>Short names representing transfer data</td></tr>
 <tr><td><a href=\"#c_ls\"             >Router link state</a></td>     <td>Link state analysis</td></tr>
+<tr><td><a href=\"#c_sequence\"       >Sequence diagram data</a></td> <td>Input data for seq-diag-gen.py utility</td></tr>
 </table>
 <hr>
 """

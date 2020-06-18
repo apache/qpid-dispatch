@@ -34,6 +34,11 @@ import common
 import text
 import router
 
+"""
+Sequence output copies the tailing end of transfers to a second display line.
+Define how many characters to show.
+"""
+SEQUENCE_TRANSFER_SIZE = 50
 
 def colorize_bg(what):
     # TODO: use the real colorize_bg
@@ -748,19 +753,21 @@ class ParsedLogLine(object):
             # Performative: transfer [channel,handle] (id)
             self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
             showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
-            res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s - %s bytes" % (
+            res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s %s - %s bytes" % (
                 res.name, colorize_bg(res.channel_handle), res.delivery_id,
                 self.highlighted("settled", res.transfer_settled, common.color_of("presettled")),
                 self.highlighted("more", res.transfer_more, common.color_of("more")),
                 self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
                 self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
-                showdat, res.transfer_size)
-            res.sdorg_str = "%s %s (%s) %s %s%s%s%s" % (
+                showdat, common.strings_of_proton_log(res.transfer_bare)[-SEQUENCE_TRANSFER_SIZE:],
+                res.transfer_size)
+            res.sdorg_str = "%s %s (%s) %s (%s%s%s%s)\\n%s" % (
                 res.name, res.channel_handle, res.delivery_id, res.transfer_size,
                 self.unhighlighted(" settled", res.transfer_settled),
                 self.unhighlighted(" more", res.transfer_more),
                 self.unhighlighted(" resume", res.transfer_resume),
-                self.unhighlighted(" aborted", res.transfer_aborted))
+                self.unhighlighted(" aborted", res.transfer_aborted),
+                common.strings_of_proton_log(res.transfer_bare)[-SEQUENCE_TRANSFER_SIZE:])
 
     def adverbl_link_to(self):
         """
@@ -868,10 +875,14 @@ class ParsedLogLine(object):
         # Pull out scraper literal logs
         sti = self.line.find(self.scraper_key)
         if sti > 0:
-            self.data.is_scraper = True
             # strip datetime and show literal string
             sti += len("SCRAPER")
+            self.data.is_scraper = True
             self.data.web_show_str = ("<strong>SCRAPER</strong> %s" % common.html_escape(self.line[sti:]))
+            stcp = self.line[sti:].find(')') # close paren after log level
+            if stcp <  0:
+                stcp = 0
+            self.data.sdorg_str = self.line[sti + stcp + 1:]
             return
 
         # extract connection number
