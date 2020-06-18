@@ -821,6 +821,8 @@ static int AMQP_incoming_link_handler(void* context, qd_link_t *link)
                                                        qdr_terminus(qd_link_remote_target(link)),
                                                        pn_link_name(qd_link_pn(link)),
                                                        terminus_addr,
+                                                       false,
+                                                       0,
                                                        &link_id);
     qd_link_set_link_id(link, link_id);
     qdr_link_set_context(qdr_link, link);
@@ -850,6 +852,8 @@ static int AMQP_outgoing_link_handler(void* context, qd_link_t *link)
                                                  qdr_terminus(qd_link_remote_target(link)),
                                                  pn_link_name(qd_link_pn(link)),
                                                  terminus_addr,
+                                                 false,
+                                                 0,
                                                  &link_id);
     qd_link_set_link_id(link, link_id);
     qdr_link_set_context(qdr_link, link);
