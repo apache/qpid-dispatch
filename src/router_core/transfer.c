@@ -151,7 +151,8 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
             dlv = DEQ_HEAD(link->undelivered);
             if (dlv) {
                 qdr_delivery_incref(dlv, "qdr_link_process_deliveries - holding the undelivered delivery locally");
-                uint64_t new_disp = 0;
+                uint64_t new_disp    = 0;
+                bool     to_new_link = false;  ///< Delivery got moved to a new link by the handler
 
                 // DISPATCH-1302 race hack fix: There is a race between the CORE thread
                 // and the outbound (this) thread over settlement. It occurs when the CORE
@@ -165,9 +166,13 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     sys_mutex_unlock(conn->work_lock);
                     new_disp = conn->protocol_adaptor->deliver_handler(conn->protocol_adaptor->user_context, link, dlv, settled);
                     sys_mutex_lock(conn->work_lock);
-                } while (settled != dlv->settled);  // oops missed the settlement
+                    if (safe_deref_qdr_link_t(dlv->link_sp) != link) {
+                        to_new_link = true;
+                        break;
+                    }
+                } while (settled != dlv->settled && !to_new_link);  // oops missed the settlement
                 send_complete = qdr_delivery_send_complete(dlv);
-                if (send_complete) {
+                if (send_complete || to_new_link) {
                     //
                     // The entire message has been sent. It is now the appropriate time to have the delivery removed
                     // from the head of the undelivered list and move it to the unsettled list if it is not settled.
@@ -178,26 +183,28 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     link->credit_to_core--;
                     link->total_deliveries++;
 
-                    // DISPATCH-1153:
-                    // If the undelivered list is cleared the link may have detached.  Stop processing.
-                    offer = DEQ_SIZE(link->undelivered);
-                    if (offer == 0) {
-                        qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - closed link");
-                        sys_mutex_unlock(conn->work_lock);
-                        return num_deliveries_completed;
-                    }
+                    if (!to_new_link) {
+                        // DISPATCH-1153:
+                        // If the undelivered list is cleared the link may have detached.  Stop processing.
+                        offer = DEQ_SIZE(link->undelivered);
+                        if (offer == 0) {
+                            qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - closed link");
+                            sys_mutex_unlock(conn->work_lock);
+                            return num_deliveries_completed;
+                        }
 
-                    assert(dlv == DEQ_HEAD(link->undelivered));
-                    DEQ_REMOVE_HEAD(link->undelivered);
-                    dlv->link_work = 0;
+                        assert(dlv == DEQ_HEAD(link->undelivered));
+                        DEQ_REMOVE_HEAD(link->undelivered);
+                        dlv->link_work = 0;
 
-                    if (settled || qdr_delivery_oversize(dlv) || qdr_delivery_is_aborted(dlv)) {
-                        dlv->where = QDR_DELIVERY_NOWHERE;
-                        qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - remove from undelivered list");
-                    } else {
-                        DEQ_INSERT_TAIL(link->unsettled, dlv);
-                        dlv->where = QDR_DELIVERY_IN_UNSETTLED;
-                        qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_process_deliveries: undelivered-list -> unsettled-list", (long) dlv);
+                        if (settled || qdr_delivery_oversize(dlv) || qdr_delivery_is_aborted(dlv)) {
+                            dlv->where = QDR_DELIVERY_NOWHERE;
+                            qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - remove from undelivered list");
+                        } else {
+                            DEQ_INSERT_TAIL(link->unsettled, dlv);
+                            dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+                            qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_process_deliveries: undelivered-list -> unsettled-list", (long) dlv);
+                        }
                     }
                 }
                 else {

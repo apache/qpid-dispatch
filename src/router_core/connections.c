@@ -543,6 +543,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
                                   qdr_terminus_t   *target,
                                   const char       *name,
                                   const char       *terminus_addr,
+                                  bool              no_route,
+                                  qdr_delivery_t   *initial_delivery,
                                   uint64_t         *link_id)
 {
     qdr_action_t   *action         = qdr_action(qdr_link_inbound_first_attach_CT, "link_first_attach");
@@ -573,6 +575,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->core_ticks     = conn->core->uptime_ticks;
     link->zero_credit_time = conn->core->uptime_ticks;
     link->terminus_survives_disconnect = qdr_terminus_survives_disconnect(local_terminus);
+    link->no_route = no_route;
 
     link->strip_annotations_in  = conn->strip_annotations_in;
     link->strip_annotations_out = conn->strip_annotations_out;
@@ -595,6 +598,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     action->args.connection.dir    = dir;
     action->args.connection.source = source;
     action->args.connection.target = target;
+    action->args.connection.initial_delivery = initial_delivery;
     qdr_action_enqueue(conn->core, action);
 
     return link;
@@ -1569,6 +1573,56 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 }
 
 
+static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
+{
+    qdr_link_t *old_link  = safe_deref_qdr_link_t(dlv->link_sp);
+    int         ref_delta = 0;
+
+    //
+    // Remove the delivery from its current link if needed
+    //
+    if (!!old_link) {
+        switch (dlv->where) {
+        case QDR_DELIVERY_NOWHERE:
+            break;
+
+        case QDR_DELIVERY_IN_UNDELIVERED:
+            DEQ_REMOVE(old_link->undelivered, dlv);
+            dlv->where = QDR_DELIVERY_NOWHERE;
+            ref_delta--;
+            break;
+
+        case QDR_DELIVERY_IN_UNSETTLED:
+            DEQ_REMOVE(old_link->unsettled, dlv);
+            dlv->where = QDR_DELIVERY_NOWHERE;
+            ref_delta--;
+            break;
+
+        case QDR_DELIVERY_IN_SETTLED:
+            DEQ_REMOVE(old_link->settled, dlv);
+            dlv->where = QDR_DELIVERY_NOWHERE;
+            ref_delta--;
+            break;
+        }
+    }
+
+    //
+    // Enqueue the delivery onto the new link's undelivered list
+    //
+    set_safe_ptr_qdr_link_t(link, &dlv->link_sp);
+    qdr_forward_deliver_CT(core, link, dlv);
+
+    //
+    // Adjust the delivery's reference count
+    //
+    assert(ref_delta <= 0);
+    while (ref_delta < 0) {
+        qdr_delivery_decref(core, dlv, "qdr_link_process_initial_delivery_CT");
+        ref_delta++;
+    }
+}
+
+
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_connection_t  *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
@@ -1576,9 +1630,10 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
     if (discard || !conn || !link)
         return;
 
-    qd_direction_t     dir    = action->args.connection.dir;
-    qdr_terminus_t    *source = action->args.connection.source;
-    qdr_terminus_t    *target = action->args.connection.target;
+    qd_direction_t  dir         = action->args.connection.dir;
+    qdr_terminus_t *source      = action->args.connection.source;
+    qdr_terminus_t *target      = action->args.connection.target;
+    qdr_delivery_t *initial_dlv = action->args.connection.initial_delivery;
 
     //
     // Start the attach count.
@@ -1681,6 +1736,9 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         //
         // Handle outgoing link cases
         //
+        if (initial_dlv)
+            qdr_link_process_initial_delivery_CT(core, link, initial_dlv);
+
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
             if (core->addr_lookup_handler)
