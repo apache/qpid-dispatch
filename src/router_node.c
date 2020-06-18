@@ -482,6 +482,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                                                    dtag.size,
                                                    pn_disposition_type(pn_delivery_remote(pnd)),
                                                    pn_disposition_data(pn_delivery_remote(pnd)));
+        qd_link_set_incoming_msg(link, (qd_message_t*) 0);  // msg no longer exclusive to qd_link
         qdr_node_connect_deliveries(link, delivery, pnd);
         qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver_to_routed_link");
         return next_delivery;
@@ -714,6 +715,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     //
 
     if (delivery) {
+        qd_link_set_incoming_msg(link, (qd_message_t*) 0);  // msg no longer exclusive to qd_link
         qdr_node_connect_deliveries(link, delivery, pnd);
         qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver");
     } else {

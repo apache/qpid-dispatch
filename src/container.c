@@ -59,6 +59,7 @@ struct qd_link_t {
     qd_direction_t              direction;
     void                       *context;
     qd_node_t                  *node;
+    qd_alloc_safe_ptr_t         incoming_msg;  // DISPATCH-1690: for cleanup
     pn_snd_settle_mode_t        remote_snd_settle_mode;
     qd_link_ref_list_t          ref_list;
     bool                        q2_limit_unbounded;
@@ -348,6 +349,11 @@ static void cleanup_link(qd_link_t *link)
             link->pn_link = 0;
         }
         link->pn_sess = 0;
+
+        // cleanup any inbound message that has not been forwarded
+        qd_message_t *msg = link->incoming_msg.ptr;
+        if (msg && qd_alloc_sequence(msg) == link->incoming_msg.seq)
+            qd_message_free(msg);
     }
 }
 
@@ -1228,5 +1234,16 @@ void qd_session_cleanup(qd_connection_t *qd_conn)
         qd_session_t *qd_ssn = qd_session_from_pn(pn_ssn);
         qd_session_free(qd_ssn);
         pn_ssn = pn_session_next(pn_ssn, 0);
+    }
+}
+
+
+void qd_link_set_incoming_msg(qd_link_t *link, qd_message_t *msg)
+{
+    if (msg) {
+        link->incoming_msg.ptr = (void*) msg;
+        link->incoming_msg.seq = qd_alloc_sequence(msg);
+    } else {
+        qd_nullify_safe_ptr(&link->incoming_msg);
     }
 }
