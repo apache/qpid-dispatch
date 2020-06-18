@@ -234,6 +234,8 @@ void qd_link_q3_block(qd_link_t *link);
 void qd_link_q3_unblock(qd_link_t *link);
 uint64_t qd_link_link_id(const qd_link_t *link);
 void qd_link_set_link_id(qd_link_t *link, uint64_t link_id);
+struct qd_message_t;
+void qd_link_set_incoming_msg(qd_link_t *link, struct qd_message_t *msg);
 
 qd_session_t *qd_session(pn_session_t *pn_ssn);
 void qd_session_cleanup(qd_connection_t *qd_conn);

@@ -1312,6 +1312,7 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
         pn_record_def(record, PN_DELIVERY_CTX, PN_WEAKREF);
         pn_record_set(record, PN_DELIVERY_CTX, (void*) msg);
         msg->content->max_message_size = qd_connection_max_message_size(qdc);
+        qd_link_set_incoming_msg(qdl, (qd_message_t*) msg);
     }
 
     //
