@@ -607,8 +607,6 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
                     qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr->fallback);
             } else if (DEQ_SIZE(addr->inlinks) == 1) {
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr);
-                if (!!addr->fallback && !link->fallback)
-                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
             }
         }
     }
