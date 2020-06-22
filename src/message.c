@@ -2292,6 +2292,36 @@ int qd_message_read_body(qd_message_t *in_msg, pn_raw_buffer_t* buffers, int len
 }
 
 
+void qd_message_release_body(qd_message_t *msg, pn_raw_buffer_t *buffers, int buffer_count)
+{
+    qd_message_pvt_t     *pvt     = (qd_message_pvt_t*) msg;
+    qd_message_content_t *content = MSG_CONTENT(msg);
+    qd_buffer_t          *buf;
+
+    LOCK(content->lock);
+    //
+    // Decrement the buffer fanout for each of the referenced buffers.
+    //
+    if (pvt->is_fanout) {
+        for (int i = 0; i < buffer_count; i++) {
+            buf = (qd_buffer_t*) buffers[i].context;
+            qd_buffer_dec_fanout(buf);
+        }
+    }
+
+    //
+    // Free buffers at the head of the list that have zero refcounts.
+    //
+    buf = DEQ_HEAD(content->buffers);
+    while (buf && qd_buffer_get_fanout(buf) == 0) {
+        DEQ_REMOVE_HEAD(content->buffers);
+        qd_buffer_free(buf);
+        buf = DEQ_HEAD(content->buffers);
+    }
+    UNLOCK(content->lock);
+}
+
+
 qd_parsed_field_t *qd_message_get_ingress    (qd_message_t *msg)
 {
     return ((qd_message_pvt_t*)msg)->content->ma_pf_ingress;
