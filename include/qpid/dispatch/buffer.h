@@ -147,6 +147,15 @@ static inline uint32_t qd_buffer_set_fanout(qd_buffer_t *buf, uint32_t value)
 }
 
 /**
+ * Get the fanout value on the buffer.
+ * @return the count
+ */
+static inline uint32_t qd_buffer_get_fanout(const qd_buffer_t *buf)
+{
+    return buf->bfanout;
+}
+
+/**
  * Increase the fanout by 1. How many receivers should this buffer be sent to.
  * @return the _old_ count (pre increment)
  */
