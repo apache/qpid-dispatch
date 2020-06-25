@@ -1984,7 +1984,7 @@
                 },
                 "groups": {
                     "type": "map",
-                    "description": "A map where each key is a vhost name and each value is a map of the settings for users of that vhost.",
+                    "description": "A map where the key is a vhost user group name and the value is a vhostUserGroupSettings object that holds the settings for that vhost user group.",
                     "required": false,
                     "create": true,
                     "update": true
