@@ -753,13 +753,17 @@ class ParsedLogLine(object):
             # Performative: transfer [channel,handle] (id)
             self.transfer_short_name = self.shorteners.short_data_names.translate(res.transfer_bare, customer=self)
             showdat = "<a href=\"#%s_dump\">%s</a>" % (self.transfer_short_name, self.transfer_short_name)
+            spl = common.strings_of_proton_log(res.transfer_bare)
+            to_strip = "\"... (truncated)"
+            if spl.endswith(to_strip):
+                spl = spl[:-len(to_strip)]
             res.web_show_str = "<strong>%s</strong>  %s (%s) %s %s %s %s %s %s - %s bytes" % (
                 res.name, colorize_bg(res.channel_handle), res.delivery_id,
                 self.highlighted("settled", res.transfer_settled, common.color_of("presettled")),
                 self.highlighted("more", res.transfer_more, common.color_of("more")),
                 self.highlighted("resume", res.transfer_resume, common.color_of("aborted")),
                 self.highlighted("aborted", res.transfer_aborted, common.color_of("aborted")),
-                showdat, common.strings_of_proton_log(res.transfer_bare)[-SEQUENCE_TRANSFER_SIZE:],
+                showdat, spl[-SEQUENCE_TRANSFER_SIZE:],
                 res.transfer_size)
             res.sdorg_str = "%s %s (%s) %s (%s%s%s%s)\\n%s" % (
                 res.name, res.channel_handle, res.delivery_id, res.transfer_size,
@@ -767,7 +771,7 @@ class ParsedLogLine(object):
                 self.unhighlighted(" more", res.transfer_more),
                 self.unhighlighted(" resume", res.transfer_resume),
                 self.unhighlighted(" aborted", res.transfer_aborted),
-                common.strings_of_proton_log(res.transfer_bare)[-SEQUENCE_TRANSFER_SIZE:])
+                spl[-SEQUENCE_TRANSFER_SIZE:])
 
     def adverbl_link_to(self):
         """
