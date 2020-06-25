@@ -79,7 +79,22 @@ static char *test_thread_id(void *context)
     for (int i = 0; i < thread_count; ++i) {
         sys_thread_join(threads[i]);
         sys_thread_free(threads[i]);
-        threads[i] = 0;
+    }
+
+    //
+    // test calling sys_thread_self() from the main context.  This context
+    // was not created by sys_thread(), however a dummy non-zero value is returned.
+    //
+    sys_thread_t *main_id = sys_thread_self();
+    if (!main_id) {
+        result = "sys_thread_self() returned 0 for main thread";
+    } else {
+        for (int i = 0; i < thread_count; ++i) {
+            if (threads[i] == main_id) {   // must be unique!
+                result = "main thread sys_thread_self() not unique!";
+                break;
+            }
+        }
     }
 
     sys_mutex_free(mutex);
