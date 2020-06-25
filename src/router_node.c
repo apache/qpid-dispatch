@@ -402,20 +402,19 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     } else {
         // message is oversize
         if (receive_complete) {
-            // set condition, reject, and settle the incoming delivery
             pn_condition_t *lcond = pn_disposition_condition(pn_delivery_local(pnd));
             (void) pn_condition_set_name(       lcond, QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED);
             (void) pn_condition_set_description(lcond, QD_AMQP_COND_OVERSIZE_DESCRIPTION);
-            pn_delivery_update(pnd, PN_REJECTED);
-            pn_delivery_settle(pnd);
-            // close the link
-            pn_link_close(pn_link);
-            // set condition and close the connection
+            pn_delivery_update(pnd, PN_REJECTED); // reject the delivery with oversize error
+
+            pn_link_close(pn_link);               // close the link
+
             pn_connection_t * pn_conn = qd_connection_pn(conn);
             pn_condition_t * cond = pn_connection_condition(pn_conn);
             (void) pn_condition_set_name(       cond, QD_AMQP_COND_CONNECTION_FORCED);
             (void) pn_condition_set_description(cond, QD_AMQP_COND_OVERSIZE_DESCRIPTION);
-            pn_connection_close(pn_conn);
+            pn_connection_close(pn_conn);         // close the connection with oversize error
+
             if (!delivery) {
                 // this message has not been forwarded yet, so it will not be
                 // cleaned up when the link is freed.
