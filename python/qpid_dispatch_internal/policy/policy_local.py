@@ -78,6 +78,7 @@ class PolicyKeys(object):
     KW_TARGETS                   = "targets"
     KW_SOURCE_PATTERN            = "sourcePattern"
     KW_TARGET_PATTERN            = "targetPattern"
+    KW_VHOST_ALIASES             = "aliases"
 
     # Policy stats key words
     KW_CONNECTIONS_APPROVED     = "connectionsApproved"
@@ -135,7 +136,8 @@ class PolicyCompiler(object):
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
-        PolicyKeys.KW_GROUPS
+        PolicyKeys.KW_GROUPS,
+        PolicyKeys.KW_VHOST_ALIASES
         ]
 
     allowed_settings_options = [
