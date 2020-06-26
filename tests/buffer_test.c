@@ -87,12 +87,47 @@ static char *test_buffer_list_clone(void *context)
 }
 
 
+static char *test_buffer_list_append(void *context)
+{
+    qd_buffer_list_t list;
+    qd_buffer_t *buf = qd_buffer();
+    size_t buffer_size = qd_buffer_capacity(buf);
+    qd_buffer_free(buf);
+
+    DEQ_INIT(list);
+
+    qd_buffer_list_append(&list, (uint8_t*) "", 0);
+    if (DEQ_SIZE(list) > 0) return "Buffer list should be empty";
+
+    qd_buffer_list_append(&list, (uint8_t*) "ABCDEFGHIJ", 10);
+    if (DEQ_SIZE(list) != (10 / buffer_size) + ((10 % buffer_size) ? 1 : 0)) return "Incorrect buffer count for size 10";
+
+    qd_buffer_list_append(&list, (uint8_t*) "KLMNOPQRSTUVWXYZ", 16);
+    if (DEQ_SIZE(list) != (26 / buffer_size) + ((26 % buffer_size) ? 1 : 0)) return "Incorrect buffer count for size 26";
+
+    size_t list_len = 0;
+    buf = DEQ_HEAD(list);
+    while (buf) {
+        list_len += qd_buffer_size(buf);
+        buf = DEQ_NEXT(buf);
+    }
+    if (list_len != 26) {
+        static char error[100];
+        sprintf(error, "Incorrect accumulated buffer size: %ld", list_len);
+        return error;
+    }
+
+    return 0;
+}
+
+
 int buffer_tests()
 {
     int result = 0;
     char *test_group = "buffer_tests";
 
     TEST_CASE(test_buffer_list_clone, 0);
+    TEST_CASE(test_buffer_list_append, 0);
 
     return result;
 }

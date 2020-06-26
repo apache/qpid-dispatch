@@ -38,8 +38,8 @@ extern size_t BUFFER_SIZE;
 /** A raw byte buffer .*/
 struct qd_buffer_t {
     DEQ_LINKS(qd_buffer_t);
-    unsigned int size;          ///< Size of data content
-    sys_atomic_t bfanout;        // The number of receivers for this buffer
+    unsigned int size;     ///< Size of data content
+    sys_atomic_t bfanout;  ///< The number of receivers for this buffer
 };
 
 /**
@@ -183,6 +183,18 @@ static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
     assert(len <= BUFFER_SIZE);
     return ((unsigned char*) &buf[1]) + len;
 }
+
+
+/**
+ * qd_buffer_list_append
+ *
+ * Append new data to a buffer list using freespace efficiently and adding new buffers when necessary.
+ *
+ * @param buflist Pointer to a buffer list that will possibly be changed by adding new buffers
+ * @param data Pointer to raw binary data to be added to the buffer list
+ * @param len The number of bytes of data to append
+ */
+void qd_buffer_list_append(qd_buffer_list_t *buflist, uint8_t *data, size_t len);
 
 
 ///@}
