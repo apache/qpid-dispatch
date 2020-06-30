@@ -47,7 +47,8 @@ struct qdr_delivery_t {
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
     uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
     uint32_t                ingress_time;
-    pn_data_t              *extension_state;     ///< delivery-state in disposition performative
+    pn_data_t              *remote_extension_state;  ///< extension state from peer endpoint
+    pn_data_t              *local_extension_state;   ///< extension state to send to peer endpoint
     qdr_error_t            *error;
     bool                    settled;
     bool                    presettled; /// Proton does not have a notion of pre-settled. This flag is introduced in Dispatch and should exclusively be used only to update management counters like presettled delivery counts on links etc. This flag DOES NOT represent the remote settlement state of the delivery.
@@ -100,9 +101,7 @@ bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
 
 pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *dlv);
-void qdr_delivery_set_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition);
-void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition);
-
+void qdr_delivery_move_extension_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer);
 
 //
 // I/O thread only functions

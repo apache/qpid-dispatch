@@ -33,6 +33,7 @@ from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
 from system_test import get_inter_router_links
 from system_test import unittest
+from test_broker import FakeService
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, AtLeastOnce
@@ -1894,6 +1895,282 @@ class StreamingLinkScrubberTest(TestCase):
         out_text, out_error = rx.communicate(timeout=TIMEOUT)
         if rx.returncode:
             raise Exception("Receiver failed: %s %s" % (out_text, out_error))
+
+
+class TwoRouterExtensionStateTest(TestCase):
+    """
+    Verify that routers propagate extended Disposition state correctly.
+    See DISPATCH-1703
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        super(TwoRouterExtensionStateTest, cls).setUpClass()
+
+        def router(name, extra_config):
+
+            config = [
+                ('router', {'mode': 'interior',
+                            'id': name}),
+
+                ('listener', {'port': cls.tester.get_port() }),
+
+                ('address', {'prefix': 'closest', 'distribution': 'closest'}),
+                ('address', {'prefix': 'balanced', 'distribution': 'balanced'}),
+                ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+            ] + extra_config
+
+            config = Qdrouterd.Config(config)
+            return cls.tester.qdrouterd(name, config, wait=False)
+
+        inter_router_port = cls.tester.get_port()
+        service_port = cls.tester.get_port()
+
+        cls.RouterA = router('RouterA',
+                             [
+                                 ('listener', {'role': 'inter-router',
+                                               'host': '0.0.0.0',
+                                               'port': inter_router_port,
+                                               'saslMechanisms': 'ANONYMOUS'}),
+                             ])
+
+        cls.RouterB = router('RouterB',
+                             [
+                                 ('connector', {'name': 'toRouterA',
+                                                'role': 'inter-router',
+                                                'port': inter_router_port}),
+
+
+
+                                 ('listener', {'role': 'route-container',
+                                               'host': '0.0.0.0',
+                                               'port': service_port,
+                                               'saslMechanisms': 'ANONYMOUS'}),
+
+                                 ('linkRoute', {'prefix': 'RoutieMcRouteFace',
+                                                'containerId': 'FakeService',
+                                                'direction': 'in'}),
+                                 ('linkRoute', {'prefix': 'RoutieMcRouteFace',
+                                                'containerId': 'FakeService',
+                                                'direction': 'out'}),
+                             ])
+
+
+        cls.RouterA.wait_router_connected('RouterB')
+        cls.RouterB.wait_router_connected('RouterA')
+
+    def test_01_link_route(self):
+        """
+        Verify non-terminal state and data propagates over a link route
+        """
+        class MyExtendedService(FakeService):
+            """
+            This service saves any outcome and extension data that arrives in a
+            transfer
+            """
+            def __init__(self, url, container_id=None):
+                self.remote_state = None
+                self.remote_data = None
+                super(MyExtendedService, self).__init__(url, container_id)
+
+            def on_message(self, event):
+                self.remote_state = event.delivery.remote_state;
+                self.remote_data = event.delivery.remote.data;
+                super(MyExtendedService, self).on_message(event)
+
+
+        fs = MyExtendedService(self.RouterB.addresses[1],
+                               container_id="FakeService")
+        self.RouterA.wait_address("RoutieMcRouteFace", remotes=1)
+
+        tx = MyExtendedSender(self.RouterA.addresses[0],
+                              "RoutieMcRouteFace")
+        tx.wait()
+        fs.join()
+        self.assertEqual(999, fs.remote_state)
+        self.assertEqual([1, 2, 3], fs.remote_data)
+
+    def test_02_closest(self):
+        """
+        Verify non-terminal state and data propagates over anycase
+        """
+        test = ExtensionStateTester(self.RouterA.addresses[0],
+                                    self.RouterB.addresses[0],
+                                    "closest/fleabag")
+        test.run()
+        self.assertEqual(None, test.error)
+
+    def test_03_multicast(self):
+        """
+        Verify that disposition state set by the publisher is available to all
+        consumers
+        """
+        rxs = [MyExtendedReceiver(self.RouterA.addresses[0],
+                                  "multicast/thingy")
+               for x in range(3)]
+        self.RouterA.wait_address("multicast/thingy", subscribers=3)
+        sleep(0.5)  # let subscribers grant credit
+        tx = MyExtendedSender(self.RouterB.addresses[0],
+                              "multicast/thingy")
+        tx.wait()
+
+        # DISPATCH-1705: only one of the receivers gets the data, but all
+        # should get the state
+
+        ext_data = None
+        for rx in rxs:
+            rx.stop()
+            try:
+                while True:
+                    dispo = rx.remote_states.pop()
+                    self.assertEqual(999, dispo[0])
+                    ext_data = dispo[1] or ext_data
+            except IndexError:
+                pass
+        self.assertEqual([1, 2, 3], ext_data)
+
+
+class MyExtendedSender(AsyncTestSender):
+    """
+    This sender sets a non-terminal outcome and data on the outgoing
+    transfer
+    """
+    def on_sendable(self, event):
+        if self.sent < self.total:
+            dlv = event.sender.delivery(str(self.sent))
+            dlv.local.data = [1, 2, 3]
+            dlv.update(999)
+            event.sender.stream(self._message.encode())
+            event.sender.advance()
+            self.sent += 1
+
+
+class MyExtendedReceiver(AsyncTestReceiver):
+    """
+    This receiver stores any remote delivery state that arrives with a message
+    transfer
+    """
+    def __init__(self, *args, **kwargs):
+        self.remote_states = []
+        super(MyExtendedReceiver, self).__init__(*args, **kwargs)
+
+    def on_message(self, event):
+        self.remote_states.append((event.delivery.remote_state,
+                                   event.delivery.remote.data))
+        super(MyExtendedReceiver, self).on_message(event)
+
+
+class ExtensionStateTester(MessagingHandler):
+    """
+    Verify the routers propagate non-terminal outcome and extended state
+    disposition information in both message transfer and disposition frames.
+
+    This tester creates a receiver and a sender link to a given address.
+
+    The sender transfers a message with a non-terminal delivery state and
+    associated extension data.  The receiver expects to find this state in the
+    incoming delivery.
+
+    The receiver then responds with a non-terminal disposition that also has
+    extension state data.  The sender expects to find this new state associated
+    with its delivery.
+    """
+    def __init__(self, ingress_router, egress_router, address):
+        super(ExtensionStateTester, self).__init__(auto_settle=False,
+                                                   auto_accept=False)
+        self._in_router = ingress_router
+        self._out_router = egress_router
+        self._address = address
+        self._sender_conn = None
+        self._recvr_conn = None
+        self._sender = None
+        self._receiver = None
+        self._sent = 0
+        self._received = 0
+        self._settled = 0
+        self._total = 10
+        self._message = Message(body="XYZ" * (1024 * 1024 * 2))
+        self.error = None
+
+    def on_start(self, event):
+        self._reactor = event.reactor
+        self._sender_conn = event.container.connect(self._in_router)
+        self._sender = event.container.create_sender(self._sender_conn,
+                                                     target=self._address,
+                                                     name="ExtensionSender")
+        self._recvr_conn = event.container.connect(self._out_router)
+        self._receiver = event.container.create_receiver(self._recvr_conn,
+                                                         source=self._address,
+                                                         name="ExtensionReceiver")
+    def _done(self, error=None):
+        self.error = error or self.error
+        self._sender.close()
+        self._sender_conn.close()
+        self._receiver.close()
+        self._recvr_conn.close()
+
+    def on_sendable(self, event):
+        if self._sent < self._total:
+            self._sent += 1
+            dlv = event.sender.delivery(str(self._sent))
+            dlv.local.data = [1, 2, 3, self._sent]
+            dlv.update(666)  # non-terminal state
+            self._message.id = self._sent
+            event.sender.stream(self._message.encode())
+            event.sender.advance()
+
+    def on_message(self, event):
+        dlv = event.delivery
+        msg_id = event.message.id
+        if dlv.remote_state != 666:
+            return self._done(error="Unexpected outcome '%s', expected '666'"
+                              % dlv.remote_state)
+        remote_data = dlv.remote.data
+        expected_data = [1, 2, 3, msg_id]
+        if remote_data != expected_data:
+            return self._done(error="Unexpected dispo data '%s', expected '%s'"
+                              % (remote_data, expected_data))
+
+        # send back a non-terminal outcome and more data
+        dlv.local.data = [10, 9, 8, msg_id]
+        dlv.update(777)
+        self._received += 1
+
+    def _handle_sender_update(self, event):
+        dlv = event.delivery
+        if dlv.local_state != 666 or len(dlv.local.data) != 4:
+            return self._done(error="Unexpected local state at sender: %s %s" %
+                              (dlv.local_state, dlv.local.data))
+
+        if dlv.remote_state != 777 or len(dlv.remote.data) != 4:
+            return self._done(error="Unexpected remote state at sender: %s %s" %
+                              (dlv.remote_state, dlv.remote.data))
+        dlv.settle()
+
+    def _handle_receiver_update(self, event):
+        dlv = event.delivery
+        if dlv.settled:
+            if dlv.local_state != 777 or len(dlv.local.data) != 4:
+                return self._done(error="Unexpected local state at sender: %s %s" %
+                                  (dlv.local_state, dlv.local.data))
+
+            if dlv.remote_state != 666 or len(dlv.remote.data) != 4:
+                return self._done(error="Unexpected remote state at sender: %s %s" %
+                                  (dlv.remote_state, dlv.remote.data))
+            dlv.settle()
+            self._settled += 1
+            if self._settled == self._total:
+                self._done()
+
+    def on_delivery(self, event):
+        if event.delivery.link.is_sender:
+            self._handle_sender_update(event)
+        else:
+            self._handle_receiver_update(event)
+
+    def run(self):
+        Container(self).run()
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

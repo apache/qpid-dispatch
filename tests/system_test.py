@@ -915,7 +915,7 @@ class AsyncTestReceiver(MessagingHandler):
             raise Exception("Timed out waiting for receiver start")
 
     def _main(self):
-        self._container.timeout = 5.0
+        self._container.timeout = 0.5
         self._container.start()
         while self._container.process():
             if self._stop_thread:
@@ -1000,7 +1000,7 @@ class AsyncTestSender(MessagingHandler):
         self._thread.start()
 
     def _main(self):
-        self._container.timeout = 5.0
+        self._container.timeout = 0.5
         self._container.start()
         while self._container.process():
             self._check_if_done()

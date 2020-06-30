@@ -480,7 +480,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                                                    pn_delivery_settled(pnd),
                                                    (uint8_t*) dtag.start,
                                                    dtag.size,
-                                                   pn_disposition_type(pn_delivery_remote(pnd)),
+                                                   pn_delivery_remote_state(pnd),
                                                    pn_disposition_data(pn_delivery_remote(pnd)));
         qd_link_set_incoming_msg(link, (qd_message_t*) 0);  // msg no longer exclusive to qd_link
         qdr_node_connect_deliveries(link, delivery, pnd);
@@ -660,7 +660,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 if (phase > 0)
                     qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
-                                               link_exclusions, ingress_index);
+                                               link_exclusions, ingress_index,
+                                               pn_delivery_remote_state(pnd),
+                                               pn_disposition_data(pn_delivery_remote(pnd)));
             } else {
                 //reject
                 qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to policy violation on target. User:%s", conn->user_id);
@@ -707,7 +709,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
             if (phase != 0)
                 qd_message_set_phase_annotation(msg, phase);
         }
-        delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index);
+        delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index,
+                                    pn_delivery_remote_state(pnd),
+                                    pn_disposition_data(pn_delivery_remote(pnd)));
     }
 
     //
@@ -1758,6 +1762,8 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
     if (!qdr_delivery_tag_sent(dlv)) {
         const char *tag;
         int         tag_length;
+        uint64_t    disposition = 0;
+        pn_data_t   *extension_state = 0;
 
         qdr_delivery_tag(dlv, &tag, &tag_length);
 
@@ -1767,7 +1773,13 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         pdlv = pn_link_current(plink);
 
         // handle any delivery-state on the transfer e.g. transactional-state
-        qdr_delivery_write_extension_state(dlv, pdlv, true);
+        extension_state = qdr_delivery_take_local_extension_state(dlv, &disposition);
+        if (extension_state) {
+            pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), extension_state);
+            pn_data_free(extension_state);
+        }
+        if (disposition)
+            pn_delivery_update(pdlv, disposition);
 
         //
         // If the remote send settle mode is set to 'settled', we should settle the delivery on behalf of the receiver.
@@ -1897,7 +1909,12 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
 
         if (disp == PN_MODIFIED)
             pn_disposition_set_failed(pn_delivery_local(pnd), true);
-        qdr_delivery_write_extension_state(dlv, pnd, false);
+
+        pn_data_t *extension_state = qdr_delivery_take_local_extension_state(dlv, 0);
+        if (extension_state) {
+            pn_data_copy(pn_disposition_data(pn_delivery_local(pnd)), extension_state);
+            pn_data_free(extension_state);
+        }
 
         //
         // If the delivery is still arriving, don't push out the disposition change yet.

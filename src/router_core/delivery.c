@@ -26,7 +26,6 @@ ALLOC_DEFINE(qdr_delivery_t);
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_deliver_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
-static void qdr_delivery_free_extension_state(qdr_delivery_t *delivery);
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
                                          qdr_delivery_t *peer, uint64_t new_disp, bool settled,
@@ -198,7 +197,7 @@ void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *deliver
     action->args.delivery.error       = error;
 
     // handle delivery-state extensions e.g. declared, transactional-state
-    qdr_delivery_set_extension_state(delivery, disposition, ext_state, false);
+    qdr_delivery_set_remote_extension_state(delivery, disposition, ext_state);
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -390,7 +389,9 @@ void qdr_delivery_increment_counters_CT(qdr_core_t *core, qdr_delivery_t *delive
                 core->modified_deliveries++;
         }
 
-        qd_log(core->log, QD_LOG_DEBUG, "Delivery outcome for%s: dlv:%lx link:%"PRIu64" is %s", delivery->presettled?" pre-settled":"", (long) delivery,  link->identity, pn_disposition_type_name(outcome));
+        qd_log(core->log, QD_LOG_DEBUG, "Delivery outcome for%s: dlv:%lx link:%"PRIu64" is %s (0x%"PRIX64")",
+               delivery->presettled?" pre-settled":"", (long) delivery,  link->identity,
+               pn_disposition_type_name(outcome), outcome);
 
         uint32_t delay = core->uptime_ticks - delivery->ingress_time;
         if (delay > 10) {
@@ -480,7 +481,10 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
 
     qd_bitmask_free(delivery->link_exclusion);
     qdr_error_free(delivery->error);
-    qdr_delivery_free_extension_state(delivery);
+    if (delivery->remote_extension_state)
+        pn_data_free(delivery->remote_extension_state);
+    if (delivery->local_extension_state)
+        pn_data_free(delivery->local_extension_state);
 
     free_qdr_delivery_t(delivery);
 }
@@ -726,10 +730,7 @@ static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
             peer->error       = error;
             push = true;
             error_assigned = true;
-            qdr_delivery_set_extension_state(peer,
-                                             dlv->remote_disposition,
-                                             dlv->extension_state,
-                                             false);
+            qdr_delivery_move_extension_state_CT(dlv, peer);
         }
     }
 
@@ -1213,57 +1214,48 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
-pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *delivery)
+// copy remote disposition and extension state into a delivery
+//
+void qdr_delivery_set_remote_extension_state(qdr_delivery_t *dlv, uint64_t remote_dispo, pn_data_t *remote_ext_state)
 {
-    if (delivery->extension_state)
-        pn_data_rewind(delivery->extension_state);
-    return delivery->extension_state;
-}
+    if (dlv->remote_extension_state)
+        // once set the I/O thread cannot overwrite this until the core has forwarded it
+        return;
 
-
-void qdr_delivery_free_extension_state(qdr_delivery_t *delivery)
-{
-    if (delivery->extension_state) {
-        pn_data_free(delivery->extension_state);
-        delivery->extension_state = 0;
+    if (remote_dispo > PN_MODIFIED) {  // set only if non-terminal outcome
+        const size_t esize = pn_data_size(remote_ext_state);
+        if (esize) {
+            // note: performance tests show that creating a new pn_data instance
+            // can be expensive, so only do so if there is actually extension state
+            // data to copy
+            dlv->remote_extension_state = pn_data(esize);
+            pn_data_copy(dlv->remote_extension_state, remote_ext_state);
+        }
     }
 }
 
 
-// copy local disposition data into proton delivery
-void qdr_delivery_write_extension_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv, bool update_disposition)
+// take local disposition and extension state from the delivery
+//
+pn_data_t *qdr_delivery_take_local_extension_state(qdr_delivery_t *dlv, uint64_t *dispo)
 {
-    if (dlv->disposition > PN_MODIFIED) {
-        pn_data_t *src = dlv->extension_state;
-        if (src) {
-            pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), src);
-            qdr_delivery_free_extension_state(dlv);
-        }
-        if (update_disposition) pn_delivery_update(pdlv, dlv->disposition);
-    }
-}
-
-void qdr_delivery_export_transfer_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv)
-{
-    qdr_delivery_write_extension_state(dlv, pdlv, true);
+    pn_data_t *ext_state = dlv->local_extension_state;
+    dlv->local_extension_state = 0;
+    if (dispo) *dispo = dlv->disposition;
+    return ext_state;
 }
 
 
-void qdr_delivery_export_disposition_state(qdr_delivery_t *dlv, pn_delivery_t* pdlv)
+// move the REMOTE extension state from a delivery to the LOCAL extension state
+// of its peer delivery.  This causes the extension state data to propagate
+// from one delivery to another.
+//
+void qdr_delivery_move_extension_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
-    qdr_delivery_write_extension_state(dlv, pdlv, false);
-}
-
-
-void qdr_delivery_set_extension_state(qdr_delivery_t *dlv, uint64_t disposition, pn_data_t* disposition_data, bool update_disposition)
-{
-    if (disposition > PN_MODIFIED) {
-        if (disposition_data) {
-            pn_data_rewind(disposition_data);
-            if (!dlv->extension_state)
-                dlv->extension_state = pn_data(0);
-            pn_data_copy(dlv->extension_state, disposition_data);
-        }
-        if (update_disposition) dlv->disposition = disposition;
+    // if extension_state is already present do not overwrite it as the outgoing
+    // I/O thread may be in the process of writing it to proton
+    if (!peer->local_extension_state) {
+        peer->local_extension_state = dlv->remote_extension_state;
+        dlv->remote_extension_state = 0;
     }
 }

@@ -167,14 +167,25 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     ZERO(out_dlv);
     set_safe_ptr_qdr_link_t(out_link, &out_dlv->link_sp);
     out_dlv->msg        = qd_message_copy(msg);
-    out_dlv->settled    = !in_dlv || in_dlv->settled;
+
+    if (in_dlv) {
+        out_dlv->settled       = in_dlv->settled;
+        out_dlv->ingress_time  = in_dlv->ingress_time;
+        out_dlv->ingress_index = in_dlv->ingress_index;
+        if (in_dlv->remote_disposition) {
+            // propagate from disposition state from remote to peer
+            out_dlv->disposition = in_dlv->remote_disposition;
+            qdr_delivery_move_extension_state_CT(in_dlv, out_dlv);
+        }
+    } else {
+        out_dlv->settled       = true;
+        out_dlv->ingress_time  = core->uptime_ticks;
+        out_dlv->ingress_index = -1;
+    }
+
     out_dlv->presettled = out_dlv->settled;
     *tag                = core->next_tag++;
     out_dlv->tag_length = 8;
-    out_dlv->error      = 0;
-
-    out_dlv->ingress_time  = in_dlv ? in_dlv->ingress_time  : core->uptime_ticks;
-    out_dlv->ingress_index = in_dlv ? in_dlv->ingress_index : -1;
 
     //
     // Add one to the message fanout. This will later be used in the qd_message_send function that sends out messages.
