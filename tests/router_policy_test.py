@@ -442,6 +442,24 @@ class PolicyAliases(TestCase):
             denied = True
         self.assertTrue(denied, "Ruleset alias names other vhost but condition not detected.")
 
+    #
+    def test_AliasOperationalLookup(self):
+        manager = MockPolicyManager()
+        policy = PolicyLocal(manager)
+        policy.test_load_config()
+
+        # For this test the test config defines vhost 'photoserver'.
+        # This test accesses that vhost using the alias name 'antialias'.
+        settingsname = policy.lookup_user('zeke', '192.168.100.5', 'antialias', "connid", 5)
+        self.assertTrue(settingsname == 'test')
+
+        upolicy = {}
+        self.assertTrue(
+            policy.lookup_settings('antialias', settingsname, upolicy)
+        )
+        self.assertTrue(upolicy['maxFrameSize']            == 444444)
+        self.assertTrue(upolicy['sources'] == 'a,private,')
+
 
 if __name__ == '__main__':
     unittest.main(main_module())

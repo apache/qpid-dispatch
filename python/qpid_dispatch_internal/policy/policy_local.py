@@ -899,6 +899,9 @@ class PolicyLocal(object):
             if self.use_hostname_patterns:
                 agent = self._manager.get_agent()
                 vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
+            # Translate an aliased vhost to a concrete vhost. If no alias then use current vhost.
+            vhost = self._vhost_aliases.get(vhost, vhost)
+            # If no usable vhost yet then try default vhost
             if vhost not in self.rulesetdb:
                 if self.default_vhost_enabled():
                     vhost = self._default_vhost
