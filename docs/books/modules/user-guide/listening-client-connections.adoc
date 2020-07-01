@@ -47,6 +47,7 @@ listener {
     port: 5672
     role: normal
     failoverUrls: secondary.example.com:20000, tertiary.example.com
+    multiTenant: true
     ...
 }
 ----
@@ -59,6 +60,7 @@ listener {
 +
 For more information, see xref:understanding-connection-failover-{context}[].
 --
+`multiTenant` (optional):: If true, apply multi-tenancy to endpoints connected at this listener.  The address space is defined by the virtual host (hostname field in the Open).
 
 .Additional resources
 
