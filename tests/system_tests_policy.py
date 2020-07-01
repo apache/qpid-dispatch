@@ -1858,5 +1858,139 @@ class VhostPolicyConfigHashPattern(TestCase):
         self.assertEqual(False, VhostPolicyConfigHashPattern.timed_out)
 
 
+class PolicyConnectionAliasTest(MessagingHandler):
+    """
+    This test tries to send an AMQP Open with a selectable hostname.
+    The hostname is expected to be an alias for a vhost. When the alias selects
+    the vhost then the connection is allowed.
+    """
+    def __init__(self, test_host, target_hostname, send_address, print_to_console=False):
+        super(PolicyConnectionAliasTest, self).__init__()
+        self.test_host = test_host # router listener
+        self.target_hostname = target_hostname # vhost name for AMQP Open
+        self.send_address = send_address # dummy address allowed by policy
+
+        self.test_conn = None
+        self.dummy_sender = None
+        self.dummy_receiver = None
+        self.error = None
+        self.shut_down = False
+        self.connection_open_seen = False
+
+        self.logger = Logger(title=("PolicyConnectionAliasTest - use virtual_host '%s'" % (self.target_hostname)), print_to_console=print_to_console)
+        self.log_unhandled = False
+
+    def timeout(self):
+        self.error = "Timeout Expired"
+        self.logger.log("self.timeout " + self.error)
+        self._shut_down_test()
+
+    def on_start(self, event):
+        self.logger.log("on_start")
+        self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.test_conn = event.container.connect(self.test_host.addresses[0],
+                                                 virtual_host=self.target_hostname)
+        self.logger.log("on_start: done")
+
+    def on_connection_opened(self, event):
+        # This happens even if the connection is rejected.
+        #  If the connection is rejected then it is immediately closed.
+        # Create a sender and receiver.
+        #  If the sender gets on_sendable then the connection stayed up as expected.
+        self.logger.log("on_connection_opened")
+        self.connection_open_seen = True
+        self.dummy_sender = event.container.create_sender(self.test_conn, self.send_address)
+        self.dummy_receiver = event.container.create_receiver(self.test_conn, self.send_address)
+
+    def on_sendable(self, event):
+        # Success
+        self.logger.log("on_sendable: test is a success")
+        self._shut_down_test()
+
+    def on_connection_remote_close(self, event):
+        self.logger.log("on_connection_remote_close")
+        if self.connection_open_seen and not self.shut_down:
+            self.error = "Policy enforcement fail: expected connection was denied."
+            self._shut_down_test()
+
+    def on_unhandled(self, method, *args):
+        pass # self.logger.log("on_unhandled %s" % (method))
+
+    def _shut_down_test(self):
+        self.shut_down = True
+        if self.timer:
+            self.timer.cancel()
+            self.timer = None
+        if self.test_conn:
+            self.test_conn.close()
+            self.test_conn = None
+
+    def run(self):
+        try:
+            Container(self).run()
+        except Exception as e:
+            self.error = "Container run exception: %s" % (e)
+            self.logger.log(self.error)
+            self.logger.dump()
+
+
+class PolicyVhostAlias(TestCase):
+    """
+    Verify vhost aliases.
+     * A policy defines vhost A with alias B.
+     * A client opens a connection with hostname B in the AMQP Open.
+     * The test expects the connection to succeed using vhost A policy settings.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyVhostAlias, cls).setUpClass()
+
+        def router(name, mode, extra=None):
+            config = [
+                ('router', {'mode': mode,
+                            'id': name}),
+                ('listener', {'role': 'normal',
+                              'port': cls.tester.get_port()}),
+                ('policy', {'enableVhostPolicy': 'true'}),
+                ('vhost', {'hostname': 'A',
+                           'allowUnknownUser': 'true',
+                           'aliases': 'B',
+                           'groups': {
+                               '$default': {
+                                   'users': '*',
+                                   'maxConnections': 100,
+                                   'remoteHosts': '*',
+                                   'sources': '*',
+                                   'targets': '*',
+                                   'allowAnonymousSender': 'true',
+                                   'allowWaypointLinks': 'true',
+                                   'allowDynamicSource': 'true'
+                               }
+                           }
+                })
+            ]
+
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            return cls.routers[-1]
+
+        cls.routers = []
+
+        router('A', 'interior')
+        cls.INT_A = cls.routers[0]
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+    def test_100_policy_aliases(self):
+        test = PolicyConnectionAliasTest(PolicyVhostAlias.INT_A,
+                                         "B",
+                                         "address-B")
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_100 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
