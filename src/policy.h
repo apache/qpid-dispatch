@@ -66,6 +66,7 @@ struct qd_policy__settings_s {
     qd_parse_tree_t *sourceParseTree;
     qd_parse_tree_t *targetParseTree;
     qd_policy_denial_counts_t *denialCounts;
+    char *vhost_name;
 };
 
 typedef struct qd_policy__settings_s qd_policy_settings_t;
@@ -125,6 +126,20 @@ bool qd_policy_socket_accept(qd_policy_t *context, const char *hostname);
  **/
 void qd_policy_socket_close(qd_policy_t *context, const qd_connection_t *conn);
 
+
+/** Look up vhost in python vhost aliases database
+ *  * Return false if the mechanics of calling python fails or if returned name buf is blank.
+ *  * Return true if a name was returned.
+ * @param[in]  policy pointer to policy
+ * @param[in]  vhost vhost name received in remote AMQP Open.hostname
+ * @param[out] name_buf pointer to result name buffer
+ * @param[in]  name_buf_size size of name_buf
+ **/
+bool qd_policy_lookup_vhost_alias(
+    qd_policy_t *policy,
+    const char *vhost,
+    char       *name_buf,
+    int         name_buf_size);
 
 /** Approve a new session based on connection's policy.
  * Sessions denied are closed and counted.

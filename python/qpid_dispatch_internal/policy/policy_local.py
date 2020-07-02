@@ -776,6 +776,29 @@ class PolicyLocal(object):
     #
     # Runtime query interface
     #
+    def lookup_vhost_alias(self, vhost_in):
+        """
+        Resolve given vhost name to vhost settings name.
+        If the incoming name is a vhost hostname then return the same name.
+        If the incoming name is a vhost alias hostname then return the containing vhost name.
+        If a default vhost is defined then return its name.
+        :param vhost_in: vhost name to test
+        :return: name of policy settings vhost to be applied. Or blank if not defined.
+        """
+        vhost = vhost_in
+        if self.use_hostname_patterns:
+            agent = self._manager.get_agent()
+            vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
+        # Translate an aliased vhost to a concrete vhost. If no alias then use current vhost.
+        vhost = self._vhost_aliases.get(vhost, vhost)
+        # If no usable vhost yet then try default vhost
+        if vhost not in self.rulesetdb:
+            if self.default_vhost_enabled():
+                vhost = self._default_vhost
+            else:
+                vhost = ""
+        return vhost
+
     def lookup_user(self, user, rhost, vhost_in, conn_name, conn_id):
         """
         Lookup function called from C.
@@ -793,21 +816,12 @@ class PolicyLocal(object):
         try:
             # choose rule set based on incoming vhost or default vhost
             # or potential vhost found by pattern matching
-            vhost = vhost_in
-            if self.use_hostname_patterns:
-                agent = self._manager.get_agent()
-                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
-            # Translate an aliased vhost to a concrete vhost. If no alias then use current vhost.
-            vhost = self._vhost_aliases.get(vhost, vhost)
-            # If no usable vhost yet then try default vhost
-            if vhost not in self.rulesetdb:
-                if self.default_vhost_enabled():
-                    vhost = self._default_vhost
-                else:
-                    self._manager.log_info(
-                        "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
-                        "No policy defined for vhost" % (user, rhost, vhost_in))
-                    return ""
+            vhost = self.lookup_vhost_alias(vhost_in)
+            if vhost == "":
+                self._manager.log_info(
+                    "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                    "No policy defined for vhost" % (user, rhost, vhost_in))
+                return ""
             if vhost != vhost_in:
                 self._manager.log_debug(
                     "AMQP Open for user '%s', rhost '%s', vhost '%s': "
@@ -895,16 +909,7 @@ class PolicyLocal(object):
         # Note: the upolicy output is a non-nested dict with settings of interest
         """
         try:
-            vhost = vhost_in
-            if self.use_hostname_patterns:
-                agent = self._manager.get_agent()
-                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
-            # Translate an aliased vhost to a concrete vhost. If no alias then use current vhost.
-            vhost = self._vhost_aliases.get(vhost, vhost)
-            # If no usable vhost yet then try default vhost
-            if vhost not in self.rulesetdb:
-                if self.default_vhost_enabled():
-                    vhost = self._default_vhost
+            vhost = self.lookup_vhost_alias(vhost_in)
             if vhost != vhost_in:
                 self._manager.log_debug(
                     "AMQP Open lookup settings for vhost '%s': "
