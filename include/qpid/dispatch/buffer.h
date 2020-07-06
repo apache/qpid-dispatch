@@ -194,7 +194,7 @@ static inline unsigned char *qd_buffer_at(const qd_buffer_t *buf, size_t len)
  * @param data Pointer to raw binary data to be added to the buffer list
  * @param len The number of bytes of data to append
  */
-void qd_buffer_list_append(qd_buffer_list_t *buflist, uint8_t *data, size_t len);
+void qd_buffer_list_append(qd_buffer_list_t *buflist, const uint8_t *data, size_t len);
 
 
 ///@}

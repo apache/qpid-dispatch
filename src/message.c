@@ -2218,11 +2218,12 @@ void qd_message_compose_5(qd_message_t        *msg,
 }
 
 
-int qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers)
+int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
 {
     qd_message_content_t *content = MSG_CONTENT(msg);
-    qd_buffer_t          *buf     = DEQ_HEAD(*buffers);
     int                   count;
+    qd_buffer_list_t     *buffers = qd_compose_buffers(field);
+    qd_buffer_t          *buf     = DEQ_HEAD(*buffers);
 
     LOCK(content->lock);
     while (buf) {
@@ -2310,13 +2311,16 @@ void qd_message_release_body(qd_message_t *msg, pn_raw_buffer_t *buffers, int bu
     }
 
     //
-    // Free buffers at the head of the list that have zero refcounts.
+    // Free buffers not at the tail of the list that have zero refcounts.
     //
     buf = DEQ_HEAD(content->buffers);
-    while (buf && qd_buffer_get_fanout(buf) == 0) {
-        DEQ_REMOVE_HEAD(content->buffers);
-        qd_buffer_free(buf);
-        buf = DEQ_HEAD(content->buffers);
+    while (!!buf && buf != DEQ_TAIL(content->buffers)) {
+        qd_buffer_t *next = DEQ_NEXT(buf);
+        if (qd_buffer_get_fanout(buf) == 0) {
+            DEQ_REMOVE(content->buffers, buf);
+            qd_buffer_free(buf);
+        }
+        buf = next;
     }
     UNLOCK(content->lock);
 }
