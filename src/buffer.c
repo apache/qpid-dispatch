@@ -108,7 +108,7 @@ unsigned int qd_buffer_list_length(const qd_buffer_list_t *list)
 }
 
 
-void qd_buffer_list_append(qd_buffer_list_t *buflist, uint8_t *data, size_t len)
+void qd_buffer_list_append(qd_buffer_list_t *buflist, const uint8_t *data, size_t len)
 {
     //
     // If len is zero, there's no work to do.

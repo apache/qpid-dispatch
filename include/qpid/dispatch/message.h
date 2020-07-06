@@ -300,10 +300,10 @@ void qd_message_compose_5(qd_message_t        *msg,
  * Extend the content of a streaming message with more buffers.
  *
  * @param msg Pointer to a message
- * @param buffers A list of buffers to be appended to the end of the message's stream
+ * @param field A composed field to be appended to the end of the message's stream
  * @return The number of buffers stored in the message's content
  */
-int qd_message_extend(qd_message_t *msg, qd_buffer_list_t *buffers);
+int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field);
 
 
 /**
