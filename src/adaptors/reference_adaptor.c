@@ -203,8 +203,6 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_compose_insert_string(props, adaptor->reply_to); // reply-to
         qd_compose_end_list(props);
 
-        props = qd_compose(QD_PERFORMATIVE_BODY_DATA, props);
-
         adaptor->streaming_message = qd_message();
 
         qd_message_compose_5(adaptor->streaming_message, props, 0, false);
@@ -239,7 +237,6 @@ static void qdr_ref_drain(void *context, qdr_link_t *link, bool mode)
 static int qdr_ref_push(void *context, qdr_link_t *link, int limit)
 {
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
-    printf("qdr_ref_push: limit=%d\n", limit);
     return qdr_link_process_deliveries(adaptor->core, link, limit);
 }
 
@@ -249,10 +246,13 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
     qd_message_t      *msg     = qdr_delivery_message(delivery);
 
-    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_APPLICATION_PROPERTIES);
+    printf("qdr_ref_deliver called\n");
+
+    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_BODY);
 
     switch (status) {
     case QD_MESSAGE_DEPTH_OK: {
+        printf("qdr_ref_deliver: depth ok\n");
         if (qd_message_receive_complete(msg)) {
             qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
             char *body = (char*) qd_iterator_copy(body_iter);
@@ -391,20 +391,42 @@ static void on_stream(void *context)
     qdr_ref_adaptor_t *adaptor        = (qdr_ref_adaptor_t*) context;
     const char        *content        = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
     const size_t       content_length = strlen(content);
+    int                depth;
 
     if (!adaptor->streaming_message)
         return;
 
-    qd_buffer_t      *buf = qd_buffer();
-    qd_buffer_list_t  buffers;
+    {
+        //
+        // This section shows the proper way to extend a streaming message with content.
+        // Note that the buffer list may be accumulated over the course of many asynchronous
+        // events before it is placed in the composed field and appended to the message stream.
+        //
 
-    DEQ_INIT(buffers);
-    DEQ_INSERT_TAIL(buffers, buf);
+        //
+        // Accumulated buffer list
+        //
+        qd_buffer_list_t buffer_list;
+        DEQ_INIT(buffer_list);
+        qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
 
-    memcpy(qd_buffer_cursor(buf), content, content_length);
-    qd_buffer_insert(buf, content_length);
-    int depth = qd_message_extend(adaptor->streaming_message, &buffers);
-    qdr_delivery_continue(adaptor->core, adaptor->streaming_delivery, false);
+        //
+        // Compose a DATA performative for this section of the stream
+        //
+        qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+        qd_compose_insert_binary_buffers(field, &buffer_list);
+
+        //
+        // Extend the streaming message and free the composed field
+        //
+        depth = qd_message_extend(adaptor->streaming_message, field);
+        qd_compose_free(field);
+
+        //
+        // Notify the router that more data has arrived on the delivery
+        //
+        qdr_delivery_continue(adaptor->core, adaptor->streaming_delivery, false);
+    }
 
     if (adaptor->stream_count < 10) {
         qd_timer_schedule(adaptor->stream_timer, 100);
@@ -471,4 +493,4 @@ void qdr_ref_adaptor_final(void *adaptor_context)
 /**
  * Declare the adaptor so that it will self-register on process startup.
  */
-//QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
+QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
