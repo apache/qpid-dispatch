@@ -45,6 +45,10 @@ class FakeBusManager:
     def displayEdges(self): pass
     def displayAddresses(self): pass
     def displayMemory(self): pass
+    def displayPolicy(self): pass
+    def displayVhosts(self): pass
+    def displayVhostgroups(self): pass
+    def displayVhoststats(self): pass
     def displayAutolinks(self): pass
     def displayLinkRoutes(self): pass
     def displayLog(self): pass
