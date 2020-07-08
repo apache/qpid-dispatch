@@ -27,6 +27,7 @@ from __future__ import print_function
 
 import json
 import pdb
+import sys
 from .policy_util import PolicyError, HostStruct, HostAddr, PolicyAppConnectionMgr, is_ipv6_enabled
 from ..compat import PY_STRING_TYPE
 from ..compat import PY_TEXT_TYPE
@@ -78,6 +79,7 @@ class PolicyKeys(object):
     KW_TARGETS                   = "targets"
     KW_SOURCE_PATTERN            = "sourcePattern"
     KW_TARGET_PATTERN            = "targetPattern"
+    KW_VHOST_ALIASES             = "aliases"
 
     # Policy stats key words
     KW_CONNECTIONS_APPROVED     = "connectionsApproved"
@@ -135,7 +137,8 @@ class PolicyCompiler(object):
         PolicyKeys.KW_MAXCONNPERHOST,
         PolicyKeys.KW_MAXCONNPERUSER,
         PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT,
-        PolicyKeys.KW_GROUPS
+        PolicyKeys.KW_GROUPS,
+        PolicyKeys.KW_VHOST_ALIASES
         ]
 
     allowed_settings_options = [
@@ -324,7 +327,8 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_SOURCES,
                          PolicyKeys.KW_TARGETS,
                          PolicyKeys.KW_SOURCE_PATTERN,
-                         PolicyKeys.KW_TARGET_PATTERN
+                         PolicyKeys.KW_TARGET_PATTERN,
+                         PolicyKeys.KW_VHOST_ALIASES
                          ]:
                 # accept a string or list
                 if isinstance(val, list):
@@ -431,6 +435,7 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_CONNECTION_ALLOW_DEFAULT] = False
         policy_out[PolicyKeys.KW_GROUPS] = {}
         policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = None
+        policy_out[PolicyKeys.KW_VHOST_ALIASES] = []
 
         # validate the options
         for key, val in dict_iteritems(policy_in):
@@ -460,6 +465,22 @@ class PolicyCompiler(object):
                     errors.append("Policy vhost '%s' option '%s' must be of type 'bool' but is '%s'" %
                                   (name, key, type(val)))
                     return False
+                policy_out[key] = val
+            elif key in [PolicyKeys.KW_VHOST_ALIASES]:
+                # vhost aliases is a CSV string. convert to a list
+                val0 = [x.strip(' ') for x in val.split(PolicyKeys.KC_CONFIG_LIST_SEP)]
+                # Reject aliases that duplicate the vhost itself or other aliases
+                val = []
+                for vtest in val0:
+                    if vtest == name:
+                        errors.append("Policy vhost '%s' option '%s' value '%s' duplicates vhost name" %
+                                      (name, key, vtest))
+                        return False
+                    if vtest in val:
+                        errors.append("Policy vhost '%s' option '%s' value '%s' is duplicated" %
+                                      (name, key, vtest))
+                        return False
+                    val.append(vtest)
                 policy_out[key] = val
             elif key in [PolicyKeys.KW_GROUPS]:
                 if not type(val) is dict:
@@ -622,6 +643,11 @@ class PolicyLocal(object):
         # _max_message_size
         #  holds global value from policy config object
         self._max_message_size = 0
+
+        # _vhost_aliases is a map
+        #  key : alias vhost name
+        #  val : actual vhost to which alias refers
+        self._vhost_aliases = {}
     #
     # Service interfaces
     #
@@ -641,16 +667,64 @@ class PolicyLocal(object):
         if len(warnings) > 0:
             for warning in warnings:
                 self._manager.log_warning(warning)
+
+        # Reject if any vhost alias name conflicts
+        if name in self._vhost_aliases:
+            # hostname is an alias
+            raise PolicyError(
+                "Policy is creating vhost '%s' but that name is already an alias for vhost '%s'" % (name, self._vhost_aliases[name]))
+        for vhost_alias in candidate[PolicyKeys.KW_VHOST_ALIASES]:
+            # alias is a hostname
+            if vhost_alias in self.rulesetdb.keys():
+                raise PolicyError(
+                    "Policy for vhost '%s' defines alias '%s' which conflicts with an existing vhost named '%s'" % (name, vhost_alias, vhost_alias))
+        if name not in self.rulesetdb:
+            # Creating new ruleset. Vhost aliases cannot overlap
+            for vhost_alias in candidate[PolicyKeys.KW_VHOST_ALIASES]:
+                if vhost_alias in self._vhost_aliases:
+                    raise PolicyError(
+                        "Policy for vhost '%s' alias '%s' conflicts with existing alias for vhost '%s'" % (name, vhost_alias, self._vhost_aliases[vhost_alias]))
+        else:
+            # Updating an existing ruleset.
+            # Vhost aliases still cannot overlap but replacement is allowed
+            for vhost_alias in candidate[PolicyKeys.KW_VHOST_ALIASES]:
+                if vhost_alias in self._vhost_aliases and not self._vhost_aliases[vhost_alias] == name:
+                    raise PolicyError(
+                        "Policy for vhost '%s' alias '%s' conflicts with existing alias for vhost '%s'" % (name, vhost_alias, self._vhost_aliases[vhost_alias]))
+
         # Reject if parse tree optimized name collision
+        # Coincidently add name and aliases to parse tree
         if self.use_hostname_patterns:
             agent = self._manager.get_agent()
-            if not agent.qd.qd_dispatch_policy_host_pattern_add(agent.dispatch, name):
-                raise PolicyError("Policy '%s' optimized pattern conflicts with existing pattern" % name)
+            # construct a list of names to be added
+            tnames = []
+            tnames.append(name)
+            tnames += candidate[PolicyKeys.KW_VHOST_ALIASES]
+            # create a list of names to undo in case a subsequent name does not work
+            snames = []
+            for tname in tnames:
+                if not agent.qd.qd_dispatch_policy_host_pattern_add(agent.dispatch, tname):
+                    # undo the snames list
+                    for sname in snames:
+                        agent.qd.qd_dispatch_policy_host_pattern_del(agent.dispatch, sname)
+                    raise PolicyError("Policy for vhost '%s' alias '%s' optimized pattern conflicts with existing pattern" % (name, tname))
+                snames.append(tname)
+        # Names pass administrative approval
         if name not in self.rulesetdb:
+            # add new aliases
+            for nname in candidate[PolicyKeys.KW_VHOST_ALIASES]:
+                self._vhost_aliases[nname] = name
             if name not in self.statsdb:
                 self.statsdb[name] = AppStats(name, self._manager, candidate)
             self._manager.log_info("Created policy rules for vhost %s" % name)
         else:
+            # remove old aliases
+            old_aliases = self.rulesetdb[name][PolicyKeys.KW_VHOST_ALIASES]
+            for oname in old_aliases:
+                del self._vhost_aliases[oname]
+            # add new aliases
+            for nname in candidate[PolicyKeys.KW_VHOST_ALIASES]:
+                self._vhost_aliases[nname] = name
             self.statsdb[name].update_ruleset(candidate)
             self._manager.log_info("Updated policy rules for vhost %s" % name)
         # TODO: ruleset lock
@@ -668,6 +742,9 @@ class PolicyLocal(object):
         if self.use_hostname_patterns:
             agent = self._manager.get_agent()
             agent.qd.qd_dispatch_policy_host_pattern_remove(agent.dispatch, name)
+            anames = self.rulesetdb[name][PolicyKeys.KW_VHOST_ALIASES]
+            for aname in anames:
+                agent.qd.qd_dispatch_policy_host_pattern_remove(agent.dispatch, aname)
         del self.rulesetdb[name]
 
     #
@@ -699,6 +776,26 @@ class PolicyLocal(object):
     #
     # Runtime query interface
     #
+    def lookup_vhost_alias(self, vhost_in):
+        """
+        Resolve given vhost name to vhost settings name.
+        If the incoming name is a vhost hostname then return the same name.
+        If the incoming name is a vhost alias hostname then return the containing vhost name.
+        If a default vhost is defined then return its name.
+        :param vhost_in: vhost name to test
+        :return: name of policy settings vhost to be applied or blank if lookup failed.
+        """
+        vhost = vhost_in
+        if self.use_hostname_patterns:
+            agent = self._manager.get_agent()
+            vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
+        # Translate an aliased vhost to a concrete vhost. If no alias then use current vhost.
+        vhost = self._vhost_aliases.get(vhost, vhost)
+        # If no usable vhost yet then try default vhost
+        if vhost not in self.rulesetdb:
+            vhost = self._default_vhost if self.default_vhost_enabled() else ""
+        return vhost
+
     def lookup_user(self, user, rhost, vhost_in, conn_name, conn_id):
         """
         Lookup function called from C.
@@ -716,18 +813,12 @@ class PolicyLocal(object):
         try:
             # choose rule set based on incoming vhost or default vhost
             # or potential vhost found by pattern matching
-            vhost = vhost_in
-            if self.use_hostname_patterns:
-                agent = self._manager.get_agent()
-                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
-            if vhost not in self.rulesetdb:
-                if self.default_vhost_enabled():
-                    vhost = self._default_vhost
-                else:
-                    self._manager.log_info(
-                        "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
-                        "No policy defined for vhost" % (user, rhost, vhost_in))
-                    return ""
+            vhost = self.lookup_vhost_alias(vhost_in)
+            if vhost == "":
+                self._manager.log_info(
+                    "DENY AMQP Open for user '%s', rhost '%s', vhost '%s': "
+                    "No policy defined for vhost" % (user, rhost, vhost_in))
+                return ""
             if vhost != vhost_in:
                 self._manager.log_debug(
                     "AMQP Open for user '%s', rhost '%s', vhost '%s': "
@@ -815,13 +906,7 @@ class PolicyLocal(object):
         # Note: the upolicy output is a non-nested dict with settings of interest
         """
         try:
-            vhost = vhost_in
-            if self.use_hostname_patterns:
-                agent = self._manager.get_agent()
-                vhost = agent.qd.qd_dispatch_policy_host_pattern_lookup(agent.dispatch, vhost)
-            if vhost not in self.rulesetdb:
-                if self.default_vhost_enabled():
-                    vhost = self._default_vhost
+            vhost = self.lookup_vhost_alias(vhost_in)
             if vhost != vhost_in:
                 self._manager.log_debug(
                     "AMQP Open lookup settings for vhost '%s': "
@@ -887,7 +972,7 @@ class PolicyLocal(object):
         Test function to load a policy.
         @return:
         """
-        ruleset_str = '["vhost", {"hostname": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true,'
+        ruleset_str = '["vhost", {"hostname": "photoserver", "maxConnections": 50, "maxConnectionsPerUser": 5, "maxConnectionsPerHost": 20, "allowUnknownUser": true, "aliases": "antialias",'
         ruleset_str += '"groups": {'
         ruleset_str += '"anonymous":       { "users": "anonymous", "remoteHosts": "*", "maxFrameSize": 111111, "maxMessageSize": 111111, "maxSessionWindow": 111111, "maxSessions": 1, "maxSenders": 11, "maxReceivers": 11, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public", "targets": "" },'
         ruleset_str += '"users":           { "users": "u1, u2", "remoteHosts": "*", "maxFrameSize": 222222, "maxMessageSize": 222222, "maxSessionWindow": 222222, "maxSessions": 2, "maxSenders": 22, "maxReceivers": 22, "allowDynamicSource": false, "allowAnonymousSender": false, "sources": "public, private", "targets": "public" },'

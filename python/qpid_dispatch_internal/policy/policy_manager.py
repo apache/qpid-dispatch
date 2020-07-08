@@ -128,6 +128,17 @@ class PolicyManager(object):
     #
     # Runtime query interface
     #
+    def lookup_vhost_alias(self, vhost_in):
+        """
+        Resolve given vhost name to vhost settings name.
+        If the incoming name is a vhost hostname then return the same name.
+        If the incoming name is a vhost alias hostname then return the containing vhost name.
+        If a default vhost is defined then return its name.
+        :param vhost_in: vhost name to test
+        :return: name of policy settings vhost to be applied. Or blank if not defined.
+        """
+        return self._policy_local.lookup_vhost_alias(vhost_in)
+
     def lookup_user(self, user, rhost, vhost, conn_name, conn_id):
         """
         Lookup function called from C.
@@ -169,6 +180,20 @@ class PolicyManager(object):
         :return: none
         """
         self._policy_local.set_max_message_size(size)
+
+#
+#
+#
+def policy_lookup_vhost_alias(mgr, vhost):
+    """
+    Look up a vhost in the policy database
+    Called by C code
+    @param mgr: policy_manager
+    @param vhost: Incoming vhost from an AMQP Open
+    @return: name of policy settings vhost to be applied or blank if lookup failed.
+    """
+    return mgr.lookup_vhost_alias(vhost)
+
 #
 #
 #

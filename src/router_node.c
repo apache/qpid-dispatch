@@ -1161,7 +1161,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
 
     if (multi_tenant)
-        vhost = pn_connection_remote_hostname(pn_conn);
+        vhost = (conn->policy_settings && conn->policy_settings->vhost_name) ?
+                conn->policy_settings->vhost_name :
+                pn_connection_remote_hostname(pn_conn);
 
     char proto[50];
     memset(proto, 0, 50);

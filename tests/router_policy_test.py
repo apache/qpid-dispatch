@@ -22,6 +22,9 @@ from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
 
+import json
+import sys
+
 from system_test import unittest
 
 from qpid_dispatch_internal.policy.policy_util import HostAddr, is_ipv6_enabled
@@ -129,17 +132,27 @@ class MockAgent(object):
 class MockPolicyManager(object):
     def __init__(self):
         self.agent = MockAgent()
+        self.logs = []
 
     def log_debug(self, text):
         print("DEBUG: %s" % text)
+        self.logs.append(text)
+
     def log_info(self, text):
         print("INFO: %s" % text)
+        self.logs.append(text)
+
     def log_trace(self, text):
         print("TRACE: %s" % text)
+        self.logs.append(text)
+
     def log_error(self, text):
         print("ERROR: %s" % text)
+        self.logs.append(text)
+
     def log_warning(self, text):
         print("WARNING: %s" % text)
+        self.logs.append(text)
 
     def get_agent(self):
         return self.agent
@@ -331,6 +344,121 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.connections_active == 10000)
         self.assertTrue(stats.connections_approved == 10000)
         self.assertTrue(stats.connections_denied == 1)
+
+
+class PolicyAliases(TestCase):
+
+    #
+    def test_AliasesRenameOwnVhost(self):
+        config_str="""
+[{
+  "hostname": "$default",
+  "allowUnknownUser": true,
+  "aliases": "$default",
+  "groups": {
+    "$default": {
+      "remoteHosts": "*",
+      "allowDynamicSource": true,
+      "allowAnonymousSender": true,
+      "sources": "$management, examples, q1",
+      "targets": "$management, examples, q1",
+      "maxSessions": 1
+    }
+  }
+}]
+"""
+        manager = MockPolicyManager()
+        policy = PolicyLocal(manager)
+        ruleset = json.loads(config_str)
+        denied = False
+        try:
+            policy.create_ruleset(ruleset[0])
+        except PolicyError:
+            denied = True
+        self.assertTrue(denied, "Ruleset duplicates vhost and alias but condition not detected.")
+
+    #
+    def test_SameAliasOnTwoVhosts(self):
+        config_str="""
+[{
+  "hostname": "$default",
+  "aliases": "a,b,c,d,e",
+  "groups": {
+    "$default": {
+      "maxSessions": 1
+    }
+  }
+},
+{
+  "hostname": "doshormigas",
+  "aliases": "i,h,g,f,e",
+  "groups": {
+    "$default": {
+      "maxSessions": 1
+    }
+  }
+}]
+"""
+        manager = MockPolicyManager()
+        policy = PolicyLocal(manager)
+        ruleset = json.loads(config_str)
+        denied = False
+        try:
+            policy.create_ruleset(ruleset[0])
+            policy.create_ruleset(ruleset[1])
+        except PolicyError as e:
+            denied = True
+        self.assertTrue(denied, "Rulesets duplicate same alias in two vhosts but condition not detected.")
+
+    #
+    def test_AliasConflictsWithVhost(self):
+        config_str="""
+[{
+  "hostname": "$default",
+  "groups": {
+    "$default": {
+      "maxSessions": 1
+    }
+  }
+},
+{
+  "hostname": "conflict-with-vhost",
+  "aliases": "$default",
+  "groups": {
+    "$default": {
+      "maxSessions": 1
+    }
+  }
+}]
+"""
+        manager = MockPolicyManager()
+        policy = PolicyLocal(manager)
+        ruleset = json.loads(config_str)
+        denied = False
+        try:
+            policy.create_ruleset(ruleset[0])
+            policy.create_ruleset(ruleset[1])
+        except PolicyError as e:
+            denied = True
+        self.assertTrue(denied, "Ruleset alias names other vhost but condition not detected.")
+
+    #
+    def test_AliasOperationalLookup(self):
+        manager = MockPolicyManager()
+        policy = PolicyLocal(manager)
+        policy.test_load_config()
+
+        # For this test the test config defines vhost 'photoserver'.
+        # This test accesses that vhost using the alias name 'antialias'.
+        settingsname = policy.lookup_user('zeke', '192.168.100.5', 'antialias', "connid", 5)
+        self.assertTrue(settingsname == 'test')
+
+        upolicy = {}
+        self.assertTrue(
+            policy.lookup_settings('antialias', settingsname, upolicy)
+        )
+        self.assertTrue(upolicy['maxFrameSize']            == 444444)
+        self.assertTrue(upolicy['sources'] == 'a,private,')
 
 
 if __name__ == '__main__':
