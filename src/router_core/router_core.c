@@ -575,14 +575,20 @@ void qdr_core_bind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_li
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_DEST, addr);
     } else {  // link->link_direction == QD_INCOMING
         qdr_add_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
-        if (DEQ_SIZE(addr->inlinks) == 1) {
+        qdr_address_t *fallback_for = addr->fallback_for;
+
+        if (DEQ_SIZE(addr->inlinks) + (!!fallback_for ? DEQ_SIZE(fallback_for->inlinks) : 0) == 1)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr);
-            if (!!addr->fallback && !link->fallback)
-                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, addr->fallback);
-        } else if (DEQ_SIZE(addr->inlinks) == 2) {
+        else if (DEQ_SIZE(addr->inlinks) + (!!fallback_for ? DEQ_SIZE(fallback_for->inlinks) : 0) == 2)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr);
-            if (!!addr->fallback && !link->fallback)
-                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, addr->fallback);
+
+        qdr_address_t *fallback = addr->fallback;
+        if (!!fallback) {
+            size_t combined_in = DEQ_SIZE(addr->inlinks) + DEQ_SIZE(fallback->inlinks);
+            if (combined_in == 1)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_BECAME_SOURCE, fallback);
+            else if (combined_in == 2)
+                qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_TWO_SOURCE, fallback);
         }
     }
 }
@@ -598,17 +604,22 @@ void qdr_core_unbind_address_link_CT(qdr_core_t *core, qdr_address_t *addr, qdr_
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST, addr);
         } else if (DEQ_SIZE(addr->rlinks) == 1 && qd_bitmask_cardinality(addr->rnodes) == 0)
             qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_LOCAL_DEST, addr);
-    } else {
+    } else {  // link->link_direction == QD_INCOMING
         bool removed = qdr_del_link_ref(&addr->inlinks, link, QDR_LINK_LIST_CLASS_ADDRESS);
         if (removed) {
-            if (DEQ_SIZE(addr->inlinks) == 0) {
+            qdr_address_t *fallback_for = addr->fallback_for;
+            if (DEQ_SIZE(addr->inlinks) + (!!fallback_for ? DEQ_SIZE(fallback_for->inlinks) : 0) == 0)
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr);
-                if (!!addr->fallback && !link->fallback)
-                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, addr->fallback);
-            } else if (DEQ_SIZE(addr->inlinks) == 1) {
+            else if (DEQ_SIZE(addr->inlinks) + (!!fallback_for ? DEQ_SIZE(fallback_for->inlinks) : 0) == 1)
                 qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr);
-                if (!!addr->fallback && !link->fallback)
-                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_ONE_SOURCE, addr->fallback);
+
+            qdr_address_t *fallback = addr->fallback;
+            if (!!fallback) {
+                size_t combined_in = DEQ_SIZE(addr->inlinks) + DEQ_SIZE(fallback->inlinks);
+                if (combined_in == 0)
+                    qdrc_event_addr_raise(core, QDRC_EVENT_ADDR_NO_LONGER_SOURCE, fallback);
+                else if (combined_in == 1)
+                    ; // Don't do anything in this case.  Raising the event will cause the fallback uplink to be dropped
             }
         }
     }
