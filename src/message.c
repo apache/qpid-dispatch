@@ -694,7 +694,7 @@ static qd_section_status_t message_section_check(qd_buffer_t         **buffer,
         // uint8_t size field
         pre_consume += 1;
         consume |= (uint32_t) next_octet(&test_cursor, &test_buffer);
-        if (!test_cursor) return QD_SECTION_NEED_MORE;
+        if (!test_cursor && consume > 0) return QD_SECTION_NEED_MORE;
         break;
     }
 
