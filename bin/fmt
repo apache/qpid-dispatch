@@ -1,0 +1,139 @@
+#!/usr/bin/python3
+
+import re
+import subprocess
+import sys
+
+def main():
+    paths = sys.argv[1:]
+    command = ["clang-format", "-i", *paths]
+
+    print(command)
+
+    # subprocess.run(["clang-format", "--version"])
+
+    for path in paths:
+        with open(path) as f:
+            text = f.read()
+
+            for match in re.finditer(r"struct\s+(\w+)\s*{(.*?)}", text, flags=re.DOTALL):
+                print(f"struct {match.group(1)} {{")
+
+                for declarator in parse_struct(match.group(2)):
+                    print(declarator.emit())
+
+                print("}")
+
+class Token:
+    def __init__(self, kind, value, start, end):
+        self.kind = kind
+        self.value = value
+        self.start = start
+        self.end = end
+
+    def __repr__(self):
+        return f"T({self.kind},'{self.value}')"
+
+class StructDeclarator:
+    def __init__(self):
+        self.type_qualifier = None
+        self.type_name = None
+        self.pointer = False
+        self.member_name = None
+        self.comment = None
+
+    def emit(self):
+        type_info = " ".join((x for x in (self.type_qualifier, self.type_name) if x is not None))
+        pointer = "*" if self.pointer else " "
+        member_info = f"{pointer}{self.member_name};"
+        comment = self.comment if self.comment is not None else ""
+
+        return f"    {type_info:30}  {member_info:30}  {comment}"
+
+def tokenize_struct(text):
+    spec = (
+        ("identifier", r"\w+"),
+        ("pointer", r"\*"),
+        ("operator", r"\+"),
+        ("open_curly", r"{"),
+        ("close_curly", r"}"),
+        ("open_square", r"\["),
+        ("close_square", r"\]"),
+        ("open_paren", r"\("),
+        ("close_paren", r"\)"),
+        ("comment", r"//[^\n]*"),
+        ("terminator", r";"),
+        ("skip", r"\s+"),
+        ('mismatch', r'.'),
+    )
+
+    pattern = "|".join("(?P<{}>{})".format(*entry) for entry in spec)
+
+    for match in re.finditer(pattern, text, flags=re.DOTALL):
+        assert match.lastgroup != "mismatch", match.group()
+        yield Token(match.lastgroup, match.group(), *match.span())
+
+def parse_struct(text):
+    declarators = list()
+
+    def default(curr, prev):
+        return
+
+    def identifier(curr, prev):
+        if prev is None or prev.kind in ("terminator", "comment"): # XXX comment?
+            declarator = StructDeclarator()
+            declarators.append(declarator)
+
+            if curr.value in ("const", "volatile"):
+                declarator.type_qualifier = curr.value
+            else:
+                declarator.type_name = curr.value # XXX handle "unsigned int"
+
+            return
+
+        declarator = declarators[-1]
+
+        if prev.kind == "identifier":
+            if declarator.type_name is None:
+                declarator.type_name = curr.value
+            else:
+                declarator.member_name = curr.value
+
+            return
+
+        if prev.kind == "pointer":
+            declarator.member_name = curr.value
+            return
+
+        default(curr, prev)
+
+    def pointer(curr, prev):
+        declarator = declarators[-1]
+        declarator.pointer = True
+
+    def comment(curr, prev):
+        declarator = declarators[-1]
+        declarator.comment = curr.value
+
+    switch = {
+        "identifier": identifier,
+        "pointer": pointer,
+        "comment": comment,
+    }
+
+    prev = None
+    curr = None
+
+    for token in tokenize_struct(text):
+        if token.kind == "skip":
+            continue
+
+        prev = curr
+        curr = token
+
+        switch.get(token.kind, default)(curr, prev)
+
+    return declarators
+
+if __name__ == "__main__":
+    main()
