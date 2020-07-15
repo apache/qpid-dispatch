@@ -93,11 +93,11 @@ typedef struct {
     qd_field_location_t  field_group_id;
     qd_field_location_t  field_group_sequence;
     qd_field_location_t  field_reply_to_group_id;
-
     qd_field_location_t  body;                            // The body of the message
-    qd_buffer_t         *parse_buffer;
-    unsigned char       *parse_cursor;
-    qd_message_depth_t   parse_depth;
+
+    qd_buffer_t         *parse_buffer;                    // Pointer to the buffer where parsing should resume, if needed
+    unsigned char       *parse_cursor;                    // Pointer to octet in parse_buffer where parsing should resume, if needed
+    qd_message_depth_t   parse_depth;                     // The depth to which this message content has been parsed
     qd_iterator_t       *ma_field_iter_in;                // 'message field iterator' for msg.FIELD_MESSAGE_ANNOTATION
 
     qd_iterator_pointer_t ma_user_annotation_blob;        // Original user annotations
