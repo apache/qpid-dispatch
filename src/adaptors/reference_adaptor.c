@@ -493,4 +493,4 @@ void qdr_ref_adaptor_final(void *adaptor_context)
 /**
  * Declare the adaptor so that it will self-register on process startup.
  */
-QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
+//QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
