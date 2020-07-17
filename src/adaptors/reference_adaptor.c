@@ -152,8 +152,6 @@ static void qdr_ref_detach(void *context, qdr_link_t *link, qdr_error_t *error, 
 static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
 {
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
-    qd_buffer_list_t   buffers;
-    qd_buffer_t       *buf;
     
     printf("qdr_ref_flow: %d credits issued\n", credit);
 
@@ -177,15 +175,12 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         */
         qd_compose_end_list(props);
 
-        qd_message_t *msg = qd_message();
-        DEQ_INIT(buffers);
-        buf = qd_buffer();
-        char *insert = (char*) qd_buffer_cursor(buf);
-        memcpy(insert, "\x00\x53\x77\xa1\x0cTest Payload", 17);
-        qd_buffer_insert(buf, 17);
-        DEQ_INSERT_HEAD(buffers, buf);
+        props = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, props);
+        qd_compose_insert_string(props, "Test Payload");
 
-        qd_message_compose_5(msg, props, &buffers, true);
+        qd_message_t *msg = qd_message();
+
+        qd_message_compose_2(msg, props, true);
         qd_compose_free(props);
 
         qdr_link_deliver(adaptor->out_link_1, msg, 0, false, 0, 0);
@@ -205,7 +200,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
 
         adaptor->streaming_message = qd_message();
 
-        qd_message_compose_5(adaptor->streaming_message, props, 0, false);
+        qd_message_compose_2(adaptor->streaming_message, props, false);
         qd_compose_free(props);
 
         printf("qdr_ref_flow: Starting a streaming delivery\n");
@@ -409,6 +404,7 @@ static void on_stream(void *context)
         qd_buffer_list_t buffer_list;
         DEQ_INIT(buffer_list);
         qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
+        qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
 
         //
         // Compose a DATA performative for this section of the stream
@@ -423,7 +419,7 @@ static void on_stream(void *context)
         qd_compose_free(field);
 
         //
-        // Notify the router that more data has arrived on the delivery
+        // Notify the router that more data is ready to be pushed out on the delivery
         //
         qdr_delivery_continue(adaptor->core, adaptor->streaming_delivery, false);
     }
@@ -493,4 +489,4 @@ void qdr_ref_adaptor_final(void *adaptor_context)
 /**
  * Declare the adaptor so that it will self-register on process startup.
  */
-//QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
+QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)

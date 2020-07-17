@@ -275,24 +275,9 @@ ssize_t qd_message_field_copy(qd_message_t *msg, qd_message_field_t field, char 
 
 // Convenience Functions
 void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *buffers);
-void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content);
+void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *content, bool complete);
 void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2);
 void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *content1, qd_composed_field_t *content2, qd_composed_field_t *content3);
-
-/**
- * Send a message with optional headers and an optional raw body with the option of starting
- * a streaming transfer.
- *
- * @param msg The message being composed
- * @param headers A composed field with 1 or more header sections (incl body performative) or NULL
- * @param body A buffer list of raw body content or NULL
- * @param complete True if the message is to be receive-complete.
- *        False if more content will arrive later.
- */
-void qd_message_compose_5(qd_message_t        *msg,
-                          qd_composed_field_t *headers,
-                          qd_buffer_list_t    *body,
-                          bool                 complete);
 
 /**
  * qd_message_extend
