@@ -245,6 +245,16 @@ class QdstatTest(system_test.TestCase):
         regexp = r'qdr_address_t","[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
+    def test_policy(self):
+        out = self.run_qdstat(['--policy'])
+        self.assertTrue("Maximum Concurrent Connections" in out)
+        self.assertTrue("Total Denials" in out)
+
+    def test_policy_csv(self):
+        out = self.run_qdstat(['-p', "--csv"])
+        self.assertTrue("Maximum Concurrent Connections" in out)
+        self.assertTrue("Total Denials" in out)
+
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
 
@@ -437,6 +447,85 @@ class QdstatTest(system_test.TestCase):
         c.close()
 
 
+class QdstatTestVhostPolicy(system_test.TestCase):
+    """Test qdstat-with-policy tool output"""
+    @classmethod
+    def setUpClass(cls):
+        super(QdstatTestVhostPolicy, cls).setUpClass()
+        config = system_test.Qdrouterd.Config([
+            ('router', {'id': 'QDR.A', 'workerThreads': 1}),
+            ('listener', {'port': cls.tester.get_port()}),
+            ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
+            ('vhost', {
+                'hostname': '$default',
+                'maxConnections': 2,
+                'allowUnknownUser': 'true',
+                'groups': {
+                    '$default': {
+                        'users': '*',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True
+                    }
+                }
+            })
+        ])
+        cls.router = cls.tester.qdrouterd('test-router', config)
+
+    def run_qdstat(self, args, regexp=None, address=None):
+        if args:
+            popen_args = ['qdstat', '--bus', str(address or self.router.addresses[0]), '--timeout', str(system_test.TIMEOUT) ] + args
+        else:
+            popen_args = ['qdstat', '--bus',
+                          str(address or self.router.addresses[0]),
+                          '--timeout', str(system_test.TIMEOUT)]
+
+        p = self.popen(popen_args,
+            name='qdstat-'+self.id(), stdout=PIPE, expect=None,
+            universal_newlines=True)
+
+        out = p.communicate()[0]
+        assert p.returncode == 0, \
+            "qdstat exit status %s, output:\n%s" % (p.returncode, out)
+        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        return out
+
+    def test_vhost(self):
+        out = self.run_qdstat(['--vhosts'])
+        self.assertTrue("Vhosts" in out)
+        self.assertTrue("allowUnknownUser" in out)
+
+    def test_vhost_csv(self):
+        out = self.run_qdstat(['--vhosts', '--csv'])
+        self.assertTrue("Vhosts" in out)
+        self.assertTrue("allowUnknownUser" in out)
+
+    def test_vhostgroups(self):
+        out = self.run_qdstat(['--vhostgroups'])
+        self.assertTrue("Vhost Groups" in out)
+        self.assertTrue("allowAdminStatusUpdate" in out)
+
+    def test_vhostgroups_csv(self):
+        out = self.run_qdstat(['--vhostgroups', '--csv'])
+        self.assertTrue("Vhost Groups" in out)
+        self.assertTrue("allowAdminStatusUpdate" in out)
+
+    def test_vhoststats(self):
+        out = self.run_qdstat(['--vhoststats'])
+        self.assertTrue("Vhost Stats" in out)
+        self.assertTrue("maxMessageSizeDenied" in out)
+        self.assertTrue("Vhost User Stats" in out)
+        self.assertTrue("remote hosts" in out)
+
+    def test_vhoststats_csv(self):
+        out = self.run_qdstat(['--vhoststats', '--csv'])
+        self.assertTrue("Vhost Stats" in out)
+        self.assertTrue("maxMessageSizeDenied" in out)
+        self.assertTrue("Vhost User Stats" in out)
+        self.assertTrue("remote hosts" in out)
+
+
 
 
 class QdstatLinkPriorityTest(system_test.TestCase):
@@ -561,7 +650,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         self.assertTrue(out.count('UTC') == 1)
         self.assertTrue(out.count('Router Links') == 1)
         self.assertTrue(out.count('Router Addresses') == 1)
-        self.assertTrue(out.count('Connections') == 2)
+        self.assertTrue(out.count('Connections') == 6)
         self.assertTrue(out.count('AutoLinks') == 2)
         self.assertTrue(out.count('Link Routes') == 3)
         self.assertTrue(out.count('Router Statistics') == 1)
@@ -579,7 +668,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         self.assertTrue(out.count('UTC') == 1)
         self.assertTrue(out.count('Router Links') == 2)
         self.assertTrue(out.count('Router Addresses') == 2)
-        self.assertTrue(out.count('Connections') == 4)
+        self.assertTrue(out.count('Connections') == 12)
         self.assertTrue(out.count('AutoLinks') == 4)
         self.assertTrue(out.count('Link Routes') == 6)
         self.assertTrue(out.count('Router Statistics') == 2)

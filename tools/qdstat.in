@@ -767,6 +767,195 @@ class BusManager(Node):
                              Header("Pooled", Header.KiMiGi)],
                             [rows])
 
+
+    def displayPolicy(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
+        heads = []
+        heads.append(Header("attr"))
+        heads.append(Header("value"))
+        rows = []
+
+        objects = self.query('org.apache.qpid.dispatch.policy')
+
+        policy = objects[0]
+
+        if show_date_id:
+            self.display_datetime_router_id()
+
+        rows.append(('Maximum Concurrent Connections', PlainNum(policy.maxConnections)))
+        rows.append(('Maximum Message Size',           PlainNum(policy.maxMessageSize)))
+        rows.append(('Enable Vhost Policy',            policy.enableVhostPolicy))
+        rows.append(('Enable Vhost Name Patterns',     policy.enableVhostNamePatterns))
+        rows.append(('Policy Directory',               policy.policyDir if len(policy.policyDir) > 0 else '(nil)'))
+        rows.append(('Default Vhost',                  policy.defaultVhost if len(policy.defaultVhost) > 0 else '(nil)'))
+
+        disp.formattedTable("Policy Configuration", heads, rows)
+
+        heads = []
+        heads.append(Header("attr"))
+        heads.append(Header("value"))
+        rows = []
+
+        rows.append(('Connections Processed',       PlainNum(policy.connectionsProcessed)))
+        rows.append(('Connections Denied',          PlainNum(policy.connectionsDenied)))
+        rows.append(('Connections Current',         PlainNum(policy.connectionsCurrent)))
+        rows.append(('Links Denied',                PlainNum(policy.linksDenied)))
+        rows.append(('Maximum Message Size Denied', PlainNum(policy.maxMessageSizeDenied)))
+        rows.append(('Total Denials',               PlainNum(policy.totalDenials)))
+
+        disp.formattedTable("\nPolicy Status", heads, rows)
+
+    def showNodefaultString(self, dict, key):
+        return dict[key] if key in dict else "."
+
+    def showNodefaultInt(self, dict, key):
+        return PlainNum(dict[key]) if key in dict else "."
+
+    def displayVhosts(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
+
+        vhosts = self.query('org.apache.qpid.dispatch.vhost')
+
+        if len(vhosts) == 0:
+            print("No Vhosts")
+            return
+        heads = []
+        heads.append(Header("hostname"))
+        heads.append(Header("maxConnections"))
+        heads.append(Header("maxMessageSize"))
+        heads.append(Header("maxConnectionsPerUser"))
+        heads.append(Header("maxConnectionsPerHost"))
+        heads.append(Header("allowUnknownUser"))
+        heads.append(Header("groups"))
+        rows = []
+        for vhost in vhosts:
+            rows.append((
+                vhost.hostname,
+                PlainNum(vhost.maxConnections),
+                PlainNum(vhost.maxMessageSize),
+                PlainNum(vhost.maxConnectionsPerUser),
+                PlainNum(vhost.maxConnectionsPerHost),
+                vhost.allowUnknownUser,
+                PlainNum(len(vhost.groups))
+                ))
+        disp.formattedTable("Vhosts", heads, rows)
+
+    def displayVhostgroups(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
+
+        vhosts = self.query('org.apache.qpid.dispatch.vhost')
+
+        if len(vhosts) == 0:
+            print("No Vhosts")
+            return
+        heads = []
+        heads.append(Header("vhost"))
+        heads.append(Header("group"))
+        heads.append(Header("users"))
+        heads.append(Header("remoteHosts"))
+        heads.append(Header("maxConnectionsPerUser"))
+        heads.append(Header("maxConnectionsPerHost"))
+        heads.append(Header("maxMessageSize"))
+        heads.append(Header("maxFrameSize"))
+        heads.append(Header("maxSessionWindow"))
+        heads.append(Header("maxSessions"))
+        heads.append(Header("maxSenders"))
+        heads.append(Header("maxReceivers"))
+        heads.append(Header("allowDynamicSource"))
+        heads.append(Header("allowAnonymousSender"))
+        heads.append(Header("allowUserIdProxy"))
+        heads.append(Header("allowWaypointLinks"))
+        heads.append(Header("allowDynamicLinkRoutes"))
+        heads.append(Header("allowAdminStatusUpdate"))
+        heads.append(Header("allowFallbackLinks"))
+        heads.append(Header("sources"))
+        heads.append(Header("targets"))
+        heads.append(Header("sourcePattern"))
+        heads.append(Header("targetPattern"))
+        rows = []
+        for vhost in vhosts:
+            groups = vhost["groups"]
+            if len(groups) > 0:
+                for groupname in groups:
+                    group = groups[groupname]
+                    rows.append((
+                        vhost.hostname,
+                        groupname,
+                        self.showNodefaultString(group, "users"),
+                        self.showNodefaultString(group, "remoteHosts"),
+                        self.showNodefaultInt(group, "maxConnectionsPerUser"),
+                        self.showNodefaultInt(group, "maxConnectionsPerHost"),
+                        self.showNodefaultInt(group, "maxMessageSize"),
+                        self.showNodefaultInt(group, "maxFrameSize"),
+                        self.showNodefaultInt(group, "maxSessionWindow"),
+                        self.showNodefaultInt(group, "maxSessions"),
+                        self.showNodefaultInt(group, "maxSenders"),
+                        self.showNodefaultInt(group, "maxReceivers"),
+                        self.showNodefaultString(group, "allowDynamicSource"),
+                        self.showNodefaultString(group, "allowAnonymousSender"),
+                        self.showNodefaultString(group, "allowUserIdProxy"),
+                        self.showNodefaultString(group, "allowWaypointLinks"),
+                        self.showNodefaultString(group, "allowDynamicLinkRoutes"),
+                        self.showNodefaultString(group, "allowAdminStatusUpdate"),
+                        self.showNodefaultString(group, "allowFallbackLinks"),
+                        self.showNodefaultString(group, "sources"),
+                        self.showNodefaultString(group, "targets"),
+                        self.showNodefaultString(group, "sourcePattern"),
+                        self.showNodefaultString(group, "targetPattern")
+                    ))
+        disp.formattedTable("Vhost Groups", heads, rows)
+
+    def displayVhoststats(self, show_date_id=True):
+        disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
+
+        vstats = self.query('org.apache.qpid.dispatch.vhostStats')
+
+        if len(vstats) == 0:
+            print("No Vhost Stats")
+            return
+        heads = []
+        heads.append(Header("hostname"))
+        heads.append(Header("connectionsApproved"))
+        heads.append(Header("connectionsDenied"))
+        heads.append(Header("connectionsCurrent"))
+        heads.append(Header("sessionDenied"))
+        heads.append(Header("senderDenied"))
+        heads.append(Header("receiverDenied"))
+        heads.append(Header("maxMessageSizeDenied"))
+        rows = []
+
+        for vstat in vstats:
+            rows.append((
+                vstat.hostname,
+                PlainNum(vstat.connectionsApproved),
+                PlainNum(vstat.connectionsDenied),
+                PlainNum(vstat.connectionsCurrent),
+                PlainNum(vstat.sessionDenied),
+                PlainNum(vstat.senderDenied),
+                PlainNum(vstat.receiverDenied),
+                PlainNum(vstat.maxMessageSizeDenied)
+                ))
+        disp.formattedTable("Vhost Stats", heads, rows)
+
+        heads = []
+        heads.append(Header("vhost"))
+        heads.append(Header("user"))
+        heads.append(Header("remote hosts"))
+        rows = []
+
+        for vstat in vstats:
+            ustates = vstat["perUserState"]
+            if len(ustates) > 0:
+                for ustate in ustates:
+                    rows.append((
+                        vstat.hostname,
+                        ustate,
+                        ustates[ustate]
+                        ))
+        disp.formattedTable("\nVhost User Stats", heads, rows)
+
+
+
     def displayLog(self):
         log = self.get_log(limit=self.opts.limit)
         for line in log:
@@ -792,6 +981,15 @@ class BusManager(Node):
         self.displayGeneral(show_date_id=False)
         print("")
         self.displayMemory(show_date_id=False)
+        print("")
+        self.displayPolicy(show_date_id=False)
+        print("")
+        self.displayVhosts(show_date_id=False)
+        print("")
+        # Groups is an ugly display. Show it only on demand.
+        # self.displayVhostgroups(show_date_id=False)
+        # print("")
+        self.displayVhoststats(show_date_id=False)
         print("")
 
     def has_nodes(self):

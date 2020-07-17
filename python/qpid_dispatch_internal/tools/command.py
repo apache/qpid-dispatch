@@ -150,12 +150,24 @@ def _qdstat_add_display_args(parser, BusManager):
     display.add_argument("-m", "--memory", action="store_const", dest="show",
                          help="Show Router Memory Stats",
                          const=BusManager.displayMemory.__name__)
+    display.add_argument("-p", "--policy", action="store_const", dest="show",
+                         help="Show Router Policy",
+                         const=BusManager.displayPolicy.__name__)
     display.add_argument("--autolinks", action="store_const", dest="show",
                          help="Show Auto Links",
                          const=BusManager.displayAutolinks.__name__)
     display.add_argument("--linkroutes", action="store_const", dest="show",
                          help="Show Link Routes",
                          const=BusManager.displayLinkRoutes.__name__)
+    display.add_argument("--vhosts", action="store_const", dest="show",
+                         help="Show Vhosts",
+                         const=BusManager.displayVhosts.__name__)
+    display.add_argument("--vhostgroups", action="store_const", dest="show",
+                         help="Show Vhost Groups",
+                         const=BusManager.displayVhostgroups.__name__)
+    display.add_argument("--vhoststats", action="store_const", dest="show",
+                         help="Show Vhost Stats",
+                         const=BusManager.displayVhoststats.__name__)
     display.add_argument("--log", action="store_const", dest="show",
                          help="Show recent log entries",
                          const=BusManager.displayLog.__name__)
