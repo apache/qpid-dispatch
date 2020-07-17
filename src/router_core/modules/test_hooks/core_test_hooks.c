@@ -108,7 +108,7 @@ static void source_send(test_endpoint_t *ep, bool presettled)
     qd_compose_insert_string(field, stringbuf);
 
     dlv = qdrc_endpoint_delivery_CT(ep->node->core, ep->ep, msg);
-    qd_message_compose_2(msg, field);
+    qd_message_compose_2(msg, field, true);
     qd_compose_free(field);
     qdrc_endpoint_send_CT(ep->node->core, ep->ep, dlv, presettled);
 
