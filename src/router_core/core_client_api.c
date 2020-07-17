@@ -687,7 +687,7 @@ static qd_message_t *_create_message_CT(qdrc_client_t *client,
     } else if (req->app_properties) {
         qd_message_compose_3(message, fld, req->app_properties);
     } else {
-        qd_message_compose_2(message, fld);
+        qd_message_compose_2(message, fld, true);
     }
     qd_compose_free(fld);
     qd_compose_free(req->body);
