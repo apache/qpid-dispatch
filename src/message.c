@@ -2224,14 +2224,14 @@ void qd_message_compose_1(qd_message_t *msg, const char *to, qd_buffer_list_t *b
 }
 
 
-void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field)
+void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field, bool complete)
 {
     qd_message_content_t *content       = MSG_CONTENT(msg);
-    content->receive_complete     = true;
-
     qd_buffer_list_t     *field_buffers = qd_compose_buffers(field);
 
-    content->buffers = *field_buffers;
+    content->buffers          = *field_buffers;
+    content->receive_complete = complete;
+
     DEQ_INIT(*field_buffers); // Zero out the linkage to the now moved buffers.
 }
 
@@ -2261,26 +2261,6 @@ void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_com
     DEQ_INIT(*field1_buffers);
     DEQ_APPEND(content->buffers, (*field2_buffers));
     DEQ_APPEND(content->buffers, (*field3_buffers));
-}
-
-
-void qd_message_compose_5(qd_message_t        *msg,
-                          qd_composed_field_t *headers,
-                          qd_buffer_list_t    *body,
-                          bool                 complete)
-{
-    qd_message_content_t *content         = MSG_CONTENT(msg);
-    qd_buffer_list_t     *headers_buffers = headers ? qd_compose_buffers(headers) : 0;
-
-    DEQ_INIT(content->buffers);
-    if (headers_buffers)
-        DEQ_APPEND(content->buffers, (*headers_buffers));
-
-    if (body) {
-        DEQ_APPEND(content->buffers, (*body));
-    }
-
-    content->receive_complete = complete;
 }
 
 
