@@ -52,11 +52,19 @@ jobs:
     os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.31.0 BUILD_TYPE=Coverage
-  - name: "qdrouterd:RelWithDebInfo+MemoryDebug"
+  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (gcc on xenial)"
     os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.31.0 BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
+  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
+    os: linux
+    dist: focal
+    env:
+      - CC=clang-10
+      - CXX=clang++-10
+      - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
+      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:Default Build"
     os: linux
     env:
