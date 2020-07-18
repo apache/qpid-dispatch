@@ -24,6 +24,7 @@ jobs:
   allow_failures:
     - os: osx
     - name: "qdrouterd:TSAN"
+    - arch: arm64
   include:
   - name: "apache-rat:check"
     os: linux
@@ -44,7 +45,7 @@ jobs:
     after_script:
     - cat target/rat.txt || true
   # prepending /usr/bin to PATH to avoid mismatched python interpreters in /opt
-  - name: "qdrouterd:Debug"
+  - name: "qdrouterd:Debug (gcc on xenial)"
     os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=Debug
@@ -79,6 +80,33 @@ jobs:
     - CXX=clang++-11
     - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
+  - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
+    arch: arm64
+    os: linux
+    dist: focal
+    compiler: clang
+    python:
+      - "3.9"
+    before_install:
+      - sudo apt-get install clang-11 llvm-11-dev
+      # Install and use the latest Node.js LTS version
+      - nvm install "lts/*"
+      # https://github.com/pypa/virtualenv/issues/1740
+      # https://github.com/pypa/virtualenv/issues/1873
+      - python3 -m pip install --user --upgrade pip
+      - python3 -m pip install --user --upgrade tox virtualenv==20.0.23
+      # Install quart to run the http2 tests.
+      - python3 -m pip install --user quart
+      # DISPATCH-1883: Install selectors to run tcp echo server/client tools
+      - python3 -m pip install --user selectors
+      # Install grpcio and protobuf to run the grpc tests.
+      #  Installation on AArch64 currently broken https://github.com/grpc/grpc/pull/25363
+      #- python3 -m pip install --user grpcio protobuf
+    env:
+      - CC=clang-11
+      - CXX=clang++-11
+      - PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
+      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DQD_ENABLE_ASSERTIONS=ON -DDISPATCH_TEST_TIMEOUT=500'
   - name: "qdrouterd:Default Build"
     os: linux
     env:
@@ -148,7 +176,7 @@ install:
 # Build and install proton from source.
 - mkdir qpid-proton/build
 - pushd qpid-proton/build
-- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DBUILD_PYTHON=YES -DBUILD_JAVASCRIPT=NO -DBUILD_CPP=NO -DBUILD_GO=NO -DBUILD_RUBY=NO -DBUILD_PHP=NO -DBUILD_PERL=NO
+- cmake .. -DCMAKE_INSTALL_PREFIX=$PREFIX -DCMAKE_BUILD_TYPE=${BUILD_TYPE} -DBUILD_BINDINGS=python
 - cmake --build . --target install -- -j $NPROC
 - popd
 
