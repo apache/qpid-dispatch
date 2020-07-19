@@ -64,8 +64,9 @@ jobs:
     before_install:
     - sudo apt-get install clang-10
     # https://github.com/pypa/virtualenv/issues/1740
+    # https://github.com/pypa/virtualenv/issues/1873
     - python -m pip install --user --upgrade pip
-    - python -m pip install --user --upgrade tox
+    - python -m pip install --user --upgrade tox virtualenv==20.0.23
     env:
     - CC=clang-10
     - CXX=clang++-10
