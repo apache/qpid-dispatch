@@ -62,7 +62,10 @@ jobs:
     dist: focal
     compiler: clang
     before_install:
-    - sudo apt-get install clang-10 python2
+    - sudo apt-get install clang-10
+    # https://github.com/pypa/virtualenv/issues/1740
+    - python -m pip install --user --upgrade pip
+    - python -m pip install --user tox
     env:
     - CC=clang-10
     - CXX=clang++-10
