@@ -60,11 +60,14 @@ jobs:
   - name: "qdrouterd:RelWithDebInfo+MemoryDebug (clang on focal)"
     os: linux
     dist: focal
+    compiler: clang
+    before_install:
+    - sudo apt-get install clang-10
     env:
-      - CC=clang-10
-      - CXX=clang++-10
-      - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
-      - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
+    - CC=clang-10
+    - CXX=clang++-10
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:Default Build"
     os: linux
     env:
