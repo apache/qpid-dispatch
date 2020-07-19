@@ -62,7 +62,7 @@ jobs:
     dist: focal
     compiler: clang
     before_install:
-    - sudo apt-get install python2
+    - sudo apt-get install clang-10 python2
     env:
     - CC=clang-10
     - CXX=clang++-10
