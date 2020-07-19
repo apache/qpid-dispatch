@@ -32,7 +32,7 @@ static const unsigned char *keys[] = {
     (const unsigned char *) "",
 };
 
-static const int key_count = sizeof(keys)/sizeof(keys[0]);
+enum { key_count = sizeof(keys) / sizeof(keys[0]) };
 
 
 // add using iterator key, lookup and remove using string key
