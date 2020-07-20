@@ -783,12 +783,12 @@ class BusManager(Node):
             self.display_datetime_router_id()
 
         rows.append(('Maximum Concurrent Connections', PlainNum(policy.maxConnections)))
-        rows.append(('Maximum Message Size',           PlainNum(policy.maxMessageSize)))
+        if 'maxMessageSize' in policy:
+            rows.append(('Maximum Message Size',           PlainNum(policy.maxMessageSize)))
         rows.append(('Enable Vhost Policy',            policy.enableVhostPolicy))
         rows.append(('Enable Vhost Name Patterns',     policy.enableVhostNamePatterns))
         rows.append(('Policy Directory',               policy.policyDir if len(policy.policyDir) > 0 else '(nil)'))
         rows.append(('Default Vhost',                  policy.defaultVhost if len(policy.defaultVhost) > 0 else '(nil)'))
-
         disp.formattedTable("Policy Configuration", heads, rows)
 
         heads = []
@@ -800,7 +800,8 @@ class BusManager(Node):
         rows.append(('Connections Denied',          PlainNum(policy.connectionsDenied)))
         rows.append(('Connections Current',         PlainNum(policy.connectionsCurrent)))
         rows.append(('Links Denied',                PlainNum(policy.linksDenied)))
-        rows.append(('Maximum Message Size Denied', PlainNum(policy.maxMessageSizeDenied)))
+        if 'maxMessageSizeDenied' in policy:
+            rows.append(('Maximum Message Size Denied', PlainNum(policy.maxMessageSizeDenied)))
         rows.append(('Total Denials',               PlainNum(policy.totalDenials)))
 
         disp.formattedTable("\nPolicy Status", heads, rows)
@@ -822,22 +823,30 @@ class BusManager(Node):
         heads = []
         heads.append(Header("hostname"))
         heads.append(Header("maxConnections"))
-        heads.append(Header("maxMessageSize"))
+
+        have_max_message_size = False
+        if 'maxMessageSize' in vhosts[0]:
+            have_max_message_size = True
+            heads.append(Header('maxMessageSize'))
+
         heads.append(Header("maxConnectionsPerUser"))
         heads.append(Header("maxConnectionsPerHost"))
         heads.append(Header("allowUnknownUser"))
         heads.append(Header("groups"))
+
         rows = []
         for vhost in vhosts:
-            rows.append((
-                vhost.hostname,
-                PlainNum(vhost.maxConnections),
-                PlainNum(vhost.maxMessageSize),
-                PlainNum(vhost.maxConnectionsPerUser),
-                PlainNum(vhost.maxConnectionsPerHost),
-                vhost.allowUnknownUser,
-                PlainNum(len(vhost.groups))
-                ))
+            row = []
+            row.append(vhost.hostname)
+            row.append(PlainNum(vhost.maxConnections))
+            if have_max_message_size:
+                row.append(PlainNum(vhost.maxMessageSize))
+            row.append(PlainNum(vhost.maxConnectionsPerUser))
+            row.append(PlainNum(vhost.maxConnectionsPerHost))
+            row.append(vhost.allowUnknownUser)
+            row.append(PlainNum(len(vhost.groups)))
+            rows.append(tuple(row))
+
         disp.formattedTable("Vhosts", heads, rows)
 
     def displayVhostgroups(self, show_date_id=True):
@@ -855,7 +864,12 @@ class BusManager(Node):
         heads.append(Header("remoteHosts"))
         heads.append(Header("maxConnectionsPerUser"))
         heads.append(Header("maxConnectionsPerHost"))
-        heads.append(Header("maxMessageSize"))
+
+        have_max_message_size = False
+        if 'maxMessageSize' in vhosts[0]:
+            have_max_message_size = True
+            heads.append(Header('maxMessageSize'))
+
         heads.append(Header("maxFrameSize"))
         heads.append(Header("maxSessionWindow"))
         heads.append(Header("maxSessions"))
@@ -878,31 +892,33 @@ class BusManager(Node):
             if len(groups) > 0:
                 for groupname in groups:
                     group = groups[groupname]
-                    rows.append((
-                        vhost.hostname,
-                        groupname,
-                        self.showNodefaultString(group, "users"),
-                        self.showNodefaultString(group, "remoteHosts"),
-                        self.showNodefaultInt(group, "maxConnectionsPerUser"),
-                        self.showNodefaultInt(group, "maxConnectionsPerHost"),
-                        self.showNodefaultInt(group, "maxMessageSize"),
-                        self.showNodefaultInt(group, "maxFrameSize"),
-                        self.showNodefaultInt(group, "maxSessionWindow"),
-                        self.showNodefaultInt(group, "maxSessions"),
-                        self.showNodefaultInt(group, "maxSenders"),
-                        self.showNodefaultInt(group, "maxReceivers"),
-                        self.showNodefaultString(group, "allowDynamicSource"),
-                        self.showNodefaultString(group, "allowAnonymousSender"),
-                        self.showNodefaultString(group, "allowUserIdProxy"),
-                        self.showNodefaultString(group, "allowWaypointLinks"),
-                        self.showNodefaultString(group, "allowDynamicLinkRoutes"),
-                        self.showNodefaultString(group, "allowAdminStatusUpdate"),
-                        self.showNodefaultString(group, "allowFallbackLinks"),
-                        self.showNodefaultString(group, "sources"),
-                        self.showNodefaultString(group, "targets"),
-                        self.showNodefaultString(group, "sourcePattern"),
-                        self.showNodefaultString(group, "targetPattern")
-                    ))
+                    row = []
+                    row.append(vhost.hostname)
+                    row.append(groupname)
+                    row.append(self.showNodefaultString(group, "users"))
+                    row.append(self.showNodefaultString(group, "remoteHosts"))
+                    row.append(self.showNodefaultInt(group, "maxConnectionsPerUser"))
+                    row.append(self.showNodefaultInt(group, "maxConnectionsPerHost"))
+                    if have_max_message_size:
+                        row.append(self.showNodefaultInt(group, "maxMessageSize"))
+                    row.append(self.showNodefaultInt(group, "maxFrameSize"))
+                    row.append(self.showNodefaultInt(group, "maxSessionWindow"))
+                    row.append(self.showNodefaultInt(group, "maxSessions"))
+                    row.append(self.showNodefaultInt(group, "maxSenders"))
+                    row.append(self.showNodefaultInt(group, "maxReceivers"))
+                    row.append(self.showNodefaultString(group, "allowDynamicSource"))
+                    row.append(self.showNodefaultString(group, "allowAnonymousSender"))
+                    row.append(self.showNodefaultString(group, "allowUserIdProxy"))
+                    row.append(self.showNodefaultString(group, "allowWaypointLinks"))
+                    row.append(self.showNodefaultString(group, "allowDynamicLinkRoutes"))
+                    row.append(self.showNodefaultString(group, "allowAdminStatusUpdate"))
+                    row.append(self.showNodefaultString(group, "allowFallbackLinks"))
+                    row.append(self.showNodefaultString(group, "sources"))
+                    row.append(self.showNodefaultString(group, "targets"))
+                    row.append(self.showNodefaultString(group, "sourcePattern"))
+                    row.append(self.showNodefaultString(group, "targetPattern"))
+                    rows.append(tuple(row))
+
         disp.formattedTable("Vhost Groups", heads, rows)
 
     def displayVhoststats(self, show_date_id=True):
@@ -921,20 +937,24 @@ class BusManager(Node):
         heads.append(Header("sessionDenied"))
         heads.append(Header("senderDenied"))
         heads.append(Header("receiverDenied"))
-        heads.append(Header("maxMessageSizeDenied"))
+        have_max_message_size = False
+        if 'maxMessageSizeDenied' in vstats[0]:
+            have_max_message_size = True
+            heads.append(Header("maxMessageSizeDenied"))
         rows = []
 
         for vstat in vstats:
-            rows.append((
-                vstat.hostname,
-                PlainNum(vstat.connectionsApproved),
-                PlainNum(vstat.connectionsDenied),
-                PlainNum(vstat.connectionsCurrent),
-                PlainNum(vstat.sessionDenied),
-                PlainNum(vstat.senderDenied),
-                PlainNum(vstat.receiverDenied),
-                PlainNum(vstat.maxMessageSizeDenied)
-                ))
+            row = []
+            row.append(vstat.hostname)
+            row.append(PlainNum(vstat.connectionsApproved))
+            row.append(PlainNum(vstat.connectionsDenied))
+            row.append(PlainNum(vstat.connectionsCurrent))
+            row.append(PlainNum(vstat.sessionDenied))
+            row.append(PlainNum(vstat.senderDenied))
+            row.append(PlainNum(vstat.receiverDenied))
+            if have_max_message_size:
+                row.append(PlainNum(vstat.maxMessageSizeDenied))
+            rows.append(tuple(row))
         disp.formattedTable("Vhost Stats", heads, rows)
 
         heads = []
