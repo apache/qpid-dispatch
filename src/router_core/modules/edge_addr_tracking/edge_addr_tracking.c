@@ -249,6 +249,10 @@ static void on_addr_event(void *context, qdrc_event_t event, qdr_address_t *addr
         }
         break;
 
+        case QDRC_EVENT_ADDR_NO_LONGER_DEST :
+
+            // fallthrough
+
         case QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST : {
             // The address no longer has any local destinations.
             // If there are no remote destinations either, we have to tell the edge routers to delete their sender links
@@ -402,7 +406,7 @@ static void qdrc_edge_address_tracking_init_CT(qdr_core_t *core, void **module_c
     //
     context->event_sub = qdrc_event_subscribe_CT(core,
             QDRC_EVENT_ADDR_BECAME_LOCAL_DEST | QDRC_EVENT_ADDR_ONE_LOCAL_DEST |
-            QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST | QDRC_EVENT_ADDR_BECAME_DEST | QDRC_EVENT_ADDR_TWO_DEST |
+            QDRC_EVENT_ADDR_NO_LONGER_LOCAL_DEST | QDRC_EVENT_ADDR_BECAME_DEST | QDRC_EVENT_ADDR_TWO_DEST | QDRC_EVENT_ADDR_NO_LONGER_DEST |
             QDRC_EVENT_LINK_EDGE_DATA_ATTACHED | QDRC_EVENT_LINK_EDGE_DATA_DETACHED,
             0,
             on_link_event,
