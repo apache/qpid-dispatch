@@ -464,6 +464,7 @@ class SenderFirstTest(MessagingHandler):
         self.n_tx          = 0
         self.n_rx          = 0
         self.n_rel         = 0
+        self.tx_seq        = 0
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d" % (self.n_tx, self.n_rx, self.n_rel)
@@ -480,19 +481,21 @@ class SenderFirstTest(MessagingHandler):
         self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
-        self.sender        = event.container.create_sender(self.sender_conn, self.addr)
+        self.sender        = event.container.create_sender(self.sender_conn, self.addr, name=(self.addr + "_sender"))
 
     def on_link_opened(self, event):
         if event.sender == self.sender:
-            self.receiver = event.container.create_receiver(self.receiver_conn, self.addr)
+            rname = self.addr + "_receiver_fallback_" + ("true" if self.rx_fallback else "false")
+            self.receiver = event.container.create_receiver(self.receiver_conn, self.addr, name=rname)
             if self.rx_fallback:
                 self.receiver.source.capabilities.put_symbol("qd.fallback")
 
     def on_sendable(self, event):
         if event.sender == self.sender:
             while self.sender.credit > 0 and self.n_tx < self.count:
-                self.sender.send(Message("Message %d" % self.n_tx))
+                self.sender.send(Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx)))
                 self.n_tx += 1
+                self.tx_seq += 1
 
     def on_message(self, event):
         if event.receiver == self.receiver:
@@ -522,6 +525,7 @@ class ReceiverFirstTest(MessagingHandler):
         self.n_tx          = 0
         self.n_rx          = 0
         self.n_rel         = 0
+        self.tx_seq        = 0
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d" % (self.n_tx, self.n_rx, self.n_rel)
@@ -538,19 +542,21 @@ class ReceiverFirstTest(MessagingHandler):
         self.timer         = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn   = event.container.connect(self.sender_host)
         self.receiver_conn = event.container.connect(self.receiver_host)
-        self.receiver      = event.container.create_receiver(self.receiver_conn, self.addr)
+        rname = self.addr + "_receiver_fallback_" + ("true" if self.rx_fallback else "false")
+        self.receiver      = event.container.create_receiver(self.receiver_conn, self.addr, name=rname)
         if self.rx_fallback:
             self.receiver.source.capabilities.put_symbol("qd.fallback")
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
-            self.sender = event.container.create_sender(self.sender_conn, self.addr)
+            self.sender = event.container.create_sender(self.sender_conn, self.addr, name=(self.addr + "_sender"))
 
     def on_sendable(self, event):
         if event.sender == self.sender:
             while self.sender.credit > 0 and self.n_tx < self.count:
-                self.sender.send(Message("Message %d" % self.n_tx))
+                self.sender.send(Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx)))
                 self.n_tx += 1
+                self.tx_seq += 1
 
     def on_message(self, event):
         if event.receiver == self.receiver:
@@ -582,6 +588,7 @@ class SwitchoverTest(MessagingHandler):
         self.n_rx           = 0
         self.n_rel          = 0
         self.phase          = 0
+        self.tx_seq         = 0
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d, phase=%d" % (self.n_tx, self.n_rx, self.n_rel, self.phase)
@@ -600,14 +607,14 @@ class SwitchoverTest(MessagingHandler):
         self.timer              = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn        = event.container.connect(self.sender_host)
         self.primary_conn       = event.container.connect(self.primary_host)
-        self.fallback_conn     = event.container.connect(self.fallback_host)
-        self.primary_receiver   = event.container.create_receiver(self.primary_conn, self.addr)
-        self.fallback_receiver = event.container.create_receiver(self.fallback_conn, self.addr, name=self.addr)
+        self.fallback_conn      = event.container.connect(self.fallback_host)
+        self.primary_receiver   = event.container.create_receiver(self.primary_conn, self.addr, name=(self.addr + "_primary_receiver"))
+        self.fallback_receiver  = event.container.create_receiver(self.fallback_conn, self.addr, name=(self.addr + "fallback_receiver"))
         self.fallback_receiver.source.capabilities.put_object(symbol("qd.fallback"))
 
     def on_link_opened(self, event):
         if event.receiver == self.primary_receiver:
-            self.sender = event.container.create_sender(self.sender_conn, self.addr)
+            self.sender = event.container.create_sender(self.sender_conn, self.addr, name=(self.addr + "_sender"))
 
     def on_link_closed(self, event):
         if event.receiver == self.primary_receiver:
@@ -617,9 +624,10 @@ class SwitchoverTest(MessagingHandler):
 
     def send(self):
         while self.sender.credit > 0 and self.n_tx < self.count:
-            self.sender.send(Message("Message %d" % self.n_tx))
+            self.sender.send(Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx)))
             self.n_tx += 1
-            
+            self.tx_seq += 1
+
     def on_sendable(self, event):
         if event.sender == self.sender:
             self.send()
@@ -655,6 +663,7 @@ class SenderFirstAutoLinkTest(MessagingHandler):
         self.n_tx          = 0
         self.n_rx          = 0
         self.n_rel         = 0
+        self.tx_seq        = 0
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d" % (self.n_tx, self.n_rx, self.n_rel)
@@ -670,7 +679,7 @@ class SenderFirstAutoLinkTest(MessagingHandler):
     def on_start(self, event):
         self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.sender_conn = event.container.connect(self.sender_host)
-        self.sender      = event.container.create_sender(self.sender_conn, self.addr)
+        self.sender      = event.container.create_sender(self.sender_conn, self.addr, name=(self.addr + "_sender"))
 
     def on_link_opening(self, event):
         if event.sender:
@@ -689,8 +698,9 @@ class SenderFirstAutoLinkTest(MessagingHandler):
 
     def send(self):
         while self.sender.credit > 0 and self.n_tx < self.count:
-            self.sender.send(Message("Message %d" % self.n_tx))
+            self.sender.send(Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx)))
             self.n_tx += 1
+            self.tx_seq += 1
 
     def on_sendable(self, event):
         if event.sender == self.sender:
@@ -725,6 +735,7 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
         self.n_tx          = 0
         self.n_rx          = 0
         self.n_rel         = 0
+        self.tx_seq        = 0
 
     def timeout(self):
         self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d" % (self.n_tx, self.n_rx, self.n_rel)
@@ -759,8 +770,9 @@ class ReceiverFirstAutoLinkTest(MessagingHandler):
 
     def send(self):
         while self.sender.credit > 0 and self.n_tx < self.count:
-            self.sender.send(Message("Message %d" % self.n_tx))
+            self.sender.send(Message("Msg %s %d %d" % (self.addr, self.tx_seq, self.n_tx)))
             self.n_tx += 1
+            self.tx_seq += 1
 
     def on_sendable(self, event):
         if event.sender == self.sender:
