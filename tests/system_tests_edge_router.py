@@ -1261,7 +1261,7 @@ class RouterTest(TestCase):
         self.assertTrue("Router Statistics" in outs)
         self.assertTrue("Router Id                        EA1" in outs)
 
-        self.assertTrue("Types" in outs)
+        self.assertTrue("Memory Pools" in outs)
 
         outs = self.run_qdstat(['-c', '--all-routers'],
                                address=self.routers[2].addresses[0])
@@ -1282,7 +1282,7 @@ class RouterTest(TestCase):
         self.assertTrue("Router Statistics" in outs)
         self.assertTrue("Router Id                        EA1" in outs)
 
-        self.assertTrue("Types" in outs)
+        self.assertTrue("Memory Pools" in outs)
 
     def test_69_interior_qdstat_all_routers(self):
         # Connects to an interior router and runs "qdstat --all-routers"
@@ -1308,7 +1308,7 @@ class RouterTest(TestCase):
         self.assertEqual(outs.count("Auto Links"), 2)
         self.assertEqual(outs.count("Link Routes"), 4)
         self.assertEqual(outs.count("Router Statistics"), 2)
-        self.assertEqual(outs.count("Types"), 2)
+        self.assertEqual(outs.count("Memory Pools"), 2)
 
         outs = self.run_qdstat(['--all-routers', '-nv'],
                                address=self.routers[0].addresses[0])

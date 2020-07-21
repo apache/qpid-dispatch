@@ -654,7 +654,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         self.assertTrue(out.count('AutoLinks') == 2)
         self.assertTrue(out.count('Link Routes') == 3)
         self.assertTrue(out.count('Router Statistics') == 1)
-        self.assertTrue(out.count('Types') == 1)
+        self.assertTrue(out.count('Memory Pools') == 1)
 
     def test_all_entities(self):
         self._test_all_entities(['--all-entities'])
@@ -672,7 +672,7 @@ class QdstatLinkPriorityTest(system_test.TestCase):
         self.assertTrue(out.count('AutoLinks') == 4)
         self.assertTrue(out.count('Link Routes') == 6)
         self.assertTrue(out.count('Router Statistics') == 2)
-        self.assertTrue(out.count('Types') == 2)
+        self.assertTrue(out.count('Memory Pools') == 2)
 
     def test_all_entities_all_routers(self):
         self._test_all_entities_all_routers(['--all-entities', '--all-routers'])
