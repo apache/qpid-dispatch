@@ -143,13 +143,19 @@ if (CMAKE_C_COMPILER_ID STREQUAL "GNU")
       PROPERTY COMPILE_FLAGS -Wno-strict-aliasing)
 endif (CMAKE_C_COMPILER_ID STREQUAL "GNU")
 
-# DISPATCH-1384 - for MacOS use flat_namespace instead of 2 level
-# namespace (acts more like linux)
+if ((DEFINED ASAN_LIBRARY) OR (DEFINED UBSAN_LIBRARY) OR (DEFINED TSAN_LIBRARY))
+  set(USING_SANITIZERS TRUE)
+endif()
 if (APPLE)
+  # DISPATCH-1384 - for macOS use flat_namespace instead of 2 level
+  #  namespace (acts more like linux)
   set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-flat_namespace ${QPID_DISPATCH_LIB_LINK_FLAGS}")
-else(APPLE)
+elseif(CMAKE_C_COMPILER_ID MATCHES "Clang" AND USING_SANITIZERS)
+  # https://github.com/google/sanitizers/issues/380 - can't enable error on
+  #  undefined symbols when linking sanitizers with Clang
+else()
   set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-z,defs ${QPID_DISPATCH_LIB_LINK_FLAGS}")
-endif(APPLE)
+endif()
 
 add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
 target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
