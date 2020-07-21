@@ -739,7 +739,7 @@ class BusManager(Node):
             # router built w/o memory pools:
             print("No memory statistics available")
             return
-        title = "Types"
+        title = "Memory Pools"
         sorter = Sorter(heads, rows, 'type', 0, True)
         dispRows = sorter.getSorted()
         disp.formattedTable(title, heads, dispRows)
@@ -762,7 +762,7 @@ class BusManager(Node):
 
         rows.append(pooled_total)
 
-        disp.formattedTable("\nSummary",
+        disp.formattedTable("\nMemory Summary",
                             [Header("VmSize", hdr_format),
                              Header("Pooled", Header.KiMiGi)],
                             [rows])
