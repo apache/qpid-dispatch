@@ -589,9 +589,11 @@ class SwitchoverTest(MessagingHandler):
         self.n_rel          = 0
         self.phase          = 0
         self.tx_seq         = 0
+        self.local_rel      = 0
 
     def timeout(self):
-        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d, phase=%d" % (self.n_tx, self.n_rx, self.n_rel, self.phase)
+        self.error = "Timeout Expired - n_tx=%d, n_rx=%d, n_rel=%d, phase=%d, local_rel=%d" % \
+                     (self.n_tx, self.n_rx, self.n_rel, self.phase, self.local_rel)
         self.sender_conn.close()
         self.primary_conn.close()
         self.fallback_conn.close()
@@ -633,13 +635,23 @@ class SwitchoverTest(MessagingHandler):
             self.send()
 
     def on_message(self, event):
-        self.n_rx += 1
-        if self.n_rx == self.count:
-            if self.phase == 0:
-                self.phase = 1
-                self.primary_receiver.close()
-            else:
-                self.fail(None)
+        if not (self.phase == 0 and event.receiver == self.fallback_receiver):
+            # Phase 0 message over primary receiver. Phase 1 can come in only on primary.
+            self.n_rx += 1
+            if self.n_rx == self.count:
+                if self.phase == 0:
+                    self.phase = 1
+                    self.primary_receiver.close()
+                else:
+                    self.fail(None)
+        else:
+            # Phase 0 message over fallback receiver. This may happen because
+            # primary receiver is on a distant router and the fallback receiver is local.
+            # Release the message to keep trying until the primary receiver kicks in.
+            self.release(event.delivery)
+            self.n_rel += 1
+            self.n_tx -= 1
+            self.local_rel += 1
 
     def on_released(self, event):
         self.n_rel += 1
