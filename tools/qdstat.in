@@ -806,11 +806,32 @@ class BusManager(Node):
 
         disp.formattedTable("\nPolicy Status", heads, rows)
 
-    def showNodefaultString(self, dict, key):
-        return dict[key] if key in dict else "."
+    def showNodefaultString(self, dict, key, schema):
+        if key in dict:
+            res = dict[key]
+        elif 'default' in schema[key]:
+            res = schema[key]['default']
+        else:
+            res = '(nil)'
+        return res
 
-    def showNodefaultInt(self, dict, key):
-        return PlainNum(dict[key]) if key in dict else "."
+    def showNodefaultBool(self, dict, key, schema):
+        if key in dict:
+            res = dict[key]
+        elif 'default' in schema[key]:
+            res = schema[key]['default']
+        else:
+            res = 'False'
+        return res
+
+    def showNodefaultInt(self, dict, key, schema):
+        if key in dict:
+            res = PlainNum(dict[key])
+        elif 'default' in schema[key]:
+            res = PlainNum(schema[key]['default'])
+        else:
+            res = '(nil)'
+        return res
 
     def displayVhosts(self, show_date_id=True):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
@@ -853,15 +874,17 @@ class BusManager(Node):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
 
         vhosts = self.query('org.apache.qpid.dispatch.vhost')
+        schema = self.get_schema()
+        vg_schema = schema['entityTypes']['vhostUserGroupSettings']['attributes']
 
         if len(vhosts) == 0:
             print("No Vhosts")
             return
+        # Create table for all vhosts and groups omitting
+        # strings that are potentially 'very long'.
         heads = []
         heads.append(Header("vhost"))
         heads.append(Header("group"))
-        heads.append(Header("users"))
-        heads.append(Header("remoteHosts"))
         heads.append(Header("maxConnectionsPerUser"))
         heads.append(Header("maxConnectionsPerHost"))
 
@@ -882,10 +905,6 @@ class BusManager(Node):
         heads.append(Header("allowDynamicLinkRoutes"))
         heads.append(Header("allowAdminStatusUpdate"))
         heads.append(Header("allowFallbackLinks"))
-        heads.append(Header("sources"))
-        heads.append(Header("targets"))
-        heads.append(Header("sourcePattern"))
-        heads.append(Header("targetPattern"))
         rows = []
         for vhost in vhosts:
             groups = vhost["groups"]
@@ -895,31 +914,46 @@ class BusManager(Node):
                     row = []
                     row.append(vhost.hostname)
                     row.append(groupname)
-                    row.append(self.showNodefaultString(group, "users"))
-                    row.append(self.showNodefaultString(group, "remoteHosts"))
-                    row.append(self.showNodefaultInt(group, "maxConnectionsPerUser"))
-                    row.append(self.showNodefaultInt(group, "maxConnectionsPerHost"))
+                    row.append(self.showNodefaultInt(group, "maxConnectionsPerUser", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxConnectionsPerHost", vg_schema))
                     if have_max_message_size:
-                        row.append(self.showNodefaultInt(group, "maxMessageSize"))
-                    row.append(self.showNodefaultInt(group, "maxFrameSize"))
-                    row.append(self.showNodefaultInt(group, "maxSessionWindow"))
-                    row.append(self.showNodefaultInt(group, "maxSessions"))
-                    row.append(self.showNodefaultInt(group, "maxSenders"))
-                    row.append(self.showNodefaultInt(group, "maxReceivers"))
-                    row.append(self.showNodefaultString(group, "allowDynamicSource"))
-                    row.append(self.showNodefaultString(group, "allowAnonymousSender"))
-                    row.append(self.showNodefaultString(group, "allowUserIdProxy"))
-                    row.append(self.showNodefaultString(group, "allowWaypointLinks"))
-                    row.append(self.showNodefaultString(group, "allowDynamicLinkRoutes"))
-                    row.append(self.showNodefaultString(group, "allowAdminStatusUpdate"))
-                    row.append(self.showNodefaultString(group, "allowFallbackLinks"))
-                    row.append(self.showNodefaultString(group, "sources"))
-                    row.append(self.showNodefaultString(group, "targets"))
-                    row.append(self.showNodefaultString(group, "sourcePattern"))
-                    row.append(self.showNodefaultString(group, "targetPattern"))
+                        row.append(self.showNodefaultInt(group, "maxMessageSize", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxFrameSize", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxSessionWindow", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxSessions", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxSenders", vg_schema))
+                    row.append(self.showNodefaultInt(group, "maxReceivers", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowDynamicSource", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowAnonymousSender", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowUserIdProxy", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowWaypointLinks", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowDynamicLinkRoutes", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowAdminStatusUpdate", vg_schema))
+                    row.append(self.showNodefaultBool(group, "allowFallbackLinks", vg_schema))
                     rows.append(tuple(row))
-
         disp.formattedTable("Vhost Groups", heads, rows)
+
+        # Create tables per vhost and per usergroup
+        # showing only potentially lengthy strings.
+        heads = []
+        heads.append(Header("attr"))
+        heads.append(Header("value"))
+
+        for vhost in vhosts:
+            groups = vhost["groups"]
+            if len(groups) > 0:
+                for groupname in groups:
+                    group = groups[groupname]
+                    rows = []
+                    rows.append(("vhost",         vhost.hostname))
+                    rows.append(("group",         groupname))
+                    rows.append(("users",         self.showNodefaultString(group, "users", vg_schema)))
+                    rows.append(("remoteHosts",   self.showNodefaultString(group, "remoteHosts", vg_schema)))
+                    rows.append(("sources",       self.showNodefaultString(group, "sources", vg_schema)))
+                    rows.append(("targets",       self.showNodefaultString(group, "targets", vg_schema)))
+                    rows.append(("sourcePattern", self.showNodefaultString(group, "sourcePattern", vg_schema)))
+                    rows.append(("targetPattern", self.showNodefaultString(group, "targetPattern", vg_schema)))
+                    disp.formattedTable(("\nVhost '%s' UserGroup '%s'" % (vhost.hostname, groupname)), heads, rows)
 
     def displayVhoststats(self, show_date_id=True):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)

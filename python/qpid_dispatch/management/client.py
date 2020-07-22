@@ -384,3 +384,6 @@ class Node(object):
 
     def get_log(self, limit=None, type=None):
         return self.call(self.node_request(operation=u"GET-LOG", entityType=type, limit=limit)).body
+
+    def get_schema(self, type=None):
+        return self.call(self.node_request(operation=u"GET-SCHEMA")).body
