@@ -157,13 +157,25 @@ else()
   set(QPID_DISPATCH_LIB_LINK_FLAGS "-Wl,-z,defs ${QPID_DISPATCH_LIB_LINK_FLAGS}")
 endif()
 
-add_library(qpid-dispatch SHARED ${qpid_dispatch_SOURCES})
-target_include_directories(qpid-dispatch PRIVATE ${qpid_dispatch_INCLUDES})
-target_link_libraries(qpid-dispatch ${qpid_dispatch_LIBRARIES})
-set_target_properties(qpid-dispatch PROPERTIES
-  LINK_FLAGS "${QPID_DISPATCH_LIB_LINK_FLAGS}")
-install(TARGETS qpid-dispatch
-  LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
+macro(add_shared_library library sources)
+  add_library(${library} SHARED ${sources})
+  target_include_directories(${library} PRIVATE ${qpid_dispatch_INCLUDES})
+  target_link_libraries(${library} ${qpid_dispatch_LIBRARIES})
+  set_target_properties(${library} PROPERTIES
+    LINK_FLAGS "${QPID_DISPATCH_LIB_LINK_FLAGS}")
+  install(TARGETS ${library}
+    LIBRARY DESTINATION ${QPID_DISPATCH_HOME})
+endmacro()
+
+add_shared_library(qpid-dispatch "${qpid_dispatch_SOURCES}")
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.5"))
+        add_shared_library(qpid-dispatch-testing "${qpid_dispatch_SOURCES}")
+        target_compile_definitions(qpid-dispatch-testing PUBLIC -DTESTING)
+        target_compile_options(qpid-dispatch-testing PUBLIC "-O0")
+    endif()
+endif (CMAKE_BUILD_TYPE MATCHES "Debug")
 
 # check for various function availability
 check_symbol_exists(getrlimit sys/resource.h QD_HAVE_GETRLIMIT)
