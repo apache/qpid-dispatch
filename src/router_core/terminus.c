@@ -23,6 +23,9 @@
 #include <inttypes.h>
 #include <limits.h>
 
+#include <qpid/dispatch/macros.h>
+
+
 ALLOC_DEFINE(qdr_terminus_t);
 
 const char* QDR_COORDINATOR_ADDRESS = "$coordinator";
@@ -80,8 +83,7 @@ void qdr_terminus_free(qdr_terminus_t *term)
 // wrapper will never return >= size, even if truncated.  This makes it safe to
 // do pointer & length arithmetic without overflowing the destination buffer in
 // qdr_terminus_format()
-//
-static inline size_t safe_snprintf(char *str, size_t size, const char *format, ...) {
+STATIC INLINE size_t safe_snprintf(char *str, size_t size, const char *format, ...) {
     // max size allowed must be INT_MAX (since vsnprintf returns an int)
     if (size == 0 || size > INT_MAX) {
         return 0;

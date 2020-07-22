@@ -123,6 +123,7 @@
                       <exclude>libuv/**</exclude>
                       <exclude>libwebsockets/**</exclude>
                       <exclude>tools/scraper/test_data/**</exclude>
+                      <exclude>**/doctest.h</exclude>
                 </excludes>
         </configuration>            
             </plugin>

@@ -42,7 +42,7 @@ set(unit_test_SOURCES
     )
 
 add_executable(unit_tests ${unit_test_SOURCES})
-target_link_libraries(unit_tests qpid-dispatch)
+target_link_libraries(unit_tests  qpid-dispatch)
 
 set(unit_test_size_SOURCES
     field_test.c
@@ -63,7 +63,6 @@ target_link_libraries(test-receiver ${Proton_LIBRARIES})
 
 add_executable(clogger clogger.c)
 target_link_libraries(clogger ${Proton_LIBRARIES})
-
 
 set(TEST_WRAP ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/run.py)
 
@@ -240,3 +239,9 @@ install(DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/config-2
 
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/ssl_certs
         DESTINATION ${QPID_DISPATCH_HOME_INSTALLED}/tests)
+
+if (CMAKE_BUILD_TYPE MATCHES "Debug")
+    if(NOT ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS "4.8.5"))
+add_subdirectory(c_unittests)
+    endif()
+endif (CMAKE_BUILD_TYPE MATCHES "Debug")

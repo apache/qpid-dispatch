@@ -18,7 +18,7 @@
 ##
 
 cmake_minimum_required(VERSION 2.8.12)
-project(qpid-dispatch C)
+project(qpid-dispatch C CXX)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
@@ -182,7 +182,7 @@ if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  if (HAS_PEDANTIC_FLAG)
     add_compile_options(-Wpedantic)
  endif(HAS_PEDANTIC_FLAG)
- add_compile_options(-std=gnu99)
+ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -std=gnu99")
  if (CMAKE_BUILD_TYPE MATCHES "Coverage")
    set (CMAKE_C_FLAGS_COVERAGE "-g -O0 --coverage")
    set (CMAKE_EXE_LINKER_FLAGS_COVERAGE "--coverage")
