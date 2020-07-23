@@ -21,8 +21,11 @@ file(GLOB unittest_SOURCES
     "*.cpp"
 )
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${SANITIZE_FLAGS} -std=c++11")
 add_executable(c_unittests ${unittest_SOURCES})
 target_link_libraries(c_unittests pthread qpid-dispatch)
 
-add_test(c_unittests c_unittests)
+add_test(
+    NAME c_unittests
+    COMMAND ${TEST_WRAP} $<TARGET_FILE:c_unittests>
+)
