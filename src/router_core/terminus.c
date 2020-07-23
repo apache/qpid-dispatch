@@ -18,13 +18,9 @@
  */
 
 #include "router_core_private.h"
+#include "terminus_private.h"
 #include <strings.h>
-#include <stdio.h>
 #include <inttypes.h>
-#include <limits.h>
-
-#include <qpid/dispatch/macros.h>
-
 
 ALLOC_DEFINE(qdr_terminus_t);
 
@@ -77,34 +73,6 @@ void qdr_terminus_free(qdr_terminus_t *term)
     pn_data_free(term->capabilities);
 
     free_qdr_terminus_t(term);
-}
-
-// DISPATCH-1461: snprintf() is evil - it returns >= size on overflow.  This
-// wrapper will never return >= size, even if truncated.  This makes it safe to
-// do pointer & length arithmetic without overflowing the destination buffer in
-// qdr_terminus_format()
-STATIC INLINE size_t safe_snprintf(char *str, size_t size, const char *format, ...) {
-    // max size allowed must be INT_MAX (since vsnprintf returns an int)
-    if (size == 0 || size > INT_MAX) {
-        return 0;
-    }
-    int max_possible_return_value = (int)(size - 1);
-    va_list ap;
-    va_start(ap, format);
-    int rc = vsnprintf(str, size, format, ap);
-    va_end(ap);
-
-    if (rc < 0) {
-        if (size > 0 && str) {
-            *str = 0;
-        }
-        return 0;
-    }
-
-    if (rc > max_possible_return_value) {
-        rc = max_possible_return_value;
-    }
-    return (size_t)rc;
 }
 
 void qdr_terminus_format(qdr_terminus_t *term, char *output, size_t *size)
