@@ -66,24 +66,33 @@ class QdstatTest(system_test.TestCase):
 
     def test_general(self):
         out = self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
-        self.assertTrue("Connections                      1" in out)
-        self.assertTrue("Nodes                            0" in out)
-        self.assertTrue("Auto Links                       0" in out)
-        self.assertTrue("Link Routes                      0" in out)
-        self.assertTrue("Worker Threads                   1" in out)
-        self.assertTrue("Router Id                        QDR.A" in out)
-        self.assertTrue("Mode                             standalone" in out)
+
+        self.assertTrue(re.match(r"(.*)\bConnections\b[ \t]+\b1\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bNodes\b[ \t]+\b0\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bAuto Links\b[ \t]+\b0\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bLink Routes\b[ \t]+\b0\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bWorker Threads\b[ \t]+\b1\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bRouter Id\b[ \t]+\bQDR.A\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+        self.assertTrue(re.match(r"(.*)\bMode\b[ \t]+\bstandalone\b(.*)",
+                                 out, flags=re.DOTALL) is not None, out)
+
         self.assertEqual(out.count("QDR.A"), 2)
 
     def test_general_csv(self):
         out = self.run_qdstat(['--general', '--csv'], r'(?s)Router Statistics.*Mode","Standalone')
-        self.assertTrue("Connections","1" in out)
-        self.assertTrue("Worker Threads", "1" in out)
-        self.assertTrue("Nodes","0" in out)
-        self.assertTrue("Auto Links","0" in out)
-        self.assertTrue("Link Routes","0" in out)
-        self.assertTrue("Router Id","QDR.A" in out)
-        self.assertTrue("Mode","standalone" in out)
+        self.assertIn('"Connections","1"', out)
+        self.assertIn('"Worker Threads","1"', out)
+        self.assertIn('"Nodes","0"', out)
+        self.assertIn('"Auto Links","0"', out)
+        self.assertIn('"Link Routes","0"', out)
+        self.assertIn('"Router Id","QDR.A"', out)
+        self.assertIn('"Mode","standalone"', out)
         self.assertEqual(out.count("QDR.A"), 2)
 
     def test_connections(self):

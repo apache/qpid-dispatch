@@ -325,7 +325,7 @@ class BusManager(Node):
         rows.append(('Mode',           router.mode))
         rows.append(('Router Id',      router.id))
         try:
-            rows.append(('Worker Threads', router.workerThreads))
+            rows.append(('Worker Threads', PlainNum(router.workerThreads)))
         except:
             pass
 
