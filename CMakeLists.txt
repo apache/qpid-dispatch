@@ -161,7 +161,7 @@ endif (NOT COMMAND add_compile_options)
 
 # Set up runtime checks (valgrind, sanitizers etc.)
 include(cmake/RuntimeChecks.cmake)
-
+SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${SANITIZE_FLAGS}")
 
 ##
 ## Include directories used by all sub-directories.
