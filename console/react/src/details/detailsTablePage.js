@@ -105,7 +105,7 @@ class DetailsTablePage extends React.Component {
         if (!this.unmounted)
           this.setState({ rows, lastUpdated: new Date() }, () => {
             if (this.props.details) {
-                this.props.lastUpdated(this.state.lastUpdated);
+              this.props.lastUpdated(this.state.lastUpdated);
             }
           });
       },
