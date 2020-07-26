@@ -39,7 +39,8 @@ it("renders the DetailTablesPage", () => {
       },
       details: true,
       service,
-      schema: service.schema
+      schema: service.schema,
+      lastUpdated: (date) => {},
     };
 
     const { getByTestId } = render(<DetailTablesPage {...props} />);

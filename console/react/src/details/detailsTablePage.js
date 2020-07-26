@@ -42,7 +42,7 @@ import { dataMap } from "../overview/entityData";
 import { dataMap as detailsDataMap, defaultData } from "./entityData";
 import Updated from "../common/updated";
 
-class DetailTablesPage extends React.Component {
+class DetailsTablePage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
@@ -58,7 +58,7 @@ class DetailTablesPage extends React.Component {
       redirect: false,
       redirectState: { page: 1 },
       redirectPath: "/dashboard",
-      lastUpdated: new Date()
+      lastUpdated: new Date(),
     };
     // if we get to this page and we don't have a props.location.state.entity
     // then redirect back to the dashboard.
@@ -105,7 +105,7 @@ class DetailTablesPage extends React.Component {
         if (!this.unmounted)
           this.setState({ rows, lastUpdated: new Date() }, () => {
             if (this.props.details) {
-              this.props.lastUpdated(this.state.lastUpdated);
+                this.props.lastUpdated(this.state.lastUpdated);
             }
           });
       },
@@ -239,4 +239,4 @@ class DetailTablesPage extends React.Component {
   }
 }
 
-export default DetailTablesPage;
+export default DetailsTablePage;
