@@ -45,7 +45,7 @@ export const mockService = ({ onSendMethod }) => {
         },
         is_connected: () => true,
         setReconnect: () => {},
-        getReceiverAddress: () => 'mockReceiverAddress',
+        getReceiverAddress: () => 'amqp:/_topo/0/routerName/',
       },
       topology: {
         setUpdateEntities: () => {},
