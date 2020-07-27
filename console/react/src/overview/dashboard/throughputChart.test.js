@@ -23,7 +23,10 @@ import { service, login, TEST_PORT } from "../../serviceTest";
 import ThroughputChartData from "./throughputData";
 import ThroughputChart from "./throughputChart";
 
-it("renders the ThroughputChart component", () => {
+it("renders the ThroughputChart component", (done) => {
+  // the chart only renders if parent's clientWidth != 0
+  Object.defineProperty(window.HTMLDivElement.prototype, 'clientWidth', {value: 1});
+
   const props = {
     service,
     chartData: new ThroughputChartData(service)
@@ -33,13 +36,9 @@ it("renders the ThroughputChart component", () => {
   login(() => {
     expect(service.management.connection.is_connected()).toBe(true);
 
-    const { getByLabelText, queryByLabelText } = render(<ThroughputChart {...props} />);
+    const { getByLabelText } = render(<ThroughputChart {...props} />);
+    expect(getByLabelText("Messages delivered per second")).toBeInTheDocument();
 
-    // the component should initially render
-    // blank until it gets the contianer's width.
-    expect(queryByLabelText("throughput-chart")).toBe(null);
-
-    // yeild, so that this componentDidMount method can fire
-    setTimeout(() => expect(getByLabelText("throughput-chart")).toBeInTheDocument(), 1);
+    done();
   });
 });

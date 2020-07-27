@@ -23,7 +23,10 @@ import { service, login, TEST_PORT } from "../../serviceTest";
 import InflightChart from "./inflightChart";
 import InflightChartData from "./inflightData";
 
-it("renders the InflightChart component", () => {
+it("renders the InflightChart component", (done) => {
+  // the chart only renders if parent's clientWidth != 0
+  Object.defineProperty(window.HTMLDivElement.prototype, 'clientWidth', {value: 1});
+
   const props = {
     service,
     chartData: new InflightChartData(service)
@@ -34,8 +37,9 @@ it("renders the InflightChart component", () => {
     expect(service.management.connection.is_connected()).toBe(true);
 
     const { getByLabelText } = render(<InflightChart {...props} />);
-
     // make sure it rendered the component
-    setTimeout(() => expect(getByLabelText("inflight-chart")).toBeInTheDocument(), 1);
+    expect(getByLabelText("Messages in flight")).toBeInTheDocument();
+
+    done()
   });
 });
