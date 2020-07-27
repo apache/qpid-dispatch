@@ -467,8 +467,15 @@ class QdstatTestVhostPolicy(system_test.TestCase):
                         'sources': '*',
                         'targets': '*',
                         'allowDynamicSource': True
-                    }
-                }
+                    },
+                    'HGCrawler': {
+                        'users': 'Farmers',
+                        'remoteHosts': '*',
+                        'sources': '*',
+                        'targets': '*',
+                        'allowDynamicSource': True
+                    },
+                },
             })
         ])
         cls.router = cls.tester.qdrouterd('test-router', config)
@@ -505,11 +512,15 @@ class QdstatTestVhostPolicy(system_test.TestCase):
         out = self.run_qdstat(['--vhostgroups'])
         self.assertTrue("Vhost Groups" in out)
         self.assertTrue("allowAdminStatusUpdate" in out)
+        self.assertTrue("Vhost '$default' UserGroup '$default'" in out)
+        self.assertTrue("Vhost '$default' UserGroup 'HGCrawler'" in out)
 
     def test_vhostgroups_csv(self):
         out = self.run_qdstat(['--vhostgroups', '--csv'])
         self.assertTrue("Vhost Groups" in out)
         self.assertTrue("allowAdminStatusUpdate" in out)
+        self.assertTrue("Vhost '$default' UserGroup '$default'" in out)
+        self.assertTrue("Vhost '$default' UserGroup 'HGCrawler'" in out)
 
     def test_vhoststats(self):
         out = self.run_qdstat(['--vhoststats'])
