@@ -48,6 +48,7 @@
     "@react-mock/localstorage": "^0.1.2",
     "@testing-library/jest-dom": "^4.2.3",
     "@testing-library/react": "^9.3.2",
+    "@types/jest": "^24.9.0",
     "body-parser": "^1.19.0",
     "browserslist": "^4.7.3",
     "jest-axe": "^3.2.0",

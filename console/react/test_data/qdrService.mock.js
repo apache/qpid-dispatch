@@ -37,19 +37,21 @@ export const mockService = ({ onSendMethod }) => {
   const cbSendMethod = onSendMethod ? onSendMethod : () => {};
   return {
     management: {
+      schema: () => schema,
       connection: {
         sendMethod: () => {
           cbSendMethod();
           return Promise.resolve(methodResults);
         },
         is_connected: () => true,
-        setReconnect: () => {}
+        setReconnect: () => {},
+        getReceiverAddress: () => 'amqp:/_topo/0/routerName/',
       },
       topology: {
         setUpdateEntities: () => {},
         ensureAllEntities: (stuff, cb) => cb(),
         ensureEntities: (foo, bar, cb) => cb(foo, fetchResults),
-        startUpdating: () => {},
+        startUpdating: () => new Promise(resolve => resolve()),
         stopUpdating: () => {},
         addChangedAction: () => {},
         delChangedAction: () => {},
@@ -60,17 +62,13 @@ export const mockService = ({ onSendMethod }) => {
             resolve();
           });
         },
-        startUpdating: () => {
-          return new Promise(resolve => {
-            resolve();
-          });
-        },
         edgesPerRouter: () => {},
         edgeList: [],
         nodeIdList: () => [],
         fetchAllEntities: (stuff, cb) => {
           cb(fetchResults);
         },
+        fetchEntity: (node, entity, attrs, cb) => cb(node, entity, {results: []}),
         fetchEntities: (foo, bar, cb) => cb(fetchResults),
         nodeInfo: () => nodeInfo,
         _nodeInfo: nodeInfo
