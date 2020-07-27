@@ -20,7 +20,7 @@ under the License.
 import React from "react";
 import { render, fireEvent } from "@testing-library/react";
 import ConnectForm from "./connect-form";
-import { service, login, TEST_PORT } from "../serviceTest";
+import { service, TEST_PORT } from "../serviceTest";
 
 it("renders the connect form", () => {
   render(<ConnectForm />);

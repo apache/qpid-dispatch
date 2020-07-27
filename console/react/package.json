@@ -30,7 +30,16 @@
     "eject": "react-scripts eject"
   },
   "eslintConfig": {
-    "extends": "react-app"
+    "extends": "react-app",
+    "ignorePatterns": ["build/**"],
+    "overrides": [
+      {
+        "files": ["test_data/schema.js"],
+        "rules": {
+          "no-template-curly-in-string": "off"
+        }
+      }
+    ]
   },
   "browserslist": {
     "production": [
