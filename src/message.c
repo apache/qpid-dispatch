@@ -86,6 +86,7 @@ PN_HANDLE(PN_DELIVERY_CTX)
 
 ALLOC_DEFINE_CONFIG(qd_message_t, sizeof(qd_message_pvt_t), 0, 0);
 ALLOC_DEFINE(qd_message_content_t);
+ALLOC_DEFINE(qd_message_body_data_t);
 
 typedef void (*buffer_process_t) (void *context, const unsigned char *base, int length);
 
@@ -1091,6 +1092,8 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
 
     if (!copy)
         return 0;
+
+    ZERO(copy);
 
     qd_buffer_list_clone(&copy->ma_to_override, &msg->ma_to_override);
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
@@ -2281,6 +2284,138 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
     count = DEQ_SIZE(content->buffers);
     UNLOCK(content->lock);
     return count;
+}
+
+
+/**
+ * find_last_buffer
+ *
+ * Given a field location, find the following:
+ *
+ *  - *cursor - The pointer to the octet _past_ the last octet in the field.  If this is the last octet in
+ *              the buffer, the cursor must point one octet past the buffer.
+ *  - *buffer - The last buffer that contains content for this field.
+ *
+ * Important:  If the last octet of the field is the last octet of a buffer and there are more buffers in the
+ * buffer list, *buffer _must_ refer to the buffer that contains the last octet of the field and *cursor must
+ * point at the octet following that octet, even if it points past the end of the buffer.
+ */
+static void find_last_buffer(qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
+{
+    //qd_buffer_t *buf = location->buffer;
+    
+}
+
+
+/**
+ * qd_message_body_data_iterator
+ *
+ * Given a body_data object, return an iterator that refers to the content of that body data.  This iterator
+ * shall not refer to the 3-byte performative header or the header for the vbin{8,32} field.
+ *
+ * The iterator must be freed eventually by the caller.
+ */
+qd_iterator_t *qd_message_body_data_iterator(const qd_message_body_data_t *body_data)
+{
+    return 0;
+}
+
+
+/**
+ * qd_message_body_data_buffer_count
+ *
+ * Return the number of buffers contained in the body_data object.
+ */
+int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data)
+{
+    return 0;
+}
+
+
+/**
+ * qd_message_body_data_buffers
+ *
+ * Populate the provided array of pn_raw_buffers with the addresses and lengths of the buffers in the body_data
+ * object.  Don't fill more than count raw_buffers with data.  Start at offset from the zero-th buffer in the
+ * body_data.
+ */
+int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffer_t *buffers, int offset, int count)
+{
+    return 0;
+}
+
+
+/**
+ * qd_message_body_data_release
+ *
+ * Decrement the fanout ref-counts for all of the buffers referred to in the body_data.  If any have reached zero,
+ * remove them from the buffer list and free them.  Never dec-ref the last buffer in the content's buffer list.
+ */
+void qd_message_body_data_release(qd_message_body_data_t *body_data)
+{
+}
+
+
+qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd_message_body_data_t **out_body_data)
+{
+    qd_message_pvt_t       *msg       = (qd_message_pvt_t*) in_msg;
+    qd_message_body_data_t *body_data = 0;
+
+    if (!msg->body_cursor) {
+        //
+        // We haven't returned a body-data record for this message yet.
+        //
+        qd_message_depth_status_t status = qd_message_check_depth(in_msg, QD_DEPTH_BODY);
+        if (status == QD_MESSAGE_DEPTH_OK) {
+            body_data = new_qd_message_body_data_t();
+            ZERO(body_data);
+            body_data->owning_message = msg;
+            body_data->section        = msg->content->section_body;
+
+            find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
+            body_data->last_buffer = msg->body_buffer;
+
+            assert(DEQ_SIZE(msg->body_data_list) == 0);
+            DEQ_INSERT_TAIL(msg->body_data_list, body_data);
+            *out_body_data = body_data;
+            return QD_MESSAGE_BODY_DATA_OK;
+        } else if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
+            return QD_MESSAGE_BODY_DATA_INCOMPLETE;
+        else if (status == QD_MESSAGE_DEPTH_INVALID)
+            return QD_MESSAGE_BODY_DATA_INVALID;
+    }
+
+    qd_section_status_t section_status;
+    qd_field_location_t location;
+
+    section_status = message_section_check(&msg->body_buffer, &msg->body_cursor,
+                                           BODY_DATA_SHORT, 3, TAGS_BINARY,
+                                           &location);
+
+    switch (section_status) {
+    case QD_SECTION_INVALID:
+    case QD_SECTION_NO_MATCH:
+        return QD_MESSAGE_BODY_DATA_INVALID;
+
+    case QD_SECTION_MATCH:
+        body_data = new_qd_message_body_data_t();
+        ZERO(body_data);
+        body_data->owning_message = msg;
+        body_data->section        = location;
+        find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
+        body_data->last_buffer = msg->body_buffer;
+        DEQ_INSERT_TAIL(msg->body_data_list, body_data);
+        *out_body_data = body_data;
+        return QD_MESSAGE_BODY_DATA_OK;
+        
+    case QD_SECTION_NEED_MORE:
+        if (msg->content->receive_complete)
+            return QD_MESSAGE_BODY_DATA_NO_MORE;
+        else
+            return QD_MESSAGE_BODY_DATA_INCOMPLETE;
+    }
+    
+    return QD_MESSAGE_BODY_DATA_NO_MORE;
 }
 
 

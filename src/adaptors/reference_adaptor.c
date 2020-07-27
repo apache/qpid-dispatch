@@ -248,22 +248,47 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     switch (status) {
     case QD_MESSAGE_DEPTH_OK: {
         printf("qdr_ref_deliver: depth ok\n");
-        if (qd_message_receive_complete(msg)) {
-            qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+        qd_message_body_data_t        *body_data;
+        qd_message_body_data_result_t  body_data_result;
+        body_data_result = qd_message_next_body_data(msg, &body_data);
+
+        switch (body_data_result) {
+        case QD_MESSAGE_BODY_DATA_OK: {
+            qd_iterator_t *body_iter = qd_message_body_data_iterator(body_data);
             char *body = (char*) qd_iterator_copy(body_iter);
-            printf("qdr_ref_deliver: complete message received, body=%s\n", body);
+            printf("qdr_ref_deliver: message body-data received: %s\n", body);
             free(body);
             qd_iterator_free(body_iter);
+            break;
+        }
+            
+        case QD_MESSAGE_BODY_DATA_INCOMPLETE:
+            printf("qdr_ref_deliver: body-data incomplete\n");
+            break;
+
+        case QD_MESSAGE_BODY_DATA_NO_MORE:
             qd_message_set_send_complete(msg);
             qdr_link_flow(adaptor->core, link, 1, false);
             return PN_ACCEPTED; // This will cause the delivery to be settled
+            
+        case QD_MESSAGE_BODY_DATA_INVALID:
+            printf("qdr_ref_deliver: body-data invalid\n");
+            qdr_link_flow(adaptor->core, link, 1, false);
+            return PN_REJECTED;
+
+        case QD_MESSAGE_BODY_DATA_NOT_DATA:
+            printf("qdr_ref_deliver: body not data\n");
+            qdr_link_flow(adaptor->core, link, 1, false);
+            return PN_REJECTED;
         }
+
         break;
     }
 
     case QD_MESSAGE_DEPTH_INVALID:
         printf("qdr_ref_deliver: message invalid\n");
         qdr_link_flow(adaptor->core, link, 1, false);
+        return PN_REJECTED;
         break;
 
     case QD_MESSAGE_DEPTH_INCOMPLETE:
@@ -489,4 +514,4 @@ void qdr_ref_adaptor_final(void *adaptor_context)
 /**
  * Declare the adaptor so that it will self-register on process startup.
  */
-QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
+//QDR_CORE_ADAPTOR_DECLARE("ref-adaptor", qdr_ref_adaptor_init, qdr_ref_adaptor_final)
