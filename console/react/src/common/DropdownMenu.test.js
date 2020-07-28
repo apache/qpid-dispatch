@@ -35,6 +35,8 @@ it("the dropdown menu component renders and calls event handlers", () => {
       parentClass=""
       handleDropdownLogout={handleDropdownLogout}
       handleContextHide={() => {}}
+      handleSuppress={() => {}}
+      suppress={false}
     />
   );
   menuRef.show(true);

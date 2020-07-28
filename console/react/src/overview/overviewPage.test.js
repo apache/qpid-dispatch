@@ -75,7 +75,8 @@ it("renders the overview connections page", () => {
   const props = {
     service,
     location: { pathname: `/overview/${entity}` },
-    lastUpdated: () => {}
+    lastUpdated: () => {},
+    handleAddNotification: () => {}
   };
 
   login(() => {
