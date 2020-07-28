@@ -1437,7 +1437,7 @@
   dependencies:
     "@fortawesome/free-brands-svg-icons" "^5.8.1"
 
-"@patternfly/react-styles@^3.3.3", "@patternfly/react-styles@^3.7.14":
+"@patternfly/react-styles@^3.7.14":
   version "3.7.14"
   resolved "https://registry.yarnpkg.com/@patternfly/react-styles/-/react-styles-3.7.14.tgz#66a3b6c1cca34d37112485fc0492b12d71a4379e"
   integrity sha512-NVwbPP9JroulfQgj0LOLWKP4DumArW8RrP1FB1lLOCuw13KkuAcFbLN9MSF8ZBwJ8syxGEdux5mDC3jPjsrQiw==
@@ -1447,6 +1447,11 @@
     cssstyle "^0.3.1"
     emotion "^9.2.9"
     emotion-server "^9.2.9"
+
+"@patternfly/react-styles@^4.5.0":
+  version "4.5.0"
+  resolved "https://registry.yarnpkg.com/@patternfly/react-styles/-/react-styles-4.5.0.tgz#d40c9d1e4b4898cb26ec8dd0aa56e89fce9ba2a9"
+  integrity sha512-6w8mvxx/cC+yUzBKlWY8YRnavlWCTLWly1si0skleYPF1t69f3P+jeXNy39kH6+o2vXJR5MeecLrnuMV0XtKvg==
 
 "@patternfly/react-table@^2.11.1":
   version "2.28.49"
