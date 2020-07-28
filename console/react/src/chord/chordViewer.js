@@ -120,9 +120,8 @@ class ChordViewer extends Component {
     this.chordReference = qdrRibbon().radius(this.innerRadius);
     //this.chordReference = d3.svg.chord().radius(this.innerRadius);
 
-    // used to transition arcs along a curcular path instead of linear
-    this.arcReference = d3.svg
-      .arc()
+    // used to transition arcs along a circular path instead of linear
+    this.arcReference = d3.arc()
       .startAngle(d => {
         return d.startAngle;
       })
