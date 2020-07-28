@@ -20,7 +20,7 @@
     "react-fontawesome": "^1.7.1",
     "react-router-dom": "^5.0.1",
     "react-scripts": "^3.4.1",
-    "rhea": "^1.0.20",
+    "rhea": "^1.0.23",
     "topojson-client": "^3.0.1"
   },
   "scripts": {
