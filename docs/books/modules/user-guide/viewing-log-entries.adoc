@@ -50,6 +50,8 @@ Wed Jun  7 17:49:32 2019 SERVER (none) [2]:0 -> @flow(19) [next-incoming-id=1, i
 ----
 --
 
+NOTE: `vhost` entries are only populated if `multiTenant` is set to `true` in the `{RouterConfigFile}` configuration file.
+
 .Additional resources
 
 * For more information about configuring logging modules, see xref:configuring-default-logging-{context}[].
