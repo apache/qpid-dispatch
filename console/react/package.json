@@ -59,7 +59,7 @@
   },
   "devDependencies": {
     "@react-mock/localstorage": "^0.1.2",
-    "@testing-library/jest-dom": "^4.2.3",
+    "@testing-library/jest-dom": "^5.11.1",
     "@testing-library/react": "^9.5.0",
     "@types/jest": "^24.9.0",
     "body-parser": "^1.19.0",
