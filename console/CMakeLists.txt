@@ -35,7 +35,7 @@ if(CONSOLE_INSTALL)
 
           ## copy the build config files
           configure_file( ${CONSOLE_SOURCE_DIR}/package.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
-          configure_file( ${CONSOLE_SOURCE_DIR}/yarn.lock ${CONSOLE_BUILD_DIR}/ COPYONLY)
+          configure_file( ${CONSOLE_SOURCE_DIR}/package-lock.json ${CONSOLE_BUILD_DIR}/ COPYONLY)
 
           function(copyDirectory fromDir toDir subDir)
             set(BASE "${fromDir}/${subDir}")
@@ -60,9 +60,10 @@ if(CONSOLE_INSTALL)
           file (GLOB_RECURSE CONSOLE_SOURCES ${CONSOLE_SOURCE_DIR}/src/*.*)
           file (GLOB_RECURSE CONSOLE_PUBLIC_FILES ${CONSOLE_SOURCE_DIR}/public/*.*)
           file (GLOB_RECURSE CONSOLE_TEST_FILES ${CONSOLE_SOURCE_DIR}/test_data/*.*)
-          set(ALL_CONSOLE_SOURCES ${CONSOLE_SOURCES} ${CONSOLE_PUBLIC_FILES} ${CONSOLE_TEST_FILES})
+          file (GLOB_RECURSE CONSOLE_BUILD_FILES ${CONSOLE_SOURCE_DIR}/package*.json)
+          set(ALL_CONSOLE_SOURCES ${CONSOLE_SOURCES} ${CONSOLE_PUBLIC_FILES} ${CONSOLE_TEST_FILES} ${CONSOLE_BUILD_FILES})
 
-          ## If any of these files is older than the above ALL_CONSOLE_SOURCE
+          ## If index.html is older than any of the above ALL_CONSOLE_SOURCE
           ## then rebuild the console
           set(CONSOLE_ARTIFACTS
             ${CONSOLE_BUILD_DIR}/build/index.html
