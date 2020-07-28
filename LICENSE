@@ -199,3 +199,10 @@
    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
    See the License for the specific language governing permissions and
    limitations under the License.
+
+
+DISPATCH SUBCOMPONENTS:
+
+Dispatch test code includes copy of doctest, which is licensed with a separate
+MIT License. Use of the source code in the doctest.h file is subject to the terms
+and conditions in the license file tests/c_unittests/LICENSE.txt.
