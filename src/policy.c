@@ -1294,7 +1294,7 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
                 if (cf && cf->multi_tenant) {
                     char vhost_name_buf[SETTINGS_NAME_SIZE];
                     if (qd_policy_lookup_vhost_alias(policy, vhost, vhost_name_buf, SETTINGS_NAME_SIZE)) {
-                        if (!strcmp(pcrh, vhost_name_buf)) {
+                        if (pcrh && !strcmp(pcrh, vhost_name_buf)) {
                             // Default condition: use proton connection value; no action here
                         } else {
                             // Policy used a name different from what came in the AMQP Open hostname.

@@ -1992,5 +1992,63 @@ class PolicyVhostAlias(TestCase):
         self.assertTrue(test.error is None)
 
 
+class PolicyVhostMultiTenantBlankHostname(TestCase):
+    """
+    DISPATCH-1732: verify that a multitenant listener can handle an Open
+    with no hostname field.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        """Start the router"""
+        super(PolicyVhostMultiTenantBlankHostname, cls).setUpClass()
+
+        def router(name, mode, extra=None):
+            config = [
+                ('router', {'mode': mode,
+                            'id': name}),
+                ('listener', {'role': 'normal',
+                              'multiTenant': 'true',
+                              'port': cls.tester.get_port(),
+                              'policyVhost': 'myhost'}),
+                ('policy', {'enableVhostPolicy': 'true'}),
+                ('vhost', {'hostname': 'myhost',
+                           'allowUnknownUser': 'true',
+                           'groups': {
+                               '$default': {
+                                   'users': '*',
+                                   'maxConnections': 100,
+                                   'remoteHosts': '*',
+                                   'sources': '*',
+                                   'targets': '*',
+                                   'allowAnonymousSender': 'true',
+                                   'allowWaypointLinks': 'true',
+                                   'allowDynamicSource': 'true'
+                               }
+                           }
+                           })
+            ]
+
+            config = Qdrouterd.Config(config)
+            cls.routers.append(cls.tester.qdrouterd(name, config, wait=True))
+            return cls.routers[-1]
+
+        cls.routers = []
+
+        router('A', 'interior')
+        cls.INT_A = cls.routers[0]
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+    def test_101_policy_alias_blank_vhost(self):
+        test = PolicyConnectionAliasTest(PolicyVhostMultiTenantBlankHostname.INT_A,
+                                         "",
+                                         "address-blank-101")
+        test.run()
+        if test.error is not None:
+            test.logger.log("test_101 test error: %s" % (test.error))
+            test.logger.dump()
+        self.assertTrue(test.error is None)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
