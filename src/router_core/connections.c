@@ -1312,74 +1312,80 @@ void qdr_check_addr_CT(qdr_core_t *core, qdr_address_t *addr)
 
 static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-
     qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
-    if (!discard && conn) {
 
-        do {
-            DEQ_ITEM_INIT(conn);
-            DEQ_INSERT_TAIL(core->open_connections, conn);
+    if (!conn || discard) {
+        qdr_field_free(action->args.connection.connection_label);
+        qdr_field_free(action->args.connection.container_id);
 
-            if (conn->role == QDR_ROLE_NORMAL) {
-                //
-                // No action needed for NORMAL connections
-                //
+        if (conn)
+            qdr_connection_free(conn);
+        return;
+    }
+
+    do {
+        DEQ_ITEM_INIT(conn);
+        DEQ_INSERT_TAIL(core->open_connections, conn);
+
+        if (conn->role == QDR_ROLE_NORMAL) {
+            //
+            // No action needed for NORMAL connections
+            //
+            break;
+        }
+
+        if (conn->role == QDR_ROLE_INTER_ROUTER) {
+            //
+            // Assign a unique mask-bit to this connection as a reference to be used by
+            // the router module
+            //
+            if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit)) {
+                qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
+                assert(core->rnode_conns_by_mask_bit[conn->mask_bit] == 0);
+                core->rnode_conns_by_mask_bit[conn->mask_bit] = conn;
+            } else {
+                qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
+                conn->role = QDR_ROLE_NORMAL;
                 break;
             }
 
-            if (conn->role == QDR_ROLE_INTER_ROUTER) {
+            if (!conn->incoming) {
                 //
-                // Assign a unique mask-bit to this connection as a reference to be used by
-                // the router module
+                // The connector-side of inter-router connections is responsible for setting up the
+                // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for
+                // routed-message transfer.
                 //
-                if (qd_bitmask_first_set(core->neighbor_free_mask, &conn->mask_bit)) {
-                    qd_bitmask_clear_bit(core->neighbor_free_mask, conn->mask_bit);
-                    assert(core->rnode_conns_by_mask_bit[conn->mask_bit] == 0);
-                    core->rnode_conns_by_mask_bit[conn->mask_bit] = conn;
-                } else {
-                    qd_log(core->log, QD_LOG_CRITICAL, "Exceeded maximum inter-router connection count");
-                    conn->role = QDR_ROLE_NORMAL;
-                    break;
-                }
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
+                (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
+                STATIC_ASSERT((QD_SSN_ROUTER_DATA_PRI_9 - QD_SSN_ROUTER_DATA_PRI_0 + 1) == QDR_N_PRIORITIES, PRIORITY_SESSION_NOT_SAME);
 
-                if (!conn->incoming) {
-                    //
-                    // The connector-side of inter-router connections is responsible for setting up the
-                    // inter-router links:  Two (in and out) for control, 2 * QDR_N_PRIORITIES for
-                    // routed-message transfer.
-                    //
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_INCOMING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
-                    (void) qdr_create_link_CT(core, conn, QD_LINK_CONTROL, QD_OUTGOING, qdr_terminus_router_control(), qdr_terminus_router_control(), QD_SSN_ROUTER_CONTROL);
-                    STATIC_ASSERT((QD_SSN_ROUTER_DATA_PRI_9 - QD_SSN_ROUTER_DATA_PRI_0 + 1) == QDR_N_PRIORITIES, PRIORITY_SESSION_NOT_SAME);
-
-                    for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
-                        // a session is reserved for each priority link
-                        qd_session_class_t sc = (qd_session_class_t)(QD_SSN_ROUTER_DATA_PRI_0 + priority);
-                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
-                        (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
-                    }
+                for (int priority = 0; priority < QDR_N_PRIORITIES; ++ priority) {
+                    // a session is reserved for each priority link
+                    qd_session_class_t sc = (qd_session_class_t)(QD_SSN_ROUTER_DATA_PRI_0 + priority);
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_INCOMING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
+                    (void) qdr_create_link_CT(core, conn, QD_LINK_ROUTER,  QD_OUTGOING, qdr_terminus_router_data(), qdr_terminus_router_data(), sc);
                 }
             }
+        }
 
-            if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
-                //
-                // Notify the route-control module that a route-container connection has opened.
-                // There may be routes that need to be activated due to the opening of this connection.
-                //
+        if (conn->role == QDR_ROLE_ROUTE_CONTAINER) {
+            //
+            // Notify the route-control module that a route-container connection has opened.
+            // There may be routes that need to be activated due to the opening of this connection.
+            //
 
-                //
-                // If there's a connection label, use it as the identifier.  Otherwise, use the remote
-                // container id.
-                //
-                qdr_field_t *cid = action->args.connection.connection_label ?
-                    action->args.connection.connection_label : action->args.connection.container_id;
-                if (cid)
-                    qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
-            }
-        } while (false);
+            //
+            // If there's a connection label, use it as the identifier.  Otherwise, use the remote
+            // container id.
+            //
+            qdr_field_t *cid = action->args.connection.connection_label ?
+                action->args.connection.connection_label : action->args.connection.container_id;
+            if (cid)
+                qdr_route_connection_opened_CT(core, conn, action->args.connection.container_id, action->args.connection.connection_label);
+        }
+    } while (false);
 
-        qdrc_event_conn_raise(core, QDRC_EVENT_CONN_OPENED, conn);
-    }
+    qdrc_event_conn_raise(core, QDRC_EVENT_CONN_OPENED, conn);
 
     qdr_field_free(action->args.connection.connection_label);
     qdr_field_free(action->args.connection.container_id);
