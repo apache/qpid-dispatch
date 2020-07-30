@@ -1381,6 +1381,10 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
         qdrc_event_conn_raise(core, QDRC_EVENT_CONN_OPENED, conn);
     }
 
+    if (discard && conn) {
+        qdr_connection_free(conn);
+    }
+
     qdr_field_free(action->args.connection.connection_label);
     qdr_field_free(action->args.connection.container_id);
 }
