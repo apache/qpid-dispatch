@@ -1,3 +1,6 @@
+Applicable only to the file doctest.h:
+
+
 The MIT License (MIT)
 
 Copyright (c) 2016-2019 Viktor Kirilov

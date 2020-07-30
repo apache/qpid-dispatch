@@ -201,8 +201,11 @@
    limitations under the License.
 
 
-DISPATCH SUBCOMPONENTS:
+###############################################
+# Third Party Dependency Licensing Information:
+###############################################
 
-Dispatch test code includes copy of doctest, which is licensed with a separate
-MIT License. Use of the source code in the doctest.h file is subject to the terms
-and conditions in the license file tests/c_unittests/LICENSE.txt.
+This product bundles a copy of DOCTEST within its test code (found at
+tests/c_unittests/doctest.h), which is distributed under the MIT licence.
+
+A copy of its licence can be found at: tests/c_unittests/LICENSE.txt
