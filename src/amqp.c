@@ -95,6 +95,35 @@ const char * const QD_AMQPS_PORT_STR = "5671";
 
 const char * const QD_AMQP_DFLT_PROTO = "tcp";
 
+/// Wrapper for getservbyname/getservbyname_r for macOS compatibility
+static inline int qdi_getservbyname(const char *name, const char *proto);
+
+#ifdef APPLE
+// getservbyname is thread safe on macOS, and getservbyname_r is not defined there
+static inline int qdi_getservbyname(const char *name, const char *proto) {
+    struct servent *serv_info = getservbyname(name, proto);
+    if (serv_info) {
+        return ntohs(serv_info->s_port);
+    } else {
+        return -1;
+    }
+}
+#else
+static inline int qdi_getservbyname(const char *name, const char *proto) {
+    struct servent  serv_info;
+    struct servent *serv_info_res;
+    enum { buf_len = 4096 };
+    char buf[buf_len];
+
+    int r = getservbyname_r(name, proto, &serv_info, buf, buf_len, &serv_info_res);
+    if (r == 0 && serv_info_res != NULL) {
+        return ntohs(serv_info.s_port);
+    } else {
+        return -1;
+    }
+}
+#endif
+
 int qd_port_int(const char *port_str) {
     char *endptr;
     unsigned long n;
@@ -116,15 +145,5 @@ int qd_port_int(const char *port_str) {
     if (endptr != port_str) return -1;
 
     // resolve service port
-    struct servent  serv_info;
-    struct servent *serv_info_res;
-    enum { buf_len = 4096 };
-    char buf[buf_len];
-
-    int r = getservbyname_r(port_str, QD_AMQP_DFLT_PROTO, &serv_info, buf, buf_len, &serv_info_res);
-    if (r == 0 && serv_info_res != NULL) {
-        return ntohs(serv_info.s_port);
-    } else {
-        return -1;
-    }
+    return qdi_getservbyname(port_str, QD_AMQP_DFLT_PROTO);
 }
