@@ -1314,13 +1314,12 @@ static void qdr_connection_opened_CT(qdr_core_t *core, qdr_action_t *action, boo
 {
     qdr_connection_t *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
 
-    if (!conn)
-        return;
-
-    if (discard) {
+    if (!conn || discard) {
         qdr_field_free(action->args.connection.connection_label);
         qdr_field_free(action->args.connection.container_id);
-        qdr_connection_free(conn);
+
+        if (conn)
+            qdr_connection_free(conn);
         return;
     }
 
