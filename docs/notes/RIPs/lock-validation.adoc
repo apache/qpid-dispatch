@@ -1,0 +1,101 @@
+////
+Licensed to the Apache Software Foundation (ASF) under one
+or more contributor license agreements.  See the NOTICE file
+distributed with this work for additional information
+regarding copyright ownership.  The ASF licenses this file
+to you under the Apache License, Version 2.0 (the
+"License"); you may not use this file except in compliance
+with the License.  You may obtain a copy of the License at
+
+  http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing,
+software distributed under the License is distributed on an
+"AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+KIND, either express or implied.  See the License for the
+specific language governing permissions and limitations
+under the License
+////
+
+= Mutex Locking Validation
+
+== Summary
+
+This RIP proposes a compile-time debug mechanism to ensure that thread
+locking is well behaved.
+
+== Introduction
+
+The Qpid Dispatch Router is a multi-threaded application.  These
+threads share state and use locks to ensure the consistency of that
+state.  The locking API is defined in
+include/qpid/dispatch/threading.h
+
+In general lock nesting (e.g. taking a lock while holding another) is
+not permitted.
+
+However in a few instances locks will nest. One example of permitted lock
+nesting is the Python lock (qd_python_lock()).  This lock must be held
+while a thread is running within the Python interpreter.  Occasionally
+the Python interpreter will invoke native C functions.  These
+functions may take addional locks, such as the global logging lock
+(log_lock).
+
+Unfortunately there is no means for policing lock nesting in the
+code. It is currently left up to the developer to ensure that locking
+is done properly so that lock inversion is avoided.
+
+== Proposal
+
+A new compile time debug flag will be introduced: *QD_LOCK_DEBUG*
+
+This flag will be automatically defined for Debug builds, however it
+will be possible to turn on QD_LOCK_DEBUG regardless of build type.
+
+This flag will enable additional run-time checks that will enforce the
+following:
+
+* Lock exclusivity: assert that locks that cannot be nested avoid nesting.
+
+* Lock hierarchy: assert that when lock nesting occurs it conforms to a valid locking order.
+
+* Unlocked paths: a mechanisim to ensure that a thread is not currently holding any locks during a particular code path.
+
+A violation of any of the above rules will result in a call to abort().
+
+== Implementation Notes:
+
+Every lock will be assigned a fixed priority on creation.  The
+priority will be a simple positive integer.
+
+A lock with a priority of zero is an exclusive lock.  A thread must
+never hold another lock when taking a priority 0 lock. While holding a
+priority 0 lock it is an error to take any other lock.
+
+Locks with priority > 0 can be nested while honoring the following rule:
+
+* A thread holding a lock of priority N (where N > 0) is allowed to
+  take another lock as long as the new lock's priority is > N.
+
+This implies that a lock of priority 1 can only be taken when the
+thread is not holding any other locks.
+
+Example: a priority 5 lock may be taken when the thread is either not
+holding any locks or is holding lock(s) with priority < 5.  Attempting
+to take a priority 2 lock while holding the priority 5 lock is an
+error.
+
+In order to track lock nesting within a thread each thread will
+maintain a per-thread stack of active locks.  Taking a new lock will
+result in that lock being pushed onto the stack.  Attempting to push a
+lock in the wrong priority order will result in calling abort().
+
+Debug logs will be generated noting the thread's current lock ordering
+each time a new lock is taken.
+
+A new utitlity macro will be defined *ASSERT_NO_LOCK()*.  This macro
+will assert that the thread is not holding any locks at the code path
+where it is called.  This can be useful in the case of callbacks that
+need to be invoked when no lock is held.
+
+
