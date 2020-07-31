@@ -19,11 +19,10 @@
 
 #include <qpid/dispatch/amqp.h>
 #include <errno.h>
+#include <netdb.h>
 #include <stdlib.h>
 #include <string.h>
-#include <netdb.h>
 #include <sys/types.h>
-#include <sys/socket.h>
 
 const char * const QD_MA_PREFIX  = "x-opt-qd.";
 const char * const QD_MA_INGRESS = "x-opt-qd.ingress";
@@ -96,27 +95,36 @@ const char * const QD_AMQPS_PORT_STR = "5671";
 
 const char * const QD_AMQP_DFLT_PROTO = "tcp";
 
-int qd_port_int(const char* port_str) {
+int qd_port_int(const char *port_str) {
+    char *endptr;
+    unsigned long n;
+
+    // empty string?
+    if (*port_str == '\0') return -1;
+
+    // digits from beginning to end?
     errno = 0;
-    unsigned long n = strtoul(port_str, NULL, 10);
-    if (errno || n > 0xFFFF) return -1;
-
-    // Port is not an integer (port = 'amqp' or 'amqps')
-    if ( !n && strlen(port_str) > 0 ) {
-        // Resolve service port
-        struct servent serv_info;
-        struct servent *serv_info_res;
-        int buf_len = 4096;
-        char *buf = calloc(buf_len, sizeof(char));
-
-        // Service port is resolved
-        if ( !getservbyname_r(port_str, QD_AMQP_DFLT_PROTO, &serv_info, buf, buf_len, &serv_info_res) ) {
-            n = ntohs(serv_info.s_port);
-        } else {
-            n = -1;
-        }
-        free(buf);
+    n = strtoul(port_str, &endptr, 10);
+    if (*endptr == '\0') {
+        if (!errno && n >= 0 && n <= 0xFFFF)
+            return n;
+        else
+            return -1;
     }
 
-    return n;
+    // digits halfway?
+    if (endptr != port_str) return -1;
+
+    // resolve service port
+    struct servent  serv_info;
+    struct servent *serv_info_res;
+    enum { buf_len = 4096 };
+    char buf[buf_len];
+
+    int r = getservbyname_r(port_str, QD_AMQP_DFLT_PROTO, &serv_info, buf, buf_len, &serv_info_res);
+    if (r == 0 && serv_info_res != NULL) {
+        return ntohs(serv_info.s_port);
+    } else {
+        return -1;
+    }
 }
