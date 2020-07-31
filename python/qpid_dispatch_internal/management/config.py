@@ -40,7 +40,7 @@ from qpid_dispatch_internal.compat import PY_STRING_TYPE
 from qpid_dispatch_internal.compat import PY_TEXT_TYPE
 
 try:
-    from ..dispatch import LogAdapter, LOG_WARNING
+    from ..dispatch import LogAdapter, LOG_WARNING, LOG_ERROR
     _log_imported = True
 except ImportError:
     # unit test cannot import since LogAdapter not set up
@@ -190,19 +190,26 @@ class Config(object):
         spare_comma = re.compile(r',\s*([]}])') # Strip spare commas
         js_text = re.sub(spare_comma, r'\1', js_text)
         # Convert dictionary keys to camelCase
-        sections = json.loads(js_text)
+        try:
+            sections = json.loads(js_text)
+        except Exception as e:
+            self.dump_failed_json(js_text)
+            raise
         Config.transform_sections(sections)
         return sections
 
-    @staticmethod
-    def _parserawjson(lines):
+    def _parserawjson(self, lines):
         """Parse raw json config file format into a section list"""
         def sub(line):
             # ignore comment lines that start with "[whitespace] #"
             line = "" if line.strip().startswith('#') else line
             return line
         js_text = "%s"%("\n".join([sub(l) for l in lines]))
-        sections = json.loads(js_text)
+        try:
+            sections = json.loads(js_text)
+        except Exception as e:
+            self.dump_failed_json(js_text)
+            raise
         Config.transform_sections(sections)
         return sections
 
@@ -236,6 +243,15 @@ class Config(object):
 
     def remove(self, entity):
         self.entities.remove(entity)
+
+    def dump_failed_json(self, js_text):
+        # For a given configuration file the json parse failed.
+        # The string passed to json is NOT the user input.
+        # Show the user what json was given so that the json error
+        # may make more sense.
+        lines = js_text.split("\n")
+        for idx in range(len(lines)):
+            self._log(LOG_ERROR, "Line %d: |%s" % (idx + 1, lines[idx]))
 
 class PolicyConfig(Config):
     def __init__(self, filename=None, schema=QdSchema(), raw_json=False):
