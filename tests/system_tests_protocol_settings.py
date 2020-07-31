@@ -26,15 +26,6 @@ from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from proton.utils import BlockingConnection
 import subprocess
-X86_64_ARCH = "x86_64"
-skip_test = True
-
-# Dont skip tests on 64 bit architectures.
-p = subprocess.Popen("uname -m", shell=True, stdout=subprocess.PIPE,
-                     universal_newlines=True)
-if X86_64_ARCH in p.communicate()[0]:
-    skip_test = False
-
 
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""
@@ -95,7 +86,7 @@ class MaxSessionsTest(TestCase):
         with  open('../setUpClass/MaxSessions.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
-            # channel-max is 10
+            # channel-max is 9
             self.assertTrue(" channel-max=9" in open_lines[0])
 
 
@@ -233,8 +224,6 @@ class MaxSessionFramesDefaultTest(TestCase):
 
     def test_max_session_frames_default(self):
         # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        if skip_test:
-            return self.skipTest("Test skipped on non-64 bit architectures")
         bc = BlockingConnection(self.router.addresses[0])
         bc.create_receiver("xxx")
         bc.close()
@@ -245,7 +234,7 @@ class MaxSessionFramesDefaultTest(TestCase):
             # if frame size not set then a default is used
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is from the config
+            # incoming-window is defaulted to 2^31-1 (Proton default)
             self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
@@ -271,8 +260,6 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
 
     def test_max_frame_max_session_zero(self):
         # Set up a connection to get the Open and a receiver to get a Begin frame in the log
-        if skip_test:
-            return self.skipTest("Test disabled on non-64 bit architectures")
         bc = BlockingConnection(self.router.addresses[0])
         bc.create_receiver("xxx")
         bc.close()
@@ -283,7 +270,7 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             # max-frame gets set to protocol min
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is defaulted to 2^31-1
+            # incoming-window is defaulted to 2^31-1 (Proton default)
             self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
 
 
@@ -330,8 +317,6 @@ class ConnectorSettingsDefaultTest(TestCase):
         cls.routers[1].wait_router_connected('QDR.A')
 
     def test_connector_default(self):
-        if skip_test:
-            return self.skipTest("Test disabled on non-64 bit architectures")
         with  open('../setUpClass/A.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "<- @open" in s]
