@@ -22,7 +22,18 @@
 
 version: 2
 updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    rebase-strategy: "disabled"
+  - package-ecosystem: "maven"
+    directory: "/"
+    schedule:
+      interval: "daily"
+    rebase-strategy: "disabled"
   - package-ecosystem: "npm"
     directory: "/console/react"
     schedule:
       interval: "daily"
+    rebase-strategy: "disabled"
