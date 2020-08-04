@@ -110,8 +110,10 @@ class Config(object):
         #
         entity = re.compile(r'([\w-]+)[ \t]*{[ \t]*$')                    # WORD {
         attr_map = re.compile(r'([\$]*[\w-]+)[ \t]*:[ \t]*{[ \t]*$')      # WORD: {
+        json_map = re.compile(r'("[\$]*[\w-]+)"[ \t]*:[ \t]*{[ \t]*$')    # "WORD": {
         attr_item = re.compile(r'([\w-]+)[ \t]*:[ \t]*([^ \t{]+.*)$')     # WORD1: VALUE
-        end = re.compile(r'^}$')                                          # }
+        end = re.compile(r'^}$')                                          # } (only)
+        json_end = re.compile(r'}$')                                      # } (at eol)
 
         # The 'pattern:' and 'bindingKey:' attributes in the schema are special
         # snowflakes. They allow '#' characters in their value, so they cannot
@@ -138,8 +140,16 @@ class Config(object):
                 self._line_num += 1
                 return ""
 
-            # just pass JSON values along
-            if self._in_json and not end.search(line.split('#')[0].strip()):
+            # watch JSON for embedded maps and map terminations
+            # always pass JSON as-is except appending a comma at the end
+            if self._in_json:
+                if json_map.search(line):
+                    self._child_level += 1
+                if json_end.search(line):
+                    self._child_level -= 1
+                    if self._child_level == 0:
+                        self._in_json = False
+                        line = re.sub(json_end, r'},', line)
                 self._line_num += 1
                 return line
 
@@ -170,7 +180,6 @@ class Config(object):
                 if self._child_level > 0:
                     line = re.sub(end, r'},', line)
                     self._child_level -= 1
-                    self._in_json = False
                 else:
                     # end top level entity list item
                     line = re.sub(end, r'}],', line)
