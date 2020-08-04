@@ -183,7 +183,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
         qd_message_compose_2(msg, props, true);
         qd_compose_free(props);
 
-        qdr_link_deliver(adaptor->out_link_1, msg, 0, false, 0, 0);
+        qdr_link_deliver(adaptor->out_link_1, msg, 0, false, 0, 0, 0, 0);
         // Keep return-protection delivery reference as the adaptor's reference
     } else if (link == adaptor->out_link_2) {
         //
@@ -205,7 +205,7 @@ static void qdr_ref_flow(void *context, qdr_link_t *link, int credit)
 
         printf("qdr_ref_flow: Starting a streaming delivery\n");
         adaptor->streaming_delivery =
-            qdr_link_deliver(adaptor->out_link_2, adaptor->streaming_message, 0, false, 0, 0);
+            qdr_link_deliver(adaptor->out_link_2, adaptor->streaming_message, 0, false, 0, 0, 0, 0);
         adaptor->stream_count = 0;
         // Keep return-protection delivery reference as the adaptor's reference
 
