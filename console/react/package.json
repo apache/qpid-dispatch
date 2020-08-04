@@ -1,6 +1,6 @@
 {
   "name": "dispatch-console",
-  "version": "0.2.0",
+  "version": "1.13.0",
   "private": true,
   "dependencies": {
     "@patternfly/patternfly": "^2.71.6",
