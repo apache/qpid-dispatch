@@ -851,11 +851,10 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_iterator_t *ingress, qd_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion, int ingress_index,
-                                    int64_t remote_disposition,
+                                    uint64_t remote_disposition,
                                     pn_data_t *remote_extension_state);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
-                                                uint64_t disposition, pn_data_t* disposition_state,
                                                 uint64_t remote_disposition,
                                                 pn_data_t *remote_extension_state);
 int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit);
