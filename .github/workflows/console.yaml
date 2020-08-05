@@ -17,6 +17,8 @@
 # under the License.
 #
 
+name: "Console"
+
 on: [push, pull_request]
 
 jobs:
