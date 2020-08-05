@@ -216,7 +216,7 @@ static void qd_manage_response_handler(void *context, const qd_amqp_error_t *sta
     qd_set_response_status(status, &fld);
 
     // Finally, compose and send the message.
-    qd_message_compose_3(ctx->msg, fld, ctx->field);
+    qd_message_compose_3(ctx->msg, fld, ctx->field, true);
 
     qdr_send_to1(ctx->core, ctx->msg, reply_to, true, false);
 

@@ -2239,10 +2239,10 @@ void qd_message_compose_2(qd_message_t *msg, qd_composed_field_t *field, bool co
 }
 
 
-void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2)
+void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, bool receive_complete)
 {
     qd_message_content_t *content        = MSG_CONTENT(msg);
-    content->receive_complete     = true;
+    content->receive_complete            = receive_complete;
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
 
@@ -2252,10 +2252,10 @@ void qd_message_compose_3(qd_message_t *msg, qd_composed_field_t *field1, qd_com
 }
 
 
-void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3)
+void qd_message_compose_4(qd_message_t *msg, qd_composed_field_t *field1, qd_composed_field_t *field2, qd_composed_field_t *field3, bool receive_complete)
 {
-    qd_message_content_t *content = MSG_CONTENT(msg);
-    content->receive_complete     = true;
+    qd_message_content_t *content        = MSG_CONTENT(msg);
+    content->receive_complete            = receive_complete;
     qd_buffer_list_t     *field1_buffers = qd_compose_buffers(field1);
     qd_buffer_list_t     *field2_buffers = qd_compose_buffers(field2);
     qd_buffer_list_t     *field3_buffers = qd_compose_buffers(field3);

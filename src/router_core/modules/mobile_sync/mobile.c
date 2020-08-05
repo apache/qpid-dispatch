@@ -252,7 +252,7 @@ static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t
 
     qd_compose_end_map(body);
 
-    qd_message_compose_3(msg, headers, body);
+    qd_message_compose_3(msg, headers, body, true);
     qd_compose_free(headers);
     qd_compose_free(body);
     return msg;
@@ -320,7 +320,7 @@ static qd_message_t *qcm_mobile_sync_compose_absolute_mau(qdrm_mobile_sync_t *ms
     }
     qd_compose_end_list(body);
     qd_compose_end_map(body);
-    qd_message_compose_3(msg, headers, body);
+    qd_message_compose_3(msg, headers, body, true);
     qd_compose_free(headers);
     qd_compose_free(body);
     return msg;
@@ -348,7 +348,7 @@ static qd_message_t *qcm_mobile_sync_compose_mar(qdrm_mobile_sync_t *msync, qdr_
 
     qd_compose_end_map(body);
 
-    qd_message_compose_3(msg, headers, body);
+    qd_message_compose_3(msg, headers, body, true);
     qd_compose_free(headers);
     qd_compose_free(body);
     return msg;
