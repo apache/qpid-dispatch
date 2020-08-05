@@ -103,7 +103,7 @@ static uint64_t _send_reply(_endpoint_ref_t             *epr,
 
     qd_message_t *msg = qd_message();
 
-    qd_message_compose_3(msg, fld, body);
+    qd_message_compose_3(msg, fld, body, true);
     qdr_in_process_send_to_CT(_server_state.core, reply_to, msg, true, false);
     qd_message_free(msg);
     qd_compose_free(fld);

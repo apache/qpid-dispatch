@@ -70,7 +70,7 @@ static qd_message_t *qdcm_edge_create_address_dlv(qdr_core_t *core, qdr_address_
     qd_compose_end_list(body);
 
     // Finally, compose and retuen the message so it can be sent out.
-    qd_message_compose_3(msg, fld, body);
+    qd_message_compose_3(msg, fld, body, true);
 
     qd_compose_free(body);
     qd_compose_free(fld);
