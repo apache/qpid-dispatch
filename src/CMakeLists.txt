@@ -39,7 +39,10 @@ add_custom_command (
 # Build the qpid-dispatch library.
 set(qpid_dispatch_SOURCES
   adaptors/reference_adaptor.c
+  adaptors/http_common.c
   adaptors/http_adaptor.c
+  adaptors/http1/http1_lib.c
+  adaptors/http1/http1_adaptor.c
   alloc_pool.c
   amqp.c
   bitmask.c
