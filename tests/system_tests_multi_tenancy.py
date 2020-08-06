@@ -869,7 +869,7 @@ class WaypointTest(MessagingHandler):
             self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 
     def on_link_opening(self, event):
-        if event.sender:
+        if event.sender and event.sender != self.first_sender:
             self.waypoint_sender = event.sender
             if event.sender.remote_source.address == self.second_address:
                 event.sender.source.address = self.second_address
@@ -878,7 +878,7 @@ class WaypointTest(MessagingHandler):
                 self.fail("Incorrect address on incoming sender: got %s, expected %s" %
                           (event.sender.remote_source.address, self.second_address))
 
-        elif event.receiver:
+        elif event.receiver and event.receiver != self.first_receiver:
             self.waypoint_receiver = event.receiver
             if event.receiver.remote_target.address == self.second_address:
                 event.receiver.target.address = self.second_address
