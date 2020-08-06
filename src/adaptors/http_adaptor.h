@@ -25,43 +25,15 @@
 #include <qpid/dispatch/log.h>
 #include <nghttp2/nghttp2.h>
 
+
 // We already have a qd_http_listener_t defined in http-libwebsockets.c
 // We will call this as qd_http_lsnr_t in order to avoid a clash.
 // At a later point in time, we will handle websocket here as well
 // and get rid of http-libwebsockets.c and rename this as qd_http_listener_t
-typedef struct qd_http_lsnr_t           qd_http_lsnr_t;
-typedef struct qd_http_connector_t      qd_http_connector_t;
 typedef struct qdr_http2_session_data_t qdr_http2_session_data_t;
-typedef struct qd_bridge_config_t       qd_bridge_config_t;
 typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
 typedef struct qdr_http_connection_t    qdr_http_connection_t;
 DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
-
-struct qd_bridge_config_t {
-    char *name;
-    char *host;
-    char *port;
-    char *address;
-    char *host_port;
-};
-
-struct qd_http_lsnr_t {
-    qd_handler_context_t       context;
-    sys_atomic_t               ref_count;
-    qd_server_t               *server;
-    qd_bridge_config_t         config;
-    pn_listener_t             *pn_listener;
-    DEQ_LINKS(qd_http_lsnr_t);
-};
-
-struct qd_http_connector_t {
-    sys_atomic_t              ref_count;
-    qd_server_t              *server;
-    qd_bridge_config_t        config;
-    qd_timer_t               *timer;
-    long                      delay;
-    DEQ_LINKS(qd_http_connector_t);
-};
 
 struct qdr_http2_session_data_t {
     qd_http2_stream_data_list_t  streams;    // A session can have many streams.
@@ -110,7 +82,7 @@ struct qdr_http_connection_t {
     pn_raw_buffer_t          read_buffers[4];
     bool                     ingress;
     qd_timer_t              *activate_timer;
-    qd_bridge_config_t      *config;
+    qd_http_bridge_config_t *config;
     qd_server_t             *server;
     uint64_t                 conn_id;
 
@@ -126,11 +98,7 @@ struct qdr_http_connection_t {
     nghttp2_data_provider    data_prd;
 };
 
-DEQ_DECLARE(qd_http_lsnr_t, qd_http_lsnr_list_t);
-ALLOC_DECLARE(qd_http_lsnr_t);
 ALLOC_DECLARE(qdr_http2_session_data_t);
-ALLOC_DECLARE(qd_http_connector_t);
 ALLOC_DECLARE(qdr_http2_stream_data_t);
-DEQ_DECLARE(qd_http_connector_t, qd_http_connector_list_t);
 
 

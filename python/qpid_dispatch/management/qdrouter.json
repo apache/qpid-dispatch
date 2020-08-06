@@ -1103,6 +1103,16 @@
                     "required": false,
                     "description": "Name of the sslProfile..",
                     "create": true
+                },
+                "protocolVersion": {
+                    "description": "The version of the HTTP protocol supported by this listener.",
+                    "type": [
+                        "HTTP/1.x",
+                        "HTTP/2.0"
+                    ],
+                    "default": "HTTP/1.x",
+                    "required": false,
+                    "create": true
                 }
             }
         },
@@ -1127,6 +1137,16 @@
                     "type": "string",
                     "create": true
 
+                },
+                "protocolVersion": {
+                    "description": "The version of the HTTP protocol supported by this connector.",
+                    "type": [
+                        "HTTP/1.x",
+                        "HTTP/2.0"
+                    ],
+                    "default": "HTTP/1.x",
+                    "required": false,
+                    "create": true
                 }
             }
         },

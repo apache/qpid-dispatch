@@ -30,6 +30,7 @@
 
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "delivery.h"
+#include "http_common.h"
 #include "http_adaptor.h"
 
 const char *PATH = ":path";
@@ -49,8 +50,6 @@ const char *CONTENT_ENCODING = "content-encoding";
         NGHTTP2_NV_FLAG_NONE                                                   \
 }
 
-ALLOC_DEFINE(qd_http_lsnr_t);
-ALLOC_DEFINE(qd_http_connector_t);
 ALLOC_DEFINE(qdr_http2_session_data_t);
 ALLOC_DEFINE(qdr_http2_stream_data_t);
 
@@ -554,26 +553,6 @@ static void grant_read_buffers(qdr_http_connection_t *conn)
 }
 
 
-static void free_bridge_config(qd_bridge_config_t *config)
-{
-    if (!config) {
-        return;
-    }
-    free(config->host);
-    free(config->port);
-    free(config->name);
-    free(config->address);
-    free(config->host_port);
-}
-
-void qd_http_listener_decref(qd_http_lsnr_t* li)
-{
-    if (li && sys_atomic_dec(&li->ref_count) == 1) {
-        free_bridge_config(&li->config);
-        free_qd_http_lsnr_t(li);
-    }
-}
-
 static void qdr_http_detach(void *context, qdr_link_t *link, qdr_error_t *error, bool first, bool close)
 {
 }
@@ -892,18 +871,8 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
     return 0;
 }
 
-void qd_http_connector_decref(qd_http_connector_t* c)
+void qd_http2_delete_connector(qd_dispatch_t *qd, qd_http_connector_t *connector)
 {
-    if (c && sys_atomic_dec(&c->ref_count) == 1) {
-        free_bridge_config(&c->config);
-        free_qd_http_connector_t(c);
-    }
-}
-
-
-void qd_dispatch_delete_http_connector(qd_dispatch_t *qd, void *impl)
-{
-    qd_http_connector_t *connector = (qd_http_connector_t*) impl;
     if (connector) {
         //TODO: cleanup and close any associated active connections
         DEQ_REMOVE(http_adaptor->connectors, connector);
@@ -1102,69 +1071,25 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server, void *c
 }
 
 
-static qd_http_lsnr_t *qd_http_lsnr(qd_server_t *server)
-{
-    qd_http_lsnr_t *li = new_qd_http_lsnr_t();
-    if (!li)
-        return 0;
-    ZERO(li);
-    sys_atomic_init(&li->ref_count, 1);
-    li->server = server;
-    li->context.context = li;
-    li->context.handler = &handle_listener_event;
-    return li;
-}
-
-
-#define CHECK() if (qd_error_code()) goto error
-
-
 static const int BACKLOG = 50;  /* Listening backlog */
 
 static bool http_listener_listen(qd_http_lsnr_t *li) {
-   li->pn_listener = pn_listener();
-    if (li->pn_listener) {
-        pn_listener_set_context(li->pn_listener, &li->context);
-        pn_proactor_listen(qd_server_proactor(li->server), li->pn_listener, li->config.host_port, BACKLOG);
-        sys_atomic_inc(&li->ref_count); /* In use by proactor, PN_LISTENER_CLOSE will dec */
-        /* Listen is asynchronous, log "listening" message on PN_LISTENER_OPEN event */
-    } else {
-        qd_log(http_adaptor->log_source, QD_LOG_CRITICAL, "Failed to create listener for %s",
-               li->config.host_port);
-     }
+    pn_proactor_listen(qd_server_proactor(li->server), li->pn_listener, li->config.host_port, BACKLOG);
+    sys_atomic_inc(&li->ref_count); /* In use by proactor, PN_LISTENER_CLOSE will dec */
+    /* Listen is asynchronous, log "listening" message on PN_LISTENER_OPEN event */
     return li->pn_listener;
 }
 
-static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_bridge_config_t *config, qd_entity_t* entity)
+
+qd_http_lsnr_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
-    qd_error_clear();
-    ZERO(config);
-
-    config->name                 = qd_entity_get_string(entity, "name");              CHECK();
-    config->host                 = qd_entity_get_string(entity, "host");              CHECK();
-    config->port                 = qd_entity_get_string(entity, "port");              CHECK();
-    config->address              = qd_entity_get_string(entity, "address");           CHECK();
-
-    int hplen = strlen(config->host) + strlen(config->port) + 2;
-    config->host_port = malloc(hplen);
-    snprintf(config->host_port, hplen, "%s:%s", config->host, config->port);
-
-    return QD_ERROR_NONE;
-
- error:
-    free_bridge_config(config);
-    return qd_error_code();
-}
-
-
-qd_http_lsnr_t *qd_dispatch_configure_http_lsnr(qd_dispatch_t *qd, qd_entity_t *entity)
-{
-    qd_http_lsnr_t *li = qd_http_lsnr(qd->server);
-    if (!li || load_bridge_config(qd, &li->config, entity) != QD_ERROR_NONE) {
-        qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create http listener: %s", qd_error_message());
-        qd_http_listener_decref(li);
+    qd_http_lsnr_t *li = qd_http_lsnr(qd->server, &handle_listener_event);
+    if (!li) {
+        qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create http listener: no memory");
         return 0;
     }
+
+    li->config = *config;
     //DEQ_ITEM_INIT(li);
     DEQ_INSERT_TAIL(http_adaptor->listeners, li);
     qd_log(http_adaptor->log_source, QD_LOG_INFO, "Configured HTTP_ADAPTOR listener on %s", (&li->config)->host_port);
@@ -1173,15 +1098,11 @@ qd_http_lsnr_t *qd_dispatch_configure_http_lsnr(qd_dispatch_t *qd, qd_entity_t *
 }
 
 
-static qd_http_connector_t *qd_http_connector(qd_server_t *server)
+void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_lsnr_t *listener)
 {
-    qd_http_connector_t *c = new_qd_http_connector_t();
-    if (!c) return 0;
-    ZERO(c);
-    sys_atomic_init(&c->ref_count, 1);
-    c->server      = server;
-    return c;
+    // TBD?
 }
+
 
 static void on_activate(void *context)
 {
@@ -1278,20 +1199,18 @@ qdr_http_connection_t *qdr_http_connection_egress(qd_http_connector_t *connector
 }
 
 
-
-qd_http_connector_t *qd_dispatch_configure_http_connector(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_http_connector_t *qd_http2_configure_connector(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
     qd_http_connector_t *c = qd_http_connector(qd->server);
-    if (!c || load_bridge_config(qd, &c->config, entity) != QD_ERROR_NONE) {
-        qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create tcp connector: %s", qd_error_message());
-        qd_http_connector_decref(c);
+    if (!c) {
+        qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create http connector: no memory");
         return 0;
     }
+    c->config = *config;
     DEQ_ITEM_INIT(c);
     DEQ_INSERT_TAIL(http_adaptor->connectors, c);
     qdr_http_connection_egress(c);
     return c;
-
 }
 
 static void qdr_http_adaptor_final(void *adaptor_context)
@@ -1300,17 +1219,6 @@ static void qdr_http_adaptor_final(void *adaptor_context)
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     free(adaptor);
     http_adaptor =  NULL;
-}
-
-qd_error_t qd_entity_refresh_httpListener(qd_entity_t* entity, void *impl)
-{
-    return QD_ERROR_NONE;
-}
-
-
-qd_error_t qd_entity_refresh_httpConnector(qd_entity_t* entity, void *impl)
-{
-    return QD_ERROR_NONE;
 }
 
 /**
@@ -1341,7 +1249,7 @@ static void qdr_http_adaptor_init(qdr_core_t *core, void **adaptor_context)
                                             qdr_http_delivery_update,
                                             qdr_http_conn_close,
                                             qdr_http_conn_trace);
-    adaptor->log_source  = qd_log_source("HTTP_ADAPTOR");
+    adaptor->log_source = qd_log_source(QD_HTTP_LOG_SOURCE);
     adaptor->protocol_log_source = qd_log_source("PROTOCOL");
     *adaptor_context = adaptor;
     DEQ_INIT(adaptor->listeners);
