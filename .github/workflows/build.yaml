@@ -224,3 +224,27 @@ jobs:
 
       - name: Run ESLint
         run: cd console/react && npx eslint --max-warnings 0 .
+
+  rat_check:
+    name: RAT Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v2
+        with:
+          path: ~/.m2/repository
+          key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: |
+            ${{ runner.os }}-maven-
+
+      - name: Install JDK ${{ matrix.java }}
+        uses: actions/setup-java@v1
+        with:
+          java-version: 11
+
+      - name: RAT Check
+        run: mvn apache-rat:check
+
+      - name: Output
+        if: ${{ ! cancelled() }}
+        run: cat target/rat.txt || echo "Unable to print output"
