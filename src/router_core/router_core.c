@@ -108,7 +108,7 @@ void qdr_core_free(qdr_core_t *core)
 
     //
     // The char* core->router_id and core->router_area are owned by qd->router_id and qd->router_area respectively
-    // and they have already been freed by qd_dispatch_free()
+    // We will set them to zero here just in case anybody tries to use these fields.
     //
     core->router_id = 0;
     core->router_area = 0;

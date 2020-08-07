@@ -358,6 +358,7 @@ static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area) {
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
     if (!qd) return;
+    qd_router_free(qd->router);
     qd_dispatch_set_router_id(qd, NULL);
     qd_dispatch_set_router_area(qd, NULL);
     free(qd->sasl_config_path);
@@ -365,7 +366,6 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_connection_manager_free(qd->connection_manager);
     qd_policy_free(qd->policy);
     Py_XDECREF((PyObject*) qd->agent);
-    qd_router_free(qd->router);
     qd_container_free(qd->container);
     qd_server_free(qd->server);
     qd_log_finalize();

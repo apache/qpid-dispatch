@@ -209,8 +209,7 @@ static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t
     //
     // DISPATCH-1738: If the router is shutting down, the qd_dispatch_free() in dispatch.c frees the qd->router_id and
     // sets the core->router_id to zero. When the core is shutting down, the core->router_id will be zero
-    // and we don't want to proceed with this function. We return here in order to prevent the use after free error on
-    // msync->core->router_id down below in the function.
+    // and we don't want to proceed with this function.
     //
     if (! msync->core->router_id)
         return 0;
