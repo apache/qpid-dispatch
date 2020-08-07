@@ -658,7 +658,8 @@ static qd_section_status_t message_section_check(qd_buffer_t         **buffer,
                                                  const unsigned char  *pattern,
                                                  int                   pattern_length,
                                                  const unsigned char  *expected_tags,
-                                                 qd_field_location_t  *location)
+                                                 qd_field_location_t  *location,
+                                                 bool                  dup_ok)
 {
     if (!*cursor || !can_advance(cursor, buffer))
         return QD_SECTION_NEED_MORE;
@@ -691,7 +692,7 @@ static qd_section_status_t message_section_check(qd_buffer_t         **buffer,
     if (*expected_tags == 0)
         return QD_SECTION_INVALID;  // Error: Unexpected tag
 
-    if (location->parsed)
+    if (location->parsed && !dup_ok)
         return QD_SECTION_INVALID;  // Error: Duplicate section
 
     //
@@ -1916,9 +1917,9 @@ static qd_message_depth_status_t message_check_depth_LH(qd_message_content_t *co
         return QD_MESSAGE_DEPTH_OK;
 
     qd_section_status_t rc;
-    rc = message_section_check(&content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location);
+    rc = message_section_check(&content->parse_buffer, &content->parse_cursor, short_pattern, SHORT, expected_tags, location, false);
     if (rc == QD_SECTION_NO_MATCH)  // try the alternative
-        rc = message_section_check(&content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location);
+        rc = message_section_check(&content->parse_buffer, &content->parse_cursor, long_pattern,  LONG,  expected_tags, location, false);
 
     if (rc == QD_SECTION_MATCH || (optional && rc == QD_SECTION_NO_MATCH)) {
         content->parse_depth = depth;
@@ -2302,8 +2303,49 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
  */
 static void find_last_buffer(qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
 {
-    //qd_buffer_t *buf = location->buffer;
-    
+    qd_buffer_t *buf       = location->buffer;
+    size_t       remaining = location->hdr_length + location->length;
+
+    while (!!buf && remaining > 0) {
+        size_t this_buf_size = qd_buffer_size(buf) - (buf == location->buffer ? location->offset : 0);
+        if (remaining <= this_buf_size) {
+            *buffer = buf;
+            *cursor = qd_buffer_base(buf) + (buf == location->buffer ? location->offset : 0) + remaining;
+            return;
+        }
+        remaining -= this_buf_size;
+        buf = DEQ_NEXT(buf);
+    }
+
+    assert(false);  // The field should already have been validated as complete.
+}
+
+
+void trim_body_data_headers(qd_message_body_data_t *body_data)
+{
+    const qd_field_location_t *location = &body_data->section;
+    qd_buffer_t               *buffer   = location->buffer;
+    unsigned char             *cursor   = qd_buffer_base(buffer) + location->offset;
+
+    bool good = advance(&cursor, &buffer, location->hdr_length);
+    assert(good);
+    if (good) {
+        unsigned char tag = 0;
+        next_octet(&cursor, &buffer, &tag);
+        if (tag == QD_AMQP_VBIN8)
+            advance(&cursor, &buffer, 1);
+        else if (tag == QD_AMQP_VBIN32)
+            advance(&cursor, &buffer, 4);
+
+        can_advance(&cursor, &buffer); // bump cursor to the next buffer if necessary
+
+        body_data->payload.buffer     = buffer;
+        body_data->payload.offset     = cursor - qd_buffer_base(buffer);
+        body_data->payload.length     = location->length;
+        body_data->payload.hdr_length = 0;
+        body_data->payload.parsed     = true;
+        body_data->payload.tag        = tag;
+    }
 }
 
 
@@ -2317,18 +2359,27 @@ static void find_last_buffer(qd_field_location_t *location, unsigned char **curs
  */
 qd_iterator_t *qd_message_body_data_iterator(const qd_message_body_data_t *body_data)
 {
-    return 0;
+    const qd_field_location_t *location = &body_data->payload;
+
+    return qd_iterator_buffer(location->buffer, location->offset, location->length, ITER_VIEW_ALL);
 }
 
 
 /**
  * qd_message_body_data_buffer_count
  *
- * Return the number of buffers contained in the body_data object.
+ * Return the number of buffers contained in payload portion of the body_data object.
  */
 int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data)
 {
-    return 0;
+    int count = 1;
+    qd_buffer_t *buffer = body_data->payload.buffer;
+    while (!!buffer && buffer != body_data->last_buffer) {
+        buffer = DEQ_NEXT(buffer);
+        count++;
+    }
+
+    return count;
 }
 
 
@@ -2341,7 +2392,34 @@ int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data)
  */
 int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffer_t *buffers, int offset, int count)
 {
-    return 0;
+    int          actual_count = 0;
+    qd_buffer_t *buffer       = body_data->payload.buffer;
+
+    //
+    // Skip the offset
+    //
+    while (offset > 0 && !!buffer) {
+        buffer = DEQ_NEXT(buffer);
+        offset--;
+    }
+
+    //
+    // Fill the buffer array
+    //
+    int idx = 0;
+    while (idx < count && !!buffer) {
+        buffers[idx].context  = 0;
+        buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+        buffers[idx].capacity = BUFFER_SIZE;
+        buffers[idx].size     = qd_buffer_size(buffer) - (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+        buffers[idx].offset   = 0;
+
+        buffer = DEQ_NEXT(buffer);
+        actual_count++;
+        idx++;
+    }
+
+    return actual_count;
 }
 
 
@@ -2353,6 +2431,7 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
  */
 void qd_message_body_data_release(qd_message_body_data_t *body_data)
 {
+    free_qd_message_body_data_t(body_data);
 }
 
 
@@ -2374,6 +2453,7 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
 
             find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
             body_data->last_buffer = msg->body_buffer;
+            trim_body_data_headers(body_data);
 
             assert(DEQ_SIZE(msg->body_data_list) == 0);
             DEQ_INSERT_TAIL(msg->body_data_list, body_data);
@@ -2390,7 +2470,7 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
 
     section_status = message_section_check(&msg->body_buffer, &msg->body_cursor,
                                            BODY_DATA_SHORT, 3, TAGS_BINARY,
-                                           &location);
+                                           &location, true);
 
     switch (section_status) {
     case QD_SECTION_INVALID:
@@ -2404,6 +2484,7 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
         body_data->section        = location;
         find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
         body_data->last_buffer = msg->body_buffer;
+        trim_body_data_headers(body_data);
         DEQ_INSERT_TAIL(msg->body_data_list, body_data);
         *out_body_data = body_data;
         return QD_MESSAGE_BODY_DATA_OK;
