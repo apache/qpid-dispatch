@@ -419,7 +419,9 @@ static void write_buffers(qdr_http_connection_t *conn)
     qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i] Writing %i bytes in write_buffers", conn->conn_id, total_bytes);
     if (i >0) {
         size_t num_buffers_written = pn_raw_connection_write_buffers(session_data->conn->pn_raw_conn, raw_buffers, num_buffs);
-        assert(num_buffs == num_buffers_written);
+        if (num_buffs != num_buffers_written) {
+            assert(false);
+        }
     }
 
 
