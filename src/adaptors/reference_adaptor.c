@@ -247,39 +247,72 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
 
     switch (status) {
     case QD_MESSAGE_DEPTH_OK: {
+        //
+        // At least one complete body performative has arrived.  It is now safe to switch
+        // over to the per-message extraction of body-data segments.
+        //
         printf("qdr_ref_deliver: depth ok\n");
         qd_message_body_data_t        *body_data;
         qd_message_body_data_result_t  body_data_result;
-        body_data_result = qd_message_next_body_data(msg, &body_data);
 
-        switch (body_data_result) {
-        case QD_MESSAGE_BODY_DATA_OK: {
-            qd_iterator_t *body_iter = qd_message_body_data_iterator(body_data);
-            char *body = (char*) qd_iterator_copy(body_iter);
-            printf("qdr_ref_deliver: message body-data received: %s\n", body);
-            free(body);
-            qd_iterator_free(body_iter);
-            break;
-        }
+        //
+        // Process as many body-data segments as are available.
+        //
+        while (true) {
+            body_data_result = qd_message_next_body_data(msg, &body_data);
+
+            switch (body_data_result) {
+            case QD_MESSAGE_BODY_DATA_OK: {
+                //
+                // We have a new valid body-data segment.  Handle it
+                //
+                printf("qdr_ref_deliver: body_data_buffer_count: %d\n", qd_message_body_data_buffer_count(body_data));
+
+                qd_iterator_t *body_iter = qd_message_body_data_iterator(body_data);
+                char *body = (char*) qd_iterator_copy(body_iter);
+                printf("qdr_ref_deliver: message body-data received: %s\n", body);
+                free(body);
+                qd_iterator_free(body_iter);
+                qd_message_body_data_release(body_data);
+                break;
+            }
             
-        case QD_MESSAGE_BODY_DATA_INCOMPLETE:
-            printf("qdr_ref_deliver: body-data incomplete\n");
-            break;
+            case QD_MESSAGE_BODY_DATA_INCOMPLETE:
+                //
+                // A new segment has not completely arrived yet.  Check again later.
+                //
+                printf("qdr_ref_deliver: body-data incomplete\n");
+                return 0;
 
-        case QD_MESSAGE_BODY_DATA_NO_MORE:
-            qd_message_set_send_complete(msg);
-            qdr_link_flow(adaptor->core, link, 1, false);
-            return PN_ACCEPTED; // This will cause the delivery to be settled
+            case QD_MESSAGE_BODY_DATA_NO_MORE:
+                //
+                // We have already handled the last body-data segment for this delivery.
+                // Complete the "sending" of this delivery and replenish credit.
+                //
+                // Note that depending on the adaptor, it might be desirable to delay the
+                // acceptance and settlement of this delivery until a later event (i.e. when
+                // a requested action has completed).
+                //
+                qd_message_set_send_complete(msg);
+                qdr_link_flow(adaptor->core, link, 1, false);
+                return PN_ACCEPTED; // This will cause the delivery to be settled
             
-        case QD_MESSAGE_BODY_DATA_INVALID:
-            printf("qdr_ref_deliver: body-data invalid\n");
-            qdr_link_flow(adaptor->core, link, 1, false);
-            return PN_REJECTED;
+            case QD_MESSAGE_BODY_DATA_INVALID:
+                //
+                // The body-data is corrupt in some way.  Stop handling the delivery and reject it.
+                //
+                printf("qdr_ref_deliver: body-data invalid\n");
+                qdr_link_flow(adaptor->core, link, 1, false);
+                return PN_REJECTED;
 
-        case QD_MESSAGE_BODY_DATA_NOT_DATA:
-            printf("qdr_ref_deliver: body not data\n");
-            qdr_link_flow(adaptor->core, link, 1, false);
-            return PN_REJECTED;
+            case QD_MESSAGE_BODY_DATA_NOT_DATA:
+                //
+                // Valid data was seen, but it is not a body-data performative.  Reject the delivery.
+                //
+                printf("qdr_ref_deliver: body not data\n");
+                qdr_link_flow(adaptor->core, link, 1, false);
+                return PN_REJECTED;
+            }
         }
 
         break;
