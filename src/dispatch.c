@@ -358,8 +358,6 @@ static void qd_dispatch_set_router_area(qd_dispatch_t *qd, char *_area) {
 void qd_dispatch_free(qd_dispatch_t *qd)
 {
     if (!qd) return;
-    qd_dispatch_set_router_id(qd, NULL);
-    qd_dispatch_set_router_area(qd, NULL);
     free(qd->sasl_config_path);
     free(qd->sasl_config_name);
     qd_connection_manager_free(qd->connection_manager);
@@ -371,6 +369,8 @@ void qd_dispatch_free(qd_dispatch_t *qd)
     qd_log_finalize();
     qd_alloc_finalize();
     qd_python_finalize();
+    qd_dispatch_set_router_id(qd, NULL);
+    qd_dispatch_set_router_area(qd, NULL);
 }
 
 
