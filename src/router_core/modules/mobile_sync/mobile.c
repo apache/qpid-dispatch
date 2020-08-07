@@ -206,6 +206,15 @@ static void qcm_mobile_sync_compose_diff_hint_list(qdrm_mobile_sync_t *msync, qd
 
 static qd_message_t *qcm_mobile_sync_compose_differential_mau(qdrm_mobile_sync_t *msync, const char *address)
 {
+    //
+    // DISPATCH-1738: If the router is shutting down, the qd_dispatch_free() in dispatch.c frees the qd->router_id and
+    // sets the core->router_id to zero. When the core is shutting down, the core->router_id will be zero
+    // and we don't want to proceed with this function. We return here in order to prevent the use after free error on
+    // msync->core->router_id down below in the function.
+    //
+    if (! msync->core->router_id)
+        return 0;
+
     qd_message_t        *msg     = qd_message();
     qd_composed_field_t *headers = qcm_mobile_sync_message_headers(address, MAU);
     qd_composed_field_t *body    = qd_compose(QD_PERFORMATIVE_BODY_AMQP_VALUE, 0);
@@ -387,6 +396,9 @@ static void qcm_mobile_sync_on_timer_CT(qdr_core_t *core, void *context)
     // Prepare a differential MAU for sending to all the other routers.
     //
     qd_message_t *mau = qcm_mobile_sync_compose_differential_mau(msync, "_topo/0/all/qdrouter.ma");
+
+    if (!mau)
+        return;
 
     //
     // Multicast the control message.  Set the exclude_inprocess and control flags.

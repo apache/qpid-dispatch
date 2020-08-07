@@ -1992,6 +1992,13 @@ void qd_router_free(qd_router_t *router)
 {
     if (!router) return;
 
+    //
+    // The char* router->router_id and router->router_area are owned by qd->router_id and qd->router_area respectively
+    // and they have already been freed by qd_dispatch_free()
+    //
+    router->router_id = 0;
+    router->router_area = 0;
+
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
     qdr_core_free(router->router_core);
