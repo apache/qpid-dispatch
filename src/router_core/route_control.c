@@ -518,7 +518,7 @@ qdr_auto_link_t *qdr_route_add_auto_link_CT(qdr_core_t          *core,
         //
         // If we just created an address that needs a fallback, set up the fallback now.
         //
-        if (!!addr_config && addr_config->fallback && dir == QD_INCOMING)
+        if (!!addr_config && addr_config->fallback)
             qdr_setup_fallback_address_CT(core, al->addr);
     }
 
