@@ -535,6 +535,11 @@
 	                "description":"Number of open connections to the router node.",
 	                "graph": true
 	            },
+	            "tcpConnectionCount": {
+	                "type": "integer",
+	                "description":"Number of open tcp connections at this router node.",
+	                "graph": true
+	            },
                 "presettledDeliveries": {
                     "type": "integer",
                     "description":"Number of presettled deliveries handled by the router.",
@@ -1956,6 +1961,50 @@
                     "graph": true,
                     "description": "The number of seconds since a delivery was sent on this connection. Will display a - (dash) if no deliveries have been sent on the connection."
                 }                
+            }
+        },
+
+        "tcpConnection": {
+            "description": "TCP Connections to/from the router's container.",
+            "extends": "operationalEntity",
+            "attributes": {
+                "address": {
+                    "description": "the router address over which the tcp connection is forwarded.",
+                    "type": "string"
+                },
+                "host": {
+                    "description": "IP address and port number in the form addr:port.",
+                    "type": "string"
+                },
+                "direction": {
+                    "description": "Direction of connection establishment in or out of the router.",
+                    "type": ["in", "out"]
+                },
+                "bytesIn": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from client to server on this connection."
+                },
+                "bytesOut": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of bytes sent from server to client on this connection."
+                },
+                "uptimeSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since the connection was created."
+                },
+                "lastInSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since a delivery was sent from client to server on this connection."
+                },
+                "lastOutSeconds": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The number of seconds since a delivery was sent from server to client on this connection."
+                }
             }
         },
 
