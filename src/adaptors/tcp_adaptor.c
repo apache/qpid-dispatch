@@ -32,20 +32,12 @@
 ALLOC_DEFINE(qd_tcp_listener_t);
 ALLOC_DEFINE(qd_tcp_connector_t);
 
-typedef struct qdr_tcp_adaptor_t {
-    qdr_core_t              *core;
-    qdr_protocol_adaptor_t  *adaptor;
-    qd_tcp_listener_list_t   listeners;
-    qd_tcp_connector_list_t  connectors;
-    qd_log_source_t         *log_source;
-} qdr_tcp_adaptor_t;
-
-static qdr_tcp_adaptor_t *tcp_adaptor;
-
 #define READ_BUFFERS 4
 #define WRITE_BUFFERS 4
 
-typedef struct qdr_tcp_connection_t {
+typedef struct qdr_tcp_connection_t qdr_tcp_connection_t;
+
+struct qdr_tcp_connection_t {
     qd_handler_context_t  context;
     char                 *reply_to;
     qdr_connection_t     *conn;
@@ -64,7 +56,31 @@ typedef struct qdr_tcp_connection_t {
     qd_bridge_config_t   config;
     qd_server_t          *server;
     char                 *remote_address;
-} qdr_tcp_connection_t;
+    char                 *global_id;
+    uint64_t              bytes_in;
+    uint64_t              bytes_out;
+    uint64_t              opened_time;
+    uint64_t              last_in_time;
+    uint64_t              last_out_time;
+
+    DEQ_LINKS(qdr_tcp_connection_t);
+};
+
+DEQ_DECLARE(qdr_tcp_connection_t, qdr_tcp_connection_list_t);
+
+typedef struct qdr_tcp_adaptor_t {
+    qdr_core_t               *core;
+    qdr_protocol_adaptor_t   *adaptor;
+    qd_tcp_listener_list_t    listeners;
+    qd_tcp_connector_list_t   connectors;
+    qdr_tcp_connection_list_t connections;
+    qd_log_source_t          *log_source;
+} qdr_tcp_adaptor_t;
+
+static qdr_tcp_adaptor_t *tcp_adaptor;
+
+static void qdr_add_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
+static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 
 static void handle_disconnected(qdr_tcp_connection_t* conn);
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* conn);
@@ -137,7 +153,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
         qd_compose_insert_null(props);                      // message-id
         qd_compose_insert_null(props);                      // user-id
         qd_compose_insert_null(props);                      // to
-        qd_compose_insert_null(props);                      // subject
+        qd_compose_insert_string(props, conn->global_id);   // subject
         qd_compose_insert_string(props, conn->reply_to);    // reply-to
         //qd_compose_insert_null(props);                      // correlation-id
         //qd_compose_insert_null(props);                      // content-type
@@ -172,6 +188,9 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     if(tc->remote_address) {
         free(tc->remote_address);
     }
+    if(tc->global_id) {
+        free(tc->global_id);
+    }
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
@@ -187,7 +206,10 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
     }
     qdr_connection_closed(conn->conn);
     qdr_connection_set_context(conn->conn, 0);
-    free_qdr_tcp_connection(conn);
+    //need to free on core thread to avoid deleting while in use by management agent
+    qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
+    action->args.general.context_1 = conn;
+    qdr_action_enqueue(tcp_adaptor->core, action);
 }
 
 static int read_message_body(qdr_tcp_connection_t *conn, qd_message_t *msg, pn_raw_buffer_t *buffers, int count)
@@ -252,6 +274,19 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
     }
 }
 
+static char *get_global_id(char *site_id, char *host_port)
+{
+    int len1 = strlen(host_port);
+    int len = site_id ? len1 + strlen(site_id) + 2 : len1 + 1;
+    char *result = malloc(len);
+    strcpy(result, host_port);
+    if (site_id) {
+        result[len1] = '@';
+        strcpy(result+len1+1, site_id);
+    }
+    return result;
+}
+
 static char *get_address_string(pn_raw_connection_t *socket)
 {
     const pn_netaddr_t *netaddr = pn_raw_connection_remote_addr(socket);
@@ -267,6 +302,7 @@ static char *get_address_string(pn_raw_connection_t *socket)
 static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
 {
     tc->remote_address = get_address_string(tc->socket);
+    tc->global_id = get_global_id(tc->config.site_id, tc->remote_address);
     qdr_connection_info_t *info = qdr_connection_info(false, //bool             is_encrypted,
                                                       false, //bool             is_authenticated,
                                                       true,  //bool             opened,
@@ -328,9 +364,14 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                          false,
                                          NULL,
                                          &(tc->incoming_id));
+    tc->opened_time = tcp_adaptor->core->uptime_ticks;
     qdr_link_set_context(tc->incoming, tc);
 
     grant_read_buffers(tc);
+
+    qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
+    action->args.general.context_1 = tc;
+    qdr_action_enqueue(tcp_adaptor->core, action);
 }
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context)
@@ -344,6 +385,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%i] Accepted from %s", conn->conn_id, conn->remote_address);
             break;
         } else {
+            conn->opened_time = tcp_adaptor->core->uptime_ticks;
             qd_log(log, QD_LOG_INFO, "[C%i] Connected", conn->conn_id);
             qdr_connection_process(conn->conn);
             break;
@@ -381,6 +423,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_READ: {
         int read = handle_incoming(conn);
+        conn->last_in_time = tcp_adaptor->core->uptime_ticks;
+        conn->bytes_in += read;
         qd_log(log, QD_LOG_DEBUG, "[C%i] Read %i bytes", conn->conn_id, read);
         while (qdr_connection_process(conn->conn)) {}
         break;
@@ -399,6 +443,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             }
         }
         qd_log(log, QD_LOG_DEBUG, "[C%i] Wrote %i bytes", conn->conn_id, written);
+        conn->last_out_time = tcp_adaptor->core->uptime_ticks;
+        conn->bytes_out += written;
         while (qdr_connection_process(conn->conn)) {}
         break;
     }
@@ -530,7 +576,7 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_bridge_config_t *conf
     config->address              = qd_entity_get_string(entity, "address");           CHECK();
     config->host                 = qd_entity_get_string(entity, "host");              CHECK();
     config->port                 = qd_entity_get_string(entity, "port");              CHECK();
-    config->site_id              = qd_entity_opt_string(entity, "site-id", 0);        CHECK();
+    config->site_id              = qd_entity_opt_string(entity, "siteId", 0);        CHECK();
 
     int hplen = strlen(config->host) + strlen(config->port) + 2;
     config->host_port = malloc(hplen);
@@ -727,6 +773,13 @@ static void qdr_tcp_connection_copy_reply_to(qdr_tcp_connection_t* tc, qd_iterat
     qd_iterator_strncpy(reply_to, tc->reply_to, length + 1);
 }
 
+static void qdr_tcp_connection_copy_global_id(qdr_tcp_connection_t* tc, qd_iterator_t* subject)
+{
+    int length = qd_iterator_length(subject);
+    tc->global_id = malloc(length + 1);
+    qd_iterator_strncpy(subject, tc->global_id, length + 1);
+}
+
 static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
                                   qdr_terminus_t *source, qdr_terminus_t *target)
 {
@@ -798,6 +851,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                     //direction once we receive the first part of the
                     //message from client to server
                     qd_message_t *msg = qdr_delivery_message(delivery);
+                    qdr_tcp_connection_copy_global_id(tc, qd_message_field_iterator(msg, QD_FIELD_SUBJECT));
                     qdr_tcp_connection_copy_reply_to(tc, qd_message_field_iterator(msg, QD_FIELD_REPLY_TO));
                     qdr_terminus_t *target = qdr_terminus(0);
                     qdr_terminus_set_address(target, tc->reply_to);
@@ -811,6 +865,11 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                                                          NULL,
                                                          &(tc->incoming_id));
                     qdr_link_set_context(tc->incoming, tc);
+                    //add this connection to those visible through management now that we have the global_id
+                    qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
+                    action->args.general.context_1 = tc;
+                    qdr_action_enqueue(tcp_adaptor->core, action);
+
                     handle_incoming(tc);
                 }
             }
@@ -838,6 +897,7 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
 
 static void qdr_tcp_conn_close(void *context, qdr_connection_t *conn, qdr_error_t *error)
 {
+    
 }
 
 
@@ -915,3 +975,245 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
  * Declare the adaptor so that it will self-register on process startup.
  */
 QDR_CORE_ADAPTOR_DECLARE("tcp-adaptor", qdr_tcp_adaptor_init, qdr_tcp_adaptor_final)
+
+#define QDR_TCP_CONNECTION_NAME                   0
+#define QDR_TCP_CONNECTION_IDENTITY               1
+#define QDR_TCP_CONNECTION_ADDRESS                2
+#define QDR_TCP_CONNECTION_HOST                   3
+#define QDR_TCP_CONNECTION_DIRECTION              4
+#define QDR_TCP_CONNECTION_BYTES_IN               5
+#define QDR_TCP_CONNECTION_BYTES_OUT              6
+#define QDR_TCP_CONNECTION_UPTIME_SECONDS         7
+#define QDR_TCP_CONNECTION_LAST_IN_SECONDS        8
+#define QDR_TCP_CONNECTION_LAST_OUT_SECONDS       9
+
+
+const char * const QDR_TCP_CONNECTION_DIRECTION_IN  = "in";
+const char * const QDR_TCP_CONNECTION_DIRECTION_OUT = "out";
+
+const char *qdr_tcp_connection_columns[] =
+    {"name",
+     "identity",
+     "address",
+     "host",
+     "direction",
+     "bytesIn",
+     "bytesOut",
+     "uptimeSeconds",
+     "lastInSeconds",
+     "lastOutSeconds",
+     0};
+
+const char *TCP_CONNECTION_TYPE = "org.apache.qpid.dispatch.tcpConnection";
+
+static void insert_column(qdr_core_t *core, qdr_tcp_connection_t *conn, int col, qd_composed_field_t *body)
+{
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Insert column %i for %p", col, (void*) conn);
+    char id_str[100];
+
+    if (!conn)
+        return;
+
+    switch(col) {
+    case QDR_TCP_CONNECTION_NAME:
+        qd_compose_insert_string(body, conn->global_id);
+        break;
+
+    case QDR_TCP_CONNECTION_IDENTITY: {
+        snprintf(id_str, 100, "%"PRId64, conn->conn_id);
+        qd_compose_insert_string(body, id_str);
+        break;
+    }
+
+    case QDR_TCP_CONNECTION_ADDRESS:
+        qd_compose_insert_string(body, conn->config.address);
+        break;
+
+    case QDR_TCP_CONNECTION_HOST:
+        qd_compose_insert_string(body, conn->config.host_port);
+        break;
+
+    case QDR_TCP_CONNECTION_DIRECTION:
+        if (conn->ingress)
+            qd_compose_insert_string(body, QDR_TCP_CONNECTION_DIRECTION_IN);
+        else
+            qd_compose_insert_string(body, QDR_TCP_CONNECTION_DIRECTION_OUT);
+        break;
+
+    case QDR_TCP_CONNECTION_BYTES_IN:
+        qd_compose_insert_uint(body, conn->bytes_in);
+        break;
+
+    case QDR_TCP_CONNECTION_BYTES_OUT:
+        qd_compose_insert_uint(body, conn->bytes_out);
+        break;
+
+    case QDR_TCP_CONNECTION_UPTIME_SECONDS:
+        qd_compose_insert_uint(body, core->uptime_ticks - conn->opened_time);
+        break;
+
+    case QDR_TCP_CONNECTION_LAST_IN_SECONDS:
+        if (conn->last_in_time==0)
+            qd_compose_insert_null(body);
+        else
+            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_in_time);
+        break;
+
+    case QDR_TCP_CONNECTION_LAST_OUT_SECONDS:
+        if (conn->last_out_time==0)
+            qd_compose_insert_null(body);
+        else
+            qd_compose_insert_uint(body, core->uptime_ticks - conn->last_out_time);
+        break;
+
+    }
+}
+
+
+static void write_list(qdr_core_t *core, qdr_query_t *query,  qdr_tcp_connection_t *conn)
+{
+    qd_composed_field_t *body = query->body;
+
+    qd_compose_start_list(body);
+
+    if (conn) {
+        int i = 0;
+        while (query->columns[i] >= 0) {
+            insert_column(core, conn, query->columns[i], body);
+            i++;
+        }
+    }
+    qd_compose_end_list(body);
+}
+
+static void write_map(qdr_core_t           *core,
+                      qdr_tcp_connection_t *conn,
+                      qd_composed_field_t  *body,
+                      const char           *qdr_connection_columns[])
+{
+    qd_compose_start_map(body);
+
+    for(int i = 0; i < QDR_TCP_CONNECTION_COLUMN_COUNT; i++) {
+        qd_compose_insert_string(body, qdr_connection_columns[i]);
+        insert_column(core, conn, i, body);
+    }
+
+    qd_compose_end_map(body);
+}
+
+static void advance(qdr_query_t *query, qdr_tcp_connection_t *conn)
+{
+    if (conn) {
+        query->next_offset++;
+        conn = DEQ_NEXT(conn);
+        query->more = !!conn;
+    }
+    else {
+        query->more = false;
+    }
+}
+
+static qdr_tcp_connection_t *find_by_identity(qdr_core_t *core, qd_iterator_t *identity)
+{
+    if (!identity)
+        return 0;
+
+    qdr_tcp_connection_t *conn = DEQ_HEAD(tcp_adaptor->connections);
+    while (conn) {
+        // Convert the passed in identity to a char*
+        char id[100];
+        snprintf(id, 100, "%"PRId64, conn->conn_id);
+        if (qd_iterator_equal(identity, (const unsigned char*) id))
+            break;
+        conn = DEQ_NEXT(conn);
+    }
+
+    return conn;
+
+}
+
+void qdra_tcp_connection_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset)
+{
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "query for first tcp connection (%i)", offset);
+    query->status = QD_AMQP_OK;
+
+    if (offset >= DEQ_SIZE(tcp_adaptor->connections)) {
+        query->more = false;
+        qdr_agent_enqueue_response_CT(core, query);
+        return;
+    }
+
+    qdr_tcp_connection_t *conn = DEQ_HEAD(tcp_adaptor->connections);
+    for (int i = 0; i < offset && conn; i++)
+        conn = DEQ_NEXT(conn);
+    assert(conn);
+
+    if (conn) {
+        write_list(core, query, conn);
+        query->next_offset = offset;
+        advance(query, conn);
+    } else {
+        query->more = false;
+    }
+
+    qdr_agent_enqueue_response_CT(core, query);
+}
+
+void qdra_tcp_connection_get_next_CT(qdr_core_t *core, qdr_query_t *query)
+{
+    qdr_tcp_connection_t *conn = 0;
+
+    if (query->next_offset < DEQ_SIZE(tcp_adaptor->connections)) {
+        conn = DEQ_HEAD(tcp_adaptor->connections);
+        for (int i = 0; i < query->next_offset && conn; i++)
+            conn = DEQ_NEXT(conn);
+    }
+
+    if (conn) {
+        write_list(core, query, conn);
+        advance(query, conn);
+    } else {
+        query->more = false;
+    }
+    qdr_agent_enqueue_response_CT(core, query);
+}
+
+void qdra_tcp_connection_get_CT(qdr_core_t          *core,
+                               qd_iterator_t       *name,
+                               qd_iterator_t       *identity,
+                               qdr_query_t         *query,
+                               const char          *qdr_tcp_connection_columns[])
+{
+    qdr_tcp_connection_t *conn = 0;
+
+    if (!identity) {
+        query->status = QD_AMQP_BAD_REQUEST;
+        query->status.description = "Name not supported. Identity required";
+        qd_log(core->agent_log, QD_LOG_ERROR, "Error performing READ of %s: %s", TCP_CONNECTION_TYPE, query->status.description);
+    } else {
+        conn = find_by_identity(core, identity);
+
+        if (conn == 0) {
+            query->status = QD_AMQP_NOT_FOUND;
+        } else {
+            write_map(core, conn, query->body, qdr_tcp_connection_columns);
+            query->status = QD_AMQP_OK;
+        }
+    }
+    qdr_agent_enqueue_response_CT(core, query);
+}
+
+static void qdr_add_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
+    DEQ_INSERT_TAIL(tcp_adaptor->connections, conn);
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Added tcp connection %s (%i)", conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+}
+
+static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
+    DEQ_REMOVE(tcp_adaptor->connections, conn);
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Removed tcp connection %s (%i)", conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+    free_qdr_tcp_connection(conn);
+}

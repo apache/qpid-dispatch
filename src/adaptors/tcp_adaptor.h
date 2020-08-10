@@ -76,4 +76,15 @@ struct qd_tcp_connector_t
 DEQ_DECLARE(qd_tcp_connector_t, qd_tcp_connector_list_t);
 ALLOC_DECLARE(qd_tcp_connector_t);
 
+void qdra_tcp_connection_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
+void qdra_tcp_connection_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_tcp_connection_get_CT(qdr_core_t          *core,
+                                qd_iterator_t       *name,
+                                qd_iterator_t       *identity,
+                                qdr_query_t         *query,
+                                const char          *qdr_tcp_connection_columns[]);
+
+#define QDR_TCP_CONNECTION_COLUMN_COUNT 10
+extern const char *qdr_tcp_connection_columns[QDR_TCP_CONNECTION_COLUMN_COUNT + 1];
+
 #endif
