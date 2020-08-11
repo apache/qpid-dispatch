@@ -41,7 +41,7 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     config->host    = qd_entity_get_string(entity, "host");            CHECK();
     config->port    = qd_entity_get_string(entity, "port");            CHECK();
     config->address = qd_entity_get_string(entity, "address");         CHECK();
-    version_str     = qd_entity_get_string(entity, "protcolVersion");  CHECK();
+    version_str     = qd_entity_get_string(entity, "protocolVersion");  CHECK();
 
     if (strncmp(version_str, "HTTP/1", 6) == 0) {
         config->version = VERSION_HTTP1;
