@@ -2331,17 +2331,21 @@ void trim_body_data_headers(qd_message_body_data_t *body_data)
     assert(good);
     if (good) {
         unsigned char tag = 0;
+        size_t        vbin_hdr_len = 1;
         next_octet(&cursor, &buffer, &tag);
-        if (tag == QD_AMQP_VBIN8)
+        if (tag == QD_AMQP_VBIN8) {
             advance(&cursor, &buffer, 1);
-        else if (tag == QD_AMQP_VBIN32)
+            vbin_hdr_len += 1;
+        } else if (tag == QD_AMQP_VBIN32) {
             advance(&cursor, &buffer, 4);
+            vbin_hdr_len += 4;
+        }
 
         can_advance(&cursor, &buffer); // bump cursor to the next buffer if necessary
 
         body_data->payload.buffer     = buffer;
         body_data->payload.offset     = cursor - qd_buffer_base(buffer);
-        body_data->payload.length     = location->length;
+        body_data->payload.length     = location->length - vbin_hdr_len;
         body_data->payload.hdr_length = 0;
         body_data->payload.parsed     = true;
         body_data->payload.tag        = tag;
@@ -2372,6 +2376,9 @@ qd_iterator_t *qd_message_body_data_iterator(const qd_message_body_data_t *body_
  */
 int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data)
 {
+    if (body_data->payload.length == 0)
+        return 0;
+
     int count = 1;
     qd_buffer_t *buffer = body_data->payload.buffer;
     while (!!buffer && buffer != body_data->last_buffer) {
