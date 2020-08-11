@@ -586,6 +586,34 @@ class HttpListenerEntity(EntityAdapter):
     def _delete(self):
         self._qd.qd_dispatch_delete_http_listener(self._dispatch, self._implementations[0].key)
 
+class TcpListenerEntity(EntityAdapter):
+    def create(self):
+        config_listener = self._qd.qd_dispatch_configure_tcp_listener(self._dispatch, self)
+        return config_listener
+
+    def _identifier(self):
+        return _host_port_name_identifier(self)
+
+    def __str__(self):
+        return super(TcpListenerEntity, self).__str__().replace("Entity(", "TcpListenerEntity(")
+
+    def _delete(self):
+        self._qd.qd_dispatch_delete_tcp_listener(self._dispatch, self._implementations[0].key)
+
+
+class TcpConnectorEntity(EntityAdapter):
+    def create(self):
+        config_connector = self._qd.qd_dispatch_configure_tcp_connector(self._dispatch, self)
+        return config_connector
+
+    def _identifier(self):
+        return _host_port_name_identifier(self)
+
+    def __str__(self):
+        return super(TcpConnectorEntity, self).__str__().replace("Entity(", "TcpConnectorEntity(")
+
+    def _delete(self):
+        self._qd.qd_dispatch_delete_tcp_connector(self._dispatch, self._implementations[0].key)
 
 class HttpConnectorEntity(EntityAdapter):
     def create(self):
