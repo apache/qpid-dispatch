@@ -1034,7 +1034,7 @@ static bool parse_body_chunked_trailer(http1_conn_t *conn, struct decoder_t *dec
 // Return True if there is more data pending to parse
 static bool parse_body_chunked(http1_conn_t *conn, struct decoder_t *decoder)
 {
-    bool more;
+    bool more = true;
     switch (decoder->chunk_state) {
 
     case HTTP1_CHUNK_HEADER:
