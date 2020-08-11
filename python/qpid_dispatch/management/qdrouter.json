@@ -1151,6 +1151,66 @@
             }
         },
 
+        "tcpListener": {
+            "description": "Ingress TCP bridge.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "address": {
+                    "description":"Address of this bridge",
+                    "type": "string",
+                    "create": true
+                },
+                "host": {
+                    "description":"A host name, IPV4 or IPV6 literal, or the empty string. The empty string listens on all local addresses. A host name listens on all addresses associated with the name. An IPV6 literal address (or wildcard '[::]') listens only for IPV6. An IPV4 literal address (or wildcard '0.0.0.0') listens only for IPV4.",
+                    "type": "string",
+                    "default": "0.0.0.0",
+                    "create": true
+                },
+                "port": {
+                    "description": "Port number or symbolic service name.  If '0', the router shall assign an ephemeral port to the listener and log the port number with a log of the form 'SERVER (notice) Listening on <host>:<assigned-port> (<listener-name>)'",
+                    "type": "string",
+                    "create": true
+                },
+                "siteId": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to identify where connection is handled.",
+                    "create": true
+                }
+            }
+        },
+
+        "tcpConnector": {
+            "description": "Egress TCP bridge.",
+            "extends": "configurationEntity",
+            "operations": ["CREATE", "DELETE"],
+            "attributes": {
+                "address": {
+                    "description":"Address of this bridge",
+                    "type": "string",
+                    "create": true
+                },
+                "host": {
+                    "description":"IP address: ipv4 or ipv6 literal or a host name",
+                    "type": "string",
+                    "create": true
+                },
+                "port": {
+                    "description": "Port number or symbolic service name.",
+                    "type": "string",
+                    "create": true
+
+                },
+                "siteId": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to identify origin of connections.",
+                    "create": true
+                }
+            }
+        },
+
         "log": {
             "description": "Configure logging for a particular module. You can use the `UPDATE` operation to change log settings while the router is running.",
             "extends": "configurationEntity",
@@ -1174,6 +1234,7 @@
                         "CONN_MGR",
                         "PYTHON",
                         "PROTOCOL",
+                        "TCP_ADAPTOR",
                         "HTTP_ADAPTOR",
                         "DEFAULT"
                     ],
