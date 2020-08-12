@@ -2474,6 +2474,7 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
 
     qd_section_status_t section_status;
     qd_field_location_t location;
+    ZERO(&location);
 
     section_status = message_section_check(&msg->body_buffer, &msg->body_cursor,
                                            BODY_DATA_SHORT, 3, TAGS_BINARY,
