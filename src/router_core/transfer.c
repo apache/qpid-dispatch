@@ -454,6 +454,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         // there are no receivers we will try to drain credit to prevent the
         // sender from attempting to send more to this address.
         //
+        qd_log(core->log, QD_LOG_DEBUG, "CRAP1 %p", (void*) dlv->to_addr);
         if (dlv->settled) {
             // Increment the presettled_dropped_deliveries on the in_link
             link->dropped_presettled_deliveries++;
@@ -491,6 +492,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     dlv->multicast = qdr_is_addr_treatment_multicast(addr);
 
     if (addr) {
+        qd_log(core->log, QD_LOG_DEBUG, "CRAP2 %p", (void*) dlv->to_addr);
         fanout = qdr_forward_message_CT(core, addr, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
         if (link->link_type != QD_LINK_CONTROL && link->link_type != QD_LINK_ROUTER) {
             if (!link->fallback)
@@ -509,6 +511,7 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
         // were no receivers or because the address was not defined in the
         // config file.
         //
+        qd_log(core->log, QD_LOG_DEBUG, "CRAP3 %p", (void*) dlv->to_addr);
 
         qd_address_treatment_t trt = core->qd->default_treatment;
         if (dlv->to_addr) {
@@ -557,10 +560,17 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     // the anonymous link.
     //
     if (fanout == 0 && !dlv->multicast && link->owning_addr == 0 && dlv->to_addr != 0) {
+
+        qd_log(core->log, QD_LOG_DEBUG, "CRAP4 %p", (void*) dlv->to_addr);
+        
         if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION) {
             qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
-            if (sender_address && sender_address != addr)
+            if (sender_address && sender_address != addr) {
+
+                qd_log(core->log, QD_LOG_DEBUG, "CRAP5 %p", (void*) dlv->to_addr);
+                
                 fanout += qdr_forward_message_CT(core, sender_address, dlv->msg, dlv, false, link->link_type == QD_LINK_CONTROL);
+            }
         }
     }
 
@@ -570,6 +580,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     // itself associated with a fallback destination.
     //
     if (fanout == 0 && !!addr && !!addr->fallback && !link->fallback) {
+        qd_log(core->log, QD_LOG_DEBUG, "CRAP6 %p", (void*) dlv->to_addr);
+        
         const char          *key      = (const char*) qd_hash_key_by_handle(addr->fallback->hash_handle);
         qd_composed_field_t *to_field = qd_compose_subfield(0);
         qd_compose_insert_string(to_field, key + 2);
@@ -724,13 +736,25 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (DEQ_IS_EMPTY(link->undelivered)) {
         qdr_link_ref_t *temp_rlink = 0;
         qdr_address_t *addr = link->owning_addr;
+
+        qd_log(core->log, QD_LOG_DEBUG, "MEOW! %p", (void*) dlv->to_addr);
+
         if (!addr && dlv->to_addr) {
             qdr_connection_t *conn = link->conn;
             if (conn && conn->tenant_space)
                 qd_iterator_annotate_space(dlv->to_addr, conn->tenant_space, conn->tenant_space_len);
+
+
+            qd_log(core->log, QD_LOG_DEBUG, "HASH RETREIVE %p", (void*) dlv->to_addr);
+
             qd_hash_retrieve(core->addr_hash, dlv->to_addr, (void**) &addr);
 
+            assert(addr);
+
             if (!addr) {
+
+                qd_log(core->log, QD_LOG_DEBUG, "MEOW!!!!! %p", (void*) dlv->to_addr);
+                
                 //
                 // This is an anonymous delivery but the address that it wants sent to is
                 // not in this router's address table. We will send this delivery up the
@@ -752,6 +776,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
                 // The connection on which the delivery arrived should not be QDR_ROLE_EDGE_CONNECTION because
                 // we do not want to send it back over the same connections
                 //
+                qd_log(core->log, QD_LOG_DEBUG, "MEOW?!!!!! %p", (void*) dlv->to_addr);
                 if (core->edge_conn_addr && link->conn->role != QDR_ROLE_EDGE_CONNECTION && qdr_is_addr_treatment_multicast(addr)) {
                     qdr_address_t *sender_address = core->edge_conn_addr(core->edge_context);
                     if (sender_address && sender_address != addr) {
@@ -770,7 +795,9 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         //
         // Deal with any delivery restrictions for this address.
         //
+        qd_log(core->log, QD_LOG_DEBUG, "MEOW? ? ?!!!!! %p", (void*) dlv->to_addr);
         if (addr && addr->router_control_only && link->link_type != QD_LINK_CONTROL) {
+            qd_log(core->log, QD_LOG_DEBUG, "MMEOW? ? ?!!!!! %p", (void*) dlv->to_addr);
             qdr_delivery_release_CT(core, dlv);
             qdr_link_issue_credit_CT(core, link, 1, false);
             qdr_delivery_decref_CT(core, dlv, "qdr_link_deliver_CT - removed from action on restricted access");
@@ -778,6 +805,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
             // Give the action reference to the qdr_link_forward function. Don't decref/incref.
             //
+            qd_log(core->log, QD_LOG_DEBUG, "BARK %p", (void*) dlv->to_addr);
             qdr_link_forward_CT(core, link, dlv, addr, more);
         }
 
@@ -789,6 +817,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         //
         // Take the action reference and use it for undelivered.  Don't decref/incref.
         //
+        qd_log(core->log, QD_LOG_DEBUG, "MMMMMEOW? ? ?!!!!! %p", (void*) dlv->to_addr);
         DEQ_INSERT_TAIL(link->undelivered, dlv);
         dlv->where = QDR_DELIVERY_IN_UNDELIVERED;
         qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_deliver_CT: action-list -> undelivered-list", (long) dlv);

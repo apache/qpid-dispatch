@@ -1135,6 +1135,7 @@
                 "host": {
                     "description":"IP address: ipv4 or ipv6 literal or a host name",
                     "type": "string",
+                    "default": "127.0.0.1",
                     "create": true
                 },
                 "port": {

@@ -628,6 +628,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         qd_iterator_t *addr_iter = 0;
         int phase = 0;
 
+        qd_log(router->log_source, QD_LOG_DEBUG, "WUBBBA WUBBA ANONYMOUS LINK!");
         //
         // If the message has delivery annotations, get the to-override field from the annotations.
         //
@@ -642,6 +643,8 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         //
         if (!addr_iter) {
             addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+
+            qd_log(router->log_source, QD_LOG_DEBUG, "HEY HEY HEY QD_FIELD_TO %p!", (void*)addr_iter);
 
             //
             // If the address came from the TO field and we need to apply a tenant-space,
