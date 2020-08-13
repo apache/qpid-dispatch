@@ -150,6 +150,7 @@ foreach(py_test_module
     system_tests_routing_protocol
     system_tests_open_properties
     system_tests_http2
+    system_tests_http1_adaptor
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
