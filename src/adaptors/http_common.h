@@ -66,7 +66,8 @@ struct qd_http_connector_t {
     qd_server_t                  *server;
     qd_timer_t                   *timer;
     long                          delay;
-    struct qdr_http_connection_t *dispatcher;  // pseudo egress connection
+    struct qdr_http_connection_t *dispatcher;
+
     DEQ_LINKS(qd_http_connector_t);
 };
 DEQ_DECLARE(qd_http_connector_t, qd_http_connector_list_t);

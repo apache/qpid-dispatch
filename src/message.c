@@ -2444,7 +2444,7 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
     //
     int idx = 0;
     while (idx < count && !!buffer) {
-        buffers[idx].context  = 0;
+        buffers[idx].context  = 0;  // reserved for use by caller - do not modify!
         buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
         buffers[idx].capacity = BUFFER_SIZE;
         buffers[idx].size     = qd_buffer_size(buffer) - (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
