@@ -511,7 +511,7 @@ class InterrouterLinksAllowed(TestCase):
             config = [
                 ('router', {'mode': 'interior', 'id': name}),
                 ('listener', {'port': cls.tester.get_port()}),
-                ('log', {'module': 'DEFAULT', 'enable': 'trace+'}),
+
                 ('policy', {'enableVhostPolicy': 'yes', 'policyDir': policy_config_path}),
                 connection
             ]
