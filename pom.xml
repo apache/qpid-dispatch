@@ -31,10 +31,6 @@
     <inceptionYear>2018</inceptionYear>
     <url>https://qpid.apache.org</url>   
     
-    <prerequisites>
-        <maven>3.0.4</maven>
-    </prerequisites>
-  
     <description>
       Qpid Dispatch Router
     </description>
