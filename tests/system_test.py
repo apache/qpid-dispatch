@@ -218,6 +218,22 @@ def wait_ports(ports, **retry_kwargs):
     for port, protocol_family in dict_iteritems(ports):
         wait_port(port=port, protocol_family=protocol_family, **retry_kwargs)
 
+def wait_server_ready(logfile, search_pattern, **retry_kwargs):
+    """Wait for up to timeout time for server log to indicate router is fully functional.
+    Takes same keyword arguments as retry to control the timeout"""
+    def peek_at_log():
+        with open(logfile, 'r') as fin:
+            lines = fin.readlines()
+        for line in lines:
+            if search_pattern in line:
+                return # success
+        raise Exception("Server not operational yet. Logfile: %s" % logfile)
+
+    try:
+        retry_exception(peek_at_log, **retry_kwargs)
+    except Exception as e:
+        raise Exception("wait_server_ready timeout waiting for server ready: %s" % (e))
+
 def message(**properties):
     """Convenience to create a proton.Message with properties set"""
     m = Message()
@@ -421,29 +437,71 @@ class Qdrouterd(Process):
             # top level list of tuples ('section-name', dict)
             return "".join(["%s {\n%s}\n"%(n, attributes(p, 1)) for n, p in self])
 
-    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True,
+    def __init__(self, name=None, config=Config(), pyinclude=None, wait=True, wait_for_server_log=True,
                  perform_teardown=True, cl_args=None, expect=Process.RUNNING):
         """
         @param name: name used for for output files, default to id from config.
         @param config: router configuration
         @keyword wait: wait for router to be ready (call self.wait_ready())
+        @param wait_for_server_log Use server log check for "wait ready"
+        @param perform_teardown
+        @param cli_args
+        @param expect
         """
         cl_args = cl_args or []
         self.config = copy(config)
+        self.wait_for_server_log = wait_for_server_log
         self.perform_teardown = perform_teardown
         if not name: name = self.config.router_id
         assert name
         # setup log and debug dump files
         self.dumpfile = os.path.abspath('%s-qddebug.txt' % name)
         self.config.sections('router')[0]['debugDumpFile'] = self.dumpfile
+
+        # setup default logging
+        # sense where server info logs are found
+        # fail if server polling log ready and log setup is insufficient
+        self.logfile = None
+        self.server_logfile = None
+        self.server_search_pattern = "SERVER (notice) Operational"
+        self.server_log_levels = ["trace+", "debug+", "info+", "notice"]
+
         default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         if not default_log:
+            # Install a global default for any test that doesn't define log DEFAULT
             self.logfile = "%s.log" % name
             config.append(
                 ('log', {'module':'DEFAULT', 'enable':'trace+',
                          'includeSource': 'true', 'outputFile': self.logfile}))
+            default_log = [l for l in config if (l[0] == 'log' and l[1]['module'] == 'DEFAULT')]
         else:
-            self.logfile = default_log[0][1].get('outputfile')
+            self.logfile = default_log[0][1].get('outputFile')
+
+        if wait_for_server_log:
+            # Make sure router.wait functions can find SERVER (notice) logs in a file.
+            # Fail the test if the logs are not set up with minimum requirements
+            # for log.enable and log.outputFile.
+            server_log =  [l for l in config if (l[0] == 'log' and l[1]['module'] == 'SERVER')]
+            if server_log:
+                # User has specified a SERVER log entry
+                server_log_level = server_log[0][1].get("enable")
+                if not server_log_level in self.server_log_levels:
+                    assert False, "Initial SERVER log level must include log level NOTICE."
+                self.server_logfile = server_log[0][1].get("outputFile")
+                if not self.server_logfile:
+                    assert False, "Initial SERVER log must be written to a file."
+                self.server_logfile = os.path.abspath(self.server_logfile)
+                # User SERVER log entry approved
+            else:
+                # No SERVER log entry. Make sure that the DEFAULT is ok
+                default_log_level = default_log[0][1].get("enable")
+                if not default_log_level in self.server_log_levels:
+                    assert False, "Initial DEFAULT log level must include log level NOTICE."
+                if not self.logfile:
+                    assert False, "Initial DEFAULT log must be written to a file."
+                # DEFAULT log entry approved. Use it for server log wait_ready.
+                self.server_logfile = os.path.abspath(self.logfile)
+
         args = ['qdrouterd', '-c', config.write(name)] + cl_args
         env_home = os.environ.get('QPID_DISPATCH_HOME')
         if pyinclude:
@@ -646,10 +704,15 @@ class Qdrouterd(Process):
             assert retry(lambda: self.is_connected(port=c['port'], host=self.get_host(c.get('protocolFamily'))),
                          **retry_kwargs), "Port not connected %s" % c['port']
 
+    def wait_server_ready(self, **retry_kwargs):
+        wait_server_ready(self.server_logfile, self.server_search_pattern, **retry_kwargs)
+
     def wait_ready(self, **retry_kwargs):
-        """Wait for ports and connectors to be ready"""
+        """Wait for server log, ports, and connectors to be ready"""
         if not self._wait_ready:
             self._wait_ready = True
+            if self.wait_for_server_log:
+                self.wait_server_ready(**retry_kwargs)
             self.wait_ports(**retry_kwargs)
             self.wait_connectors(**retry_kwargs)
         return self
