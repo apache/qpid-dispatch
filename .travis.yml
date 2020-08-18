@@ -71,7 +71,7 @@ jobs:
     - CC=clang-10
     - CXX=clang++-10
     - PATH="/usr/bin:$PATH" PROTON_VERSION=master BUILD_TYPE=RelWithDebInfo
-    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=asan -DENABLE_LINKTIME_OPTIMIZATION=no -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG'
   - name: "qdrouterd:Default Build"
     os: linux
     env:
