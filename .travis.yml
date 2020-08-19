@@ -115,6 +115,7 @@ install:
 - NPROC=2
 - PREFIX=$PWD/install
 - git clone --depth=10 --branch=$PROTON_VERSION https://github.com/apache/qpid-proton.git
+- cmake -version
 
 # Build and install proton from source.
 - mkdir qpid-proton/build
