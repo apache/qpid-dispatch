@@ -110,6 +110,34 @@ a|
 $ qdstat --linkroutes [all-routers\|__<connection-options>__]
 ----
 
+| View a router's policy global settings and statistics
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --policy [all-routers\|__<connection-options>__]
+----
+
+| View a router's policy vhost settings
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --vhosts [all-routers\|__<connection-options>__]
+----
+
+| View a router's policy vhost statistics
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --vhoststats [all-routers\|__<connection-options>__]
+----
+
+| View a router's vhostgroup settings
+a|
+[options="nowrap",subs="+quotes"]
+----
+$ qdstat --vhostgroups [all-routers\|__<connection-options>__]
+----
+
 | View a router's memory consumption
 a|
 [options="nowrap",subs="+quotes"]
