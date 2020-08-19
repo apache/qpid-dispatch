@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { render, waitForElement, fireEvent } from "@testing-library/react";
+import { render, waitFor, fireEvent } from "@testing-library/react";
 import { service, login, TEST_PORT } from "../serviceTest";
 import EntitiesPage from "./entitiesPage";
 
@@ -31,7 +31,7 @@ it("renders an EntitiesPage", () => {
 
     const props = {
       service,
-      schema: service.schema
+      schema: service.schema,
     };
     let pageRef = null;
     const { getByTestId } = render(
@@ -42,12 +42,12 @@ it("renders an EntitiesPage", () => {
     pageRef.handleSelectEntity("router");
 
     // the router A should be in the list
-    await waitForElement(() => getByTestId("A"));
+    await waitFor(() => expect(getByTestId("A")).toBeInTheDocument());
 
     // click on the A
     fireEvent.click(getByTestId("A"));
 
     // the details page should show for router A
-    await waitForElement(() => getByTestId("detail-for-A"));
+    await waitFor(() => expect(getByTestId("detail-for-A")).toBeInTheDocument());
   });
 });

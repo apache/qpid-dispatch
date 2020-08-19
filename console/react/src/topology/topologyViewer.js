@@ -23,7 +23,7 @@ import {
   TopologyView,
   TopologyControlBar,
   createTopologyControlButtons,
-  TopologySideBar
+  TopologySideBar,
 } from "@patternfly/react-topology";
 
 import { Traffic } from "./traffic.js";
@@ -35,7 +35,7 @@ import {
   getSizes,
   reconcileArrays,
   reconcileLinks,
-  nextHopHighlight
+  nextHopHighlight,
 } from "./topoUtils.js";
 import { BackgroundMap } from "./map.js";
 import { utils } from "../common/amqp/utilities.js";
@@ -50,7 +50,7 @@ import {
   appendContent,
   addGradient,
   addDefs,
-  updateState
+  updateState,
 } from "./svgUtils.js";
 import { QDRLogger } from "../common/qdrGlobals";
 const TOPOOPTIONSKEY = "topologyLegendOptionsKey";
@@ -68,20 +68,20 @@ class TopologyViewer extends Component {
           traffic: {
             open: false,
             dots: false,
-            congestion: false
+            congestion: false,
           },
           legend: {
-            open: true
+            open: true,
           },
           map: {
             open: false,
-            show: false
+            show: false,
           },
           arrows: {
             open: false,
             routerArrows: false,
-            clientArrows: true
-          }
+            clientArrows: true,
+          },
         };
     // previous version read from storage didn't have show attribute
     if (typeof savedOptions.map.show === "undefined") {
@@ -94,7 +94,7 @@ class TopologyViewer extends Component {
       showContextMenu: false,
       showLegend: false,
       mapOptions: { areaColor: "#000000", oceanColor: "#FFFFFF" },
-      addressColors: {}
+      addressColors: {},
     };
     this.QDRLog = new QDRLogger(console, "Topology");
     this.popupCancelled = true;
@@ -104,7 +104,7 @@ class TopologyViewer extends Component {
     this.forceData = {
       nodes: new Nodes(this.QDRLog),
       links: new Links(this.QDRLog),
-      edges: {}
+      edges: {},
     };
 
     this.force = null;
@@ -121,6 +121,7 @@ class TopologyViewer extends Component {
       [],
       this.addressesChanged
     );
+    this.traffic.remove();
   }
 
   // called only once when the component is initialized
@@ -150,7 +151,7 @@ class TopologyViewer extends Component {
         if (!this.mounted) return;
         this.setState({
           addressColors,
-          mapOptions: this.backgroundMap.mapOptions
+          mapOptions: this.backgroundMap.mapOptions,
         });
 
         // poll the routers for their latest data
@@ -275,7 +276,7 @@ class TopologyViewer extends Component {
   // called from contextMenu
   setSelected = (item, data) => {
     // remove the selected attr from each node
-    this.circle.each(function(d) {
+    this.circle.each(function (d) {
       d.selected = false;
     });
     // set the selected attr for this node
@@ -354,14 +355,8 @@ class TopologyViewer extends Component {
     addGradient(this.svg);
 
     // handles to link and node element groups
-    this.path = this.svg
-      .append("svg:g")
-      .attr("class", "links")
-      .selectAll("g");
-    this.circle = this.svg
-      .append("svg:g")
-      .attr("class", "nodes")
-      .selectAll("g");
+    this.path = this.svg.append("svg:g").attr("class", "links").selectAll("g");
+    this.circle = this.svg.append("svg:g").attr("class", "nodes").selectAll("g");
   };
 
   // initialize the nodes and links array from the QDRService.topology._nodeInfo object
@@ -389,7 +384,7 @@ class TopologyViewer extends Component {
         this.forceData.nodes.saveLonLat(this.backgroundMap);
         this.forceData.nodes.savePositions();
       });
-      this.traffic.remove();
+      if (this.traffic) this.traffic.remove();
       if (this.state.legendOptions.traffic.dots)
         this.traffic.addAnimationType(
           "dots",
@@ -444,7 +439,7 @@ class TopologyViewer extends Component {
       this.updateLegend();
 
       if (this.oldSelectedNode) {
-        d3.selectAll("circle.inter-router").classed("selected", function(d) {
+        d3.selectAll("circle.inter-router").classed("selected", function (d) {
           if (d.key === this.oldSelectedNode.key) {
             this.selected_node = d;
             return true;
@@ -453,15 +448,15 @@ class TopologyViewer extends Component {
         });
       }
       if (this.oldMouseoverNode && this.selected_node) {
-        d3.selectAll("circle.inter-router").each(function(d) {
+        d3.selectAll("circle.inter-router").each(function (d) {
           if (d.key === this.oldMouseoverNode.key) {
             this.mouseover_node = d;
             this.topology.ensureAllEntities(
               [
                 {
                   entity: "router.node",
-                  attrs: ["id", "nextHop"]
-                }
+                  attrs: ["id", "nextHop"],
+                },
               ],
               () => {
                 nextHopHighlight(
@@ -546,11 +541,11 @@ class TopologyViewer extends Component {
           [
             {
               entity: "router.link",
-              force: true
+              force: true,
             },
             {
-              entity: "connection"
-            }
+              entity: "connection",
+            },
           ],
           updateTooltip
         );
@@ -605,7 +600,7 @@ class TopologyViewer extends Component {
     this.circle = d3
       .select("g.nodes")
       .selectAll("g")
-      .data(this.forceData.nodes.nodes, function(d) {
+      .data(this.forceData.nodes.nodes, function (d) {
         return d.uid();
       });
 
@@ -613,20 +608,20 @@ class TopologyViewer extends Component {
     let enterCircle = this.circle
       .enter()
       .append("g")
-      .attr("id", function(d) {
+      .attr("id", function (d) {
         return (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index;
       });
 
     let self = this;
     appendCircle(enterCircle)
-      .on("mouseover", function(d) {
+      .on("mouseover", function (d) {
         // mouseover a circle
         self.current_node = d;
         self.props.service.management.topology.delUpdatedAction("connectionPopupHTML");
         let e = d3.event;
         self.popupCancelled = false;
         if (!self.state.showContextMenu) {
-          d.toolTip(self.props.service.management.topology).then(function(toolTip) {
+          d.toolTip(self.props.service.management.topology).then(function (toolTip) {
             if (self.popupCancelled) return;
             self.displayTooltip(toolTip, { x: e.pageX, y: e.pageY });
           });
@@ -645,8 +640,8 @@ class TopologyViewer extends Component {
           [
             {
               entity: "router.node",
-              attrs: ["id", "nextHop"]
-            }
+              attrs: ["id", "nextHop"],
+            },
           ],
           () => {
             // the mouse left the circle before the data came in
@@ -664,7 +659,7 @@ class TopologyViewer extends Component {
         );
         self.restart();
       })
-      .on("mouseout", function() {
+      .on("mouseout", function () {
         // mouse out for a circle
         self.current_node = null;
         // unenlarge target node
@@ -688,7 +683,7 @@ class TopologyViewer extends Component {
         this.initial_mouse_down_position = d3.mouse(this.svg.node());
         this.hideTooltip();
       })
-      .on("mouseup", function(d) {
+      .on("mouseup", function (d) {
         // mouse up for circle
         if (self.backgroundMap) self.backgroundMap.restartZoom();
         if (!self.mousedown_node) return;
@@ -775,7 +770,7 @@ class TopologyViewer extends Component {
     // add text to client circles if there are any that represent multiple clients
     this.svg.selectAll(".subtext").remove();
     let multiples = this.svg.selectAll(".multiple");
-    multiples.each(function(d) {
+    multiples.each(function (d) {
       let g = d3.select(this.parentNode);
       let r = Nodes.radius(d.nodeType);
       if (d.nodeType === "edge" || d.normals.length > 1) {
@@ -1059,7 +1054,7 @@ class TopologyViewer extends Component {
       resetViewCallback: this.resetViewCallback,
       fitToScreenHidden: true,
       legendCallback: this.handleLegendClick,
-      legendAriaLabel: "topology-legend"
+      legendAriaLabel: "topology-legend",
     });
     return (
       <TopologyView

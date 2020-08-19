@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { render, fireEvent, waitForElement } from "@testing-library/react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import { service, login } from "../serviceTest";
 import TopologyViewer from "./topologyViewer";
 import * as world from "../../public/data/countries.json";
@@ -26,12 +26,12 @@ import * as world from "../../public/data/countries.json";
 it("renders the TopologyViewer component", () => {
   jest.spyOn(window, "fetch").mockImplementationOnce(() => {
     return Promise.resolve({
-      json: () => Promise.resolve(world)
+      json: () => Promise.resolve(world),
     });
   });
   const props = {
     service,
-    handleAddNotification: () => {}
+    handleAddNotification: () => {},
   };
 
   login(async () => {
@@ -45,10 +45,11 @@ it("renders the TopologyViewer component", () => {
     expect(getByLabelText("topology-diagram")).toBeInTheDocument();
 
     // make sure it created the svg
-    await waitForElement(() => getByLabelText("topology-svg"));
+    //await waitFor(() => getByLabelText("topology-svg"));
+    await waitFor(() => expect(getByLabelText("topology-svg").toBeInTheDocument()));
 
     // the svg should have a router circle
-    await waitForElement(() => getByTestId("router-0"));
+    await waitFor(() => expect(getByTestId("router-0")).toBeInTheDocument());
 
     // "click" on the router
     const router = getByTestId("router-0");
@@ -56,7 +57,7 @@ it("renders the TopologyViewer component", () => {
     fireEvent.mouseUp(router);
 
     // the routerInfo modal appears
-    await waitForElement(() => getByLabelText("Close"));
+    await waitFor(() => expect(getByLabelText("Close")).toBeInTheDocument());
     // close the modal
     fireEvent.click(getByLabelText("Close"));
 
@@ -67,7 +68,7 @@ it("renders the TopologyViewer component", () => {
     fireEvent.mouseUp(client);
 
     // the clientInfo modal appears
-    await waitForElement(() => getByLabelText("Close"));
+    await waitFor(() => expect(getByLabelText("Close")).toBeInTheDocument());
     // close the modal
     fireEvent.click(getByLabelText("Close"));
 
@@ -90,6 +91,6 @@ it("renders the TopologyViewer component", () => {
     const trafficCheckbox = getByLabelText("show traffic by address");
     fireEvent.click(trafficCheckbox);
     // the address dot should be there
-    await waitForElement(() => getByText("toB"));
+    await waitFor(() => expect(getByText("toB")).toBeInTheDocument());
   });
 });

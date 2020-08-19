@@ -18,14 +18,14 @@ under the License.
 */
 
 import React from "react";
-import { render, fireEvent, waitForElement } from "@testing-library/react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
 import { service, login, TEST_PORT } from "../serviceTest";
 import { LocalStorageMock } from "@react-mock/localstorage";
 import ChordViewer from "./chordViewer";
 
 it("renders the ChordViewer component", () => {
   const props = {
-    service
+    service,
   };
 
   if (!TEST_PORT) {
@@ -39,8 +39,8 @@ it("renders the ChordViewer component", () => {
         items={{
           chordOptions: JSON.stringify({
             isRate: false,
-            byAddress: true
-          })
+            byAddress: true,
+          }),
         }}
       >
         <ChordViewer {...props} />
@@ -62,6 +62,6 @@ it("renders the ChordViewer component", () => {
     fireEvent.click(addressButton);
 
     // after 1 update period, the B chord should be in the svg
-    await waitForElement(() => getByLabelText("B"));
+    await waitFor(() => expect(getByLabelText("B")).toBeInTheDocument());
   });
 });
