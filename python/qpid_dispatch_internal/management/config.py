@@ -318,8 +318,8 @@ def configure_dispatch(dispatch, lib_handle, filename):
     agent.policy.set_use_hostname_patterns(useHostnamePatterns)
     agent.policy.set_max_message_size(maxMessageSize)
 
-    # Remaining configuration
-    for t in "sslProfile", "authServicePlugin", "listener", "connector", \
+    # Configure types that may be duplicated many times; don't configure listeners
+    for t in "sslProfile", "authServicePlugin", "connector", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "router.config.exchange", "router.config.binding", \
              "vhost":
@@ -331,11 +331,13 @@ def configure_dispatch(dispatch, lib_handle, filename):
                     ssl_profile_name = a.get('name')
                     displayname_service.add(ssl_profile_name, display_file_name)
 
+    # Configure remaining singleton types; don't configure listeners
     for e in config.entities:
-        configure(e)
+        if not e['type'] == 'org.apache.qpid.dispatch.listener':
+            configure(e)
 
     # Load the vhosts from the .json files in policyDir
-    # Only vhosts are loaded. Other entities are silently discarded.
+    # Only vhosts are loaded. Other entities in these files are silently discarded.
     if not policyDir == '':
         apath = os.path.abspath(policyDir)
         for i in os.listdir(policyDir):
@@ -343,3 +345,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
                 pconfig = PolicyConfig(os.path.join(apath, i))
                 for a in pconfig.by_type("vhost"):
                     agent.configure(a)
+
+    # Configure listeners
+    for a in config.by_type("listener"):
+        configure(a)
