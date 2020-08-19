@@ -50,6 +50,7 @@ struct qdr_http2_stream_data_t {
     qdr_delivery_t           *out_dlv;
     uint64_t                  incoming_id;
     uint64_t                  outgoing_id;
+    uint64_t                  disposition;
 
     qdr_link_t               *in_link;
     qdr_link_t               *out_link;
@@ -58,8 +59,16 @@ struct qdr_http2_stream_data_t {
     qd_composed_field_t      *field;
     qd_composed_field_t      *header_properties;  // This has the header and the properties.
     qd_composed_field_t      *app_properties;     // This has the application properties.
-    bool                     entire_header_arrived; // true if all the header properties has arrived, just before the start of the data frame or just before the end stream.
+    qd_composed_field_t      *body;
+
+    qd_message_body_data_t        *curr_body_data;
+    qd_message_body_data_result_t  curr_body_data_result;
+    int                            curr_body_data_buff_offset;
+    int                            body_data_buff_count;
+
+    bool                     entire_header_arrived; // true if all the header properties have arrived, just before the start of the data frame or just before the END_STREAM.
     bool                     header_sent;
+    bool                     has_body;
     bool                     has_data;  // Did we ever receive a DATA frame.
 
 
