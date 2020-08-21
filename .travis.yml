@@ -110,6 +110,7 @@ addons:
     - tox
     # code coverage
     - lcov
+    - libnghttp2-dev
 
 install:
 - NPROC=2

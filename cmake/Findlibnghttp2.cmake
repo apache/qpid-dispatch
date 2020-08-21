@@ -24,7 +24,7 @@ find_library(NGHTTP2_LIBRARIES
 
 find_path(NGHTTP2_INCLUDE_DIRS
   NAMES nghttp2.h
-  HINTS "${LIBWEBSOCKETS_INCLUDEDIR}" "${LIBWEBSOCKETS_ROOT}/include" "${CMAKE_INSTALL_PREFIX}/include"
+  HINTS "${CMAKE_INSTALL_PREFIX}/include"
   PATHS "/usr/include/nghttp2"
 )
 
