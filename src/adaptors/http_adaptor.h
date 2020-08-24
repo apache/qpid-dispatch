@@ -56,9 +56,7 @@ struct qdr_http2_stream_data_t {
     qdr_link_t               *out_link;
 
     qd_message_t             *message;
-    qd_composed_field_t      *field;
-    qd_composed_field_t      *header_properties;  // This has the header and the properties.
-    qd_composed_field_t      *app_properties;     // This has the application properties.
+    qd_composed_field_t      *app_properties;
     qd_composed_field_t      *body;
 
     qd_message_body_data_t        *curr_body_data;
@@ -66,22 +64,11 @@ struct qdr_http2_stream_data_t {
     int                            curr_body_data_buff_offset;
     int                            body_data_buff_count;
 
-    bool                     entire_header_arrived; // true if all the header properties have arrived, just before the start of the data frame or just before the END_STREAM.
+    bool                     entire_header_arrived; // true if all the headershave arrived, just before the start of the data frame or just before the END_STREAM.
     bool                     header_sent;
-    bool                     has_body;
-    bool                     has_data;  // Did we ever receive a DATA frame.
 
 
     DEQ_LINKS(qdr_http2_stream_data_t);
-    //const char *uri; // The NULL-terminated URI string to retrieve.
-    /* The authority portion of the |uri|, not NULL-terminated */
-    //char *authority;
-    /* The path portion of the |uri|, including query, not NULL-terminated */
-    //char *path;
-    /* The length of the |authority| */
-    //size_t authoritylen;
-    /* The length of the |path| */
-    //size_t pathlen;
 };
 
 struct qdr_http_connection_t {
