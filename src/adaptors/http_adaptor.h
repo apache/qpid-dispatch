@@ -36,14 +36,13 @@ typedef struct qdr_http_connection_t    qdr_http_connection_t;
 DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
 
 struct qdr_http2_session_data_t {
-    qd_http2_stream_data_list_t  streams;    // A session can have many streams.
-    nghttp2_session             *session;    // A pointer to the nghttp2s' session object
-    qd_buffer_list_t             buffs;      // Buffers for writing
     qdr_http_connection_t       *conn;       // Connection associated with the session_data
+    nghttp2_session             *session;    // A pointer to the nghttp2s' session object
+    qd_http2_stream_data_list_t  streams;    // A session can have many streams.
+    qd_buffer_list_t             buffs;      // Buffers for writing
 };
 
 struct qdr_http2_stream_data_t {
-    int32_t                   stream_id;
     qdr_http2_session_data_t *session_data;
     char                     *reply_to;
     qdr_delivery_t           *in_dlv;
@@ -51,24 +50,21 @@ struct qdr_http2_stream_data_t {
     uint64_t                  incoming_id;
     uint64_t                  outgoing_id;
     uint64_t                  disposition;
-
     qdr_link_t               *in_link;
     qdr_link_t               *out_link;
-
     qd_message_t             *message;
     qd_composed_field_t      *app_properties;
     qd_composed_field_t      *body;
+    qd_message_body_data_t   *curr_body_data;
+    DEQ_LINKS(qdr_http2_stream_data_t);
 
-    qd_message_body_data_t        *curr_body_data;
     qd_message_body_data_result_t  curr_body_data_result;
     int                            curr_body_data_buff_offset;
     int                            body_data_buff_count;
+    int32_t                        stream_id;
 
     bool                     entire_header_arrived; // true if all the headershave arrived, just before the start of the data frame or just before the END_STREAM.
     bool                     header_sent;
-
-
-    DEQ_LINKS(qdr_http2_stream_data_t);
 };
 
 struct qdr_http_connection_t {
@@ -76,7 +72,6 @@ struct qdr_http_connection_t {
     qdr_connection_t        *qdr_conn;
     pn_raw_connection_t     *pn_raw_conn;
     pn_raw_buffer_t          read_buffers[4];
-    bool                     ingress;
     qd_timer_t              *activate_timer;
     qd_http_bridge_config_t *config;
     qd_server_t             *server;
@@ -87,12 +82,13 @@ struct qdr_http_connection_t {
     char                    *remote_address;
     qdr_link_t              *stream_dispatcher;
     uint64_t                 stream_dispatcher_id;
-    bool                     connection_established;
-    bool                     grant_initial_buffers;
     qdr_http2_stream_data_t *initial_stream;
     char                     *reply_to;
     nghttp2_data_provider    data_prd;
-};
+    bool                     connection_established;
+    bool                     grant_initial_buffers;
+    bool                     ingress;
+ };
 
 ALLOC_DECLARE(qdr_http2_session_data_t);
 ALLOC_DECLARE(qdr_http2_stream_data_t);
