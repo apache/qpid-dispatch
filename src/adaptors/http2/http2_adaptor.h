@@ -24,6 +24,10 @@
 #include <qpid/dispatch/ctools.h>
 #include <qpid/dispatch/log.h>
 #include <nghttp2/nghttp2.h>
+#include <qpid/dispatch/protocol_adaptor.h>
+
+#include "server_private.h"
+#include "adaptors/http_common.h"
 
 
 // We already have a qd_http_listener_t defined in http-libwebsockets.c
@@ -32,11 +36,11 @@
 // and get rid of http-libwebsockets.c and rename this as qd_http_listener_t
 typedef struct qdr_http2_session_data_t qdr_http2_session_data_t;
 typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
-typedef struct qdr_http_connection_t    qdr_http_connection_t;
+typedef struct qdr_http2_connection_t    qdr_http2_connection_t;
 DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
 
 struct qdr_http2_session_data_t {
-    qdr_http_connection_t       *conn;       // Connection associated with the session_data
+    qdr_http2_connection_t       *conn;       // Connection associated with the session_data
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
     qd_http2_stream_data_list_t  streams;    // A session can have many streams.
     qd_buffer_list_t             buffs;      // Buffers for writing
@@ -63,11 +67,12 @@ struct qdr_http2_stream_data_t {
     int                            body_data_buff_count;
     int32_t                        stream_id;
 
-    bool                     entire_header_arrived; // true if all the headershave arrived, just before the start of the data frame or just before the END_STREAM.
+    bool                     entire_header_arrived;
     bool                     header_sent;
+    bool                     steam_closed;
 };
 
-struct qdr_http_connection_t {
+struct qdr_http2_connection_t {
     qd_handler_context_t     context;
     qdr_connection_t        *qdr_conn;
     pn_raw_connection_t     *pn_raw_conn;
