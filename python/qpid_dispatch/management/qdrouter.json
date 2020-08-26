@@ -1112,10 +1112,10 @@
                 "protocolVersion": {
                     "description": "The version of the HTTP protocol supported by this listener.",
                     "type": [
-                        "HTTP/1.x",
-                        "HTTP/2.0"
+                        "HTTP1",
+                        "HTTP2"
                     ],
-                    "default": "HTTP/1.x",
+                    "default": "HTTP1",
                     "required": false,
                     "create": true
                 }
@@ -1146,10 +1146,10 @@
                 "protocolVersion": {
                     "description": "The version of the HTTP protocol supported by this connector.",
                     "type": [
-                        "HTTP/1.x",
-                        "HTTP/2.0"
+                        "HTTP1",
+                        "HTTP2"
                     ],
-                    "default": "HTTP/1.x",
+                    "default": "HTTP1",
                     "required": false,
                     "create": true
                 }
