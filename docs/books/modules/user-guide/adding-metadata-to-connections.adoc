@@ -45,6 +45,7 @@ connector {
    saslMechanisms: ANONYMOUS
    openProperties: {
       "label": "green"
+   }
 }
 ----
 
