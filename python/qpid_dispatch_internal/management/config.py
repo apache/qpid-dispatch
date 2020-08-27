@@ -318,7 +318,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     agent.policy.set_use_hostname_patterns(useHostnamePatterns)
     agent.policy.set_max_message_size(maxMessageSize)
 
-    # Configure types that may be duplicated many times
+    # Configure a block of types
     for t in "sslProfile", "authServicePlugin", \
              "router.config.address", "router.config.linkRoute", "router.config.autoLink", \
              "router.config.exchange", "router.config.binding", \
@@ -331,9 +331,9 @@ def configure_dispatch(dispatch, lib_handle, filename):
                     ssl_profile_name = a.get('name')
                     displayname_service.add(ssl_profile_name, display_file_name)
 
-    # Configure remaining singleton types
+    # Configure remaining types except for connector and listener
     for e in config.entities:
-        if not e['type'] == 'org.apache.qpid.dispatch.listener':
+        if not e['type'] in ['org.apache.qpid.dispatch.connector', 'org.apache.qpid.dispatch.listener']:
             configure(e)
 
     # Load the vhosts from the .json files in policyDir
@@ -346,8 +346,9 @@ def configure_dispatch(dispatch, lib_handle, filename):
                 for a in pconfig.by_type("vhost"):
                     agent.configure(a)
 
-    # Configuring connectors and listeners last so that no user payload is
-    # processed until the rest of the configuration has been established.
+    # Static configuration is loaded except for connectors and listeners.
+    # Configuring connectors and listeners last starts inter-router and user messages
+    # when the router is in a known and repeatable initial configuration state.
     for t in "connector", "listener":
         for a in config.by_type(t):
             configure(a)
