@@ -433,17 +433,36 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
 
 static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, const qd_server_config_t *config)
 {
-    size_t clen = strlen(QD_CAPABILITY_ANONYMOUS_RELAY);
-
     //
     // Set the container name
     //
     pn_connection_set_container(conn, qd_server->container_name);
 
     //
-    // Offer ANONYMOUS_RELAY capability
+    // Advertise our container capabilities.
     //
-    pn_data_put_symbol(pn_connection_offered_capabilities(conn), pn_bytes(clen, (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+    {
+        // offered: extension capabilities this router supports
+        pn_data_t *ocaps = pn_connection_offered_capabilities(conn);
+        pn_data_put_array(ocaps, false, PN_SYMBOL);
+        pn_data_enter(ocaps);
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_ANONYMOUS_RELAY), (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_STREAMING_LINKS), (char*) QD_CAPABILITY_STREAMING_LINKS));
+        pn_data_exit(ocaps);
+
+        // The desired-capability list defines which extension capabilities the
+        // sender MAY use if the receiver offers them (i.e., they are in the
+        // offered-capabilities list received by the sender of the
+        // desired-capabilities). The sender MUST NOT attempt to use any
+        // capabilities it did not declare in the desired-capabilities
+        // field.
+        ocaps = pn_connection_desired_capabilities(conn);
+        pn_data_put_array(ocaps, false, PN_SYMBOL);
+        pn_data_enter(ocaps);
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_ANONYMOUS_RELAY), (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_STREAMING_LINKS), (char*) QD_CAPABILITY_STREAMING_LINKS));
+        pn_data_exit(ocaps);
+    }
 
     //
     // Create the connection properties map

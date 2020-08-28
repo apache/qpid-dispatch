@@ -163,7 +163,8 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
                                            bool             ssl,
-                                           const qdr_router_version_t *version)
+                                           const char      *version,
+                                           bool             streaming_links)
 {
     qdr_connection_info_t *connection_info = new_qdr_connection_info_t();
     ZERO(connection_info);
@@ -184,6 +185,8 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
         connection_info->ssl_cipher = strdup(ssl_cipher);
     if (user)
         connection_info->user = strdup(user);
+    if (version)
+        connection_info->version = strdup(version);
 
     pn_data_t *qdr_conn_properties = pn_data(0);
     pn_data_copy(qdr_conn_properties, connection_properties);
@@ -191,11 +194,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
     connection_info->connection_properties = qdr_conn_properties;
     connection_info->ssl_ssf = ssl_ssf;
     connection_info->ssl     = ssl;
-
-    if (version) {  // only if peer is a router
-        connection_info->version = *version;
-    }
-
+    connection_info->streaming_links = streaming_links;
     return connection_info;
 }
 
@@ -208,6 +207,7 @@ static void qdr_connection_info_free(qdr_connection_info_t *ci)
     free(ci->ssl_proto);
     free(ci->ssl_cipher);
     free(ci->user);
+    free(ci->version);
     pn_data_free(ci->connection_properties);
     free_qdr_connection_info_t(ci);
 }

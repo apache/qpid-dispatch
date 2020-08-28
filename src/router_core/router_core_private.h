@@ -623,18 +623,19 @@ struct qdr_connection_info_t {
     char                       *container;
     char                       *sasl_mechanisms;
     char                       *host;
-    bool                        is_encrypted;
     char                       *ssl_proto;
     char                       *ssl_cipher;
     char                       *user;
     bool                        is_authenticated;
+    bool                        is_encrypted;
     bool                        opened;
+    bool                        streaming_links;  // will allow streaming links
     qd_direction_t              dir;
     qdr_connection_role_t       role;
     pn_data_t                  *connection_properties;
     bool                        ssl;
     int                         ssl_ssf; //ssl strength factor
-    qdr_router_version_t        version; // if role is router or edge
+    char                       *version; // if role is router or edge
 };
 
 ALLOC_DECLARE(qdr_connection_info_t);

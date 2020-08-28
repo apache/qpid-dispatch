@@ -29,7 +29,7 @@ from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from proton import VERSION as PROTON_VERSION
 from proton import Terminus
-from proton import Data
+from proton import Data, symbol
 from qpid_dispatch.management.client import Node, BadRequestStatus
 import os, json
 from subprocess import PIPE, STDOUT
@@ -734,6 +734,31 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_50_extension_capabilities(self):
+        """
+        Test clients sending different offered capability values.  Verify the
+        expected offered and desired capabilities sent by the router
+        """
+        client_caps = [symbol("single"),
+                       ["A", "B", "C"],
+                       [9, 10, 11],
+                       [],
+                       None]
+
+        for cc in client_caps:
+            test = ExtensionCapabilitiesTest(self.address, cc)
+            test.run()
+            self.assertEqual(None, test.error)
+
+            # check the caps sent by router.
+            self.assertTrue(test.remote_offered is not None)
+            self.assertTrue(test.remote_desired is not None)
+            ro = [c for c in test.remote_offered]
+            rd = [c for c in test.remote_desired]
+            for rc in [ro, rd]:
+                self.assertTrue(symbol('ANONYMOUS-RELAY') in rc)
+                self.assertTrue(symbol('qd.streaming-links') in rc)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -786,6 +811,41 @@ class ReleasedChecker(object):
 
     def on_timer_task(self, event):
         self.parent.released_check_timeout()
+
+
+class ExtensionCapabilitiesTest(MessagingHandler):
+    def __init__(self, address, capabilities):
+        """
+        capabilities: sent by this client to the router
+        """
+        super(ExtensionCapabilitiesTest, self).__init__()
+        self._addr = address
+        self._caps = capabilities
+        self._timer = None
+        self._conn = None
+        self.remote_offered = None
+        self.remote_desired = None
+        self.error = None
+
+    def on_start(self, event):
+        self._timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self._conn = event.container.connect(self._addr,
+                                             offered_capabilities=self._caps,
+                                             desired_capabilities=self._caps)
+    def timeout(self):
+        self.error = "Timeout Expired: connection failed"
+        if self._conn:
+            self._conn.close()
+
+    def on_connection_opened(self, event):
+        self.remote_offered = event.connection.remote_offered_capabilities
+        self.remote_desired = event.connection.remote_desired_capabilities
+        self._timer.cancel()
+        self._conn.close()
+
+    def run(self):
+        Container(self).run()
+
 
 class UnexpectedReleaseTest(MessagingHandler):
     def __init__(self, address):

@@ -67,7 +67,6 @@ int main(int argc, char** argv)
     result += parse_tree_tests();
     result += proton_utils_tests();
     result += core_timer_tests();
-    result += version_tests();
     result += hash_tests();
     result += thread_tests();
 
