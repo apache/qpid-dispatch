@@ -70,6 +70,7 @@ struct qdr_http2_stream_data_t {
     bool                     entire_header_arrived;
     bool                     header_sent;
     bool                     steam_closed;
+    bool                     processing;
 };
 
 struct qdr_http2_connection_t {
