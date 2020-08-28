@@ -49,6 +49,7 @@ const char * const QD_CAPABILITY_WAYPOINT8        = "qd.waypoint.8";
 const char * const QD_CAPABILITY_WAYPOINT9        = "qd.waypoint.9";
 const char * const QD_CAPABILITY_FALLBACK         = "qd.fallback";
 const char * const QD_CAPABILITY_ANONYMOUS_RELAY  = "ANONYMOUS-RELAY";
+const char * const QD_CAPABILITY_STREAMING_LINKS  = "qd.streaming-links";
 
 const char * const QD_DYNAMIC_NODE_PROPERTY_ADDRESS = "x-opt-qd.address";
 

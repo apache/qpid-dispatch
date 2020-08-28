@@ -1050,9 +1050,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     int                    link_capacity = 1;
     const char            *name = 0;
     bool                   multi_tenant = false;
+    bool                   streaming_links = false;
     const char            *vhost = 0;
-    qdr_router_version_t   rversion = {0};
-    bool                   rversion_found = false;
+    char                   rversion[128];
     uint64_t               connection_id = qd_connection_connection_id(conn);
     pn_connection_t       *pn_conn = qd_connection_pn(conn);
     pn_transport_t *tport = 0;
@@ -1061,6 +1061,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
     const char     *mech  = 0;
     const char     *user  = 0;
     const char *container = conn->pn_conn ? pn_connection_remote_container(conn->pn_conn) : 0;
+
+    rversion[0] = 0;
     conn->strip_annotations_in  = false;
     conn->strip_annotations_out = false;
     if (conn->pn_conn) {
@@ -1092,6 +1094,27 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 
     qd_router_connection_get_config(conn, &role, &cost, &name, &multi_tenant,
                                     &conn->strip_annotations_in, &conn->strip_annotations_out, &link_capacity);
+
+    // check offered capabilities for streaming link support
+    //
+    pn_data_t *ocaps = pn_connection_remote_offered_capabilities(pn_conn);
+    if (ocaps) {
+        size_t sl_len = strlen(QD_CAPABILITY_STREAMING_LINKS);
+        pn_data_rewind(ocaps);
+        if (pn_data_next(ocaps)) {
+            if (pn_data_type(ocaps) == PN_ARRAY) {
+                pn_data_enter(ocaps);
+                pn_data_next(ocaps);
+            }
+            do {
+                if (pn_data_type(ocaps) == PN_SYMBOL) {
+                    pn_bytes_t s = pn_data_get_symbol(ocaps);
+                    streaming_links = (s.size == sl_len
+                                       && strncmp(s.start, QD_CAPABILITY_STREAMING_LINKS, sl_len) == 0);
+                }
+            } while (pn_data_next(ocaps) && !streaming_links);
+        }
+    }
 
     // if connection properties are present parse out any important data
     //
@@ -1132,23 +1155,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                     if (!pn_data_next(props)) break;
                     if (is_router) {
                         pn_bytes_t vdata = pn_data_get_string(props);
-                        if (vdata.size < 64) {  // > strlen("u16.u16.u16-SNAPSHOT")
-                            char vstr[64];
-                            memcpy(vstr, vdata.start, vdata.size);
-                            vstr[vdata.size] = 0;
-                            int rc = sscanf(vstr, "%"SCNu16".%"SCNu16".%"SCNu16,
-                                            &rversion.major,
-                                            &rversion.minor,
-                                            &rversion.patch);
-                            if (strstr(vstr, "SNAPSHOT")) {
-                                rversion.flags = QDR_ROUTER_VERSION_SNAPSHOT;
-                            }
-                            rversion_found = rc == 3;
-                            if (rversion_found) {
-                                qd_log(router->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Peer router version: %u.%u.%u%s",
-                                       connection_id, rversion.major, rversion.minor, rversion.patch, (rversion.flags) ? "-SNAPSHOT" : "");
-                            }
-                        }
+                        size_t vlen = MIN(sizeof(rversion) - 1, vdata.size);
+                        strncpy(rversion, vdata.start, vlen);
+                        rversion[vlen] = 0;
                     }
 
                 } else {
@@ -1197,7 +1206,8 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                                                                  props,
                                                                  ssl_ssf,
                                                                  is_ssl,
-                                                                 (rversion_found) ? &rversion : 0);
+                                                                 rversion,
+                                                                 streaming_links);
 
     qdr_connection_opened(router->router_core, inbound, role, cost, connection_id, name,
                           pn_connection_remote_container(pn_conn),

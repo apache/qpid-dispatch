@@ -128,6 +128,7 @@ extern const int          QD_MA_FILTER_LEN;   ///< size of annotation filter buf
 /** @name Container Capabilities */
 /// @{
 extern const char * const QD_CAPABILITY_ANONYMOUS_RELAY;
+extern const char * const QD_CAPABILITY_STREAMING_LINKS;
 /// @}
 
 /** @name Link Terminus Capabilities */

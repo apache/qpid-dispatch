@@ -66,20 +66,6 @@ static inline qdr_link_t *peer_router_data_link(qdr_core_t *core,
 }
 
 
-// Returns true if the peer router can support this router opening additional incoming links dedicated for streaming messages
-//
-static inline bool next_hop_supports_streaming_links(const qdr_connection_t *conn)
-{
-    if (conn->role == QDR_ROLE_EDGE_CONNECTION)
-        return true;
-    if (conn->role == QDR_ROLE_INTER_ROUTER) {
-        return QDR_ROUTER_VERSION_AT_LEAST(conn->connection_info->version,
-                                           1, 13, 0);
-    }
-    return false;
-}
-
-
 // Get an idle anonymous link for a streaming message. This link will come from
 // either the connections free link pool or it will be dynamically created on
 // the given connection.
@@ -431,7 +417,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
             //
             if (!qdr_forward_edge_echo_CT(in_delivery, out_link)) {
 
-                if (!receive_complete && next_hop_supports_streaming_links(out_link->conn)) {
+                if (!receive_complete && out_link->conn->connection_info->streaming_links) {
                     out_link = get_outgoing_streaming_link(core, out_link->conn);
                 }
 
@@ -620,7 +606,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     if (link_ref) {
         qdr_link_t *out_link = link_ref->link;
 
-        if (!receive_complete && next_hop_supports_streaming_links(out_link->conn)) {
+        if (!receive_complete && out_link->conn->connection_info->streaming_links) {
             out_link = get_outgoing_streaming_link(core, out_link->conn);
         }
 
@@ -844,7 +830,7 @@ int qdr_forward_balanced_CT(qdr_core_t      *core,
 
         // DISPATCH-1545 (head of line blocking): if the message is streaming,
         // see if the allows us to open a dedicated link for streaming
-        if (!qd_message_receive_complete(msg) && next_hop_supports_streaming_links(chosen_link->conn)) {
+        if (!qd_message_receive_complete(msg) && chosen_link->conn->connection_info->streaming_links) {
             chosen_link = get_outgoing_streaming_link(core, chosen_link->conn);
             if (!chosen_link)
                 return 0;

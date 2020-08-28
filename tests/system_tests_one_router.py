@@ -29,7 +29,7 @@ from proton.reactor import Container, AtMostOnce, AtLeastOnce
 from proton.utils import BlockingConnection, SyncRequestResponse
 from proton import VERSION as PROTON_VERSION
 from proton import Terminus
-from proton import Data
+from proton import Data, symbol
 from qpid_dispatch.management.client import Node, BadRequestStatus
 import os, json
 from subprocess import PIPE, STDOUT
@@ -734,6 +734,29 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
+    def test_50_offered_capabilities(self):
+        """
+        Test different offered capability values.
+        Verify the expected capabilities from the router
+        """
+        test = OfferedCapabilitiesTest(self.address, symbol("single"))
+        test.run()
+        self.assertEqual(None, test.error)
+        self.assertTrue(test.remote_capabilities is not None)
+        rc = [c for c in test.remote_capabilities]
+        self.assertTrue(symbol('ANONYMOUS-RELAY') in rc)
+        self.assertTrue(symbol('qd.streaming-links') in rc)
+
+        array = ["A", "B", "C"]
+        test = OfferedCapabilitiesTest(self.address, array)
+        test.run()
+        self.assertEqual(None, test.error)
+
+        array = [9, 10, 11]
+        test = OfferedCapabilitiesTest(self.address, array)
+        test.run()
+        self.assertEqual(None, test.error)
+
 
 class Entity(object):
     def __init__(self, status_code, status_description, attrs):
@@ -786,6 +809,28 @@ class ReleasedChecker(object):
 
     def on_timer_task(self, event):
         self.parent.released_check_timeout()
+
+
+class OfferedCapabilitiesTest(MessagingHandler):
+    def __init__(self, address, capabilities):
+        super(OfferedCapabilitiesTest, self).__init__()
+        self._addr = address
+        self._caps = capabilities
+        self.remote_capabilities = None
+        self.error = None
+
+    def on_start(self, event):
+        from proton import symbol
+        self._conn = event.container.connect(self._addr,
+                                             offered_capabilities=self._caps)
+
+    def on_connection_opened(self, event):
+        self.remote_capabilities = event.connection.remote_offered_capabilities
+        event.connection.close()
+
+    def run(self):
+        Container(self).run()
+
 
 class UnexpectedReleaseTest(MessagingHandler):
     def __init__(self, address):
