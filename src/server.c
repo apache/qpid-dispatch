@@ -439,10 +439,24 @@ static void decorate_connection(qd_server_t *qd_server, pn_connection_t *conn, c
     pn_connection_set_container(conn, qd_server->container_name);
 
     //
-    // Advertise our container capabilities
+    // Advertise our container capabilities.
     //
     {
+        // offered: extension capabilities this router supports
         pn_data_t *ocaps = pn_connection_offered_capabilities(conn);
+        pn_data_put_array(ocaps, false, PN_SYMBOL);
+        pn_data_enter(ocaps);
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_ANONYMOUS_RELAY), (char*) QD_CAPABILITY_ANONYMOUS_RELAY));
+        pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_STREAMING_LINKS), (char*) QD_CAPABILITY_STREAMING_LINKS));
+        pn_data_exit(ocaps);
+
+        // The desired-capability list defines which extension capabilities the
+        // sender MAY use if the receiver offers them (i.e., they are in the
+        // offered-capabilities list received by the sender of the
+        // desired-capabilities). The sender MUST NOT attempt to use any
+        // capabilities it did not declare in the desired-capabilities
+        // field.
+        ocaps = pn_connection_desired_capabilities(conn);
         pn_data_put_array(ocaps, false, PN_SYMBOL);
         pn_data_enter(ocaps);
         pn_data_put_symbol(ocaps, pn_bytes(strlen(QD_CAPABILITY_ANONYMOUS_RELAY), (char*) QD_CAPABILITY_ANONYMOUS_RELAY));

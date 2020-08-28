@@ -734,26 +734,32 @@ class OneRouterTest(TestCase):
         test.run()
         self.assertEqual(None, test.error)
 
-    def test_50_offered_capabilities(self):
+    def test_50_extension_capabilities(self):
         """
-        Test different offered capability values.
-        Verify the expected capabilities from the router
+        Test clients sending different offered capability values.  Verify the
+        expected offered and desired capabilities sent by the router
         """
-        test = OfferedCapabilitiesTest(self.address, symbol("single"))
+        test = ExtensionCapabilitiesTest(self.address, symbol("single"))
         test.run()
         self.assertEqual(None, test.error)
-        self.assertTrue(test.remote_capabilities is not None)
-        rc = [c for c in test.remote_capabilities]
-        self.assertTrue(symbol('ANONYMOUS-RELAY') in rc)
-        self.assertTrue(symbol('qd.streaming-links') in rc)
+
+        # check the caps sent by router. since these are constant we only need
+        # to check them once in this test
+        self.assertTrue(test.remote_offered is not None)
+        self.assertTrue(test.remote_desired is not None)
+        ro = [c for c in test.remote_offered]
+        rd = [c for c in test.remote_desired]
+        for rc in [ro, rd]:
+            self.assertTrue(symbol('ANONYMOUS-RELAY') in rc)
+            self.assertTrue(symbol('qd.streaming-links') in rc)
 
         array = ["A", "B", "C"]
-        test = OfferedCapabilitiesTest(self.address, array)
+        test =  ExtensionCapabilitiesTest(self.address, array)
         test.run()
         self.assertEqual(None, test.error)
 
         array = [9, 10, 11]
-        test = OfferedCapabilitiesTest(self.address, array)
+        test =  ExtensionCapabilitiesTest(self.address, array)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -811,22 +817,35 @@ class ReleasedChecker(object):
         self.parent.released_check_timeout()
 
 
-class OfferedCapabilitiesTest(MessagingHandler):
+class ExtensionCapabilitiesTest(MessagingHandler):
     def __init__(self, address, capabilities):
-        super(OfferedCapabilitiesTest, self).__init__()
+        """
+        capabilities: sent by this client to the router
+        """
+        super(ExtensionCapabilitiesTest, self).__init__()
         self._addr = address
         self._caps = capabilities
-        self.remote_capabilities = None
+        self._timer = None
+        self._conn = None
+        self.remote_offered = None
+        self.remote_desired = None
         self.error = None
 
     def on_start(self, event):
-        from proton import symbol
+        self._timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self._conn = event.container.connect(self._addr,
-                                             offered_capabilities=self._caps)
+                                             offered_capabilities=self._caps,
+                                             desired_capabilities=self._caps)
+    def timeout(self):
+        self.error = "Timeout Expired: connection failed"
+        if self._conn:
+            self._conn.close()
 
     def on_connection_opened(self, event):
-        self.remote_capabilities = event.connection.remote_offered_capabilities
-        event.connection.close()
+        self.remote_offered = event.connection.remote_offered_capabilities
+        self.remote_desired = event.connection.remote_desired_capabilities
+        self._timer.cancel()
+        self._conn.close()
 
     def run(self):
         Container(self).run()
