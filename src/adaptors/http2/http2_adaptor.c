@@ -143,10 +143,11 @@ qd_composed_field_t  *qd_message_compose_amqp(qd_message_t *msg,
 static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data)
 {
     qdr_http2_session_data_t *session_data = stream_data->session_data;
+    qdr_http2_connection_t *conn = session_data->conn;
     stream_data->session_data = 0;
-    if (stream_data->in_link)
+    if (conn->qdr_conn && stream_data->in_link)
         qdr_link_detach(stream_data->in_link, QD_CLOSED, 0);
-    if (stream_data->out_link)
+    if (conn->qdr_conn && stream_data->out_link)
         qdr_link_detach(stream_data->out_link, QD_CLOSED, 0);
     free(stream_data->reply_to);
     qd_compose_free(stream_data->app_properties);
@@ -1017,6 +1018,9 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
 
             nghttp2_session_send(session_data->session);
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Headers submitted", conn->conn_id, stream_data->stream_id);
+
+            qd_iterator_free(app_properties_iter);
+            qd_parse_free(app_properties_fld);
         }
         else {
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Headers already submitted, Proceeding with the body", conn->conn_id, stream_data->stream_id);
