@@ -53,8 +53,6 @@ Note the following restrictions on the JSON entries:
  
 * ASCII characters only for keys
 * The following keys are not allowed:
-** qd.*
-** x-opt-qd.*
 ** product
 ** version
 ** failover-server-list
@@ -62,6 +60,8 @@ Note the following restrictions on the JSON entries:
 ** port
 ** scheme
 ** hostname
+** any key starting with `qd.`
+** any key starting with `x-opt-qd.`
 
 The `openProperties` attribute can only be set for a connector with a `normal` or `route-container` role. 
 You cannot set the attribute for connectors that have the following settings:
