@@ -39,7 +39,6 @@ struct qd_config_ssl_profile_t {
     char        *name;
     char        *ssl_password;
     char        *ssl_trusted_certificate_db;
-    char        *ssl_trusted_certificates;
     char        *ssl_uid_format;
     char        *uid_name_mapping_file;
     char        *ssl_certificate_file;
@@ -180,7 +179,6 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->ssl_protocols)              free(cf->ssl_protocols);
     if (cf->ssl_password)               free(cf->ssl_password);
     if (cf->ssl_trusted_certificate_db) free(cf->ssl_trusted_certificate_db);
-    if (cf->ssl_trusted_certificates)   free(cf->ssl_trusted_certificates);
     if (cf->ssl_uid_format)             free(cf->ssl_uid_format);
     if (cf->ssl_uid_name_mapping_file)  free(cf->ssl_uid_name_mapping_file);
 
@@ -192,7 +190,6 @@ void qd_server_config_free(qd_server_config_t *cf)
     if (cf->sasl_plugin_config.ssl_protocols)              free(cf->sasl_plugin_config.ssl_protocols);
     if (cf->sasl_plugin_config.ssl_password)               free(cf->sasl_plugin_config.ssl_password);
     if (cf->sasl_plugin_config.ssl_trusted_certificate_db) free(cf->sasl_plugin_config.ssl_trusted_certificate_db);
-    if (cf->sasl_plugin_config.ssl_trusted_certificates)   free(cf->sasl_plugin_config.ssl_trusted_certificates);
     if (cf->sasl_plugin_config.ssl_uid_format)             free(cf->sasl_plugin_config.ssl_uid_format);
     if (cf->sasl_plugin_config.ssl_uid_name_mapping_file)  free(cf->sasl_plugin_config.ssl_uid_name_mapping_file);
 
@@ -395,6 +392,13 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->multi_tenant         = qd_entity_opt_bool(entity, "multiTenant", false);  CHECK();
     config->policy_vhost         = qd_entity_opt_string(entity, "policyVhost", 0);    CHECK();
     config->conn_props           = qd_entity_opt_map(entity, "openProperties");       CHECK();
+
+    const char *unused           = qd_entity_opt_string(entity, "trustedCertsFile", 0);
+    if (unused) {
+        qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
+               "Configuration listener attribute 'trustedCertsFile' is not used. Specify sslProfile caCertFile instead.");
+    }
+
     set_config_host(config, entity);
 
     if (config->sasl_password) {
@@ -485,7 +489,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             config->ssl_protocols = SSTRDUP(ssl_profile->ssl_protocols);
             config->ssl_password = SSTRDUP(ssl_profile->ssl_password);
             config->ssl_trusted_certificate_db = SSTRDUP(ssl_profile->ssl_trusted_certificate_db);
-            config->ssl_trusted_certificates = SSTRDUP(ssl_profile->ssl_trusted_certificates);
             config->ssl_uid_format = SSTRDUP(ssl_profile->ssl_uid_format);
             config->ssl_uid_name_mapping_file = SSTRDUP(ssl_profile->uid_name_mapping_file);
         }
@@ -510,7 +513,6 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
                 config->sasl_plugin_config.ssl_protocols = SSTRDUP(auth_ssl_profile->ssl_protocols);
                 config->sasl_plugin_config.ssl_password = SSTRDUP(auth_ssl_profile->ssl_password);
                 config->sasl_plugin_config.ssl_trusted_certificate_db = SSTRDUP(auth_ssl_profile->ssl_trusted_certificate_db);
-                config->sasl_plugin_config.ssl_trusted_certificates = SSTRDUP(auth_ssl_profile->ssl_trusted_certificates);
                 config->sasl_plugin_config.ssl_uid_format = SSTRDUP(auth_ssl_profile->ssl_uid_format);
                 config->sasl_plugin_config.ssl_uid_name_mapping_file = SSTRDUP(auth_ssl_profile->uid_name_mapping_file);
             } else {
@@ -550,7 +552,6 @@ static bool config_ssl_profile_free(qd_connection_manager_t *cm, qd_config_ssl_p
     free(ssl_profile->name);
     free(ssl_profile->ssl_password);
     free(ssl_profile->ssl_trusted_certificate_db);
-    free(ssl_profile->ssl_trusted_certificates);
     free(ssl_profile->ssl_uid_format);
     free(ssl_profile->uid_name_mapping_file);
     free(ssl_profile->ssl_certificate_file);
@@ -622,7 +623,6 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
     ssl_profile->ssl_protocols = qd_entity_opt_string(entity, "protocols", 0);                 CHECK();
     ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "caCertFile", 0);   CHECK();
-    ssl_profile->ssl_trusted_certificates   = qd_entity_opt_string(entity, "trustedCertsFile", 0);   CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0);          CHECK();
     ssl_profile->uid_name_mapping_file      = qd_entity_opt_string(entity, "uidNameMappingFile", 0); CHECK();
 

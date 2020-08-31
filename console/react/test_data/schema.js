@@ -897,11 +897,6 @@ export default {
           description:
             "yes: Require the connection to the peer to be encrypted; no: Permit non-encrypted communication with the peer"
         },
-        trustedCertsFile: {
-          type: "path",
-          description:
-            "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide the absolute path to a PEM file that contains the trusted certificates."
-        },
         role: {
           default: "normal",
           type: ["normal", "inter-router", "route-container", "edge"],
