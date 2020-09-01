@@ -114,7 +114,7 @@ typedef struct stats_t {
 
 /* Navigating from WSI pointer to qd objects */
 static qd_http_server_t *wsi_server(struct lws *wsi);
-static qd_http_listener_t *wsi_listener(struct lws *wsi);
+static qd_lws_listener_t *wsi_listener(struct lws *wsi);
 static qd_log_source_t *wsi_log(struct lws *wsi);
 
 
@@ -260,8 +260,8 @@ static work_t work_pop(qd_http_server_t *hs) {
     return w;
 }
 
-/* Each qd_http_listener_t is associated with an lws_vhost */
-struct qd_http_listener_t {
+/* Each qd_lws_listener_t is associated with an lws_vhost */
+struct qd_lws_listener_t {
     qd_listener_t *listener;
     qd_http_server_t *server;
     struct lws_vhost *vhost;
@@ -270,7 +270,7 @@ struct qd_http_listener_t {
     struct lws_http_mount healthz;
 };
 
-void qd_http_listener_free(qd_http_listener_t *hl) {
+void qd_lws_listener_free(qd_lws_listener_t *hl) {
     if (!hl) return;
     if (hl->listener) {
         hl->listener->http = NULL;
@@ -279,8 +279,8 @@ void qd_http_listener_free(qd_http_listener_t *hl) {
     free(hl);
 }
 
-static qd_http_listener_t *qd_http_listener(qd_http_server_t *hs, qd_listener_t *li) {
-    qd_http_listener_t *hl = calloc(1, sizeof(*hl));
+static qd_lws_listener_t *qd_lws_listener(qd_http_server_t *hs, qd_listener_t *li) {
+    qd_lws_listener_t *hl = calloc(1, sizeof(*hl));
     if (hl) {
         hl->server = hs;
         hl->listener = li;
@@ -302,7 +302,7 @@ static const struct lws_protocol_vhost_options mime_types[] = {
     { NULL, NULL, "*", "application/octet-stream" }
 };
 
-static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
+static void listener_start(qd_lws_listener_t *hl, qd_http_server_t *hs) {
     log_init();                 /* Update log flags at each listener */
 
     qd_server_config_t *config = &hl->listener->config;
@@ -385,10 +385,10 @@ static void listener_start(qd_http_listener_t *hl, qd_http_server_t *hs) {
                config->host_port);
         exit(1);
     }
-    qd_http_listener_free(hl);
+    qd_lws_listener_free(hl);
 }
 
-static void listener_close(qd_http_listener_t *hl, qd_http_server_t *hs) {
+static void listener_close(qd_lws_listener_t *hl, qd_http_server_t *hs) {
     qd_server_config_t *config = &hl->listener->config;
     qd_log(hs->log, QD_LOG_NOTICE, "Stopped listening for HTTP on %s", config->host_port);
     lws_vhost_destroy(hl->vhost);
@@ -403,7 +403,7 @@ static int callback_http(struct lws *wsi, enum lws_callback_reasons reason,
 {
     switch (reason) {
     case LWS_CALLBACK_PROTOCOL_DESTROY:
-        qd_http_listener_free(wsi_listener(wsi));
+        qd_lws_listener_free(wsi_listener(wsi));
         break;
       default:
         break;
@@ -669,7 +669,7 @@ static int callback_amqpws(struct lws *wsi, enum lws_callback_reasons reason,
         /* Upgrade accepted HTTP connection to AMQPWS */
         memset(c, 0, sizeof(*c));
         c->wsi = wsi;
-        qd_http_listener_t *hl = wsi_listener(wsi);
+        qd_lws_listener_t *hl = wsi_listener(wsi);
         if (hl == NULL || !hl->listener->config.websockets) {
             return unexpected_close(c->wsi, "cannot-upgrade");
         }
@@ -784,10 +784,10 @@ static void* http_thread_run(void* v) {
                 result = -1;
                 break;
             case W_LISTEN:
-                listener_start((qd_http_listener_t*)w.value, hs);
+                listener_start((qd_lws_listener_t*)w.value, hs);
                 break;
             case W_CLOSE:
-                listener_close((qd_http_listener_t*)w.value, hs);
+                listener_close((qd_lws_listener_t*)w.value, hs);
                 break;
             case W_HANDLE_STATS:
                 handle_stats_result_HT((stats_request_state_t*) w.value);
@@ -856,7 +856,7 @@ qd_http_server_t *qd_http_server(qd_server_t *s, qd_log_source_t *log) {
 
 /* Thread safe calls that put items on work queue */
 
-qd_http_listener_t *qd_http_server_listen(qd_http_server_t *hs, qd_listener_t *li)
+qd_lws_listener_t *qd_http_server_listen(qd_http_server_t *hs, qd_listener_t *li)
 {
     hs->core = qd_dispatch_router_core(qd_server_dispatch(hs->server));
     sys_mutex_lock(hs->work.lock);
@@ -867,7 +867,7 @@ qd_http_listener_t *qd_http_server_listen(qd_http_server_t *hs, qd_listener_t *l
     sys_mutex_unlock(hs->work.lock);
     if (!ok) return NULL;
 
-    qd_http_listener_t *hl = qd_http_listener(hs, li);
+    qd_lws_listener_t *hl = qd_lws_listener(hs, li);
     if (hl) {
         work_t w = { W_LISTEN, hl };
         work_push(hs, w);
@@ -875,7 +875,7 @@ qd_http_listener_t *qd_http_server_listen(qd_http_server_t *hs, qd_listener_t *l
     return hl;
 }
 
-void qd_http_listener_close(qd_http_listener_t *hl)
+void qd_lws_listener_close(qd_lws_listener_t *hl)
 {
     work_t w = { W_CLOSE, hl };
     work_push(hl->server, w);
@@ -885,10 +885,10 @@ static qd_http_server_t *wsi_server(struct lws *wsi) {
     return (qd_http_server_t*)lws_context_user(lws_get_context(wsi));
 }
 
-static qd_http_listener_t *wsi_listener(struct lws *wsi) {
-    qd_http_listener_t *hl = NULL;
+static qd_lws_listener_t *wsi_listener(struct lws *wsi) {
+    qd_lws_listener_t *hl = NULL;
     struct lws_vhost *vhost = lws_get_vhost(wsi);
-    if (vhost) {                /* Get qd_http_listener from vhost data */
+    if (vhost) {                /* Get qd_lws_listener from vhost data */
         void *vp = lws_protocol_vh_priv_get(vhost, &protocols[0]);
         memcpy(&hl, vp, sizeof(hl));
     }
