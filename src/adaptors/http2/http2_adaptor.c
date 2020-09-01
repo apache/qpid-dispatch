@@ -46,6 +46,7 @@ const char *CONTENT_ENCODING = "content-encoding";
 
 ALLOC_DEFINE(qdr_http2_session_data_t);
 ALLOC_DEFINE(qdr_http2_stream_data_t);
+ALLOC_DEFINE(qdr_http2_connection_t);
 
 typedef struct qdr_http_adaptor_t {
     qdr_core_t              *core;
@@ -202,10 +203,8 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn)
     }
 
     nghttp2_session_del(http_conn->session_data->session);
-    http_conn->session_data->session = 0;
     free_qdr_http2_session_data_t(http_conn->session_data);
-    http_conn->session_data = 0;
-    free(http_conn);
+    free_qdr_http2_connection_t(http_conn);
 }
 
 static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_t *session_data, int32_t stream_id)
@@ -216,6 +215,8 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     stream_data->stream_id = stream_id;
     stream_data->message = qd_message();
     stream_data->session_data = session_data;
+    stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
+    qd_compose_start_map(stream_data->app_properties);
     nghttp2_session_set_stream_user_data(session_data->session, stream_id, stream_data);
     DEQ_INSERT_TAIL(session_data->streams, stream_data);
     return stream_data;
@@ -332,10 +333,6 @@ static int on_begin_headers_callback(nghttp2_session *session,
             //
             // 2. dynamic receiver on which to receive back the response data for that stream.
             //
-
-            //
-            // TODO - Andrew was asking if the router could expose the function that generates a dynamic address.
-            //
             qdr_terminus_t *dynamic_source = qdr_terminus(0);
             qdr_terminus_set_dynamic(dynamic_source);
             stream_data->out_link = qdr_link_first_attach(conn->qdr_conn,
@@ -374,12 +371,6 @@ static int on_header_callback(nghttp2_session *session,
 
     switch (frame->hd.type) {
         case NGHTTP2_HEADERS: {
-            // Andrew next Monday
-            if (!stream_data->app_properties) {
-                stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
-                qd_compose_start_map(stream_data->app_properties);
-            }
-
             qd_compose_insert_string_n(stream_data->app_properties, (const char *)name, namelen);
             qd_compose_insert_string_n(stream_data->app_properties, (const char *)value, valuelen);
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 HEADER Incoming [%s=%s]", conn->conn_id, stream_data->stream_id, (char *)name, (char *)value);
@@ -409,6 +400,7 @@ static void compose_and_deliver(qdr_http2_stream_data_t *stream_data, qd_compose
         qd_message_compose_3(stream_data->message, header_and_prop, stream_data->app_properties, receive_complete);
     }
     qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"][L%"PRIu64"] Initiating qdr_link_deliver in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
+    // Andrew
     stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
     qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"][L%"PRIu64"] Routed delivery dlv:%lx", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
 
@@ -789,7 +781,7 @@ ssize_t read_callback(nghttp2_session *session,
 
 qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_lsnr_t* listener)
 {
-    qdr_http2_connection_t* ingress_http_conn = NEW(qdr_http2_connection_t);
+    qdr_http2_connection_t* ingress_http_conn = new_qdr_http2_connection_t();
     ZERO(ingress_http_conn);
     ingress_http_conn->ingress = true;
     ingress_http_conn->context.context = ingress_http_conn;
@@ -1382,7 +1374,6 @@ qd_http_lsnr_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bri
 {
     // TODO - Add lws in the qd_lws_listener.
     // TOOD - Separate commit.
-    // TODO - use http2 in function names
     qd_http_lsnr_t *li = qd_http_lsnr(qd->server, &handle_listener_event);
     if (!li) {
         qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create http listener: no memory");
@@ -1417,7 +1408,7 @@ static void on_activate(void *context)
 qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connector)
 {
     // TODO - Make this a pooled object.
-    qdr_http2_connection_t* egress_http_conn = NEW(qdr_http2_connection_t);
+    qdr_http2_connection_t* egress_http_conn = new_qdr_http2_connection_t();
     ZERO(egress_http_conn);
     egress_http_conn->activate_timer = qd_timer(http_adaptor->core->qd, on_activate, egress_http_conn);
 

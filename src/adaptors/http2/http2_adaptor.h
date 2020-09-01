@@ -98,5 +98,6 @@ struct qdr_http2_connection_t {
 
 ALLOC_DECLARE(qdr_http2_session_data_t);
 ALLOC_DECLARE(qdr_http2_stream_data_t);
+ALLOC_DECLARE(qdr_http2_connection_t);
 
 
