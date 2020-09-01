@@ -1612,7 +1612,7 @@ static bool qd_listener_listen_pn(qd_listener_t *li) {
 
 static bool qd_listener_listen_http(qd_listener_t *li) {
     if (li->server->http) {
-        /* qd_http_listener holds a reference to li, will decref when closed */
+        /* qd_lws_listener holds a reference to li, will decref when closed */
         qd_http_server_listen(li->server->http, li);
         return li->http;
     } else {
@@ -1736,7 +1736,7 @@ const qd_server_config_t *qd_connector_config(const qd_connector_t *c) {
     return &c->config;
 }
 
-qd_http_listener_t *qd_listener_http(qd_listener_t *li) {
+qd_lws_listener_t *qd_listener_http(qd_listener_t *li) {
     return li->http;
 }
 

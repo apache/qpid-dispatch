@@ -108,7 +108,7 @@ struct qd_listener_t {
     qd_server_t              *server;
     qd_server_config_t        config;
     pn_listener_t            *pn_listener;
-    qd_http_listener_t       *http;
+    qd_lws_listener_t        *http;
     DEQ_LINKS(qd_listener_t);
     bool                      exit_on_error;
 };
