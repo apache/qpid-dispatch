@@ -31,7 +31,7 @@ SYNOPSIS
 
 DESCRIPTION
 -----------
-An AMQP monitoring tool that shows status information about networks of Dispatch routers. It can display connections, network nodes and links, and router stats such as memory use.
+An AMQP monitoring tool that shows status information about networks of Dispatch routers. It can display connections, network nodes and links, policy, and router stats such as memory use.
 
 OPTIONS
 -------
@@ -411,6 +411,284 @@ The operational status of this auto link:
 
 lastErr::
 The description of the last attach failure that occurred on this auto link.
+
+qdstat --policy
+~~~~~~~~~~~~~~~
+
+Maximum Concurrent Connections::
+The maximum number of concurrent client connections allowed for this router.
+
+Maximum Message Size::
+The maximum size in bytes of AMQP message transfers allowed for this router. This limit is applied to transfers over user connections and to transfers to interior
+routers from edge routers.
+
+Enable Vhost Policy::
+Enables the router to enforce the connection denials and resource limits defined in the
+vhost policies.
+
+Enable Vhost Name Patterns::
+Enable vhost name patterns. When false vhost hostnames are treated as literal strings.
+When true vhost hostnames are treated as match patterns.
+
+Policy Directory::
+The absolute path to a directory that holds vhost policy definition files in JSON format (*.json).
+
+Default Vhost::
+The name of the default vhost policy. This policy rule set is applied to a connection for which a
+vhost policy has not otherwise been configured. Processing for the default vhost is enabled by
+default and set to select vhost '$default'. To disable default vhost processing set defaultVhost
+to blank or do not define a vhost named '$default'.
+
+Connections Processed::
+Count of all incoming connection attempts.
+
+Connections Denied::
+Count of all incoming connection attempts denied by policy.
+
+Connections Current::
+Count of currently active incoming connections.
+
+Links Denied::
+Count of all sender and receiver policy denials summed across all vhosts.
+
+Maximum Message Size Denied::
+Count of all maxMessageSize policy denials summed across all vhosts.
+
+Total Denials::
+Count of all policy denials for any reason summed across all vhosts.
+
+qdstat --vhosts
+~~~~~~~~~~~~~~~
+
+hostname::
+The hostname of the vhost. This vhost policy applies
+to any client connection that uses this hostname in the 'hostname' field of the incoming AMQP Open.
+
+maxConnections::
+The global maximum number of concurrent client connections allowed for this vhost.
+
+maxMessageSize::
+Optional maximum size in bytes of AMQP message transfers allowed for connections to this vhost.
+This limit overrides the policy maxMessageSize value and may be overridden by vhost user group
+settings. A value of zero disables this limit.
+
+maxConnectionsPerUser::
+The maximum number of concurrent client connections allowed for any user.
+
+maxConnectionsPerHost::
+The maximum number of concurrent client connections allowed for any remote host
+(the host from which the client is connecting).
+
+allowUnknownUser::
+Set to 'true' this allows 'unknown users', users who are not members of a defined user group, to
+connect to the vhost. Unknown users are assigned to the '$default' user group and receive
+'$default' settings.
+
+groups::
+Count of usergroups defined for this vhost.
+
+qdstat --vhoststats
+~~~~~~~~~~~~~~~~~~~
+
+Vhost Stats table
+
+hostname::
+Name of the vhost.
+
+connectionsApproved::
+Count of connections approved by policy for this vhost.
+
+connectionsDenied::
+Count of connections denied by policy for this vhost.
+
+connectionsCurrent::
+Count of active connections for this vhost.
+
+sessionDenied::
+Count of sessions denied by policy for this vhost.
+
+senderDenied::
+Count of senders denied by policy for this vhost.
+
+receiverDenied::
+Count of receivers denied by policy for this vhost.
+
+maxMessageSizeDenied::
+Count of transfers denied by maxMesageSize policy for this vhost.
+
+Vhost User Stats table
+
+vhost::
+Vhost hostname
+
+user::
+Authenticated user name
+
+remote hosts::
+List of remote hosts from which this user has connected to this vhost.
+
+qdstat --vhostgroups
+~~~~~~~~~~~~~~~~~~~~
+
+Table of settings for all vhosts and groups.
+
+vhost::
+Vhost name.
+
+group::
+Vhost user group name.
+
+maxConnectionsPerUser::
+Optional maximum number of connections that may be created by users
+in this group. This value, if specified, overrides the vhost
+maxConnectionsPerUser value.
+
+maxConnectionsPerHost::
+Optional maximum number of concurrent connections allowed for any
+remote host by users in this group. This value, if specified, overrides
+the vhost maxConnectionsPerHost value.
+
+maxMessageSize::
+Optional maximum size in bytes of AMQP message transfers allowed for
+connections created by users in this group. This limit overrides the
+policy and vhost maxMessageSize values. A value of zero disables this limit.
+
+maxFrameSize::
+The largest frame, in bytes, that may be sent on this connection. Non-zero
+policy values overwrite values specified for a listener object
+(AMQP Open, max-frame-size).
+
+maxSessionWindow::
+The incoming capacity for new AMQP sessions, measured in octets. Non-zero
+policy values overwrite values specified for a listener object
+(AMQP Begin, incoming-window).
+
+maxSessions::
+The maximum number of sessions that may be created on this connection.
+Non-zero policy values overwrite values specified for a listener object
+(AMQP Open, channel-max).
+
+maxSenders::
+The maximum number of sending links that may be created on this connection.
+A value of '0' disables all sender links.
+
+maxReceivers::
+The maximum number of receiving links that may be created on this connection.
+A value of '0' disables all receiver links.
+
+allowDynamicSource::
+Whether this connection is allowed to create dynamic receiving links
+(links to resources that do not exist on the peer). A value of 'true' means
+that users are able to automatically create resources on the peer system.
+
+allowAnonymousSender::
+Whether this connection is allowed to create sending links if the sender
+does not provide a target address. By prohibiting anonymous senders,
+the router only needs to verify once, when the link is created, that
+the sender is permitted to send messages to the target address. The
+router does not need to verify each message that is sent on the link.
+A value of 'true' means that users may send messages to any address.
+Allowing anonymous senders can also decrease performance: if the sender
+does not specify a target address, then the router must parse each message
+to determine how to route it.
+
+allowUserIdProxy::
+Whether this connection is allowed to send messages with a user ID that
+is different than the connection's authenticated user name.
+
+allowWaypointLinks::
+Whether this connection is allowed to claim 'waypoint.N' capability for
+attached links.  This allows endpoints to act as waypoints without
+needing auto-links.
+
+allowDynamicLinkRoutes::
+Whether this connection is allowed to dynamically create connection-scoped
+link route destinations.
+
+allowAdminStatusUpdate::
+Whether this connection is allowed to update the admin status of other
+connections. Note: Inter-router connections cannot be deleted at any time.
+
+allowFallbackLinks::
+Whether this connection is allowed to claim 'qd.fallback' capability
+for attached links.  This allows endpoints to act as fallback destinations
+for addresses that have fallback capability enabled.
+
+Tables for each vhost and user group.
+
+Vhost::
+Name of vhost.
+
+UserGroup::
+Name of vhost usergroup.
+
+vhost::
+Name of vhost.
+
+group::
+Name of vhost usergroup.
+
+users::
+A list of authenticated users for this user group.
+
+remoteHosts::
+A list of remote hosts from which the users may connect. A host can
+be a hostname, IP address, or IP address range. Use commas to separate
+multiple hosts. To allow access from all remote hosts, specify a
+wildcard 'asterisk \*'. To deny access from all remote hosts, leave this
+attribute blank.
+
+sources::
+A list of source addresses from which users in this group may receive messages.
+To specify multiple addresses, separate the addresses with either a comma or
+a space. If you do not specify any addresses, users in this group are not
+allowed to receive messages from any addresses. You can use the substitution
+token '${user}' to specify an address that contains a user's authenticated
+user name. You can use an 'asterisk \*' wildcard to match one or more
+characters in an address. However, this wildcard is only recognized if
+it is the last character in the address name. You may specify attributes
+'sources' or 'sourcePattern' but not both at the same time.
+
+targets::
+A list of target addresses to which users in this group may send messages.
+To specify multiple addresses, separate the addresses with either a comma or
+a space. If you do not specify any addresses, users in this group are not
+allowed to send messages to any addresses. You can use the substitution
+token '${user}' to specify an address that contains a user's authenticated
+user name. You can use an 'asterisk \*' wildcard to match one or more
+characters in an address. However, this wildcard is only recognized if it
+is the last character in the address name. You may specify attributes
+'targets' or 'targetPattern' but not both at the same time.
+
+sourcePattern::
+A wildcarded pattern for matching source addresses from which users in
+this group may receive messages. The pattern consists of one or more
+tokens separated by a forward slash '/'. A token can be one of the
+following: 'asterisk \*', 'hash \#', or a sequence of characters
+that do not include '/', 'asterisk \*', or 'hash \#'.  The 'asterisk \*' token matches any single token.
+The 'hash \#' token matches zero or more tokens. 'asterisk \*' has higher precedence than 'hash \#',
+and exact match has the highest precedence. To specify multiple addresses,
+separate the addresses with either a comma or a space. You can use the
+text string '${user}' in a token to specify an address that contains a
+user's authenticated user name. If you do not specify any addresses then
+users in this group are not allowed to receive messages from any addresses.
+You may specify attributes 'sources' or 'sourcePattern' but not both at
+the same time.
+
+targetPattern::
+A wildcarded pattern for matching target addresses to which users in this
+group may send messages. The pattern consists of one or more tokens
+separated by a forward slash "/". A token can be one of the following:
+'asterisk \*', 'hash \#', or a sequence of characters that do not
+include "/", 'asterisk \*', or 'hash \#'.  The 'asterisk \*' token matches any single token.  The 'hash \#'
+token matches zero or more tokens. 'asterisk \*' has higher precedence than 'hash \#',
+and exact match has the highest precedence. To specify multiple addresses,
+separate the addresses with either a comma or a space. You can use the
+text string '${user}' in a token to specify an address that contains a
+user's authenticated user name. If you do not specify any addresses then
+users in this group are not allowed to send messages to any addresses.
+You may specify attributes 'targets' or 'targetPattern' but not both at
+the same time.
 
 SEE ALSO
 --------

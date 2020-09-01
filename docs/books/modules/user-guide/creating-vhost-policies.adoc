@@ -56,7 +56,11 @@ The literal hostname of the vhost (the messaging endpoint) or a pattern that mat
 If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostnames. For more information, see xref:vhost-policy-hostname-pattern-matching-rules-{context}[].
 
 `aliases`::
-Alternative literal hostnames or patterns that direct the router to use the settings in this vhost. Alias hostnames that match an incoming connection will use the settings defined in the contained vhost. In a multi-tenant configuration a connection to a vhost alias will use the base vhost hostname for the tenant namespace. In this example if a connection is directed to vhost `example.org` then the settings from the base vhost hostname `example.com` will apply and `example.com` will be the tenant namespace. Vhost `hostname` and `aliases` settings from all vhosts are shared in a single list and must be unique.
+Alternative literal hostnames or patterns that direct the router to use the settings in this vhost. 
+Alias hostnames that match an incoming connection use the settings defined in the vhost section. 
+In a multi-tenant configuration, a connection to a vhost alias uses the base vhost hostname for the tenant namespace. 
+In this example if a connection is directed to vhost `example.org` then the settings from the base vhost hostname `example.com` apply and `example.com` becomes the tenant namespace. 
+Vhost `hostname` and `aliases` settings from all vhosts must be unique.
 +
 If `enableVhostNamePatterns` is set to `true`, you can use wildcards to specify a pattern that matches a range of hostname aliases. For more information, see xref:vhost-policy-hostname-pattern-matching-rules-{context}[].
 
