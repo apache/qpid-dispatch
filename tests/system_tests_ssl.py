@@ -905,7 +905,7 @@ class RouterTestSslInterRouterVerifyHostname(RouterTestSslBase):
         # Poll for a while until the connector error shows up in router B's log
         pattern = " SERVER (error) SSL CA configuration failed"
         sleep_time = 0.1 # seconds
-        poll_duration = 10.0 # seconds
+        poll_duration = 60.0 # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
             with  open('../setUpClass/B.log', 'r') as router_log:

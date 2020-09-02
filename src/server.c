@@ -1188,6 +1188,18 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
             return;
         }
 
+        bool failed = false;
+
+        // set our trusted database for checking the peer's cert:
+        if (config->ssl_trusted_certificate_db) {
+            if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                       "SSL CA configuration failed for %s:%s",
+                       ct->config.host, ct->config.port);
+                failed = true;
+            }
+        }
+
         // peer must provide a cert
         const char *trusted = (config->ssl_trusted_certificates)
             ? config->ssl_trusted_certificates
@@ -1198,19 +1210,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
             qd_log(ct->server->log_source, QD_LOG_ERROR,
                     "SSL peer auth configuration failed for %s:%s",
                     config->host, config->port);
-            pn_ssl_domain_free(domain);
-            return;
-        }
-
-        // set our trusted database for checking the peer's cert:
-        if (config->ssl_trusted_certificate_db) {
-            if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
-                qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL CA configuration failed for %s:%s",
-                       ct->config.host, ct->config.port);
-                pn_ssl_domain_free(domain);
-                return;
-            }
+                failed = true;
         }
 
         // configure our certificate if the peer requests one:
@@ -1222,8 +1222,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "SSL local configuration failed for %s:%s",
                        config->host, config->port);
-                pn_ssl_domain_free(domain);
-                return;
+                failed = true;
             }
         }
 
@@ -1232,8 +1231,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "SSL cipher configuration failed for %s:%s",
                        config->host, config->port);
-                pn_ssl_domain_free(domain);
-                return;
+                failed = true;
             }
         }
 
@@ -1242,20 +1240,23 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
                        "Permitted TLS protocols configuration failed %s:%s",
                        config->host, config->port);
-                pn_ssl_domain_free(domain);
-                return;
+                failed = true;
             }
         }
 
         //If ssl is enabled and verify_host_name is true, instruct proton to verify peer name
         if (config->verify_host_name) {
             if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, NULL)) {
-                    qd_log(ct->server->log_source, QD_LOG_ERROR,
-                           "SSL peer host name verification failed for %s:%s",
-                           config->host, config->port);
-                    pn_ssl_domain_free(domain);
-                    return;
+                qd_log(ct->server->log_source, QD_LOG_ERROR,
+                        "SSL peer host name verification failed for %s:%s",
+                        config->host, config->port);
+                failed = true;
             }
+        }
+
+        if (failed) {
+            pn_ssl_domain_free(domain);
+            return;
         }
 
         ctx->ssl = pn_ssl(tport);
