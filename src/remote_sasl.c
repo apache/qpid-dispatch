@@ -25,10 +25,22 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <proton/version.h>
+#if PN_VERSION_MAJOR==0 && PN_VERSION_MINOR>32
+#define USE_NEW_PNX_SASL_API
+#endif
 #include <proton/engine.h>
 #include <proton/proactor.h>
 #include <proton/sasl.h>
+#ifdef USE_NEW_PNX_SASL_API
+#include <proton/sasl_plugin.h>
+#else
 #include <proton/sasl-plugin.h>
+#define pnx_sasl_set_succeeded(X, Y, Z)  pnx_sasl_succeed_authentication(X, Y)
+#define pnx_sasl_set_failed(X)  pnx_sasl_fail_authentication(X)
+#define remote_sasl_process_outcome(X, Y) remote_sasl_process_outcome(X)
+#endif
 #include <qpid/dispatch/log.h>
 #include <qpid/dispatch/ctools.h>
 
@@ -350,14 +362,14 @@ static void remote_sasl_prepare(pn_transport_t *transport)
             case PN_SASL_OK:
                 set_policy_settings(impl->upstream, &impl->permissions);
                 qd_log(auth_service_log, QD_LOG_INFO, "authenticated as %s", impl->username);
-                pnx_sasl_succeed_authentication(transport, impl->username);
+                pnx_sasl_set_succeeded(transport, impl->username, NULL);
                 break;
             default:
-                pnx_sasl_fail_authentication(transport);
+                pnx_sasl_set_failed(transport);
             }
             pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
         } else if (impl->upstream_state == DOWNSTREAM_CLOSED) {
-            pnx_sasl_fail_authentication(transport);
+            pnx_sasl_set_failed(transport);
             pnx_sasl_set_desired_state(transport, SASL_POSTED_OUTCOME);
         }
         impl->upstream_state = 0;
@@ -394,7 +406,7 @@ static void remote_sasl_process_challenge(pn_transport_t *transport, const pn_by
 }
 
 // Client / Downstream
-static void remote_sasl_process_outcome(pn_transport_t *transport)
+static void remote_sasl_process_outcome(pn_transport_t *transport, const pn_bytes_t *recv)
 {
     qdr_sasl_relay_t* impl = (qdr_sasl_relay_t*) pnx_sasl_get_context(transport);
     if (impl) {
