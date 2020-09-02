@@ -921,7 +921,7 @@ class RouterTestSslInterRouterVerifyHostname(RouterTestSslBase):
         router_nodes = self.get_router_nodes()
         self.assertTrue(router_nodes)
         node = "QDR.B"
-        self.assertTrue(node not in router_nodes, "%s should not be connected" % node)
+        self.assertNotIn(node, router_nodes, msg=("%s should not be connected" % node))
 
 
 if __name__ == '__main__':
