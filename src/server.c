@@ -98,7 +98,7 @@ char *COMPONENT_SEPARATOR = ";";
 
 static const int BACKLOG = 50;  /* Listening backlog */
 
-static void setup_ssl_sasl_and_open(qd_connection_t *ctx);
+static bool setup_ssl_sasl_and_open(qd_connection_t *ctx); // true if ssl, sasl, and open succeeded
 static qd_failover_item_t *qd_connector_get_conn_info(qd_connector_t *ct);
 
 /**
@@ -755,7 +755,11 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
                ctx->connection_id, name, ctx->rhost_port);
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
-        setup_ssl_sasl_and_open(ctx);
+        if (!setup_ssl_sasl_and_open(ctx)) {
+            pn_transport_close_tail(tport);
+            pn_transport_close_head(tport);
+            return;
+        }
 
     } else {                    /* No connector and no listener */
         connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "unknown Connection");
@@ -1170,7 +1174,7 @@ static void try_open_lh(qd_connector_t *ct)
     pn_proactor_connect(ct->server->proactor, ctx->pn_conn, host_port);
 }
 
-static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
+static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
 {
     qd_connector_t *ct = ctx->connector;
     const qd_server_config_t *config = &ct->config;
@@ -1185,7 +1189,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (!domain) {
             qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection to %s:%s",
                      ct->config.host, ct->config.port);
-            return;
+            return false;
         }
 
         bool failed = false;
@@ -1254,14 +1258,15 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
             }
         }
 
+        if (!failed) {
+            ctx->ssl = pn_ssl(tport);
+            failed = pn_ssl_init(ctx->ssl, domain, 0) != 0;
+        }
+        pn_ssl_domain_free(domain);
         if (failed) {
-            pn_ssl_domain_free(domain);
-            return;
+            return false;
         }
 
-        ctx->ssl = pn_ssl(tport);
-        pn_ssl_init(ctx->ssl, domain, 0);
-        pn_ssl_domain_free(domain);
     }
 
     //
@@ -1275,6 +1280,7 @@ static void setup_ssl_sasl_and_open(qd_connection_t *ctx)
     sys_mutex_unlock(ct->server->lock);
 
     pn_connection_open(ctx->pn_conn);
+    return true;
 }
 
 static void try_open_cb(void *context) {

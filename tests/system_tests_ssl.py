@@ -851,7 +851,7 @@ class RouterTestSslInterRouterVerifyHostname(RouterTestSslBase):
             ('router', {'id': 'QDR.B',
                         'mode': 'interior'}),
             # Connector to All TLS versions allowed listener
-            ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
+            ('connector', {'host': 'localhost', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
                            'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
                            'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
                            'sslProfile': 'ssl-profile-tls-all'}),
