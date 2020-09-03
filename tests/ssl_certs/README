@@ -1,0 +1,2 @@
+The certificates in this folder have been created using gencerts.sh which uses a combination of java keytool and openssl commands
+gencerts_openssl.sh uses all openssl commands and no keytool commands. Do not use this file to generate the certs in this folder. It is only meant to give serve as an example of how to use openssl to generate certs.  
