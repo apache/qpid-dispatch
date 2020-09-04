@@ -756,6 +756,8 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
     } else if (ctx->connector) { /* Establishing an outgoing connection */
         config = &ctx->connector->config;
         if (!setup_ssl_sasl_and_open(ctx)) {
+            qd_log(ctx->server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Connection aborted due to internal setup error",
+               ctx->connection_id);
             pn_transport_close_tail(tport);
             pn_transport_close_head(tport);
             return;
@@ -1187,8 +1189,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         pn_ssl_domain_t *domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
 
         if (!domain) {
-            qd_error(QD_ERROR_RUNTIME, "SSL domain failed for connection to %s:%s",
-                     ct->config.host, ct->config.port);
+            qd_error(QD_ERROR_RUNTIME, "SSL domain allocation failed for connection [C%"PRIu64"] to %s:%s",
+                     ctx->connection_id, config->host, config->port);
             return false;
         }
 
@@ -1198,8 +1200,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_trusted_certificate_db) {
             if (pn_ssl_domain_set_trusted_ca_db(domain, config->ssl_trusted_certificate_db)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL CA configuration failed for %s:%s",
-                       ct->config.host, ct->config.port);
+                       "SSL CA configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       ctx->connection_id, config->host, config->port);
                 failed = true;
             }
         }
@@ -1212,8 +1214,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
                                                     PN_SSL_VERIFY_PEER,
                                                     trusted)) {
             qd_log(ct->server->log_source, QD_LOG_ERROR,
-                    "SSL peer auth configuration failed for %s:%s",
-                    config->host, config->port);
+                    "SSL peer auth configuration failed for connection [C%"PRIu64"] to %s:%s",
+                    ctx->connection_id, config->host, config->port);
                 failed = true;
         }
 
@@ -1224,8 +1226,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
                                               config->ssl_private_key_file,
                                               config->ssl_password)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL local configuration failed for %s:%s",
-                       config->host, config->port);
+                       "SSL local certificate configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       ctx->connection_id, config->host, config->port);
                 failed = true;
             }
         }
@@ -1233,8 +1235,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_ciphers) {
             if (pn_ssl_domain_set_ciphers(domain, config->ssl_ciphers)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "SSL cipher configuration failed for %s:%s",
-                       config->host, config->port);
+                       "SSL cipher configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       ctx->connection_id, config->host, config->port);
                 failed = true;
             }
         }
@@ -1242,8 +1244,8 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->ssl_protocols) {
             if (pn_ssl_domain_set_protocols(domain, config->ssl_protocols)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                       "Permitted TLS protocols configuration failed %s:%s",
-                       config->host, config->port);
+                       "Permitted TLS protocols configuration failed for connection [C%"PRIu64"] to %s:%s",
+                       ctx->connection_id, config->host, config->port);
                 failed = true;
             }
         }
@@ -1252,15 +1254,20 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->verify_host_name) {
             if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, NULL)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                        "SSL peer host name verification failed for %s:%s",
-                        config->host, config->port);
+                        "SSL peer host name configuration failed for connection [C%"PRIu64"] to %s:%s",
+                        ctx->connection_id, config->host, config->port);
                 failed = true;
             }
         }
 
         if (!failed) {
             ctx->ssl = pn_ssl(tport);
-            failed = pn_ssl_init(ctx->ssl, domain, 0) != 0;
+            if (pn_ssl_init(ctx->ssl, domain, 0) != 0) {
+                 qd_log(ct->server->log_source, QD_LOG_ERROR,
+                        "SSL domain internal initialization failed for connection [C%"PRIu64"] to %s:%s",
+                        ctx->connection_id, config->host, config->port);
+                failed = true;
+            }
         }
         pn_ssl_domain_free(domain);
         if (failed) {
