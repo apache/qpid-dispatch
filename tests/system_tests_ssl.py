@@ -923,7 +923,7 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
         poll_duration = 60.0 # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
-            with  open( os.path.join(self.routers[1].outdir, 'B.log'), 'r') as router_log:
+            with  open(self.routers[1].logfile, 'r') as router_log:
                 log_lines = router_log.read().split("\n")
             e1_lines = [s for s in log_lines if pattern in s and host_port_1 in s]
             e2_lines = [s for s in log_lines if pattern in s and host_port_2 in s]
@@ -1057,7 +1057,7 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
         poll_duration = 60.0 # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
-            with  open(os.path.join(self.routers[1].outdir, 'B.log'), 'r') as router_log:
+            with  open(self.routers[1].logfile, 'r') as router_log:
                 log_lines = router_log.read().split("\n")
             e_lines = [s for s in log_lines if pattern in s]
             verified = len(e_lines) > 0
