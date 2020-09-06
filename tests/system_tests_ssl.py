@@ -916,6 +916,7 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
             self.skipTest("Cyrus library not available. skipping test")
 
         # Poll for a while until the connector error shows up in router B's log
+        time.sleep(0.5)
         pattern = " SERVER (error) SSL CA configuration failed"
         host_port_1 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_1)
         host_port_2 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_2)
@@ -923,13 +924,15 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
         poll_duration = 60.0 # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
-            with  open(self.routers[1].logfile, 'r') as router_log:
-                log_lines = router_log.read().split("\n")
-            e1_lines = [s for s in log_lines if pattern in s and host_port_1 in s]
-            e2_lines = [s for s in log_lines if pattern in s and host_port_2 in s]
-            verified = len(e1_lines) > 0 and len(e2_lines) > 0
-            if verified:
-                break;
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e1_lines = [s for s in log_lines if pattern in s and host_port_1 in s]
+                e2_lines = [s for s in log_lines if pattern in s and host_port_2 in s]
+                verified = len(e1_lines) > 0 and len(e2_lines) > 0
+                if verified:
+                    break;
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' not seen for both connectors in QDR.B log" % pattern)
 
@@ -1052,17 +1055,20 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
             self.skipTest("Cyrus library not available. skipping test")
 
         # Poll for a while until the connector error shows up in router B's log
+        time.sleep(0.5)
         pattern = "Connection to localhost:%s failed:" % self.PORT_TLS_ALL
         sleep_time = 0.1 # seconds
         poll_duration = 60.0 # seconds
         verified = False
         for tries in range(int(poll_duration / sleep_time)):
-            with  open(self.routers[1].logfile, 'r') as router_log:
-                log_lines = router_log.read().split("\n")
-            e_lines = [s for s in log_lines if pattern in s]
-            verified = len(e_lines) > 0
-            if verified:
-                break;
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e_lines = [s for s in log_lines if pattern in s]
+                verified = len(e_lines) > 0
+                if verified:
+                    break;
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' not seen in QDR.B log" % pattern)
 
