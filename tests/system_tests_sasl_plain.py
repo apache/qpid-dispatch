@@ -571,7 +571,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                      ('connector', {'host': '127.0.0.1', 'role': 'inter-router', 'port': x_listener_port,
                                     'sslProfile': 'client-ssl-profile',
                                     # verifyHostName has been deprecated. We are using it here to test
-                                    # backward compatibility.
+                                    # backward compatibility. TODO: should add a specific test.
                                     'verifyHostName': 'yes',
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
@@ -651,6 +651,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
                                      # certDb has been deprecated. We are using it here to test backward compatibility.
+                                     # TODO: should add a specific test, this one presumably doesnt even use it due to not doing client-certificate authentication
                                      'certDb': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
                                      # keyFile has been deprecated. We are using it here to test backward compatibility.
