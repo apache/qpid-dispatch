@@ -70,7 +70,7 @@ struct qdr_http2_stream_data_t {
     bool                     entire_header_arrived;
     bool                     header_sent;
     bool                     steam_closed;
-    bool                     processing;
+    pn_raw_buffer_t          raw_buffer;
 };
 
 struct qdr_http2_connection_t {
@@ -94,6 +94,7 @@ struct qdr_http2_connection_t {
     bool                     connection_established;
     bool                     grant_initial_buffers;
     bool                     ingress;
+    bool                     timer_scheduled;
  };
 
 ALLOC_DECLARE(qdr_http2_session_data_t);
