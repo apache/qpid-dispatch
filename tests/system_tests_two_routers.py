@@ -97,8 +97,7 @@ class TwoRouterTest(TestCase):
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
 
         router('B', 'client',
-               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
-                              'verifyHostname': 'no'}))
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
@@ -1837,8 +1836,7 @@ class StreamingLinkScrubberTest(TestCase):
         router('B',
                [('connector', {'name': 'connectorToA', 'role':
                                'inter-router',
-                               'port': inter_router_port,
-                              'verifyHostname': 'no'})])
+                               'port': inter_router_port})])
         cls.RouterB = cls.routers[-1]
         cls.RouterB.listener = cls.RouterB.addresses[0]
 

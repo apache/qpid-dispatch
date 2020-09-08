@@ -58,7 +58,7 @@ class RouterTest(TestCase):
         inter_router_port = cls.tester.get_port()
         
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-        router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port, 'verifyHostname': 'no'}))
+        router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         cls.routers[0].wait_router_connected('B')
         cls.routers[1].wait_router_connected('A')

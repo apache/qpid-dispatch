@@ -246,8 +246,7 @@ class EnableConnectionLevelInterRouterTraceTest(TestCase):
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
 
         router('B',
-               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
-                              'verifyHostname': 'no'}))
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')

@@ -525,7 +525,7 @@ class InterrouterLinksAllowed(TestCase):
         inter_router_port = cls.tester.get_port()
 
         router('A', ('listener', {'role': 'inter-router', 'port': inter_router_port}))
-        router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port, 'verifyHostname': 'no'}))
+        router('B', ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         # With these configs before DISPATCH-920 the routers never connect
         # because the links are disallowed by policy. Before the wait_ready
@@ -1404,7 +1404,7 @@ class ConnectorPolicyMisconfigured(TestCase):
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
-            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+            ('connector', {'name': 'novhost',
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'nosuch'
@@ -1598,7 +1598,7 @@ class ConnectorPolicySrcTgt(TestCase):
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
-            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+            ('connector', {'name': 'novhost',
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'
@@ -1695,7 +1695,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
             ('router', {'mode': 'standalone', 'id': 'QDR.Policy'}),
             ('listener', {'port': cls.tester.get_port()}),
             ('policy', {'maxConnections': 100, 'enableVhostPolicy': 'true'}),
-            ('connector', {'verifyHostname': 'false', 'name': 'novhost',
+            ('connector', {'name': 'novhost',
                            'idleTimeoutSeconds': 120, 'saslMechanisms': 'ANONYMOUS',
                            'host': '127.0.0.1', 'role': 'normal',
                            'port': cls.remoteListenerPort, 'policyVhost': 'test'

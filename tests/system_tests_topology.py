@@ -182,7 +182,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'AB_connector',
                          'role': 'inter-router',
                          'port': A_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost':  cls.A_B_cost,
                          'stripAnnotations': 'no'
                       }
@@ -209,7 +208,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'AC_connector',
                          'role': 'inter-router',
                          'port': A_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost' : cls.A_C_cost,
                          'stripAnnotations': 'no'
                       }
@@ -218,7 +216,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'BC_connector',
                          'role': 'inter-router',
                          'port': B_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost' : cls.B_C_cost,
                          'stripAnnotations': 'no'
                       }
@@ -239,7 +236,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'AD_connector',
                          'role': 'inter-router',
                          'port': A_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost' : cls.A_D_cost,
                          'stripAnnotations': 'no'
                       }
@@ -248,7 +244,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'BD_connector',
                          'role': 'inter-router',
                          'port': B_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost' : cls.B_D_cost,
                          'stripAnnotations': 'no'
                       }
@@ -257,7 +252,6 @@ class TopologyTests ( TestCase ):
                       {  'name': 'CD_connector',
                          'role': 'inter-router',
                          'port': C_inter_router_port,
-                         'verifyHostname': 'no',
                          'cost' : cls.C_D_cost,
                          'stripAnnotations': 'no'
                       }

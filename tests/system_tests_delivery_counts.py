@@ -233,8 +233,7 @@ class TwoRouterReleasedDroppedPresettledTest(TestCase):
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router,
-                           'verifyHostname': 'no'}),
+            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
             ])
 
         cls.routers = []
@@ -522,8 +521,7 @@ class TwoRouterLargeMessagePresettledCountTest(TestCase):
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router,
-                           'verifyHostname': 'no'}),
+            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
             ])
 
         cls.routers = []
@@ -563,8 +561,7 @@ class TwoRouterLargeMessagePresettledReleasedCountTest(TestCase):
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router,
-                           'verifyHostname': 'no'}),
+            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
             ])
 
         cls.routers = []
@@ -721,8 +718,7 @@ class TwoRouterIngressEgressTest(TestCase):
         config_2 = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'B'}),
             ('listener', {'port': listen_port_2, 'authenticatePeer': False, 'saslMechanisms': 'ANONYMOUS'}),
-            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router,
-                           'verifyHostname': 'no'}),
+            ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': listen_port_inter_router}),
             ])
 
         cls.routers = []

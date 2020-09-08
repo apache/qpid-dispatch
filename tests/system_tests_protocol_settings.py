@@ -310,8 +310,7 @@ class ConnectorSettingsDefaultTest(TestCase):
         router('A', 'server',
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', 'client',
-               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
-                              'verifyHostname': 'no'}))
+               ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')
@@ -365,8 +364,7 @@ class ConnectorSettingsNondefaultTest(TestCase):
                ('listener', {'role': 'inter-router', 'port': inter_router_port}))
         router('B', 'client',
                ('connector', {'name': 'connectorToA', 'role': 'inter-router', 'port': inter_router_port,
-                              'maxFrameSize': '2048', 'maxSessionFrames': '10', 'maxSessions': '20',
-                              'verifyHostname': 'no'}))
+                              'maxFrameSize': '2048', 'maxSessionFrames': '10', 'maxSessions': '20'}))
 
         cls.routers[0].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.A')

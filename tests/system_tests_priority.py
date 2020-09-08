@@ -158,7 +158,6 @@ class PriorityTests ( TestCase ):
                            { 'name'             : 'BA_connector',
                              'role'             : 'inter-router',
                              'port'             : A_inter_router_port,
-                             'verifyHostname'   : 'no',
                              'linkCapacity'     : link_cap,
                              'stripAnnotations' : 'no'
                            }
@@ -184,7 +183,6 @@ class PriorityTests ( TestCase ):
                        { 'name'             : 'CB_connector',
                          'role'             : 'inter-router',
                          'port'             : B_inter_router_port,
-                         'verifyHostname'   : 'no',
                          'linkCapacity'     : link_cap,
                          'stripAnnotations' : 'no'
                        }

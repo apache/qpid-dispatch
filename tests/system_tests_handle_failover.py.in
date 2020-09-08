@@ -79,7 +79,7 @@ class FailoverTest(TestCase):
                         ('router', {'mode': 'interior', 'id': 'A'}),
                         ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': cls.inter_router_port, 'verifyHostname': 'no'}),
+                                       'port': cls.inter_router_port}),
                     ]
                )
 
