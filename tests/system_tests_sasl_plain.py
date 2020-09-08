@@ -440,9 +440,8 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         super(RouterTestPlainSaslOverSsl, cls).router('Y', [
                      # This router will act like a client. First an SSL connection will be established and then
                      # we will have SASL plain authentication over SSL.
-                     ('connector', {'host': '0.0.0.0', 'role': 'inter-router', 'port': x_listener_port,
+                     ('connector', {'host': 'localhost', 'role': 'inter-router', 'port': x_listener_port,
                                     'sslProfile': 'client-ssl-profile',
-                                    'verifyHostname': 'no',
                                     # Provide a sasl user name and password to connect to QDR.X
                                     'saslMechanisms': 'PLAIN',
                                     'saslUsername': 'test@domain.com',
