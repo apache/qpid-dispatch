@@ -395,7 +395,7 @@ class WaypointReceiverPhaseTest(TestCase):
                         ('router', {'mode': 'interior', 'id': 'B'}),
                         ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port()}),
                         ('connector', {'name': 'connectorToB', 'role': 'inter-router',
-                                       'port': cls.inter_router_port, 'verifyHostname': 'no'}),
+                                       'port': cls.inter_router_port}),
                         ('address', {'prefix': '0.0.0.0/queue', 'waypoint': 'yes'}),
                     ])
 
