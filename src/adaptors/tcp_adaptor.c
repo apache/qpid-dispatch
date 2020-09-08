@@ -385,6 +385,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%i] Accepted from %s", conn->conn_id, conn->remote_address);
             break;
         } else {
+            conn->remote_address = get_address_string(conn->socket);
             conn->opened_time = tcp_adaptor->core->uptime_ticks;
             qd_log(log, QD_LOG_INFO, "[C%i] Connected", conn->conn_id);
             qdr_connection_process(conn->conn);
@@ -1030,7 +1031,7 @@ static void insert_column(qdr_core_t *core, qdr_tcp_connection_t *conn, int col,
         break;
 
     case QDR_TCP_CONNECTION_HOST:
-        qd_compose_insert_string(body, conn->config.host_port);
+        qd_compose_insert_string(body, conn->remote_address);
         break;
 
     case QDR_TCP_CONNECTION_DIRECTION:
