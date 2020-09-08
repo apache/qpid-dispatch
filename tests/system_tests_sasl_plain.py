@@ -424,7 +424,6 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                    'sslProfile':'server-ssl-profile',
                                    'saslMechanisms':'PLAIN', 'authenticatePeer': 'yes'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
                                      'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                      'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
@@ -451,10 +450,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                                     'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
-                                     'password': 'client-password'}),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem')}),
         ])
 
         cls.routers[1].wait_router_connected('QDR.X')
@@ -556,7 +552,6 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.tester.get_port(),
                                    'authenticatePeer': 'no'}),
                      ('sslProfile', {'name': 'server-ssl-profile',
-                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
                                      'certFile': cls.ssl_file('server-certificate.pem'),
                                      'privateKeyFile': cls.ssl_file('server-private-key.pem'),
                                      'password': 'server-password'}),
@@ -581,10 +576,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                                     'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
-                                     'password': 'client-password'}),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem')}),
         ])
 
         cls.routers[0].wait_ports()
@@ -680,10 +672,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
                                  'id': 'QDR.Y'}),
                      ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': y_listener_port}),
                      ('sslProfile', {'name': 'client-ssl-profile',
-                                     'caCertFile': cls.ssl_file('ca-certificate.pem'),
-                                     'certFile': cls.ssl_file('client-certificate.pem'),
-                                     'privateKeyFile': cls.ssl_file('client-private-key.pem'),
-                                     'password': 'client-password'}),
+                                     'caCertFile': cls.ssl_file('ca-certificate.pem')}),
         ])
 
         cls.routers[0].wait_ports()
