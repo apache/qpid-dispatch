@@ -24,6 +24,7 @@ import os
 import ssl
 import sys
 import re
+import time
 from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
 from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
@@ -778,6 +779,316 @@ class RouterTestSslInterRouter(RouterTestSslBase):
             expected_nodes -= 1
 
         self.assertEqual(len(router_nodes), expected_nodes)
+
+
+class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
+    """
+    DISPATCH-1762
+    Starts 2 routers:
+       Router A two listeners serve a normal, good certificate
+       Router B two connectors configured with an invalid CA file path in its profile
+          - one sets verifyHostname true, the other false.
+    Test proves:
+       Router B must not connect to A with mis-configured CA file path regardless of
+       verifyHostname setting.
+    """
+    # Listener ports for each TLS protocol definition
+    PORT_NO_SSL  = 0
+    PORT_TLS_ALL = 0
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Prepares 2 routers to form a network.
+        """
+        super(RouterTestSslInterRouterWithInvalidPathToCA, cls).setUpClass()
+
+        if not SASL.extended():
+            return
+
+        os.environ["ENV_SASL_PASSWORD"] = "password"
+
+        # Generate authentication DB
+        super(RouterTestSslInterRouterWithInvalidPathToCA, cls).create_sasl_files()
+
+        # Router expected to be connected
+        cls.connected_tls_sasl_routers = []
+
+        # Generated router list
+        cls.routers = []
+
+        # Saving listener ports for each TLS definition
+        cls.PORT_NO_SSL = cls.tester.get_port()
+        cls.PORT_TLS_ALL_1 = cls.tester.get_port()
+        cls.PORT_TLS_ALL_2 = cls.tester.get_port()
+
+        # Configured connector host
+        cls.CONNECTOR_HOST = "localhost"
+
+        config_a = Qdrouterd.Config([
+            ('router', {'id': 'QDR.A',
+                        'mode': 'interior',
+                        'saslConfigName': 'tests-mech-PLAIN',
+                        'saslConfigDir': os.getcwd()}),
+            # No auth and no SSL for management access
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_NO_SSL}),
+            # All TLS versions and normal, good sslProfile config
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL_1,
+                          'saslMechanisms': 'PLAIN',
+                          'requireEncryption': 'yes', 'requireSsl': 'yes',
+                          'sslProfile': 'ssl-profile-tls-all'}),
+            # All TLS versions and normal, good sslProfile config
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL_2,
+                          'saslMechanisms': 'PLAIN',
+                          'requireEncryption': 'yes', 'requireSsl': 'yes',
+                          'sslProfile': 'ssl-profile-tls-all'}),
+            # SSL Profile for all TLS versions (protocols element not defined)
+            ('sslProfile', {'name': 'ssl-profile-tls-all',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
+                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
+                            'password': 'server-password'})
+        ])
+
+        # Router B has a connector to listener that allows all protocols but will not verify hostname.
+        # The sslProfile has a bad caCertFile name and this router should not connect.
+        config_b = Qdrouterd.Config([
+            ('router', {'id': 'QDR.B',
+                        'mode': 'interior'}),
+            # Connector to All TLS versions allowed listener
+            ('connector', {'name': 'connector1',
+                           'host': cls.CONNECTOR_HOST, 'role': 'inter-router',
+                           'port': cls.PORT_TLS_ALL_1,
+                           'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
+                           'sslProfile': 'ssl-profile-tls-all'}),
+            # Connector to All TLS versions allowed listener
+            ('connector', {'name': 'connector2',
+                           'host': cls.CONNECTOR_HOST, 'role': 'inter-router',
+                           'port': cls.PORT_TLS_ALL_2,
+                           'verifyHostname': 'yes', 'saslMechanisms': 'PLAIN',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
+                           'sslProfile': 'ssl-profile-tls-all'}),
+            # SSL Profile with an invalid caCertFile file path. The correct file path here would allow this
+            # router to connect. The object is to trigger a specific failure in the ssl
+            # setup chain of calls to pn_ssl_domain_* functions.
+            ('sslProfile', {'name': 'ssl-profile-tls-all',
+                            'caCertFile': cls.ssl_file('ca-certificate-INVALID-FILENAME.pem'),
+                            'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
+                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS'})
+        ])
+
+        cls.routers.append(cls.tester.qdrouterd("A", config_a, wait=False))
+        cls.routers.append(cls.tester.qdrouterd("B", config_b, wait=False))
+
+        # Wait until A is running
+        cls.routers[0].wait_ports()
+
+        # Can't wait until B is connected because it's not supposed to connect.
+
+    def get_router_nodes(self):
+        """
+        Retrieves connected router nodes from QDR.A
+        :return: list of connected router id's
+        """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
+        url = Url("amqp://0.0.0.0:%d/$management" % self.PORT_NO_SSL)
+        node = Node.connect(url)
+        response = node.query(type="org.apache.qpid.dispatch.router.node", attribute_names=["id"])
+        router_nodes = []
+        for resp in response.get_dicts():
+            router_nodes.append(resp['id'])
+        node.close()
+        return router_nodes
+
+    def test_invalid_ca_path(self):
+        """
+        Prove sslProfile with invalid path to CA prevents the router from joining the network
+        """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
+        # Poll for a while until the connector error shows up in router B's log
+        pattern = " SERVER (error) SSL CA configuration failed"
+        host_port_1 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_1)
+        host_port_2 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_2)
+        sleep_time = 0.1 # seconds
+        poll_duration = 60.0 # seconds
+        verified = False
+        for tries in range(int(poll_duration / sleep_time)):
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e1_lines = [s for s in log_lines if pattern in s and host_port_1 in s]
+                e2_lines = [s for s in log_lines if pattern in s and host_port_2 in s]
+                verified = len(e1_lines) > 0 and len(e2_lines) > 0
+                if verified:
+                    break;
+            time.sleep(sleep_time)
+        self.assertTrue(verified, "Log line containing '%s' not seen for both connectors in QDR.B log" % pattern)
+
+        verified = False
+        pattern1 = "Connection to %s failed:" % host_port_1
+        pattern2 = "Connection to %s failed:" % host_port_2
+        for tries in range(int(poll_duration / sleep_time)):
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e1_lines = [s for s in log_lines if pattern1 in s]
+                e2_lines = [s for s in log_lines if pattern2 in s]
+                verified = len(e1_lines) > 0 and len(e2_lines) > 0
+                if verified:
+                    break;
+            time.sleep(sleep_time)
+        self.assertTrue(verified, "Log line containing '%s' or '%s' not seen in QDR.B log" % (pattern1, pattern2))
+
+        # Show that router A does not have router B in its network
+        router_nodes = self.get_router_nodes()
+        self.assertTrue(router_nodes)
+        node = "QDR.B"
+        self.assertNotIn(node, router_nodes, msg=("%s should not be connected" % node))
+
+
+class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterTestSslBase):
+    """
+    DISPATCH-1762
+    Starts 2 routers:
+       Router A listener serves a normal, good certificate.
+       Router B connector is configured with a CA cert that did not sign the server cert, and verifyHostname is false.
+    Test proves:
+       Router B must not connect to A.
+    """
+    # Listener ports for each TLS protocol definition
+    PORT_NO_SSL  = 0
+    PORT_TLS_ALL = 0
+
+    @classmethod
+    def setUpClass(cls):
+        """
+        Prepares 2 routers to form a network.
+        """
+        super(RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA, cls).setUpClass()
+
+        if not SASL.extended():
+            return
+
+        os.environ["ENV_SASL_PASSWORD"] = "password"
+
+        # Generate authentication DB
+        super(RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA, cls).create_sasl_files()
+
+        # Router expected to be connected
+        cls.connected_tls_sasl_routers = []
+
+        # Generated router list
+        cls.routers = []
+
+        # Saving listener ports for each TLS definition
+        cls.PORT_NO_SSL = cls.tester.get_port()
+        cls.PORT_TLS_ALL = cls.tester.get_port()
+
+        config_a = Qdrouterd.Config([
+            ('router', {'id': 'QDR.A',
+                        'mode': 'interior',
+                        'saslConfigName': 'tests-mech-PLAIN',
+                        'saslConfigDir': os.getcwd()}),
+            # No auth and no SSL for management access
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_NO_SSL}),
+            # All TLS versions and normal, good sslProfile config
+            ('listener', {'host': '0.0.0.0', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
+                          'saslMechanisms': 'PLAIN',
+                          'requireEncryption': 'yes', 'requireSsl': 'yes',
+                          'sslProfile': 'ssl-profile-tls-all'}),
+            # SSL Profile for all TLS versions (protocols element not defined)
+            ('sslProfile', {'name': 'ssl-profile-tls-all',
+                            'caCertFile': cls.ssl_file('ca-certificate.pem'),
+                            'certFile': cls.ssl_file('server-certificate.pem'),
+                            'privateKeyFile': cls.ssl_file('server-private-key.pem'),
+                            'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
+                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
+                            'password': 'server-password'})
+        ])
+
+        # Router B has a connector to listener that allows all protocols but will not verify hostname.
+        # The sslProfile has a caCertFile that does not sign the server cert, so this router should not connect.
+        config_b = Qdrouterd.Config([
+            ('router', {'id': 'QDR.B',
+                        'mode': 'interior'}),
+            # Connector to All TLS versions allowed listener
+            ('connector', {'host': 'localhost', 'role': 'inter-router', 'port': cls.PORT_TLS_ALL,
+                           'verifyHostname': 'no', 'saslMechanisms': 'PLAIN',
+                           'saslUsername': 'test@domain.com', 'saslPassword': 'pass:password',
+                           'sslProfile': 'ssl-profile-tls-all'}),
+            # SSL Profile with caCertFile to cert that does not sign the server cert. The correct path here would allow this
+            # router to connect. The object is to trigger a certificate verification failure while hostname verification is off.
+            ('sslProfile', {'name': 'ssl-profile-tls-all',
+                            'caCertFile': cls.ssl_file('bad-ca-certificate.pem'),
+                            'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
+                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS'})
+        ])
+
+        cls.routers.append(cls.tester.qdrouterd("A", config_a, wait=False))
+        cls.routers.append(cls.tester.qdrouterd("B", config_b, wait=False))
+
+        # Wait until A is running
+        cls.routers[0].wait_ports()
+
+        # Can't wait until B is connected because it's not supposed to connect.
+
+    def get_router_nodes(self):
+        """
+        Retrieves connected router nodes from QDR.A
+        :return: list of connected router id's
+        """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
+        url = Url("amqp://0.0.0.0:%d/$management" % self.PORT_NO_SSL)
+        node = Node.connect(url)
+        response = node.query(type="org.apache.qpid.dispatch.router.node", attribute_names=["id"])
+        router_nodes = []
+        for resp in response.get_dicts():
+            router_nodes.append(resp['id'])
+        node.close()
+        return router_nodes
+
+    def test_mismatched_ca_and_no_hostname_verification(self):
+        """
+        Prove that improperly configured ssl-enabled connector prevents the router
+        from joining the network
+        """
+        if not SASL.extended():
+            self.skipTest("Cyrus library not available. skipping test")
+
+        # Poll for a while until the connector error shows up in router B's log
+        pattern = "Connection to localhost:%s failed:" % self.PORT_TLS_ALL
+        sleep_time = 0.1 # seconds
+        poll_duration = 60.0 # seconds
+        verified = False
+        for tries in range(int(poll_duration / sleep_time)):
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e_lines = [s for s in log_lines if pattern in s]
+                verified = len(e_lines) > 0
+                if verified:
+                    break;
+            time.sleep(sleep_time)
+        self.assertTrue(verified, "Log line containing '%s' not seen in QDR.B log" % pattern)
+
+        # Show that router A does not have router B in its network
+        router_nodes = self.get_router_nodes()
+        self.assertTrue(router_nodes)
+        node = "QDR.B"
+        self.assertNotIn(node, router_nodes, msg=("%s should not be connected" % node))
+
 
 
 if __name__ == '__main__':
