@@ -1254,7 +1254,7 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         if (config->verify_host_name) {
             if (pn_ssl_domain_set_peer_authentication(domain, PN_SSL_VERIFY_PEER_NAME, NULL)) {
                 qd_log(ct->server->log_source, QD_LOG_ERROR,
-                        "SSL peer host name configuration failed for connection [C%"PRIu64"] to %s:%s",
+                        "SSL peer host name verification configuration failed for connection [C%"PRIu64"] to %s:%s",
                         ctx->connection_id, config->host, config->port);
                 failed = true;
             }

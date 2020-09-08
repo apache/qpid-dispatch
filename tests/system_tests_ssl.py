@@ -876,11 +876,8 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
             # setup chain of calls to pn_ssl_domain_* functions.
             ('sslProfile', {'name': 'ssl-profile-tls-all',
                             'caCertFile': cls.ssl_file('ca-certificate-INVALID-FILENAME.pem'),
-                            'certFile': cls.ssl_file('client-certificate.pem'),
-                            'privateKeyFile': cls.ssl_file('client-private-key.pem'),
                             'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
-                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
-                            'password': 'client-password'})
+                                       'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS'})
         ])
 
         cls.routers.append(cls.tester.qdrouterd("A", config_a, wait=False))
@@ -916,7 +913,6 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
             self.skipTest("Cyrus library not available. skipping test")
 
         # Poll for a while until the connector error shows up in router B's log
-        time.sleep(0.5)
         pattern = " SERVER (error) SSL CA configuration failed"
         host_port_1 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_1)
         host_port_2 = self.CONNECTOR_HOST + ":" + str(self.PORT_TLS_ALL_2)
@@ -1055,7 +1051,6 @@ class RouterTestSslInterRouterWithoutHostnameVerificationAndMismatchedCA(RouterT
             self.skipTest("Cyrus library not available. skipping test")
 
         # Poll for a while until the connector error shows up in router B's log
-        time.sleep(0.5)
         pattern = "Connection to localhost:%s failed:" % self.PORT_TLS_ALL
         sleep_time = 0.1 # seconds
         poll_duration = 60.0 # seconds
