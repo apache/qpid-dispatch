@@ -932,6 +932,22 @@ class RouterTestSslInterRouterWithInvalidPathToCA(RouterTestSslBase):
             time.sleep(sleep_time)
         self.assertTrue(verified, "Log line containing '%s' not seen for both connectors in QDR.B log" % pattern)
 
+        verified = False
+        pattern1 = "Connection to %s failed:" % host_port_1
+        pattern2 = "Connection to %s failed:" % host_port_2
+        for tries in range(int(poll_duration / sleep_time)):
+            logfile = os.path.join(self.routers[1].outdir, self.routers[1].logfile)
+            if os.path.exists(logfile):
+                with  open(logfile, 'r') as router_log:
+                    log_lines = router_log.read().split("\n")
+                e1_lines = [s for s in log_lines if pattern1 in s]
+                e2_lines = [s for s in log_lines if pattern2 in s]
+                verified = len(e1_lines) > 0 and len(e2_lines) > 0
+                if verified:
+                    break;
+            time.sleep(sleep_time)
+        self.assertTrue(verified, "Log line containing '%s' or '%s' not seen in QDR.B log" % (pattern1, pattern2))
+
         # Show that router A does not have router B in its network
         router_nodes = self.get_router_nodes()
         self.assertTrue(router_nodes)
