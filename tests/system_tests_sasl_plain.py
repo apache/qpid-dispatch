@@ -533,7 +533,7 @@ class RouterTestVerifyHostNameYes(RouterTestPlainSaslCommon):
     def setUpClass(cls):
         """
         Tests the verifyHostname property of the connector. The hostname on the server certificate we use is
-        A1.Good.Server.domain.com and the host is 0.0.0.0 on the client router initiating the SSL connection.
+        localhost and the host is 127.0.0.1 on the client router initiating the SSL connection.
         Since the host names do not match and the verifyHostname is set to true, the client router
         will NOT be able make a successful SSL connection the server router.
         """
@@ -626,7 +626,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
     def setUpClass(cls):
         """
         Tests the verifyHostname property of the connector. The hostname on the server certificate we use is
-        A1.Good.Server.domain.com and the host is 0.0.0.0 on the client router initiating the SSL connection.
+        localhost and the host is 127.0.0.1 on the client router initiating the SSL connection.
         Since the host names do not match but verifyHostname is set to false, the client router
         will be successfully able to make an SSL connection the server router.
         """
