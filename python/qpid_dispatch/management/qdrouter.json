@@ -807,7 +807,7 @@
                 },
                 "trustedCertsFile": {
                     "type": "path",
-                    "description": "This optional setting can be used to reduce the set of available CAs for client authentication.  If used, this setting must provide the absolute path to a PEM file that contains the trusted certificates.",
+                    "description": "(DEPRECATED) Use sslProfile caCertFile instead.",
                     "deprecationName": "trustedCerts",
                     "create": true
                 },

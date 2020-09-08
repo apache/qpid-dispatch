@@ -404,8 +404,6 @@ static qd_error_t listener_setup_ssl(qd_connection_t *ctx, const qd_server_confi
     }
 
     const char *trusted = config->ssl_trusted_certificate_db;
-    if (config->ssl_trusted_certificates)
-        trusted = config->ssl_trusted_certificates;
 
     // do we force the peer to send a cert?
     if (config->ssl_require_peer_authentication) {
@@ -1207,12 +1205,9 @@ static bool setup_ssl_sasl_and_open(qd_connection_t *ctx)
         }
 
         // peer must provide a cert
-        const char *trusted = (config->ssl_trusted_certificates)
-            ? config->ssl_trusted_certificates
-            : config->ssl_trusted_certificate_db;
         if (pn_ssl_domain_set_peer_authentication(domain,
-                                                    PN_SSL_VERIFY_PEER,
-                                                    trusted)) {
+                                                  PN_SSL_VERIFY_PEER,
+                                                  config->ssl_trusted_certificate_db)) {
             qd_log(ct->server->log_source, QD_LOG_ERROR,
                     "SSL peer auth configuration failed for connection [C%"PRIu64"] to %s:%s",
                     ctx->connection_id, config->host, config->port);

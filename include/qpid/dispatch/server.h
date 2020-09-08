@@ -193,7 +193,6 @@ typedef struct qd_server_config_t {
         char *ssl_uid_name_mapping_file;
         char *ssl_password;
         char *ssl_trusted_certificate_db;
-        char *ssl_trusted_certificates;
         char *ssl_ciphers;
         char *ssl_protocols;
     } sasl_plugin_config;
@@ -313,14 +312,6 @@ typedef struct qd_server_config_t {
      * Path to the file containing the PEM-formatted set of certificates of trusted CAs.
      */
     char *ssl_trusted_certificate_db;
-
-    /**
-     * Path to an optional file containing the PEM-formatted set of certificates of
-     * trusted CAs for a particular connection/listener.  This must be a subset of the
-     * set of certificates in the ssl_trusted_certificate_db.  If this is left NULL,
-     * the entire set within the db will be used.
-     */
-    char *ssl_trusted_certificates;
 
     /**
      * Iff true, require that the peer's certificate be supplied and that it be authentic
