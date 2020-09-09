@@ -393,10 +393,11 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     config->policy_vhost         = qd_entity_opt_string(entity, "policyVhost", 0);    CHECK();
     config->conn_props           = qd_entity_opt_map(entity, "openProperties");       CHECK();
 
-    const char *unused           = qd_entity_opt_string(entity, "trustedCertsFile", 0);
+    char *unused                 = qd_entity_opt_string(entity, "trustedCertsFile", 0);
     if (unused) {
         qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
                "Configuration listener attribute 'trustedCertsFile' is not used. Specify sslProfile caCertFile instead.");
+        free(unused);
     }
 
     set_config_host(config, entity);
