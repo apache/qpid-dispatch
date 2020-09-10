@@ -153,6 +153,7 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_lsnr_t *li)
     hconn->cfg.host = qd_strdup(li->config.host);
     hconn->cfg.port = qd_strdup(li->config.port);
     hconn->cfg.address = qd_strdup(li->config.address);
+    hconn->cfg.site = li->config.site ? qd_strdup(li->config.site) : 0;
 
     hconn->raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
@@ -605,6 +606,7 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
 
     _client_request_t *creq = new__client_request_t();
     ZERO(creq);
+    creq->base.start = qd_timer_now();
     creq->base.msg_id = hconn->client.next_msg_id++;
     creq->base.lib_rs = hrs;
     creq->base.hconn = hconn;
@@ -722,6 +724,13 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qd_compose_insert_string(props, hconn->cfg.address); // to
     qd_compose_insert_string(props, h1_codec_request_state_method(hrs));  // subject
     qd_compose_insert_string(props, hconn->client.reply_to_addr);   // reply-to
+    qd_compose_insert_null(props);                      // correlation-id
+    qd_compose_insert_null(props);                      // content-type
+    qd_compose_insert_null(props);                      // content-encoding
+    qd_compose_insert_null(props);                      // absolute-expiry-time
+    qd_compose_insert_null(props);                      // creation-time
+    qd_compose_insert_string(props, hconn->cfg.site);   // group-id
+
     qd_compose_end_list(props);
 
     qd_compose_end_map(hreq->request_props);
@@ -814,6 +823,8 @@ static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool c
 {
     _client_request_t *hreq = (_client_request_t*) h1_codec_request_state_get_context(lib_rs);
     if (hreq) {
+        hreq->base.stop = qd_timer_now();
+        qdr_http1_record_client_request_info(qdr_http1_adaptor, &hreq->base);
         hreq->base.lib_rs = 0;  // freed on return from this call
         hreq->cancelled = hreq->cancelled || cancelled;
         hreq->codec_completed = !hreq->cancelled;
@@ -983,6 +994,11 @@ static bool _encode_response_headers(_client_request_t *hreq,
 {
     bool ok = false;
     qd_message_t *msg = qdr_delivery_message(rmsg->dlv);
+
+    qd_iterator_t *group_id_itr = qd_message_field_iterator(msg, QD_FIELD_GROUP_ID);
+    hreq->base.site = (char*) qd_iterator_copy(group_id_itr);
+    qd_iterator_free(group_id_itr);
+
     qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
     if (app_props_iter) {
         qd_parsed_field_t *app_props = qd_parse(app_props_iter);

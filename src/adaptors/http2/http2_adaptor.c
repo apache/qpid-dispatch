@@ -132,7 +132,8 @@ qd_composed_field_t  *qd_message_compose_amqp(qd_message_t *msg,
                                               const char *reply_to,
                                               const char *content_type,
                                               const char *content_encoding,
-                                              int32_t  correlation_id)
+                                              int32_t  correlation_id,
+                                              const char* group_id)
 {
     qd_composed_field_t  *field   = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_message_content_t *content = MSG_CONTENT(msg);
@@ -194,6 +195,13 @@ qd_composed_field_t  *qd_message_compose_amqp(qd_message_t *msg,
         qd_compose_insert_string(field, content_encoding);               // content-encoding
     }
     else {
+        qd_compose_insert_null(field);
+    }
+    qd_compose_insert_null(field);                      // absolute-expiry-time
+    qd_compose_insert_null(field);                      // creation-time
+    if (group_id) {
+        qd_compose_insert_string(field, group_id);      // group-id
+    } else {
         qd_compose_insert_null(field);
     }
     qd_compose_end_list(field);
@@ -275,6 +283,8 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
         nghttp2_session_set_stream_user_data(session_data->session, stream_data->stream_id, NULL);
     }
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream", stream_data->session_data->conn->conn_id, stream_data->stream_id);
+    if (stream_data->method)      free(stream_data->method);
+    if (stream_data->remote_site) free(stream_data->remote_site);
     free_qdr_http2_stream_data_t(stream_data);
 }
 
@@ -341,6 +351,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
     stream_data->status = QD_STREAM_OPEN;
+    stream_data->start = qd_timer_now();
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Creating new stream_data->app_properties=QD_PERFORMATIVE_APPLICATION_PROPERTIES", session_data->conn->conn_id, stream_id);
     qd_compose_start_map(stream_data->app_properties);
     nghttp2_session_set_stream_user_data(session_data->session, stream_id, stream_data);
@@ -382,6 +393,7 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
         nghttp2_session_send(stream_data->session_data->session);
         return 0;
     }
+    stream_data->bytes_in += len;
 
     qd_buffer_list_t buffers;
     DEQ_INIT(buffers);
@@ -434,6 +446,8 @@ static int snd_data_callback(nghttp2_session *session,
     qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
     qdr_http2_session_data_t *session_data = conn->session_data;
     qdr_http2_stream_data_t *stream_data = (qdr_http2_stream_data_t *)source->ptr;
+
+    stream_data->bytes_out += length;
 
     qd_http2_buffer_t *http2_buff = qd_http2_buffer();
     DEQ_INSERT_TAIL(session_data->buffs, http2_buff);
@@ -596,6 +610,12 @@ static int on_header_callback(nghttp2_session *session,
                 qd_compose_insert_string_n(stream_data->footer_properties, (const char *)value, valuelen);
             }
             else {
+                if (strcmp(METHOD, (const char *)name) == 0) {
+                    stream_data->method = qd_strdup((const char *)value);
+                }
+                if (strcmp(STATUS, (const char *)name) == 0) {
+                    stream_data->request_status = atoi((const char *)value);
+                }
                 qd_compose_insert_string_n(stream_data->app_properties, (const char *)name, namelen);
                 qd_compose_insert_string_n(stream_data->app_properties, (const char *)value, valuelen);
             }
@@ -656,7 +676,8 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
                                                   stream_data->reply_to,  // const char *reply_to
                                                   0,                      // const char *content_type
                                                   0,                      // const char *content_encoding
-                                                  0);                     // int32_t  correlation_id
+                                                  0,                      // int32_t  correlation_id
+                                                  conn->config->site);
             compose_and_deliver(stream_data, header_and_props, conn, receive_complete);
             qd_compose_free(header_and_props);
             delivery_routed = true;
@@ -670,7 +691,8 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
                                                   0,                      // const char *reply_to
                                                   0,                      // const char *content_type
                                                   0,                      // const char *content_encoding
-                                                  0);                     // int32_t  correlation_id
+                                                  0,                      // int32_t  correlation_id
+                                                  conn->config->site);
             compose_and_deliver(stream_data, header_and_props, conn, receive_complete);
             qd_compose_free(header_and_props);
             delivery_routed = true;
@@ -705,6 +727,14 @@ static void send_settings_frame(qdr_http2_connection_t *conn)
     write_buffers(session_data->conn);
 }
 
+static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data)
+{
+    stream_data->stop = qd_timer_now();
+    qd_http_record_request(http2_adaptor->core, stream_data->method, conn->ingress? stream_data->status : stream_data->request_status,
+                           conn->config->address, conn->config->host, conn->config->site,
+                           stream_data->remote_site, conn->ingress, stream_data->bytes_in, stream_data->bytes_out,
+                           stream_data->stop && stream_data->start ? stream_data->stop - stream_data->start : 0);
+}
 
 static int on_frame_recv_callback(nghttp2_session *session,
                                   const nghttp2_frame *frame,
@@ -739,6 +769,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA NGHTTP2_FLAG_END_STREAM flag received, receive_complete = true", conn->conn_id, stream_id);
             qd_message_set_receive_complete(stream_data->message);
             advance_stream_status(stream_data);
+
+            if (!conn->ingress) {
+                _http_record_request(conn, stream_data);
+            }
         }
 
         if (stream_data->in_dlv) {
@@ -803,6 +837,9 @@ static int on_frame_recv_callback(nghttp2_session *session,
                 qd_message_set_receive_complete(stream_data->message);
                 advance_stream_status(stream_data);
                 receive_complete = true;
+                if (!conn->ingress) {
+                    _http_record_request(conn, stream_data);
+                }
             }
 
             if (stream_data->entire_footer_arrived) {
@@ -916,6 +953,9 @@ ssize_t read_data_callback(nghttp2_session *session,
                     qd_message_body_data_release(stream_data->next_body_data);
                     stream_data->next_body_data = 0;
                     stream_data->out_dlv_local_disposition = PN_ACCEPTED;
+                    if ((*data_flags & NGHTTP2_DATA_FLAG_EOF) && conn->ingress) {
+                        _http_record_request(conn, stream_data);
+                    }
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0 and next_body_data=QD_MESSAGE_BODY_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
                     return 0;
                 }
@@ -970,6 +1010,9 @@ ssize_t read_data_callback(nghttp2_session *session,
                     stream_data->qd_buffers_to_send = NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER;
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
                 }
+            }
+            if ((*data_flags & NGHTTP2_DATA_FLAG_EOF) && conn->ingress) {
+                _http_record_request(conn, stream_data);
             }
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback returning bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
             return bytes_to_send;
@@ -1042,6 +1085,9 @@ ssize_t read_data_callback(nghttp2_session *session,
         return NGHTTP2_ERR_DEFERRED;
     }
 
+    if ((*data_flags & NGHTTP2_DATA_FLAG_EOF) && conn->ingress) {
+        _http_record_request(conn, stream_data);
+    }
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"][S%"PRId32"] read_data_callback Returning zero", conn->conn_id, stream_data->stream_id);
     return 0;
 }
@@ -1303,6 +1349,11 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
 
         if (!stream_data->out_msg_header_sent) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Header not sent yet", conn->conn_id);
+
+            qd_iterator_t *group_id_itr = qd_message_field_iterator(message, QD_FIELD_GROUP_ID);
+            stream_data->remote_site = (char*) qd_iterator_copy(group_id_itr);
+            qd_iterator_free(group_id_itr);
+
             qd_iterator_t *app_properties_iter = qd_message_field_iterator(message, QD_FIELD_APPLICATION_PROPERTIES);
             qd_parsed_field_t *app_properties_fld = qd_parse(app_properties_iter);
 
@@ -1321,6 +1372,13 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 hdrs[idx].namelen = qd_iterator_length(key_raw);
                 hdrs[idx].valuelen = qd_iterator_length(val_raw);
                 hdrs[idx].flags = NGHTTP2_NV_FLAG_NONE;
+
+                if (strcmp(METHOD, (const char *)hdrs[idx].name) == 0) {
+                    stream_data->method = qd_strdup((const char *)hdrs[idx].value);
+                }
+                if (strcmp(STATUS, (const char *)hdrs[idx].name) == 0) {
+                    stream_data->status = atoi((const char *)hdrs[idx].value);
+                }
             }
 
             int stream_id = stream_data->session_data->conn->ingress?stream_data->stream_id: -1;

@@ -180,6 +180,7 @@ h1_codec_connection_t *h1_codec_request_state_get_connection(const h1_codec_requ
 void h1_codec_request_state_cancel(h1_codec_request_state_t *hrs);
 
 const char *h1_codec_request_state_method(const h1_codec_request_state_t *hrs);
+const uint32_t h1_codec_request_state_response_code(const h1_codec_request_state_t *hrs);
 
 // true when codec has encoded/decoded a complete request message
 bool h1_codec_request_complete(const h1_codec_request_state_t *hrs);

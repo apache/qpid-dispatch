@@ -40,7 +40,7 @@ except ImportError:
 
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
-from system_test import TestCase, unittest, main_module, Qdrouterd
+from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager
 from system_test import TIMEOUT, Logger
 
 
@@ -738,6 +738,36 @@ class Http1AdaptorOneRouterTest(TestCase):
                                 timeout=TIMEOUT)
         self._do_request(client, self.TESTS_10["PUT"])
         client.close()
+
+    def test_000_stats(self):
+        client = HTTPConnection("127.0.0.1:%s" % self.http_listener11_port,
+                                timeout=TIMEOUT)
+        self._do_request(client, self.TESTS_11["GET"])
+        self._do_request(client, self.TESTS_11["POST"])
+        client.close()
+        qd_manager = QdManager(self, address=self.INT_A.listener)
+        stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
+        self.assertEqual(len(stats), 2)
+        for s in stats:
+            self.assertEqual(s.get('requests'), 9)
+            self.assertEqual(s.get('details').get('GET:400'), 1)
+            self.assertEqual(s.get('details').get('GET:200'), 6)
+            self.assertEqual(s.get('details').get('POST:200'), 2)
+        def assert_approximately_equal(a, b):
+            self.assertTrue((abs(a - b) / a) < 0.1)
+        if stats[0].get('direction') == 'out':
+            self.assertEqual(stats[1].get('direction'), 'in')
+            assert_approximately_equal(stats[0].get('bytesOut'), 1059)
+            assert_approximately_equal(stats[0].get('bytesIn'), 8849)
+            assert_approximately_equal(stats[1].get('bytesOut'), 8830)
+            assert_approximately_equal(stats[1].get('bytesIn'), 1059)
+        else:
+            self.assertEqual(stats[0].get('direction'), 'in')
+            self.assertEqual(stats[1].get('direction'), 'out')
+            assert_approximately_equal(stats[0].get('bytesOut'), 8849)
+            assert_approximately_equal(stats[0].get('bytesIn'), 1059)
+            assert_approximately_equal(stats[1].get('bytesOut'), 1059)
+            assert_approximately_equal(stats[1].get('bytesIn'), 8830)
 
 
 class Http1AdaptorEdge2EdgeTest(TestCase):

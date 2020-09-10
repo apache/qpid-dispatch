@@ -119,6 +119,7 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
         free(hconn->cfg.host);
         free(hconn->cfg.port);
         free(hconn->cfg.address);
+        free(hconn->cfg.site);
         free(hconn->cfg.host_port);
 
         free(hconn->client.client_ip_addr);
