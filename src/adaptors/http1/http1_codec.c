@@ -1329,6 +1329,11 @@ const char *h1_codec_request_state_method(const h1_codec_request_state_t *hrs)
     return hrs->method;
 }
 
+const uint32_t h1_codec_request_state_response_code(const h1_codec_request_state_t *hrs)
+{
+    return hrs->response_code;
+}
+
 
 void h1_codec_request_state_cancel(h1_codec_request_state_t *hrs)
 {

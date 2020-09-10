@@ -46,6 +46,7 @@ set(qpid_dispatch_SOURCES
   adaptors/http1/http1_adaptor.c
   adaptors/http1/http1_client.c
   adaptors/http1/http1_server.c
+  adaptors/http1/http1_request_info.c
   adaptors/tcp_adaptor.c
   alloc_pool.c
   amqp.c

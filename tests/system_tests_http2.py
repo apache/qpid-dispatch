@@ -20,7 +20,7 @@
 import os, sys
 from time import sleep
 import system_test
-from system_test import TestCase, Qdrouterd, Process, SkipIfNeeded
+from system_test import TestCase, Qdrouterd, QdManager, Process, SkipIfNeeded
 from subprocess import PIPE
 
 
@@ -220,6 +220,34 @@ class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
         ])
         cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
 
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_000_stats(self):
+        # Run curl 127.0.0.1:port --http2-prior-knowledge
+        address = self.router_qdra.http_addresses[0]
+        self.run_curl(address=address)
+        address = self.router_qdra.http_addresses[0] + "/myinfo"
+        out = self.run_curl(args=['-d', 'fname=Mickey&lname=Mouse', '-X', 'POST'], address=address)
+        self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
+        qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
+        stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
+        self.assertEqual(len(stats), 2)
+        for s in stats:
+            self.assertEqual(s.get('requests'), 2)
+            self.assertEqual(s.get('details').get('GET:200'), 1)
+            self.assertEqual(s.get('details').get('POST:200'), 1)
+        if stats[0].get('direction') == 'out':
+            self.assertEqual(stats[1].get('direction'), 'in')
+            self.assertEqual(stats[0].get('bytesOut'), 24)
+            self.assertEqual(stats[0].get('bytesIn'), 3944)
+            self.assertEqual(stats[1].get('bytesOut'), 3944)
+            self.assertEqual(stats[1].get('bytesIn'), 24)
+        else:
+            self.assertEqual(stats[0].get('direction'), 'in')
+            self.assertEqual(stats[1].get('direction'), 'out')
+            self.assertEqual(stats[0].get('bytesOut'), 3944)
+            self.assertEqual(stats[0].get('bytesIn'), 24)
+            self.assertEqual(stats[1].get('bytesOut'), 24)
+            self.assertEqual(stats[1].get('bytesIn'), 3944)
 
 class Http2TestOneEdgeRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
@@ -317,7 +345,28 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
 
         sleep(2)
 
-
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_000_stats(self):
+        # Run curl 127.0.0.1:port --http2-prior-knowledge
+        address = self.router_qdra.http_addresses[0]
+        self.run_curl(address=address)
+        address = self.router_qdra.http_addresses[0] + "/myinfo"
+        out = self.run_curl(args=['-d', 'fname=Mickey&lname=Mouse', '-X', 'POST'], address=address)
+        self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
+        qd_manager_a = QdManager(self, address=self.router_qdra.addresses[0])
+        stats_a = qd_manager_a.query('org.apache.qpid.dispatch.httpRequestInfo')
+        self.assertEqual(len(stats_a), 1)
+        self.assertEqual(stats_a[0].get('requests'), 2)
+        self.assertEqual(stats_a[0].get('direction'), 'in')
+        self.assertEqual(stats_a[0].get('bytesOut'), 3944)
+        self.assertEqual(stats_a[0].get('bytesIn'), 24)
+        qd_manager_b = QdManager(self, address=self.router_qdrb.addresses[0])
+        stats_b = qd_manager_b.query('org.apache.qpid.dispatch.httpRequestInfo')
+        self.assertEqual(len(stats_b), 1)
+        self.assertEqual(stats_b[0].get('requests'), 2)
+        self.assertEqual(stats_b[0].get('direction'), 'out')
+        self.assertEqual(stats_b[0].get('bytesOut'), 24)
+        self.assertEqual(stats_b[0].get('bytesIn'), 3944)
 
 class Http2TestEdgeInteriorRouter(Http2TestBase, CommonHttp2Tests):
     """

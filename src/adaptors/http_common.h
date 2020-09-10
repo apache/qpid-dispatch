@@ -39,6 +39,7 @@ typedef struct qd_http_bridge_config_t {
     char              *host;
     char              *port;
     char              *address;
+    char              *site;
     char              *host_port;
     qd_http_version_t  version;
 } qd_http_bridge_config_t;
@@ -88,6 +89,22 @@ qd_error_t qd_entity_refresh_httpListener(qd_entity_t* entity, void *impl);
 qd_http_connector_t *qd_dispatch_configure_http_connector(qd_dispatch_t *qd, qd_entity_t *entity);
 void qd_dispatch_delete_http_connector(qd_dispatch_t *qd, void *impl);
 qd_error_t qd_entity_refresh_httpConnector(qd_entity_t* entity, void *impl);
+
+// Management interfaces for retrieval of HttpRequestInfo entities
+void qdra_http_request_info_get_first_CT(qdr_core_t *core, qdr_query_t *query, int offset);
+void qdra_http_request_info_get_next_CT(qdr_core_t *core, qdr_query_t *query);
+void qdra_http_request_info_get_CT(qdr_core_t          *core,
+                                   qd_iterator_t       *name,
+                                   qd_iterator_t       *identity,
+                                   qdr_query_t         *query,
+                                   const char          *qdr_http_request_info_columns[]);
+
+#define QDR_HTTP_REQUEST_INFO_COLUMN_COUNT 11
+extern const char *qdr_http_request_info_columns[QDR_HTTP_REQUEST_INFO_COLUMN_COUNT + 1];
+
+void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t status_code, const char *address, const char *host,
+                            const char *local_site, const char *remote_site, bool ingress,
+                            uint64_t bytes_in, uint64_t bytes_out, uint64_t latency);
 
 //
 // These functions are defined in their respective HTTP adaptors:

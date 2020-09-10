@@ -1103,6 +1103,12 @@
                     "type": "string",
                     "create": true
                 },
+                "siteId": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to identify where request is handled.",
+                    "create": true
+                },
                 "sslProfile": {
                     "type": "string",
                     "required": false,
@@ -1138,6 +1144,12 @@
                     "default": "127.0.0.1",
                     "create": true
                 },
+                "siteId": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to identify where request originates.",
+                    "create": true
+                },
                 "port": {
                     "description": "Port number or symbolic service name.",
                     "type": "string",
@@ -1156,6 +1168,54 @@
                 }
             }
         },
+
+        "httpRequestInfo": {
+            "description": "Statistics for requests to/from httpListener and httpConnector instances",
+            "extends": "operationalEntity",
+            "attributes": {
+                "address": {
+                    "description": "the router address over which the request was forwarded.",
+                    "type": "string"
+                },
+                "host": {
+                    "description": "IP address and port number of peer (i.e. the client for direction=in and the server for direction=out) in the form addr:port.",
+                    "type": "string"
+                },
+                "site": {
+                    "description": "The site identifier of the router in which the request originated (for direction=out) or was handled (for direction=in).",
+                    "type": "string"
+                },
+                "direction": {
+                    "description": "Direction of connection establishment in or out of the router.",
+                    "type": ["in", "out"]
+                },
+                "requests": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The cumulative number of requests made."
+                },
+                "bytesIn": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The cumulative number of bytes sent in requests."
+                },
+                "bytesOut": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The cumulative number of bytes sent in responses."
+                },
+                "maxLatency": {
+                    "type": "integer",
+                    "graph": true,
+                    "description": "The maximum latency seen for any request represented by this instance."
+                },
+                "details": {
+                    "description": "Details of method and statuses for requests.",
+                    "type": "map"
+                }
+            }
+        },
+
 
         "tcpListener": {
             "description": "Ingress TCP bridge.",
