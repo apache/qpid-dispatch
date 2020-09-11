@@ -2368,6 +2368,16 @@ qd_iterator_t *qd_message_body_data_iterator(const qd_message_body_data_t *body_
     return qd_iterator_buffer(location->buffer, location->offset, location->length, ITER_VIEW_ALL);
 }
 
+/**
+ * qd_message_body_data_payload_length
+ *
+ * Given a body_data object, return the length of the payload.
+ */
+size_t qd_message_body_data_payload_length(const qd_message_body_data_t *body_data)
+{
+    return body_data->payload.length;
+}
+
 
 /**
  * qd_message_body_data_buffer_count
