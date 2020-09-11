@@ -330,6 +330,17 @@ int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data);
  */
 int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffer_t *buffers, int offset, int count);
 
+/**
+ * qd_message_body_data_payload_length
+ *
+ * Given a body_data object, return the length of the payload.
+ * This will equal the sum of the length of all qd_buffer_t objects contained in payload portion of the body_data object
+ *
+ * @param body_data Pointer to a body_data object produced by qd_message_next_body_data
+ * @return The length of the payload of the passed in body data object.
+ */
+size_t qd_message_body_data_payload_length(const qd_message_body_data_t *body_data);
+
 
 /**
  * qd_message_body_data_release
