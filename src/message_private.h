@@ -135,6 +135,7 @@ typedef struct {
     bool                 priority_parsed;
     bool                 priority_present;
     bool                 oversize;                       // policy oversize handling in effect
+    bool                 no_body;                        // Used for http2 messages. If no_body is true, the HTTP request had no body
     uint8_t              priority;                       // The priority of this message
 } qd_message_content_t;
 

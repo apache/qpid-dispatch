@@ -1309,6 +1309,25 @@ void qd_message_set_receive_complete(qd_message_t *in_msg)
     }
 }
 
+void qd_message_set_no_body(qd_message_t *in_msg)
+{
+    if (!!in_msg) {
+        qd_message_content_t *content = MSG_CONTENT(in_msg);
+        content->no_body = true;
+    }
+}
+
+bool qd_message_no_body(qd_message_t *in_msg)
+{
+    if (!!in_msg) {
+        qd_message_content_t *content = MSG_CONTENT(in_msg);
+        return content->no_body;
+    }
+
+    return false;
+}
+
+
 
 bool qd_message_tag_sent(qd_message_t *in_msg)
 {

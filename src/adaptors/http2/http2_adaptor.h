@@ -159,7 +159,7 @@ static inline size_t qd_http2_buffer_size(const qd_http2_buffer_t *buf)
 static inline void qd_http2_buffer_insert(qd_http2_buffer_t *buf, size_t len)
 {
     buf->size += len;
-    assert(buf->size <= QD_HTTP2_BUFFER_SIZE);
+    assert(buf->size <= QD_HTTP2_BUFFER_SIZE + HTTP2_DATA_FRAME_HEADER_LENGTH);
 }
 
 ALLOC_DECLARE(qdr_http2_session_data_t);
