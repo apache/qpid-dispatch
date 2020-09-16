@@ -343,14 +343,12 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
         qd_compose_insert_binary_buffers(stream_data->body, &buffers);
     }
 
-    //
-    // Tells the session that size|bytes for a stream denoted by
-    // stream_id were consumed by application and are ready to
-    // WINDOW_UPDATE.  The consumed bytes are counted towards both
-    // connection and stream level WINDOW_UPDATE
-    //
-    nghttp2_session_consume(session, stream_id, len);
     qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback data length %zu", conn->conn_id, stream_id, len);
+
+    // Calling this here to send out any WINDOW_UPDATE frames that might be necessary.
+    // The only function that nghttp2 calls if it wants to send data is the send_callback.
+    // The only function that calls send_callback is nghttp2_session_send
+    nghttp2_session_send(session_data->session);
 
     //Returning zero means success.
     return 0;
@@ -623,8 +621,7 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
 //    write_buffers(session_data);
 //}
 
-
-static void send_settings_frame(qdr_http2_connection_t *conn)
+static void create_settings_frame(qdr_http2_connection_t *conn)
 {
     qdr_http2_session_data_t *session_data = conn->session_data;
     nghttp2_settings_entry iv[3] = {{NGHTTP2_SETTINGS_MAX_CONCURRENT_STREAMS, 100},
@@ -638,6 +635,13 @@ static void send_settings_frame(qdr_http2_connection_t *conn)
         return;
     }
     qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i] Initial SETTINGS frame sent", conn->conn_id);
+}
+
+
+static void send_settings_frame(qdr_http2_connection_t *conn)
+{
+    qdr_http2_session_data_t *session_data = conn->session_data;
+    create_settings_frame(conn);
     nghttp2_session_send(session_data->session);
     write_buffers(session_data->conn);
 }
@@ -701,6 +705,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
             if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
                 qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 NGHTTP2_FLAG_END_HEADERS and NGHTTP2_FLAG_END_STREAM flag received, receive_complete=true", conn->conn_id, stream_id);
                 qd_message_set_receive_complete(stream_data->message);
+                qd_message_set_no_body(stream_data->message);
                 receive_complete = true;
             }
 
@@ -807,12 +812,10 @@ ssize_t read_callback(nghttp2_session *session,
             assert (payload_length >= 0);
             size_t bytes_to_send = 0;
             if (payload_length) {
-                qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_MESSAGE_BODY_DATA_OK, body_data_buff_count=%i", conn->conn_id, stream_data->stream_id, stream_data->body_data_buff_count);
-
                 // Add the HTTP2 DATA frame header to the payload length to get the complete size of the payload.
                 size_t remaining_payload_length = payload_length - (stream_data->curr_body_data_qd_buff_offset * BUFFER_SIZE);
 
-                if (QD_HTTP2_BUFFER_SIZE >= remaining_payload_length) {
+                if (remaining_payload_length <= QD_HTTP2_BUFFER_SIZE) {
                     bytes_to_send = remaining_payload_length;
                     stream_data->qd_buffers_to_send = stream_data->body_data_buff_count;
                     stream_data->full_payload_handled = true;
@@ -835,7 +838,8 @@ ssize_t read_callback(nghttp2_session *session,
             // A new segment has not completely arrived yet.  Check again later.
             //
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_MESSAGE_BODY_DATA_INCOMPLETE", conn->conn_id, stream_data->stream_id);
-            break;
+            stream_data->disposition = 0;
+            return NGHTTP2_ERR_DEFERRED;
 
         case QD_MESSAGE_BODY_DATA_NO_MORE: {
             //
@@ -1104,10 +1108,17 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
 
             int stream_id = stream_data->session_data->conn->ingress?stream_data->stream_id: -1;
 
+            uint8_t flags = 0;
+            if (qd_message_no_body(qdr_delivery_message(stream_data->out_dlv))) {
+                flags = NGHTTP2_FLAG_END_STREAM;
+            }
+
+            create_settings_frame(conn);
+
             // This does not really submit the request. We need to read the bytes
             //nghttp2_session_set_next_stream_id(session_data->session, stream_data->stream_id);
             stream_data->stream_id = nghttp2_submit_headers(session_data->session,
-                                                            0,
+                                                            flags,
                                                             stream_id,
                                                             NULL,
                                                             hdrs,
@@ -1130,6 +1141,13 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         }
         else {
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Headers already submitted, Proceeding with the body", conn->conn_id, stream_data->stream_id);
+        }
+
+
+        if (qd_message_no_body(qdr_delivery_message(stream_data->out_dlv))) {
+            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Headers already submitted, Message has no body, returning", conn->conn_id, stream_data->stream_id);
+            stream_data->header_sent = true;
+            return PN_ACCEPTED;
         }
 
         if (stream_data->header_sent) {
@@ -1248,9 +1266,9 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
             qd_http2_buffer_t *buf = (qd_http2_buffer_t*) raw_buffers[i].context;
             uint32_t raw_buff_size = raw_buffers[i].size;
             qd_http2_buffer_insert(buf, raw_buff_size);
-            qd_log(http_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
             count += raw_buff_size;
             DEQ_INSERT_TAIL(buffers, buf);
+            qd_log(http_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
         }
     }
 
@@ -1263,21 +1281,23 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
     //TODO - Look into reusing the buffers between here and grant_read_buffers
     int rv = 0;
     while (buf) {
-        // TODO - Check the return value of nghttp2_session_mem_recv.
-        rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
-        if (rv < 0) {
-            if (rv == NGHTTP2_ERR_FLOODED || rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
-                // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
-                // If the client magic is bad, we need to close the connection.
+        size_t http2_buffer_size = qd_http2_buffer_size(buf);
+        if (http2_buffer_size > 0) {
+            rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
+            if (rv < 0) {
+                if (rv == NGHTTP2_ERR_FLOODED || rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
+                    // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
+                    // If the client magic is bad, we need to close the connection.
 
-            }
-            else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
+                }
+                else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
 
-            }
-            else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
+                }
+                else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
 
+                }
+                break;
             }
-            break;
         }
         curr_buf = buf;
         DEQ_REMOVE_HEAD(buffers);
