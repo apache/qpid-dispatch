@@ -22,8 +22,6 @@ import {Links} from './links.js';
 import {Nodes} from './nodes.js';
 
 class Log {
-  constructor() {
-  }
   log(msg) { console.log(msg); }
   debug(msg) { console.log(`Debug: ${msg}`); }
   error(msg) { console.log(`Error: ${msg}`); }
