@@ -334,6 +334,7 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
         qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
         qd_compose_insert_binary_buffers(body, &buffers);
         qd_message_extend(stream_data->message, body);
+        qd_compose_free(body);
     }
     else {
         if (!stream_data->body) {
@@ -567,7 +568,7 @@ static void compose_and_deliver(qdr_http2_stream_data_t *stream_data, qd_compose
         //qd_bitmask_free(link_exclusions);
         qd_message_set_discard(qdr_delivery_message(stream_data->in_dlv), true);
         if (receive_complete) {
-            //qd_message_free(qdr_delivery_message(stream_data->in_dlv));
+            qd_message_free(qdr_delivery_message(stream_data->in_dlv));
         }
     }
 
@@ -591,6 +592,7 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
                                                   0,                      // const char *content_encoding
                                                   0);                     // int32_t  correlation_id
             compose_and_deliver(stream_data, header_and_props, conn, receive_complete);
+            qd_compose_free(header_and_props);
             delivery_routed = true;
         }
     }
@@ -604,6 +606,7 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
                                                   0,                      // const char *content_encoding
                                                   0);                     // int32_t  correlation_id
             compose_and_deliver(stream_data, header_and_props, conn, receive_complete);
+            qd_compose_free(header_and_props);
             delivery_routed = true;
         }
     }
@@ -1211,6 +1214,7 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
         qdr_link_set_context(stream_data->out_link, stream_data);
         qd_iterator_t *fld_iter = qd_message_field_iterator(qdr_delivery_message(delivery), QD_FIELD_REPLY_TO);
         stream_data->reply_to = (char *)qd_iterator_copy(fld_iter);
+        qd_iterator_free(fld_iter);
 
         // Sender link.
         qdr_terminus_t *target = qdr_terminus(0);
@@ -1644,9 +1648,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     // Create a dummy stream_data object and set that as context.
     qdr_http2_stream_data_t *stream_data = new_qdr_http2_stream_data_t();
     ZERO(stream_data);
-    stream_data->session_data = new_qdr_http2_session_data_t();
-    ZERO(stream_data->session_data);
-    stream_data->session_data->conn = egress_http_conn;
+    stream_data->session_data = egress_http_conn->session_data;
 
     qdr_link_set_context(egress_http_conn->stream_dispatcher, stream_data);
     return egress_http_conn;
