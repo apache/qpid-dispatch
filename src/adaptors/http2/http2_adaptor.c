@@ -305,6 +305,9 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     stream_data->message = qd_message();
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
+
+    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] Creating new stream_data->app_properties=QD_PERFORMATIVE_APPLICATION_PROPERTIES", session_data->conn->conn_id, stream_id);
+
     qd_compose_start_map(stream_data->app_properties);
     nghttp2_session_set_stream_user_data(session_data->session, stream_id, stream_data);
     DEQ_INSERT_TAIL(session_data->streams, stream_data);
@@ -461,8 +464,8 @@ static int on_begin_headers_callback(nghttp2_session *session,
         if(frame->headers.cat == NGHTTP2_HCAT_REQUEST && conn->ingress) {
             int32_t stream_id = frame->hd.stream_id;
             qdr_terminus_t *target = qdr_terminus(0);
-            stream_data = create_http2_stream_data(session_data, stream_id);
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i] Processing incoming HTTP2 stream with id %"PRId32"", conn->conn_id, stream_id);
+            stream_data = create_http2_stream_data(session_data, stream_id);
 
             if (!conn->qdr_conn)
                 return 0;
@@ -822,7 +825,7 @@ ssize_t read_callback(nghttp2_session *session,
                     bytes_to_send = remaining_payload_length;
                     stream_data->qd_buffers_to_send = stream_data->body_data_buff_count;
                     stream_data->full_payload_handled = true;
-                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_HTTP2_BUFFER_SIZE >= remaining_payload_length bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
                 }
                 else {
                     // This means that there is more that 16k worth of payload in one body data.
@@ -830,7 +833,7 @@ ssize_t read_callback(nghttp2_session *session,
                     bytes_to_send = QD_HTTP2_BUFFER_SIZE;
                     stream_data->full_payload_handled = false;
                     stream_data->qd_buffers_to_send = NUM_QD_BUFFERS_IN_ONE_HTTP2_BUFFER;
-                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_HTTP2_BUFFER_SIZE >= remaining_payload_length ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
                 }
             }
             return bytes_to_send;
@@ -861,7 +864,7 @@ ssize_t read_callback(nghttp2_session *session,
                 qd_message_set_send_complete(message);
                 // TODO - Dont do the disposition here.
                 stream_data->disposition = PN_ACCEPTED; // This will cause the delivery to be settled
-                qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_MESSAGE_BODY_DATA_NO_MORE - send_complete=true, setting NGHTTP2_DATA_FLAG_EOF", conn->conn_id, stream_data->stream_id);
+                qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_callback QD_MESSAGE_BODY_DATA_NO_MORE - stream_data->disposition = PN_ACCEPTED - send_complete=true, setting NGHTTP2_DATA_FLAG_EOF", conn->conn_id, stream_data->stream_id);
             }
 
             break;
@@ -1372,8 +1375,10 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
             stream_data = next_stream_data;
         }
         else {
-            qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%i] Restarting stream in restart_streams()", http_conn->conn_id, stream_data->stream_id);
-            handle_outgoing_http(stream_data);
+            if (stream_data->disposition != PN_ACCEPTED) {
+                qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%i] Restarting stream in restart_streams()", http_conn->conn_id, stream_data->stream_id);
+                handle_outgoing_http(stream_data);
+            }
             stream_data = DEQ_NEXT(stream_data);
         }
     }
