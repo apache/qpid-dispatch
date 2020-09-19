@@ -235,6 +235,9 @@ class MaxSessionFramesDefaultTest(TestCase):
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            if begin_lines[0] not in [" incoming-window=2147483647,", " incoming-window=131071,"]:
+                print ("DEBUG", "test_max_session_frames_default")
+                print(begin_lines)
             self.assertTrue(begin_lines[0] in
                             [" incoming-window=2147483647,", " incoming-window=131071,"])
 
@@ -272,6 +275,9 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            if begin_lines[0] not in [" incoming-window=2147483647,", " incoming-window=131071,"]:
+                print ("DEBUG", "test_max_frame_max_session_zero")
+                print(begin_lines)
             self.assertTrue(begin_lines[0] in
                             [" incoming-window=2147483647,", " incoming-window=131071,"])
 
@@ -326,6 +332,9 @@ class ConnectorSettingsDefaultTest(TestCase):
             self.assertTrue(' channel-max=32767,' in open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            if begin_lines[0] not in [" incoming-window=2147483647,", " incoming-window=131071,"]:
+                print ("DEBUG", "test_connector_default")
+                print(begin_lines)
             self.assertTrue(begin_lines[0] in
                             [" incoming-window=2147483647,", " incoming-window=131071,"])
 
