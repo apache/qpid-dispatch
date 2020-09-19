@@ -214,4 +214,9 @@ extern const char * const QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED;
 #define QD_AMQP_LINK_ROLE_RECEIVER true
 /// @};
 
+/** @name AMQP session constants. */
+/// @{
+extern const int QD_AMQP_MAX_WINDOW_SIZE;
+/// @};
+
 #endif

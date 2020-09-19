@@ -234,8 +234,9 @@ class MaxSessionFramesDefaultTest(TestCase):
             # if frame size not set then a default is used
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is defaulted to 2^31-1 (Proton default)
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
+            # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            self.assertTrue(begin_lines[0] in
+                            [" incoming-window=2147483647,", " incoming-window=131071,"])
 
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
@@ -270,8 +271,9 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             # max-frame gets set to protocol min
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
-            # incoming-window is defaulted to 2^31-1 (Proton default)
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
+            # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            self.assertTrue(begin_lines[0] in
+                            [" incoming-window=2147483647,", " incoming-window=131071,"])
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -323,8 +325,9 @@ class ConnectorSettingsDefaultTest(TestCase):
             self.assertTrue(' max-frame-size=16384,' in open_lines[0])
             self.assertTrue(' channel-max=32767,' in open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
-            # defaults
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0])
+            # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
+            self.assertTrue(begin_lines[0] in
+                            [" incoming-window=2147483647,", " incoming-window=131071,"])
 
 
 class ConnectorSettingsNondefaultTest(TestCase):
