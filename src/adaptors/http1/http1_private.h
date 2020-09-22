@@ -34,10 +34,10 @@
 #include <qpid/dispatch/message.h>
 #include "adaptors/http_common.h"
 
-typedef struct qdr_http1_out_data_t     qdr_http1_out_data_t;
-typedef struct qdr_http1_response_msg_t qdr_http1_response_msg_t;
-typedef struct qdr_http1_request_t      qdr_http1_request_t;
-typedef struct qdr_http1_connection_t   qdr_http1_connection_t;
+typedef struct qdr_http1_out_data_t      qdr_http1_out_data_t;
+typedef struct qdr_http1_out_data_fifo_t qdr_http1_out_data_fifo_t;
+typedef struct qdr_http1_request_base_t  qdr_http1_request_base_t;
+typedef struct qdr_http1_connection_t    qdr_http1_connection_t;
 
 
 typedef struct qdr_http1_adaptor_t {
@@ -63,7 +63,8 @@ extern qdr_http1_adaptor_t *qdr_http1_adaptor;
 //
 struct qdr_http1_out_data_t {
     DEQ_LINKS(qdr_http1_out_data_t);
-    qdr_http1_request_t *hreq;   // owning request/response
+
+    qdr_http1_out_data_fifo_t *owning_fifo;
 
     // data is either in a raw buffer chain
     // or a message body data (not both!)
@@ -79,91 +80,41 @@ ALLOC_DECLARE(qdr_http1_out_data_t);
 DEQ_DECLARE(qdr_http1_out_data_t, qdr_http1_out_data_list_t);
 
 
-// State for a single HTTP Response message.
-// An HTTP client may receive zero or more "100 Continue"
-// responses prior to the final response message.  This structure
-// holds the state for one response message
 //
-struct qdr_http1_response_msg_t {
-    DEQ_LINKS(qdr_http1_response_msg_t);
-
-    qd_message_t   *in_msg;
-    qdr_delivery_t *dlv;
-    uint64_t        dispo;
-    bool            headers_encoded;
+// A fifo of outgoing (raw connection) data, oldest at HEAD.
+//
+// write_ptr tracks the point in the fifo where the current out_data node that
+// is being written to the raw connection.  As the raw connection returns
+// written buffers (PN_RAW_CONNECTION_WRITTEN) the are removed from the HEAD
+// and freed.
+//
+struct qdr_http1_out_data_fifo_t {
+    qdr_http1_out_data_list_t fifo;
+    qdr_http1_out_data_t     *write_ptr;
 };
-ALLOC_DECLARE(qdr_http1_response_msg_t);
-DEQ_DECLARE(qdr_http1_response_msg_t, qdr_http1_response_msg_list_t);
 
 
 // Per HTTP request/response(s) state.
-// A reference is stored in qdr_delivery_get_context(dlv)
 //
-struct qdr_http1_request_t {
-    DEQ_LINKS(qdr_http1_request_t);
+// This base class is extended for client and server-specific state, see
+// http1_client.c and http1_server.c A reference is stored in
+// qdr_delivery_get_context(dlv)
+//
+struct qdr_http1_request_base_t {
+    DEQ_LINKS(qdr_http1_request_base_t);
 
     uint64_t                  msg_id;
     h1_codec_request_state_t *lib_rs;
     qdr_http1_connection_t   *hconn;  // parent connection
     char                     *response_addr; // request reply-to
 
-    // The request message.
-    //
-    // For connections to an HTTP client, request_msg is used to build the
-    // incoming request.  Once enough of the message arrives and credit is
-    // available a delivery is created (request_dlv) and request_msg pointer is
-    // cleared (the delivery now holds the message).
-    //
-    // For connections to an HTTP server request_msg is not used.  request_dlv
-    // holds the delivery sent by the router.
-    //
-    qd_message_t   *request_msg;
-    qdr_delivery_t *request_dlv;
-    uint64_t        request_dispo;
-    bool            request_headers_encoded;
-
-    // The response message(s).
-    //
-    // A client may receive zero or more "100 Continue" responses by the server
-    // prior to receiving the terminal response. This list holds these
-    // responses in order of delivery (oldest at HEAD).
-    //
-    qdr_http1_response_msg_list_t responses;
-
-    // Incoming message construction.
-    //
-    // app_props is used to temporarily hold header fields as they arrive from
-    // the HTTP endpoint prior to creating a qd_message_t
-    //
-    qd_composed_field_t      *app_props;
-
-    // incoming message disposition - set by router
-    uint64_t                  in_dispo;
-    // outgoing message disposition - set by adaptor
-    uint64_t                  out_dispo;
-
-    // Outgoing data to write to proactor raw connection.
-    // Out_fifo holds the data to be written in order HEAD to TAIL.
-    // Write_ptr tracks the entry that holds the next buffers to send.
-    // Entries are removed from out_fifo after proton completes
-    // writing the buffers to the raw connection.
-    qdr_http1_out_data_list_t out_fifo;
-    qdr_http1_out_data_t     *write_ptr;
-
     // statistics
     //
     uint64_t  in_http1_octets;    // read from raw conn
     uint64_t  out_http1_octets;   // written to raw conn
-
-    // flags
-
-    bool headers_sent; // HTTP headers written to raw connection
-    bool codec_completed;     // encoder/decoder done
-    bool cancelled;
-    bool close_on_complete;   // close the conn when this request is complete
 };
-ALLOC_DECLARE(qdr_http1_request_t);
-DEQ_DECLARE(qdr_http1_request_t, qdr_http1_request_list_t);
+//ALLOC_DECLARE(qdr_http1_request_t);
+DEQ_DECLARE(qdr_http1_request_base_t, qdr_http1_request_list_t);
 
 
 // A single HTTP adaptor connection.
@@ -173,7 +124,6 @@ struct qdr_http1_connection_t {
     h1_codec_connection_t *http_conn;
     pn_raw_connection_t   *raw_conn;
     qdr_connection_t      *qdr_conn;
-    void                  *user_context;
     qdr_http1_adaptor_t   *adaptor;
 
     uint64_t               conn_id;
@@ -242,19 +192,27 @@ ALLOC_DECLARE(qdr_http1_connection_t);
 
 // http1_adaptor.c
 //
-int qdr_http1_write_out_data(qdr_http1_connection_t *hconn);
-void qdr_http1_write_buffer_list(qdr_http1_request_t *hreq, qd_buffer_list_t *blist);
-void qdr_http1_write_body_data(qdr_http1_request_t *hreq, qd_message_body_data_t *body_data);
+//int qdr_http1_write_out_data(qdr_http1_connection_t *hconn);
+//void qdr_http1_write_buffer_list(qdr_http1_request_t *hreq, qd_buffer_list_t *blist);
+
 void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn);
+void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_list_t *blist);
+void qdr_http1_enqueue_body_data(qdr_http1_out_data_fifo_t *fifo, qd_message_body_data_t *body_data);
+uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_fifo_t *fifo);
+void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data);
+// return the number of buffers currently held by the proactor for writing
+int qdr_http1_out_data_buffers_outstanding(const qdr_http1_out_data_fifo_t *out_data);
+
 void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error);
-void qdr_http1_request_free(qdr_http1_request_t *hreq);
 void qdr_http1_connection_free(qdr_http1_connection_t *hconn);
-void qdr_http1_error_response(qdr_http1_request_t *hreq,
+
+void qdr_http1_request_base_cleanup(qdr_http1_request_base_t *hreq);
+void qdr_http1_error_response(qdr_http1_request_base_t *hreq,
                               int error_code,
                               const char *reason);
-void qdr_http1_rejected_response(qdr_http1_request_t *hreq,
+void qdr_http1_rejected_response(qdr_http1_request_base_t *hreq,
                                  const qdr_error_t *error);
-bool qdr_http1_request_complete(const qdr_http1_request_t *hreq);
+
 
 // return the next HTTP token in a comma separated list of tokens
 //
@@ -282,12 +240,12 @@ void qdr_http1_client_core_second_attach(qdr_http1_adaptor_t    *adaptor,
                                          qdr_link_t             *link,
                                          qdr_terminus_t         *source,
                                          qdr_terminus_t         *target);
-void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t *adaptor,
-                                           qdr_http1_connection_t *hconn,
-                                           qdr_http1_request_t    *hreq,
-                                           qdr_delivery_t         *dlv,
-                                           uint64_t                disp,
-                                           bool                    settled);
+void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
+                                           qdr_http1_connection_t   *hconn,
+                                           qdr_http1_request_base_t *hreqb,
+                                           qdr_delivery_t           *dlv,
+                                           uint64_t                  disp,
+                                           bool                      settled);
 
 
 // http1_server.c protocol adaptor callbacks
@@ -301,11 +259,11 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                                             qdr_link_t             *link,
                                             qdr_delivery_t         *delivery,
                                             bool                    settled);
-void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t *adaptor,
-                                           qdr_http1_connection_t *hconn,
-                                           qdr_http1_request_t    *hreq,
-                                           qdr_delivery_t         *dlv,
-                                           uint64_t                disp,
-                                           bool                    settled);
+void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
+                                           qdr_http1_connection_t   *hconn,
+                                           qdr_http1_request_base_t *hreq,
+                                           qdr_delivery_t           *dlv,
+                                           uint64_t                  disp,
+                                           bool                      settled);
 
 #endif // http1_private_H

@@ -22,6 +22,17 @@
 #include <stdio.h>
 #include <inttypes.h>
 
+
+//
+// This file contains code for the HTTP/1.x protocol adaptor.  This file
+// includes code that is common to both ends of the protocol (e.g. client and
+// server processing).  See http1_client.c and http1_server.c for code specific
+// to HTTP endpoint processing.
+//
+
+// for debug: will dump raw buffer content to stdout if true
+#define HTTP1_DUMP_BUFFERS false
+
 #define RAW_BUFFER_BATCH  16
 
 
@@ -53,8 +64,6 @@
 // @TODO(kgiusti): rx complete + abort ingress deliveries when endpoint dies while msg in flight
 
 
-ALLOC_DEFINE(qdr_http1_request_t);
-ALLOC_DEFINE(qdr_http1_response_msg_t);
 ALLOC_DEFINE(qdr_http1_out_data_t);
 ALLOC_DEFINE(qdr_http1_connection_t);
 
@@ -62,58 +71,12 @@ ALLOC_DEFINE(qdr_http1_connection_t);
 qdr_http1_adaptor_t *qdr_http1_adaptor;
 
 
-void qdr_http1_request_free(qdr_http1_request_t *hreq)
+void qdr_http1_request_base_cleanup(qdr_http1_request_base_t *hreq)
 {
     if (hreq) {
         DEQ_REMOVE(hreq->hconn->requests, hreq);
-
         h1_codec_request_state_cancel(hreq->lib_rs);
         free(hreq->response_addr);
-
-        qd_message_free(hreq->request_msg);
-        if (hreq->request_dlv) {
-            qdr_delivery_set_context(hreq->request_dlv, 0);
-            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor connection closed");
-        }
-
-        qdr_http1_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
-        while (rmsg) {
-            DEQ_REMOVE_HEAD(hreq->responses);
-            qd_message_free(rmsg->in_msg);
-            if (rmsg->dlv) {
-                qdr_delivery_set_context(rmsg->dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 adaptor connection closed");
-            }
-            rmsg = DEQ_HEAD(hreq->responses);
-        }
-
-        qd_compose_free(hreq->app_props);
-
-        qdr_http1_out_data_t *od = DEQ_HEAD(hreq->out_fifo);
-        while (od) {
-            DEQ_REMOVE_HEAD(hreq->out_fifo);
-            if (od->body_data)
-                qd_message_body_data_release(od->body_data);
-            else {
-
-#if 1
-                {
-                    qd_buffer_t *mybuf = DEQ_HEAD(od->raw_buffers);
-                    while (mybuf) {
-                        fprintf(stdout, "Free buffer: Ptr=%p len=%d\n",
-                                (void*)&mybuf[1], (int)mybuf->size);
-                        fflush(stdout);
-                        mybuf = DEQ_NEXT(mybuf);
-                    }
-                }
-#endif
-                qd_buffer_list_free_buffers(&od->raw_buffers);
-            }
-            free_qdr_http1_out_data_t(od);
-            od = DEQ_HEAD(hreq->out_fifo);
-        }
-
-        free_qdr_http1_request_t(hreq);
     }
 }
 
@@ -122,11 +85,9 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 {
     if (hconn) {
 
-        qdr_http1_request_t *hreq = DEQ_HEAD(hconn->requests);
-        while (hreq) {
-            qdr_http1_request_free(hreq);
-            hreq = DEQ_HEAD(hconn->requests);
-        }
+        // request expected to be clean up by caller
+        assert(DEQ_IS_EMPTY(hconn->requests));
+
         h1_codec_connection_free(hconn->http_conn);
         if (hconn->raw_conn) {
             pn_raw_connection_set_context(hconn->raw_conn, 0);
@@ -160,6 +121,46 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 }
 
 
+void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data)
+{
+    if (out_data) {
+        // expect: all buffers returned from proton!
+        assert(qdr_http1_out_data_buffers_outstanding(out_data) == 0);
+        qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
+        while (od) {
+            DEQ_REMOVE_HEAD(out_data->fifo);
+            if (od->body_data)
+                qd_message_body_data_release(od->body_data);
+            else
+                qd_buffer_list_free_buffers(&od->raw_buffers);
+            free_qdr_http1_out_data_t(od);
+            od = DEQ_HEAD(out_data->fifo);
+        }
+    }
+}
+
+
+// Return the number of buffers in the process of being written out by the proactor.
+// These buffers are "owned" by proton - they must not be freed until proton has
+// released them.
+//
+int qdr_http1_out_data_buffers_outstanding(const qdr_http1_out_data_fifo_t *out_data)
+{
+    int count = 0;
+    if (out_data) {
+        qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
+        while (od) {
+            count += od->next_buffer - od->free_count;
+            if (od == out_data->write_ptr)
+                break;
+
+            od = DEQ_NEXT(od);
+        }
+    }
+    return count;
+}
+
+
 // Initiate close of the raw connection.
 //
 void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error)
@@ -169,10 +170,11 @@ void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error
                "[C%"PRIu64"] Connection closing: %s", hconn->conn_id, error);
     }
 
-    hconn->close_connection = true;
+    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+           "[C%"PRIu64"] Initiating close of connection", hconn->conn_id);
+
     if (hconn->raw_conn) {
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%"PRIu64"] Initiating close of connection", hconn->conn_id);
+        hconn->close_connection = true;
         pn_raw_connection_close(hconn->raw_conn);
     }
 
@@ -181,21 +183,8 @@ void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error
 }
 
 
-// Check if hreq has completed.
-//
-bool qdr_http1_request_complete(const qdr_http1_request_t *hreq)
-{
-    assert(hreq);
-    return (hreq->codec_completed &&
-            hreq->request_msg == 0 &&
-            hreq->request_dlv == 0 &&
-            DEQ_IS_EMPTY(hreq->responses) &&
-            DEQ_IS_EMPTY(hreq->out_fifo));
-}
-
-
-void qdr_http1_rejected_response(qdr_http1_request_t *hreq,
-                                 const qdr_error_t *error)
+void qdr_http1_rejected_response(qdr_http1_request_base_t *hreq,
+                                 const qdr_error_t        *error)
 {
     char *reason = 0;
     if (error) {
@@ -226,7 +215,7 @@ void qdr_http1_rejected_response(qdr_http1_request_t *hreq,
 
 // send a server error response
 //
-void qdr_http1_error_response(qdr_http1_request_t *hreq,
+void qdr_http1_error_response(qdr_http1_request_base_t *hreq,
                               int error_code,
                               const char *reason)
 {
@@ -274,19 +263,15 @@ const char *qdr_http1_token_list_next(const char *start, size_t *len, const char
 // Write pending data out the raw connection.  Preserve order by only writing
 // the head request data.
 //
-int qdr_http1_write_out_data(qdr_http1_connection_t *hconn)
+uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_fifo_t *fifo)
 {
-    qdr_http1_request_t *hreq = DEQ_HEAD(hconn->requests);
-    if (!hreq) return 0;
-
     pn_raw_buffer_t buffers[RAW_BUFFER_BATCH];
     size_t count = !hconn->raw_conn || pn_raw_connection_is_write_closed(hconn->raw_conn)
         ? 0
         : pn_raw_connection_write_buffers_capacity(hconn->raw_conn);
 
-
-    int total_bufs = 0;
-    qdr_http1_out_data_t *od = hreq->write_ptr;
+    uint64_t total_octets = 0;
+    qdr_http1_out_data_t *od = fifo->write_ptr;
     while (count > 0 && od) {
         qd_buffer_t *wbuf   = 0;
         int          od_len = MIN(count,
@@ -298,7 +283,6 @@ int qdr_http1_write_out_data(qdr_http1_connection_t *hconn)
         while (od_len) {
             size_t limit = MIN(RAW_BUFFER_BATCH, od_len);
             int written = 0;
-            uint64_t total_bytes = 0;
 
             if (od->body_data) {  // buffers stored in qd_message_t
 
@@ -307,7 +291,7 @@ int qdr_http1_write_out_data(qdr_http1_connection_t *hconn)
                     // enforce this: we expect the context can be used by the adaptor!
                     assert(buffers[i].context == 0);
                     buffers[i].context = (uintptr_t)od;
-                    total_bytes += buffers[i].size;
+                    total_octets += buffers[i].size;
                 }
 
             } else {   // list of buffers in od->raw_buffers
@@ -326,10 +310,21 @@ int qdr_http1_write_out_data(qdr_http1_connection_t *hconn)
                     rdisc->size     = qd_buffer_size(wbuf);
                     rdisc->offset   = 0;
 
-                    total_bytes += rdisc->size;
+                    total_octets += rdisc->size;
                     ++rdisc;
                     wbuf = DEQ_NEXT(wbuf);
                     written += 1;
+                }
+            }
+
+            // keep me, you'll need it
+            if (HTTP1_DUMP_BUFFERS) {
+                for (size_t j = 0; j < written; ++j) {
+                    char *ptr = (char*) buffers[j].bytes;
+                    int len = (int) buffers[j].size;
+                    fprintf(stdout, "\n[C%"PRIu64"] Raw Write: Ptr=%p len=%d\n  value='%.*s'\n",
+                            hconn->conn_id, (void*)ptr, len, len, ptr);
+                    fflush(stdout);
                 }
             }
 
@@ -337,71 +332,58 @@ int qdr_http1_write_out_data(qdr_http1_connection_t *hconn)
             count -= written;
             od_len -= written;
             od->next_buffer += written;
-            total_bufs += written;
-
-            hreq->out_http1_octets  += total_bytes;
-            hconn->out_http1_octets += total_bytes;
-            total_bytes = 0;
         }
 
         if (od->next_buffer == od->buffer_count) {
             // all buffers in od have been passed to proton.
             od = DEQ_NEXT(od);
-            hreq->write_ptr = od;
+            fifo->write_ptr = od;
             wbuf = 0;
         }
     }
 
-    return total_bufs;
+    hconn->out_http1_octets += total_octets;
+    return total_octets;
 }
 
 
 // The HTTP encoder has a list of buffers to be written to the raw connection.
-// Queue it to the requests outgoing data.  Write to the raw connection only if
-// this is the current request.
+// Queue it to the outgoing data fifo.
 //
-void qdr_http1_write_buffer_list(qdr_http1_request_t *hreq, qd_buffer_list_t *blist)
+void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_list_t *blist)
 {
     int count = (int) DEQ_SIZE(*blist);
     if (count) {
         qdr_http1_out_data_t *od = new_qdr_http1_out_data_t();
         ZERO(od);
-        od->raw_buffers = *blist;
+        od->owning_fifo = fifo;
         od->buffer_count = (int) DEQ_SIZE(*blist);
+        od->raw_buffers = *blist;
         DEQ_INIT(*blist);
 
-        od->hreq = hreq;
-        DEQ_INSERT_TAIL(hreq->out_fifo, od);
-        if (!hreq->write_ptr)
-            hreq->write_ptr = od;
-
-        if (hreq == DEQ_HEAD(hreq->hconn->requests))
-            qdr_http1_write_out_data(hreq->hconn);
+        DEQ_INSERT_TAIL(fifo->fifo, od);
+        if (!fifo->write_ptr)
+            fifo->write_ptr = od;
     }
 }
 
 
 // The HTTP encoder has a message body data to be written to the raw connection.
-// Queue it to the requests outgoing data. Write to raw connection only if
-// this is the current request.
+// Queue it to the outgoing data fifo.
 //
-void qdr_http1_write_body_data(qdr_http1_request_t *hreq, qd_message_body_data_t *body_data)
+void qdr_http1_enqueue_body_data(qdr_http1_out_data_fifo_t *fifo, qd_message_body_data_t *body_data)
 {
     int count = qd_message_body_data_buffer_count(body_data);
     if (count) {
         qdr_http1_out_data_t *od = new_qdr_http1_out_data_t();
         ZERO(od);
+        od->owning_fifo = fifo;
         od->body_data = body_data;
         od->buffer_count = count;
 
-        od->hreq = hreq;
-        DEQ_INSERT_TAIL(hreq->out_fifo, od);
-        if (!hreq->write_ptr)
-            hreq->write_ptr = od;
-
-        if (hreq == DEQ_HEAD(hreq->hconn->requests))
-            qdr_http1_write_out_data(hreq->hconn);
-
+        DEQ_INSERT_TAIL(fifo->fifo, od);
+        if (!fifo->write_ptr)
+            fifo->write_ptr = od;
     } else {
         // empty body-data
         qd_message_body_data_release(body_data);
@@ -418,14 +400,14 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
     while ((count = pn_raw_connection_take_written_buffers(hconn->raw_conn, buffers, RAW_BUFFER_BATCH)) != 0) {
         for (size_t i = 0; i < count; ++i) {
 
-#if 1
-                {
-                    char *ptr = (char*) buffers[i].bytes;
-                    int len = (int) buffers[i].size;
-                    fprintf(stdout, "\n\nRaw Written: Ptr=%p len=%d\n  value='%.*s'\n\n", (void*)ptr, len, len, ptr);
-                    fflush(stdout);
-                }
-#endif
+            // keep me, you'll need it
+            if (HTTP1_DUMP_BUFFERS) {
+                char *ptr = (char*) buffers[i].bytes;
+                int len = (int) buffers[i].size;
+                fprintf(stdout, "\n[C%"PRIu64"] Raw Written: Ptr=%p len=%d\n  value='%.*s'\n",
+                        hconn->conn_id, (void*)ptr, len, len, ptr);
+                fflush(stdout);
+            }
 
             qdr_http1_out_data_t *od = (qdr_http1_out_data_t*) buffers[i].context;
             assert(od);
@@ -436,8 +418,8 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
             od->free_count += 1;
             if (od->free_count == od->buffer_count) {
                 // all buffers returned
-                qdr_http1_request_t *hreq = od->hreq;
-                DEQ_REMOVE(hreq->out_fifo, od);
+                qdr_http1_out_data_fifo_t *fifo = od->owning_fifo;
+                DEQ_REMOVE(fifo->fifo, od);
                 if (od->body_data)
                     qd_message_body_data_release(od->body_data);
                 else
@@ -611,11 +593,11 @@ static int _core_link_get_credit(void *context, qdr_link_t *link)
 }
 
 
-// Handle disposition/settlement update for the outstanding incoming HTTP message
+// Handle disposition/settlement update for the outstanding incoming HTTP message.
 //
 static void _core_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t disp, bool settled)
 {
-    qdr_http1_request_t *hreq = (qdr_http1_request_t*) qdr_delivery_get_context(dlv);
+    qdr_http1_request_base_t *hreq = (qdr_http1_request_base_t*) qdr_delivery_get_context(dlv);
     if (hreq) {
         qdr_http1_connection_t *hconn = hreq->hconn;
         qdr_link_t *link = qdr_delivery_link(dlv);
@@ -635,9 +617,8 @@ static void _core_conn_close(void *context, qdr_connection_t *conn, qdr_error_t 
 {
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) qdr_connection_get_context(conn);
     if (hconn) {
-        if (hconn->trace)
-            qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                   "[C%"PRIu64"] HTTP/1.x closing connection", hconn->conn_id);
+        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+               "[C%"PRIu64"] HTTP/1.x closing connection", hconn->conn_id);
 
         char *qdr_error = error ? qdr_error_description(error) : 0;
         hconn->qdr_conn = 0;
@@ -702,7 +683,20 @@ static void qd_http1_adaptor_final(void *adaptor_context)
 {
     qdr_http1_adaptor_t *adaptor = (qdr_http1_adaptor_t*) adaptor_context;
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
-    // @TODO(kgiusti): proper clean up
+
+#if 0
+    qd_http_lsnr_t *li = DEQ_HEAD(adaptor->listeners);
+    while (li) {
+        qd_http1_delete_listener(qd, li);
+        li = DEQ_HEAD(adaptor->listeners);
+    }
+    qd_http_connector_t *ct = DEQ_HEAD(adaptor->connectors);
+    while (ct) {
+        qd_http1_delete_connector(qd, ct);
+        ct = DEQ_HEAD(adaptor->connectors);
+    }
+#endif
+
     free(adaptor);
     qdr_http1_adaptor =  NULL;
 }

@@ -29,6 +29,13 @@
 #include <string.h>
 #include <assert.h>
 
+
+//
+// This file contains code for encoding/decoding an HTTP/1.x data stream.  See
+// http1_codec.h for details.
+//
+
+
 // @TODO(kgiusti)
 // - properly set 'more' flag on rx_body() callback
 
@@ -225,16 +232,18 @@ h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *cont
 }
 
 
-// The server has closed the connection.
+// The connection has closed.  If this is a connection to a server this may
+// simply be the end of the response message. If so mark it complete.
 //
 void h1_codec_connection_closed(h1_codec_connection_t *conn)
 {
     if (conn) {
-        struct decoder_t *decoder = &conn->decoder;
-        if (conn->config.type == HTTP1_CONN_SERVER && decoder->hrs) {
-            // The server may have closed the connection to indicate the response has completed.
-            // If that is the case consider this request complete
-            if (decoder->hrs->request_complete && decoder->hrs->response_code) {
+        if (conn->config.type == HTTP1_CONN_SERVER) {
+            struct decoder_t *decoder = &conn->decoder;
+            if (decoder->hrs &&
+                decoder->hrs->request_complete &&
+                decoder->state == HTTP1_MSG_STATE_BODY) {
+
                 h1_codec_request_state_t *hrs = decoder->hrs;
                 decoder_reset(decoder);
                 hrs->response_complete = true;
@@ -418,8 +427,11 @@ static bool is_empty_line(const qd_iterator_pointer_t *line)
     return false;
 }
 
+
+// for debug:
 static void debug_print_iterator_pointer(const char *prefix, const qd_iterator_pointer_t *ptr)
 {
+#if 0
     qd_iterator_pointer_t tmp = *ptr;
     fprintf(stdout, "%s '", prefix);
     size_t len = MIN(tmp.remaining, 80);
@@ -429,6 +441,7 @@ static void debug_print_iterator_pointer(const char *prefix, const qd_iterator_p
     }
     fprintf(stdout, "%s'\n", (tmp.remaining) ? " <truncated>" : "");
     fflush(stdout);
+#endif
 }
 
 
@@ -943,7 +956,7 @@ static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
     // unparsed data.  Send any buffers preceding the current read pointer.
     qd_buffer_list_t blist = DEQ_EMPTY;
     size_t octets = 0;
-    const size_t body_offset = body_ptr->cursor - qd_buffer_base(body_ptr->buffer);
+    size_t body_offset = body_ptr->cursor - qd_buffer_base(body_ptr->buffer);
 
     // invariant:
     assert(DEQ_HEAD(decoder->incoming) == body_ptr->buffer);
@@ -969,6 +982,8 @@ static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
         qd_buffer_insert(tail, body_ptr->remaining);
         DEQ_INSERT_TAIL(blist, tail);
         octets += body_ptr->remaining;
+        if (DEQ_SIZE(blist) == 1)
+            body_offset = 0;
 
         *body_ptr = *rptr;
         body_ptr->remaining = 0;
@@ -1477,11 +1492,11 @@ int h1_codec_tx_done(h1_codec_request_state_t *hrs, bool *need_close)
 
 bool h1_codec_request_complete(const h1_codec_request_state_t *hrs)
 {
-    return hrs->request_complete;
+    return hrs && hrs->request_complete;
 }
 
 
 bool h1_codec_response_complete(const h1_codec_request_state_t *hrs)
 {
-    return hrs->response_complete;
+    return hrs && hrs->response_complete;
 }

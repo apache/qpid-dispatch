@@ -60,7 +60,7 @@ class RequestMsg(object):
             conn.putheader(key, value)
         conn.endheaders()
         if self.body:
-            conn.send(body)
+            conn.send(self.body)
 
 
 class ResponseMsg(object):
@@ -87,8 +87,8 @@ class ResponseMsg(object):
             return
 
         handler.send_response(self.status, self.reason)
-        for header in self.headers:
-            handler.send_header(header[0], header[1])
+        for key, value in self.headers.items():
+            handler.send_header(key, value)
         handler.end_headers()
 
         if self.body:
@@ -98,33 +98,72 @@ class ResponseMsg(object):
         return self.eom_close
 
 
+class ResponseValidator(object):
+    """
+    Validate a response as received by the HTTP client
+    """
+    def __init__(self, status=200, expect_headers=None, expect_body=None):
+        if expect_headers is None:
+            expect_headers = {}
+        self.status = status
+        self.expect_headers = expect_headers
+        self.expect_body = expect_body
+
+    def check_response(self, rsp):
+        if self.status and rsp.status != self.status:
+            raise Exception("Bad response code, expected %s got %s"
+                            % (self.status, rsp.status))
+        for key, value in self.expect_headers.items():
+            if rsp.getheader(key) != value:
+                raise Exception("Missing/bad header (%s), expected %s got %s"
+                                % (key, value, rsp.getheader(key)))
+
+        body = rsp.read()
+        if (self.expect_body and self.expect_body != body):
+            raise Exception("Bad response body expected %s got %s"
+                            % (self.expect_body, body))
+        return body
+
+
 TEST_SCENARIOS = {
+
+    #
+    # GET
+    #
+
     "GET": [
         (RequestMsg("GET", "/GET/error"),
-         ResponseMsg(400, reason="Bad breath", error=True)),
+         ResponseMsg(400, reason="Bad breath", error=True),
+         ResponseValidator(status=400)),
 
         (RequestMsg("GET", "/GET/content_len"),
          ResponseMsg(200, reason="OK",
-                     headers=[("Content-Length", 1),
-                              ("Content-Type", "text/plain;charset=utf-8")],
-                     body=b'?')),
+                     headers={"Content-Length": 1,
+                              "Content-Type": "text/plain;charset=utf-8"},
+                     body=b'?'),
+         ResponseValidator(expect_headers={'Content-Length': '1'},
+                           expect_body=b'?')),
 
         (RequestMsg("GET", "/GET/content_len_511"),
          ResponseMsg(200, reason="OK",
-                     headers=[("Content-Length", 511),
-                              ("Content-Type", "text/plain;charset=utf-8")],
-                     body=b'X' * 511)),
+                     headers={"Content-Length": 511,
+                              "Content-Type": "text/plain;charset=utf-8"},
+                     body=b'X' * 511),
+         ResponseValidator(expect_headers={'Content-Length': '511'},
+                           expect_body=b'X' * 511)),
 
         (RequestMsg("GET", "/GET/content_len_4096"),
          ResponseMsg(200, reason="OK",
-                     headers=[("Content-Length", 4096),
-                              ("Content-Type", "text/plain;charset=utf-8")],
-                     body=b'X' * 4096)),
+                     headers={"Content-Length": 4096,
+                              "Content-Type": "text/plain;charset=utf-8"},
+                     body=b'X' * 4096),
+         ResponseValidator(expect_headers={'Content-Length': '4096'},
+                           expect_body=b'X' * 4096)),
 
         (RequestMsg("GET", "/GET/chunked"),
          ResponseMsg(200, reason="OK",
-                     headers=[("transfer-encoding", "chunked"),
-                              ("Content-Type", "text/plain;charset=utf-8")],
+                     headers={"transfer-encoding": "chunked",
+                              "Content-Type": "text/plain;charset=utf-8"},
                      # note: the chunk length does not count the trailing CRLF
                      body=b'16\r\n'
                      + b'Mary had a little pug \r\n'
@@ -133,12 +172,14 @@ TEST_SCENARIOS = {
                      + b'0\r\n'
                      + b'Optional: Trailer\r\n'
                      + b'Optional: Trailer\r\n'
-                     + b'\r\n')),
+                     + b'\r\n'),
+         ResponseValidator(expect_headers={'transfer-encoding': 'chunked'},
+                           expect_body=b'Mary had a little pug Its name was "Skupper-Jack"')),
 
         (RequestMsg("GET", "/GET/chunked_large"),
          ResponseMsg(200, reason="OK",
-                     headers=[("transfer-encoding", "chunked"),
-                              ("Content-Type", "text/plain;charset=utf-8")],
+                     headers={"transfer-encoding": "chunked",
+                              "Content-Type": "text/plain;charset=utf-8"},
                      # note: the chunk length does not count the trailing CRLF
                      body=b'1\r\n'
                      + b'?\r\n'
@@ -149,34 +190,135 @@ TEST_SCENARIOS = {
                      + b'0\r\n'
                      + b'Optional: Trailer\r\n'
                      + b'Optional: Trailer\r\n'
-                     + b'\r\n')),
+                     + b'\r\n'),
+         ResponseValidator(expect_headers={'transfer-encoding': 'chunked'},
+                           expect_body=b'?' + b'X' * 0x800 + b'Y' * 0x13)),
 
         (RequestMsg("GET", "/GET/info_content_len"),
          [ResponseMsg(100, reason="Continue",
-                      headers=[("Blab", 1), ("Blob", "?")]),
+                      headers={"Blab": 1, "Blob": "?"}),
           ResponseMsg(200, reason="OK",
-                      headers=[("Content-Length", 1),
-                               ("Content-Type", "text/plain;charset=utf-8")],
-                      body=b'?')]),
+                      headers={"Content-Length": 1,
+                               "Content-Type": "text/plain;charset=utf-8"},
+                      body=b'?')],
+         ResponseValidator(expect_headers={'Content-Type': "text/plain;charset=utf-8"},
+                           expect_body=b'?')),
 
         (RequestMsg("GET", "/GET/no_length"),
          ResponseMsg(200, reason="OK",
-                     headers=[("Content-Type", "text/plain;charset=utf-8"),
+                     headers={"Content-Type": "text/plain;charset=utf-8",
                               #         ("connection", "close")
-                     ],
+                     },
                      body=b'Hi! ' * 1024 + b'X',
-                     eom_close=True))
+                     eom_close=True),
+         ResponseValidator(expect_body=b'Hi! ' * 1024 + b'X')),
     ],
-}
 
+    #
+    # HEAD
+    #
+
+    "HEAD": [
+        (RequestMsg("HEAD", "/HEAD/test_01"),
+         ResponseMsg(200, headers={"App-Header-1": "Value 01",
+                                   "Content-Length": "10",
+                                   "App-Header-2": "Value 02"},
+                     body=None),
+         ResponseValidator(expect_headers={"App-Header-1": "Value 01",
+                                        "Content-Length": "10",
+                                        "App-Header-2": "Value 02"})
+        ),
+        (RequestMsg("HEAD", "/HEAD/test_02"),
+         ResponseMsg(200, headers={"App-Header-1": "Value 01",
+                                   "Transfer-Encoding": "chunked",
+                                   "App-Header-2": "Value 02"}),
+         ResponseValidator(expect_headers={"App-Header-1": "Value 01",
+                                        "Transfer-Encoding": "chunked",
+                                        "App-Header-2": "Value 02"})),
+
+        (RequestMsg("HEAD", "/HEAD/test_03"),
+         ResponseMsg(200, headers={"App-Header-3": "Value 03"}, eom_close=True),
+         ResponseValidator(expect_headers={"App-Header-3": "Value 03"})),
+    ],
+
+    #
+    # POST
+    #
+
+    "POST": [
+        (RequestMsg("POST", "/POST/test_01",
+                    headers={"App-Header-1": "Value 01",
+                             "Content-Length": "18",
+                             "Content-Type": "application/x-www-form-urlencoded"},
+                    body=b'one=1&two=2&three=3'),
+         ResponseMsg(200, reason="OK",
+                     headers={"Response-Header": "whatever",
+                              "Transfer-Encoding": "chunked"},
+                     body=b'8\r\n'
+                     + b'12345678\r\n'
+                     + b'f\r\n'
+                     + b'abcdefghijklmno\r\n'
+                     + b'000\r\n'
+                     + b'\r\n'),
+         ResponseValidator(expect_body=b'12345678abcdefghijklmno')
+        ),
+        (RequestMsg("POST", "/POST/test_02",
+                    headers={"App-Header-1": "Value 01",
+                              "Transfer-Encoding": "chunked"},
+                    body=b'01\r\n'
+                    + b'!\r\n'
+                    + b'0\r\n\r\n'),
+         ResponseMsg(200, reason="OK",
+                     headers={"Response-Header": "whatever",
+                             "Content-Length": "9"},
+                     body=b'Hi There!',
+                     eom_close=True),
+         ResponseValidator(expect_body=b'Hi There!')
+        ),
+    ],
+
+    #
+    # PUT
+    #
+    
+    "PUT": [
+        (RequestMsg("PUT", "/PUT/test_01",
+                    headers={"Put-Header-1": "Value 01",
+                             #"Transfer-Encoding": "beaten,robbed,chunked",
+                             "Transfer-Encoding": "chunked",
+                             "Content-Type": "text/plain;charset=utf-8"},
+                    body=b'80\r\n'
+                    + b'$' * 0x80 + b'\r\n'
+                    + b'0\r\n\r\n'),
+         ResponseMsg(201, reason="Created",
+                     headers={"Response-Header": "whatever",
+                              "Content-length": "3"},
+                     body=b'ABC'),
+         ResponseValidator(status=201, expect_body=b'ABC')
+        ),
+
+        (RequestMsg("PUT", "/PUT/test_02",
+                    headers={"Put-Header-1": "Value 01",
+                             "Content-length": "0",
+                             "Content-Type": "text/plain;charset=utf-8"}),
+         ResponseMsg(201, reason="Created",
+                     headers={"Response-Header": "whatever",
+                              # "Transfer-Encoding": "beaten,robbed,chunked"},
+                              "Transfer-Encoding": "chunked"},
+                     body=b'1\r\n$\r\n0\r\n\r\n',
+                     eom_close=True),
+         ResponseValidator(status=201, expect_body=b'$')
+        ),
+    ]
+}
 
 
 class RequestHandler(BaseHTTPRequestHandler):
     """
     Dispatches requests received by the HTTPServer based on the method
     """
-    def do_GET(self):
-        for req, resp in TEST_SCENARIOS["GET"]:
+    def _execute_request(self, tests):
+        for req, resp, val in tests:
             if req.target == self.path:
                 if not isinstance(resp, list):
                     resp = [resp]
@@ -189,6 +331,18 @@ class RequestHandler(BaseHTTPRequestHandler):
 
         resp = HttpResponse(404, reason="Not Found", error=True)
         resp.send_response(self)
+
+    def do_GET(self):
+        self._execute_request(TEST_SCENARIOS["GET"])
+
+    def do_HEAD(self):
+        self._execute_request(TEST_SCENARIOS["HEAD"])
+
+    def do_POST(self):
+        self._execute_request(TEST_SCENARIOS["POST"])
+
+    def do_PUT(self):
+        self._execute_request(TEST_SCENARIOS["PUT"])
 
     # these overrides just quiet the test output
     # comment them out to help debug:
@@ -277,17 +431,14 @@ class Http1AdaptorOneRouterTest(TestCase):
         #      ^         ^
         #      |         |
         #      V         V
-        #   <client>  <server>
+        #  <clients>  <server>
 
         cls.routers = []
-        #cls.http_server_port = cls.tester.get_port()
-        cls.http_server_port = 9090
-        #cls.http_listener_port = cls.tester.get_port()
-        cls.http_listener_port = 8080
+        cls.http_server_port = cls.tester.get_port()
+        cls.http_listener_port = cls.tester.get_port()
 
         router('INT.A', 'standalone',
                [('httpConnector', {'port': cls.http_server_port,
-                                   #'host': '0.0.0.0',
                                    'protocolVersion': 'HTTP1',
                                    'address': 'testServer'}),
                 ('httpListener', {'port': cls.http_listener_port,
@@ -297,24 +448,41 @@ class Http1AdaptorOneRouterTest(TestCase):
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
 
-    def test_001_get(self):
+    def _do_request(self, tests):
         server = TestServer(port=self.http_server_port)
-        for req, _ in TEST_SCENARIOS["GET"]:
+        for req, _, val in tests:
             client = HTTPConnection("127.0.0.1:%s" % self.http_listener_port,
                                     timeout=TIMEOUT)
             req.send_request(client)
             rsp = client.getresponse()
-            ignored = rsp.getheaders()
-            ignored = rsp.read()
-            client.close()
+            try:
+                body = val.check_response(rsp)
+            except Exception as exc:
+                self.fail("request failed:  %s" % str(exc))
 
+            if req.method is "BODY":
+                self.assertEqual(b'', body)
+
+            client.close()
         server.wait()
 
+    def test_001_get(self):
+        self._do_request(TEST_SCENARIOS["GET"])
+
+    def test_002_head(self):
+        self._do_request(TEST_SCENARIOS["HEAD"])
+
+    def test_003_post(self):
+        self._do_request(TEST_SCENARIOS["POST"])
+
+    def test_004_put(self):
+        self._do_request(TEST_SCENARIOS["PUT"])
 
 
 class Http1AdaptorInteriorTest(TestCase):
     """
-    Test an HTTP server connected to an interior router
+    Test an HTTP server connected to an interior router serving multiple HTTP
+    clients
     """
     @classmethod
     def setUpClass(cls):
@@ -356,8 +524,9 @@ class Http1AdaptorInteriorTest(TestCase):
 
         router('INT.A', 'interior',
                [('listener', {'role': 'edge', 'port': cls.INTA_edge_port}),
-               # ('httpConnector', {'port': cls.http_server_port,
-               #                    'protocolVersion': 'HTTP1'})
+                ('httpConnector', {'port': cls.http_server_port,
+                                   'protocolVersion': 'HTTP1',
+                                   'address': 'testServer'})
                ])
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
@@ -365,15 +534,21 @@ class Http1AdaptorInteriorTest(TestCase):
         router('EA1', 'edge',
                [('connector', {'name': 'uplink', 'role': 'edge',
                                'port': cls.INTA_edge_port}),
-                # ('httpListener', {'port': cls.http_listener_port,
-                #                   'protocolVersion': 'HTTP1',
-                #                   'address': 'testServer'})
+                ('httpListener', {'port': cls.http_listener_port,
+                                  'protocolVersion': 'HTTP1',
+                                  'address': 'testServer'})
                ])
         cls.EA1 = cls.routers[1]
         cls.EA1.listener = cls.EA1.addresses[0]
 
         cls.EA1.wait_connectors()
         cls.INT_A.wait_address('EA1')
+
+
+    def test_0(self):
+        #TBD
+        pass
+
 
 if __name__ == '__main__':
     unittest.main(main_module())
