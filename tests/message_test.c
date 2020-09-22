@@ -704,6 +704,147 @@ exit:
 }
 
 
+// validate the body data interface
+//
+static char *test_body_data(void *context)
+{
+    char *result = 0;
+    qd_message_t *msg = qd_message();
+
+    // construct a message with multiple body data sections
+
+    qd_composed_field_t *hdrs = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    // dummy headers
+    qd_compose_start_list(hdrs);
+    qd_compose_insert_bool(hdrs, 0);     // durable
+    qd_compose_insert_null(hdrs);        // priority
+    qd_compose_end_list(hdrs);
+
+    qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, hdrs);
+    // dummy message properties
+    qd_compose_start_list(props);
+    qd_compose_insert_null(props);     // message-id
+    qd_compose_insert_null(props);     // user-id
+    qd_compose_insert_string(props, "amqp://home/index.html"); // to
+    qd_compose_insert_string(props, "my-subject");
+    qd_compose_end_list(props);
+
+    // start with an empty (0 length) data section
+    //
+    qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_DATA, props);
+    qd_buffer_list_t data = DEQ_EMPTY;
+    qd_compose_insert_binary_buffers(body, &data);
+    assert(DEQ_IS_EMPTY(data));
+
+    qd_message_compose_2(msg, body, false);
+    qd_compose_free(body);
+
+    const size_t body_sizes[] = {0, 1, 513, 4099};
+    const char   body_values[] = {0, 'X', 'Y', 'Z'};
+    const size_t body_size_count = 4;
+
+    for (int k = 1; k < body_size_count; ++k) {
+        size_t len = body_sizes[k];
+        while (len > 0) {
+            qd_buffer_t *buf = qd_buffer();
+            size_t segment = MIN(qd_buffer_capacity(buf), len);
+            memset(qd_buffer_cursor(buf), body_values[k], segment);
+            qd_buffer_insert(buf, segment);
+            DEQ_INSERT_TAIL(data, buf);
+            len -= segment;
+        }
+        body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+        qd_compose_insert_binary_buffers(body, &data);
+        assert(DEQ_IS_EMPTY(data));
+        qd_message_extend(msg, body);
+        qd_compose_free(body);
+    }
+
+    qd_message_set_receive_complete(msg);
+
+    // flatten the message so all data buffers are concatenated
+    size_t msg_len = flatten_bufs(MSG_CONTENT(msg));
+    qd_message_free(msg);
+
+    // now create a new message from the raw buffered data
+
+    msg = qd_message();
+    set_content(MSG_CONTENT(msg), buffer, msg_len);
+    if (qd_message_check_depth(msg, QD_DEPTH_ALL) != QD_MESSAGE_DEPTH_OK) {
+        qd_message_free(msg);
+        return "qd_message_check_depth returns 'invalid'";
+    }
+
+    qd_message_body_data_t *body_data = 0;
+    for (int k = 0; k < body_size_count; ++k) {
+
+        qd_message_body_data_result_t rc = qd_message_next_body_data(msg, &body_data);
+        if (rc != QD_MESSAGE_BODY_DATA_OK) {
+            result = "BAD BODY DATA FOUND!";
+            goto exit;
+        }
+
+        // verify body_data
+
+        size_t pl = qd_message_body_data_payload_length(body_data);
+        if (pl != body_sizes[k]) {
+            fprintf(stderr, "INVALID LEN=%zu expect=%zu\n", pl, body_sizes[k]);
+            qd_message_body_data_release(body_data);
+            result = "UNEXPECTED BODY SIZE!";
+            goto exit;
+        }
+
+        if (pl > 0) {
+            pn_raw_buffer_t pn_raw_bufs[9];
+            const int buffer_count = qd_message_body_data_buffer_count(body_data);
+            int actual_count = 0;
+            int byte_count = 0;
+
+            while (actual_count < buffer_count) {
+                int count = MIN(9, buffer_count - actual_count);
+                if (qd_message_body_data_buffers(body_data, pn_raw_bufs, actual_count, count) != count) {
+                    qd_message_body_data_release(body_data);
+                    result = "BODY DATA BUFFERS FAILED!";
+                    goto exit;
+                }
+                actual_count += count;
+
+                for (pn_raw_buffer_t *rbptr = pn_raw_bufs;
+                     rbptr != &pn_raw_bufs[count];
+                     ++rbptr) {
+
+                    byte_count += rbptr->size;
+
+                    for (char *cptr = rbptr->bytes;
+                         cptr < &rbptr->bytes[rbptr->size];
+                         ++cptr) {
+
+                        if (*cptr != body_values[k]) {
+                            qd_message_body_data_release(body_data);
+                            result = "UNEXPECTED BODY DATA VALUE!";
+                            goto exit;
+                        }
+                    }
+                }
+            }
+
+            if (byte_count != pl) {
+                fprintf(stderr, "body_data_buffers length mismatch! expect=%zu actual=%d\n",
+                        pl, byte_count);
+                qd_message_body_data_release(body_data);
+                result = "UNEXPECTED BODY DATA VALUE!";
+                goto exit;
+            }
+        }
+        qd_message_body_data_release(body_data);
+    }
+
+exit:
+    qd_message_free(msg);
+    return result;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -717,6 +858,7 @@ int message_tests(void)
     TEST_CASE(test_q2_input_holdoff_sensing, 0);
     TEST_CASE(test_incomplete_annotations, 0);
     TEST_CASE(test_check_weird_messages, 0);
+    TEST_CASE(test_body_data, 0);
 
     return result;
 }

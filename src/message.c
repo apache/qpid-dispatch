@@ -2340,7 +2340,7 @@ static void find_last_buffer(qd_field_location_t *location, unsigned char **curs
 }
 
 
-void trim_body_data_headers(qd_message_body_data_t *body_data)
+void trim_body_data_headers_LH(qd_message_body_data_t *body_data)
 {
     const qd_field_location_t *location = &body_data->section;
     qd_buffer_t               *buffer   = location->buffer;
@@ -2368,6 +2368,15 @@ void trim_body_data_headers(qd_message_body_data_t *body_data)
         body_data->payload.hdr_length = 0;
         body_data->payload.parsed     = true;
         body_data->payload.tag        = tag;
+
+        body_data->owning_message->is_fanout = true;
+        qd_buffer_t *bptr = body_data->payload.buffer;
+        while (bptr) {
+            qd_buffer_inc_fanout(bptr);
+            if (bptr == body_data->last_buffer)
+                break;
+            bptr = DEQ_NEXT(bptr);
+        }
     }
 }
 
@@ -2430,29 +2439,47 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
 {
     int          actual_count = 0;
     qd_buffer_t *buffer       = body_data->payload.buffer;
+    size_t       data_len     = body_data->payload.length;
+    size_t       data_offset  = body_data->payload.offset;
 
     //
-    // Skip the offset
+    // Skip the offset buffer count
     //
-    while (offset > 0 && !!buffer) {
-        buffer = DEQ_NEXT(buffer);
+    assert(body_data->last_buffer);  // expect: never hit a null buffer ptr
+    while (offset > 0 && data_len) {
+        size_t buf_len = (qd_buffer_size(buffer) - data_offset);
+        data_offset = 0;
+        data_len -= MIN(data_len, buf_len);
         offset--;
+        if (buffer == body_data->last_buffer)
+            break;
+        buffer = DEQ_NEXT(buffer);
+    }
+
+    if (offset || data_len == 0) {
+        // offset is past the body data
+        return 0;
     }
 
     //
     // Fill the buffer array
     //
     int idx = 0;
-    while (idx < count && !!buffer) {
-        buffers[idx].context  = 0;  // reserved for use by caller - do not modify!
-        buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+    while (idx < count && data_len) {
+        buffers[idx].context  = 0;
+        buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + data_offset;
         buffers[idx].capacity = BUFFER_SIZE;
-        buffers[idx].size     = qd_buffer_size(buffer) - (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+        buffers[idx].size     = MIN(data_len, qd_buffer_size(buffer) - data_offset);
         buffers[idx].offset   = 0;
+        data_offset = 0;
+        data_len -= buffers[idx].size;
 
-        buffer = DEQ_NEXT(buffer);
         actual_count++;
         idx++;
+
+        if (buffer == body_data->last_buffer)
+            break;
+        buffer = DEQ_NEXT(buffer);
     }
 
     return actual_count;
@@ -2467,13 +2494,38 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
  */
 void qd_message_body_data_release(qd_message_body_data_t *body_data)
 {
-    free_qd_message_body_data_t(body_data);
+    if (body_data) {
+        qd_message_pvt_t     *msg     = body_data->owning_message;
+        qd_message_content_t *content = msg->content;
+
+        LOCK(content->lock);
+
+        assert(msg->is_fanout);
+        qd_buffer_t *bptr = body_data->payload.buffer;
+        while (bptr && bptr != DEQ_TAIL(content->buffers)) {
+            uint32_t last_ref_count = qd_buffer_dec_fanout(bptr);
+            qd_buffer_t *next = DEQ_NEXT(bptr);
+            if (last_ref_count == 1) {
+                DEQ_REMOVE(content->buffers, bptr);
+                qd_buffer_free(bptr);
+                ++content->buffers_freed;
+            }
+            if (bptr == body_data->last_buffer)
+                break;
+            bptr = next;
+        }
+
+        UNLOCK(content->lock);
+
+        free_qd_message_body_data_t(body_data);
+    }
 }
 
 
 qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd_message_body_data_t **out_body_data)
 {
     qd_message_pvt_t       *msg       = (qd_message_pvt_t*) in_msg;
+    qd_message_content_t   *content   = msg->content;
     qd_message_body_data_t *body_data = 0;
 
     if (!msg->body_cursor) {
@@ -2487,18 +2539,23 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
             body_data->owning_message = msg;
             body_data->section        = msg->content->section_body;
 
+            LOCK(content->lock);
+
             find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
             body_data->last_buffer = msg->body_buffer;
-            trim_body_data_headers(body_data);
-
+            trim_body_data_headers_LH(body_data);
             assert(DEQ_SIZE(msg->body_data_list) == 0);
             DEQ_INSERT_TAIL(msg->body_data_list, body_data);
             *out_body_data = body_data;
+
+            UNLOCK(content->lock);
+
             return QD_MESSAGE_BODY_DATA_OK;
-        } else if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
+        } else if (status == QD_MESSAGE_DEPTH_INCOMPLETE) {
             return QD_MESSAGE_BODY_DATA_INCOMPLETE;
-        else if (status == QD_MESSAGE_DEPTH_INVALID)
+        } else if (status == QD_MESSAGE_DEPTH_INVALID) {
             return QD_MESSAGE_BODY_DATA_INVALID;
+        }
     }
 
     qd_section_status_t section_status;
@@ -2519,20 +2576,27 @@ qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *in_msg, qd
         ZERO(body_data);
         body_data->owning_message = msg;
         body_data->section        = location;
+
+        LOCK(content->lock);
+
         find_last_buffer(&body_data->section, &msg->body_cursor, &msg->body_buffer);
         body_data->last_buffer = msg->body_buffer;
-        trim_body_data_headers(body_data);
+        trim_body_data_headers_LH(body_data);
         DEQ_INSERT_TAIL(msg->body_data_list, body_data);
         *out_body_data = body_data;
+
+        UNLOCK(content->lock);
+
         return QD_MESSAGE_BODY_DATA_OK;
-        
+
     case QD_SECTION_NEED_MORE:
-        if (msg->content->receive_complete)
+        if (msg->content->receive_complete) {
             return QD_MESSAGE_BODY_DATA_NO_MORE;
-        else
+        } else {
             return QD_MESSAGE_BODY_DATA_INCOMPLETE;
+        }
     }
-    
+
     return QD_MESSAGE_BODY_DATA_NO_MORE;
 }
 
@@ -2589,39 +2653,6 @@ int qd_message_read_body(qd_message_t *in_msg, pn_raw_buffer_t* buffers, int len
         }
     }
     return count;
-}
-
-
-void qd_message_release_body(qd_message_t *msg, pn_raw_buffer_t *buffers, int buffer_count)
-{
-    qd_message_pvt_t     *pvt     = (qd_message_pvt_t*) msg;
-    qd_message_content_t *content = MSG_CONTENT(msg);
-    qd_buffer_t          *buf;
-
-    LOCK(content->lock);
-    //
-    // Decrement the buffer fanout for each of the referenced buffers.
-    //
-    if (pvt->is_fanout) {
-        for (int i = 0; i < buffer_count; i++) {
-            buf = (qd_buffer_t*) buffers[i].context;
-            qd_buffer_dec_fanout(buf);
-        }
-    }
-
-    //
-    // Free buffers not at the tail of the list that have zero refcounts.
-    //
-    buf = DEQ_HEAD(content->buffers);
-    while (!!buf && buf != DEQ_TAIL(content->buffers)) {
-        qd_buffer_t *next = DEQ_NEXT(buf);
-        if (qd_buffer_get_fanout(buf) == 0) {
-            DEQ_REMOVE(content->buffers, buf);
-            qd_buffer_free(buf);
-        }
-        buf = next;
-    }
-    UNLOCK(content->lock);
 }
 
 
