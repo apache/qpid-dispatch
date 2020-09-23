@@ -739,6 +739,8 @@ static char *test_body_data(void *context)
     qd_message_compose_2(msg, body, false);
     qd_compose_free(body);
 
+    // create a body consisting of these body-data segments:
+    //
     const size_t body_sizes[] = {0, 1, 513, 4099};
     const char   body_values[] = {0, 'X', 'Y', 'Z'};
     const size_t body_size_count = 4;
@@ -776,9 +778,20 @@ static char *test_body_data(void *context)
     }
 
     qd_message_body_data_t *body_data = 0;
-    for (int k = 0; k < body_size_count; ++k) {
+    for (int k = 0; k < body_size_count + 1; ++k) {
 
         qd_message_body_data_result_t rc = qd_message_next_body_data(msg, &body_data);
+
+        if (k == body_size_count) {
+            // expect to fall off end..
+            if (rc != QD_MESSAGE_BODY_DATA_NO_MORE) {
+                result = "EXPECTED END OF BODY DATA!";
+                goto exit;
+            }
+            break;
+        }
+
+        fprintf(stderr, "BODY-DATA RESULT=%d\n", (int)rc); fflush(stderr);
         if (rc != QD_MESSAGE_BODY_DATA_OK) {
             result = "BAD BODY DATA FOUND!";
             goto exit;
