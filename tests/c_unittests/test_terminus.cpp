@@ -20,12 +20,18 @@
 #include "qdr_doctest.h"
 
 extern "C" {
+#include "./test_terminus_mocks.c"
 #include <../src/router_core/router_core_private.h>
 #include <../src/terminus_private.h>
 #include <inttypes.h>
 #include <qpid/dispatch/router_core.h>
 #include <stdint.h>
 #include <stdio.h>
+}
+
+extern "C" {
+void mock(bool m);
+void mocked_value(int v);
 }
 
 TEST_CASE("test_safe_snprintf") {
@@ -71,6 +77,18 @@ TEST_CASE("test_safe_snprintf") {
             len = safe_snprintf(output, (int)-1, TEST_MESSAGE);
             CHECK(0 == len);
         }
+    }
+
+    SUBCASE("vsnprintf failure") {
+        mock(true);
+        mocked_value(-1);
+
+        output[0] = 'a';
+        len = safe_snprintf(output, LEN+10, TEST_MESSAGE);
+        CHECK(0 == len);
+        CHECK('\0' == output[0]);
+
+        mock(false);
     }
 }
 

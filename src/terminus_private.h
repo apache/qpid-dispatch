@@ -19,6 +19,7 @@
  * under the License.
  */
 
+#include "router_core/terminus_testing.h" // terminus.c and terminus_private.h are in different dirs; whoops
 #include <limits.h>
 #include <stdarg.h>
 #include <stdio.h>
