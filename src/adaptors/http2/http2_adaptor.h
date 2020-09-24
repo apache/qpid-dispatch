@@ -44,9 +44,20 @@ typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
 typedef struct qdr_http2_connection_t   qdr_http2_connection_t;
 typedef struct qd_http2_buffer_t          qd_http2_buffer_t;
 
+/**
+ * Stream status
+ */
+typedef enum {
+    QD_STREAM_OPEN,
+    QD_STREAM_HALF_CLOSED,
+    QD_STREAM_FULLY_CLOSED
+} qd_http2_stream_status_t;
+
+
 DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
 DEQ_DECLARE(qd_http2_buffer_t,         qd_http2_buffer_list_t);
 
+//TODO - Categorize the fields in the structs so they are in their own sections
 struct qdr_http2_session_data_t {
     qdr_http2_connection_t       *conn;       // Connection associated with the session_data
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
@@ -62,26 +73,31 @@ struct qdr_http2_stream_data_t {
     qdr_delivery_t           *out_dlv;
     uint64_t                  incoming_id;
     uint64_t                  outgoing_id;
-    uint64_t                  disposition;
+    uint64_t                  out_dlv_local_disposition;
     qdr_link_t               *in_link;
     qdr_link_t               *out_link;
     qd_message_t             *message;
     qd_composed_field_t      *app_properties;
+    qd_composed_field_t      *footer_properties;
     qd_composed_field_t      *body;
     qd_message_body_data_t   *curr_body_data;
+    qd_message_body_data_t   *next_body_data;
     DEQ_LINKS(qdr_http2_stream_data_t);
 
     qd_message_body_data_result_t  curr_body_data_result;
+    qd_message_body_data_result_t  next_body_data_result;
     int                            curr_body_data_qd_buff_offset;
     int                            body_data_buff_count;
     int32_t                        stream_id;
     size_t                         qd_buffers_to_send;
-
+    qd_http2_stream_status_t       status;
+    bool                     entire_footer_arrived;
     bool                     entire_header_arrived;
-    bool                     header_sent;
-    bool                     steam_closed;
-
+    bool                     out_msg_header_sent;
+    bool                     out_msg_body_sent;
+    bool                     use_footer_properties;
     bool                     full_payload_handled;
+    bool                     out_msg_has_body;
 };
 
 struct qdr_http2_connection_t {
@@ -96,15 +112,15 @@ struct qdr_http2_connection_t {
 
     //TODO - Code review - Change this to a struct.
     qdr_http2_session_data_t *session_data;
-    char                    *remote_address;
-    qdr_link_t              *stream_dispatcher;
-    uint64_t                 stream_dispatcher_id;
+    char                     *remote_address;
+    qdr_link_t               *stream_dispatcher;
+    uint64_t                  stream_dispatcher_id;
     char                     *reply_to;
-    nghttp2_data_provider    data_prd;
-    bool                     connection_established;
-    bool                     grant_initial_buffers;
-    bool                     ingress;
-    bool                     timer_scheduled;
+    nghttp2_data_provider     data_prd;
+    bool                      connection_established;
+    bool                      grant_initial_buffers;
+    bool                      ingress;
+    bool                      timer_scheduled;
  };
 
 struct qd_http2_buffer_t {

@@ -452,11 +452,6 @@ void qd_message_set_discard(qd_message_t *msg, bool discard);
  */
 bool qd_message_receive_complete(qd_message_t *msg);
 
-
-void qd_message_set_no_body(qd_message_t *in_msg);
-
-bool qd_message_no_body(qd_message_t *in_msg);
-
 /**
  * Returns true if the message has been completely received AND the message has been completely sent.
  */
