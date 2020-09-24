@@ -101,6 +101,10 @@ class Common():
     # when --no-data is in effect, how many log lines were skipped?
     data_skipped = 0
 
+    # List of router log module names to include verbatim.
+    # Defaults to "SCRAPER". Overridden by command line.
+    verbatim_include_list = ["SCRAPER"]
+
     def router_id_index(self, id):
         """
         Given a router full container name, return the index in router_ids table
@@ -109,6 +113,21 @@ class Common():
         :return:
         """
         return self.router_ids.index(id)
+
+    def module_key_in_line(self, key, line):
+        '''
+        Sense if the key is a log module name in the log line.
+        The name can't be too far into the string or else it finds
+        false positives when a user uses qdstat to get a log file.
+        MAX_POSITION defines what constitutes 'too far'.
+        :param key:
+        :param line:
+        :return:
+        '''
+        MAX_POSITION = 40
+        assert len(key) > 0
+        st = line.find(key)
+        return st >= 0 and st <= MAX_POSITION
 
 
 def log_letter_of(idx):

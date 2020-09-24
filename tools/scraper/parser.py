@@ -389,7 +389,6 @@ class ParsedLogLine(object):
     router_ls_key = "ROUTER_LS (info)"
     transfer_key = "@transfer(20)"
     proton_frame_key = "FRAME: "
-    scraper_key = "SCRAPER ("
 
     def sender_settle_mode_of(self, value):
         if value == "0":
@@ -808,12 +807,18 @@ class ParsedLogLine(object):
         :param _comn:
         :param _router:
         """
-        if not (ParsedLogLine.server_trace_key in _line or
-                ParsedLogLine.protocol_trace_key in _line or
-                (ParsedLogLine.policy_trace_key in _line and "lookup_user:" in _line) or  # open (not begin, attach)
-                ParsedLogLine.server_info_key in _line or
-                ParsedLogLine.router_ls_key in _line or
-                ParsedLogLine.scraper_key in _line):
+        verbatim_module = None
+        if len(_comn.verbatim_include_list) > 0:
+            for modx in _comn.verbatim_include_list:
+                if _comn.module_key_in_line(modx, _line):
+                    verbatim_module = modx
+                    break
+        if not (_comn.module_key_in_line(self.server_trace_key, _line) or
+                _comn.module_key_in_line(self.protocol_trace_key, _line) or
+                (_comn.module_key_in_line(self.policy_trace_key, _line) and "lookup_user:" in _line) or  # open (not begin, attach)
+                _comn.module_key_in_line(self.server_info_key, _line) or
+                _comn.module_key_in_line(self.router_ls_key, _line) or
+                verbatim_module is not None):
             raise ValueError("Line is not a candidate for parsing")
         self.index = _log_index  # router prefix 0 for A, 1 for B
         self.instance = _instance  # router instance in log file
@@ -877,17 +882,20 @@ class ParsedLogLine(object):
                     raise ValueError("Line too late outside time-of-day limits")
 
         # Pull out scraper literal logs
-        sti = self.line.find(self.scraper_key)
-        if sti > 0:
-            # strip datetime and show literal string
-            sti += len("SCRAPER")
-            self.data.is_scraper = True
-            self.data.web_show_str = ("<strong>SCRAPER</strong> %s" % common.html_escape(self.line[sti:]))
-            stcp = self.line[sti:].find(')') # close paren after log level
-            if stcp <  0:
-                stcp = 0
-            self.data.sdorg_str = self.line[sti + stcp + 1:]
-            return
+        if verbatim_module is not None:
+            sti = self.line.find(verbatim_module)
+            if sti > 0:
+                # strip datetime and show literal string
+                sti += len(verbatim_module)
+                self.data.is_scraper = True
+                self.data.web_show_str = ("<strong>%s</strong> %s" % (verbatim_module, common.html_escape(self.line[sti:])))
+                stcp = self.line[sti:].find(')') # close paren after log level
+                if stcp <  0:
+                    stcp = 0
+                self.data.sdorg_str = self.line[sti + stcp + 1:]
+                return
+            else:
+                assert False # verbatim module was found only moments ago...
 
         # extract connection number
         sti = self.line.find(self.server_trace_key)
@@ -1013,7 +1021,6 @@ def parse_log_file(fn, log_index, comn):
     keys = [key1, key3]
     key4 = "ROUTER (info) Version:"  # router version line
     key5 = "ROUTER (info) Router started in " # router mode
-    key6 = "SCRAPER (" # verbatim log lines to copy to Log Data
     with open(fn, 'r') as infile:
         for line in infile:
             if search_for_in_progress:
@@ -1028,6 +1035,12 @@ def parse_log_file(fn, log_index, comn):
                     search_for_in_progress = False
                     rtr.restart_rec = router.RestartRecord(rtr, line, lineno + 1)
             lineno += 1
+            verbatim_module = None
+            if len(comn.verbatim_include_list) > 0:
+                for modx in comn.verbatim_include_list:
+                    if comn.module_key_in_line(modx, line):
+                        verbatim_module = modx
+                        break
             if key2 in line:
                 # This line closes the current router, if any, and opens a new one
                 if rtr is not None:
@@ -1058,7 +1071,7 @@ def parse_log_file(fn, log_index, comn):
                 rtr.version = line[(line.find(key4) + len(key4)):].strip().split()[0]
             elif key5 in line:
                 rtr.mode = line[(line.find(key5) + len(key5)):].strip().split()[0].lower()
-            elif key6 in line:
+            elif verbatim_module is not None:
                 pl = ParsedLogLine(log_index, instance, lineno, line, comn, rtr)
                 rtr.lines.append(pl)
             elif "[" in line and "]" in line:

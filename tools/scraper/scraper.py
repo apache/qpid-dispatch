@@ -103,6 +103,8 @@ def main_except(argv):
     p.add_argument('--sequence', '-sq',
                    action='store_true',
                    help='Write sequence diagram raw data to end of web page. Edit what you need for input to seq-diag-gen utility.')
+    p.add_argument('--log-modules', '-lm',
+                   help='Include list of named modules'' log entries in main log display. Specify multiple modules as a CSV string. Defaults to "SCRAPER"')
     p.add_argument('--files', '-f', nargs="+")
 
     del argv[0]
@@ -119,6 +121,10 @@ def main_except(argv):
             comn.args.time_end = datetime.datetime.strptime(comn.args.time_end, "%Y-%m-%d %H:%M:%S.%f")
         except:
             sys.exit("ERROR: Failed to parse time_end '%s'. Use format 'YYYY-MM-DD HH:MM:SS.n_uS'" % comn.args.time_end)
+
+    if not comn.args.log_modules is None:
+        l = [x.strip() for x in comn.args.log_modules.split(",")]
+        comn.verbatim_include_list = [x for x in l if len(x) > 0]
 
     # process split function
     if comn.args.split:
