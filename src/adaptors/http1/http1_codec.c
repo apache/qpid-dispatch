@@ -1404,6 +1404,7 @@ int h1_codec_tx_add_header(h1_codec_request_state_t *hrs, const char *key, const
         DEQ_REMOVE_HEAD(encoder->outgoing);
         DEQ_INSERT_TAIL(blist, buf);
         octets += qd_buffer_size(buf);
+        buf = DEQ_HEAD(encoder->outgoing);
     }
     if (!DEQ_IS_EMPTY(blist))
         conn->config.tx_buffers(hrs, &blist, octets);

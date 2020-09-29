@@ -158,6 +158,10 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_lsnr_t *li)
     hconn->raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
 
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+    DEQ_INSERT_TAIL(qdr_http1_adaptor->connections, hconn);
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
     // we'll create a QDR connection and links once the raw connection activates
     return hconn;
 }
@@ -224,9 +228,12 @@ qd_http_lsnr_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bri
     }
     li->config = *config;
 
-    sys_atomic_inc(&li->ref_count);
     DEQ_ITEM_INIT(li);
+
+    sys_mutex_lock(qdr_http1_adaptor->lock);
     DEQ_INSERT_TAIL(qdr_http1_adaptor->listeners, li);
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
     qd_log(qdr_http1_adaptor->log, QD_LOG_INFO, "Configured HTTP_ADAPTOR listener on %s", (&li->config)->host_port);
     // Note: the proactor may schedule the pn_listener on another thread during this call
     pn_proactor_listen(qd_server_proactor(li->server), li->pn_listener, li->config.host_port, LISTENER_BACKLOG);
@@ -236,14 +243,17 @@ qd_http_lsnr_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bri
 
 // Management Agent API - Delete
 //
-void qd_http1_delete_listener(qd_dispatch_t *qd, qd_http_lsnr_t *li)
+void qd_http1_delete_listener(qd_dispatch_t *ignore, qd_http_lsnr_t *li)
 {
     if (li) {
         if (li->pn_listener) {
             pn_listener_close(li->pn_listener);
             li->pn_listener = 0;
         }
+        sys_mutex_lock(qdr_http1_adaptor->lock);
         DEQ_REMOVE(qdr_http1_adaptor->listeners, li);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
         qd_log(qdr_http1_adaptor->log, QD_LOG_INFO, "Deleted HttpListener for %s, %s:%s", li->config.address, li->config.host, li->config.port);
         qd_http_listener_decref(li);
     }
@@ -901,11 +911,17 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
         hreq->request_dispo = disp;
         if (disp != PN_ACCEPTED) {
             // no response message is going to arrive.  Now what?  For now fake
-            // a reply from the server by using the codec to write an error
+            // a response from the server by using the codec to write an error
             // response on the behalf of the server.
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                    "[C%"PRIu64"][L%"PRIu64"] HTTP request failure, outcome=0x%"PRIx64,
                    hconn->conn_id, hconn->in_link_id, disp);
+
+            _client_response_msg_t *rmsg = new__client_response_msg_t();
+            ZERO(rmsg);
+            DEQ_INIT(rmsg->out_data.fifo);
+            DEQ_INSERT_TAIL(hreq->responses, rmsg);
+
             if (disp == PN_REJECTED) {
                 qdr_http1_error_response(&hreq->base, 400, "Bad Request");
             } else {

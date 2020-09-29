@@ -39,13 +39,17 @@ typedef struct qdr_http1_out_data_fifo_t qdr_http1_out_data_fifo_t;
 typedef struct qdr_http1_request_base_t  qdr_http1_request_base_t;
 typedef struct qdr_http1_connection_t    qdr_http1_connection_t;
 
+DEQ_DECLARE(qdr_http1_connection_t, qdr_http1_connection_list_t);
+
 
 typedef struct qdr_http1_adaptor_t {
-    qdr_core_t               *core;
-    qdr_protocol_adaptor_t   *adaptor;
-    qd_http_lsnr_list_t       listeners;
-    qd_http_connector_list_t  connectors;
-    qd_log_source_t          *log;
+    qdr_core_t                  *core;
+    qdr_protocol_adaptor_t      *adaptor;
+    qd_log_source_t             *log;
+    sys_mutex_t                 *lock;  // for the lists
+    qd_http_lsnr_list_t          listeners;
+    qd_http_connector_list_t     connectors;
+    qdr_http1_connection_list_t  connections;
 } qdr_http1_adaptor_t;
 
 extern qdr_http1_adaptor_t *qdr_http1_adaptor;
@@ -113,13 +117,13 @@ struct qdr_http1_request_base_t {
     uint64_t  in_http1_octets;    // read from raw conn
     uint64_t  out_http1_octets;   // written to raw conn
 };
-//ALLOC_DECLARE(qdr_http1_request_t);
 DEQ_DECLARE(qdr_http1_request_base_t, qdr_http1_request_list_t);
 
 
 // A single HTTP adaptor connection.
 //
 struct qdr_http1_connection_t {
+    DEQ_LINKS(qdr_http1_connection_t);
     qd_server_t           *qd_server;
     h1_codec_connection_t *http_conn;
     pn_raw_connection_t   *raw_conn;
@@ -178,7 +182,6 @@ struct qdr_http1_connection_t {
     bool close_connection;
 };
 ALLOC_DECLARE(qdr_http1_connection_t);
-
 
 // special AMQP application properties keys for HTTP1 metadata headers
 //

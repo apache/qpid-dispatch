@@ -198,6 +198,10 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     hconn->raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
 
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+    DEQ_INSERT_TAIL(qdr_http1_adaptor->connections, hconn);
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
     return hconn;
 }
 
@@ -215,7 +219,10 @@ qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_ht
     DEQ_ITEM_INIT(c);
     qdr_http1_connection_t *hconn = _create_server_connection(c, qd, config);
     if (hconn) {
+        sys_mutex_lock(qdr_http1_adaptor->lock);
         DEQ_INSERT_TAIL(qdr_http1_adaptor->connectors, c);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
         // activate the raw connection. This connection may be scheduled on
         // another thread by this call:
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
@@ -234,11 +241,15 @@ qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_ht
 
 // Management Agent API - Delete
 //
-void qd_http1_delete_connector(qd_dispatch_t *qd, qd_http_connector_t *ct)
+void qd_http1_delete_connector(qd_dispatch_t *ignored, qd_http_connector_t *ct)
 {
     if (ct) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_INFO, "Deleted HttpConnector for %s, %s:%s", ct->config.address, ct->config.host, ct->config.port);
+
+        sys_mutex_lock(qdr_http1_adaptor->lock);
         DEQ_REMOVE(qdr_http1_adaptor->connectors, ct);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
         qd_http_connector_decref(ct);
 
         // TODO(kgiusti): do we now close all related connections?
@@ -518,17 +529,15 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
         if (hreq->cancelled) {
 
-            assert(false);  // not sure how to clean up
-
             // request:  have to wait until all buffers returned from proton
             // before we can release the request delivery...
             if (qdr_http1_out_data_buffers_outstanding(&hreq->out_data))
-                assert(false);
+                return;
 
             if (hreq->request_dlv) {
                 // let the message drain... (TODO@(kgiusti) is this necessary?
                 if (!qdr_delivery_receive_complete(hreq->request_dlv))
-                    assert(false);
+                    return;
 
                 uint64_t dispo = hreq->request_dispo || PN_MODIFIED;
                 qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,

@@ -85,14 +85,21 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 {
     if (hconn) {
 
+        sys_mutex_lock(qdr_http1_adaptor->lock);
+        DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
         // request expected to be clean up by caller
+#if 0  // JIRA ME!
         assert(DEQ_IS_EMPTY(hconn->requests));
+#endif
 
         h1_codec_connection_free(hconn->http_conn);
         if (hconn->raw_conn) {
             pn_raw_connection_set_context(hconn->raw_conn, 0);
             pn_raw_connection_close(hconn->raw_conn);
         }
+#if 0
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
             qdr_link_detach(hconn->out_link, QD_CLOSED, 0);
@@ -105,6 +112,7 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             qdr_connection_set_context(hconn->qdr_conn, 0);
             qdr_connection_closed(hconn->qdr_conn);
         }
+#endif
 
         free(hconn->cfg.host);
         free(hconn->cfg.port);
@@ -489,6 +497,8 @@ static void _core_link_detach(void *context, qdr_link_t *link, qdr_error_t *erro
     if (hconn) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                "[C%"PRIu64"][L%"PRIu64"] Link detach", hconn->conn_id, link->identity);
+
+        qdr_link_set_context(link, 0);
         if (link == hconn->out_link)
             hconn->out_link = 0;
         else
@@ -621,10 +631,10 @@ static void _core_conn_close(void *context, qdr_connection_t *conn, qdr_error_t 
                "[C%"PRIu64"] HTTP/1.x closing connection", hconn->conn_id);
 
         char *qdr_error = error ? qdr_error_description(error) : 0;
-        hconn->qdr_conn = 0;
-        hconn->out_link = 0;
-        hconn->in_link = 0;
         qdr_http1_close_connection(hconn, qdr_error);
+        qdr_connection_set_context(conn, 0);
+        hconn->qdr_conn = 0;
+        hconn->in_link = hconn->out_link = 0;
         free(qdr_error);
     }
 }
@@ -653,6 +663,11 @@ static void qd_http1_adaptor_init(qdr_core_t *core, void **adaptor_context)
 
     ZERO(adaptor);
     adaptor->core    = core;
+    adaptor->log = qd_log_source(QD_HTTP_LOG_SOURCE);
+    adaptor->lock = sys_mutex();
+    DEQ_INIT(adaptor->listeners);
+    DEQ_INIT(adaptor->connectors);
+    DEQ_INIT(adaptor->connections);
     adaptor->adaptor = qdr_protocol_adaptor(core,
                                             "http/1.x",
                                             adaptor,             // context
@@ -670,11 +685,7 @@ static void qd_http1_adaptor_init(qdr_core_t *core, void **adaptor_context)
                                             _core_delivery_update,
                                             _core_conn_close,
                                             _core_conn_trace);
-    adaptor->log = qd_log_source(QD_HTTP_LOG_SOURCE);
-    DEQ_INIT(adaptor->listeners);
-    DEQ_INIT(adaptor->connectors);
     *adaptor_context = adaptor;
-
     qdr_http1_adaptor = adaptor;
 }
 
@@ -684,21 +695,26 @@ static void qd_http1_adaptor_final(void *adaptor_context)
     qdr_http1_adaptor_t *adaptor = (qdr_http1_adaptor_t*) adaptor_context;
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
 
-#if 0
     qd_http_lsnr_t *li = DEQ_HEAD(adaptor->listeners);
     while (li) {
-        qd_http1_delete_listener(qd, li);
+        qd_http1_delete_listener(0, li);
         li = DEQ_HEAD(adaptor->listeners);
     }
     qd_http_connector_t *ct = DEQ_HEAD(adaptor->connectors);
     while (ct) {
-        qd_http1_delete_connector(qd, ct);
+        qd_http1_delete_connector(0, ct);
         ct = DEQ_HEAD(adaptor->connectors);
     }
-#endif
+    qdr_http1_connection_t *hconn = DEQ_HEAD(adaptor->connections);
+    while (hconn) {
+        qdr_http1_connection_free(hconn);
+        hconn = DEQ_HEAD(adaptor->connections);
+    }
+
+    sys_mutex_free(adaptor->lock);
+    qdr_http1_adaptor =  NULL;
 
     free(adaptor);
-    qdr_http1_adaptor =  NULL;
 }
 
 
