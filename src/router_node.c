@@ -2018,7 +2018,6 @@ void qd_router_free(qd_router_t *router)
 
     qd_container_set_default_node_type(router->qd, 0, 0, QD_DIST_BOTH);
 
-    qdr_protocol_adaptor_free(router->router_core, amqp_direct_adaptor);
     qdr_core_free(router->router_core);
     qd_tracemask_free(router->tracemask);
     qd_timer_free(router->timer);
