@@ -82,8 +82,7 @@ class ResponseMsg(object):
         handler.protocol_version = self.version
         if self.error:
             handler.send_error(self.status,
-                               message=self.reason,
-                               explain=self.body)
+                               message=self.reason)
             return
 
         handler.send_response(self.status, self.reason)
@@ -407,7 +406,7 @@ class MyHTTPServer(HTTPServer):
             testcases = DEFAULT_TEST_SCENARIOS
         self.system_test_server_done = False
         self.system_tests = testcases
-        super(MyHTTPServer, self).__init__(addr, handler_cls)
+        HTTPServer.__init__(self, addr, handler_cls)
 
 
 class TestServer(object):
