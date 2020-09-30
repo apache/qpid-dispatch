@@ -42,7 +42,7 @@ size_t HTTP2_DATA_FRAME_HEADER_LENGTH = 9;
 typedef struct qdr_http2_session_data_t qdr_http2_session_data_t;
 typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
 typedef struct qdr_http2_connection_t   qdr_http2_connection_t;
-typedef struct qd_http2_buffer_t          qd_http2_buffer_t;
+typedef struct qd_http2_buffer_t        qd_http2_buffer_t;
 
 /**
  * Stream status
@@ -55,19 +55,21 @@ typedef enum {
 
 
 DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
-DEQ_DECLARE(qd_http2_buffer_t,         qd_http2_buffer_list_t);
+DEQ_DECLARE(qd_http2_buffer_t,       qd_http2_buffer_list_t);
+DEQ_DECLARE(qdr_http2_connection_t,  qdr_http2_connection_list_t);
 
 //TODO - Categorize the fields in the structs so they are in their own sections
 struct qdr_http2_session_data_t {
     qdr_http2_connection_t       *conn;       // Connection associated with the session_data
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
     qd_http2_stream_data_list_t  streams;    // A session can have many streams.
-    qd_http2_buffer_list_t         buffs;      // Buffers for writing
+    qd_http2_buffer_list_t       buffs;      // Buffers for writing
     bool                         max_buffs_in_pool;
 };
 
 struct qdr_http2_stream_data_t {
     qdr_http2_session_data_t *session_data;
+    void                     *context;
     char                     *reply_to;
     qdr_delivery_t           *in_dlv;
     qdr_delivery_t           *out_dlv;
@@ -98,6 +100,7 @@ struct qdr_http2_stream_data_t {
     bool                     use_footer_properties;
     bool                     full_payload_handled;
     bool                     out_msg_has_body;
+    bool                     disp_updated;
 };
 
 struct qdr_http2_connection_t {
@@ -109,18 +112,20 @@ struct qdr_http2_connection_t {
     qd_http_bridge_config_t *config;
     qd_server_t             *server;
     uint64_t                 conn_id;
-
-    //TODO - Code review - Change this to a struct.
     qdr_http2_session_data_t *session_data;
     char                     *remote_address;
     qdr_link_t               *stream_dispatcher;
+    qdr_http2_stream_data_t  *stream_dispatcher_stream_data;
     uint64_t                  stream_dispatcher_id;
     char                     *reply_to;
     nghttp2_data_provider     data_prd;
+    qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
+
     bool                      connection_established;
     bool                      grant_initial_buffers;
     bool                      ingress;
     bool                      timer_scheduled;
+    DEQ_LINKS(qdr_http2_connection_t);
  };
 
 struct qd_http2_buffer_t {
