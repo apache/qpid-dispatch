@@ -51,13 +51,14 @@ ALLOC_DEFINE(qdr_http2_connection_t);
 ALLOC_DEFINE(qd_http2_buffer_t);
 
 typedef struct qdr_http_adaptor_t {
-    qdr_core_t              *core;
-    qdr_protocol_adaptor_t  *adaptor;
-    qd_http_lsnr_list_t      listeners;
-    qd_http_connector_list_t connectors;
-    qd_log_source_t         *log_source;
-    void                    *callbacks;
-    qd_log_source_t         *protocol_log_source;
+    qdr_core_t                  *core;
+    qdr_protocol_adaptor_t      *adaptor;
+    qd_http_lsnr_list_t          listeners;
+    qd_http_connector_list_t     connectors;
+    qd_log_source_t             *log_source;
+    void                        *callbacks;
+    qd_log_source_t             *protocol_log_source;
+    qdr_http2_connection_list_t  connections;
 } qdr_http_adaptor_t;
 
 
@@ -69,9 +70,11 @@ static void advance_stream_status(qdr_http2_stream_data_t *stream_data)
 {
     if (stream_data->status == QD_STREAM_OPEN) {
         stream_data->status = QD_STREAM_HALF_CLOSED;
+        qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] Moving stream status to QD_STREAM_HALF_CLOSED", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     }
     else if (stream_data->status == QD_STREAM_HALF_CLOSED) {
         stream_data->status = QD_STREAM_FULLY_CLOSED;
+        qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] Moving stream status to QD_STREAM_FULLY_CLOSED", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     }
 }
 
@@ -245,7 +248,7 @@ static size_t write_buffers(qdr_http2_connection_t *conn)
     return 0;
 }
 
-static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data)
+static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on_shutdown)
 {
     if (!stream_data)
         return;
@@ -253,13 +256,15 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data)
     qdr_http2_session_data_t *session_data = stream_data->session_data;
     qdr_http2_connection_t *conn = session_data->conn;
     stream_data->session_data = 0;
-    if (conn->qdr_conn && stream_data->in_link) {
-        qdr_link_set_context(stream_data->in_link, 0);
-        qdr_link_detach(stream_data->in_link, QD_CLOSED, 0);
-    }
-    if (conn->qdr_conn && stream_data->out_link) {
-        qdr_link_set_context(stream_data->out_link, 0);
-        qdr_link_detach(stream_data->out_link, QD_CLOSED, 0);
+    if (!on_shutdown) {
+        if (conn->qdr_conn && stream_data->in_link) {
+            qdr_link_set_context(stream_data->in_link, 0);
+            qdr_link_detach(stream_data->in_link, QD_CLOSED, 0);
+        }
+        if (conn->qdr_conn && stream_data->out_link) {
+            qdr_link_set_context(stream_data->out_link, 0);
+            qdr_link_detach(stream_data->out_link, QD_CLOSED, 0);
+        }
     }
     free(stream_data->reply_to);
     qd_compose_free(stream_data->app_properties);
@@ -284,7 +289,7 @@ static char *get_address_string(pn_raw_connection_t *pn_raw_conn)
     }
 }
 
-void free_qdr_http2_connection(qdr_http2_connection_t* http_conn)
+void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdown)
 {
     if(http_conn->remote_address) {
         free(http_conn->remote_address);
@@ -295,13 +300,11 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn)
         http_conn->activate_timer = 0;
     }
 
-    qdr_http2_stream_data_t *stream_data = 0;
-
     // Free all the stream data associated with this connection/session.
-    stream_data = DEQ_HEAD(http_conn->session_data->streams);
+    qdr_http2_stream_data_t *stream_data = DEQ_HEAD(http_conn->session_data->streams);
     while (stream_data) {
         DEQ_REMOVE_HEAD(http_conn->session_data->streams);
-        free_http2_stream_data(stream_data);
+        free_http2_stream_data(stream_data, on_shutdown);
         stream_data = DEQ_HEAD(http_conn->session_data->streams);
     }
 
@@ -309,6 +312,15 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn)
 
     nghttp2_session_del(http_conn->session_data->session);
     free_qdr_http2_session_data_t(http_conn->session_data);
+    DEQ_REMOVE(http_adaptor->connections, http_conn);
+
+    qd_http2_buffer_t *buff = DEQ_HEAD(http_conn->granted_read_buffs);
+    while (buff) {
+        DEQ_REMOVE_HEAD(http_conn->granted_read_buffs);
+        free_qd_http2_buffer_t(buff);
+        buff = DEQ_HEAD(http_conn->granted_read_buffs);
+    }
+
     free_qdr_http2_connection_t(http_conn);
 }
 
@@ -384,21 +396,16 @@ static int on_stream_close_callback(nghttp2_session *session,
                                     nghttp2_error_code error_code,
                                     void *user_data)
 {
-    qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
-    qdr_http2_session_data_t *session_data = conn->session_data;
-    qdr_http2_stream_data_t *stream_data = nghttp2_session_get_stream_user_data(session_data->session, stream_id);
-    advance_stream_status(stream_data);
     return 0;
 }
 
 
-
 static int snd_data_callback(nghttp2_session *session,
-                                  nghttp2_frame *frame,
-                                  const uint8_t *framehd,
-                                  size_t length,
-                                  nghttp2_data_source *source,
-                                  void *user_data) {
+                             nghttp2_frame *frame,
+                             const uint8_t *framehd,
+                             size_t length,
+                             nghttp2_data_source *source,
+                             void *user_data) {
     // The frame is a DATA frame to send. The framehd is the serialized frame header (9 bytes).
     // The length is the length of application data to send (this does not include padding)
     qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
@@ -436,10 +443,10 @@ static int snd_data_callback(nghttp2_session *session,
         stream_data->curr_body_data_qd_buff_offset = 0;
         qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] snd_data_callback qd_message_body_data_release", conn->conn_id, stream_data->stream_id);
 
-        if (stream_data->next_body_data) {
-            qd_message_body_data_release(stream_data->next_body_data);
-            stream_data->next_body_data = 0;
-        }
+//        if (stream_data->next_body_data) {
+//            qd_message_body_data_release(stream_data->next_body_data);
+//            stream_data->next_body_data = 0;
+//        }
     }
 
     if (length)
@@ -702,12 +709,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
         if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] NGHTTP2_DATA NGHTTP2_FLAG_END_STREAM flag received, receive_complete = true", conn->conn_id, stream_id);
             qd_message_set_receive_complete(stream_data->message);
-
-            if (qd_message_receive_complete(qdr_delivery_message(stream_data->in_dlv))
-                    && qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
-                qdr_delivery_remote_state_updated(http_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
-                advance_stream_status(stream_data);
-            }
+            advance_stream_status(stream_data);
         }
 
         if (stream_data->in_dlv) {
@@ -721,6 +723,13 @@ static int on_frame_recv_callback(nghttp2_session *session,
         if (stream_data->in_dlv) {
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] NGHTTP2_DATA frame received, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
             qdr_delivery_continue(http_adaptor->core, stream_data->in_dlv, false);
+        }
+
+        if (stream_data->out_dlv && !stream_data->disp_updated && stream_data->status == QD_STREAM_FULLY_CLOSED) {
+            qdr_delivery_remote_state_updated(http_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
+            qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] In on_frame_recv_callback NGHTTP2_DATA QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", conn->conn_id, stream_data->stream_id);
+            stream_data->disp_updated = true;
+            stream_data->out_dlv = 0;
         }
     }
     break;
@@ -761,6 +770,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
                     qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 NGHTTP2_FLAG_END_HEADERS and NGHTTP2_FLAG_END_STREAM flag received, receive_complete=true", conn->conn_id, stream_id);
                 }
                 qd_message_set_receive_complete(stream_data->message);
+                advance_stream_status(stream_data);
                 receive_complete = true;
             }
 
@@ -782,13 +792,12 @@ static int on_frame_recv_callback(nghttp2_session *session,
 
             }
 
-            if (qd_message_receive_complete(qdr_delivery_message(stream_data->in_dlv))
-                    && qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
+            if (stream_data->out_dlv && !stream_data->disp_updated && stream_data->status == QD_STREAM_FULLY_CLOSED) {
                 qdr_delivery_remote_state_updated(http_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
+                qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] In on_frame_recv_callback NGHTTP2_HEADERS QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", conn->conn_id, stream_data->stream_id);
+                stream_data->disp_updated = true;
+                stream_data->out_dlv = 0;
             }
-
-
-
         }
     }
     break;
@@ -825,51 +834,49 @@ ssize_t read_data_callback(nghttp2_session *session,
         // over to the per-message extraction of body-data segments.
         //
         qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback QD_MESSAGE_DEPTH_OK", conn->conn_id, stream_data->stream_id);
-        qd_message_body_data_t        *body_data = 0;
-        qd_message_body_data_result_t  body_data_result;
 
         if (stream_data->next_body_data) {
             stream_data->curr_body_data = stream_data->next_body_data;
-            body_data_result = stream_data->next_body_data_result;
-        }
-        else if (stream_data->curr_body_data) {
-            body_data = stream_data->curr_body_data;
-            body_data_result = stream_data->curr_body_data_result;
+            stream_data->curr_body_data_result = stream_data->next_body_data_result;
+            stream_data->next_body_data = 0;
+            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback Use next_body_data", conn->conn_id, stream_data->stream_id);
         }
 
-        if (body_data) {
-            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback Use existing body_data", conn->conn_id, stream_data->stream_id);
-        }
-        else {
-            body_data_result = qd_message_next_body_data(message, &body_data);
-            stream_data->curr_body_data = body_data;
-            stream_data->curr_body_data_result = body_data_result;
-            stream_data->curr_body_data_qd_buff_offset = 0;
-            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback qd_message_next_body_data", conn->conn_id, stream_data->stream_id);
+        if (!stream_data->curr_body_data) {
+            stream_data->curr_body_data_result = qd_message_next_body_data(message, &stream_data->curr_body_data);
+            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback No body data, get qd_message_next_body_data", conn->conn_id, stream_data->stream_id);
+
         }
 
-        switch (body_data_result) {
+        switch (stream_data->curr_body_data_result) {
         case QD_MESSAGE_BODY_DATA_OK: {
             //
             // We have a new valid body-data segment.  Handle it
             //
             size_t pn_buffs_write_capacity = pn_raw_connection_write_buffers_capacity(conn->pn_raw_conn);
-
-            // total length of the payload (across all qd_buffers in the current body data)
-            size_t payload_length = qd_message_body_data_payload_length(body_data);
-
             qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback pn_raw_connection_write_buffers_capacity=%zu", conn->conn_id, stream_data->stream_id, pn_buffs_write_capacity);
 
-            if (pn_buffs_write_capacity == 0 || payload_length == 0) {
-                if (pn_buffs_write_capacity == 0)
-                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Exiting read_data_callback, pn_buffs_write_capacity=0, pausing stream", conn->conn_id, stream_data->stream_id);
-                if (payload_length == 0) {
-                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Exiting read_data_callback, payload_length=0, pausing stream", conn->conn_id, stream_data->stream_id);
-                    qd_message_body_data_release(stream_data->curr_body_data);
-                    stream_data->curr_body_data = 0;
-                }
+            if (pn_buffs_write_capacity == 0) {
+                //
+                // Proton capacity is zero, we will come back later to write this stream, return for now.
+                //
+                qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Exiting read_data_callback, pn_buffs_write_capacity=0, pausing stream, returning NGHTTP2_ERR_DEFERRED", conn->conn_id, stream_data->stream_id);
+                stream_data->out_dlv_local_disposition = 0;
+                return NGHTTP2_ERR_DEFERRED;
+            }
 
-                // The payload length is zero on this body data. This might mean that the body is empty. Look ahead one body data
+            // total length of the payload (across all qd_buffers in the current body data)
+            size_t payload_length = qd_message_body_data_payload_length(stream_data->curr_body_data);
+
+            if (payload_length == 0) {
+                //
+                // Current body data has payload length zero. Release the curr_body_data
+                //
+                qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback, payload_length=0", conn->conn_id, stream_data->stream_id);
+                qd_message_body_data_release(stream_data->curr_body_data);
+                stream_data->curr_body_data = 0;
+
+                // The payload length is zero on this body data. Look ahead one body data to see if it is QD_MESSAGE_BODY_DATA_NO_MORE
                 stream_data->next_body_data_result = qd_message_next_body_data(message, &stream_data->next_body_data);
                 if (stream_data->next_body_data_result == QD_MESSAGE_BODY_DATA_NO_MORE) {
                     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
@@ -878,7 +885,8 @@ ssize_t read_data_callback(nghttp2_session *session,
                     qd_message_body_data_release(stream_data->next_body_data);
                     stream_data->next_body_data = 0;
                     stream_data->out_dlv_local_disposition = PN_ACCEPTED;
-                    break;
+                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback, payload_length=0 and next_body_data=QD_MESSAGE_BODY_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
+                    return 0;
                 }
 
 
@@ -890,35 +898,37 @@ ssize_t read_data_callback(nghttp2_session *session,
                 return NGHTTP2_ERR_DEFERRED;
             }
 
-            stream_data->body_data_buff_count = qd_message_body_data_buffer_count(body_data);
+            stream_data->body_data_buff_count = qd_message_body_data_buffer_count(stream_data->curr_body_data);
 
             assert (payload_length >= 0);
             size_t bytes_to_send = 0;
             if (payload_length) {
-                // Add the HTTP2 DATA frame header to the payload length to get the complete size of the payload.
                 size_t remaining_payload_length = payload_length - (stream_data->curr_body_data_qd_buff_offset * BUFFER_SIZE);
 
                 if (remaining_payload_length <= QD_HTTP2_BUFFER_SIZE) {
                     bytes_to_send = remaining_payload_length;
                     stream_data->qd_buffers_to_send = stream_data->body_data_buff_count;
                     stream_data->full_payload_handled = true;
-
-                    if (stream_data->next_body_data) {
-                        qd_message_body_data_release(stream_data->next_body_data);
-                        stream_data->next_body_data = 0;
-                    }
+                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
 
                     // Look ahead one body data
                     stream_data->next_body_data_result = qd_message_next_body_data(message, &stream_data->next_body_data);
-                    if (body_data_result == QD_MESSAGE_BODY_DATA_NO_MORE) {
+                    if (stream_data->next_body_data_result == QD_MESSAGE_BODY_DATA_NO_MORE) {
                         *data_flags |= NGHTTP2_DATA_FLAG_EOF;
                         stream_data->out_msg_body_sent = true;
                         qd_message_body_data_release(stream_data->next_body_data);
                         stream_data->next_body_data = 0;
                         stream_data->out_dlv_local_disposition = PN_ACCEPTED;
-                        break;
+                        qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback, looking ahead one body data QD_MESSAGE_BODY_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
                     }
-                    qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
+                    else if (stream_data->next_body_data_result == QD_MESSAGE_BODY_DATA_INCOMPLETE) {
+                        qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback, looking ahead one body data QD_MESSAGE_BODY_DATA_INCOMPLETE", conn->conn_id, stream_data->stream_id);
+
+                    }
+                    else if (stream_data->next_body_data_result == QD_MESSAGE_BODY_DATA_OK) {
+                        qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback, looking ahead one body data QD_MESSAGE_BODY_DATA_OK", conn->conn_id, stream_data->stream_id);
+
+                    }
                 }
                 else {
                     // This means that there is more that 16k worth of payload in one body data.
@@ -929,7 +939,7 @@ ssize_t read_data_callback(nghttp2_session *session,
                     qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
                 }
             }
-
+            qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] read_data_callback bytes_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send);
             return bytes_to_send;
         }
 
@@ -1021,8 +1031,11 @@ qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_lsnr_t* listener)
     ZERO(ingress_http_conn->session_data);
     DEQ_INIT(ingress_http_conn->session_data->buffs);
     DEQ_INIT(ingress_http_conn->session_data->streams);
+    DEQ_INIT(ingress_http_conn->granted_read_buffs);
     ingress_http_conn->session_data->conn = ingress_http_conn;
     ingress_http_conn->data_prd.read_callback = read_data_callback;
+
+    DEQ_INSERT_TAIL(http_adaptor->connections, ingress_http_conn);
 
     nghttp2_session_server_new(&(ingress_http_conn->session_data->session), (nghttp2_session_callbacks*)http_adaptor->callbacks, ingress_http_conn);
     pn_raw_connection_set_context(ingress_http_conn->pn_raw_conn, ingress_http_conn);
@@ -1040,6 +1053,7 @@ static void grant_read_buffers(qdr_http2_connection_t *conn)
                 size_t i;
                 for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
                     qd_http2_buffer_t *buf = qd_http2_buffer();
+                    DEQ_INSERT_TAIL(conn->granted_read_buffs, buf);
                     raw_buffers[i].bytes = (char*) qd_http2_buffer_base(buf);
                     raw_buffers[i].capacity = qd_http2_buffer_capacity(buf);
                     raw_buffers[i].size = 0;
@@ -1090,26 +1104,28 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
     if (settled) {
         qdr_http2_stream_data_t* stream_data = qdr_delivery_get_context(dlv);
         nghttp2_nv hdrs[1];
-        if (disp == PN_RELEASED || disp == PN_MODIFIED) {
-            hdrs[0].name = (uint8_t *)":status";
-            hdrs[0].value = (uint8_t *)"503";
-            hdrs[0].namelen = 7;
-            hdrs[0].valuelen = 3;
-            hdrs[0].flags = NGHTTP2_NV_FLAG_NONE;
-            nghttp2_submit_response(stream_data->session_data->session, stream_data->stream_id, hdrs, 1, 0);
-        }
-        else if (disp == PN_REJECTED) {
-            hdrs[0].name = (uint8_t *)":status";
-            hdrs[0].value = (uint8_t *)"400";
-            hdrs[0].namelen = 7;
-            hdrs[0].valuelen = 3;
-            hdrs[0].flags = NGHTTP2_NV_FLAG_NONE;
-            nghttp2_submit_response(stream_data->session_data->session, stream_data->stream_id, hdrs, 1, 0);
+        if (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED) {
+            if (disp == PN_RELEASED || disp == PN_MODIFIED) {
+                hdrs[0].name = (uint8_t *)":status";
+                hdrs[0].value = (uint8_t *)"503";
+                hdrs[0].namelen = 7;
+                hdrs[0].valuelen = 3;
+                hdrs[0].flags = NGHTTP2_NV_FLAG_NONE;
+                nghttp2_submit_response(stream_data->session_data->session, stream_data->stream_id, hdrs, 1, 0);
+            }
+            else if (disp == PN_REJECTED) {
+                hdrs[0].name = (uint8_t *)":status";
+                hdrs[0].value = (uint8_t *)"400";
+                hdrs[0].namelen = 7;
+                hdrs[0].valuelen = 3;
+                hdrs[0].flags = NGHTTP2_NV_FLAG_NONE;
+                nghttp2_submit_response(stream_data->session_data->session, stream_data->stream_id, hdrs, 1, 0);
 
+            }
+            nghttp2_submit_goaway(stream_data->session_data->session, 0, stream_data->stream_id, NGHTTP2_CONNECT_ERROR, (uint8_t *)"Service Unavailable", 19);
+            nghttp2_session_send(stream_data->session_data->session);
         }
-        nghttp2_submit_goaway(stream_data->session_data->session, 0, stream_data->stream_id, NGHTTP2_CONNECT_ERROR, (uint8_t *)"Service Unavailable", 19);
-        nghttp2_session_send(stream_data->session_data->session);
-        free_http2_stream_data(stream_data);
+        free_http2_stream_data(stream_data, false);
     }
 }
 
@@ -1379,13 +1395,9 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
             }
         }
 
-        if (qd_message_receive_complete(qdr_delivery_message(stream_data->in_dlv))
-                && qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
+        if (qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
             advance_stream_status(stream_data);
-            qdr_delivery_remote_state_updated(http_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
         }
-
-
         qd_log(http_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i] Finished handle_outgoing_http, the thread id = %i", conn->conn_id, pthread_self());
     }
     else {
@@ -1447,7 +1459,6 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
     }
     else if (stream_data) {
         if (conn->ingress) {
-            //stream_data->message = qdr_delivery_message(delivery);
             stream_data->out_dlv = delivery;
         }
         qd_log(http_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - qdr_http_deliver - call handle_outgoing_http", conn->conn_id);
@@ -1481,6 +1492,7 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
     while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
             qd_http2_buffer_t *buf = (qd_http2_buffer_t*) raw_buffers[i].context;
+            DEQ_REMOVE(conn->granted_read_buffs, buf);
             uint32_t raw_buff_size = raw_buffers[i].size;
             qd_http2_buffer_insert(buf, raw_buff_size);
             count += raw_buff_size;
@@ -1586,9 +1598,14 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
     while (stream_data) {
         if (stream_data->status == QD_STREAM_FULLY_CLOSED) {
             qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] In restart_streams QD_STREAM_FULLY_CLOSED, not restarting stream", http_conn->conn_id, stream_data->stream_id);
-            qdr_http2_stream_data_t *next_stream_data = DEQ_NEXT(stream_data);
-            DEQ_REMOVE(http_conn->session_data->streams, stream_data);
-            stream_data = next_stream_data;
+            if (stream_data->out_dlv && !stream_data->disp_updated) {
+                // A call to qdr_delivery_remote_state_updated will free the out_dlv
+                qdr_delivery_remote_state_updated(http_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
+                qd_log(http_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] In restart_streams QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", http_conn->conn_id, stream_data->stream_id);
+                stream_data->disp_updated = true;
+                stream_data->out_dlv = 0;
+            }
+            stream_data = DEQ_NEXT(stream_data);
         }
         else {
             if (stream_data->out_dlv_local_disposition != PN_ACCEPTED) {
@@ -1605,7 +1622,7 @@ static void qdr_del_http2_connection_CT(qdr_core_t *core, qdr_action_t *action, 
 {
     qdr_http2_connection_t *conn = (qdr_http2_connection_t*) action->args.general.context_1;
     qd_log(http_adaptor->log_source, QD_LOG_DEBUG, "Removed http2 connection %s", conn->config->host_port);
-    free_qdr_http2_connection(conn);
+    free_qdr_http2_connection(conn, false);
 }
 
 
@@ -1617,19 +1634,6 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
         conn->pn_raw_conn = 0;
     }
 
-    if (!conn->ingress) {
-        if (conn->stream_dispatcher) {
-            qdr_http2_stream_data_t *stream_data = qdr_link_get_context(conn->stream_dispatcher);
-            if (stream_data) {
-                free_http2_stream_data(stream_data);
-            }
-            qd_log(http_adaptor->log_source, QD_LOG_INFO, "[C%i] Detaching stream dispatcher on egress connection", conn->conn_id);
-            qdr_link_set_context(conn->stream_dispatcher, 0);
-            qdr_link_detach(conn->stream_dispatcher, QD_CLOSED, 0);
-            conn->stream_dispatcher = 0;
-        }
-    }
-
     if (conn->ingress) {
         qdr_connection_closed(conn->qdr_conn);
         qdr_connection_set_context(conn->qdr_conn, 0);
@@ -1637,6 +1641,19 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
         qdr_action_t *action = qdr_action(qdr_del_http2_connection_CT, "delete_http2_connection");
         action->args.general.context_1 = conn;
         qdr_action_enqueue(http_adaptor->core, action);
+    }
+    else {
+        if (conn->stream_dispatcher) {
+            qdr_http2_stream_data_t *stream_data = qdr_link_get_context(conn->stream_dispatcher);
+            qd_log(http_adaptor->log_source, QD_LOG_INFO, "[C%i] Detaching stream dispatcher link on egress connection, freed associated stream data", conn->conn_id);
+            qdr_link_detach(conn->stream_dispatcher, QD_CLOSED, 0);
+            qdr_link_set_context(conn->stream_dispatcher, 0);
+            conn->stream_dispatcher = 0;
+            if (stream_data) {
+                free_qdr_http2_stream_data_t(stream_data);
+            }
+            conn->stream_dispatcher_stream_data = 0;
+        }
     }
     sys_mutex_unlock(qd_server_get_activation_lock(http_adaptor->core->qd->server));
 }
@@ -1678,6 +1695,10 @@ static void create_stream_dispatcher_link(qdr_http2_connection_t *egress_http_co
     ZERO(stream_data);
     stream_data->session_data = egress_http_conn->session_data;
     qdr_link_set_context(egress_http_conn->stream_dispatcher, stream_data);
+
+    // This is added specifically to deal with the shutdown leak of the dispatcher stream data.
+    // The core frees all links before it calls adaptor final. so we cannot get the stream data from the qdr_link context.
+    egress_http_conn->stream_dispatcher_stream_data = stream_data;
 }
 
 
@@ -1698,7 +1719,10 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     ZERO(egress_http_conn->session_data);
     DEQ_INIT(egress_http_conn->session_data->buffs);
     DEQ_INIT(egress_http_conn->session_data->streams);
+    DEQ_INIT(egress_http_conn->granted_read_buffs);
     egress_http_conn->session_data->conn = egress_http_conn;
+
+    DEQ_INSERT_TAIL(http_adaptor->connections, egress_http_conn);
 
     nghttp2_session_client_new(&egress_http_conn->session_data->session, (nghttp2_session_callbacks*)http_adaptor->callbacks, (void *)egress_http_conn);
 
@@ -1875,8 +1899,6 @@ static bool http_listener_listen(qd_http_lsnr_t *li) {
 
 qd_http_lsnr_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
-    // TODO - Add lws in the qd_lws_listener.
-    // TOOD - Separate commit.
     qd_http_lsnr_t *li = qd_http_lsnr(qd->server, &handle_listener_event);
     if (!li) {
         qd_log(http_adaptor->log_source, QD_LOG_ERROR, "Unable to create http listener: no memory");
@@ -1884,7 +1906,6 @@ qd_http_lsnr_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bri
     }
 
     li->config = *config;
-    //DEQ_ITEM_INIT(li);
     DEQ_INSERT_TAIL(http_adaptor->listeners, li);
     qd_log(http_adaptor->log_source, QD_LOG_INFO, "Configured HTTP_ADAPTOR listener on %s", (&li->config)->host_port);
     http_listener_listen(li);
@@ -1920,6 +1941,16 @@ static void qdr_http_adaptor_final(void *adaptor_context)
     adaptor->protocol_log_source = 0;
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     nghttp2_session_callbacks_del(adaptor->callbacks);
+
+    qdr_http2_connection_t *http_conn = DEQ_HEAD(adaptor->connections);
+    while (http_conn) {
+        if (http_conn->stream_dispatcher_stream_data) {
+            free_qdr_http2_stream_data_t(http_conn->stream_dispatcher_stream_data);
+            http_conn->stream_dispatcher = 0;
+        }
+        free_qdr_http2_connection(http_conn, true);
+        http_conn = DEQ_HEAD(adaptor->connections);
+    }
     free(adaptor);
     http_adaptor =  NULL;
 }
@@ -1936,7 +1967,7 @@ static void qdr_http_adaptor_init(qdr_core_t *core, void **adaptor_context)
     qdr_http_adaptor_t *adaptor = NEW(qdr_http_adaptor_t);
     adaptor->core    = core;
     adaptor->adaptor = qdr_protocol_adaptor(core,
-                                            "http",                // name
+                                            "http2",                // name
                                             adaptor,               // context
                                             qdr_http_activate,
                                             qdr_http_first_attach,
@@ -1957,6 +1988,7 @@ static void qdr_http_adaptor_init(qdr_core_t *core, void **adaptor_context)
     *adaptor_context = adaptor;
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);
+    DEQ_INIT(adaptor->connections);
 
     //
     // Register all nghttp2 callbacks.
