@@ -664,13 +664,13 @@ static int _client_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, 
         // @TODO(kgiusti): also have to remove other headers given in value!
         //
         size_t len;
-        const char *token = qdr_http1_token_list_next(value, &len, &value);
+        const char *token = h1_codec_token_list_next(value, &len, &value);
         while (token) {
             if (len == 5 && strncasecmp(token, "close", 5) == 0) {
                 hreq->close_on_complete = true;
                 break;
             }
-            token = qdr_http1_token_list_next(value, &len, &value);
+            token = h1_codec_token_list_next(value, &len, &value);
         }
 
     } else {

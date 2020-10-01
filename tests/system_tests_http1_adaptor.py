@@ -27,6 +27,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 
+import socket
 import sys
 from threading import Thread
 try:
@@ -41,6 +42,13 @@ from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from system_test import TestCase, unittest, main_module, Qdrouterd
 from system_test import TIMEOUT, Logger
+
+
+class SimpleSocket(object):
+    def __init__(self, host, port, timeout=TIMEOUT):
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(timeout)
+        self.socket.connect((host, port))
 
 
 class RequestMsg(object):
@@ -79,7 +87,6 @@ class ResponseMsg(object):
         self.error = error
 
     def send_response(self, handler):
-        handler.protocol_version = self.version
         if self.error:
             handler.send_error(self.status,
                                message=self.reason)
@@ -397,6 +404,13 @@ class RequestHandler(BaseHTTPRequestHandler):
         return self.rfile.read()
 
 
+class RequestHandler10(RequestHandler):
+    """
+    RequestHandler that forces the server to use HTTP version 1.0 semantics
+    """
+    protocol_version = 'HTTP/1.0'
+
+
 class MyHTTPServer(HTTPServer):
     """
     Adds a switch to the HTTPServer to allow it to exit gracefully
@@ -413,10 +427,12 @@ class TestServer(object):
     """
     A HTTPServer running in a separate thread
     """
-    def __init__(self, port=8080, tests=None):
+    def __init__(self, port=8080, tests=None, handler_cls=None):
         self._logger = Logger(title="TestServer", print_to_console=False)
         self._server_addr = ("", port)
-        self._server = MyHTTPServer(self._server_addr, RequestHandler, tests)
+        self._server = MyHTTPServer(self._server_addr,
+                                    handler_cls or RequestHandler,
+                                    tests)
         self._server.allow_reuse_address = True
         self._thread = Thread(target=self._run)
         self._thread.daemon = True
@@ -526,8 +542,10 @@ class Http1AdaptorOneRouterTest(TestCase):
         #  <client>  <server>
 
         cls.routers = []
-        cls.http_server_port = cls.tester.get_port()
-        cls.http_listener_port = cls.tester.get_port()
+        #cls.http_server_port = cls.tester.get_port()
+        #cls.http_listener_port = cls.tester.get_port()
+        cls.http_server_port = 9090
+        cls.http_listener_port = 8080
 
         router('INT.A', 'standalone',
                [('httpConnector', {'port': cls.http_server_port,
@@ -540,8 +558,10 @@ class Http1AdaptorOneRouterTest(TestCase):
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
 
-    def _do_request(self, tests):
-        server = TestServer(port=self.http_server_port)
+    def _do_request(self, tests, handler_cls=None):
+        handler_cls = handler_cls or RequestHandler
+        server = TestServer(port=self.http_server_port,
+                            handler_cls=handler_cls)
         for req, _, val in tests:
             client = HTTPConnection("127.0.0.1:%s" % self.http_listener_port,
                                     timeout=TIMEOUT)
@@ -569,6 +589,22 @@ class Http1AdaptorOneRouterTest(TestCase):
 
     def test_004_put(self):
         self._do_request(DEFAULT_TEST_SCENARIOS["PUT"])
+
+    def test_005_get_10(self):
+        self._do_request(DEFAULT_TEST_SCENARIOS["GET"],
+                         handler_cls=RequestHandler10)
+
+    def test_006_head_10(self):
+        self._do_request(DEFAULT_TEST_SCENARIOS["HEAD"],
+                         handler_cls=RequestHandler10)
+
+    def test_007_post_10(self):
+        self._do_request(DEFAULT_TEST_SCENARIOS["POST"],
+                         handler_cls=RequestHandler10)
+
+    def test_008_put_10(self):
+        self._do_request(DEFAULT_TEST_SCENARIOS["PUT"],
+                         handler_cls=RequestHandler10)
 
 
 class Http1AdaptorInteriorTest(TestCase):
@@ -661,8 +697,10 @@ class Http1AdaptorInteriorTest(TestCase):
 
         cls.routers = []
         cls.INTA_edge_port   = cls.tester.get_port()
-        cls.http_server_port = cls.tester.get_port()
-        cls.http_listener_port = cls.tester.get_port()
+        #cls.http_server_port = cls.tester.get_port()
+        #cls.http_listener_port = cls.tester.get_port()
+        cls.http_server_port = 9090
+        cls.http_listener_port = 8080
 
         router('INT.A', 'interior',
                [('listener', {'role': 'edge', 'port': cls.INTA_edge_port}),
@@ -702,19 +740,32 @@ class Http1AdaptorInteriorTest(TestCase):
             client.wait()
             self.assertIsNone(client.error)
 
-        # terminate the server thread by sending a request
-        # with eom_close set
-
+        # send command to stop the server thread
         client = ThreadedTestClient({"POST": [(RequestMsg("POST",
                                                           "/SHUTDOWN",
                                                           {"Content-Length": "0"}),
-                                                   None,
-                                                   None)]},
+                                               None,
+                                               None)]},
                                     self.http_listener_port)
         client.wait()
         self.assertIsNone(client.error)
 
         server.wait()
+
+    def test_02_unsupported_version(self):
+        """
+        Test the handling of invalid/unsupported HTTP version
+        """
+        return
+        print("Creating socket", flush=True)
+        ss = SimpleSocket(host="127.0.0.1", port=self.http_listener_port,
+                            timeout=10.0)
+        print("sending socket", flush=True)
+        ss.socket.sendall(b'GET /no/version\r\n')
+        print("recv socket", flush=True)
+        buf = ss.socket.recv(4096)
+        print("recv '%s'" % buf, flush=True)
+
 
 
 if __name__ == '__main__':
