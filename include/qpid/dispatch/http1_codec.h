@@ -187,6 +187,16 @@ bool h1_codec_request_complete(const h1_codec_request_state_t *hrs);
 // true when codec has encoded/decoded a complete response message
 bool h1_codec_response_complete(const h1_codec_request_state_t *hrs);
 
+// Utility for iterating over a list of HTTP tokens.
+//
+// start - begin search
+// len - (output) length of token if non-null returned
+// next - (output) address past token - for start of next search
+// Returns a pointer to the first byte of the token, or 0 if no token found
+//
+const char *h1_codec_token_list_next(const char *start, size_t *len, const char **next);
+
+
 //
 // API for sending HTTP/1.x messages
 //

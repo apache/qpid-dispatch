@@ -78,6 +78,7 @@ typedef struct _client_request_t {
     bool codec_completed;     // encoder/decoder done
     bool cancelled;
     bool close_on_complete;   // close the conn when this request is complete
+    bool conn_close_hdr;      // add Connection: close to response msg
 
 } _client_request_t;
 ALLOC_DECLARE(_client_request_t);
@@ -607,6 +608,7 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
     creq->base.msg_id = hconn->client.next_msg_id++;
     creq->base.lib_rs = hrs;
     creq->base.hconn = hconn;
+    creq->close_on_complete = (version_minor == 0);
     DEQ_INIT(creq->responses);
 
     creq->request_props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
@@ -656,21 +658,23 @@ static int _client_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, 
            "[C%"PRIu64"][L%"PRIu64"] HTTP request header received: key='%s' value='%s'",
            hconn->conn_id, hconn->in_link_id, key, value);
 
-    if (strcasecmp(key, "connection") == 0) {
-        // We need to filter the connection header out.  See if client
-        // requested 'close' - this means it expects us to close the connection
-        // when the response has been sent
+    if (strcasecmp(key, "Connection") == 0) {
+        // We need to filter the connection header out.  But first see if
+        // client requested that the connection be closed after the response
+        // arrives.
         //
         // @TODO(kgiusti): also have to remove other headers given in value!
+        // @TODO(kgiusti): do we need to support keep-alive on 1.0 connections?
         //
         size_t len;
-        const char *token = qdr_http1_token_list_next(value, &len, &value);
+        const char *token = h1_codec_token_list_next(value, &len, &value);
         while (token) {
             if (len == 5 && strncasecmp(token, "close", 5) == 0) {
                 hreq->close_on_complete = true;
+                hreq->conn_close_hdr = true;
                 break;
             }
-            token = qdr_http1_token_list_next(value, &len, &value);
+            token = h1_codec_token_list_next(value, &len, &value);
         }
 
     } else {
@@ -1007,7 +1011,7 @@ static bool _encode_response_headers(_client_request_t *hreq,
 
                     // the value for RESPONSE_HEADER_KEY is optional and is set
                     // to a string representation of the version of the server
-                    // (e.g. "1.1"
+                    // (e.g. "1.1")
                     uint32_t major = 1;
                     uint32_t minor = 1;
                     tmp = qd_parse_value_by_key(app_props, RESPONSE_HEADER_KEY);
@@ -1052,7 +1056,7 @@ static bool _encode_response_headers(_client_request_t *hreq,
                             char *header_key = (char*) qd_iterator_copy(i_key);
                             char *header_value = (char*) qd_iterator_copy(i_value);
 
-
+                            // @TODO(kgiusti): remove me (sensitive content)
                             qd_log(hreq->base.hconn->adaptor->log, QD_LOG_TRACE,
                                    "[C%"PRIu64"][L%"PRIu64"] Encoding response header %s:%s",
                                    hreq->base.hconn->conn_id, hreq->base.hconn->out_link_id,
@@ -1065,6 +1069,16 @@ static bool _encode_response_headers(_client_request_t *hreq,
                         }
 
                         key = qd_field_next_child(value);
+                    }
+
+                    // If the client has requested Connection: close respond
+                    // accordingly IF this is the terminal response (not
+                    // INFORMATIONAL)
+                    if (ok && (status_code / 100) == 1) {
+                        if (hreq->conn_close_hdr) {
+                            ok = !h1_codec_tx_add_header(hreq->base.lib_rs,
+                                                         "Connection", "close");
+                        }
                     }
                 }
             }
