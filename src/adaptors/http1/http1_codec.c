@@ -149,6 +149,7 @@ struct h1_codec_connection_t {
 
         bool is_request;
         bool is_chunked;
+        bool is_http10;
 
         // decoded headers
         bool hdr_transfer_encoding;
@@ -291,6 +292,7 @@ static void decoder_reset(struct decoder_t *decoder)
     decoder->error_msg = 0;
     decoder->is_request = false;
     decoder->is_chunked = false;
+    decoder->is_http10 = false;
     decoder->hdr_transfer_encoding = false;
     decoder->hdr_content_length = false;
 }
@@ -628,6 +630,8 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
         return decoder->error;
     }
 
+    decoder->is_http10 = minor == 0;
+
     h1_codec_request_state_t *hrs = h1_codec_request_state(conn);
 
     // check for methods that do not support body content in the response:
@@ -718,6 +722,7 @@ static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *de
     }
 
     decoder->is_request = false;
+    decoder->is_http10 = minor == 0;
 
     decoder->error = conn->config.rx_response(decoder->hrs,
                                               hrs->response_code,
