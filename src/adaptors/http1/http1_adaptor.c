@@ -235,34 +235,6 @@ void qdr_http1_error_response(qdr_http1_request_base_t *hreq,
 }
 
 
-const char *qdr_http1_token_list_next(const char *start, size_t *len, const char **next)
-{
-    static const char *SKIPME = ", \t";
-
-    *len = 0;
-    *next = 0;
-
-    if (!start) return 0;
-
-    while (*start && strchr(SKIPME, *start))
-        ++start;
-
-    if (!*start) return 0;
-
-    const char *end = start;
-    while (*end && !strchr(SKIPME, *end))
-        ++end;
-
-    *len = end - start;
-    *next = end;
-
-    while (**next && strchr(SKIPME, **next))
-        ++(*next);
-
-    return start;
-}
-
-
 //
 // Raw Connection Write Buffer Management
 //

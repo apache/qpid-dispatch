@@ -149,10 +149,13 @@ struct h1_codec_connection_t {
 
         bool is_request;
         bool is_chunked;
+        bool is_http10;
 
         // decoded headers
         bool hdr_transfer_encoding;
         bool hdr_content_length;
+        bool hdr_conn_close;      // Connection: close
+        bool hdr_conn_keep_alive;  // Connection: keep-alive
     } decoder;
 
     // Encoder for current outgoing msg.
@@ -233,21 +236,21 @@ h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *cont
 
 
 // The connection has closed.  If this is a connection to a server this may
-// simply be the end of the response message. If so mark it complete.
+// simply be the end of the response message.  Mark the in-flight response as
+// completed.
 //
 void h1_codec_connection_closed(h1_codec_connection_t *conn)
 {
     if (conn) {
         if (conn->config.type == HTTP1_CONN_SERVER) {
             struct decoder_t *decoder = &conn->decoder;
-            if (decoder->hrs &&
-                decoder->hrs->request_complete &&
-                decoder->state == HTTP1_MSG_STATE_BODY) {
-
-                h1_codec_request_state_t *hrs = decoder->hrs;
+            h1_codec_request_state_t *hrs = decoder->hrs;
+            if (hrs && hrs->request_complete) {
                 decoder_reset(decoder);
-                hrs->response_complete = true;
-                conn->config.rx_done(hrs);
+                if (!hrs->response_complete) {
+                    hrs->response_complete = true;
+                    conn->config.rx_done(hrs);
+                }
                 conn->config.request_complete(hrs, false);
                 h1_codec_request_state_free(hrs);
             }
@@ -291,8 +294,11 @@ static void decoder_reset(struct decoder_t *decoder)
     decoder->error_msg = 0;
     decoder->is_request = false;
     decoder->is_chunked = false;
+    decoder->is_http10 = false;
     decoder->hdr_transfer_encoding = false;
     decoder->hdr_content_length = false;
+    decoder->hdr_conn_close = false;
+    decoder->hdr_conn_keep_alive = false;
 }
 
 
@@ -628,6 +634,8 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
         return decoder->error;
     }
 
+    decoder->is_http10 = minor == 0;
+
     h1_codec_request_state_t *hrs = h1_codec_request_state(conn);
 
     // check for methods that do not support body content in the response:
@@ -718,6 +726,7 @@ static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *de
     }
 
     decoder->is_request = false;
+    decoder->is_http10 = minor == 0;
 
     decoder->error = conn->config.rx_response(decoder->hrs,
                                               hrs->response_code,
@@ -852,6 +861,19 @@ static int process_header(h1_codec_connection_t *conn, struct decoder_t *decoder
     } else if (strcasecmp("Transfer-Encoding", (char*) key) == 0) {
         decoder->is_chunked = _is_transfer_chunked((char*) value);
         decoder->hdr_transfer_encoding = true;
+
+    } else if (strcasecmp("Connection", (char*) key) == 0) {
+        // parse out connection lifecycle options
+        const char *token = 0;
+        size_t len = 0;
+        const char *next = (const char*) value;
+        while (*next && (token = h1_codec_token_list_next(next, &len, &next)) != 0) {
+            if (len == 5 && strncmp("close", token, 5) == 0) {
+                decoder->hdr_conn_close = true;
+            } else if (len == 10 && strncmp("keep-alive", token, 10) == 0) {
+                decoder->hdr_conn_keep_alive = true;
+            }
+        }
     }
 
     return 0;
@@ -1169,25 +1191,40 @@ static bool parse_done(h1_codec_connection_t *conn, struct decoder_t *decoder)
     // signal the message receive is complete
     conn->config.rx_done(hrs);
 
+    bool close_expected = false;
     if (is_response) {
         // Informational 1xx response codes are NOT teriminal - further responses are allowed!
         if (IS_INFO_RESPONSE(hrs->response_code)) {
             hrs->response_code = 0;
         } else {
             hrs->response_complete = true;
+
+            // In certain scenarios an HTTP server will close the connection to
+            // indicate the end of a response message. This may happen even if
+            // the request message has a known length (Content-Length or
+            // Transfer-Encoding).  In these circumstances do NOT signal that
+            // the request is complete (call request_complete() callback) until
+            // the connection closes.  Otherwise the user may start sending the
+            // next request message before the HTTP server closes the TCP
+            // connection.  (see RFC7230, section Persistence)
+
+            close_expected = decoder->hdr_conn_close
+                || (decoder->is_http10 && !decoder->hdr_conn_keep_alive);
         }
     } else {
         hrs->request_complete = true;
     }
 
-    if (hrs->request_complete && hrs->response_complete) {
-        conn->config.request_complete(hrs, false);
-        decoder->hrs = 0;
-        h1_codec_request_state_free(hrs);
-    }
-
-    decoder_reset(decoder);
-    return !!decoder->read_ptr.remaining;
+    if (!close_expected) {
+        if (hrs->request_complete && hrs->response_complete) {
+            conn->config.request_complete(hrs, false);
+            decoder->hrs = 0;
+            h1_codec_request_state_free(hrs);
+        }
+        decoder_reset(decoder);
+        return !!decoder->read_ptr.remaining;
+    } else
+        return false;  // stop parsing input, wait for close
 }
 
 
@@ -1500,4 +1537,31 @@ bool h1_codec_request_complete(const h1_codec_request_state_t *hrs)
 bool h1_codec_response_complete(const h1_codec_request_state_t *hrs)
 {
     return hrs && hrs->response_complete;
+}
+
+
+const char *h1_codec_token_list_next(const char *start, size_t *len, const char **next)
+{
+    static const char *SKIPME = ", \t";
+
+    *len = 0;
+    *next = 0;
+
+    if (!start) return 0;
+
+    while (*start && strchr(SKIPME, *start))
+        ++start;
+
+    if (!*start) return 0;
+
+    const char *end = start;
+    while (*end && !strchr(SKIPME, *end))
+        ++end;
+
+    *len = end - start;
+    while (*end && strchr(SKIPME, *end))
+        ++end;
+
+    *next = end;
+    return start;
 }

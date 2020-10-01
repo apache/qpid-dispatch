@@ -217,16 +217,6 @@ void qdr_http1_rejected_response(qdr_http1_request_base_t *hreq,
                                  const qdr_error_t *error);
 
 
-// return the next HTTP token in a comma separated list of tokens
-//
-// start - search for token start pointer
-// len - length of token if non-null returned
-// next - address of start of next token
-//
-const char *qdr_http1_token_list_next(const char *start, size_t *len, const char **next);
-
-
-
 // http1_client.c protocol adaptor callbacks
 //
 void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
