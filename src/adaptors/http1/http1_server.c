@@ -374,6 +374,7 @@ static void _do_reconnect(void *context)
         hconn->raw_conn = pn_raw_connection();
         pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
         // this call may reschedule the connection on another I/O thread:
+        assert(hconn->raw_conn);
         pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
     }
 }
