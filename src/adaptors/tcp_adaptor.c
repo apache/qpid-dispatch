@@ -152,9 +152,15 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
         qd_compose_start_list(props);
         qd_compose_insert_null(props);                      // message-id
         qd_compose_insert_null(props);                      // user-id
-        qd_compose_insert_null(props);                      // to
-        qd_compose_insert_string(props, conn->global_id);   // subject
-        qd_compose_insert_string(props, conn->reply_to);    // reply-to
+        if (conn->ingress) {
+            qd_compose_insert_string(props, conn->config.address); // to
+            qd_compose_insert_string(props, conn->global_id);   // subject
+            qd_compose_insert_string(props, conn->reply_to);    // reply-to
+        } else {
+            qd_compose_insert_string(props, conn->reply_to); // to
+            qd_compose_insert_string(props, conn->global_id);   // subject
+            qd_compose_insert_null(props);    // reply-to
+        }
         //qd_compose_insert_null(props);                      // correlation-id
         //qd_compose_insert_null(props);                      // content-type
         //qd_compose_insert_null(props);                      // content-encoding
