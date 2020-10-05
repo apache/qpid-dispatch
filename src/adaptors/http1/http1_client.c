@@ -838,9 +838,13 @@ static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool c
         hreq->cancelled = hreq->cancelled || cancelled;
         hreq->codec_completed = !hreq->cancelled;
 
+        uint64_t in_octets, out_octets;
+        h1_codec_request_state_counters(lib_rs, &in_octets, &out_octets);
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-               "[C%"PRIu64"] HTTP request/response %s.", hreq->base.hconn->conn_id,
-               cancelled ? "cancelled!" : "codec done");
+               "[C%"PRIu64"] HTTP request/response %s. Octets read: %"PRIu64" written: %"PRIu64,
+               hreq->base.hconn->conn_id,
+               cancelled ? "cancelled!" : "codec done",
+               in_octets, out_octets);
     }
 }
 
