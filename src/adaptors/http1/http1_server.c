@@ -539,7 +539,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 if (!qdr_delivery_receive_complete(hreq->request_dlv))
                     return;
 
-                uint64_t dispo = hreq->request_dispo || PN_MODIFIED;
+                uint64_t dispo = hreq->request_dispo ? hreq->request_dispo : PN_MODIFIED;
                 qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
                                                   hreq->request_dlv,
                                                   dispo,
