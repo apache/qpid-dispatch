@@ -187,6 +187,11 @@ bool h1_codec_request_complete(const h1_codec_request_state_t *hrs);
 // true when codec has encoded/decoded a complete response message
 bool h1_codec_response_complete(const h1_codec_request_state_t *hrs);
 
+// query the amount of octets read (in) and written (out) for a request
+void h1_codec_request_state_counters(const h1_codec_request_state_t *hrs,
+                                     uint64_t *in_octets,
+                                     uint64_t *out_octets);
+
 // Utility for iterating over a list of HTTP tokens.
 //
 // start - begin search

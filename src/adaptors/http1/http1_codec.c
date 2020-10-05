@@ -101,6 +101,9 @@ struct h1_codec_request_state_t {
     char                *method;
     uint32_t             response_code;
 
+    uint64_t in_octets;     // # encoded octets arriving from endpoint
+    uint64_t out_octets;    // # encoded octets written to endpoint
+
     bool no_body_method;    // true if request method is either HEAD or CONNECT
     bool request_complete;  // true when request message done encoding/decoding
     bool response_complete; // true when response message done encoding/decoding
@@ -365,6 +368,7 @@ static void write_string(struct encoder_t *encoder, const char *string)
     size_t needed = strlen(string);
     ensure_outgoing_capacity(encoder, needed);
 
+    encoder->hrs->out_octets += needed;
     qd_iterator_pointer_t *wptr = &encoder->write_ptr;
     while (needed) {
         if (qd_buffer_capacity(wptr->buffer) == 0) {
@@ -592,6 +596,7 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
     qd_iterator_pointer_t method = {0};
     qd_iterator_pointer_t target = {0};
     qd_iterator_pointer_t version = {0};
+    int in_octets = line->remaining;
 
     if (!parse_token(line, &method) ||
         !parse_field(line, &target) ||
@@ -643,6 +648,7 @@ static bool parse_request_line(h1_codec_connection_t *conn, struct decoder_t *de
                            strcmp((char*)method_str, "CONNECT") == 0);
 
     hrs->method = qd_strdup((char*) method_str);
+    hrs->in_octets += in_octets;
 
     decoder->hrs = hrs;
     decoder->is_request = true;
@@ -662,6 +668,7 @@ static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *de
     qd_iterator_pointer_t version = {0};
     qd_iterator_pointer_t status_code = {0};
     qd_iterator_pointer_t reason = {0};
+    int in_octets = line->remaining;
 
     if (!parse_field(line, &version)
         || !parse_field(line, &status_code)
@@ -685,6 +692,7 @@ static int parse_response_line(h1_codec_connection_t *conn, struct decoder_t *de
     assert(!decoder->hrs);   // state machine violation
     assert(hrs->response_code == 0);
 
+    hrs->in_octets += in_octets;
     decoder->hrs = hrs;
 
     unsigned char code_str[4];
@@ -892,6 +900,8 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
     if (read_line(rptr, &line)) {
         debug_print_iterator_pointer("header:", &line);
 
+        hrs->in_octets += line.remaining;
+
         if (is_empty_line(&line)) {
             // end of headers
             return process_headers_done(conn, decoder);
@@ -964,6 +974,7 @@ static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
     // shortcut: if no more data to parse send the entire incoming chain
     if (rptr->remaining == 0) {
 
+        decoder->hrs->in_octets += body_ptr->remaining;
         decoder->error = conn->config.rx_body(decoder->hrs, &decoder->incoming,
                                               body_ptr->cursor - qd_buffer_base(body_ptr->buffer),
                                               body_ptr->remaining,
@@ -1011,8 +1022,10 @@ static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
         body_ptr->remaining = 0;
     }
 
-    if (octets)
+    if (octets) {
+        decoder->hrs->in_octets += octets;
         decoder->error = conn->config.rx_body(decoder->hrs, &blist, body_offset, octets, true);
+    }
     return decoder->error;
 }
 
@@ -1163,6 +1176,7 @@ static bool parse_body(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
     // otherwise no explict body size, so just keep passing the entire unparsed
     // incoming chain along until the remote closes the connection
+    decoder->hrs->in_octets += decoder->read_ptr.remaining;
     decoder->error = conn->config.rx_body(decoder->hrs,
                                           &decoder->incoming,
                                           decoder->read_ptr.cursor
@@ -1477,6 +1491,7 @@ int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_body_data_t *body
         _flush_headers(hrs, encoder);
 
     // skip the outgoing queue and send directly
+    hrs->out_octets += qd_message_body_data_payload_length(body_data);
     conn->config.tx_body_data(hrs, body_data);
 
     return 0;
@@ -1537,6 +1552,14 @@ bool h1_codec_request_complete(const h1_codec_request_state_t *hrs)
 bool h1_codec_response_complete(const h1_codec_request_state_t *hrs)
 {
     return hrs && hrs->response_complete;
+}
+
+
+void h1_codec_request_state_counters(const h1_codec_request_state_t *hrs,
+                                     uint64_t *in_octets, uint64_t *out_octets)
+{
+    *in_octets = (hrs) ? hrs->in_octets : 0;
+    *out_octets = (hrs) ? hrs->out_octets : 0;
 }
 
 

@@ -539,7 +539,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 if (!qdr_delivery_receive_complete(hreq->request_dlv))
                     return;
 
-                uint64_t dispo = hreq->request_dispo || PN_MODIFIED;
+                uint64_t dispo = hreq->request_dispo ? hreq->request_dispo : PN_MODIFIED;
                 qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
                                                   hreq->request_dlv,
                                                   dispo,
@@ -937,9 +937,13 @@ static void _server_request_complete_cb(h1_codec_request_state_t *hrs, bool canc
     hreq->cancelled = hreq->cancelled || cancelled;
     hreq->codec_completed = !hreq->cancelled;
 
+    uint64_t in_octets, out_octets;
+    h1_codec_request_state_counters(hrs, &in_octets, &out_octets);
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%"PRIu64"] HTTP request/response %s.", hconn->conn_id,
-           cancelled ? "cancelled!" : "codec done");
+           "[C%"PRIu64"] HTTP request/response %s. Octets read: %"PRIu64" written: %"PRIu64,
+           hconn->conn_id,
+           cancelled ? "cancelled!" : "codec done",
+           in_octets, out_octets);
 }
 
 
