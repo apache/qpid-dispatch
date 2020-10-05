@@ -2450,6 +2450,12 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
         buffers[idx].size     = qd_buffer_size(buffer) - (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
         buffers[idx].offset   = 0;
 
+        if (buffer == body_data->last_buffer) {
+            // Don't process beyond the end of this body_data section
+            actual_count++;
+            break;
+        }
+
         buffer = DEQ_NEXT(buffer);
         actual_count++;
         idx++;
