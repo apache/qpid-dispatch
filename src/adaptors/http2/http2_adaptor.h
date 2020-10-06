@@ -125,6 +125,7 @@ struct qdr_http2_connection_t {
     bool                      grant_initial_buffers;
     bool                      ingress;
     bool                      timer_scheduled;
+    bool                      client_magic_sent;
     DEQ_LINKS(qdr_http2_connection_t);
  };
 
