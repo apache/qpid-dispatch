@@ -347,6 +347,18 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
 }
 
 
+/**
+ * Callback function invoked by nghttp2_session_recv() and nghttp2_session_mem_recv() when an invalid non-DATA frame is received
+ */
+static int on_invalid_frame_recv_callback(nghttp2_session *session, const nghttp2_frame *frame, int lib_error_code, void *user_data)
+{
+    qdr_http2_connection_t *conn = (qdr_http2_connection_t *)user_data;
+    int32_t stream_id = frame->hd.stream_id;
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] on_invalid_frame_recv_callback", conn->conn_id, stream_id);
+    return 0;
+}
+
+
 static int on_data_chunk_recv_callback(nghttp2_session *session,
                                        uint8_t flags,
                                        int32_t stream_id,
@@ -700,6 +712,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
         return 0;
 
     switch (frame->hd.type) {
+    case NGHTTP2_PRIORITY: {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 PRIORITY frame received", conn->conn_id, stream_id);
+    }
+    break;
     case NGHTTP2_SETTINGS: {
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 SETTINGS frame received", conn->conn_id, stream_id);
     }
@@ -1290,6 +1306,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
             }
 
             nghttp2_session_send(session_data->session);
+            conn->client_magic_sent = true;
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Headers submitted", conn->conn_id, stream_data->stream_id);
 
             qd_iterator_free(app_properties_iter);
@@ -1476,13 +1493,31 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
 
 static int handle_incoming_http(qdr_http2_connection_t *conn)
 {
+    //
+    // This fix is a for nodejs server (router acting as client).
+    // This is what happens -
+    // 1. nodejs sends a SETTINGS frame immediately after we open the connection. (this is legal)
+    // 2. Router sends -
+    //     2a. Client magic
+    //     2b. SETTINGS frame with ack=true (here the router is responding to the SETTINGS frame from nodejs in step 1)
+    //     2c. SETTINGS frame ack=false(this is the router's inital settings frame)
+    //     2d. GET request
+    // 3. Nodejs responds with GOAWAY. Not sure why
+    // To remedy this problem, when nodejs sends the initial SETTINGS frame, we don't tell nghttp2 about it. So step 2c happens before step 2b and nodejs is now happy
+    //
+    if (!conn->ingress) {
+        if (!conn->client_magic_sent) {
+            return 0;
+        }
+
+    }
+
     qd_http2_buffer_list_t buffers;
     DEQ_INIT(buffers);
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     size_t n;
     int count = 0;
 
-    // TODO - Remove after using connection safe pointers.
     if (!conn->pn_raw_conn)
         return 0;
 
@@ -1510,16 +1545,19 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
         if (http2_buffer_size > 0) {
             rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
             if (rv < 0) {
-                if (rv == NGHTTP2_ERR_FLOODED || rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%i] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
+                if (rv == NGHTTP2_ERR_FLOODED) {
                     // Flooding was detected in this HTTP/2 session, and it must be closed. This is most likely caused by misbehavior of peer.
                     // If the client magic is bad, we need to close the connection.
-
                 }
                 else if (rv == NGHTTP2_ERR_CALLBACK_FAILURE) {
-
+                    printf ("NGHTTP2_ERR_CALLBACK_FAILURE\n");
                 }
                 else if (rv == NGHTTP2_ERR_BAD_CLIENT_MAGIC) {
-
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%i] HTTP Protocol error, NGHTTP2_ERR_BAD_CLIENT_MAGIC, closing connection", conn->conn_id);
+                    nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Bad Client Magic", 16);
+                    nghttp2_session_send(conn->session_data->session);
+                    pn_raw_connection_close(conn->pn_raw_conn);
                 }
                 break;
             }
@@ -1606,7 +1644,7 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
         }
         else {
             if (stream_data->out_dlv_local_disposition != PN_ACCEPTED) {
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%i][S%i] Restarting stream in restart_streams()", http_conn->conn_id, stream_data->stream_id);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%i] Restarting stream in restart_streams()", http_conn->conn_id, stream_data->stream_id);
                 handle_outgoing_http(stream_data);
             }
             stream_data = DEQ_NEXT(stream_data);
@@ -1661,10 +1699,11 @@ static void egress_conn_timer_handler(void *context)
 
     qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%i] Running egress_conn_timer_handler", conn->conn_id);
 
-    assert(!conn->connection_established);
+    if (conn->connection_established)
+        return;
 
     if (!conn->ingress) {
-        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - qdr_http_deliver - Establishing outbound connection", conn->conn_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - egress_conn_timer_handler - Trying to establishing outbound connection", conn->conn_id);
         http_connector_establish(conn);
     }
 }
@@ -2035,6 +2074,7 @@ static void qdr_http2_adaptor_init(qdr_core_t *core, void **adaptor_context)
     nghttp2_session_callbacks_set_on_data_chunk_recv_callback(callbacks, on_data_chunk_recv_callback);
     nghttp2_session_callbacks_set_send_data_callback(callbacks, snd_data_callback);
     nghttp2_session_callbacks_set_send_callback(callbacks, send_callback);
+    nghttp2_session_callbacks_set_on_invalid_frame_recv_callback(callbacks, on_invalid_frame_recv_callback);
 
     adaptor->callbacks = callbacks;
     http2_adaptor = adaptor;
