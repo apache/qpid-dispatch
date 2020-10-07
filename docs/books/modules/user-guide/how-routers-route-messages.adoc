@@ -64,6 +64,12 @@ Flow control is "real" in that credits flow across the link route from the recei
 * Server-side selectors
 +
 With a link route, consumers can provide server-side selectors for broker subscriptions.
+
+* Consumer specific acknowledgements
++
+With a link route, modified delivery states can be interpreted by a broker.
+For example, a broker can prevent redelivery of any messsages with the `undeliverable-here=true` modified delivery state.
+
 --
 
 .Additional resources
