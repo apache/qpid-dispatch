@@ -424,6 +424,17 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         qd_buffer_list_t blist;
         uintmax_t length;
         qda_raw_conn_get_read_buffers(hconn->raw_conn, &blist, &length);
+
+        if (HTTP1_DUMP_BUFFERS) {
+            fprintf(stdout, "\nClient raw buffer READ %"PRIuMAX" total octets\n", length);
+            qd_buffer_t *bb = DEQ_HEAD(blist);
+            while (bb) {
+                fprintf(stdout, "  buffer='%.*s'\n", (int)qd_buffer_size(bb), (char*)&bb[1]);
+                bb = DEQ_NEXT(bb);
+            }
+            fflush(stdout);
+        }
+
         if (length) {
             qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Read %"PRIuMAX" bytes from client",
                    hconn->conn_id, hconn->in_link_id, length);

@@ -188,12 +188,18 @@ class RequestHandler(BaseHTTPRequestHandler):
                 while True:
                     print(" CHUNK READ HEADER...", flush=True)
                     header = self.rfile.readline().strip().split(b';')[0]
-                    print(" CHUNK HEADER=%s" % header, flush=True)
-                    data = self.rfile.readline().rstrip()
-                    print(" CHUNK DATA (LEN)=%s" % len(data), flush=True)
-                    body += data
-                    if int(header, base=16) == 0:
+                    hlen = int(header, base=16)
+                    print(" CHUNK HEADER=%s (%d)" % (header, hlen), flush=True)
+
+                    if hlen > 0:
+                        data = self.rfile.read(hlen + 2)  #+\r\n
+                        print(" CHUNK DATA (LEN)=%s" % len(data), flush=True)
+                        body += data[:-2]
+                    else:
+                        print(" LAST CHUNK", flush=True)
+                        self.rfile.readline()  # discard last \r\n
                         break;
+                print(" CHUNKED BODY=%s" % body, flush=True)
                 return body
         return self.rfile.read()
 
@@ -848,7 +854,18 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         """
         Test multiple clients sending streaming messages in parallel
         """
-        _data = b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\r\n'
+        _data = b'1f9\r\n' + b'0' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'1' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'2' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'3' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'4' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'5' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'6' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'7' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'8' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'9' * 505 + b'\r\n'
+        _data += b'1f9\r\n' + b'a' * 505 + b'\r\n'
+        
         TESTS_11 = {
             "PUT": [
                 (RequestMsg("PUT", "/PUT/streaming_test",
@@ -856,9 +873,15 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                 "Transfer-encoding": "chunked",
                                 #"Content-Length": "1034888",
                                 "Content-Type": "text/plain;charset=utf-8"},
-                            body=b'aBcDe\r\n' + b'1' * 0xabcde + b'\r\n'
-                            + b'a9B8C\r\n' + b'2' * 0xa9b8c + b'\r\n'
-                            + b'0\r\n\r\n'),
+
+                            
+                            #body=b'aBcDe\r\n' + b'1' * 0xabcde + b'\r\n'
+                            #+ b'a9B8C\r\n' + b'2' * 0xa9b8c + b'\r\n'
+                            #+ b'0\r\n\r\n'),
+
+                            body=_data + b'0\r\n\r\n'),
+
+                            
                             #body=b'1' * 1034888),
                             # body=b'300\r\n' + b'a' * 0x300 + b'\r\n'
                             # + b'C01\r\n' + b'b' * 0xC01 + b'\r\n'
@@ -921,10 +944,10 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                               client_port=self.http_listener11_port,
                               #client_port=self.http_server11_port,
                               tests=TESTS_11)
-        server10 = TestServer(server_port=self.http_server10_port,
-                              client_port=self.http_listener10_port,
-                              tests=TESTS_10)
-        self.EA2.wait_connectors()
+        #server10 = TestServer(server_port=self.http_server10_port,
+        #                      client_port=self.http_listener10_port,
+        #                      tests=TESTS_10)
+        #self.EA2.wait_connectors()
         print("SERVERS UP", flush=True)
 
         print("SPAWNING CLIENTS", flush=True)
@@ -932,7 +955,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         for _ in range(1):
             clients.append(ThreadedTestClient(TESTS_11,
                                               self.http_listener11_port,
-                                              # self.http_server11_port,
+                                              #self.http_server11_port,
                                               repeat=1))
             # clients.append(ThreadedTestClient(TESTS_10,
             #                                   self.http_listener10_port,
@@ -945,7 +968,7 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         print("SERVER SHUTDOWN 11 ", flush=True)
         server11.wait()
         print("SERVER SHUTDOWN 10 ", flush=True)
-        server10.wait()
+        #server10.wait()
         print("CRASH?", flush=True)
 
 
