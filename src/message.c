@@ -1554,6 +1554,13 @@ qd_message_t *qd_message_receive(pn_delivery_t *delivery)
             // the entire message.  We'll be back later to finish it up.
             // Return the message so that the caller can start sending out whatever we have received so far
             //
+            // push what we do have for testing/processing
+            LOCK(content->lock);
+            qd_buffer_set_fanout(content->pending, content->fanout);
+            DEQ_INSERT_TAIL(content->buffers, content->pending);
+            content->pending = 0;
+            UNLOCK(content->lock);
+            content->pending = qd_buffer();
             break;
         }
     }
