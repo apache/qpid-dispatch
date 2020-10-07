@@ -197,6 +197,23 @@ void qd_message_set_phase_annotation(qd_message_t *msg, int phase);
 int  qd_message_get_phase_annotation(const qd_message_t *msg);
 
 /**
+ * Indicate whether message should be considered to be streaming.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @param stream true if the message is streaming
+ *
+ */
+void qd_message_set_stream_annotation(qd_message_t *msg, bool stream);
+/**
+ * Test whether received message should be considered to be streaming.
+ *
+ * @param msg Pointer to an outgoing message.
+ * @return true if the received message has the streaming annotation set, else false.
+ *
+ */
+int qd_message_is_streaming(qd_message_t *msg);
+
+/**
  * Set the value for the QD_MA_INGRESS field in the outgoing message
  * annotations for the message.
  *
