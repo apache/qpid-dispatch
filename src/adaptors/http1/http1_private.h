@@ -34,6 +34,9 @@
 #include <qpid/dispatch/message.h>
 #include "adaptors/http_common.h"
 
+// for debug: will dump I/O buffer content to stdout if true
+#define HTTP1_DUMP_BUFFERS false
+
 typedef struct qdr_http1_out_data_t      qdr_http1_out_data_t;
 typedef struct qdr_http1_out_data_fifo_t qdr_http1_out_data_fifo_t;
 typedef struct qdr_http1_request_base_t  qdr_http1_request_base_t;
