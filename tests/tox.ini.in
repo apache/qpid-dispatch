@@ -18,7 +18,7 @@
 #
 
 [tox]
-envlist = py27,py35,py36,py37
+envlist = py27,py35,py36,py37,py38
 skipsdist = True
 minversion = ${TOX_VERSION}
 skip_missing_interpreters = True
@@ -53,4 +53,7 @@ basepython = python3.6
 
 [testenv:py37]
 basepython = python3.7
+
+[testenv:py38]
+basepython = python3.8
 
