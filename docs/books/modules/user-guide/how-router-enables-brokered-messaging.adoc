@@ -28,6 +28,9 @@ Brokered messaging enables {RouterName} to store messages on a broker queue. Thi
 
 An autolink is a link that is automatically created by the router to attach to a waypoint address. With autolinks, client traffic is handled on the router, not the broker. Clients attach their links to the router, and then the router uses internal autolinks to connect to the queue on the broker. Therefore, the queue will always have a single producer and a single consumer regardless of how many clients are attached to the router.
 
+Using autolinks is a form of _message routing_, as distinct from _link routing_.
+It is recommended to use link routing if you want to use semantics associated with a consumer, for example, the `undeliverable-here=true` modified delivery state.
+
 .Brokered messaging
 image::brokered-messaging.png[Brokered Messaging, align="center"]
 
