@@ -301,6 +301,7 @@ void qd_parse_annotations(
     qd_parsed_field_t    **ma_phase,
     qd_parsed_field_t    **ma_to_override,
     qd_parsed_field_t    **ma_trace,
+    qd_parsed_field_t    **ma_stream,
     qd_iterator_pointer_t *blob_pointer,
     uint32_t              *blob_item_count);
 
@@ -312,6 +313,7 @@ typedef enum {
     QD_MAE_TRACE,
     QD_MAE_TO,
     QD_MAE_PHASE,
+    QD_MAE_STREAM,
     QD_MAE_NONE
 } qd_ma_enum_t;
 

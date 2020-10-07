@@ -148,6 +148,8 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     } else {
         qd_message_t *msg = qd_message();
 
+        qd_message_set_stream_annotation(msg, true);
+
         qd_composed_field_t *props = qd_compose(QD_PERFORMATIVE_PROPERTIES, 0);
         qd_compose_start_list(props);
         qd_compose_insert_null(props);                      // message-id
@@ -964,6 +966,7 @@ static void qdr_tcp_adaptor_init(qdr_core_t *core, void **adaptor_context)
     adaptor->log_source  = qd_log_source("TCP_ADAPTOR");
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);
+    DEQ_INIT(adaptor->connections);
     *adaptor_context = adaptor;
 
     tcp_adaptor = adaptor;

@@ -777,6 +777,7 @@ const char *qd_parse_annotations_v1(
     qd_parsed_field_t    **ma_phase,
     qd_parsed_field_t    **ma_to_override,
     qd_parsed_field_t    **ma_trace,
+    qd_parsed_field_t    **ma_stream,
     qd_iterator_pointer_t *blob_pointer,
     uint32_t              *blob_item_count)
 {
@@ -850,6 +851,11 @@ const char *qd_parse_annotations_v1(
                         ma_type = QD_MAE_INGRESS;
                     }
                     break;
+                case QD_MA_STREAM_LEN:
+                    if (memcmp(QD_MA_STREAM + QMPL, dp, QD_MA_STREAM_LEN - QMPL) == 0) {
+                        ma_type = QD_MAE_STREAM;
+                    }
+                    break;
                 default:
                     // padding annotations are ignored here
                     break;
@@ -884,6 +890,9 @@ const char *qd_parse_annotations_v1(
                         break;
                     case QD_MAE_PHASE:
                         *ma_phase = val_field;
+                        break;
+                    case QD_MAE_STREAM:
+                        *ma_stream = val_field;
                         break;
                     case QD_MAE_NONE:
                         assert(false);
@@ -920,6 +929,7 @@ void qd_parse_annotations(
     qd_parsed_field_t    **ma_phase,
     qd_parsed_field_t    **ma_to_override,
     qd_parsed_field_t    **ma_trace,
+    qd_parsed_field_t    **ma_stream,
     qd_iterator_pointer_t *blob_pointer,
     uint32_t              *blob_item_count)
 {
@@ -958,7 +968,7 @@ void qd_parse_annotations(
     qd_iterator_free(raw_iter);
 
     (void) qd_parse_annotations_v1(strip_annotations_in, ma_iter_in, ma_ingress, ma_phase,
-                                    ma_to_override, ma_trace,
+                                    ma_to_override, ma_trace, ma_stream,
                                     blob_pointer, blob_item_count);
 
     return;

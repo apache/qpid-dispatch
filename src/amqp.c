@@ -30,6 +30,7 @@ const char * const QD_MA_TRACE   = "x-opt-qd.trace";
 const char * const QD_MA_TO      = "x-opt-qd.to";
 const char * const QD_MA_PHASE   = "x-opt-qd.phase";
 const char * const QD_MA_CLASS   = "x-opt-qd.class";
+const char * const QD_MA_STREAM  = "x-opt-qd.stream";
 const int          QD_MA_MAX_KEY_LEN = 16;
 const int          QD_MA_N_KEYS      = 4;  // max number of router annotations to send/receive
 const int          QD_MA_FILTER_LEN  = 5;  // N tailing inbound entries to search for stripping
