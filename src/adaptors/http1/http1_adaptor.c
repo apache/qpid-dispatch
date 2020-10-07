@@ -30,9 +30,6 @@
 // to HTTP endpoint processing.
 //
 
-// for debug: will dump raw buffer content to stdout if true
-#define HTTP1_DUMP_BUFFERS false
-
 #define RAW_BUFFER_BATCH  16
 
 
@@ -384,8 +381,8 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
             if (HTTP1_DUMP_BUFFERS) {
                 char *ptr = (char*) buffers[i].bytes;
                 int len = (int) buffers[i].size;
-                fprintf(stdout, "\n[C%"PRIu64"] Raw Written: Ptr=%p len=%d\n  value='%.*s'\n",
-                        hconn->conn_id, (void*)ptr, len, len, ptr);
+                fprintf(stdout, "\n[C%"PRIu64"] Raw Written: Ptr=%p len=%d c=%d o=%d\n  value='%.*s'\n",
+                        hconn->conn_id, (void*)ptr, len, buffers[i].capacity, buffers[i].offset, len, ptr);
                 fflush(stdout);
             }
 

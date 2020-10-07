@@ -1087,10 +1087,11 @@ static bool parse_body_chunked_data(h1_codec_connection_t *conn, struct decoder_
     decoder->chunk_length -= skipped;
     body_ptr->remaining += skipped;
 
+    consume_body_data(conn, false);
+
     if (decoder->chunk_length == 0) {
         // end of chunk
         decoder->chunk_state = HTTP1_CHUNK_HEADER;
-        consume_body_data(conn, false);
     }
 
     return !!rptr->remaining;
