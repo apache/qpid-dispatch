@@ -27,9 +27,6 @@
 // connection is terminated at an HTTP server, not an HTTP client.
 //
 
-// for debug: dump raw buffers to stdout if true
-#define HTTP1_DUMP_BUFFERS false
-
 
 //
 // State for a single response message arriving via the raw connection.  This
@@ -1107,6 +1104,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
     uint64_t outcome = 0;
 
     assert(!hreq->base.lib_rs);
+    assert(qd_message_check_depth(msg, QD_DEPTH_PROPERTIES) == QD_MESSAGE_DEPTH_OK);
 
     // method is passed in the SUBJECT field
     qd_iterator_t *method_iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
@@ -1220,19 +1218,6 @@ static uint64_t _encode_request_message(_server_request_t *hreq)
 {
     qdr_http1_connection_t    *hconn = hreq->base.hconn;
     qd_message_t                *msg = qdr_delivery_message(hreq->request_dlv);
-    qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_BODY);
-
-    if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
-        return 0;
-
-    if (status == QD_MESSAGE_DEPTH_INVALID) {
-        qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-               "[C%"PRIu64"][L%"PRIu64"] body data depth check failed",
-               hconn->conn_id, hconn->out_link_id);
-        return PN_REJECTED;
-    }
-
-    assert(status == QD_MESSAGE_DEPTH_OK);
 
     if (!hreq->headers_encoded) {
         uint64_t outcome = _send_request_headers(hreq, msg);
