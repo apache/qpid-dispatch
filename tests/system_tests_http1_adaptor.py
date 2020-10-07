@@ -186,10 +186,13 @@ class RequestHandler(BaseHTTPRequestHandler):
                and 'chunked' in value.lower():
                 body = b''
                 while True:
+                    print(" CHUNK READ HEADER...", flush=True)
                     header = self.rfile.readline().strip().split(b';')[0]
+                    print(" CHUNK HEADER=%s" % header, flush=True)
                     data = self.rfile.readline().rstrip()
+                    print(" CHUNK DATA (LEN)=%s" % len(data), flush=True)
                     body += data
-                    if int(header) == 0:
+                    if int(header, base=16) == 0:
                         break;
                 return body
         return self.rfile.read()
@@ -216,7 +219,7 @@ class TestServer(object):
     A HTTPServer running in a separate thread
     """
     def __init__(self, server_port, client_port, tests, handler_cls=None):
-        self._logger = Logger(title="TestServer", print_to_console=False)
+        self._logger = Logger(title="TestServer", print_to_console=True)
         self._client_port = client_port
         self._server_addr = ("", server_port)
         self._server = MyHTTPServer(self._server_addr,
@@ -244,11 +247,14 @@ class TestServer(object):
         if self._thread.is_alive():
             client = HTTPConnection("127.0.0.1:%s" % self._client_port,
                                     timeout=TIMEOUT)
+            print("CLIENT POST SHUTDOWN...", flush=True)
             client.putrequest("POST", "/SHUTDOWN")
             client.putheader("Content-Length", "0")
             client.endheaders()
-            client.getresponse()
+            xxx = client.getresponse().read()
+            print(xxx, flush=True)
             client.close()
+            print("CLIENT POSTED", flush=True)
             self._thread.join(timeout=TIMEOUT)
         if self._server:
             self._server.server_close()
@@ -288,7 +294,7 @@ class ThreadedTestClient(object):
                             self.error = "client failed: %s" % str(exc)
                             return
 
-                        if req.method is "BODY" and body != b'':
+                        if req.method == "BODY" and body != b'':
                             self._logger.log("TestClient response invalid: %s",
                                              "body present!")
                             self.error = "error: body present!"
@@ -648,14 +654,10 @@ class Http1AdaptorOneRouterTest(TestCase):
         #  <clients>  <servers>
 
         cls.routers = []
-        #cls.http_server11_port = cls.tester.get_port()
-        #cls.http_server10_port = cls.tester.get_port()
-        #cls.http_listener11_port = cls.tester.get_port()
-        #cls.http_listener10_port = cls.tester.get_port()
-        cls.http_server11_port = 9090
-        cls.http_listener11_port = 8080
-        cls.http_server10_port = 9091
-        cls.http_listener10_port = 8081
+        cls.http_server11_port = cls.tester.get_port()
+        cls.http_server10_port = cls.tester.get_port()
+        cls.http_listener11_port = cls.tester.get_port()
+        cls.http_listener10_port = cls.tester.get_port()
 
         router('INT.A', 'standalone',
                [('httpConnector', {'port': cls.http_server11_port,
@@ -701,7 +703,7 @@ class Http1AdaptorOneRouterTest(TestCase):
             except Exception as exc:
                 self.fail("request failed:  %s" % str(exc))
 
-            if req.method is "BODY":
+            if req.method == "BODY":
                 self.assertEqual(b'', body)
 
     def test_001_get(self):
@@ -753,65 +755,16 @@ class Http1AdaptorOneRouterTest(TestCase):
         client.close()
 
 
-class Http1AdaptorInteriorTest(TestCase):
+class Http1AdaptorEdge2EdgeTest(TestCase):
     """
-    Test an HTTP server connected to an interior router serving multiple HTTP
-    clients
+    Test an HTTP servers and clients attached to edge routers separated by an
+    interior router
     """
-    TESTS = {
-        "PUT": [
-            (RequestMsg("PUT", "/PUT/test",
-                        headers={"Header-1": "Value",
-                                 "Header-2": "Value",
-                                 "Content-Length": "20",
-                                 "Content-Type": "text/plain;charset=utf-8"},
-                        body=b'!' * 20),
-             ResponseMsg(201, reason="Created",
-                         headers={"Response-Header": "data",
-                                  "Content-Length": "0"}),
-             ResponseValidator(status=201)
-            )],
-
-        "POST": [
-            (RequestMsg("POST", "/POST/test",
-                        headers={"Header-1": "X",
-                                 "Content-Length": "11",
-                                 "Content-Type": "application/x-www-form-urlencoded"},
-                        body=b'one=1' + b'&two=2'),
-             ResponseMsg(200, reason="OK",
-                         headers={"Response-Header": "whatever",
-                                  "Content-Length": 10},
-                         body=b'0123456789'),
-             ResponseValidator()
-            )],
-
-        "GET": [
-            (RequestMsg("GET", "/GET/test",
-                        headers={"Content-Length": "000"}),
-             ResponseMsg(200, reason="OK",
-                         headers={"Content-Length": "655",
-                                  "Content-Type": "text/plain;charset=utf-8"},
-                         body=b'?' * 655),
-             ResponseValidator(expect_headers={'Content-Length': '655'},
-                               expect_body=b'?' * 655)
-            )],
-
-        "PUT": [
-            (RequestMsg("PUT", "/PUT/chunked",
-                        headers={"Transfer-Encoding": "chunked",
-                                 "Content-Type": "text/plain;charset=utf-8"},
-                        body=b'16\r\n' + b'!' * 0x16 + b'\r\n'
-                        + b'0\r\n\r\n'),
-             ResponseMsg(204, reason="No Content",
-                        headers={"Content-Length": "000"}),
-             ResponseValidator(status=204)
-            )],
-    }
 
     @classmethod
     def setUpClass(cls):
         """Start a router"""
-        super(Http1AdaptorInteriorTest, cls).setUpClass()
+        super(Http1AdaptorEdge2EdgeTest, cls).setUpClass()
 
         def router(name, mode, extra):
             config = [
@@ -833,26 +786,30 @@ class Http1AdaptorInteriorTest(TestCase):
         # configuration:
         # one edge, one interior
         #
-        #  +-------+    +---------+
-        #  |  EA1  |<==>|  INT.A  |
-        #  +-------+    +---------+
-        #      ^             ^
-        #      |             |
-        #      V             V
-        #  <clients>      <server>
+        #  +-------+    +---------+    +-------+
+        #  |  EA1  |<==>|  INT.A  |<==>|  EA2  |
+        #  +-------+    +---------+    +-------+
+        #      ^                           ^
+        #      |                           |
+        #      V                           V
+        #  <clients>                   <servers>
 
         cls.routers = []
-        cls.INTA_edge_port   = cls.tester.get_port()
-        #cls.http_server_port = cls.tester.get_port()
-        #cls.http_listener_port = cls.tester.get_port()
-        cls.http_server_port = 9090
-        cls.http_listener_port = 8080
+        # cls.INTA_edge_port   = cls.tester.get_port()
+        # cls.http_server11_port = cls.tester.get_port()
+        # cls.http_listener11_port = cls.tester.get_port()
+        # cls.http_server10_port = cls.tester.get_port()
+        # cls.http_listener10_port = cls.tester.get_port()
+
+        cls.INTA_edge_port   = 9999
+        cls.http_server11_port = 9090
+        cls.http_listener11_port = 8080
+        cls.http_server10_port = 9091
+        cls.http_listener10_port = 8081
+        print("FIXME", flush=True)
 
         router('INT.A', 'interior',
                [('listener', {'role': 'edge', 'port': cls.INTA_edge_port}),
-                ('httpConnector', {'port': cls.http_server_port,
-                                   'protocolVersion': 'HTTP1',
-                                   'address': 'testServer'})
                ])
         cls.INT_A = cls.routers[0]
         cls.INT_A.listener = cls.INT_A.addresses[0]
@@ -860,45 +817,136 @@ class Http1AdaptorInteriorTest(TestCase):
         router('EA1', 'edge',
                [('connector', {'name': 'uplink', 'role': 'edge',
                                'port': cls.INTA_edge_port}),
-                ('httpListener', {'port': cls.http_listener_port,
+                ('httpListener', {'port': cls.http_listener11_port,
                                   'protocolVersion': 'HTTP1',
-                                  'address': 'testServer'})
+                                  'address': 'testServer11'}),
+                ('httpListener', {'port': cls.http_listener10_port,
+                                  'protocolVersion': 'HTTP1',
+                                  'address': 'testServer10'})
                ])
         cls.EA1 = cls.routers[1]
         cls.EA1.listener = cls.EA1.addresses[0]
 
-        cls.EA1.wait_connectors()
+        router('EA2', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge',
+                               'port': cls.INTA_edge_port}),
+                ('httpConnector', {'port': cls.http_server11_port,
+                                   'protocolVersion': 'HTTP1',
+                                   'address': 'testServer11'}),
+                ('httpConnector', {'port': cls.http_server10_port,
+                                   'protocolVersion': 'HTTP1',
+                                   'address': 'testServer10'})
+               ])
+        cls.EA2 = cls.routers[-1]
+        cls.EA2.listener = cls.EA2.addresses[0]
+
         cls.INT_A.wait_address('EA1')
+        cls.INT_A.wait_address('EA2')
+        print("SETUP DONE", flush=True)
 
-
-    def test_01_load(self):
+    def test_01_streaming(self):
         """
-        Test multiple clients running as fast as possible
+        Test multiple clients sending streaming messages in parallel
         """
-        server = TestServer(server_port=self.http_server_port,
-                            client_port=self.http_listener_port,
-                            tests=self.TESTS)
+        _data = b'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ\r\n'
+        TESTS_11 = {
+            "PUT": [
+                (RequestMsg("PUT", "/PUT/streaming_test",
+                            headers={
+                                "Transfer-encoding": "chunked",
+                                #"Content-Length": "1034888",
+                                "Content-Type": "text/plain;charset=utf-8"},
+                            body=b'aBcDe\r\n' + b'1' * 0xabcde + b'\r\n'
+                            + b'a9B8C\r\n' + b'2' * 0xa9b8c + b'\r\n'
+                            + b'0\r\n\r\n'),
+                            #body=b'1' * 1034888),
+                            # body=b'300\r\n' + b'a' * 0x300 + b'\r\n'
+                            # + b'C01\r\n' + b'b' * 0xC01 + b'\r\n'
+                            # + b'C00\r\n' + b'c' * 0xC00 + b'\r\n'
+                            # + b'C00\r\n' + b'd' * 0xC00 + b'\r\n'
+                            # + b'BFF\r\n' + b'e' * 0xBFF + b'\r\n'
+                            # + b'C00\r\n' + b'f' * 0xC00 + b'\r\n'
+                            # + b'0\r\n\r\n'),
+                            #body=b'8001\r\n'
+                            #+ b'1' * 0x8001 + b'\r\n'
+                            # + b'7999\r\n'
+                            # + b'2' * 0x7999 + b'\r\n'
+                            # + b'10001\r\n'
+                            # + b'3' * 0x10001 + b'\r\n'
+                            # + b'10001\r\n'
+                            # + b'4' * 0x10001 + b'\r\n'
+                 ResponseMsg(201, reason="Created",
+                             headers={"Response-Header": "data",
+                                      "Content-Length": "0"}),
+                 ResponseValidator(status=201)
+                )],
 
+            # "GET": [
+            #     (RequestMsg("GET", "/GET/test",
+            #                 headers={"Content-Length": "000"}),
+            #      ResponseMsg(200, reason="OK",
+            #                  headers={"transfer-Encoding": "chunked",
+            #                           "Content-Type": "text/plain;charset=utf-8"},
+            #                  body=b'99999\r\n'
+            #                  + b'G' * 0x99999 + b'\r\n'
+            #                  + b'0\r\n\r\n'),
+            #      ResponseValidator(status=200)
+            #     )],
+        }
+
+        TESTS_10 = {
+            "POST": [
+                (RequestMsg("POST", "/POST/streaming_test",
+                            headers={"Header-1": "H" * 2048,
+                                     "Content-Length": "1048577",
+                                     "Content-Type": "text/plain;charset=utf-8"},
+                            body=b'P' * 1048577),
+                 ResponseMsg(201, reason="Created",
+                             headers={"Response-Header": "data",
+                                      "Content-Length": "0"}),
+                 ResponseValidator(status=201)
+                )],
+
+            "GET": [
+                (RequestMsg("GET", "/GET/streaming_test",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "999999",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'G' * 999999),
+                 ResponseValidator(status=200),
+                )],
+        }
+        server11 = TestServer(server_port=self.http_server11_port,
+                              client_port=self.http_listener11_port,
+                              #client_port=self.http_server11_port,
+                              tests=TESTS_11)
+        server10 = TestServer(server_port=self.http_server10_port,
+                              client_port=self.http_listener10_port,
+                              tests=TESTS_10)
+        self.EA2.wait_connectors()
+        print("SERVERS UP", flush=True)
+
+        print("SPAWNING CLIENTS", flush=True)
         clients = []
-        for _ in range(5):
-            clients.append(ThreadedTestClient(self.TESTS,
-                                              self.http_listener_port,
-                                              repeat=2))
+        for _ in range(1):
+            clients.append(ThreadedTestClient(TESTS_11,
+                                              self.http_listener11_port,
+                                              # self.http_server11_port,
+                                              repeat=1))
+            # clients.append(ThreadedTestClient(TESTS_10,
+            #                                   self.http_listener10_port,
+            #                                   repeat=1))
+        print("WAITING CLIENTS", flush=True)
         for client in clients:
             client.wait()
             self.assertIsNone(client.error)
 
-        # send command to stop the server thread
-        client = ThreadedTestClient({"POST": [(RequestMsg("POST",
-                                                          "/SHUTDOWN",
-                                                          {"Content-Length": "0"}),
-                                               None,
-                                               None)]},
-                                    self.http_listener_port)
-        client.wait()
-        self.assertIsNone(client.error)
-
-        server.wait()
+        print("SERVER SHUTDOWN 11 ", flush=True)
+        server11.wait()
+        print("SERVER SHUTDOWN 10 ", flush=True)
+        server10.wait()
+        print("CRASH?", flush=True)
 
 
 if __name__ == '__main__':
