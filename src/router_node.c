@@ -491,38 +491,6 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     }
 
     //
-    // Head of line blocking avoidance (DISPATCH-1545)
-    //
-    // Before we can forward a message we need to determine whether or not this
-    // message is "streaming" - a large message that has the potential to block
-    // other messages sharing the trunk link.  At this point we cannot for sure
-    // know the actual length of the incoming message, so we employ the
-    // following heuristic to determine if the message is "streaming":
-    //
-    // - If the message is receive-complete it is NOT a streaming message.
-    // - If it is NOT receive-complete:
-    //   Continue buffering incoming data until:
-    //   - receive has completed => NOT a streaming message
-    //   - not rx-complete AND Q2 threshold hit => a streaming message
-    //
-    // Once Q2 is hit we MUST forward the message regardless of rx-complete
-    // since Q2 will block forever unless the incoming data is drained via
-    // forwarding.
-    //
-    if (!receive_complete) {
-        if (qd_message_is_Q2_blocked(msg)) {
-            qd_log(router->log_source, QD_LOG_DEBUG,
-                   "[C%"PRIu64" L%"PRIu64"] Incoming message classified as streaming. User:%s",
-                   conn->connection_id,
-                   qd_link_link_id(link),
-                   conn->user_id);
-        } else {
-            // Continue buffering this message
-            return false;
-        }
-    }
-
-    //
     // Determine if the incoming link is anonymous.  If the link is addressed,
     // there are some optimizations we can take advantage of.
     //
@@ -605,6 +573,38 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     int           ingress_index = 0; // Default to _this_ router
 
     qd_iterator_t *ingress_iter = router_annotate_message(router, msg, &link_exclusions, &distance, &ingress_index);
+
+    //
+    // Head of line blocking avoidance (DISPATCH-1545)
+    //
+    // Before we can forward a message we need to determine whether or not this
+    // message is "streaming" - a large message that has the potential to block
+    // other messages sharing the trunk link.  At this point we cannot for sure
+    // know the actual length of the incoming message, so we employ the
+    // following heuristic to determine if the message is "streaming":
+    //
+    // - If the message is receive-complete it is NOT a streaming message.
+    // - If it is NOT receive-complete:
+    //   Continue buffering incoming data until:
+    //   - receive has completed => NOT a streaming message
+    //   - not rx-complete AND Q2 threshold hit => a streaming message
+    //
+    // Once Q2 is hit we MUST forward the message regardless of rx-complete
+    // since Q2 will block forever unless the incoming data is drained via
+    // forwarding.
+    //
+    if (!receive_complete) {
+        if (qd_message_is_streaming(msg) || qd_message_is_Q2_blocked(msg)) {
+            qd_log(router->log_source, QD_LOG_DEBUG,
+                   "[C%"PRIu64" L%"PRIu64"] Incoming message classified as streaming. User:%s",
+                   conn->connection_id,
+                   qd_link_link_id(link),
+                   conn->user_id);
+        } else {
+            // Continue buffering this message
+            return false;
+        }
+    }
 
     //
     // If this delivery has traveled further than the known radius of the network topology (plus 1),
