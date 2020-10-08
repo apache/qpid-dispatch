@@ -667,10 +667,10 @@ class OneRouterTest(TestCase):
     def test_43_dropped_presettled_receiver_stops(self):
         local_node = Node.connect(self.address, timeout=TIMEOUT)
         res = local_node.query('org.apache.qpid.dispatch.router')
-        deliveries_ingress = res.attribute_names.index(
-            'deliveriesIngress')
+        deliveries_ingress = res.attribute_names.index('deliveriesIngress')
+        presettled_dropped_count = res.attribute_names.index('droppedPresettledDeliveries')
         ingress_delivery_count = res.results[0][deliveries_ingress]
-        test = DroppedPresettledTest(self.address, 200, ingress_delivery_count)
+        test = DroppedPresettledTest(self.address, 200, ingress_delivery_count, presettled_dropped_count)
         test.run()
         self.assertEqual(None, test.error)
 
@@ -1485,25 +1485,29 @@ class PresettledCustomTimeout(object):
         res = local_node.query('org.apache.qpid.dispatch.router')
         deliveries_ingress = res.attribute_names.index(
             'deliveriesIngress')
+        presettled_deliveries_dropped = res.attribute_names.index(
+            'droppedPresettledDeliveries')
         ingress_delivery_count = res.results[0][deliveries_ingress]
         self.parent.cancel_custom()
 
-        # Without the fix for DISPATCH--1213  the ingress count will be less than
+        deliveries_dropped_diff = presettled_deliveries_dropped - self.parent.begin_dropped_presettled_count
+
+        # Without the fix for DISPATCH-1213  the ingress count will be less than
         # 200 because the sender link has stalled. The q2_holdoff happened
         # and so all the remaining messages are still in the
         # proton buffers.
-
-        if ingress_delivery_count - self.parent.begin_ingress_count > self.parent.n_messages:
+        deliveries_ingress_diff = ingress_delivery_count - self.parent.begin_ingress_count
+        if  deliveries_ingress_diff + deliveries_dropped_diff > self.parent.n_messages:
             self.parent.bail(None)
         else:
             self.parent.bail("Messages sent to the router is %d, "
                              "Messages processed by the router is %d" %
                              (self.parent.n_messages,
-                              ingress_delivery_count - self.parent.begin_ingress_count))
+                              deliveries_ingress_diff + deliveries_dropped_diff))
 
 
 class DroppedPresettledTest(MessagingHandler):
-    def __init__(self, addr, n_messages, begin_ingress_count):
+    def __init__(self, addr, n_messages, begin_ingress_count, begin_dropped_presettled_count):
         super (DroppedPresettledTest, self).__init__()
         self.addr = addr
         self.n_messages = n_messages
@@ -1518,6 +1522,7 @@ class DroppedPresettledTest(MessagingHandler):
         self.max_receive = 10
         self.custom_timer = None
         self.timer = None
+        self.begin_dropped_presettled_count = begin_dropped_presettled_count
         self.begin_ingress_count = begin_ingress_count
         self.str1 = "0123456789abcdef"
         self.msg_str = ""
@@ -1571,9 +1576,7 @@ class DroppedPresettledTest(MessagingHandler):
             # that the initial credit of 250 that the router gives.
             # Lets do a qdstat to find out if all 200 messages is handled
             # by the router.
-            self.custom_timer = event.reactor.schedule(1,
-                                                       PresettledCustomTimeout(
-                                                           self))
+            self.custom_timer = event.reactor.schedule(1, PresettledCustomTimeout(self))
 
 class MulticastUnsettled ( MessagingHandler ) :
     def __init__ ( self,
