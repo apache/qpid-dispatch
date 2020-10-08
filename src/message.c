@@ -2428,40 +2428,40 @@ int qd_message_body_data_buffer_count(const qd_message_body_data_t *body_data)
  */
 int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffer_t *buffers, int offset, int count)
 {
-    int          actual_count = 0;
     qd_buffer_t *buffer       = body_data->payload.buffer;
+    size_t       data_offset  = body_data->payload.offset;
+    size_t       payload_len  = body_data->payload.length;
 
     //
-    // Skip the offset
+    // Skip the buffer offset
     //
-    while (offset > 0 && !!buffer) {
-        buffer = DEQ_NEXT(buffer);
+    assert(offset < qd_message_body_data_buffer_count(body_data));
+    while (offset > 0 && payload_len > 0) {
+        payload_len -= qd_buffer_size(buffer) - data_offset;
         offset--;
+        data_offset = 0;
+        buffer = DEQ_NEXT(buffer);
     }
 
     //
     // Fill the buffer array
     //
     int idx = 0;
-    while (idx < count && !!buffer) {
+    while (idx < count && payload_len > 0) {
+        size_t buf_size = MIN(payload_len, qd_buffer_size(buffer) - data_offset);
         buffers[idx].context  = 0;  // reserved for use by caller - do not modify!
-        buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+        buffers[idx].bytes    = (char*) qd_buffer_base(buffer) + data_offset;
         buffers[idx].capacity = BUFFER_SIZE;
-        buffers[idx].size     = qd_buffer_size(buffer) - (buffer == body_data->payload.buffer ? body_data->payload.offset : 0);
+        buffers[idx].size     = buf_size;
         buffers[idx].offset   = 0;
 
-        if (buffer == body_data->last_buffer) {
-            // Don't process beyond the end of this body_data section
-            actual_count++;
-            break;
-        }
-
+        data_offset = 0;
+        payload_len -= buf_size;
         buffer = DEQ_NEXT(buffer);
-        actual_count++;
         idx++;
     }
 
-    return actual_count;
+    return idx;
 }
 
 
