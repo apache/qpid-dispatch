@@ -37,7 +37,7 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
 
-      ProtonCMakeExtraArgs: '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_BINDINGS=python -DRUNTIME_CHECK=${{matrix.runtimeCheck}}'
+      ProtonCMakeExtraArgs: '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_BINDINGS=python -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DRUNTIME_CHECK=${{matrix.runtimeCheck}}'
       DispatchCMakeExtraArgs: '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCONSOLE_INSTALL=OFF -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DRUNTIME_CHECK=${{matrix.runtimeCheck}}'
 
       CCACHE_BASEDIR: ${{github.workspace}}
