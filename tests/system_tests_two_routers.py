@@ -1105,10 +1105,9 @@ class MessageAnnotationsStripAddTraceTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
+        self.conn1 = event.container.connect(self.address1)
 
     def on_sendable(self, event):
         if self.msg_not_sent:
@@ -1118,9 +1117,15 @@ class MessageAnnotationsStripAddTraceTest(MessagingHandler):
             event.sender.send(msg)
             self.msg_not_sent = False
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_message(self, event):
+        print (event.message)
         if 0 == event.message.body['number']:
             ma = event.message.annotations
+            print (ma)
             if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.1', '0/QDR.A', '0/QDR.B']:
                 self.error = None
         self.accept(event.delivery)
