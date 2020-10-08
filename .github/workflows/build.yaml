@@ -37,8 +37,21 @@ jobs:
       DispatchBuildDir: ${{github.workspace}}/qpid-dispatch/build
       InstallPrefix: ${{github.workspace}}/install
 
-      ProtonCMakeExtraArgs: '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DBUILD_BINDINGS=python -DBUILD_EXAMPLES=OFF -DBUILD_TESTING=OFF -DRUNTIME_CHECK=${{matrix.runtimeCheck}}'
-      DispatchCMakeExtraArgs: '-DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCONSOLE_INSTALL=OFF -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG -DRUNTIME_CHECK=${{matrix.runtimeCheck}}'
+      ProtonCMakeExtraArgs: >
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DBUILD_BINDINGS=python
+        -DBUILD_EXAMPLES=OFF
+        -DBUILD_TESTING=OFF
+        -DENABLE_FUZZ_TESTING=OFF
+        -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
+      DispatchCMakeExtraArgs: >
+        -DCMAKE_C_COMPILER_LAUNCHER=ccache
+        -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+        -DCMAKE_C_FLAGS=-DQD_MEMORY_DEBUG
+        -DCONSOLE_INSTALL=OFF
+        -DUSE_BWRAP=ON
+        -DRUNTIME_CHECK=${{matrix.runtimeCheck}}
 
       CCACHE_BASEDIR: ${{github.workspace}}
       CCACHE_DIR: ${{github.workspace}}/.ccache
@@ -99,7 +112,12 @@ jobs:
 
       - name: qpid-proton cmake configure
         working-directory: ${{env.ProtonBuildDir}}
-        run: cmake "${{github.workspace}}/qpid-proton" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-DBUILD_TESTING=OFF" "-DENABLE_FUZZ_TESTING=OFF" "-GNinja" ${ProtonCMakeExtraArgs}
+        run: >
+          cmake "${{github.workspace}}/qpid-proton" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            "-GNinja" \
+            ${ProtonCMakeExtraArgs}
 
       - name: qpid-proton cmake build/install
         run: cmake --build "${ProtonBuildDir}" --config ${BuildType} -t install
@@ -109,7 +127,12 @@ jobs:
 
       - name: qpid-dispatch cmake configure
         working-directory: ${{env.DispatchBuildDir}}
-        run: cmake "${{github.workspace}}/qpid-dispatch" "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" "-DCMAKE_BUILD_TYPE=${BuildType}" "-GNinja" "-DUSE_BWRAP=ON" ${DispatchCMakeExtraArgs}
+        run: >
+          cmake "${{github.workspace}}/qpid-dispatch" \
+            "-DCMAKE_INSTALL_PREFIX=${InstallPrefix}" \
+            "-DCMAKE_BUILD_TYPE=${BuildType}" \
+            "-GNinja" \
+            ${DispatchCMakeExtraArgs}
 
       - name: qpid-dispatch cmake build/install
         run: cmake --build "${DispatchBuildDir}" --config ${BuildType} -t install
@@ -120,7 +143,17 @@ jobs:
       # github actions/upload-artifact@v2 does not preserve executable permission on binaries
       - name: Compress build
         working-directory: ${{github.workspace}}
-        run: tar -I pixz -cf /tmp/archive.tar.xz --exclude '*.o' --exclude '*.pyc' --exclude '.git' --exclude='qpid-dispatch/build/console' qpid-dispatch install qpid-proton/build/python/pkgs
+        run: >
+          tar \
+            -I pixz \
+            -cf /tmp/archive.tar.xz \
+            --exclude '*.o' \
+            --exclude '*.pyc' \
+            --exclude '.git' \
+            --exclude='qpid-dispatch/build/console' \
+            qpid-dispatch \
+            install \
+            qpid-proton/build/python/pkgs
 
       - name: Upload archive
         uses: actions/upload-artifact@v2
