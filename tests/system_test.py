@@ -607,6 +607,12 @@ class Qdrouterd(Process):
         raise Exception("Unknown protocol family: %s" % protocol_family)
 
     @property
+    def http_addresses(self):
+        """Return http://host:port addresses for all http listeners"""
+        cfg = self.config.sections('httpListener')
+        return ["http://%s" % self._cfg_2_host_port(l) for l in cfg]
+
+    @property
     def addresses(self):
         """Return amqp://host:port addresses for all listeners"""
         cfg = self.config.sections('listener')
@@ -770,7 +776,7 @@ class Tester(object):
         """Return a Qdrouterd that will be cleaned up on teardown"""
         return self.cleanup(Qdrouterd(*args, **kwargs))
 
-    def httpserver(self, *args, **kwargs):
+    def http2server(self, *args, **kwargs):
         return self.cleanup(Http2Server(*args, **kwargs))
 
     port_range = (20000, 30000)
@@ -1112,7 +1118,6 @@ class AsyncTestSender(MessagingHandler):
         if self._conn:
             self._conn.close()
             self._conn = None
-
 
 class QdManager(object):
     """
