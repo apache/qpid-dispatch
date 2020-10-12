@@ -67,6 +67,8 @@ jobs:
     # https://github.com/pypa/virtualenv/issues/1873
     - python -m pip install --user --upgrade pip
     - python -m pip install --user --upgrade tox virtualenv==20.0.23
+    # Install quart to run the http2 tests.
+    - python -m pip install --user quart
     env:
     - CC=clang-10
     - CXX=clang++-10
@@ -101,6 +103,7 @@ addons:
     - python2.7-dev
     - sasl2-bin
     - swig
+    - libnghttp2-dev
     # documentation
     - asciidoc
     - asciidoctor
@@ -110,7 +113,6 @@ addons:
     - tox
     # code coverage
     - lcov
-    - libnghttp2-dev
 
 install:
 - NPROC=2
