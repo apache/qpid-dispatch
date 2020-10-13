@@ -417,15 +417,20 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
 //
 static void _core_connection_activate_CT(void *context, qdr_connection_t *conn)
 {
+    bool activated = false;
+
+    sys_mutex_lock(qdr_http1_adaptor->lock);
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) qdr_connection_get_context(conn);
-    if (!hconn) return;
+    if (hconn) {
+        if (hconn->raw_conn) {
+            pn_raw_connection_wake(hconn->raw_conn);
+            activated = true;
+        }
+    }
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
 
-    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Connection activate", hconn->conn_id);
-
-    if (hconn->raw_conn)
-        pn_raw_connection_wake(hconn->raw_conn);
-    else
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] missing raw connection!", hconn->conn_id);
+    if (hconn && activated)
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Connection activate", hconn->conn_id);
 }
 
 
@@ -601,7 +606,11 @@ static void _core_conn_close(void *context, qdr_connection_t *conn, qdr_error_t 
 
         char *qdr_error = error ? qdr_error_description(error) : 0;
         qdr_http1_close_connection(hconn, qdr_error);
+
+        sys_mutex_lock(qdr_http1_adaptor->lock);
         qdr_connection_set_context(conn, 0);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
         hconn->qdr_conn = 0;
         hconn->in_link = hconn->out_link = 0;
         free(qdr_error);

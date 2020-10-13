@@ -410,15 +410,21 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
         pn_raw_connection_set_context(hconn->raw_conn, 0);
-        hconn->raw_conn = 0;
         hconn->close_connection = false;
 
         if (!hconn->qdr_conn) {
             // the router has closed this connection so do not try to
             // re-establish it
             qd_log(log, QD_LOG_INFO, "[C%i] Connection closed", hconn->conn_id);
+            hconn->raw_conn = 0;
             _server_connection_free(hconn);
             return;
+        } else {
+            // prevent the core from activating this connection
+            // until we can re-establish it
+            sys_mutex_lock(qdr_http1_adaptor->lock);
+            hconn->raw_conn = 0;
+            sys_mutex_unlock(qdr_http1_adaptor->lock);
         }
 
         // if the current request was not completed, cancel it.  it's ok if
