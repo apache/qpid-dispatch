@@ -77,7 +77,7 @@ DEQ_DECLARE(qd_alloc_type_t, qd_alloc_type_list_t);
 // Be a Good Citizen when adding unexpected leaks to this list and include the
 // corresponding JIRA in a comment!
 //
-#ifdef QD_MEMORY_DEBUG
+#if QD_MEMORY_STATS
 static const char *leaking_types[] = {
     // DISPATCH-1679:
     "qd_timer_t", "qd_connector_t",
@@ -591,10 +591,19 @@ void qd_alloc_finalize(void)
         //
 #if QD_MEMORY_STATS
         if (dump_file && desc->stats->total_free_to_heap < desc->stats->total_alloc_from_heap) {
+            bool suppressed = false;
+            for (int i = 0; leaking_types[i]; ++i) {
+                if (strcmp(desc->type_name, leaking_types[i]) == 0) {
+                    suppressed = true;
+                    break;
+                }
+            }
             fprintf(dump_file,
-                    "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"\n",
+                    "alloc.c: Items of type '%s' remain allocated at shutdown: %"PRId64"%s\n",
                     desc->type_name,
-                    desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap);
+                    desc->stats->total_alloc_from_heap - desc->stats->total_free_to_heap,
+                    suppressed ? " (SUPPRESSED)" : "");
+
 #ifdef QD_MEMORY_DEBUG
             qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
             qd_alloc_item_t *item = DEQ_HEAD(qtype->allocated);
@@ -603,25 +612,18 @@ void qd_alloc_finalize(void)
                 DEQ_REMOVE_HEAD(qtype->allocated);
                 char **strings = backtrace_symbols(item->backtrace, item->backtrace_size);
 
-                // is this leak suppressed?
-                bool suppress = false;
-                for (int i = 0; leaking_types[i]; ++i) {
-                    if (strcmp(desc->type_name, leaking_types[i]) == 0) {
-                        suppress = true;
-                        break;
-                    }
-                }
-                if (!suppress)
+                if (!suppressed) {
+                    // DISPATCH-1795: avoid output noise by only printing
+                    // backtraces for leaks that are not suppressed
+                    qd_log_formatted_time(&item->timestamp, buf, 100);
+                    fprintf(dump_file, "Leak: %s type: %s address: %p\n",
+                            buf, desc->type_name, (void *)(&item[1]));
+                    for (size_t i = 0; i < item->backtrace_size; i++)
+                        fprintf(dump_file, "%s\n", strings[i]);
+                    fprintf(dump_file, "\n");
                     last_leak = desc->type_name;
-
-                qd_log_formatted_time(&item->timestamp, buf, 100);
-                fprintf(dump_file, "Leak: %s type: %s address: %p%s\n",
-                        buf, desc->type_name, (void *)(&item[1]),
-                        (suppress) ? " (suppressed)" : "");
-                for (size_t i = 0; i < item->backtrace_size; i++)
-                    fprintf(dump_file, "%s\n", strings[i]);
+                }
                 free(strings);
-                fprintf(dump_file, "\n");
 
                 // free the item to prevent ASAN from also reporting this leak.
                 // Since this is a custom heap ASAN will dump the first
