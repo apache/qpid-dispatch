@@ -378,7 +378,12 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     case PN_RAW_CONNECTION_DISCONNECTED: {
         qd_log(log, QD_LOG_INFO, "[C%i] Disconnected", hconn->conn_id);
         pn_raw_connection_set_context(hconn->raw_conn, 0);
+
+        // prevent core from waking this connection
+        sys_mutex_lock(qdr_http1_adaptor->lock);
+        qdr_connection_set_context(hconn->qdr_conn, 0);
         hconn->raw_conn = 0;
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
 
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
@@ -391,7 +396,6 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             hconn->in_link = 0;
         }
         if (hconn->qdr_conn) {
-            qdr_connection_set_context(hconn->qdr_conn, 0);
             qdr_connection_closed(hconn->qdr_conn);
             hconn->qdr_conn = 0;
         }
