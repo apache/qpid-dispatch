@@ -212,6 +212,7 @@ static void h1_codec_request_state_free(h1_codec_request_state_t *hrs)
         assert(conn->decoder.hrs != hrs);
         assert(conn->encoder.hrs != hrs);
         DEQ_REMOVE(conn->hrs_queue, hrs);
+        free(hrs->method);
         free_h1_codec_request_state_t(hrs);
     }
 }

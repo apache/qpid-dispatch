@@ -228,7 +228,6 @@ qd_http_lsnr_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bri
         return 0;
     }
     li->config = *config;
-
     DEQ_ITEM_INIT(li);
 
     sys_mutex_lock(qdr_http1_adaptor->lock);
@@ -506,7 +505,6 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 hconn->in_link_credit -= 1;
                 hreq->request_dlv = qdr_link_deliver(hconn->in_link, hreq->request_msg, 0, false, 0, 0, 0, 0);
                 qdr_delivery_set_context(hreq->request_dlv, (void*) hreq);
-                qdr_delivery_incref(hreq->request_dlv, "referenced by HTTP1 adaptor");
                 hreq->request_msg = 0;
             }
 
@@ -755,7 +753,6 @@ static int _client_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
         hreq->request_dlv = qdr_link_deliver(hconn->in_link, hreq->request_msg, 0, false, 0, 0, 0, 0);
         qdr_delivery_set_context(hreq->request_dlv, (void*) hreq);
-        qdr_delivery_incref(hreq->request_dlv, "referenced by HTTP1 adaptor");
         hreq->request_msg = 0;
     }
 
@@ -911,7 +908,6 @@ void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
 
             hreq->request_dlv = qdr_link_deliver(hconn->in_link, hreq->request_msg, 0, false, 0, 0, 0, 0);
             qdr_delivery_set_context(hreq->request_dlv, (void*) hreq);
-            qdr_delivery_incref(hreq->request_dlv, "referenced by HTTP1 adaptor");
             hreq->request_msg = 0;
         }
     }
