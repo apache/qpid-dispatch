@@ -81,20 +81,36 @@ void qdr_http1_request_base_cleanup(qdr_http1_request_base_t *hreq)
 void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 {
     if (hconn) {
+        pn_raw_connection_t *rconn = 0;
+        qd_timer_t *t1 = 0;
+        qd_timer_t *t2 = 0;
 
+        // prevent core from activating this connection while it is being torn
+        // down.  see _core_connection_activate_CT
+        //
         sys_mutex_lock(qdr_http1_adaptor->lock);
-        DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
+        {
+            DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
+            t1 = hconn->server.reconnect_timer;
+            hconn->server.reconnect_timer = 0;
+            t2 = hconn->server.activate_timer;
+            hconn->server.activate_timer = 0;
+            rconn = hconn->raw_conn;
+            hconn->raw_conn = 0;
+        }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 
         // request expected to be clean up by caller
 #if 0  // JIRA ME!
         assert(DEQ_IS_EMPTY(hconn->requests));
 #endif
+        qd_timer_free(t1);
+        qd_timer_free(t2);
 
         h1_codec_connection_free(hconn->http_conn);
-        if (hconn->raw_conn) {
-            pn_raw_connection_set_context(hconn->raw_conn, 0);
-            pn_raw_connection_close(hconn->raw_conn);
+        if (rconn) {
+            pn_raw_connection_set_context(rconn, 0);
+            pn_raw_connection_close(rconn);
         }
 #if 0
         if (hconn->out_link) {
@@ -118,8 +134,6 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 
         free(hconn->client.client_ip_addr);
         free(hconn->client.reply_to_addr);
-
-        qd_timer_free(hconn->server.reconnect_timer);
 
         free_qdr_http1_connection_t(hconn);
     }
@@ -425,12 +439,17 @@ static void _core_connection_activate_CT(void *context, qdr_connection_t *conn)
         if (hconn->raw_conn) {
             pn_raw_connection_wake(hconn->raw_conn);
             activated = true;
+        } else if (hconn->type == HTTP1_CONN_SERVER) {
+            if (hconn->server.activate_timer) {
+                qd_timer_schedule(hconn->server.activate_timer, 0);
+                activated = true;
+            }
         }
     }
     sys_mutex_unlock(qdr_http1_adaptor->lock);
 
-    if (hconn && activated)
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Connection activate", hconn->conn_id);
+    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Connection %s",
+           conn->identity, activated ? "activated" : "down, unable to activate");
 }
 
 

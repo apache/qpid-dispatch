@@ -114,6 +114,7 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs);
 static void _server_request_complete_cb(h1_codec_request_state_t *hrs, bool cancelled);
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _do_reconnect(void *context);
+static void _do_activate(void *context);
 static void _server_response_msg_free(_server_request_t *req, _server_response_msg_t *rmsg);
 static void _server_request_free(_server_request_t *req);
 static void _server_connection_free(qdr_http1_connection_t *hconn);
@@ -149,6 +150,9 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
 
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
+
+    // to run qdr_connection_process() when there is no raw connection to wake
+    hconn->server.activate_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_activate, hconn);
 
     // Create the qdr_connection
 
@@ -212,8 +216,9 @@ qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_ht
         qd_log(qdr_http1_adaptor->log, QD_LOG_ERROR, "Unable to create http connector: no memory");
         return 0;
     }
-
+    c->config = *config;
     DEQ_ITEM_INIT(c);
+
     qdr_http1_connection_t *hconn = _create_server_connection(c, qd, config);
     if (hconn) {
         sys_mutex_lock(qdr_http1_adaptor->lock);
@@ -376,6 +381,21 @@ static void _do_reconnect(void *context)
 }
 
 
+// This adapter attempts to keep the qdr_connection_t open as it tries to
+// re-connect to the server.  During this reconnect phase there is no raw
+// connection.  If the core needs to process the qdr_connection_t when there is
+// no raw connection to wake this zero-length timer handler will perform the
+// connection processing (under the I/O thread).
+//
+static void _do_activate(void *context)
+{
+    qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) context;
+    if (hconn->qdr_conn) {
+        while (qdr_connection_process(hconn->qdr_conn)) {}
+    }
+}
+
+
 // Proton Raw Connection Events
 //
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context)
@@ -419,13 +439,11 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             hconn->raw_conn = 0;
             _server_connection_free(hconn);
             return;
-        } else {
-            // prevent the core from activating this connection
-            // until we can re-establish it
-            sys_mutex_lock(qdr_http1_adaptor->lock);
-            hconn->raw_conn = 0;
-            sys_mutex_unlock(qdr_http1_adaptor->lock);
         }
+
+        sys_mutex_lock(qdr_http1_adaptor->lock);
+        hconn->raw_conn = 0;
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
 
         // if the current request was not completed, cancel it.  it's ok if
         // there are outstanding *response* deliveries in flight as long as the
@@ -835,7 +853,6 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
         qd_iterator_reset_view(addr, ITER_VIEW_ADDRESS_HASH);
         rmsg->dlv = qdr_link_deliver_to(hconn->in_link, rmsg->msg, 0, addr, false, 0, 0, 0, 0);
         qdr_delivery_set_context(rmsg->dlv, (void*) hreq);
-        qdr_delivery_incref(rmsg->dlv, "referenced by HTTP1 adaptor");
         rmsg->msg = 0;  // now owned by delivery
     }
 
@@ -992,17 +1009,15 @@ void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
 
                 qd_iterator_t *addr = qd_message_field_iterator(rmsg->msg, QD_FIELD_TO);
                 qd_iterator_reset_view(addr, ITER_VIEW_ADDRESS_HASH);
-                qdr_delivery_t *dlv = qdr_link_deliver_to(hconn->in_link, rmsg->msg, 0, addr, false, 0, 0, 0, 0);
+                rmsg->dlv = qdr_link_deliver_to(hconn->in_link, rmsg->msg, 0, addr, false, 0, 0, 0, 0);
+                qdr_delivery_set_context(rmsg->dlv, (void*) hreq);
+                rmsg->msg = 0;
                 if (!rmsg->rx_complete) {
                     // stop here since response must be complete before we can deliver the next one.
-                    rmsg->dlv = dlv;
-                    qdr_delivery_set_context(rmsg->dlv, (void*) hreq);
-                    qdr_delivery_incref(rmsg->dlv, "referenced by HTTP1 adaptor");
-                    rmsg->msg = 0;
                     break;
                 }
 
-                // the delivery is complete no need to save it
+                // else the delivery is complete no need to save it
                 _server_response_msg_free(hreq, rmsg);
                 rmsg = DEQ_HEAD(hreq->responses);
             }
