@@ -284,8 +284,8 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
                                                       pn_data(0),     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
 
     hconn->conn_id = qd_server_allocate_connection_id(hconn->qd_server);
     hconn->qdr_conn = qdr_connection_opened(qdr_http1_adaptor->core,
