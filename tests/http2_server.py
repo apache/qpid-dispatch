@@ -37,7 +37,7 @@ def image_file(name):
     return os.path.join(system_test.DIR, 'images', name)
 
 @app.route("/myinfo/delete/<id>", methods=["DELETE"])
-async def delete_myinfo(id):
+async def delete_myinfo(id):  # noqa
     my_info.id = id
     jsonStr = json.dumps(my_info.__dict__)
     return jsonStr
