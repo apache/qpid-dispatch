@@ -186,7 +186,7 @@ class RequestHandler(BaseHTTPRequestHandler):
                     header = self.rfile.readline().strip().split(b';')[0]
                     hlen = int(header, base=16)
                     if hlen > 0:
-                        data = self.rfile.read(hlen + 2)  #+\r\n
+                        data = self.rfile.read(hlen + 2)  # 2 = \r\n
                         body += data[:-2]
                     else:
                         self.rfile.readline()  # discard last \r\n
