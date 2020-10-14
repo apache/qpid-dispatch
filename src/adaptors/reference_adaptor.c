@@ -391,7 +391,8 @@ static void on_startup(void *context)
                                                       pn_data(0),          //pn_data_t      *connection_properties,
                                                       0,                   //int             ssl_ssf,
                                                       false,               //bool            ssl,
-                                                      0);                  //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
 
     adaptor->conn = qdr_connection_opened(adaptor->core,    // core
                                           adaptor->adaptor, // protocol_adaptor

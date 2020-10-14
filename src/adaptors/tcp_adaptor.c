@@ -316,8 +316,9 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                       pn_data(0),     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
+
 
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
@@ -509,8 +510,8 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
                                                       pn_data(0),     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
 
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,

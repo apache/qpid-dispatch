@@ -1608,8 +1608,8 @@ qdr_http2_connection_t *qdr_http_connection_ingress_accept(qdr_http2_connection_
                                                       pn_data(0),     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
 
     qdr_connection_t *conn = qdr_connection_opened(http2_adaptor->core,
                                                    http2_adaptor->adaptor,
@@ -1796,8 +1796,8 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
                                                       pn_data(0),     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
-                                                      // set if remote is a qdrouter
-                                                      0);    //const qdr_router_version_t *version)
+                                                      "",                  // peer router version,
+                                                      false);              // streaming links
 
     qdr_connection_t *conn = qdr_connection_opened(http2_adaptor->core,
                                                    http2_adaptor->adaptor,

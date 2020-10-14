@@ -896,8 +896,7 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
                                            pn_data_t       *connection_properties,
                                            int              ssl_ssf,
                                            bool             ssl,
-                                           // set if remote is a qdrouter
-                                           const qdr_router_version_t *version);
-
+                                           const char      *version,
+                                           bool             streaming_links);
 
 #endif
