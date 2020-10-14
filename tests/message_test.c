@@ -791,10 +791,10 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
     // flatten if required
     if (flatten) {
         // check that the flatten buffer is big enough
-        int vbin_size = chunk_size > 511 ? 8 : 5;  // per-chunk vbin descriptor overhead
-        int header_size = 100;                     // leave plenty of allocaton for header
-        int msg_size = n_chunks * (chunk_size + vbin_size) + header_size;
-        assert(msg_size < FLAT_BUF_SIZE);
+        assert(FLAT_BUF_SIZE > (n_chunks * (chunk_size
+                                            // per-chunk vbin descriptor overhead:
+                                            + (chunk_size > 511 ? 8 : 5))
+                                + 100));  // leave plenty of allocaton for header
 
         // compress message into flatten buffer
         size_t flat_size = flatten_bufs(MSG_CONTENT(msg));
