@@ -139,10 +139,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     grant_read_buffers(conn);
 
     if (conn->instream) {
-        qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(field, &buffers);
-        qd_message_extend(qdr_delivery_message(conn->instream), field);
-        qd_compose_free(field);
+        qd_message_body_data_append(qdr_delivery_message(conn->instream), &buffers);
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, false);
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Continuing message with %i bytes", conn->conn_id, conn->incoming_id, count);
     } else {

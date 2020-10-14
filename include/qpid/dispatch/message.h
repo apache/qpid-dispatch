@@ -378,6 +378,20 @@ typedef enum {
 qd_message_body_data_result_t qd_message_next_body_data(qd_message_t *msg, qd_message_body_data_t **body_data);
 
 
+/**
+ * qd_message_body_data_append
+ *
+ * Append the buffers in data as a sequence of one or more BODY_DATA sections
+ * to the given message.  The buffers in data are moved into the message
+ * content by this function.
+ *
+ * @param msg Pointer to message under construction
+ * @param data List of buffers containing body data.
+ * @return The number of buffers stored in the message's content
+ */
+int qd_message_body_data_append(qd_message_t *msg, qd_buffer_list_t *data);
+
+
 /** Put string representation of a message suitable for logging in buffer.
  * @return buffer
  */

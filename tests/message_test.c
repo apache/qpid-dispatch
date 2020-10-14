@@ -939,6 +939,105 @@ static char *test_check_body_data(void * context)
 }
 
 
+// Verify that qd_message_body_data_append() will break up a long binary data
+// field in order to avoid triggering Q2
+//
+static char *test_check_body_data_append(void * context)
+{
+    char *result = 0;
+    qd_message_t *msg = 0;
+    qd_message_t *out_msg = 0;
+
+    // generate a buffer list of binary data large enough to trigger Q2
+    //
+    const int buffer_count = (QD_QLIMIT_Q2_UPPER * 3) + 5;
+    qd_buffer_list_t bin_data = DEQ_EMPTY;
+    for (int i = 0; i < buffer_count; ++i) {
+        qd_buffer_t *buffy = qd_buffer();
+        // "fill" the buffer:
+        qd_buffer_insert(buffy, qd_buffer_capacity(buffy));
+        DEQ_INSERT_TAIL(bin_data, buffy);
+    }
+
+    // simulate building a message as an adaptor would:
+    msg = qd_message();
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(field);
+    qd_compose_insert_bool(field, 0);     // durable
+    qd_compose_insert_null(field);        // priority
+    qd_compose_end_list(field);
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_ulong(field, 666);    // message-id
+    qd_compose_insert_null(field);                 // user-id
+    qd_compose_insert_string(field, "/whereevah"); // to
+    qd_compose_insert_string(field, "my-subject");  // subject
+    qd_compose_insert_string(field, "/reply-to");   // reply-to
+    qd_compose_end_list(field);
+
+    qd_message_compose_2(msg, field, false);
+    qd_compose_free(field);
+    int depth = qd_message_body_data_append(msg, &bin_data);
+    if (depth <= buffer_count) {
+        // expected to add extra buffer(s) for meta-data
+        result = "append length is incorrect";
+        goto exit;
+    }
+    qd_message_set_receive_complete(msg);
+
+    // now validate the message body sections
+
+    out_msg = qd_message_copy(msg);
+    if (qd_message_check_depth(out_msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK) {
+        result = "Invalid body depth check";
+        goto exit;
+    }
+
+    int bd_count = 0;
+    int total_buffers = 0;
+    qd_message_body_data_t *body_data = 0;
+    bool done = false;
+    while (!done) {
+        switch (qd_message_next_body_data(msg, &body_data)) {
+        case QD_MESSAGE_BODY_DATA_INCOMPLETE:
+        case QD_MESSAGE_BODY_DATA_INVALID:
+        case QD_MESSAGE_BODY_DATA_NOT_DATA:
+            result = "Next body data failed to get next body data";
+            goto exit;
+        case QD_MESSAGE_BODY_DATA_NO_MORE:
+            done = true;
+            break;
+        case QD_MESSAGE_BODY_DATA_OK:
+            bd_count += 1;
+            // qd_message_body_data_append() breaks the buffer list up into
+            // smaller lists that are no bigger than QD_QLIMIT_Q2_LOWER buffers
+            // long
+            total_buffers += qd_message_body_data_buffer_count(body_data);
+            if (qd_message_body_data_buffer_count(body_data) > QD_QLIMIT_Q2_LOWER) {
+                result = "Body data list length too long!";
+                goto exit;
+            }
+            qd_message_body_data_release(body_data);
+            break;
+        }
+    }
+
+    if (bd_count != (buffer_count / QD_QLIMIT_Q2_LOWER) + 1) {
+        result = "Unexpected count of body data sections!";
+        goto exit;
+    }
+
+    if (total_buffers != buffer_count) {
+        result = "Not all buffers were decoded!";
+    }
+
+exit:
+    qd_message_free(msg);
+    qd_message_free(out_msg);
+    return result;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -953,6 +1052,7 @@ int message_tests(void)
     TEST_CASE(test_incomplete_annotations, 0);
     TEST_CASE(test_check_weird_messages, 0);
     TEST_CASE(test_check_body_data, 0);
+    TEST_CASE(test_check_body_data_append, 0);
 
     return result;
 }

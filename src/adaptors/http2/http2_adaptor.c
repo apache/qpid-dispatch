@@ -388,10 +388,7 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     qd_buffer_list_append(&buffers, (uint8_t *)data, len);
 
     if (stream_data->in_dlv) {
-        qd_composed_field_t *body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(body, &buffers);
-        qd_message_extend(stream_data->message, body);
-        qd_compose_free(body);
+        qd_message_body_data_append(stream_data->message, &buffers);
     }
     else {
         if (!stream_data->body) {
