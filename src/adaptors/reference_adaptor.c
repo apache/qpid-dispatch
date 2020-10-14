@@ -462,16 +462,10 @@ static void on_stream(void *context)
         qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
 
         //
-        // Compose a DATA performative for this section of the stream
+        // append this data to the streaming message as one or more DATA
+        // performatives
         //
-        qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        qd_compose_insert_binary_buffers(field, &buffer_list);
-
-        //
-        // Extend the streaming message and free the composed field
-        //
-        depth = qd_message_extend(adaptor->streaming_message, field);
-        qd_compose_free(field);
+        depth = qd_message_body_data_append(adaptor->streaming_message, &buffer_list);
 
         //
         // Notify the router that more data is ready to be pushed out on the delivery

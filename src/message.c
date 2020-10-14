@@ -2720,3 +2720,49 @@ bool qd_message_oversize(const qd_message_t *msg)
     qd_message_content_t * mc = MSG_CONTENT(msg);
     return mc->oversize;
 }
+
+
+int qd_message_body_data_append(qd_message_t *message, qd_buffer_list_t *data)
+{
+    unsigned int        length = DEQ_SIZE(*data);
+    qd_composed_field_t *field = 0;
+    int rc = 0;
+
+    if (length == 0)
+        return rc;
+
+    // DISPATCH-1803: ensure no body data section can violate the Q2 threshold.
+    // This allows the egress router to wait for an entire body data section
+    // to arrive and be validated before sending it out to the endpoint.
+    //
+    while (length > QD_QLIMIT_Q2_LOWER) {
+        qd_buffer_t *buf = DEQ_HEAD(*data);
+        for (int i = 0; i < QD_QLIMIT_Q2_LOWER; ++i) {
+            buf = DEQ_NEXT(buf);
+        }
+
+        // split the list at buf.  buf becomes head of trailing list
+
+        qd_buffer_list_t trailer = DEQ_EMPTY;
+        DEQ_HEAD(trailer) = buf;
+        DEQ_TAIL(trailer) = DEQ_TAIL(*data);
+        DEQ_TAIL(*data) = DEQ_PREV(buf);
+        DEQ_NEXT(DEQ_TAIL(*data)) = 0;
+        DEQ_PREV(buf) = 0;
+        DEQ_SIZE(trailer) = length - QD_QLIMIT_Q2_LOWER;
+        DEQ_SIZE(*data) = QD_QLIMIT_Q2_LOWER;
+
+        field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+        qd_compose_insert_binary_buffers(field, data);
+
+        DEQ_MOVE(trailer, *data);
+        length -= QD_QLIMIT_Q2_LOWER;
+    }
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+    qd_compose_insert_binary_buffers(field, data);
+
+    rc = qd_message_extend(message, field);
+    qd_compose_free(field);
+    return rc;
+}
