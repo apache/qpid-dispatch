@@ -716,9 +716,6 @@ static int on_frame_recv_callback(nghttp2_session *session,
     int32_t stream_id = frame->hd.stream_id;
     qdr_http2_stream_data_t *stream_data = nghttp2_session_get_stream_user_data(session_data->session, stream_id);
 
-    if (!stream_data)
-        return 0;
-
     switch (frame->hd.type) {
     case NGHTTP2_PRIORITY: {
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 PRIORITY frame received", conn->conn_id, stream_id);
@@ -732,6 +729,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 WINDOW_UPDATE frame received", conn->conn_id, stream_id);
     break;
     case NGHTTP2_DATA: {
+
+        if (!stream_data)
+            return 0;
+
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] NGHTTP2_DATA frame received", conn->conn_id, stream_id);
 
         if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
@@ -765,6 +766,8 @@ static int on_frame_recv_callback(nghttp2_session *session,
     break;
     case NGHTTP2_HEADERS:
     case NGHTTP2_CONTINUATION: {
+        if (!stream_data)
+            return 0;
         if (frame->hd.type == NGHTTP2_CONTINUATION) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%i][S%"PRId32"] HTTP2 CONTINUATION frame received", conn->conn_id, stream_id);
         }
@@ -1546,7 +1549,7 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
             qd_http2_buffer_insert(buf, raw_buff_size);
             count += raw_buff_size;
             DEQ_INSERT_TAIL(buffers, buf);
-            qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%i] - handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
+            qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%i] handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
         }
     }
 
@@ -1560,6 +1563,7 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
     while (buf) {
         size_t http2_buffer_size = qd_http2_buffer_size(buf);
         if (http2_buffer_size > 0) {
+            qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%i] handle_incoming_http - Calling nghttp2_session_mem_recv qd_http2_buffer of size %"PRIu32" ", conn->conn_id, http2_buffer_size);
             rv = nghttp2_session_mem_recv(conn->session_data->session, qd_http2_buffer_base(buf), qd_http2_buffer_size(buf));
             if (rv < 0) {
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%i] Error in nghttp2_session_mem_recv rv=%i", conn->conn_id, rv);
@@ -1587,6 +1591,8 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
 
     if (rv > 0)
         grant_read_buffers(conn);
+
+    nghttp2_session_send(conn-> session_data->session);
 
     return count;
 }
@@ -1831,8 +1837,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     switch (pn_event_type(e)) {
     case PN_RAW_CONNECTION_CONNECTED: {
         if (conn->ingress) {
-            send_settings_frame(conn);
             qdr_http_connection_ingress_accept(conn);
+            send_settings_frame(conn);
             qd_log(log, QD_LOG_INFO, "[C%i] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
             qd_log(log, QD_LOG_INFO, "[C%i] Connected Egress (PN_RAW_CONNECTION_CONNECTED), thread_id=%i", conn->conn_id, pthread_self());
