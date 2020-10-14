@@ -2435,12 +2435,14 @@ int qd_message_body_data_buffers(qd_message_body_data_t *body_data, pn_raw_buffe
     //
     // Skip the buffer offset
     //
-    assert(offset < qd_message_body_data_buffer_count(body_data));
-    while (offset > 0 && payload_len > 0) {
-        payload_len -= qd_buffer_size(buffer) - data_offset;
-        offset--;
-        data_offset = 0;
-        buffer = DEQ_NEXT(buffer);
+    if (offset > 0) {
+        assert(offset < qd_message_body_data_buffer_count(body_data));
+        while (offset > 0 && payload_len > 0) {
+            payload_len -= qd_buffer_size(buffer) - data_offset;
+            offset--;
+            data_offset = 0;
+            buffer = DEQ_NEXT(buffer);
+        }
     }
 
     //
