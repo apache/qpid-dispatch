@@ -772,17 +772,7 @@ static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
            "[C%"PRIu64"][L%"PRIu64"] HTTP request body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
 
-    //
-    // Compose a DATA performative for this section of the stream
-    //
-    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-    qd_compose_insert_binary_buffers(field, body);
-
-    //
-    // Extend the streaming message and free the composed field
-    //
-    qd_message_extend(msg, field);
-    qd_compose_free(field);
+    qd_message_body_data_append(msg, body);
 
     //
     // Notify the router that more data is ready to be pushed out on the delivery
