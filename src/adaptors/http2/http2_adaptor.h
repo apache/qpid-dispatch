@@ -98,9 +98,11 @@ struct qdr_http2_stream_data_t {
     bool                     out_msg_header_sent;
     bool                     out_msg_body_sent;
     bool                     use_footer_properties;
-    bool                     full_payload_handled;
+    bool                     full_payload_handled; // applies to the sending side.
     bool                     out_msg_has_body;
-    bool                     disp_updated;
+    bool                     out_msg_send_complete; // we use this flag to save the send_complete flag because the delivery and message associated with this stream might have been freed.
+    bool                     disp_updated;   // Has the disposition already been set on the out_dlv
+    bool                     disp_applied;   // Has the disp been applied to the out_dlv. The stream is ready to be freed now.
 };
 
 struct qdr_http2_connection_t {
