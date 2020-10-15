@@ -25,8 +25,9 @@ from __future__ import print_function
 import json
 import os
 import sys
+from time import sleep
 
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
+from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR
 from system_test import unittest
 from subprocess import PIPE, STDOUT
 from qpid_dispatch_internal.compat import dictify
@@ -523,8 +524,8 @@ class QdmanageTest(TestCase):
     def test_yy_query_many_links(self):
         # This test will fail without the fix for DISPATCH-974
         c = BlockingConnection(self.address())
+        self.logger = Logger(title="test_yy_query_many_links")
         count = 0
-        links = []
         COUNT = 5000
 
         ADDRESS_SENDER = "examples-sender"
@@ -532,14 +533,10 @@ class QdmanageTest(TestCase):
 
         # This loop creates 5000 consumer and 5000 producer links with
         # different addresses
-        while True:
-            count += 1
+        while count < COUNT:
             r = c.create_receiver(ADDRESS_RECEIVER + str(count))
-            links.append(r)
             s = c.create_sender(ADDRESS_SENDER + str(count))
-            links.append(c)
-            if count == COUNT:
-                break
+            count += 1
 
         # Try fetching all 10,000 addresses
         # This qdmanage query command would fail without the fix
@@ -565,12 +562,29 @@ class QdmanageTest(TestCase):
         out_links = 0
         in_links = 0
 
-        for out in outs:
-            if out.get('owningAddr'):
-                if ADDRESS_SENDER in out['owningAddr']:
-                    in_links += 1
-                if ADDRESS_RECEIVER in out['owningAddr']:
-                    out_links += 1
+        i = 0
+        while i < 3:
+            i += 1
+            for out in outs:
+                if out.get('owningAddr'):
+                    if ADDRESS_SENDER in out['owningAddr']:
+                        in_links += 1
+                    if ADDRESS_RECEIVER in out['owningAddr']:
+                        out_links += 1
+
+            # If the link count is less than COUNT, try again in 2 seconds
+            # Try after 2 more seconds for a total of 6 seconds.
+            # If the link count is still less than expected count, there
+            # is something wrong, the test has failed.
+            if out_links < COUNT or in_links < COUNT:
+                self.logger.log("out_links=%s, in_links=%s" % (str(out_links), str(in_links)))
+                sleep(2)
+                outs = json.loads(self.run_qdmanage(query_command))
+            else:
+                self.logger.log("Test success!")
+                break
+
+        self.logger.dump()
 
         self.assertEqual(out_links, COUNT)
         self.assertEqual(in_links, COUNT)
