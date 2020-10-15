@@ -79,15 +79,11 @@ static void qdr_ref_second_attach(void *context, qdr_link_t *link,
     ftarget[0] = '\0';
     fsource[0] = '\0';
 
-    if (!!source) {
-        size_t size = TERM_SIZE;
-        qdr_terminus_format(source, fsource, &size);
-    }
+    size_t size = TERM_SIZE;
+    qdr_terminus_format(source, fsource, &size);
 
-    if (!!target) {
-        size_t size = TERM_SIZE;
-        qdr_terminus_format(target, ftarget, &size);
-    }
+    size = TERM_SIZE;
+    qdr_terminus_format(target, ftarget, &size);
 
     printf("qdr_ref_second_attach: source=%s target=%s\n", fsource, ftarget);
 

@@ -91,7 +91,7 @@ ALLOC_DEFINE(_server_request_t);
 
 
 #define DEFAULT_CAPACITY 250
-#define RETRY_PAUSE_MSEC 500
+#define RETRY_PAUSE_MSEC ((qd_duration_t)500)
 #define MAX_RECONNECT    5  // 5 * 500 = 2.5 sec
 
 static void _server_tx_buffers_cb(h1_codec_request_state_t *lib_hrs, qd_buffer_list_t *blist, unsigned int len);
@@ -644,6 +644,9 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request completed!", hconn->conn_id);
                 _server_request_free(hreq);
 
+                // coverity ignores the fact that _server_request_free() calls
+                // the base cleanup which removes hreq from hconn->requests.
+                // coverity[use_after_free]
                 hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
                 if (hreq)
                     _write_pending_request(hreq);

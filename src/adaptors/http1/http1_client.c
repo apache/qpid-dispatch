@@ -368,14 +368,14 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
     case PN_RAW_CONNECTION_CLOSED_READ:
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Closed for %s", hconn->conn_id,
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for %s", hconn->conn_id,
                pn_event_type(e) == PN_RAW_CONNECTION_CLOSED_READ
                ? "reading" : "writing");
         pn_raw_connection_close(hconn->raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
-        qd_log(log, QD_LOG_INFO, "[C%i] Disconnected", hconn->conn_id);
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Disconnected", hconn->conn_id);
         pn_raw_connection_set_context(hconn->raw_conn, 0);
 
         // prevent core from waking this connection
@@ -403,7 +403,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         return;  // hconn no longer valid
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Need write buffers", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", hconn->conn_id);
         _write_pending_response((_client_request_t*) DEQ_HEAD(hconn->requests));
         break;
     }
@@ -465,7 +465,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     // check if the head request is done
 
     bool need_close = false;
-    _client_request_t *hreq = (_client_request_t *)(hconn ? DEQ_HEAD(hconn->requests) : 0);
+    _client_request_t *hreq = (_client_request_t *)DEQ_HEAD(hconn->requests);
     if (hreq) {
         // Can we retire the current outgoing response messages?
         _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
@@ -531,7 +531,7 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
     if (!hconn->raw_conn) {
         // client connection has been lost
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-               "[C%i] Discarding outgoing data - client connection closed", hconn->conn_id);
+               "[C%"PRIu64"] Discarding outgoing data - client connection closed", hconn->conn_id);
         qd_buffer_list_free_buffers(blist);
         return;
     }
@@ -565,7 +565,7 @@ static void _client_tx_body_data_cb(h1_codec_request_state_t *hrs, qd_message_bo
     if (!hconn->raw_conn) {
         // client connection has been lost
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
-               "[C%i] Discarding outgoing data - client connection closed", hconn->conn_id);
+               "[C%"PRIu64"] Discarding outgoing data - client connection closed", hconn->conn_id);
         qd_message_body_data_release(body_data);
         return;
     }
@@ -1284,7 +1284,7 @@ static void _write_pending_response(_client_request_t *hreq)
         _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
         if (rmsg && rmsg->out_data.write_ptr) {
             uint64_t written = qdr_http1_write_out_data(hreq->base.hconn, &rmsg->out_data);
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%i] %"PRIu64" octets written",
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %"PRIu64" octets written",
                    hreq->base.hconn->conn_id, written);
         }
     }
