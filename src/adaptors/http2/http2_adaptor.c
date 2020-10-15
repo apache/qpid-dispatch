@@ -1990,7 +1990,6 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
 		free_http2_stream_data(stream_data, false);
 	}
 	return disp;
-
 }
 
 

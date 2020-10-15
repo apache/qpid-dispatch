@@ -25,13 +25,21 @@ find_package(benchmark REQUIRED)
 
 # need -Wno-pedantic, for two reasons:
 #  incompatibility in older libbenchmark, https://github.com/google/benchmark/issues/494#issuecomment-502444478
-#  PRIu64 macros without spaces around are invalid C++ (c.f. the C++11 value suffixes feature)
+#  PRIu64 macros without spaces around are invalid C++ (c.f. the C++11 suffixes feature)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD_FLAGS} ${SANITIZE_FLAGS} -Wno-pedantic -Wno-unused-function")
 
 add_executable(c-benchmarks
         ../c_unittests/helpers.cpp
         c_benchmarks_main.cpp
         bm_router_initialization.cpp
+        bm_parse_tree.cpp
+        bm_tcp_adapter.cpp
+        echo_server.cpp echo_server.hpp
+        socket_utils.cpp socket_utils.hpp
+        Socket.cpp Socket.hpp
+        SocketException.cpp SocketException.hpp
+        TCPSocket.cpp TCPSocket.hpp
+        TCPServerSocket.cpp TCPServerSocket.hpp
         $<TARGET_OBJECTS:qpid-dispatch>)
 target_link_libraries(c-benchmarks qpid-dispatch-libraries benchmark pthread)
 

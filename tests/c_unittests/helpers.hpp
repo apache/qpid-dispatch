@@ -58,6 +58,17 @@ extern "C" {
 void qd_router_setup_late(qd_dispatch_t *qd);
 }
 
+// low-level router initialization
+extern "C" {
+#include "entity_cache.h"
+#include "log_private.h"
+
+#include "qpid/dispatch.h"
+
+// declarations that don't have .h file
+void qd_error_initialize();
+}
+
 // backport of C++14 feature
 template <class T>
 using remove_const_t = typename std::remove_const<T>::type;
@@ -230,6 +241,44 @@ class QDR
         // however, redeclaring it in a second router without freeing what then becomes unreachable creates leak
         qd_entity_cache_free_entries();
     };
+};
+
+/// Synchronizes two threads. One waits at the latch, the other releases the latch.
+class Latch
+{
+    std::mutex mut;
+    std::condition_variable cv;
+    bool opened = false;
+
+   public:
+    void notify()
+    {
+        std::lock_guard<std::mutex> lock(mut);
+        opened = true;
+        cv.notify_all();
+    }
+    void wait()
+    {
+        std::unique_lock<std::mutex> lock(mut);
+        cv.wait(lock, [this] { return opened; });
+    }
+};
+
+class QDRMinimalEnv
+{
+   public:
+    QDRMinimalEnv()
+    {
+        qd_alloc_initialize();
+        qd_log_initialize();
+        qd_error_initialize();
+    }
+
+    ~QDRMinimalEnv()
+    {
+        qd_log_finalize();
+        qd_alloc_finalize();
+    }
 };
 
 #endif  // QPID_DISPATCH_HELPERS_HPP
