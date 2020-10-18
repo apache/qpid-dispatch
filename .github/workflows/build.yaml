@@ -252,9 +252,6 @@ jobs:
       - name: Install Dependencies
         run: cd console/react && npm ci
 
-      - name: Install Typescript
-        run: cd console/react && npm install typescript
-
       - name: Run ESLint
         run: cd console/react && npx eslint --max-warnings 0 .
 
