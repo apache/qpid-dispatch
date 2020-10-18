@@ -24,18 +24,18 @@ void qd_router_setup_late(qd_dispatch_t *qd);
 /// anything is reported (even suppressed leaks).
 class WithNoMemoryLeaks {
    public:
-    char *path = strdup("unittests_memory_debug_logs_XXXXXX");
+    std::unique_ptr<char> path_ptr {strdup("unittests_memory_debug_logs_XXXXXX")};
     WithNoMemoryLeaks() {
 #if QD_MEMORY_DEBUG
-        int fd = mkstemp(path);
+        int fd = mkstemp(path_ptr.get());
         REQUIRE(fd != -1);
-        qd_alloc_debug_dump(path);
+        qd_alloc_debug_dump(path_ptr.get());
 #endif  // QD_MEMORY_DEBUG
     }
 
     ~WithNoMemoryLeaks() {
 #if QD_MEMORY_DEBUG
-        std::ifstream     f(path);
+        std::ifstream     f(path_ptr.get());
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string reports = buffer.str();
@@ -43,7 +43,6 @@ class WithNoMemoryLeaks {
         qd_alloc_debug_dump(nullptr);
 #endif  // QD_MEMORY_DEBUG
 
-        free(path);
         // TODO close that fd?
     }
 };
@@ -81,7 +80,7 @@ class QDR {
 
 TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
     std::thread([]() {
-        auto leaks = WithNoMemoryLeaks();
+        WithNoMemoryLeaks leaks{};
         QDR qdr{};
         qdr.start();
         qdr.wait();
@@ -89,30 +88,31 @@ TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
         // todo check for more errors, maybe in logging calls?
     }).join();
     std::thread([]() {
-      auto leaks = WithNoMemoryLeaks();
-      QDR qdr{};
-      qdr.start();
-      qdr.wait();
-      qdr.stop();
+        WithNoMemoryLeaks leaks{};
+        QDR qdr{};
+        qdr.start();
+        qdr.wait();
+        qdr.stop();
     }).join();
 }
 
 TEST_CASE("More to come" * doctest::skip(false)) {
-    auto leaks = WithNoMemoryLeaks();
-    auto qdr = QDR{};
-    qdr.start();
-    qdr.wait();
+    std::thread([]() {
+        WithNoMemoryLeaks leaks{};
+        QDR qdr{};
+        qdr.start();
+        qdr.wait();
 
-    qdr_core_t *core = qdr.qd->router->router_core;
-    // qdr_route_table_setup_CT(core) happened in qd_router_setup_late
+        qdr_core_t *core = qdr.qd->router->router_core;
+        // qdr_route_table_setup_CT(core) happened in qd_router_setup_late
 
-    qd_iterator_t *name = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
+        qd_iterator_t *name = qd_iterator_string("I.am.Sam", ITER_VIEW_ALL);
 
-    void *                  context = nullptr;
-    qd_router_entity_type_t type = QD_ROUTER_LINK;
-    qd_composed_field_t *   composed_body = NULL;
-    uint64_t                in_conn_id = 0;
-    qdr_query_t *           query = qdr_query(core, context, type, composed_body, in_conn_id);
+        void *context = nullptr;
+        qd_router_entity_type_t type = QD_ROUTER_LINK;
+        qd_composed_field_t *composed_body = NULL;
+        uint64_t in_conn_id = 0;
+        qdr_query_t *query = qdr_query(core, context, type, composed_body, in_conn_id);
 
     // TODO fix the following
     //  70: Error performing CREATE of org.apache.qpid.dispatch.router.config.autoLink: Body of request must be a map
@@ -123,5 +123,6 @@ TEST_CASE("More to come" * doctest::skip(false)) {
     // don't do qdr_query_free(query), it was freed when configuring failed
     qd_iterator_free(name);
 
-    // todo check for more errors, maybe in log calls?
+        // todo check for more errors, maybe in log calls?
+    }).join();
 }
