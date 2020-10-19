@@ -108,8 +108,7 @@ static int  _server_rx_response_cb(h1_codec_request_state_t *hrs,
                                    uint32_t version_minor);
 static int _server_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, const char *value);
 static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_body);
-static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t offset, size_t len,
-                              bool more);
+static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t len, bool more);
 static void _server_rx_done_cb(h1_codec_request_state_t *hrs);
 static void _server_request_complete_cb(h1_codec_request_state_t *hrs, bool cancelled);
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
@@ -866,7 +865,7 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 // Called with decoded body data.  This may be called multiple times as body
 // data becomes available.
 //
-static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t offset, size_t len,
+static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t len,
                               bool more)
 {
     _server_request_t       *hreq = (_server_request_t*) h1_codec_request_state_get_context(hrs);
@@ -878,15 +877,6 @@ static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
            "[C%"PRIu64"][L%"PRIu64"] HTTP response body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
-
-    if (offset) {
-        // dispatch assumes all body data starts at the buffer base so it cannot deal with offsets.
-        // Remove the offset by shifting the content of the head buffer forward
-        //
-        qd_buffer_t *head = DEQ_HEAD(*body);
-        memmove(qd_buffer_base(head), qd_buffer_base(head) + offset, qd_buffer_size(head) - offset);
-        head->size -= offset;
-    }
 
     //
     // Compose a DATA performative for this section of the stream

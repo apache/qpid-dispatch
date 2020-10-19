@@ -968,44 +968,51 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 //
 static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
 {
-    struct decoder_t *decoder = &conn->decoder;
+    struct decoder_t       *decoder = &conn->decoder;
     qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-
-    // shortcut: if no more data to parse send the entire incoming chain
-    if (rptr->remaining == 0) {
-
-        decoder->hrs->in_octets += body_ptr->remaining;
-        decoder->error = conn->config.rx_body(decoder->hrs, &decoder->incoming,
-                                              body_ptr->cursor - qd_buffer_base(body_ptr->buffer),
-                                              body_ptr->remaining,
-                                              true);
-        DEQ_INIT(decoder->incoming);
-        *body_ptr = NULL_I_PTR;
-        *rptr = NULL_I_PTR;
-        return decoder->error;
-    }
-
-    // The read pointer points to somewhere in the buffer chain that contains some
-    // unparsed data.  Send any buffers preceding the current read pointer.
-    qd_buffer_list_t blist = DEQ_EMPTY;
-    size_t octets = 0;
-    size_t body_offset = body_ptr->cursor - qd_buffer_base(body_ptr->buffer);
+    qd_iterator_pointer_t     *rptr = &decoder->read_ptr;
+    qd_buffer_list_t          blist = DEQ_EMPTY;
+    size_t                   octets = 0;
 
     // invariant:
     assert(DEQ_HEAD(decoder->incoming) == body_ptr->buffer);
 
-    while (body_ptr->buffer && body_ptr->buffer != rptr->buffer) {
+    // The read pointer points to somewhere in the buffer chain that contains some
+    // unparsed data.  Send any buffers preceding the current read pointer.
+    while (body_ptr->remaining) {
+
+        if (body_ptr->buffer == rptr->buffer && rptr->remaining > 0)
+            break;
+
         DEQ_REMOVE_HEAD(decoder->incoming);
-        DEQ_INSERT_TAIL(blist, body_ptr->buffer);
-        octets += qd_buffer_cursor(body_ptr->buffer) - body_ptr->cursor;
+
+        size_t offset = body_ptr->cursor - qd_buffer_base(body_ptr->buffer);
+        if (offset) {
+            // most (all?) message buffer operations assume the message
+            // data starts at the buffer_base. Adjust accordingly
+            memmove(qd_buffer_base(body_ptr->buffer),
+                    qd_buffer_base(body_ptr->buffer) + offset,
+                    qd_buffer_size(body_ptr->buffer) - offset);
+            body_ptr->cursor = qd_buffer_base(body_ptr->buffer);
+            body_ptr->buffer->size -= offset;
+        }
+
+        if (qd_buffer_size(body_ptr->buffer) > 0) {
+            DEQ_INSERT_TAIL(blist, body_ptr->buffer);
+            octets += qd_buffer_size(body_ptr->buffer);
+            body_ptr->remaining -= qd_buffer_size(body_ptr->buffer);
+        } else {
+            qd_buffer_free(body_ptr->buffer);
+        }
         body_ptr->buffer = DEQ_HEAD(decoder->incoming);
-        body_ptr->cursor = qd_buffer_base(body_ptr->buffer);
+        body_ptr->cursor = body_ptr->buffer ? qd_buffer_base(body_ptr->buffer) : 0;
     }
 
     // invariant:
-    assert(octets <= body_ptr->remaining);
-    body_ptr->remaining -= octets;
+    assert(body_ptr->remaining >= 0);
+
+    // At this point if there is any body bytes remaining they are in the same
+    // buffer as the unparsed input (rptr).
 
     if (flush && body_ptr->remaining) {
         // need to copy out remaining body octets into new buffer
@@ -1016,16 +1023,13 @@ static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
         qd_buffer_insert(tail, body_ptr->remaining);
         DEQ_INSERT_TAIL(blist, tail);
         octets += body_ptr->remaining;
-        if (DEQ_SIZE(blist) == 1)
-            body_offset = 0;
-
         *body_ptr = *rptr;
         body_ptr->remaining = 0;
     }
 
     if (octets) {
         decoder->hrs->in_octets += octets;
-        decoder->error = conn->config.rx_body(decoder->hrs, &blist, body_offset, octets, true);
+        decoder->error = conn->config.rx_body(decoder->hrs, &blist, octets, true);
     }
     return decoder->error;
 }
@@ -1178,20 +1182,16 @@ static bool parse_body(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
     // otherwise no explict body size, so just keep passing the entire unparsed
     // incoming chain along until the remote closes the connection
-    decoder->hrs->in_octets += decoder->read_ptr.remaining;
-    decoder->error = conn->config.rx_body(decoder->hrs,
-                                          &decoder->incoming,
-                                          decoder->read_ptr.cursor
-                                          - qd_buffer_base(decoder->read_ptr.buffer),
-                                          decoder->read_ptr.remaining,
-                                          true);
-    if (decoder->error) {
-        decoder->error_msg = "hrs_rx_body callback error";
-        return false;
+    if (decoder->read_ptr.remaining) {
+        // extend body_ptr to consume all unparsed read data
+        decoder->body_ptr.remaining += decoder->read_ptr.remaining;
+        decoder->read_ptr.remaining = 0;
+        decoder->read_ptr.buffer = DEQ_TAIL(decoder->incoming);
+        decoder->read_ptr.cursor = qd_buffer_cursor(decoder->read_ptr.buffer);
+        consume_body_data(conn, true);
+        decoder->body_ptr = decoder->read_ptr = NULL_I_PTR;
+        DEQ_INIT(decoder->incoming);
     }
-
-    decoder->body_ptr = decoder->read_ptr = NULL_I_PTR;
-    DEQ_INIT(decoder->incoming);
 
     return false;
 }

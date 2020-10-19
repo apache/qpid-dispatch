@@ -127,7 +127,7 @@ typedef struct h1_codec_config_t {
     int (*rx_header)(h1_codec_request_state_t *hrs, const char *key, const char *value);
     int (*rx_headers_done)(h1_codec_request_state_t *hrs, bool has_body);
 
-    int (*rx_body)(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t offset, uintmax_t len, bool more);
+    int (*rx_body)(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, uintmax_t len, bool more);
 
     // Invoked after a received HTTP message has been completely parsed.
     //
