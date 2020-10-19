@@ -28,7 +28,7 @@ import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
 from proton import Message, Timeout, Delivery
-from system_test import TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, TestTimeout
+from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, TestTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
 from system_test import get_inter_router_links
@@ -153,6 +153,9 @@ class TwoRouterTest(TestCase):
     def test_03a_test_strip_message_annotations_no_add_trace(self):
         test = MessageAnnotationsStripAddTraceTest(self.routers[0].addresses[1], self.routers[1].addresses[1])
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
     def test_03a_test_strip_message_annotations_both_add_ingress_trace(self):
@@ -750,10 +753,13 @@ class MessageAnnotationsTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
 
     def on_sendable(self, event):
         if self.msg_not_sent:
@@ -762,14 +768,14 @@ class MessageAnnotationsTest(MessagingHandler):
             self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            ma = event.message.annotations
-            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
-                self.error = None
-        self.accept(event.delivery)
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                ma = event.message.annotations
+                if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
+                    self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -797,29 +803,34 @@ class MessageAnnotationsStripTest(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            ingress_message_annotations = {'work': 'hard', 'stay': 'humble'}
-            msg.annotations = ingress_message_annotations
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                ingress_message_annotations = {'work': 'hard', 'stay': 'humble'}
+                msg.annotations = ingress_message_annotations
+                event.sender.send(msg)
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            ma = event.message.annotations
-            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B'] \
-                    and ma['work'] == 'hard' and ma['stay'] == 'humble':
-                self.error = None
-        self.accept(event.delivery)
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                ma = event.message.annotations
+                if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B'] \
+                        and ma['work'] == 'hard' and ma['stay'] == 'humble':
+                    self.error = None
+            self.accept(event.delivery)
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -913,30 +924,35 @@ class MessageAnnotationStripMessageAnnotationsIn(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            #
-            # Pre-existing ingress and trace
-            #
-            ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
-            msg.annotations = ingress_message_annotations
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                #
+                # Pre-existing ingress and trace
+                #
+                ingress_message_annotations = {'x-opt-qd.ingress': 'ingress-router', 'x-opt-qd.trace': ['X/QDR']}
+                msg.annotations = ingress_message_annotations
+                event.sender.send(msg)
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            if event.message.annotations['x-opt-qd.ingress'] == '0/QDR.A' \
-                    and event.message.annotations['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
-                self.error = None
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                if event.message.annotations['x-opt-qd.ingress'] == '0/QDR.A' \
+                        and event.message.annotations['x-opt-qd.trace'] == ['0/QDR.A', '0/QDR.B']:
+                    self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -963,26 +979,31 @@ class MessageAnnotaionsPreExistingOverride(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            msg.annotations = {'x-opt-qd.to': 'toov/1'}
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                msg.annotations = {'x-opt-qd.to': 'toov/1'}
+                event.sender.send(msg)
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            ma = event.message.annotations
-            if ma['x-opt-qd.to'] == 'toov/1':
-                self.error = None
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                ma = event.message.annotations
+                if ma['x-opt-qd.to'] == 'toov/1':
+                    self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -1010,24 +1031,29 @@ class MessageAnnotationsStripMessageAnnotationsOut(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                event.sender.send(msg)
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            if event.message.annotations is None:
-                self.error = None
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                if event.message.annotations is None:
+                    self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -1055,29 +1081,34 @@ class MessageAnnotationsStripBothAddIngressTrace(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            ingress_message_annotations = {'work': 'hard',
-                                           'x-opt-qd': 'humble',
-                                           'x-opt-qd.ingress': 'ingress-router',
-                                           'x-opt-qd.trace': ['0/QDR.A']}
-            msg.annotations = ingress_message_annotations
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                ingress_message_annotations = {'work': 'hard',
+                                               'x-opt-qd': 'humble',
+                                               'x-opt-qd.ingress': 'ingress-router',
+                                               'x-opt-qd.trace': ['0/QDR.A']}
+                msg.annotations = ingress_message_annotations
+                event.sender.send(msg)
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            if event.message.annotations == {'work': 'hard', 'x-opt-qd': 'humble'}:
-                self.error = None
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if self.receiver == event.receiver:
+            if 0 == event.message.body['number']:
+                if event.message.annotations == {'work': 'hard', 'x-opt-qd': 'humble'}:
+                    self.error = None
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
@@ -1097,6 +1128,7 @@ class MessageAnnotationsStripAddTraceTest(MessagingHandler):
         self.receiver = None
         self.sent_count = 0
         self.msg_not_sent = True
+        self.logger = Logger(title="MessageAnnotationsStripAddTraceTest")
 
     def timeout(self):
         self.error = "Timeout Expired: " + self.error
@@ -1107,31 +1139,41 @@ class MessageAnnotationsStripAddTraceTest(MessagingHandler):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
-        self.conn1 = event.container.connect(self.address1)
+        self.logger.log("on_start(): Receiver link created on self.conn2")
 
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1']}
-            msg.annotations = ingress_message_annotations
-            event.sender.send(msg)
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                ingress_message_annotations = {'x-opt-qd.trace': ['0/QDR.1']}
+                msg.annotations = ingress_message_annotations
+                event.sender.send(msg)
+                self.msg_not_sent = False
+                self.logger.log("on_sendable(): Message sent")
 
     def on_link_opened(self, event):
         if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
             self.sender = event.container.create_sender(self.conn1, self.dest)
+            self.logger.log("on_link_opened(): Sender link created on self.conn1")
 
     def on_message(self, event):
-        print (event.message)
-        if 0 == event.message.body['number']:
-            ma = event.message.annotations
-            print (ma)
-            if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.1', '0/QDR.A', '0/QDR.B']:
-                self.error = None
-        self.accept(event.delivery)
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            self.logger.log("on_message(): Message received by receiver")
+            if 0 == event.message.body['number']:
+                self.logger.log("on_message(): Message received by receiver body matches expected body")
+                ma = event.message.annotations
+                if ma['x-opt-qd.ingress'] == '0/QDR.A' and ma['x-opt-qd.trace'] == ['0/QDR.1', '0/QDR.A', '0/QDR.B']:
+                    self.logger.log("on_message(): Message annotations in message match expected message annotations. Success...")
+                    self.error = None
+                    self.timer.cancel()
+                    self.conn1.close()
+                    self.conn2.close()
+                else:
+                    self.logger.log("on_message(): Message received by receiver,  message annotations are not as expected")
+                    self.logger.log(ma)
+            else:
+                self.logger.log("on_message(): Message received by receiver but body is not expected")
 
     def run(self):
         Container(self).run()
@@ -1162,25 +1204,30 @@ class SenderSettlesFirst(MessagingHandler):
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
-        self.conn1 = event.container.connect(self.address1)
-        self.sender = event.container.create_sender(self.conn1, self.dest)
         self.conn2 = event.container.connect(self.address2)
         self.receiver = event.container.create_receiver(self.conn2, self.dest)
 
+    def on_link_opened(self, event):
+        if event.receiver == self.receiver:
+            self.conn1 = event.container.connect(self.address1)
+            self.sender = event.container.create_sender(self.conn1, self.dest)
+
     def on_sendable(self, event):
-        if self.msg_not_sent:
-            msg = Message(body={'number': 0})
-            dlv = event.sender.send(msg)
-            dlv.settle()
-            self.msg_not_sent = False
+        if event.sender == self.sender:
+            if self.msg_not_sent:
+                msg = Message(body={'number': 0})
+                dlv = event.sender.send(msg)
+                dlv.settle()
+                self.msg_not_sent = False
 
     def on_message(self, event):
-        if 0 == event.message.body['number']:
-            self.error = None
-        self.accept(event.delivery)
-        self.timer.cancel()
-        self.conn1.close()
-        self.conn2.close()
+        if event.receiver == self.receiver:
+            if 0 == event.message.body['number']:
+                self.error = None
+            self.accept(event.delivery)
+            self.timer.cancel()
+            self.conn1.close()
+            self.conn2.close()
 
     def run(self):
         Container(self).run()
