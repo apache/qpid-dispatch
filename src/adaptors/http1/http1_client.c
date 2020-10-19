@@ -105,7 +105,6 @@ static void _client_request_complete_cb(h1_codec_request_state_t *lib_rs, bool c
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _client_response_msg_free(_client_request_t *req, _client_response_msg_t *rmsg);
 static void _client_request_free(_client_request_t *req);
-static void _client_connection_free(qdr_http1_connection_t *hconn);
 static void _write_pending_response(_client_request_t *req);
 
 
@@ -398,7 +397,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             hconn->qdr_conn = 0;
         }
 
-        _client_connection_free(hconn);
+        qdr_http1_connection_free(hconn);
         return;  // hconn no longer valid
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
@@ -1303,12 +1302,12 @@ static void _client_request_free(_client_request_t *hreq)
 }
 
 
-static void _client_connection_free(qdr_http1_connection_t *hconn)
+// release client-specific state
+void qdr_http1_client_conn_cleanup(qdr_http1_connection_t *hconn)
 {
     for (_client_request_t *hreq = (_client_request_t*) DEQ_HEAD(hconn->requests);
          hreq;
          hreq = (_client_request_t*) DEQ_HEAD(hconn->requests)) {
         _client_request_free(hreq);
     }
-    qdr_http1_connection_free(hconn);
 }
