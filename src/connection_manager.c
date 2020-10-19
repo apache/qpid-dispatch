@@ -440,34 +440,30 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
     //
     // Given session frame count and max frame size, compute session incoming_capacity
     //   On 64-bit systems the capacity has no limit.
-    //   On 32-bit systems the largest capacity is AMQP_MAX_WINDWOW_SIZE.
+    //   On 32-bit systems the largest capacity is PN_AMQP_MAX_SESSION_CAPACITY_32BIT
+    //     due to a size_t limit on the capacity setting parameter.
     //
-    if (ssn_frames == 0) {
-        // Unlimited incoming frames.
-        // config->incoming_capacity is zero. Proton incoming_window is always AMQP_MAX_WINDOW_SIZE
-    } else {
+    if (ssn_frames != 0) {
         // Limited incoming frames.
         // Specify this to proton by setting capacity to be
         // the product (max_frame_size * ssn_frames).
-
         size_t capacity = config->max_frame_size * ssn_frames;
-        assert(capacity >= (size_t)QD_AMQP_MIN_MAX_FRAME_SIZE);
 
         if (sizeof(size_t) == 8) {
             // 64-bit systems use the configured, unbounded capacity
             config->incoming_capacity = capacity;
         } else {
             // 32-bit systems have an upper bound to the capacity
-            if (capacity <= QD_AMQP_MAX_WINDOW_SIZE) {
+            if (capacity <= PN_AMQP_MAX_SESSION_CAPACITY_32BIT) {
                 config->incoming_capacity = capacity;
             } else {
-                config->incoming_capacity = QD_AMQP_MAX_WINDOW_SIZE;
+                config->incoming_capacity = PN_AMQP_MAX_SESSION_CAPACITY_32BIT;
 
                 qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
                     "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
                     "requested maxSessionFrames truncated from %"PRId64" to %"PRId64,
                     config->name, config->host, config->port, ssn_frames,
-                    QD_AMQP_MAX_WINDOW_SIZE / config->max_frame_size);
+                    PN_AMQP_MAX_SESSION_CAPACITY_32BIT / config->max_frame_size);
             }
         }
     }

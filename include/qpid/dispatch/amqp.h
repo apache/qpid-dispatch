@@ -216,7 +216,7 @@ extern const char * const QD_AMQP_COND_MESSAGE_SIZE_EXCEEDED;
 
 /** @name AMQP session constants. */
 /// @{
-extern const int QD_AMQP_MAX_WINDOW_SIZE;
+extern const int PN_AMQP_MAX_SESSION_CAPACITY_32BIT;
 /// @};
 
 #endif

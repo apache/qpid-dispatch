@@ -26,6 +26,7 @@ from system_test import TestCase, Qdrouterd, main_module
 from system_test import unittest
 from proton.utils import BlockingConnection
 import subprocess
+import sys
 
 class MaxFrameMaxSessionFramesTest(TestCase):
     """System tests setting proton negotiated size max-frame-size and incoming-window"""
@@ -235,7 +236,9 @@ class MaxSessionFramesDefaultTest(TestCase):
             self.assertTrue(" max-frame-size=16384" in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0] or " incoming-window=131071," in begin_lines[0])
+            is_64bits = sys.maxsize > 2 ** 32
+            expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
+            self.assertTrue(expected in begin_lines[0])
 
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
@@ -271,7 +274,9 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             self.assertTrue(' max-frame-size=512,' in open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0] or " incoming-window=131071," in begin_lines[0])
+            is_64bits = sys.maxsize > 2 ** 32
+            expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
+            self.assertTrue(expected in begin_lines[0])
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -324,7 +329,9 @@ class ConnectorSettingsDefaultTest(TestCase):
             self.assertTrue(' channel-max=32767,' in open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
-            self.assertTrue(" incoming-window=2147483647," in begin_lines[0] or " incoming-window=131071," in begin_lines[0])
+            is_64bits = sys.maxsize > 2 ** 32
+            expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
+            self.assertTrue(expected in begin_lines[0])
 
 
 class ConnectorSettingsNondefaultTest(TestCase):
