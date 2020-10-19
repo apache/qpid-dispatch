@@ -105,7 +105,7 @@ jobs:
       - name: Install Linux dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev ccache ninja-build pixz
+          sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
 
       - name: Zero ccache stats
         run: ccache -z
