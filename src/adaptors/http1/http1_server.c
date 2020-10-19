@@ -190,7 +190,7 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
                                             0);     // bind token
     qdr_connection_set_context(hconn->qdr_conn, hconn);
 
-    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%i] HTTP connection to server created", hconn->conn_id);
+    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP connection to server created", hconn->conn_id);
 
     // wait for the raw connection to come up before creating the in and out links
 
@@ -420,7 +420,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     }
     // fall through
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Closed for %s", hconn->conn_id,
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for %s", hconn->conn_id,
                pn_event_type(e) == PN_RAW_CONNECTION_CLOSED_READ
                ? "reading" : "writing");
         pn_raw_connection_close(hconn->raw_conn);
@@ -433,7 +433,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         if (!hconn->qdr_conn) {
             // the router has closed this connection so do not try to
             // re-establish it
-            qd_log(log, QD_LOG_INFO, "[C%i] Connection closed", hconn->conn_id);
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection closed", hconn->conn_id);
             hconn->raw_conn = 0;
             qdr_http1_connection_free(hconn);
             return;
@@ -459,7 +459,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         //
         qd_duration_t nap_time = RETRY_PAUSE_MSEC * hconn->server.reconnect_count;
         if (hconn->server.reconnect_count == MAX_RECONNECT) {
-            qd_log(log, QD_LOG_INFO, "[C%i] Server not responding - disconnecting...", hconn->conn_id);
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Server not responding - disconnecting...", hconn->conn_id);
             _teardown_server_links(hconn);
         } else {
             hconn->server.reconnect_count += 1;  // increase next sleep interval
@@ -473,7 +473,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Need read buffers", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", hconn->conn_id);
         // @TODO(kgiusti): backpressure if no credit
         // if (hconn->in_link_credit > 0 */)
         if (!hconn->close_connection) {
@@ -484,9 +484,9 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Wake-up", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wake-up", hconn->conn_id);
         while (qdr_connection_process(hconn->qdr_conn)) {}
-        qd_log(log, QD_LOG_DEBUG, "[C%i] Connection processing complete", hconn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Connection processing complete", hconn->conn_id);
         break;
     }
     case PN_RAW_CONNECTION_READ: {
@@ -1400,7 +1400,7 @@ static void _write_pending_request(_server_request_t *hreq)
         assert(DEQ_PREV(&hreq->base) == 0);  // preserve order!
         uint64_t written = qdr_http1_write_out_data(hreq->base.hconn, &hreq->out_data);
         hreq->base.out_http1_octets += written;
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%i] %"PRIu64" octets written",
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %"PRIu64" octets written",
                hreq->base.hconn->conn_id, written);
     }
 }
