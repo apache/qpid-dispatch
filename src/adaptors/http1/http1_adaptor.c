@@ -100,10 +100,13 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
         }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 
-        // request expected to be clean up by caller
-#if 0  // JIRA ME!
-        assert(DEQ_IS_EMPTY(hconn->requests));
-#endif
+        // cleanup outstanding requests
+        //
+        if (hconn->type == HTTP1_CONN_SERVER)
+            qdr_http1_server_conn_cleanup(hconn);
+        else
+            qdr_http1_client_conn_cleanup(hconn);
+
         qd_timer_free(t1);
         qd_timer_free(t2);
 
@@ -112,20 +115,6 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             pn_raw_connection_set_context(rconn, 0);
             pn_raw_connection_close(rconn);
         }
-#if 0
-        if (hconn->out_link) {
-            qdr_link_set_context(hconn->out_link, 0);
-            qdr_link_detach(hconn->out_link, QD_CLOSED, 0);
-        }
-        if (hconn->in_link) {
-            qdr_link_set_context(hconn->in_link, 0);
-            qdr_link_detach(hconn->in_link, QD_CLOSED, 0);
-        }
-        if (hconn->qdr_conn) {
-            qdr_connection_set_context(hconn->qdr_conn, 0);
-            qdr_connection_closed(hconn->qdr_conn);
-        }
-#endif
 
         free(hconn->cfg.host);
         free(hconn->cfg.port);

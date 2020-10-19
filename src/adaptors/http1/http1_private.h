@@ -243,7 +243,7 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                                            qdr_delivery_t           *dlv,
                                            uint64_t                  disp,
                                            bool                      settled);
-
+void qdr_http1_client_conn_cleanup(qdr_http1_connection_t *hconn);
 
 // http1_server.c protocol adaptor callbacks
 //
@@ -262,5 +262,5 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                                            qdr_delivery_t           *dlv,
                                            uint64_t                  disp,
                                            bool                      settled);
-
+void qdr_http1_server_conn_cleanup(qdr_http1_connection_t *hconn);
 #endif // http1_private_H

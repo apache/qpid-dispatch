@@ -115,8 +115,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 static void _do_reconnect(void *context);
 static void _do_activate(void *context);
 static void _server_response_msg_free(_server_request_t *req, _server_response_msg_t *rmsg);
-static void _server_request_free(_server_request_t *req);
-static void _server_connection_free(qdr_http1_connection_t *hconn);
+static void _server_request_free(_server_request_t *hreq);
 static void _write_pending_request(_server_request_t *req);
 static void _cancel_request(_server_request_t *req);
 
@@ -436,7 +435,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             // re-establish it
             qd_log(log, QD_LOG_INFO, "[C%i] Connection closed", hconn->conn_id);
             hconn->raw_conn = 0;
-            _server_connection_free(hconn);
+            qdr_http1_connection_free(hconn);
             return;
         }
 
@@ -1407,14 +1406,13 @@ static void _write_pending_request(_server_request_t *hreq)
 }
 
 
-static void _server_connection_free(qdr_http1_connection_t *hconn)
+void qdr_http1_server_conn_cleanup(qdr_http1_connection_t *hconn)
 {
     for (_server_request_t *hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
          hreq;
          hreq = (_server_request_t*) DEQ_HEAD(hconn->requests)) {
         _server_request_free(hreq);
     }
-    qdr_http1_connection_free(hconn);
 }
 
 
