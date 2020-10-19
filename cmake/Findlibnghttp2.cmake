@@ -23,9 +23,9 @@ find_library(NGHTTP2_LIBRARIES
 )
 
 find_path(NGHTTP2_INCLUDE_DIRS
-  NAMES nghttp2.h
+  NAMES "nghttp2/nghttp2.h"
   HINTS "${CMAKE_INSTALL_PREFIX}/include"
-  PATHS "/usr/include/nghttp2"
+  PATHS "/usr/include"
 )
 
 include(FindPackageHandleStandardArgs)
