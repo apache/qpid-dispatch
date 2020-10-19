@@ -2351,6 +2351,7 @@ void trim_body_data_headers(qd_message_body_data_t *body_data)
     if (good) {
         unsigned char tag = 0;
         size_t        vbin_hdr_len = 1;
+        // coverity[check_return]
         next_octet(&cursor, &buffer, &tag);
         if (tag == QD_AMQP_VBIN8) {
             advance(&cursor, &buffer, 1);
@@ -2360,6 +2361,7 @@ void trim_body_data_headers(qd_message_body_data_t *body_data)
             vbin_hdr_len += 4;
         }
 
+        // coverity[check_return]
         can_advance(&cursor, &buffer); // bump cursor to the next buffer if necessary
 
         body_data->payload.buffer     = buffer;
