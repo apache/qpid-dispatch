@@ -8,6 +8,7 @@
 #include "./qdr_doctest.h"  // or .hpp, to make it clear this is a C++ header?
 
 extern "C" {
+#include <proton/message.h>
 #include "../../src/router_core/agent_config_auto_link.h"
 //#include <router_core/agent_config_auto_link.h>
 
@@ -96,6 +97,26 @@ TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
     }).join();
 }
 
+// from message_test.c
+static void set_content(qd_message_content_t *content, unsigned char *buffer, size_t len)
+{
+    unsigned char        *cursor = buffer;
+    qd_buffer_t *buf;
+
+    while (len > (size_t) (cursor - buffer)) {
+        buf = qd_buffer();
+        size_t segment   = qd_buffer_capacity(buf);
+        size_t remaining = len - (size_t) (cursor - buffer);
+        if (segment > remaining)
+            segment = remaining;
+        memcpy(qd_buffer_base(buf), cursor, segment);
+        cursor += segment;
+        qd_buffer_insert(buf, segment);
+        DEQ_INSERT_TAIL(content->buffers, buf);
+    }
+    content->receive_complete = true;
+}
+
 TEST_CASE("More to come" * doctest::skip(false)) {
     std::thread([]() {
         WithNoMemoryLeaks leaks{};
@@ -114,14 +135,43 @@ TEST_CASE("More to come" * doctest::skip(false)) {
         uint64_t in_conn_id = 0;
         qdr_query_t *query = qdr_query(core, context, type, composed_body, in_conn_id);
 
-    // TODO fix the following
-    //  70: Error performing CREATE of org.apache.qpid.dispatch.router.config.autoLink: Body of request must be a map
-    qd_parsed_field_t *parsed_body = NULL;
+        // TODO fix the following
+        //  70: Error performing CREATE of org.apache.qpid.dispatch.router.config.autoLink: Body of request must be a map
+        qd_message_t *msg = qd_message();
+        qd_message_content_t *content = MSG_CONTENT(msg);
 
-    qdra_config_auto_link_create_CT(core, name, query, parsed_body);
+        pn_message_t *pn_msg = pn_message();
+        pn_data_t *body;
+        body = pn_message_body(pn_msg);
+        pn_data_put_map(body);
+        pn_data_enter(body);
 
-    // don't do qdr_query_free(query), it was freed when configuring failed
-    qd_iterator_free(name);
+        pn_data_put_int(body, 42);
+        pn_data_put_string(
+            body, pn_bytes(sizeof("some key value") - 1, "some key value"));
+
+        pn_data_exit(body);
+        pn_rwbytes_t buf{};
+        REQUIRE(pn_message_encode2(pn_msg, &buf) != 0);
+        set_content(content, (unsigned char *)buf.start, buf.size);
+        free(buf.start);
+
+        pn_message_free(pn_msg);
+
+//        size_t       size = 10000;
+//        int result = pn_message_encode(pn_msg, (char *)buffer, &size);
+//        pn_message_free(pn_msg);
+
+        qd_iterator_t* iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
+        qd_parsed_field_t *parsed_body = qd_parse(iter);
+        qd_message_free(msg);
+
+        qdra_config_auto_link_create_CT(core, name, query, parsed_body);
+
+        qd_parse_free(parsed_body);
+
+        // don't do qdr_query_free(query), it was freed when configuring failed
+        qd_iterator_free(name);
 
         // todo check for more errors, maybe in log calls?
     }).join();
