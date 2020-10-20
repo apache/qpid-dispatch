@@ -238,7 +238,8 @@ class MaxSessionFramesDefaultTest(TestCase):
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
-            self.assertTrue(expected in begin_lines[0])
+            self.assertTrue(expected in begin_lines[0],
+                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
 
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
@@ -276,7 +277,8 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
-            self.assertTrue(expected in begin_lines[0])
+            self.assertTrue(expected in begin_lines[0],
+                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -331,7 +333,8 @@ class ConnectorSettingsDefaultTest(TestCase):
             # incoming-window is defaulted to 2^31-1 (64-bit) or 2^17-1 (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else " incoming-window=131071,"
-            self.assertTrue(expected in begin_lines[0])
+            self.assertTrue(expected in begin_lines[0],
+                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
 
 
 class ConnectorSettingsNondefaultTest(TestCase):

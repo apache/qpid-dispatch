@@ -96,8 +96,6 @@ const char * const QD_AMQPS_PORT_STR = "5671";
 
 const char * const QD_AMQP_DFLT_PROTO = "tcp";
 
-const int PN_AMQP_MAX_SESSION_CAPACITY_32BIT = 2147483647;
-
 /// Wrapper for getservbyname/getservbyname_r macOS compatibility.
 /// Needed because getservbyname is thread safe on macOS, and getservbyname_r is not defined there.
 static inline int qd_getservbyname(const char *name, const char *proto);
