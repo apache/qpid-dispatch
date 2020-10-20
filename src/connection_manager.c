@@ -438,25 +438,33 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         config->max_frame_size = QD_AMQP_MIN_MAX_FRAME_SIZE;
 
     //
-    // Given session frame count and max frame size compute session incoming_capacity
+    // Given session frame count and max frame size, compute session incoming_capacity
+    //   On 64-bit systems the capacity has no limit.
+    //   On 32-bit systems the largest capacity is defined as half the process address space.
     //
-    if (ssn_frames == 0)
-        config->incoming_capacity = (sizeof(size_t) < 8) ? 0x7FFFFFFFLL : 0x7FFFFFFFLL * config->max_frame_size;
-    else {
-        uint64_t mfs      = (uint64_t) config->max_frame_size;
-        uint64_t trial_ic = ssn_frames * mfs;
-        uint64_t limit    = (sizeof(size_t) < 8) ? (1ll << 31) - 1 : 0;
-        if (limit == 0 || trial_ic < limit) {
-            // Silently promote incoming capacity of zero to one
-            config->incoming_capacity = 
-                (trial_ic < QD_AMQP_MIN_MAX_FRAME_SIZE ? QD_AMQP_MIN_MAX_FRAME_SIZE : trial_ic);
+    if (ssn_frames != 0) {
+        // Limited incoming frames.
+        // Specify this to proton by setting capacity to be
+        // the product (max_frame_size * ssn_frames).
+        size_t capacity = config->max_frame_size * ssn_frames;
+
+        if (sizeof(size_t) == 8) {
+            // 64-bit systems use the configured, unbounded capacity
+            config->incoming_capacity = capacity;
         } else {
-            config->incoming_capacity = limit;
-            uint64_t computed_ssn_frames = limit / mfs;
-            qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
-                   "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
-                   "requested maxSessionFrames truncated from %"PRId64" to %"PRId64,
-                   config->name, config->host, config->port, ssn_frames, computed_ssn_frames);
+            // 32-bit systems have an upper bound to the capacity
+#define AMQP_MAX_WINDOW_SIZE (2147483647)
+            if (capacity <= AMQP_MAX_WINDOW_SIZE) {
+                config->incoming_capacity = capacity;
+            } else {
+                config->incoming_capacity = AMQP_MAX_WINDOW_SIZE;
+
+                qd_log(qd->connection_manager->log_source, QD_LOG_WARNING,
+                    "Server configuation for I/O adapter entity name:'%s', host:'%s', port:'%s', "
+                    "requested maxSessionFrames truncated from %"PRId64" to %"PRId64,
+                    config->name, config->host, config->port, ssn_frames,
+                    AMQP_MAX_WINDOW_SIZE / config->max_frame_size);
+            }
         }
     }
 
