@@ -131,8 +131,18 @@ TEST_CASE("More to come" * doctest::skip(false)) {
 
         void *context = nullptr;
         qd_router_entity_type_t type = QD_ROUTER_LINK;
-        qd_composed_field_t *composed_body = NULL;
         uint64_t in_conn_id = 0;
+
+//        qd_composed_field_t *composed_body = NULL;
+        qd_composed_field_t *composed_body = qd_compose_subfield(0);
+        // nobody is looking at this, yet; TODO because this is to store the reply, not request!
+//        qd_compose_start_map(composed_body);
+//        qd_compose_insert_string(composed_body, "address");
+//        qd_compose_insert_string(composed_body, "cc");
+//        qd_compose_insert_string(composed_body, "direction");
+//        qd_compose_insert_string(composed_body, "dd");
+//        qd_compose_end_map(composed_body);
+
         qdr_query_t *query = qdr_query(core, context, type, composed_body, in_conn_id);
 
         // TODO fix the following
@@ -146,9 +156,12 @@ TEST_CASE("More to come" * doctest::skip(false)) {
         pn_data_put_map(body);
         pn_data_enter(body);
 
-        pn_data_put_int(body, 42);
-        pn_data_put_string(
-            body, pn_bytes(sizeof("some key value") - 1, "some key value"));
+        auto put_key_value = [&body](const std::string& key, const std::string& value) {
+          pn_data_put_string(body, pn_bytes(key.length(), key.c_str()));
+          pn_data_put_string(body, pn_bytes(value.length(), value.c_str()));
+        };
+        put_key_value("address", "aa");
+        put_key_value("direction", "out");
 
         pn_data_exit(body);
         pn_rwbytes_t buf{};
@@ -164,15 +177,35 @@ TEST_CASE("More to come" * doctest::skip(false)) {
 
         qd_iterator_t* iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
         qd_parsed_field_t *parsed_body = qd_parse(iter);
-        qd_message_free(msg);
+//        qd_message_free(msg);  // DONT free this yet! references into msg are held
+
+        // huh? TODO, need this to see error from CREATE
+        qdr.qd->router->router_core->agent_log = qdr.qd->router->log_source;
+
+        // sanity check the body is set correctly
+        const int QDR_CONFIG_AUTO_LINK_ADDRESS = 3;
+        qd_parsed_field_t *addr_field = qd_parse_value_by_key(parsed_body, qdr_config_auto_link_columns[QDR_CONFIG_AUTO_LINK_ADDRESS]);
+        REQUIRE(addr_field != nullptr);
 
         qdra_config_auto_link_create_CT(core, name, query, parsed_body);
+        // called qdr_route_add_auto_link_CT to actually add the auto link
+
+        // result is put into query; no need to read logs
+        CHECK(query->status.status == QD_AMQP_CREATED.status);  // some smarter compare in doctest?
+        CHECK(query->status.description == QD_AMQP_CREATED.description);
+        // if query->body is null, it is not set
+        if (query->body != nullptr) {  // nonsense, query is freed at this point if query->body was == null
+            //            CHECK(query->body)
+            // todo, there will be map with 15 fields about the autoLink; looking in debugger, there's no map now...
+            //  its there, just hard to see in the buffer, had to do (char(*)[50])qd_buffer_base(query->body->buffers.head)
+        }
 
         qd_parse_free(parsed_body);
+        qd_message_free(msg);  // OK to free now
 
         // don't do qdr_query_free(query), it was freed when configuring failed
+        qdr_query_free(query);  // actually, set query->body to non-null, and then it won't be auto-freed!
         qd_iterator_free(name);
 
-        // todo check for more errors, maybe in log calls?
     }).join();
 }
