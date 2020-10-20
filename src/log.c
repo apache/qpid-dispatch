@@ -401,7 +401,6 @@ static void qd_log_source_free_lh(qd_log_source_t* src) {
 }
 
 bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
-    return true;  // TODO I'd want to null all sources or replace func
     if (!source) return false;
     int mask = source->mask == -1 ? default_log_source->mask : source->mask;
     return level & mask;
@@ -410,9 +409,9 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
 void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_level, const char *file, int line, const char *fmt, va_list ap)
 {
     // TODO; just a way-of-least-resistance solution for now
-    vfprintf(stderr, fmt, ap);
-    fprintf(stderr, "\n");
-    return;
+//    vfprintf(stderr, fmt, ap);
+//    fprintf(stderr, "\n");
+//    return;
     /*-----------------------------------------------
       Count this log-event in this log's histogram
       whether or not this log is currently enabled.
@@ -520,7 +519,7 @@ void qd_log_initialize(void)
     log_source_lock = sys_mutex();
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
-    default_log_source->mask = levels[INFO].mask;
+    default_log_source->mask = levels[TRACE].mask;
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
