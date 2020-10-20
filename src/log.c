@@ -519,7 +519,7 @@ void qd_log_initialize(void)
     log_source_lock = sys_mutex();
 
     default_log_source = qd_log_source(SOURCE_DEFAULT);
-    default_log_source->mask = levels[TRACE].mask;
+    default_log_source->mask = levels[INFO].mask;
     default_log_source->includeTimestamp = true;
     default_log_source->includeSource = 0;
     default_log_source->sink = log_sink_lh(SINK_STDERR);
