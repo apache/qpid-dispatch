@@ -1,0 +1,162 @@
+#!/usr/bin/env python
+
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+
+import argparse
+import os
+import selectors
+import socket
+import sys
+import traceback
+import types
+
+from system_test import Logger
+
+def main_except(host, port, size, count, logger):
+    '''
+    :param host: connect to this host
+    :param port: connect to this port
+    :param size: size of individual payload chunks in bytes
+    :param count: number of payload chunks
+    :param strategy: "1" Send one payload;  # TODO
+                         Recv one payload
+    :param logger: Logger() object
+    :return:
+    '''
+    # Start up
+    logger.log('Connecting to host:%s, port:%d, size:%d, count:%d' % (host, port, size, count))
+    keep_going = True
+
+    # outbound payload
+    payload_out = []
+    out_list_idx = 0  # current _out array being sent
+    out_byte_idx = 0  # next-to-send in current array
+    out_ready_to_send = True
+    for i in range(count):
+        payload_out.append(bytearray([i & 255] * size))
+    # incoming payloads
+    payload_in  = []
+    in_list_idx = 0 # current _in array being received
+    for i in range(count):
+        payload_in.append(bytearray())
+
+    # set up connection
+    host_address = (host, port)
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.connect(host_address)
+    sock.setblocking(False)
+
+    # set up selector
+    sel = selectors.DefaultSelector()
+    sel.register(sock,
+                 selectors.EVENT_READ | selectors.EVENT_WRITE)
+
+    # event loop
+    while keep_going:
+        for key, mask in sel.select(timeout=1):
+            sock = key.fileobj
+            if mask & selectors.EVENT_READ:
+                recv_data = sock.recv(1024)
+                if recv_data:
+                    payload_in[in_list_idx].extend(recv_data)
+                    if len(payload_in[in_list_idx]) == size:
+                        logger.log("Rcvd message %d" % in_list_idx)
+                        in_list_idx += 1
+                        if in_list_idx == count:
+                            # Received all bytes of all chunks - done.
+                            keep_going = False
+                        else:
+                            out_ready_to_send = True
+                            sel.modify(sock, selectors.EVENT_READ | selectors.EVENT_WRITE)
+                    elif len(payload_in[in_list_idx]) > size:
+                        error = "CRITICAL Rcvd message too big. Expected:%d, actual:%d" % \
+                                (size, len(payload_in[in_list_idx]))
+                        logger.log(error)
+                        keep_going = False
+                    else:
+                        pass # still accumulating a message
+                else:
+                    # socket closed
+                    keep_going = False
+            if mask & selectors.EVENT_WRITE:
+                if out_ready_to_send:
+                    n_sent = sock.send( payload_out[out_list_idx][out_byte_idx:] )
+                    out_byte_idx += n_sent
+                    if out_byte_idx == size:
+                        logger.log("Sent message %d" % out_list_idx)
+                        out_byte_idx = 0
+                        out_list_idx += 1
+                        sel.modify(sock, selectors.EVENT_READ) # turn off write events
+                        out_ready_to_send = False # turn on when rcvr receives
+                else:
+                    logger.log("DEBUG: ignoring EVENT_WRITE")
+
+    # shut down
+    sel.unregister(sock)
+    sock.close()
+
+def main(argv):
+    try:
+        # parse args
+        p = argparse.ArgumentParser()
+        p.add_argument('--host', '-b',
+                       help='Required target host')
+        p.add_argument('--port', '-p', type=int,
+                       help='Required target port number')
+        p.add_argument('--size', '-s', type=int, default=100, const=1, nargs='?',
+                       help='Size of payload in bytes')
+        p.add_argument('--count', '-c', type=int, default=1, const=1, nargs='?',
+                       help='Number of payloads to process')
+        p.add_argument('--log', '-l',
+                       action='store_true',
+                       help='Write activity log to console')
+        del argv[0]
+        args = p.parse_args(argv)
+
+        # host
+        if args.host is None:
+            raise Exception("User must specify a host")
+        host = args.host
+
+        # port
+        if args.port is None:
+            raise Exception("User must specify a port number")
+        port = args.port
+
+        # size
+        size = args.size
+
+        # count
+        count = args.count
+
+        # logging
+        logger = Logger(title = "TCP_echo_client host:%s port %d size:%d count:%d" % (host, port, size, count),
+                        print_to_console = args.log,
+                        save_for_dump = False)
+
+        main_except(host, port, size, count, logger)
+        return 0
+    except Exception as e:
+        traceback.print_exc()
+        return 1
+
+
+if __name__ == "__main__":
+    sys.exit(main(sys.argv))
