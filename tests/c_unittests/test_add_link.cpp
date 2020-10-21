@@ -35,6 +35,23 @@ extern "C" {
 void qd_router_setup_late(qd_dispatch_t *qd);
 }
 
+// backport of C++14 feature
+template< class T >
+using remove_const_t = typename std::remove_const<T>::type;
+
+// https://stackoverflow.com/questions/27440953/stdunique-ptr-for-c-functions-that-need-free
+struct free_deleter{
+    template <typename T>
+    void operator()(T *p) const {
+        std::free(const_cast<remove_const_t<T>*>(p));
+    }
+};
+template <typename T>
+using unique_C_ptr=std::unique_ptr<T,free_deleter>;
+static_assert(sizeof(char *)==
+              sizeof(unique_C_ptr<char>),""); // ensure no overhead
+
+
 // This could be a viable path to address some sanitizer issues. Decide
 // that unittested code is not allowed to leak, under unittests, and
 // enforce it. As the amount of unittested code increases, the leaks
@@ -44,7 +61,7 @@ void qd_router_setup_late(qd_dispatch_t *qd);
 /// anything is reported (even suppressed leaks).
 class WithNoMemoryLeaks {
    public:
-    std::unique_ptr<char> path_ptr {strdup("unittests_memory_debug_logs_XXXXXX")};
+    unique_C_ptr<char> path_ptr {strdup("unittests_memory_debug_logs_XXXXXX")};
     WithNoMemoryLeaks() {
 #if QD_MEMORY_DEBUG
         int fd = mkstemp(path_ptr.get());
@@ -213,10 +230,10 @@ TEST_CASE("More to come" * doctest::skip(false)) {
         CHECK(query->status.status == QD_AMQP_CREATED.status);  // some smarter compare in doctest?
         CHECK(query->status.description == QD_AMQP_CREATED.description);
         // if query->body is null, it is not set
-        if (query->body != nullptr) {  // nonsense, query is freed at this point if query->body was == null
+        if (query->body != nullptr) {  // nonsense, query would be freed at this point if query->body was == null
             //            CHECK(query->body)
             // todo, there will be map with 15 fields about the autoLink; looking in debugger, there's no map now...
-            //  its there, just hard to see in the buffer, had to do (char(*)[50])qd_buffer_base(query->body->buffers.head)
+            //  it's there, just hard to see in the buffer, had to do (char(*)[512])qd_buffer_base(query->body->buffers.head)
         }
 
         qd_parse_free(parsed_body);
