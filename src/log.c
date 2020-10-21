@@ -408,10 +408,6 @@ bool qd_log_enabled(qd_log_source_t *source, qd_log_level_t level) {
 
 void qd_vlog_impl(qd_log_source_t *source, qd_log_level_t level, bool check_level, const char *file, int line, const char *fmt, va_list ap)
 {
-    // TODO; just a way-of-least-resistance solution for now
-//    vfprintf(stderr, fmt, ap);
-//    fprintf(stderr, "\n");
-//    return;
     /*-----------------------------------------------
       Count this log-event in this log's histogram
       whether or not this log is currently enabled.
