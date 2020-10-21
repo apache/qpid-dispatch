@@ -110,7 +110,7 @@ void transport_tracer(pn_transport_t *transport, const char *message)
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx) {
         // The PROTOCOL module is used exclusively for logging protocol related tracing. The protocol could be AMQP, HTTP, TCP etc.
-        qd_log(ctx->server->protocol_log_source, QD_LOG_TRACE, "[%"PRIu64"]:%s", ctx->connection_id, message);
+        qd_log(ctx->server->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"]:%s", ctx->connection_id, message);
     }
 }
 
@@ -119,7 +119,7 @@ void connection_transport_tracer(pn_transport_t *transport, const char *message)
     qd_connection_t *ctx = (qd_connection_t*) pn_transport_get_context(transport);
     if (ctx) {
         // Unconditionally write the log at TRACE level to the log file.
-        qd_log_impl_v1(ctx->server->protocol_log_source, QD_LOG_TRACE,  __FILE__, __LINE__, "[%"PRIu64"]:%s", ctx->connection_id, message);
+        qd_log_impl_v1(ctx->server->protocol_log_source, QD_LOG_TRACE,  __FILE__, __LINE__, "[C%"PRIu64"]:%s", ctx->connection_id, message);
     }
 }
 
@@ -249,7 +249,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
             }
             else {
                 // This is an unrecognized component. log a critical error
-                qd_log(conn->server->log_source, QD_LOG_CRITICAL, "Unrecognized component '%c' in uidFormat ", components[x]);
+                qd_log(conn->server->log_source, QD_LOG_CRITICAL, "[C%"PRIu64"] Unrecognized component '%c' in uidFormat ", conn->connection_id, components[x]);
                 return 0;
             }
         }
@@ -325,7 +325,7 @@ static const char *transport_get_user(qd_connection_t *conn, pn_transport_t *tpo
                     user_id = py_string_2_c(result);
                     Py_XDECREF(result);
                 } else {
-                    qd_log(conn->server->log_source, QD_LOG_DEBUG, "Internal: failed to read displaynameservice query result");
+                    qd_log(conn->server->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Internal: failed to read displaynameservice query result", conn->connection_id);
                 }
                 qd_python_unlock(lock_state);
             }
@@ -606,7 +606,7 @@ static void on_accept(pn_event_t *e, qd_listener_t *listener)
     }
     ctx->listener = listener;
     qd_log(listener->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"]: Accepting incoming connection to '%s'",
+           "[C%"PRIu64"]: Accepting incoming connection to '%s'",
            ctx->connection_id, ctx->listener->config.host_port);
     /* Asynchronous accept, configure the transport on PN_CONNECTION_BOUND */
     pn_listener_accept(pn_listener, ctx->pn_conn);
@@ -692,7 +692,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
 
         // Set up SSL
         if (config->ssl_profile)  {
-            qd_log(ctx->server->log_source, QD_LOG_TRACE, "Configuring SSL on %s", name);
+            qd_log(ctx->server->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Configuring SSL on %s", ctx->connection_id, name);
             if (listener_setup_ssl(ctx, config, tport) != QD_ERROR_NONE) {
                 connect_fail(ctx, QD_AMQP_COND_INTERNAL_ERROR, "%s on %s", qd_error_message(), name);
                 return;
@@ -709,7 +709,7 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
         if (config->sasl_mechanisms)
             pn_sasl_allowed_mechs(sasl, config->sasl_mechanisms);
         if (config->sasl_plugin_config.auth_service) {
-            qd_log(server->log_source, QD_LOG_INFO, "enabling remote authentication service %s", config->sasl_plugin_config.auth_service);
+            qd_log(server->log_source, QD_LOG_INFO, "[C%"PRIu64"] Enabling remote authentication service %s", ctx->connection_id, config->sasl_plugin_config.auth_service);
             pn_ssl_domain_t* plugin_ssl_domain = NULL;
             if (config->sasl_plugin_config.use_ssl) {
                 plugin_ssl_domain = pn_ssl_domain(PN_SSL_MODE_CLIENT);
@@ -719,26 +719,26 @@ static void on_connection_bound(qd_server_t *server, pn_event_t *e) {
                                                       config->sasl_plugin_config.ssl_certificate_file,
                                                       config->sasl_plugin_config.ssl_private_key_file,
                                                       config->sasl_plugin_config.ssl_password)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL credentials for authentication service");
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set SSL credentials for authentication service", ctx->connection_id);
                     }
                 }
                 if (config->sasl_plugin_config.ssl_trusted_certificate_db) {
                     if (pn_ssl_domain_set_trusted_ca_db(plugin_ssl_domain, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set trusted SSL certificate db for authentication service" );
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set trusted SSL certificate db for authentication service", ctx->connection_id);
                     } else {
                         if (pn_ssl_domain_set_peer_authentication(plugin_ssl_domain, PN_SSL_VERIFY_PEER, config->sasl_plugin_config.ssl_trusted_certificate_db)) {
-                            qd_log(server->log_source, QD_LOG_ERROR, "Cannot set SSL peer verification for authentication service");
+                            qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set SSL peer verification for authentication service", ctx->connection_id);
                         }
                     }
                 }
                 if (config->sasl_plugin_config.ssl_ciphers) {
                     if (pn_ssl_domain_set_ciphers(plugin_ssl_domain, config->sasl_plugin_config.ssl_ciphers)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set ciphers for authentication service");
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set ciphers for authentication service", ctx->connection_id);
                     }
                 }
                 if (config->sasl_plugin_config.ssl_protocols) {
                     if (pn_ssl_domain_set_protocols(plugin_ssl_domain, config->sasl_plugin_config.ssl_protocols)) {
-                        qd_log(server->log_source, QD_LOG_ERROR, "Cannot set protocols for authentication service");
+                        qd_log(server->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Cannot set protocols for authentication service", ctx->connection_id);
                     }
                 }
             }
@@ -1202,7 +1202,7 @@ static void try_open_lh(qd_connector_t *ct)
     ct->delay = 5000;
 
     qd_log(ct->server->log_source, QD_LOG_TRACE,
-           "[%"PRIu64"] Connecting to %s", ctx->connection_id, host_port);
+           "[C%"PRIu64"] Connecting to %s", ctx->connection_id, host_port);
     /* Note: the transport is configured in the PN_CONNECTION_BOUND event */
     pn_proactor_connect(ct->server->proactor, ctx->pn_conn, host_port);
 }
