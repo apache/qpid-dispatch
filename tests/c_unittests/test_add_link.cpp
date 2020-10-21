@@ -29,8 +29,7 @@
 
 extern "C" {
 #include <proton/message.h>
-#include "../../src/router_core/agent_config_auto_link.h"
-//#include <router_core/agent_config_auto_link.h>
+#include <router_core/agent_config_auto_link.h>
 }
 
 TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {

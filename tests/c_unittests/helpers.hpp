@@ -20,6 +20,8 @@
 #ifndef QPID_DISPATCH_HELPERS_HPP
 #define QPID_DISPATCH_HELPERS_HPP
 
+#include "./qdr_doctest.h"
+
 extern "C" {
 #include "../../src/router_core/agent_config_auto_link.h"
 
