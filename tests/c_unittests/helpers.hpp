@@ -20,6 +20,8 @@
 #ifndef QPID_DISPATCH_HELPERS_HPP
 #define QPID_DISPATCH_HELPERS_HPP
 
+#include <mutex>
+
 #include "./qdr_doctest.h"
 
 extern "C" {
@@ -79,6 +81,23 @@ class WithNoMemoryLeaks {
     }
 };
 
+class BetterRouterStartupLatch {
+   public:
+    std::mutex mut;
+    void wait_for_qdr(qd_dispatch_t *qd) {
+        mut.lock();
+
+        qdr_action_handler_t handler = [](qdr_core_t *core, qdr_action_t *action, bool discard) {
+          static_cast<BetterRouterStartupLatch *>(action->args.general.context_1)->mut.unlock();
+        };
+        qdr_action_t *action = qdr_action(handler, "my_action");
+        action->args.general.context_1 = this;
+        qdr_action_enqueue(qd->router->router_core, action);
+
+        mut.lock();  // wait for action_handler to do the unlock
+    }
+};
+
 // It is not possible to initialize the router multiple times in the same thread, due to
 // alloc pools declared as `extern __thread qd_alloc_pool_t *`. These will have wrong values
 // the second time around, and there is no good way to hunt them all down and NULL them.
@@ -101,8 +120,8 @@ class QDR {
     /// cleaning up too early after init will lead to leaks and other
     /// unpleasantries (I observed some invalid pointer accesses)
     void wait() const {
-        // todo Can I detect when startup is done?
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        // give the router core thread an action; when that executes, we're done starting up
+        BetterRouterStartupLatch{}.wait_for_qdr(qd);
     }
 
     void stop() const {
