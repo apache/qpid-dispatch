@@ -2031,7 +2031,7 @@ class TwoRouterExtensionStateTest(TestCase):
 
         fs = MyExtendedService(self.RouterB.addresses[1],
                                container_id="FakeService")
-        self.RouterA.wait_address("RoutieMcRouteFace", remotes=1)
+        self.RouterA.wait_address("RoutieMcRouteFace", remotes=1, count=2)
 
         tx = MyExtendedSender(self.RouterA.addresses[0],
                               "RoutieMcRouteFace")

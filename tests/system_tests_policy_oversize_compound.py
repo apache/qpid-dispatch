@@ -1192,7 +1192,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
         cls.fake_broker = Dummy("amqp://127.0.0.1:" + str(cls.fb_port),
                                        container_id="FakeBroker")
         cls.INT_B.wait_address("oversize",
-                               containers=1)
+                               containers=1, count=2)
 
     @classmethod
     def tearDownClass(cls):

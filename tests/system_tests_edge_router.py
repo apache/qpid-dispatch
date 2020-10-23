@@ -1666,7 +1666,8 @@ class LinkRouteProxyTest(TestCase):
                 self.link_dropped.set()
 
         ad = AttachDropper(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
+        # wait for both in and out link route addresses to propagate
+        self.INT_B.wait_address("CfgLinkRoute1", count=2)
 
         # create a consumer, do not wait for link to open, reattach
         # on received detach
@@ -1676,14 +1677,13 @@ class LinkRouteProxyTest(TestCase):
         ad.join() # wait for thread exit
 
         # wait until prefix addresses are removed
-        self._wait_address_gone(self.INT_B, "CCfgLinkRoute1")
-        self._wait_address_gone(self.INT_B, "DCfgLinkRoute1")
+        self._wait_address_gone(self.INT_B, "CfgLinkRoute1")
         rx.stop()
 
         # now attach a working service to the same address,
         # make sure it all works
         fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
+        self.INT_B.wait_address("CfgLinkRoute1", count=2)
         rx = AsyncTestReceiver(self.EB1.listener, 'CfgLinkRoute1/foo',
                                wait=False, recover_link=True)
         tx = AsyncTestSender(self.EA1.listener, 'CfgLinkRoute1/foo',
@@ -1712,7 +1712,7 @@ class LinkRouteProxyTest(TestCase):
         # activate the pre-configured link routes
         ea1_mgmt = self.EA1.management
         fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
+        self.INT_B.wait_address("CfgLinkRoute1", count=2)
 
         for i in range(10):
             lr1 = ea1_mgmt.create(type=self.CFG_LINK_ROUTE_TYPE,
@@ -1727,7 +1727,7 @@ class LinkRouteProxyTest(TestCase):
                                               'direction': 'in'})
             # verify that they are correctly propagated (once)
             if i == 9:
-                self.INT_B.wait_address("Test/*/9/#")
+                self.INT_B.wait_address("Test/*/9/#", count=2)
             lr1.delete()
             lr2.delete()
 
@@ -1783,7 +1783,7 @@ class LinkRouteProxyTest(TestCase):
 
         # activate the link routes before the connection exists
         fs = FakeService(er.addresses[1])
-        er.wait_address("Edge1/*")
+        er.wait_address("Edge1/*", count=2)
 
         # create the connection to interior
         er_mgmt = er.management
@@ -1791,7 +1791,7 @@ class LinkRouteProxyTest(TestCase):
                               name='toA',
                               attributes={'role': 'edge',
                                           'port': self.INTA_edge_port})
-        self.INT_B.wait_address("Edge1/*")
+        self.INT_B.wait_address("Edge1/*", count=2)
 
         # delete it, and verify the routes are removed
         ctor.delete()
@@ -1802,7 +1802,7 @@ class LinkRouteProxyTest(TestCase):
                               name='toA',
                               attributes={'role': 'edge',
                                           'port': self.INTA_edge_port})
-        self.INT_B.wait_address("Edge1/*")
+        self.INT_B.wait_address("Edge1/*", count=2)
         self._test_traffic(self.INT_B.listener,
                            self.INT_B.listener,
                            "Edge1/One",
@@ -1823,7 +1823,7 @@ class LinkRouteProxyTest(TestCase):
             self.skipTest ( "Test skipped during development." )
 
         fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
+        self.INT_B.wait_address("CfgLinkRoute1", count=2)
 
         # create a sender on one edge and the receiver on another
         bc_b = BlockingConnection(self.EB1.listener, timeout=TIMEOUT)
@@ -1891,7 +1891,7 @@ class LinkRouteProxyTest(TestCase):
         a_type = 'org.apache.qpid.dispatch.router.address'
 
         fs = FakeService(self.EA1.route_container)
-        self.INT_B.wait_address("CfgLinkRoute1")
+        self.INT_B.wait_address("CfgLinkRoute1", count=2)
 
         self._test_traffic(self.INT_B.listener,
                            self.INT_B.listener,
@@ -1909,7 +1909,7 @@ class LinkRouteProxyTest(TestCase):
         # repeat test, but this time with patterns:
 
         fs = FakeService(self.EB1.route_container)
-        self.INT_A.wait_address("*.cfg.pattern.#")
+        self.INT_A.wait_address("*.cfg.pattern.#", count=2)
 
         self._test_traffic(self.INT_A.listener,
                            self.INT_A.listener,
@@ -1920,7 +1920,6 @@ class LinkRouteProxyTest(TestCase):
         self.assertEqual(5, fs.in_count)
         self.assertEqual(5, fs.out_count)
         self._wait_address_gone(self.INT_A, "*.cfg.pattern.#")
-
 
     def test_52_conn_link_route_proxy(self):
         """
@@ -1942,7 +1941,7 @@ class LinkRouteProxyTest(TestCase):
                                               "direction": "in"})])
         self.assertEqual(2, len(fs.values))
 
-        self.INT_B.wait_address("Conn/*/One")
+        self.INT_B.wait_address("Conn/*/One", count=2)
         self.assertEqual(2, len(self._get_address(self.INT_A, "Conn/*/One")))
 
         # between interiors
@@ -2996,8 +2995,8 @@ class StreamingMessageTest(TestCase):
         # start a new broker on EB1
         fake_broker = FakeBroker(self.EB1.route_container)
         # wait until the link route appears on the interior routers
-        self.INT_B.wait_address("MyLinkRoute")
-        self.INT_A.wait_address("MyLinkRoute")
+        self.INT_B.wait_address("MyLinkRoute", count=2)
+        self.INT_A.wait_address("MyLinkRoute", count=2)
         return fake_broker
 
     def spawn_receiver(self, router, count, address, expect=None):
@@ -3045,7 +3044,6 @@ class StreamingMessageTest(TestCase):
         """
         Verify that a streaming message can be delivered over a link route
         """
-
         fake_broker = self._start_broker_EB1()
 
         rx = self.spawn_receiver(self.EB1, count=1,

@@ -3905,7 +3905,7 @@ class OneRouterTransactionalAttachTest(TestCase):
                                        auto_accept=False,
                                        auto_settle=False)
         cls.router.wait_connectors()
-        cls.router.wait_address("closest/queue01")
+        cls.router.wait_address("closest/queue01", count=2)
 
     def test_01_verify_attach(self):
         """
