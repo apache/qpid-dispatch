@@ -636,7 +636,7 @@ class LinkRouteIngressEgressTransitTest(TestCase):
         # to settle
         cls.routers[2].wait_router_connected('QDR.B')
         cls.routers[1].wait_router_connected('QDR.C')
-        cls.routers[2].wait_address("pulp.task", remotes=1, delay=3)
+        cls.routers[2].wait_address("pulp.task", remotes=1, delay=3, count=2)
 
         # This is not a classic router network in the sense that QDR.A and D are acting as brokers. We allow a little
         # bit more time for the routers to stabilize.

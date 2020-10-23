@@ -167,7 +167,7 @@ class LinkRouteTest(TestCase):
         # to settle
         cls.routers[1].wait_router_connected('QDR.C')
         cls.routers[2].wait_router_connected('QDR.B')
-        cls.routers[2].wait_address("org.apache", remotes=1, delay=0.5)
+        cls.routers[2].wait_address("org.apache", remotes=1, delay=0.5, count=2)
 
         # This is not a classic router network in the sense that QDR.A and D are acting as brokers. We allow a little
         # bit more time for the routers to stabilize.
@@ -442,7 +442,7 @@ class LinkRouteTest(TestCase):
 
         # wait until the host we're connecting to gets its next hop for the
         # pattern we're connecting to
-        connect_node.wait_address(expected_pattern, remotes=1, delay=0.1)
+        connect_node.wait_address(expected_pattern, remotes=1, delay=0.1, count=2)
 
         # Connect to 'connect_node' and send message to 'address'
 
@@ -1919,10 +1919,8 @@ class ConnectionLinkRouteTest(TestCase):
         self.assertEqual(2, len(fs.values))
 
         # the address should propagate to A and B
-        self.QDR_A.wait_address(address="Eflea.*")
-        self.QDR_A.wait_address(address="Fflea.*")
-        self.QDR_B.wait_address(address="Eflea.*")
-        self.QDR_B.wait_address(address="Fflea.*")
+        self.QDR_A.wait_address(address="flea.*", count=2)
+        self.QDR_B.wait_address(address="flea.*", count=2)
 
         # now have the service delete the config
         fs.delete_config()
@@ -1955,8 +1953,7 @@ class ConnectionLinkRouteTest(TestCase):
         self.assertEqual(2, len(fs.values))
 
         # wait for the address to propagate to B
-        self.QDR_B.wait_address(address="Eflea.*")
-        self.QDR_B.wait_address(address="Fflea.*")
+        self.QDR_B.wait_address(address="flea.*", count=2)
 
         # ensure the link routes are not visible via other connections
         clrs = mgmt_A.query(self._AS_TYPE)
@@ -2446,7 +2443,7 @@ class LinkRoute3Hop(TestCase):
         cls.fake_service = FakeService(cls.QDR_A.addresses[1],
                                        container_id="FakeService")
         cls.QDR_C.wait_address("closest/test-client",
-                               remotes=1)
+                               remotes=1, count=2)
 
     def test_01_parallel_link_routes(self):
         """
