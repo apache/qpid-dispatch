@@ -112,6 +112,9 @@ message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERS
 ## Optional dependencies
 ##
 
+# Benchmarks
+OPTION(BUILD_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" OFF)
+
 # http2 support is optional
 find_package(libnghttp2 1.33.0)
 CMAKE_DEPENDENT_OPTION(USE_LIBNGHTTP2 "Use libnghttp2 for HTTP/2 support" ON
