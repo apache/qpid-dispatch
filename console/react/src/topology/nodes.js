@@ -258,8 +258,7 @@ export class Nodes {
   // vary the following force graph attributes based on nodeCount
   static forceScale(nodeCount, minmax) {
     let count = Math.max(Math.min(nodeCount, 80), 6);
-    let x = d3.scale
-      .linear()
+    let x = d3.scaleLinear()
       .domain([6, 80])
       .range(minmax);
     return x(count);
@@ -339,7 +338,7 @@ export class Nodes {
       });
     });
   }
-  // Convert node's x,y coordinates to longitude, lattitude
+  // Convert node's x,y coordinates to longitude, latitude
   saveLonLat(backgroundMap, nodes) {
     if (!backgroundMap || !backgroundMap.initialized) return;
     // didn't pass nodes, use all nodes
@@ -361,7 +360,7 @@ export class Nodes {
       }
     }
   }
-  // convert all nodes' longitude,lattitude to x,y coordinates
+  // convert all nodes' longitude,latitude to x,y coordinates
   setXY(backgroundMap) {
     if (!backgroundMap) return;
     for (let i = 0; i < this.nodes.length; i++) {

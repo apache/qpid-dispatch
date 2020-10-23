@@ -84,8 +84,7 @@ export class BackgroundMap {
     this.scaleExtent = [1, 10];
 
     // setup the projection with some defaults
-    this.projection = d3.geo
-      .mercator()
+    this.projection = d3.geoMercator()
       .rotate([this.rotate, 0])
       .scale(1)
       .translate([width / 2, height / 2]);
