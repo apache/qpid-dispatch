@@ -626,27 +626,23 @@ static void compose_and_deliver(qdr_http2_stream_data_t *stream_data, qd_compose
     }
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Initiating qdr_link_deliver in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
 
-    stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
-    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery dlv:%lx", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
-
-    if (stream_data->in_dlv) {
+    if (!stream_data->in_dlv && stream_data->in_link_credit > 0) {
+        stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in qdr_http_flow dlv:%lx", stream_data->session_data->conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
         qdr_delivery_set_context(stream_data->in_dlv, stream_data);
-        qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "http2_adaptor - release protection of return from deliver");
-    } else {
-        //
-        // If there is no delivery, the message is now and will always be unroutable because there is no address.
-        //
-        qd_message_set_discard(qdr_delivery_message(stream_data->in_dlv), true);
-        if (receive_complete) {
-            qd_message_free(qdr_delivery_message(stream_data->in_dlv));
-        }
+        qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "http2_adaptor - qdr_http_flow - release protection of return from deliver");
+        stream_data->in_link_credit -= 1;
     }
-
-
 }
 
 static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_complete)
 {
+    if (stream_data->in_dlv)
+        return false;
+
+    if (stream_data->in_link_credit == 0)
+        return false;
+
     qd_composed_field_t  *header_and_props = 0;
     qdr_http2_connection_t *conn  = stream_data->session_data->conn;
 
@@ -1114,6 +1110,18 @@ static void qdr_http_detach(void *context, qdr_link_t *link, qdr_error_t *error,
 
 static void qdr_http_flow(void *context, qdr_link_t *link, int credit)
 {
+    if (credit > 0) {
+        qdr_http2_stream_data_t *stream_data = qdr_link_get_context(link);
+        if (! stream_data)
+            return;
+        stream_data->in_link_credit += credit;
+        if (route_delivery(stream_data, qd_message_receive_complete(stream_data->message))) {
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] qdr_http_flow, delivery routed successfully", stream_data->session_data->conn->conn_id);
+        }
+        else {
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] qdr_http_flow delivery not routed", stream_data->session_data->conn->conn_id);
+        }
+    }
 }
 
 
@@ -1531,7 +1539,6 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
                                                      0,
                                                      &(stream_data->incoming_id));
         qdr_link_set_context(stream_data->in_link, stream_data);
-
         qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] - qdr_http_deliver - delivery for stream_dispatcher", conn->conn_id);
     }
     else if (stream_data) {

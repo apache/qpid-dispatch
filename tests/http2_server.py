@@ -45,9 +45,9 @@ async def delete_myinfo(id):  # noqa
 @app.route('/myinfo', methods=['GET', 'POST', 'PUT'])
 async def create_myinfo():
     form = await request.form
-    name = form['fname']
-    age = form['lname']
-    message = "Success! Your first name is %s, last name is %s" % (name, age)
+    fname = form['fname']
+    lname = form['lname']
+    message = "Success! Your first name is %s, last name is %s" % (fname, lname)
     return message
 
 def large_string(length):
