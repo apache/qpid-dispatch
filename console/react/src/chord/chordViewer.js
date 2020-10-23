@@ -77,8 +77,8 @@ class ChordViewer extends Component {
     this.formatNumber = d3.format(",.1f");
 
     // colors
-    this.colorGen = d3.scale.category20();
-    // The colorGen funtion is not random access.
+    this.colorGen = d3.scaleOrdinal(d3.schemeSpectral);
+    // The colorGen function is not random access.
     // To get the correct color[19] you first have to get all previous colors
     // I suspect some caching is going on in d3
     for (let i = 0; i < 20; i++) {
