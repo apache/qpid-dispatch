@@ -10,7 +10,7 @@
     "@patternfly/react-styles": "^4.5.0",
     "@patternfly/react-table": "^2.11.1",
     "@patternfly/react-topology": "^2.7.31",
-    "d3": "^3.5.17",
+    "d3": "^6.2.0",
     "d3-queue": "^3.0.7",
     "express": "^4.17.1",
     "font-awesome": "^4.7.0",
