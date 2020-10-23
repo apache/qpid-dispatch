@@ -42,16 +42,20 @@ def curl_available():
         return False
 
 def quart_available():
+    """
+    Checks if quart version is greater than 0.13
+    """
     popen_args = ['quart', '--version']
     try:
         process = Process(popen_args,
-                          name='curl_check',
+                          name='quart_check',
                           stdout=PIPE,
                           expect=None,
                           universal_newlines=True)
         out = process.communicate()[0]
         parts = out.split(".")
-        if int(parts[1]) >= 13:
+        major_version = parts[0]
+        if int(major_version[-1]) > 0 or int(parts[1]) >= 13:
             return True
         return False
     except Exception as e:
@@ -87,8 +91,8 @@ class Http2TestBase(TestCase):
 
 class CommonHttp2Tests():
     """
-    The tests in this class are run by both Http2TestOneRouter and
-    Http2TestTwoRouter
+    Common Base class containing all tests. These tests are run by all
+    topologies of routers.
     """
     @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     # Tests the HTTP2 head request
@@ -190,10 +194,10 @@ class CommonHttp2Tests():
         self.assertTrue(passed)
 
 
-class Http2TestOneRouter(Http2TestBase, CommonHttp2Tests):
+class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
     def setUpClass(cls):
-        super(Http2TestOneRouter, cls).setUpClass()
+        super(Http2TestOneStandaloneRouter, cls).setUpClass()
         if skip_test():
             return
         cls.http2_server_name = "http2_server"
@@ -217,6 +221,57 @@ class Http2TestOneRouter(Http2TestBase, CommonHttp2Tests):
         cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
 
 
+class Http2TestOneEdgeRouter(Http2TestBase, CommonHttp2Tests):
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestOneEdgeRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        name = "http2-test-router"
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+        ])
+        cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+class Http2TestOneInteriorRouter(Http2TestBase, CommonHttp2Tests):
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestOneInteriorRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        name = "http2-test-router"
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+        ])
+        cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
 
 class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
@@ -261,3 +316,145 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         cls.router_qdrb.wait_router_connected('QDR.A')
 
         sleep(2)
+
+
+
+class Http2TestEdgeInteriorRouter(Http2TestBase, CommonHttp2Tests):
+    """
+    The interior router connects to the HTTP2 server and the curl client
+    connects to the edge router.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestEdgeInteriorRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        inter_router_port = cls.tester.get_port()
+        config_edgea = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': 'connectorToA', 'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        config_qdrb = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('listener', {'role': 'edge', 'port': inter_router_port}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+        ])
+
+        cls.router_qdrb = cls.tester.qdrouterd("interior-router", config_qdrb, wait=True)
+        cls.router_qdra = cls.tester.qdrouterd("edge-router", config_edgea)
+        sleep(3)
+
+
+class Http2TestInteriorEdgeRouter(Http2TestBase, CommonHttp2Tests):
+    """
+    The edge router connects to the HTTP2 server and the curl client
+    connects to the interior router.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestInteriorEdgeRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        inter_router_port = cls.tester.get_port()
+        config_edge = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': 'connectorToA', 'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        config_qdra = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('listener', {'role': 'edge', 'port': inter_router_port}),
+            ('httpListener',
+             {'port': cls.tester.get_port(), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+        ])
+
+        cls.router_qdra = cls.tester.qdrouterd("interior-router", config_qdra, wait=True)
+        cls.router_qdrb = cls.tester.qdrouterd("edge-router", config_edge)
+        sleep(3)
+
+
+
+class Http2TestEdgeToEdgeViaInteriorRouter(Http2TestBase, CommonHttp2Tests):
+    """
+    The edge router connects to the HTTP2 server and the curl client
+    connects to another edge router. The two edge routers are connected
+    via an interior router.
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestEdgeToEdgeViaInteriorRouter, cls).setUpClass()
+        if skip_test():
+            return
+        cls.http2_server_name = "http2_server"
+        os.environ["QUART_APP"] = "http2server:app"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="http2_server.py")
+        inter_router_port = cls.tester.get_port()
+        config_edge_b = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('httpConnector',
+             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': 'connectorToA', 'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        config_qdra = Qdrouterd.Config([
+            ('router', {'mode': 'interior', 'id': 'QDR.A'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+            ('listener', {'role': 'edge', 'port': inter_router_port}),
+        ])
+
+        config_edge_a = Qdrouterd.Config([
+            ('router', {'mode': 'edge', 'id': 'EDGE.B'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal',
+                          'host': '0.0.0.0'}),
+            ('httpListener',
+             {'port': cls.tester.get_port(), 'address': 'examples',
+              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('connector', {'name': 'connectorToA', 'role': 'edge',
+                           'port': inter_router_port,
+                           'verifyHostname': 'no'})
+        ])
+
+        cls.interior_qdr = cls.tester.qdrouterd("interior-router", config_qdra,
+                                               wait=True)
+        cls.router_qdra = cls.tester.qdrouterd("edge-router-a", config_edge_a)
+        cls.router_qdrb = cls.tester.qdrouterd("edge-router-b", config_edge_b)
+        sleep(5)
