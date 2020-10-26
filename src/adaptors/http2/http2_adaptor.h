@@ -16,6 +16,8 @@
  * specific language governing permissions and limitations
  * under the License.
  */
+#include <time.h>
+
 #include <qpid/dispatch/server.h>
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/compose.h>
@@ -117,6 +119,7 @@ struct qdr_http2_connection_t {
     pn_raw_connection_t     *pn_raw_conn;
     pn_raw_buffer_t          read_buffers[4];
     qd_timer_t              *activate_timer;
+    qd_timer_t              *ping_timer;  // This timer is used to send a ping frame on the egress connection every 4 seconds.
     qd_http_bridge_config_t *config;
     qd_server_t             *server;
     uint64_t                 conn_id;
@@ -134,6 +137,7 @@ struct qdr_http2_connection_t {
     bool                      ingress;
     bool                      timer_scheduled;
     bool                      client_magic_sent;
+    time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
     DEQ_LINKS(qdr_http2_connection_t);
  };
 
