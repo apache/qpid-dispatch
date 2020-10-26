@@ -1244,7 +1244,7 @@ class RouterTest(TestCase):
         # Connects to an edge router and runs "qdstat --all-routers"
         # "qdstat --all-routers" is same as "qdstat --all-routers --g"
         # Connecting to an edge router and running "qdstat --all-routers""will only yield the
-        # summary statostics of the edge router. It will not show statistics of the interior routers.
+        # summary statistics of the edge router. It will not show statistics of the interior routers.
         outs = self.run_qdstat(['--all-routers'],
                                address=self.routers[2].addresses[0])
         self.assertIn("Router Id                        EA1", outs)

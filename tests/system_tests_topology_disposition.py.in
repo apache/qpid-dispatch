@@ -460,7 +460,7 @@ class TopologyDispositionTests ( TestCase ):
             print("Error text: ", error)
             sys.stdout.flush()
         self.assertEqual ( str(None), error )
-        self.assertTrue( '</body>' in out )
+        self.assertIn( '</body>', out )
 
         # split A.log
         p = self.popen(['/usr/bin/env', '${PY_STRING}', scraper_path, '--split', '-f', '../setUpClass/A.log'],
@@ -476,7 +476,7 @@ class TopologyDispositionTests ( TestCase ):
             print("Error text: ", error)
             sys.stdout.flush()
         self.assertEqual ( str(None), error )
-        self.assertTrue( '</body>' in out )
+        self.assertIn( '</body>', out )
 
 
 #################################################################

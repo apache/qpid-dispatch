@@ -299,7 +299,7 @@ class QdSSLUseridProxy(QdSSLUseridTest):
             except proton.utils.SendException as e:
                 result = e.state
             except proton.utils.Timeout as e:
-                self.assertTrue(False, "Timed out waiting for send credit")
+                self.fail("Timed out waiting for send credit")
 
             self.assertTrue(result == Delivery.REJECTED,
                             "Router accepted a message with user_id that did not match connection user_id")

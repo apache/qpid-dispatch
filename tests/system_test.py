@@ -38,9 +38,9 @@ from datetime import datetime
 from subprocess import PIPE, STDOUT
 from copy import copy
 try:
-    import queue as Queue   # 3.x
+    import queue as Queue  # 3.x
 except ImportError:
-    import Queue as Queue   # 2.7
+    import Queue as Queue  # 2.7
 from threading import Thread
 from threading import Event
 import json
@@ -84,7 +84,7 @@ except ImportError as err:
 try:
     import qpid_messaging as qm
 except ImportError as err:
-    qm = None                   # pylint: disable=invalid-name
+    qm = None  # pylint: disable=invalid-name
     MISSING_MODULES.append(str(err))
 
 def find_exe(program):
@@ -157,7 +157,7 @@ def retry_exception(function, timeout=TIMEOUT, delay=.001, max_delay=1, exceptio
     while True:
         try:
             return function()
-        except Exception as e:    # pylint: disable=broad-except
+        except Exception as e:  # pylint: disable=broad-except
             if exception_test:
                 exception_test(e)
             delay = retry_delay(deadline, delay, max_delay)
@@ -645,7 +645,7 @@ class Qdrouterd(Process):
             return False
 
     def wait_address(self, address, subscribers=0, remotes=0, containers=0,
-                     count=1, **retry_kwargs ):
+                     count=1, **retry_kwargs):
         """
         Wait for an address to be visible on the router.
         @keyword subscribers: Wait till subscriberCount >= subscribers
@@ -800,7 +800,7 @@ class Tester(object):
         return p
 
 
-class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-methods
+class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-methods
     """A TestCase that sets up its own working directory and is also a Tester."""
 
     def __init__(self, test_method):
@@ -867,13 +867,30 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
         for i in seq:
             assert i > avg/2, "Work not fairly distributed: %s"%seq
 
-    def assertIn(self, item, items):
-        assert item in items, "%s not in %s" % (item, items)
+    if not hasattr(unittest.TestCase, 'assertIn'):
+        def assertIn(self, item, items, msg=None):
+            """For Python < 2.7"""
+            assert item in items, msg or "%s not in %s%s"
 
-    if not hasattr(unittest.TestCase, 'assertRegexpMatches'):
-        def assertRegexpMatches(self, text, regexp, msg=None):
-            """For python < 2.7: assert re.search(regexp, text)"""
-            assert re.search(regexp, text), msg or "Can't find %r in '%s'" %(regexp, text)
+    if not hasattr(unittest.TestCase, 'assertNotIn'):
+        def assertNotIn(self, item, items, msg=None):
+            assert item not in items, msg or "%s not in %s%s"
+
+    if not hasattr(unittest.TestCase, 'assertRegex'):
+        def assertRegex(self, text, regexp, msg=None):
+            """For python < 3.2"""
+            if hasattr(unittest.TestCase, 'assertRegexpMatches'):
+                self.assertRegexpMatches(text, regexp, msg)
+            else:
+                assert re.search(regexp, text), msg or "Can't find %r in '%s'" % (regexp, text)
+
+    if not hasattr(unittest.TestCase, 'assertNotRegex'):
+        def assertNotRegex(self, text, regexp, msg=None):
+            """For python < 3.2"""
+            if hasattr(unittest.TestCase, 'assertNotRegexpMatches'):
+                self.assertNotRegexpMatches(text, regexp, msg)
+            else:
+                assert not re.search(regexp, text), msg or "Found %r in '%s'" % (regexp, text)
 
 
 class SkipIfNeeded(object):

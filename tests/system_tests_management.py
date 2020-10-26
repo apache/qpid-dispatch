@@ -154,7 +154,7 @@ class ManagementTest(system_test.TestCase):
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
         for r in expect: # We might have extras in results due to create tests
             self.assertIn(r, response.results)
-            self.assertTrue(dict(zip(attribute_names, r)) in response.get_dicts())
+            self.assertIn(dict(zip(attribute_names, r)), response.get_dicts())
 
     def test_query_attributes(self):
         """Query with attributes only"""
@@ -162,7 +162,7 @@ class ManagementTest(system_test.TestCase):
         response = self.node.query(attribute_names=attribute_names)
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
-        for r in expect: # We might have extras in results due to create tests
+        for r in expect:  # We might have extras in results due to create tests
             self.assertIn(r, response.results)
         for name in ['router/' + self.router.name, 'log/DEFAULT']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
@@ -406,9 +406,9 @@ class ManagementTest(system_test.TestCase):
             else:
                 if e.type == 'org.apache.qpid.dispatch.connection':
                     # This will make sure that the identity of the connection object is always numeric
-                    self.assertRegexpMatches(str(e.identity), "[1-9]+", e)
+                    self.assertRegex(str(e.identity), "[1-9]+", e)
                 else:
-                    self.assertRegexpMatches(e.identity, "^%s/" % short_name(e.type), e)
+                    self.assertRegex(e.identity, "^%s/" % short_name(e.type), e)
 
     def test_remote_node(self):
         """Test that we can access management info of remote nodes using get_mgmt_nodes addresses"""

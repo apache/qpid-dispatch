@@ -756,8 +756,8 @@ class OneRouterTest(TestCase):
             ro = [c for c in test.remote_offered]
             rd = [c for c in test.remote_desired]
             for rc in [ro, rd]:
-                self.assertTrue(symbol('ANONYMOUS-RELAY') in rc)
-                self.assertTrue(symbol('qd.streaming-links') in rc)
+                self.assertIn(symbol('ANONYMOUS-RELAY'), rc)
+                self.assertIn(symbol('qd.streaming-links'), rc)
 
 
 class Entity(object):
@@ -3929,11 +3929,11 @@ class OneRouterTransactionalAttachTest(TestCase):
             count = 0
             while rc.next() == Data.SYMBOL:
                 s = rc.get_symbol()
-                self.assertTrue(s in [symbol('amqp:local-transactions'),
-                                      symbol('amqp:distributed-transactions'),
-                                      symbol('amqp:promotable-transactions'),
-                                      symbol('amqp:multi-txns-per-ssn'),
-                                      symbol('amqp:multi-ssns-per-txn')])
+                self.assertIn(s, [symbol('amqp:local-transactions'),
+                                  symbol('amqp:distributed-transactions'),
+                                  symbol('amqp:promotable-transactions'),
+                                  symbol('amqp:multi-txns-per-ssn'),
+                                  symbol('amqp:multi-ssns-per-txn')])
                 count += 1
             self.assertTrue(count > 0)
 

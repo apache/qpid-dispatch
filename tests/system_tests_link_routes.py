@@ -232,7 +232,7 @@ class LinkRouteTest(TestCase):
             out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
         except Exception as e:
             exception_occurred = True
-            self.assertTrue("NotFoundStatus: Not Found" in str(e))
+            self.assertIn("NotFoundStatus: Not Found", str(e))
 
         self.assertTrue(exception_occurred)
 
@@ -243,7 +243,7 @@ class LinkRouteTest(TestCase):
             out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
         except Exception as e:
             exception_occurred = True
-            self.assertTrue("BadRequestStatus: No name or identity provided" in str(e))
+            self.assertIn("BadRequestStatus: No name or identity provided", str(e))
 
         self.assertTrue(exception_occurred)
 
