@@ -575,7 +575,7 @@ class BindingEntity(EntityAdapter):
 
 class HttpListenerEntity(EntityAdapter):
     def create(self):
-        return self._qd.qd_dispatch_configure_http_lsnr(self._dispatch, self)
+        return self._qd.qd_dispatch_configure_http_listener(self._dispatch, self)
 
     def _identifier(self):
         return _host_port_name_identifier(self)

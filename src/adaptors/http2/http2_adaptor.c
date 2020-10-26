@@ -54,7 +54,7 @@ ALLOC_DEFINE(qd_http2_buffer_t);
 typedef struct qdr_http2_adaptor_t {
     qdr_core_t                  *core;
     qdr_protocol_adaptor_t      *adaptor;
-    qd_http_lsnr_list_t          listeners;   // A list of all http2 listeners
+    qd_http_listener_list_t      listeners;   // A list of all http2 listeners
     qd_http_connector_list_t     connectors;  // A list of all http2 connectors
     qd_log_source_t             *log_source;
     void                        *callbacks;
@@ -1094,7 +1094,7 @@ ssize_t read_data_callback(nghttp2_session *session,
 
 
 
-qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_lsnr_t* listener)
+qdr_http2_connection_t *qdr_http_connection_ingress(qd_http_listener_t* listener)
 {
     qdr_http2_connection_t* ingress_http_conn = new_qdr_http2_connection_t();
     ZERO(ingress_http_conn);
@@ -2040,7 +2040,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
 static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server, void *context) {
     qd_log_source_t *log = http2_adaptor->log_source;
 
-    qd_http_lsnr_t *li = (qd_http_lsnr_t*) context;
+    qd_http_listener_t *li = (qd_http_listener_t*) context;
     const char *host_port = li->config.host_port;
 
     switch (pn_event_type(e)) {
@@ -2082,7 +2082,7 @@ void qd_http2_delete_connector(qd_dispatch_t *qd, qd_http_connector_t *connector
 /**
  * Delete listener via Management request
  */
-void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_lsnr_t *li)
+void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_listener_t *li)
 {
     if (li) {
         if (li->pn_listener) {
@@ -2099,9 +2099,9 @@ void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_lsnr_t *li)
 }
 
 
-qd_http_lsnr_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
+qd_http_listener_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
-    qd_http_lsnr_t *li = qd_http_lsnr(qd->server, &handle_listener_event);
+    qd_http_listener_t *li = qd_http_listener(qd->server, &handle_listener_event);
     if (!li) {
         qd_log(http2_adaptor->log_source, QD_LOG_ERROR, "Unable to create http listener: no memory");
         return 0;
@@ -2136,7 +2136,7 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
 
     // Free all http listeners
-    qd_http_lsnr_t *li = DEQ_HEAD(adaptor->listeners);
+    qd_http_listener_t *li = DEQ_HEAD(adaptor->listeners);
     while (li) {
         qd_http2_delete_listener(0, li);
         li = DEQ_HEAD(adaptor->listeners);

@@ -23,8 +23,8 @@
 
 #include <stdio.h>
 
-ALLOC_DECLARE(qd_http_lsnr_t);
-ALLOC_DEFINE(qd_http_lsnr_t);
+ALLOC_DECLARE(qd_http_listener_t);
+ALLOC_DEFINE(qd_http_listener_t);
 ALLOC_DECLARE(qd_http_connector_t);
 ALLOC_DEFINE(qd_http_connector_t);
 
@@ -84,9 +84,9 @@ void qd_http_free_bridge_config(qd_http_bridge_config_t *config)
 //
 
 
-qd_http_lsnr_t *qd_dispatch_configure_http_lsnr(qd_dispatch_t *qd, qd_entity_t *entity)
+qd_http_listener_t *qd_dispatch_configure_http_listener(qd_dispatch_t *qd, qd_entity_t *entity)
 {
-    qd_http_lsnr_t *listener = 0;
+    qd_http_listener_t *listener = 0;
     qd_http_bridge_config_t config;
 
     if (load_bridge_config(qd, &config, entity) != QD_ERROR_NONE) {
@@ -113,7 +113,7 @@ qd_http_lsnr_t *qd_dispatch_configure_http_lsnr(qd_dispatch_t *qd, qd_entity_t *
 
 void qd_dispatch_delete_http_listener(qd_dispatch_t *qd, void *impl)
 {
-    qd_http_lsnr_t *listener = (qd_http_lsnr_t*) impl;
+    qd_http_listener_t *listener = (qd_http_listener_t*) impl;
     if (listener) {
         switch (listener->config.version) {
         case VERSION_HTTP1:
@@ -187,19 +187,19 @@ qd_error_t qd_entity_refresh_httpConnector(qd_entity_t* entity, void *impl)
 }
 
 //
-// qd_http_lsnr_t constructor
+// qd_http_listener_t constructor
 //
 
-qd_http_lsnr_t *qd_http_lsnr(qd_server_t *server, qd_server_event_handler_t handler)
+qd_http_listener_t *qd_http_listener(qd_server_t *server, qd_server_event_handler_t handler)
 {
-    qd_http_lsnr_t *li = new_qd_http_lsnr_t();
+    qd_http_listener_t *li = new_qd_http_listener_t();
     if (!li)
         return 0;
     ZERO(li);
 
     li->pn_listener = pn_listener();
     if (!li->pn_listener) {
-        free_qd_http_lsnr_t(li);
+        free_qd_http_listener_t(li);
         return 0;
     }
 
@@ -212,11 +212,11 @@ qd_http_lsnr_t *qd_http_lsnr(qd_server_t *server, qd_server_event_handler_t hand
     return li;
 }
 
-void qd_http_listener_decref(qd_http_lsnr_t* li)
+void qd_http_listener_decref(qd_http_listener_t* li)
 {
     if (li && sys_atomic_dec(&li->ref_count) == 1) {
         qd_http_free_bridge_config(&li->config);
-        free_qd_http_lsnr_t(li);
+        free_qd_http_listener_t(li);
     }
 }
 

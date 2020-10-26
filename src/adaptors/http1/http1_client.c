@@ -115,7 +115,7 @@ static void _write_pending_response(_client_request_t *req);
 
 // Listener received connection request from client
 //
-static qdr_http1_connection_t *_create_client_connection(qd_http_lsnr_t *li)
+static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
 {
     qdr_http1_connection_t *hconn = new_qdr_http1_connection_t();
 
@@ -172,7 +172,7 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_lsnr_t *li)
 static void _handle_listener_events(pn_event_t *e, qd_server_t *qd_server, void *context)
 {
     qd_log_source_t *log = qdr_http1_adaptor->log;
-    qd_http_lsnr_t *li = (qd_http_lsnr_t*) context;
+    qd_http_listener_t *li = (qd_http_listener_t*) context;
     const char *host_port = li->config.host_port;
 
     qd_log(log, QD_LOG_DEBUG, "HTTP/1.x Client Listener Event %s\n", pn_event_type_name(pn_event_type(e)));
@@ -219,9 +219,9 @@ static void _handle_listener_events(pn_event_t *e, qd_server_t *qd_server, void 
 
 // Management Agent API - Create
 //
-qd_http_lsnr_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
+qd_http_listener_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
-    qd_http_lsnr_t *li = qd_http_lsnr(qd->server, &_handle_listener_events);
+    qd_http_listener_t *li = qd_http_listener(qd->server, &_handle_listener_events);
     if (!li) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_ERROR, "Unable to create http listener: no memory");
         return 0;
@@ -242,7 +242,7 @@ qd_http_lsnr_t *qd_http1_configure_listener(qd_dispatch_t *qd, const qd_http_bri
 
 // Management Agent API - Delete
 //
-void qd_http1_delete_listener(qd_dispatch_t *ignore, qd_http_lsnr_t *li)
+void qd_http1_delete_listener(qd_dispatch_t *ignore, qd_http_listener_t *li)
 {
     if (li) {
         if (li->pn_listener) {
