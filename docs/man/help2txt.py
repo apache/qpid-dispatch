@@ -45,7 +45,8 @@ def help2txt(help_out):
         help_out = help_out.decode()
 
     options = re.search("^Options:$", help_out, re.IGNORECASE | re.MULTILINE)
-    if (options): help_out = help_out[options.end():]
+    if (options):
+        help_out = help_out[options.end():]
     result = ""
 
     def heading(text, depth):
@@ -59,7 +60,8 @@ def help2txt(help_out):
     return result
 
 def main(argv):
-    if len(argv) < 2: raise ValueError("Wrong number of arguments\nUsage %s"
+    if len(argv) < 2:
+        raise ValueError("Wrong number of arguments\nUsage %s"
                                        " <program> [args,...]" % argv[0])
     program = argv[1:]
     print(help2txt(check_output(program)))

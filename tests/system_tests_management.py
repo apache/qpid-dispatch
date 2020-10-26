@@ -433,7 +433,8 @@ class ManagementTest(system_test.TestCase):
         result = self.node.get_operations(type=DUMMY)
         self.assertEqual({DUMMY: ["CREATE", "READ", "UPDATE", "DELETE", "CALLME"]}, result)
         result = self.node.get_operations()
-        for type in LISTENER, LINK: self.assertIn(type, result)
+        for type in LISTENER, LINK:
+            self.assertIn(type, result)
         self.assertEqual(["UPDATE", "READ"], result[LINK])
 
     def test_get_attributes(self):
@@ -441,8 +442,10 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(set([u'arg1', u'arg2', u'num1', u'num2', u'name', u'identity', u'type']),
                          set(result[DUMMY]))
         result = self.node.get_attributes()
-        for type in LISTENER, LINK: self.assertIn(type, result)
-        for a in ['linkType', 'linkDir', 'owningAddr']: self.assertIn(a, result[LINK])
+        for type in LISTENER, LINK:
+            self.assertIn(type, result)
+        for a in ['linkType', 'linkDir', 'owningAddr']:
+            self.assertIn(a, result[LINK])
 
     def test_standalone_no_inter_router(self):
         """Verify that we do not allow inter-router connectors or listeners in standalone mode"""

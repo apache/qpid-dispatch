@@ -304,7 +304,8 @@ class MessageDef(object):
     """A request or response message"""
     def __init__(self, body=None, properties=None):
         self.body = None
-        if body: self.body = AttributeType("body", **body)
+        if body:
+            self.body = AttributeType("body", **body)
         self.properties = dict((name, AttributeType(name, **value))
                                for name, value in (properties or {}).items())
 
@@ -316,8 +317,10 @@ class OperationDef(object):
             self.name = name
             self.description = description
             self.request = self.response = None
-            if request: self.request = MessageDef(**request)
-            if response: self.response = MessageDef(**response)
+            if request:
+                self.request = MessageDef(**request)
+            if response:
+                self.response = MessageDef(**response)
         except Exception as exc:
             raise ValidationError("Operation '%s': %s\n%s"
                                   % (name, str(exc), sys.exc_info()[2]))
@@ -402,7 +405,8 @@ class EntityType(object):
 
     def init(self):
         """Find bases after all types are loaded."""
-        if self._init: return
+        if self._init:
+            return
         self._init = True
         if self.base:
             self.base = self.schema.entity_type(self.base)
@@ -453,7 +457,8 @@ class EntityType(object):
         @param attributes: Map attributes name:value or Entity with attributes property.
             Modifies attributes: adds defaults, converts values.
         """
-        if isinstance(attributes, SchemaEntity): attributes = attributes.attributes
+        if isinstance(attributes, SchemaEntity):
+            attributes = attributes.attributes
 
         try:
             # Add missing values
@@ -585,14 +590,16 @@ class Schema(object):
 
     def short_name(self, name):
         """Remove prefix from name if present"""
-        if not name: return name
+        if not name:
+            return name
         if name.startswith(self.prefixdot):
             name = name[len(self.prefixdot):]
         return name
 
     def long_name(self, name):
         """Add prefix to unqualified name"""
-        if not name: return name
+        if not name:
+            return name
         if not name.startswith(self.prefixdot):
             name = self.prefixdot + name
         return name
@@ -669,7 +676,8 @@ class Schema(object):
 
     def filter(self, predicate):
         """Return an iterator over entity types that satisfy predicate."""
-        if predicate is None: return self.entity_types.values()
+        if predicate is None:
+            return self.entity_types.values()
         return (t for t in self.entity_types.values() if predicate(t))
 
     def by_type(self, type):
@@ -686,7 +694,8 @@ class SchemaEntity(EntityBase):
         super(SchemaEntity, self).__init__(attributes, **kwattrs)
         self.__dict__['entity_type'] = entity_type
         self.attributes.setdefault('type', entity_type.name)
-        if validate: self.validate()
+        if validate:
+            self.validate()
 
     def _set(self, name, value):
         super(SchemaEntity, self)._set(name, value)

@@ -97,12 +97,14 @@ class QdmanageTest(TestCase):
     def assert_entity_equal(self, expect, actual, copy=None):
         """Copy keys in copy from actual to idenity, then assert maps equal."""
         if copy:
-            for k in copy: expect[k] = actual[k]
+            for k in copy:
+                expect[k] = actual[k]
         self.assertEqual(expect, actual)
 
     def assert_entities_equal(self, expect, actual, copy=None):
         """Do assert_entities_equal on a list of maps."""
-        for e, a in zip(expect, actual): self.assert_entity_equal(e, a, copy)
+        for e, a in zip(expect, actual):
+            self.assert_entity_equal(e, a, copy)
 
     def test_crud(self):
 

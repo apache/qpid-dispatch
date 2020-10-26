@@ -167,7 +167,8 @@ class SchemaTest(unittest.TestCase):
         try:
             e.nosuch = 'x'
             self.fail("Expected exception")
-        except: pass
+        except:
+            pass
 
 if __name__ == '__main__':
     unittest.main()

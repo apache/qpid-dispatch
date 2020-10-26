@@ -192,8 +192,10 @@ class EntityAdapter(SchemaEntity):
         Generate identifier. identity=type/identifier.
         Default is per-type counter, derived classes can override.
         """
-        try: counter = type(self)._identifier_count
-        except AttributeError: counter = type(self)._identifier_count = AtomicCount()
+        try:
+            counter = type(self)._identifier_count
+        except AttributeError:
+            counter = type(self)._identifier_count = AtomicCount()
         return str(counter.next())
 
     def _refresh(self):
@@ -634,7 +636,8 @@ class EntityCache(object):
             self.entities.remove(entity)
             self.log(LOG_DEBUG, "Remove %s entity: %s" %
                      (entity.entity_type.short_name, entity.attributes['identity']))
-        except ValueError: pass
+        except ValueError:
+            pass
 
     def remove(self, entity):
         self._remove(entity)
@@ -679,7 +682,8 @@ class EntityCache(object):
                     entity_type = self.schema.entity_type(type)
                     self._add_implementation(CImplementation(self.qd, entity_type, pointer))
             # Refresh the entity values while the lock is still held.
-            for e in self.entities: e._refresh()
+            for e in self.entities:
+                e._refresh()
         finally:
             self.qd.qd_entity_refresh_end()
             self.qd.qd_dispatch_router_unlock(self.agent.dispatch)
@@ -694,8 +698,10 @@ class ManagementEntity(EntityAdapter):
 
     def requested_type(self, request):
         type = request.properties.get('entityType')
-        if type: return self._schema.entity_type(type)
-        else: return None
+        if type:
+            return self._schema.entity_type(type)
+        else:
+            return None
 
     def query(self, request):
         """Management node query operation"""
@@ -723,8 +729,10 @@ class ManagementEntity(EntityAdapter):
             non_empty = False
             for name in names:
                 result.append(entity.attributes.get(name))
-                if result[-1] is not None: non_empty = True
-            if non_empty: results.append(result)
+                if result[-1] is not None:
+                    non_empty = True
+            if non_empty:
+                results.append(result)
 
         self._agent.entities.map_type(add_result, entity_type)
         return (OK, {'attributeNames': names, 'results': results})
@@ -764,7 +772,8 @@ class ManagementEntity(EntityAdapter):
 
     def _intprop(self, request, prop):
         value = request.properties.get(prop)
-        if value is not None: value = int(value)
+        if value is not None:
+            value = int(value)
         return value
 
     def get_json_schema(self, request):
@@ -850,7 +859,8 @@ class Agent(object):
 
     def respond(self, request, status=OK, description=None, body=None):
         """Send a response to the client"""
-        if body is None: body = {}
+        if body is None:
+            body = {}
         description = description or STATUS_TEXT[status]
         response = Message(
             address=request.reply_to,
@@ -889,8 +899,10 @@ class Agent(object):
                 error(InternalServerErrorStatus("%s: %s"%(type(e).__name__, e)), format_exc())
 
     def entity_type(self, type):
-        try: return self.schema.entity_type(type)
-        except ValidationError as e: raise NotFoundStatus(str(e))
+        try:
+            return self.schema.entity_type(type)
+        except ValidationError as e:
+            raise NotFoundStatus(str(e))
 
     def handle(self, request):
         """
@@ -1009,7 +1021,8 @@ class Agent(object):
             raise NotFoundStatus("No entity with %s" % attrvals())
 
         for k, v in dict_iteritems(ids):
-            if entity[k] != v: raise BadRequestStatus("Conflicting %s" % attrvals())
+            if entity[k] != v:
+                raise BadRequestStatus("Conflicting %s" % attrvals())
 
         if requested_type:
             if not entity.entity_type.is_a(requested_type):

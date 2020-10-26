@@ -482,12 +482,14 @@ def main_except(argv):
     # loop to print table with no expanded data
     print("<h4>With transfer data (N=%d)</h4>" % len(w_data))
     print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
-    for line in w_data: print(line)
+    for line in w_data:
+        print(line)
     print("</table>")
 
     print("<h4>With no transfer data (N=%d)</h4>" % len(wo_data))
     print("<table><tr><th>Address</th> <th>N Links</th> <th>Frames</th> <th>Transfers</th> <th>Unsettled</th> </tr>")
-    for line in wo_data: print(line)
+    for line in wo_data:
+        print(line)
     print("</table>")
 
     # loop to print expandable sub tables

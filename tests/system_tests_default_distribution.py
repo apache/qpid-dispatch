@@ -58,7 +58,8 @@ class DefaultDistributionTest(TestCase):
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_create_unavailable_sender(self):

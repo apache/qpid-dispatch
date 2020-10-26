@@ -191,7 +191,8 @@ class RouterEngine(object):
                      'link-state-set' : "The set of link states from known routers",
                      'next-hops'      : "Next hops to each known router"
                      }
-        if kind == 'link-state'     : return self.neighbor_engine.link_state.to_dict()
+        if kind == 'link-state'     :
+            return self.neighbor_engine.link_state.to_dict()
         if kind == 'link-state-set' :
             copy = {}
             for _id,_ls in self.link_state_engine.collection.items():

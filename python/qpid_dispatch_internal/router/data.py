@@ -303,10 +303,14 @@ class MessageMAU(object):
         _del = ''
         _exist = ''
         _hints = ''
-        if self.add_list != None:   _add   = ' add=%r'   % self.add_list
-        if self.del_list != None:   _del   = ' del=%r'   % self.del_list
-        if self.exist_list != None: _exist = ' exist=%r' % self.exist_list
-        if self.hints != None: _hints = ' hints=%r' % self.hints
+        if self.add_list != None:
+            _add   = ' add=%r'   % self.add_list
+        if self.del_list != None:
+            _del   = ' del=%r'   % self.del_list
+        if self.exist_list != None:
+            _exist = ' exist=%r' % self.exist_list
+        if self.hints != None:
+            _hints = ' hints=%r' % self.hints
         return "MAU(id=%s pv=%d area=%s mobile_seq=%d%s%s%s%s)" % \
                 (self.id, self.version, self.area, self.mobile_seq, _add, _del, _exist, _hints)
 
@@ -315,10 +319,14 @@ class MessageMAU(object):
                 'pv'         : self.version,
                 'area'       : self.area,
                 'mobile_seq' : self.mobile_seq }
-        if self.add_list != None:   body['add']   = self.add_list
-        if self.del_list != None:   body['del']   = self.del_list
-        if self.exist_list != None: body['exist'] = self.exist_list
-        if self.hints != None: body['hints'] = self.hints
+        if self.add_list != None:
+            body['add']   = self.add_list
+        if self.del_list != None:
+            body['del']   = self.del_list
+        if self.exist_list != None:
+            body['exist'] = self.exist_list
+        if self.hints != None:
+            body['hints'] = self.hints
         return body
 
 

@@ -58,7 +58,8 @@ class QdstatTest(system_test.TestCase):
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_help(self):
@@ -504,7 +505,8 @@ class QdstatTestVhostPolicy(system_test.TestCase):
         out = p.communicate()[0]
         assert p.returncode == 0, \
             "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-        if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+        if regexp:
+            assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
         return out
 
     def test_vhost(self):
@@ -749,7 +751,8 @@ try:
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-            if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+            if regexp:
+                assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
             return out
 
         def get_ssl_args(self):
@@ -926,7 +929,8 @@ try:
             out = p.communicate()[0]
             assert p.returncode == 0, \
                 "qdstat exit status %s, output:\n%s" % (p.returncode, out)
-            if regexp: assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
+            if regexp:
+                assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
             return out
 
         def ssl_test(self, url_name, arg_names):

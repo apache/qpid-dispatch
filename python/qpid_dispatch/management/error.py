@@ -116,12 +116,18 @@ def _error_class(status):
         def __init__(self, description): ManagementError.__init__(self, status, description)
     return Error
 
-class BadRequestStatus(_error_class(BAD_REQUEST)): pass
-class UnauthorizedStatus(_error_class(UNAUTHORIZED)): pass
-class ForbiddenStatus(_error_class(FORBIDDEN)): pass
-class NotFoundStatus(_error_class(NOT_FOUND)): pass
-class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)): pass
-class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)): pass
+class BadRequestStatus(_error_class(BAD_REQUEST)):
+    pass
+class UnauthorizedStatus(_error_class(UNAUTHORIZED)):
+    pass
+class ForbiddenStatus(_error_class(FORBIDDEN)):
+    pass
+class NotFoundStatus(_error_class(NOT_FOUND)):
+    pass
+class InternalServerErrorStatus(_error_class(INTERNAL_SERVER_ERROR)):
+    pass
+class NotImplementedStatus(_error_class(NOT_IMPLEMENTED)):
+    pass
 
 __all__ = [
     u"STATUS_TEXT", u"OK", u"NO_CONTENT", u"CREATED",

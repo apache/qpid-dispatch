@@ -38,7 +38,8 @@ class SchemaWriter(object):
         # Options affecting how output is written
 
     def warn(self, message):
-        if not self.quiet: print(message, file=sys.stderr)
+        if not self.quiet:
+            print(message, file=sys.stderr)
 
     def write(self, text): self.output.write(text)
 
@@ -48,7 +49,8 @@ class SchemaWriter(object):
 
     def heading(self, text=None, sub=0):
         self._heading += sub
-        if text: self.para("\n=%s %s" % ("="*self._heading, text))
+        if text:
+            self.para("\n=%s %s" % ("="*self._heading, text))
 
     class Section(namedtuple("Section", ["writer", "heading"])):
         def __enter__(self): self.writer.heading(self.heading, sub=+1)
@@ -110,7 +112,8 @@ class SchemaWriter(object):
                         self.attribute_type(prop)
 
         with self.section("Operation %s" % op.name):
-            if op.description: self.para(op.description)
+            if op.description:
+                self.para(op.description)
             request_response("request")
             request_response("response")
 

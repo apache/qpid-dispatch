@@ -2683,9 +2683,12 @@ class BalancedTest ( MessagingHandler ):
         else:
             self.n_received += 1
 
-            if   event.receiver == self.recv_1: self.count_1 += 1
-            elif event.receiver == self.recv_2: self.count_2 += 1
-            elif event.receiver == self.recv_3: self.count_3 += 1
+            if   event.receiver == self.recv_1:
+                self.count_1 += 1
+            elif event.receiver == self.recv_2:
+                self.count_2 += 1
+            elif event.receiver == self.recv_3:
+                self.count_3 += 1
 
             # I do not check for count_1 + count_2 + count_3 == total,
             # because it always will be due to how the code counts things.

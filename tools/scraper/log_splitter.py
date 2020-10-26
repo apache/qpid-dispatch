@@ -586,7 +586,8 @@ function show_node(node)
         print("<div id=\"addr_table_many\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with many links (N=%d)</h4>" % (len(addr_many)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
-        for line in addr_many: print(line)
+        for line in addr_many:
+            print(line)
         print("</table>")
         print("</div>")
 
@@ -596,7 +597,8 @@ function show_node(node)
         print("<div id=\"addr_table_few\" style=\"display:none; margin-top: 2px; margin-bottom: 2px; margin-left: 10px\">")
         print("<h4>Addresses with few links (N=%d)</h4>" % (len(addr_few)))
         print("<table><tr> <th>Address</th> <th>N References</th> </tr>")
-        for line in addr_few: print(line)
+        for line in addr_few:
+            print(line)
         print("</table>")
         print("</div>")
 

@@ -431,7 +431,8 @@ class Qdrouterd(Process):
         cl_args = cl_args or []
         self.config = copy(config)
         self.perform_teardown = perform_teardown
-        if not name: name = self.config.router_id
+        if not name:
+            name = self.config.router_id
         assert name
         # setup log and debug dump files
         self.dumpfile = os.path.abspath('%s-qddebug.txt' % name)
@@ -469,7 +470,8 @@ class Qdrouterd(Process):
         if self._management:
             try:
                 self._management.close()
-            except: pass
+            except:
+                pass
             self._management = None
 
         if not self.perform_teardown:
@@ -776,7 +778,8 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     def setUp(self):
         # Python < 2.7 will call setUp on the system_test.TestCase class
         # itself as well as the subclasses. Ignore that.
-        if self.__class__ is TestCase: return
+        if self.__class__ is TestCase:
+            return
         # Hack to support setUpClass on older python.
         # If the class has not already been set up, do it now.
         if not hasattr(self.__class__, 'tester'):
@@ -791,7 +794,8 @@ class TestCase(unittest.TestCase, Tester): # pylint: disable=too-many-public-met
     def tearDown(self):
         # Python < 2.7 will call tearDown on the system_test.TestCase class
         # itself as well as the subclasses. Ignore that.
-        if self.__class__ is TestCase: return
+        if self.__class__ is TestCase:
+            return
         Tester.teardown(self)
         # Hack to support tearDownClass on older versions of python.
         if hasattr(self.__class__, '_tear_down_class'):

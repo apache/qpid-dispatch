@@ -75,11 +75,16 @@ class Config(object):
         for s in sections:
             s[0] = camelcase(s[0])
             s[1] = dict((camelcase(k), v) for k, v in dict_iteritems(s[1]))
-            if s[0] == "address":   s[0] = "router.config.address"
-            if s[0] == "linkRoute": s[0] = "router.config.linkRoute"
-            if s[0] == "autoLink":  s[0] = "router.config.autoLink"
-            if s[0] == "exchange":  s[0] = "router.config.exchange"
-            if s[0] == "binding":   s[0] = "router.config.binding"
+            if s[0] == "address":
+                s[0] = "router.config.address"
+            if s[0] == "linkRoute":
+                s[0] = "router.config.linkRoute"
+            if s[0] == "autoLink":
+                s[0] = "router.config.autoLink"
+            if s[0] == "exchange":
+                s[0] = "router.config.exchange"
+            if s[0] == "binding":
+                s[0] = "router.config.binding"
 
     def _parse(self, lines):
         """

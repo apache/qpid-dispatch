@@ -179,7 +179,8 @@ class Node(object):
         @param properties: Keyword arguments for application-properties of the request.
         @return: L{proton.Message} containining the management request.
         """
-        if self.locales: properties.setdefault(u'locales', self.locales)
+        if self.locales:
+            properties.setdefault(u'locales', self.locales)
         request = proton.Message()
         request.properties = clean_dict(properties)
         request.body = body or {}
@@ -218,15 +219,18 @@ class Node(object):
             @param clean: if True remove any None values from returned dictionaries.
             """
             for r in self.results:
-                if clean: yield clean_dict(zip(self.attribute_names, r))
-                else: yield dict(zip(self.attribute_names, r))
+                if clean:
+                    yield clean_dict(zip(self.attribute_names, r))
+                else:
+                    yield dict(zip(self.attribute_names, r))
 
         def iter_entities(self, clean=False):
             """
             Return an iterator that yields an L{Entity} for each result.
             @param clean: if True remove any None values from returned dictionaries.
             """
-            for d in self.iter_dicts(clean=clean): yield Entity(self.node, d)
+            for d in self.iter_dicts(clean=clean):
+                yield Entity(self.node, d)
 
         def get_dicts(self, clean=False):
             """Results as list of dicts."""
@@ -327,7 +331,8 @@ class Node(object):
         @param identity: Entity identity.
         @return: An L{Entity}
         """
-        if name and identity: name = None # Only specify one
+        if name and identity:
+            name = None # Only specify one
         request = self.request(operation=u'READ', type=type, name=name, identity=identity)
         return Entity(self, self.call(request).body)
 
@@ -348,7 +353,8 @@ class Node(object):
         type = type or attributes.get(u'type')
         name = name or attributes.get(u'name')
         identity = identity or attributes.get(u'identity')
-        if name and identity: name = None # Only send one
+        if name and identity:
+            name = None # Only send one
         request = self.request(operation=U'UPDATE', type=type, name=name,
                                identity=identity, body=self.clean_attrs(attributes))
         return Entity(self, self.call(request).body)
@@ -362,7 +368,8 @@ class Node(object):
         @param name: Entity name.
         @param identity: Entity identity.
         """
-        if name and identity: name = None # Only specify one
+        if name and identity:
+            name = None # Only specify one
         request = self.request(operation=U'DELETE', type=type, name=name,
                                identity=identity)
         self.call(request, expect=NO_CONTENT)
