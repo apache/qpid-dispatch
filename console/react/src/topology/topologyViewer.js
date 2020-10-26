@@ -269,7 +269,7 @@ class TopologyViewer extends Component {
       this.svg.attr("width", this.width);
       this.svg.attr("height", this.height);
       if (this.backgroundMap) this.backgroundMap.setWidthHeight(width, height);
-      this.force.size([width, height]).resume();
+      // this.force.size([width, height]).resume(); // TODO
     }
   };
 
@@ -409,21 +409,23 @@ class TopologyViewer extends Component {
         this.height,
         localStorage
       );
-      this.force = d3.layout
-        .force()
-        .nodes(this.forceData.nodes.nodes)
-        .links(this.forceData.links.links)
-        .size([this.width, this.height])
-        .linkDistance(d => {
-          return this.forceData.nodes.linkDistance(d, nodeCount);
-        })
-        .charge(d => {
-          return this.forceData.nodes.charge(d, nodeCount);
-        })
-        .friction(0.1)
-        .gravity(d => {
-          return this.forceData.nodes.gravity(d, nodeCount);
-        })
+      this.force = d3.forceSimulation() // TODO XXX
+        .force("link", d3.forceLink().id(function(d) { return d.id; }))
+        .force("charge", d3.forceManyBody((node, _) => this.forceData.nodes.charge(node, nodeCount)))
+          .force("center", d3.forceCenter(width / 2, height / 2))
+        // .nodes(this.forceData.nodes.nodes)
+        // .links(this.forceData.links.links)
+        // .size([this.width, this.height])
+        // .linkDistance(d => {
+        //   return this.forceData.nodes.linkDistance(d, nodeCount);
+        // })
+        // .charge(d => {
+        //   return ;
+        // })
+        // .friction(0.1)
+        // .gravity(d => {
+        //   return this.forceData.nodes.gravity(d, nodeCount);
+        // })
         .on("tick", this.tick)
         .on("end", () => {
           this.forceData.nodes.savePositions();
@@ -431,10 +433,10 @@ class TopologyViewer extends Component {
         });
       //.start();
       this.force.stop();
-      this.force.start();
+      // this.force.start();
       if (this.backgroundMap) this.forceData.nodes.saveLonLat(this.backgroundMap);
-      this.restart();
-      this.circle.call(this.force.drag);
+      // this.restart();
+      // this.circle.call(this.force.drag);
       this.legend = new Legend(this.forceData.nodes, this.QDRLog);
       this.updateLegend();
 

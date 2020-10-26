@@ -99,11 +99,10 @@ export class BackgroundMap {
 
     this.projection.scale(this.scaleExtent[0]);
 
-    this.zoom = d3.behavior
-      .zoom()
+    this.zoom = d3.zoom() // TODO XXX
       .scaleExtent(this.scaleExtent)
-      .scale(this.projection.scale())
-      .translate([0, 0]) // not linked directly to projection
+      // .scale(this.projection.scale())
+      // .translate([0, 0]) // not linked directly to projection
       .on("zoom", this.zoomed);
 
     this.geo
@@ -179,11 +178,10 @@ export class BackgroundMap {
             translate: [width / 2, height / 2]
           };
 
-      this.zoom = d3.behavior
-        .zoom()
+        this.zoom = d3.zoom() // TODO XXX
         .scaleExtent(this.scaleExtent)
-        .scale(this.projection.scale())
-        .translate([0, 0]) // not linked directly to projection
+        // .scale(this.projection.scale())
+        // .translate([0, 0]) // not linked directly to projection
         .on("zoom", this.zoomed);
 
       if (!this.svg) this.setSvg(svg, width, height);
@@ -225,8 +223,8 @@ export class BackgroundMap {
     this.projection.rotate([this.lastProjection.rotate, 0]);
     this.projection.translate(this.lastProjection.translate);
     this.projection.scale(this.lastProjection.scale);
-    this.zoom.scale(this.lastProjection.scale);
-    this.zoom.translate(this.lastProjection.translate);
+    // this.zoom.scale(this.lastProjection.scale); // TODO XXX
+    // this.zoom.translate(this.lastProjection.translate);
   }
 
   // stop responding to pan/zoom events
