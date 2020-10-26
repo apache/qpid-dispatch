@@ -78,6 +78,13 @@ it("renders the TopologyViewer component", () => {
     fireEvent.click(legendButton);
     fireEvent.click(getByLabelText("Close"));
 
+    // turn on the world map
+    fireEvent.click(legendButton);
+    const mapCheckbox = getByText("topology-legend");
+    expect(mapCheckbox).toBeInTheDocument();
+    fireEvent.click(mapCheckbox);
+    fireEvent.click(getByLabelText("Close"));
+
     // turn on the traffic animation
 
     // dropdown the traffic panel
