@@ -682,7 +682,7 @@ static void qd_http1_adaptor_final(void *adaptor_context)
     qdr_http1_adaptor_t *adaptor = (qdr_http1_adaptor_t*) adaptor_context;
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
 
-    qd_http_lsnr_t *li = DEQ_HEAD(adaptor->listeners);
+    qd_http_listener_t *li = DEQ_HEAD(adaptor->listeners);
     while (li) {
         qd_http1_delete_listener(0, li);
         li = DEQ_HEAD(adaptor->listeners);
