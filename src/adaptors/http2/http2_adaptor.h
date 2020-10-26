@@ -35,10 +35,6 @@ size_t MAX_BUFFERS = 16;
 size_t HTTP2_DATA_FRAME_HEADER_LENGTH = 9;
 
 
-// We already have a qd_http_listener_t defined in http-libwebsockets.c
-// We will call this as qd_http_lsnr_t in order to avoid a clash.
-// At a later point in time, we will handle websocket here as well
-// and get rid of http-libwebsockets.c and rename this as qd_http_listener_t
 typedef struct qdr_http2_session_data_t qdr_http2_session_data_t;
 typedef struct qdr_http2_stream_data_t  qdr_http2_stream_data_t;
 typedef struct qdr_http2_connection_t   qdr_http2_connection_t;
