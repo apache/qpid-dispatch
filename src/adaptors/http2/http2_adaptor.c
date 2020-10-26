@@ -312,6 +312,11 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
         http_conn->activate_timer = 0;
     }
 
+    if (http_conn->ping_timer) {
+        qd_timer_free(http_conn->ping_timer);
+        http_conn->ping_timer = 0;
+    }
+
     // Free all the stream data associated with this connection/session.
     qdr_http2_stream_data_t *stream_data = DEQ_HEAD(http_conn->session_data->streams);
     while (stream_data) {
@@ -719,6 +724,29 @@ static void create_settings_frame(qdr_http2_connection_t *conn)
 }
 
 
+static void send_ping_frame(qdr_http2_connection_t *conn)
+{
+    qdr_http2_session_data_t *session_data = conn->session_data;
+    nghttp2_submit_ping(session_data->session, NGHTTP2_FLAG_NONE, 0);
+    nghttp2_session_send(session_data->session);
+}
+
+static void check_send_ping_frame(qdr_http2_connection_t *conn)
+{
+    time_t current = time(NULL);
+    time_t prev = conn->prev_ping;
+
+    //
+    // Send a ping frame every 4 seconds.
+    //
+    if (current - prev >= 4) {
+        send_ping_frame(conn);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Sent PING frame", conn->conn_id);
+        qd_timer_schedule(conn->ping_timer, 4000);
+        conn->prev_ping = current;
+    }
+}
+
 static void send_settings_frame(qdr_http2_connection_t *conn)
 {
     qdr_http2_session_data_t *session_data = conn->session_data;
@@ -747,6 +775,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
     qdr_http2_stream_data_t *stream_data = nghttp2_session_get_stream_user_data(session_data->session, stream_id);
 
     switch (frame->hd.type) {
+    case NGHTTP2_PING: {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 PING frame received", conn->conn_id, stream_id);
+    }
+    break;
     case NGHTTP2_PRIORITY: {
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 PRIORITY frame received", conn->conn_id, stream_id);
     }
@@ -1833,6 +1865,22 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
     sys_mutex_unlock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
 }
 
+
+static void egress_conn_ping_sender(void *context)
+{
+    qdr_http2_connection_t* conn = (qdr_http2_connection_t*) context;
+    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Running egress_conn_ping_sender", conn->conn_id);
+
+    if (!conn->connection_established)
+        return;
+
+    if (conn->pn_raw_conn) {
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] egress_conn_ping_sender, calling pn_raw_connection_wake()", conn->conn_id);
+        pn_raw_connection_wake(conn->pn_raw_conn);
+    }
+}
+
+
 static void egress_conn_timer_handler(void *context)
 {
     qdr_http2_connection_t* conn = (qdr_http2_connection_t*) context;
@@ -1843,7 +1891,7 @@ static void egress_conn_timer_handler(void *context)
         return;
 
     if (!conn->ingress) {
-        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] - egress_conn_timer_handler - Trying to establishing outbound connection", conn->conn_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] - Egress_conn_timer_handler - Trying to establishing outbound connection", conn->conn_id);
         http_connector_establish(conn);
     }
 }
@@ -1883,6 +1931,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     qdr_http2_connection_t* egress_http_conn = new_qdr_http2_connection_t();
     ZERO(egress_http_conn);
     egress_http_conn->activate_timer = qd_timer(http2_adaptor->core->qd, egress_conn_timer_handler, egress_http_conn);
+    egress_http_conn->ping_timer = qd_timer(http2_adaptor->core->qd, egress_conn_ping_sender, egress_http_conn);
 
     egress_http_conn->ingress = false;
     egress_http_conn->context.context = egress_http_conn;
@@ -1958,11 +2007,11 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         } else {
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED), thread_id=%i", conn->conn_id, pthread_self());
             conn->connection_established = true;
-            if (!conn->ingress) {
-                create_stream_dispatcher_link(conn);
-                qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Created stream_dispatcher_link in PN_RAW_CONNECTION_CONNECTED", conn->conn_id);
-            }
+            create_stream_dispatcher_link(conn);
+            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Created stream_dispatcher_link in PN_RAW_CONNECTION_CONNECTED", conn->conn_id);
             qdr_connection_process(conn->qdr_conn);
+            // Send a PING frame 4 seconds after opening an egress connection.
+            qd_timer_schedule(conn->ping_timer, 4000);
         }
         break;
     }
@@ -2000,6 +2049,9 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
+        if (!conn->ingress) {
+            check_send_ping_frame(conn);
+        }
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WAKE Wake-up", conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
