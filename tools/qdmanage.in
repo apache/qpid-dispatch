@@ -102,7 +102,8 @@ class QdManage():
 
     def print_result(self, result):
         """Print a string result as-is, else try json dump, else print as-is"""
-        if not result: return
+        if not result:
+            return
         if isinstance(result, (PY_STRING_TYPE, PY_TEXT_TYPE)):
             print("%s" % result)
         else:
@@ -145,7 +146,8 @@ class QdManage():
                 self.print_json(func(data).attributes)
             elif isinstance(data, Sequence):
                 self.print_json([func(attrs).attributes for attrs in data])
-            else: raise ValueError("stdin is not a JSON map or list")
+            else:
+                raise ValueError("stdin is not a JSON map or list")
         else:
             self.print_json(func(self.opts.attributes).attributes)
 

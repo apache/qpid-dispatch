@@ -264,14 +264,22 @@ class BusManager(Node):
     def _addr_class(self, addr):
         if not addr:
             return ""
-        if addr[0] == 'M'  : return "mobile"
-        if addr[0] == 'R'  : return "router"
-        if addr[0] == 'A'  : return "area"
-        if addr[0] == 'L'  : return "local"
-        if addr[0] == 'T'  : return "topo"
-        if addr[0] in 'CE' : return "link-in"
-        if addr[0] in 'DF' : return "link-out"
-        if addr[0] == 'H'  : return "edge"
+        if addr[0] == 'M'  :
+            return "mobile"
+        if addr[0] == 'R'  :
+            return "router"
+        if addr[0] == 'A'  :
+            return "area"
+        if addr[0] == 'L'  :
+            return "local"
+        if addr[0] == 'T'  :
+            return "topo"
+        if addr[0] in 'CE' :
+            return "link-in"
+        if addr[0] in 'DF' :
+            return "link-out"
+        if addr[0] == 'H'  :
+            return "edge"
         return "unknown: %s" % addr[0]
 
     def _addr_text(self, addr):
