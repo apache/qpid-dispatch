@@ -161,6 +161,7 @@ foreach(py_test_module
     system_tests_open_properties
     system_tests_http2
     system_tests_http1_adaptor
+    system_tests_tcp_adaptor
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
@@ -233,6 +234,8 @@ file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-2/policy-photoserver-sasl.sasldb  D
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-3/test-sender-receiver-limits.json DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-3)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/policy-4/management-access.json  DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/policy-4/)
 file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/authservice.py  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/TCP_echo_server.py  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/TCP_echo_client.py  DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 
 # following install() functions will be called only if you do a make "install"
 install(FILES ${SYSTEM_TEST_FILES}

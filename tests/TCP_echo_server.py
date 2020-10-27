@@ -104,7 +104,7 @@ def main_except(sock, port, echo_count, timeout, logger):
                     if key.fileobj is sock:
                         do_accept(key.fileobj, sel, logger)
                     else:
-                        assert(False, "Only listener 'sock' has None in opaque data field")
+                        raise Exception("Only listener 'sock' has None in opaque data field")
                 else:
                     total_echoed += do_service(key, mask, sel, logger)
         else:
