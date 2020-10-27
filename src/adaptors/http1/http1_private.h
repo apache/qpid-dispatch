@@ -247,7 +247,9 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                                            uint64_t                  disp,
                                            bool                      settled);
 void qdr_http1_client_conn_cleanup(qdr_http1_connection_t *hconn);
-
+void qdr_http1_client_core_conn_close(qdr_http1_adaptor_t *adaptor,
+                                      qdr_http1_connection_t *hconn,
+                                      const char *error);
 // http1_server.c protocol adaptor callbacks
 //
 void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
@@ -266,6 +268,9 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                                            uint64_t                  disp,
                                            bool                      settled);
 void qdr_http1_server_conn_cleanup(qdr_http1_connection_t *hconn);
+void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
+                                      qdr_http1_connection_t *hconn,
+                                      const char *error);
 
 // recording of stats:
 void qdr_http1_record_client_request_info(qdr_http1_adaptor_t *adaptor, qdr_http1_request_base_t *request);

@@ -363,20 +363,65 @@ static void _teardown_server_links(qdr_http1_connection_t *hconn)
 }
 
 
+//
+// A note about reconnect and activate timer handlers:
+//
+// Both _do_reconnect and _do_activate are run via separate qd_timers.
+// qd_timers execute on an arbitrary I/O thread and are guaranteed NOT to be
+// run in parallel.  The _do_activate timer is started by the core thread via
+// _core_connection_activate_CT (http1_adaptor.c).  The _do_reconnect timer is
+// started by the I/O thread handling the server raw connection
+// PN_RAW_CONNECTION_DISCONNECTED event.
+//
+// Since the server PN_RAW_CONNECTION_DISCONNECTED handler releases the raw
+// connection and at a later point in time _do_reconnect creates a new raw
+// connection it is guaranteed that _do_reconnect will NOT run in parallel with
+// an I/O thread running the raw connection event handler (since no such raw
+// connection exists when _do_reconnect is run)
+//
+// However it is possible to have a race between an I/O thread running
+// _do_activate and an I/O thread running the raw connection event handler IF
+// _do_activate runs _after_ _do_reconnect has run (since a new raw connection
+// is created and can be immediately scheduled).
+//
+// To avoid this race the _do_reconnect handler cancels the _do_activate timer
+// to prevent it from running immediately after _do_reconnect completes
+// (remember: timer handlers never run in parallel).  To prevent the core
+// thread from rescheduling _do_activate after _do_reconnect runs a lock is
+// held by _do_reconnect while it sets hconn->raw_conn.
+//
+
+
 // This adapter attempts to keep the connection to the server up as long as the
 // connector is configured.  This is called via a timer scheduled when the
 // PN_CONNECTION_CLOSE event is handled.
+// (See above note)
 //
 static void _do_reconnect(void *context)
 {
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) context;
+    bool connecting = false;
+
+    // lock out core activation
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+
+    // prevent _do_activate() from trying to process the qdr_connection after
+    // we schedule the raw connection on another thread
+    if (hconn->server.activate_timer)
+        qd_timer_cancel(hconn->server.activate_timer);
     if (!hconn->raw_conn) {
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] Connecting to HTTP server...", hconn->conn_id);
+        connecting = true;
         hconn->raw_conn = pn_raw_connection();
         pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
         // this call may reschedule the connection on another I/O thread:
         pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
     }
+
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+    if (connecting)
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"] Connecting to HTTP server...", hconn->conn_id);
 }
 
 
@@ -385,12 +430,19 @@ static void _do_reconnect(void *context)
 // connection.  If the core needs to process the qdr_connection_t when there is
 // no raw connection to wake this zero-length timer handler will perform the
 // connection processing (under the I/O thread).
+// (See above note)
 //
 static void _do_activate(void *context)
 {
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) context;
-    if (hconn->qdr_conn) {
+    if (!hconn->raw_conn && hconn->qdr_conn) {
         while (qdr_connection_process(hconn->qdr_conn)) {}
+        if (!hconn->qdr_conn) {
+            // the qdr_connection_t has been closed
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+                   "[C%"PRIu64"] HTTP/1.x server connection closed", hconn->conn_id);
+            qdr_http1_connection_free(hconn);
+        }
     }
 }
 
@@ -431,15 +483,10 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         pn_raw_connection_set_context(hconn->raw_conn, 0);
         hconn->close_connection = false;
 
-        if (!hconn->qdr_conn) {
-            // the router has closed this connection so do not try to
-            // re-establish it
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection closed", hconn->conn_id);
-            hconn->raw_conn = 0;
-            qdr_http1_connection_free(hconn);
-            return;
-        }
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection closed", hconn->conn_id);
 
+        // prevent core from activating raw conn since it will no longer exist
+        // on return from the handler
         sys_mutex_lock(qdr_http1_adaptor->lock);
         hconn->raw_conn = 0;
         sys_mutex_unlock(qdr_http1_adaptor->lock);
@@ -454,19 +501,22 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             _cancel_request(hreq);
         }
 
-        // reconnect to the server. Leave the links intact so pending requests
-        // are not aborted.  Once we've failed to reconnect after MAX_RECONNECT
-        // tries drop the links to prevent additional request from arriving.
-        //
-        qd_duration_t nap_time = RETRY_PAUSE_MSEC * hconn->server.reconnect_count;
-        if (hconn->server.reconnect_count == MAX_RECONNECT) {
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Server not responding - disconnecting...", hconn->conn_id);
-            _teardown_server_links(hconn);
-        } else {
-            hconn->server.reconnect_count += 1;  // increase next sleep interval
+        if (hconn->qdr_conn) {
+            //
+            // reconnect to the server. Leave the links intact so pending requests
+            // are not aborted.  Once we've failed to reconnect after MAX_RECONNECT
+            // tries drop the links to prevent additional request from arriving.
+            //
+            qd_duration_t nap_time = RETRY_PAUSE_MSEC * hconn->server.reconnect_count;
+            if (hconn->server.reconnect_count == MAX_RECONNECT) {
+                qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Server not responding - disconnecting...", hconn->conn_id);
+                _teardown_server_links(hconn);
+            } else {
+                hconn->server.reconnect_count += 1;  // increase next sleep interval
+            }
+            qd_timer_schedule(hconn->server.reconnect_timer, nap_time);
         }
-        qd_timer_schedule(hconn->server.reconnect_timer, nap_time);
-        return;
+        break;
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", hconn->conn_id);
@@ -523,10 +573,19 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         break;
     }
 
-    // remove me:
-    if (hconn) {
+    //
+    // After each event check connection and request status
+    //
+    if (!hconn->qdr_conn) {
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP/1.x server connection closed", hconn->conn_id);
+        qdr_http1_connection_free(hconn);
+
+    } else {
+
+        bool need_close = false;
         _server_request_t *hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
         if (hreq) {
+            // remove me:
             qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP is server request complete????", hconn->conn_id);
             qd_log(log, QD_LOG_DEBUG, "   codec_completed=%s cancelled=%s",
                    hreq->codec_completed ? "Complete" : "Not Complete",
@@ -538,124 +597,119 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                    (int) DEQ_SIZE(hreq->out_data.fifo),
                    qdr_http1_out_data_buffers_outstanding(&hreq->out_data),
                    (int) DEQ_SIZE(hreq->responses));
-        }
-    }
 
-    // Check for completed or cancelled requests
+            // Check for completed or cancelled requests
 
-    bool need_close = false;
-    _server_request_t *hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
-    if (hreq) {
+            if (hreq->cancelled) {
 
-        if (hreq->cancelled) {
-
-            // request:  have to wait until all buffers returned from proton
-            // before we can release the request delivery...
-            if (qdr_http1_out_data_buffers_outstanding(&hreq->out_data))
-                return;
-
-            if (hreq->request_dlv) {
-                // let the message drain... (TODO@(kgiusti) is this necessary?
-                if (!qdr_delivery_receive_complete(hreq->request_dlv))
+                // request:  have to wait until all buffers returned from proton
+                // before we can release the request delivery...
+                if (qdr_http1_out_data_buffers_outstanding(&hreq->out_data))
                     return;
 
-                uint64_t dispo = hreq->request_dispo ? hreq->request_dispo : PN_MODIFIED;
-                qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                                  hreq->request_dlv,
-                                                  dispo,
-                                                  true,   // settled
-                                                  0,      // error
-                                                  0,      // dispo data
-                                                  false);
-                qdr_delivery_set_context(hreq->request_dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request cancelled");
-                hreq->request_dlv = 0;
-            }
+                if (hreq->request_dlv) {
+                    // let the message drain... (TODO@(kgiusti) is this necessary?
+                    if (!qdr_delivery_receive_complete(hreq->request_dlv))
+                        return;
 
-            _server_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
-            while (rmsg) {
-                if (rmsg->dlv) {
-                    qd_message_set_receive_complete(qdr_delivery_message(rmsg->dlv));
-                    qdr_delivery_set_aborted(rmsg->dlv, true);
+                    uint64_t dispo = hreq->request_dispo ? hreq->request_dispo : PN_MODIFIED;
+                    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                                      hreq->request_dlv,
+                                                      dispo,
+                                                      true,   // settled
+                                                      0,      // error
+                                                      0,      // dispo data
+                                                      false);
+                    qdr_delivery_set_context(hreq->request_dlv, 0);
+                    qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request cancelled");
+                    hreq->request_dlv = 0;
                 }
-                _server_response_msg_free(hreq, rmsg);
-                rmsg = DEQ_HEAD(hreq->responses);
-            }
 
-            // The state of the connection to the server will be unknown if
-            // this request was not completed.
-            if (!hreq->codec_completed && hreq->base.out_http1_octets > 0)
-                need_close = true;
+                _server_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
+                while (rmsg) {
+                    if (rmsg->dlv) {
+                        qd_message_set_receive_complete(qdr_delivery_message(rmsg->dlv));
+                        qdr_delivery_set_aborted(rmsg->dlv, true);
+                    }
+                    _server_response_msg_free(hreq, rmsg);
+                    rmsg = DEQ_HEAD(hreq->responses);
+                }
 
-            _server_request_free(hreq);
+                // The state of the connection to the server will be unknown if
+                // this request was not completed.
+                if (!hreq->codec_completed && hreq->base.out_http1_octets > 0)
+                    need_close = true;
 
-        } else {
-
-            // Can the request disposition be updated?  Disposition can be
-            // updated after the entire encoded request has been written to the
-            // server.
-            if (!hreq->request_acked &&
-                hreq->request_encoded &&
-                DEQ_SIZE(hreq->out_data.fifo) == 0) {
-
-                qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                                  hreq->request_dlv,
-                                                  hreq->request_dispo,
-                                                  false,   // settled
-                                                  0,      // error
-                                                  0,      // dispo data
-                                                  false);
-                hreq->request_acked = true;
-            }
-
-            // Can we settle request?  Settle the request delivery after all
-            // response messages have been received from the server
-            // (codec_complete).  Note that the responses may not have finished
-            // being delivered to the core (lack of credit, etc.)
-            //
-            if (!hreq->request_settled &&
-                hreq->request_acked &&  // implies out_data done
-                hreq->codec_completed) {
-
-                qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                                  hreq->request_dlv,
-                                                  hreq->request_dispo,
-                                                  true,   // settled
-                                                  0,      // error
-                                                  0,      // dispo data
-                                                  false);
-                // can now release the delivery
-                qdr_delivery_set_context(hreq->request_dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
-                hreq->request_dlv = 0;
-
-                hreq->request_settled = true;
-            }
-
-            // Has the entire request/response completed?  It is complete after
-            // the request message has been settled and all responses have been
-            // delivered to the core.
-            //
-            if (hreq->request_acked &&
-                hreq->request_settled &&
-                DEQ_SIZE(hreq->responses) == 0) {
-
-                qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request completed!", hconn->conn_id);
                 _server_request_free(hreq);
 
-                // coverity ignores the fact that _server_request_free() calls
-                // the base cleanup which removes hreq from hconn->requests.
-                // coverity[use_after_free]
-                hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
-                if (hreq)
-                    _write_pending_request(hreq);
+            } else {
+
+                // Can the request disposition be updated?  Disposition can be
+                // updated after the entire encoded request has been written to the
+                // server.
+                if (!hreq->request_acked &&
+                    hreq->request_encoded &&
+                    DEQ_SIZE(hreq->out_data.fifo) == 0) {
+
+                    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                                      hreq->request_dlv,
+                                                      hreq->request_dispo,
+                                                      false,   // settled
+                                                      0,      // error
+                                                      0,      // dispo data
+                                                      false);
+                    hreq->request_acked = true;
+                }
+
+                // Can we settle request?  Settle the request delivery after all
+                // response messages have been received from the server
+                // (codec_complete).  Note that the responses may not have finished
+                // being delivered to the core (lack of credit, etc.)
+                //
+                if (!hreq->request_settled &&
+                    hreq->request_acked &&  // implies out_data done
+                    hreq->codec_completed) {
+
+                    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                                      hreq->request_dlv,
+                                                      hreq->request_dispo,
+                                                      true,   // settled
+                                                      0,      // error
+                                                      0,      // dispo data
+                                                      false);
+                    // can now release the delivery
+                    qdr_delivery_set_context(hreq->request_dlv, 0);
+                    qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
+                    hreq->request_dlv = 0;
+
+                    hreq->request_settled = true;
+                }
+
+                // Has the entire request/response completed?  It is complete after
+                // the request message has been settled and all responses have been
+                // delivered to the core.
+                //
+                if (hreq->request_acked &&
+                    hreq->request_settled &&
+                    DEQ_SIZE(hreq->responses) == 0) {
+
+                    qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request completed!", hconn->conn_id);
+                    _server_request_free(hreq);
+
+                    // coverity ignores the fact that _server_request_free() calls
+                    // the base cleanup which removes hreq from hconn->requests.
+                    // coverity[use_after_free]
+                    hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
+                    if (hreq)
+                        _write_pending_request(hreq);
+                }
             }
         }
-    }
 
-    if (need_close) {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closing connection!", hconn->conn_id);
-        qdr_http1_close_connection(hconn, "Request cancelled");
+        if (need_close) {
+            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closing connection!", hconn->conn_id);
+            qdr_http1_close_connection(hconn, "Request cancelled");
+        }
     }
 }
 
@@ -1434,4 +1488,26 @@ static void _cancel_request(_server_request_t *hreq)
     }
 
     // cleanup occurs at the end of the connection event handler
+}
+
+
+// handle connection close request from management
+//
+void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
+                                      qdr_http1_connection_t *hconn,
+                                      const char *error)
+{
+    qdr_connection_t *qdr_conn = hconn->qdr_conn;
+
+    // prevent activation by core thread
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+    qdr_connection_set_context(hconn->qdr_conn, 0);
+    hconn->qdr_conn = 0;
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+    qdr_connection_closed(qdr_conn);
+    qdr_http1_close_connection(hconn, "Connection closed by management");
+
+    // it is expected that this callback is the final callback before returning
+    // from qdr_connection_process(). Free hconn when qdr_connection_process returns.
 }

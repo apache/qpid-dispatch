@@ -267,6 +267,7 @@ class ThreadedTestClient(object):
         self._thread = Thread(target=self._run)
         self._thread.daemon = True
         self.error = None
+        self.count = 0
         self._thread.start()
 
     def _run(self):
@@ -294,6 +295,7 @@ class ThreadedTestClient(object):
                                              % "body present!")
                             self.error = "error: body present!"
                             return
+                    self.count += 1
         client.close()
         self._logger.log("TestClient to %s closed" % self._conn_addr)
 
@@ -971,6 +973,147 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
 
         server11.wait()
         server10.wait()
+
+    def test_02_credit_replenish(self):
+        """
+        Verify credit is replenished by sending > the default credit window
+        requests across the routers.  The default credit window is 250
+        """
+
+        TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_02_credit_replenish",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "24",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'test_02_credit_replenish'),
+                 ResponseValidator(status=200),
+                ),
+            ]
+        }
+        server = TestServer(server_port=self.http_server11_port,
+                            client_port=self.http_listener11_port,
+                            tests=TESTS)
+        self.EA2.wait_connectors()
+
+        client = ThreadedTestClient(TESTS,
+                                    self.http_listener11_port,
+                                    repeat=300)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(300, client.count)
+        server.wait()
+
+    def test_03_server_reconnect(self):
+        """
+        Verify server reconnect logic.
+        """
+        TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_03_server_reconnect",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "24",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'test_03_server_reconnect'),
+                 ResponseValidator(status=200),
+                ),
+            ]
+        }
+
+        # bring up the server and send some requests. This will cause the
+        # router to grant credit for clients
+        server = TestServer(server_port=self.http_server11_port,
+                            client_port=self.http_listener11_port,
+                            tests=TESTS)
+        self.EA2.wait_connectors()
+
+        client = ThreadedTestClient(TESTS,
+                                    self.http_listener11_port,
+                                    repeat=2)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(2, client.count)
+
+        # simulate server loss.  Fire up a client which should be granted
+        # credit since the adaptor does not immediately teardown the server
+        # links.  This will cause the adaptor to run qdr_connection_process
+        # without a raw connection available to wake the I/O thread..
+        server.wait()
+        client = ThreadedTestClient(TESTS,
+                                    self.http_listener11_port,
+                                    repeat=2)
+        # the adaptor will detach the links to the server if the connection
+        # cannot be reestablished after 2.5 seconds.  Restart the server before
+        # that occurrs to prevent client messages from being released
+        server = TestServer(server_port=self.http_server11_port,
+                            client_port=self.http_listener11_port,
+                            tests=TESTS)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(2, client.count)
+        server.wait()
+
+    def test_04_server_pining_for_the_fjords(self):
+        """
+        Test permanent loss of server
+        """
+        TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_04_fjord_pining",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "20",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'test_04_fjord_pining'),
+                 ResponseValidator(status=200),
+                ),
+            ]
+        }
+
+        # bring up the server and send some requests. This will cause the
+        # router to grant credit for clients
+        server = TestServer(server_port=self.http_server11_port,
+                            client_port=self.http_listener11_port,
+                            tests=TESTS)
+        self.EA2.wait_connectors()
+
+        client = ThreadedTestClient(TESTS, self.http_listener11_port)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(1, client.count)
+
+        TESTS_FAIL = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_04_fjord_pining",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "20",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'test_04_fjord_pining'),
+                 ResponseValidator(status=503),
+                ),
+            ]
+        }
+
+        # Kill the server then issue client requests, expect 503 response
+        server.wait()
+        client = ThreadedTestClient(TESTS_FAIL, self.http_listener11_port)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(1, client.count)
+
+        # ensure links recover once the server re-appears
+        server = TestServer(server_port=self.http_server11_port,
+                            client_port=self.http_listener11_port,
+                            tests=TESTS)
+        self.EA2.wait_connectors()
+
+        client = ThreadedTestClient(TESTS, self.http_listener11_port)
+        client.wait()
+        self.assertIsNone(client.error)
+        self.assertEqual(1, client.count)
 
 
 if __name__ == '__main__':

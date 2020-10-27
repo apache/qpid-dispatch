@@ -101,6 +101,9 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
 
 void qdr_core_free(qdr_core_t *core)
 {
+    // have adaptors clean up all core resources
+    qdr_adaptors_finalize(core);
+
     //
     // Stop and join the thread
     //
@@ -221,7 +224,6 @@ void qdr_core_free(qdr_core_t *core)
     // at this point all the conn identifiers have been freed
     qd_hash_free(core->conn_id_hash);
 
-    qdr_adaptors_finalize(core);
     qdr_modules_finalize(core);
 
     qdr_agent_free(core->mgmt_agent);
