@@ -63,6 +63,21 @@ class EchoLogger(Logger):
         super(EchoLogger, self).log(self.prefix + msg)
 
 
+def split_chunk_for_display(raw_bytes):
+    """
+    Given some raw bytes, return a display string
+    Only show the beginning and end of largish (2xMAGIC_SIZE) arrays.
+    :param raw_bytes:
+    :return: display string
+    """
+    MAGIC_SIZE = 50  # Content repeats after chunks this big - used by echo client, too
+    if len(raw_bytes) > 2 * MAGIC_SIZE:
+        result = repr(raw_bytes[:MAGIC_SIZE]) + " ... " + repr(raw_bytes[-MAGIC_SIZE:])
+    else:
+        result = repr(raw_bytes)
+    return result
+
+
 def main_except(sock, port, echo_count, timeout, logger):
     '''
     :param lsock: socket to listen on
@@ -128,23 +143,26 @@ def do_service(key, mask, sel, logger):
         recv_data = sock.recv(1024)
         if recv_data:
             data.outb += recv_data
-            logger.log('read from: %s:%d len:%d: %s' % (data.addr[0], data.addr[1], len(recv_data), repr(recv_data)))
+            logger.log('read from: %s:%d len:%d: %s' % (data.addr[0], data.addr[1], len(recv_data),
+                                                        split_chunk_for_display(recv_data)))
             sel.modify(sock, selectors.EVENT_READ | selectors.EVENT_WRITE, data=data)
         else:
             logger.log('Closing connection to %s:%d' % (data.addr[0], data.addr[1]))
             sel.unregister(sock)
             sock.close()
+            return 0
     if mask & selectors.EVENT_WRITE:
         if data.outb:
             sent = sock.send(data.outb)
             retval += sent
             if sent > 0:
-                logger.log('write to : %s:%d len:%d: %s' % (data.addr[0], data.addr[1], sent, repr(data.outb[:sent])))
+                logger.log('write to : %s:%d len:%d: %s' % (data.addr[0], data.addr[1], sent,
+                                                            split_chunk_for_display(data.outb[:sent])))
             else:
                 logger.log('write to : %s:%d len:0' % (data.addr[0], data.addr[1]))
             data.outb = data.outb[sent:]
         else:
-            logger.log('write event with no data' + str(data))
+            #logger.log('write event with no data' + str(data))
             sel.modify(sock, selectors.EVENT_READ, data=data)
     return retval
 
@@ -183,7 +201,7 @@ def main(argv):
 
         # timeout
         if args.timeout < 0.0:
-            raise Exception("Timeout must be greater than zero")
+            raise Exception("Timeout must be greater than or equal to zero")
 
         # logging
         logger = EchoLogger(prefix = prefix,
@@ -197,9 +215,10 @@ def main(argv):
         main_except(lsock, port, args.echo, args.timeout, logger)
 
     except KeyboardInterrupt:
-        pass
+        logger.log("Exiting due to KeyboardInterrupt. Total echoed = %d" % total_echoed)
 
     except Exception as e:
+        logger.log("Exiting due to Exception. Total echoed = %d" % total_echoed)
         traceback.print_exc()
         retval = 1
 
