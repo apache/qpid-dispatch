@@ -808,7 +808,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
         # Verfiy that a link was closed with the expected pattern(s)
         ilink1, olink1 = self.sense_n_closed_lines("EB1", pattern=OVERSIZE_LINK_CONDITION_NAME)
@@ -817,7 +817,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: Did not see link close in log file. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate link close with condition: amqp:link:message-size-exceeded"
+            self.assertTrue(success, "Expected router to generate link close with condition: amqp:link:message-size-exceeded")
 
 
     # verify that a message can go through an edge EB1 and get blocked by interior INT.B
@@ -856,7 +856,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
 
     # see what happens when a message must be blocked by edge and also by interior
@@ -901,7 +901,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
 
     # Verify that a multicast can go through an edge EB1 and get blocked by interior INT.B
@@ -951,7 +951,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
 
     # Verify that a multicast blocked by edge ingress goes to no receivers
@@ -1001,7 +1001,7 @@ class MaxMessageSizeBlockOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
 
     # Verify that a multicast blocked by interior ingress goes to no receivers
@@ -1052,7 +1052,7 @@ class MaxMessageSizeBlockOversize(TestCase):
                 "FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                 (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
 
 #
 # Link route
@@ -1258,7 +1258,7 @@ class MaxMessageSizeLinkRouteOversize(TestCase):
             test.logger.log("FAIL: N closed events in log file did not increment by 1. oBefore: %d, oAfter: %d, iBefore:%d, iAfter:%d" %
                             (obefore, oafter, ibefore, iafter))
             test.logger.dump()
-            self.assertTrue(success), "Expected router to generate close with condition: message size exceeded"
+            self.assertTrue(success, "Expected router to generate close with condition: message size exceeded")
             MaxMessageSizeLinkRouteOversize.wait_router_network_connected()
 
 
