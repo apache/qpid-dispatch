@@ -74,6 +74,7 @@ void qdr_http1_request_base_cleanup(qdr_http1_request_base_t *hreq)
         DEQ_REMOVE(hreq->hconn->requests, hreq);
         h1_codec_request_state_cancel(hreq->lib_rs);
         free(hreq->response_addr);
+        free(hreq->site);
     }
 }
 
@@ -82,21 +83,24 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 {
     if (hconn) {
         pn_raw_connection_t *rconn = 0;
-        qd_timer_t *t1 = 0;
-        qd_timer_t *t2 = 0;
 
         // prevent core from activating this connection while it is being torn
-        // down.  see _core_connection_activate_CT
+        // down. Also prevent timer callbacks from running. see
+        // _core_connection_activate_CT, and _do_reconnect/_do_activate in
+        // http1_server.c
         //
         sys_mutex_lock(qdr_http1_adaptor->lock);
         {
             DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
-            t1 = hconn->server.reconnect_timer;
+            qd_timer_free(hconn->server.reconnect_timer);
             hconn->server.reconnect_timer = 0;
-            t2 = hconn->server.activate_timer;
+            qd_timer_free(hconn->server.activate_timer);
             hconn->server.activate_timer = 0;
             rconn = hconn->raw_conn;
             hconn->raw_conn = 0;
+            if (hconn->qdr_conn)
+                qdr_connection_set_context(hconn->qdr_conn, 0);
+            hconn->qdr_conn = 0;
         }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 
@@ -106,9 +110,6 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             qdr_http1_server_conn_cleanup(hconn);
         else
             qdr_http1_client_conn_cleanup(hconn);
-
-        qd_timer_free(t1);
-        qd_timer_free(t2);
 
         h1_codec_connection_free(hconn->http_conn);
         if (rconn) {
@@ -231,6 +232,7 @@ void qdr_http1_error_response(qdr_http1_request_base_t *hreq,
     if (hreq->lib_rs) {
         bool ignored;
         h1_codec_tx_response(hreq->lib_rs, error_code, reason, 1, 1);
+        h1_codec_tx_add_header(hreq->lib_rs, "Content-Length", "0");
         h1_codec_tx_done(hreq->lib_rs, &ignored);
     }
 }
@@ -606,22 +608,24 @@ static void _core_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t d
     }
 }
 
+
+// This is invoked by management to initiate the connection close process.
+// Once the raw conn is closed (DISCONNECT event) we call qdr_connection_closed()
+// to finish the close processing
+//
 static void _core_conn_close(void *context, qdr_connection_t *conn, qdr_error_t *error)
 {
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) qdr_connection_get_context(conn);
     if (hconn) {
+        assert(hconn->qdr_conn == conn);
         qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
                "[C%"PRIu64"] HTTP/1.x closing connection", hconn->conn_id);
 
         char *qdr_error = error ? qdr_error_description(error) : 0;
-        qdr_http1_close_connection(hconn, qdr_error);
-
-        sys_mutex_lock(qdr_http1_adaptor->lock);
-        qdr_connection_set_context(conn, 0);
-        sys_mutex_unlock(qdr_http1_adaptor->lock);
-
-        hconn->qdr_conn = 0;
-        hconn->in_link = hconn->out_link = 0;
+        if (hconn->type == HTTP1_CONN_SERVER)
+            qdr_http1_server_core_conn_close(qdr_http1_adaptor, hconn, qdr_error);
+        else
+            qdr_http1_client_core_conn_close(qdr_http1_adaptor, hconn, qdr_error);
         free(qdr_error);
     }
 }

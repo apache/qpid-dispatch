@@ -385,15 +385,14 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
-            qdr_link_detach(hconn->out_link, QD_CLOSED, 0);
             hconn->out_link = 0;
         }
         if (hconn->in_link) {
             qdr_link_set_context(hconn->in_link, 0);
-            qdr_link_detach(hconn->in_link, QD_CLOSED, 0);
             hconn->in_link = 0;
         }
         if (hconn->qdr_conn) {
+            qdr_connection_set_context(hconn->qdr_conn, 0);
             qdr_connection_closed(hconn->qdr_conn);
             hconn->qdr_conn = 0;
         }
@@ -995,9 +994,11 @@ static bool _encode_response_headers(_client_request_t *hreq,
     bool ok = false;
     qd_message_t *msg = qdr_delivery_message(rmsg->dlv);
 
-    qd_iterator_t *group_id_itr = qd_message_field_iterator(msg, QD_FIELD_GROUP_ID);
-    hreq->base.site = (char*) qd_iterator_copy(group_id_itr);
-    qd_iterator_free(group_id_itr);
+    if (!hreq->base.site) {
+        qd_iterator_t *group_id_itr = qd_message_field_iterator(msg, QD_FIELD_GROUP_ID);
+        hreq->base.site = (char*) qd_iterator_copy(group_id_itr);
+        qd_iterator_free(group_id_itr);
+    }
 
     qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
     if (app_props_iter) {
@@ -1318,4 +1319,18 @@ void qdr_http1_client_conn_cleanup(qdr_http1_connection_t *hconn)
          hreq = (_client_request_t*) DEQ_HEAD(hconn->requests)) {
         _client_request_free(hreq);
     }
+}
+
+
+// handle connection close request from management
+//
+void qdr_http1_client_core_conn_close(qdr_http1_adaptor_t *adaptor,
+                                      qdr_http1_connection_t *hconn,
+                                      const char *error)
+{
+    // initiate close of the raw conn.  the adaptor will call
+    // qdr_connection_close() and clean up once the DISCONNECT
+    // event is processed
+    //
+    qdr_http1_close_connection(hconn, error);
 }
