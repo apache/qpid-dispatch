@@ -171,11 +171,13 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                         break;
                     }
                 } while (settled != dlv->settled && !to_new_link);  // oops missed the settlement
+
                 send_complete = qdr_delivery_send_complete(dlv);
                 if (send_complete || to_new_link) {
                     //
-                    // The entire message has been sent. It is now the appropriate time to have the delivery removed
-                    // from the head of the undelivered list and move it to the unsettled list if it is not settled.
+                    // The entire message has been sent or the message has been moved from this link.
+                    // It is now the appropriate time to remove the delivery from the head of the
+                    // undelivered list to the unsettled list if it is not settled.
                     //
                     num_deliveries_completed++;
 
@@ -249,6 +251,42 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
     }
 
     return num_deliveries_completed;
+}
+
+
+void qdr_link_complete_sent_message(qdr_core_t *core, qdr_link_t *link)
+{
+    if (!link || !link->conn)
+        return;
+
+    qdr_connection_t *conn     = link->conn;
+    bool              activate = false;
+
+    sys_mutex_lock(conn->work_lock);
+    qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
+    if (!!dlv && qdr_delivery_send_complete(dlv)) {
+        DEQ_REMOVE_HEAD(link->undelivered);
+        if (!dlv->settled && !qdr_delivery_oversize(dlv) && !qdr_delivery_is_aborted(dlv)) {
+            DEQ_INSERT_TAIL(link->unsettled, dlv);
+            dlv->where = QDR_DELIVERY_IN_UNSETTLED;
+            qd_log(core->log, QD_LOG_DEBUG, "Delivery transfer:  dlv:%lx qdr_link_complete_sent_message: undelivered-list -> unsettled-list", (long) dlv);
+        } else {
+            dlv->where = QDR_DELIVERY_NOWHERE;
+            qdr_delivery_decref(core, dlv, "qdr_link_complete_sent_message - removed from undelivered");
+        }
+
+        //
+        // If there's another delivery on the undelivered list, get the outbound process moving again.
+        //
+        if (DEQ_SIZE(link->undelivered) > 0) {
+            qdr_add_link_ref(&conn->links_with_work[link->priority], link, QDR_LINK_LIST_CLASS_WORK);
+            activate = true;
+        }
+    }
+    sys_mutex_unlock(conn->work_lock);
+
+    if (activate)
+        conn->protocol_adaptor->activate_handler(conn->protocol_adaptor->user_context, conn);
 }
 
 

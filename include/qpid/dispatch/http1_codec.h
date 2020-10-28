@@ -87,12 +87,12 @@ typedef struct h1_codec_config_t {
     //
     void (*tx_buffers)(h1_codec_request_state_t *hrs, qd_buffer_list_t *data, unsigned int len);
 
-    // tx_body_data()
-    // Called with body_data containing encoded HTTP message data. Only
+    // tx_stream_data()
+    // Called with stream_data containing encoded HTTP message data. Only
     // called if the outgoing HTTP message has a body. The caller assumes
-    // ownership of the body_data and must release it when done.
+    // ownership of the stream_data and must release it when done.
     //
-    void (*tx_body_data)(h1_codec_request_state_t *hrs, qd_message_body_data_t *body_data);
+    void (*tx_stream_data)(h1_codec_request_state_t *hrs, qd_message_stream_data_t *stream_data);
 
     //
     // RX message callbacks
@@ -227,9 +227,9 @@ int h1_codec_tx_response(h1_codec_request_state_t *hrs, int status_code, const c
 //
 int h1_codec_tx_add_header(h1_codec_request_state_t *hrs, const char *key, const char *value);
 
-// Stream outgoing body data.  Ownership of body_data is passed to the caller.
+// Stream outgoing body data.  Ownership of stream_data is passed to the caller.
 //
-int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_body_data_t *body_data);
+int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_stream_data_t *stream_data);
 
 // outgoing message construction complete.  The request_complete() callback MAY
 // occur during this call.

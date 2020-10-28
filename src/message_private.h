@@ -61,16 +61,16 @@ typedef struct {
 } qd_field_location_t;
 
 
-struct qd_message_body_data_t {
-    DEQ_LINKS(qd_message_body_data_t);    // Linkage to form a DEQ
+struct qd_message_stream_data_t {
+    DEQ_LINKS(qd_message_stream_data_t);    // Linkage to form a DEQ
     qd_message_pvt_t    *owning_message;  // Pointer to the owning message
     qd_field_location_t  section;         // Section descriptor for the field
     qd_field_location_t  payload;         // Descriptor for the payload of the body data
     qd_buffer_t         *last_buffer;     // Pointer to the last buffer in the field
 };
 
-ALLOC_DECLARE(qd_message_body_data_t);
-DEQ_DECLARE(qd_message_body_data_t, qd_message_body_data_list_t);
+ALLOC_DECLARE(qd_message_stream_data_t);
+DEQ_DECLARE(qd_message_stream_data_t, qd_message_stream_data_list_t);
 
 // TODO - consider using pointers to qd_field_location_t below to save memory
 // TODO - provide a way to allocate a message without a lock for the link-routing case.
@@ -141,23 +141,23 @@ typedef struct {
 } qd_message_content_t;
 
 struct qd_message_pvt_t {
-    qd_iterator_pointer_t        cursor;          // A pointer to the current location of the outgoing byte stream.
-    qd_message_depth_t           message_depth;   // What is the depth of the message that has been received so far
-    qd_message_depth_t           sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
-    qd_message_content_t        *content;         // The actual content of the message. The content is never copied
-    qd_buffer_list_t             ma_to_override;  // to field in outgoing message annotations.
-    qd_buffer_list_t             ma_trace;        // trace list in outgoing message annotations
-    qd_buffer_list_t             ma_ingress;      // ingress field in outgoing message annotations
-    int                          ma_phase;        // phase for the override address
-    bool                         ma_stream;       // indicates whether this message is streaming
-    qd_message_body_data_list_t  body_data_list;  // TODO - move this to the content for one-time parsing (TLR)
-    qd_message_body_data_t      *next_body_data;
-    unsigned char               *body_cursor;
-    qd_buffer_t                 *body_buffer;
-    bool                         strip_annotations_in;
-    bool                         send_complete;   // Has the message been completely received and completely sent?
-    bool                         tag_sent;        // Tags are sent
-    bool                         is_fanout;       // If msg is an outgoing fanout
+    qd_iterator_pointer_t          cursor;          // A pointer to the current location of the outgoing byte stream.
+    qd_message_depth_t             message_depth;   // What is the depth of the message that has been received so far
+    qd_message_depth_t             sent_depth;      // How much of the message has been sent?  QD_DEPTH_NONE means nothing has been sent so far, QD_DEPTH_HEADER means the header has already been sent, dont send it again and so on.
+    qd_message_content_t          *content;         // The actual content of the message. The content is never copied
+    qd_buffer_list_t               ma_to_override;  // to field in outgoing message annotations.
+    qd_buffer_list_t               ma_trace;        // trace list in outgoing message annotations
+    qd_buffer_list_t               ma_ingress;      // ingress field in outgoing message annotations
+    int                            ma_phase;        // phase for the override address
+    bool                           ma_stream;       // indicates whether this message is streaming
+    qd_message_stream_data_list_t  stream_data_list;  // TODO - move this to the content for one-time parsing (TLR)
+    qd_message_stream_data_t      *next_stream_data;
+    unsigned char                 *body_cursor;
+    qd_buffer_t                   *body_buffer;
+    bool                           strip_annotations_in;
+    bool                           send_complete;   // Has the message been completely received and completely sent?
+    bool                           tag_sent;        // Tags are sent
+    bool                           is_fanout;       // If msg is an outgoing fanout
 };
 
 ALLOC_DECLARE(qd_message_t);

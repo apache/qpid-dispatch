@@ -706,10 +706,10 @@ exit:
 }
 
 //
-// Testing protocol adapter 'body_data' interfaces
+// Testing protocol adapter 'stream_data' interfaces
 //
 
-static void body_data_generate_message(qd_message_t *msg, char *s_chunk_size, char *s_n_chunks)
+static void stream_data_generate_message(qd_message_t *msg, char *s_chunk_size, char *s_n_chunks)
 {
     // Fill a message with n_chunks of vbin chunk_size body data.
 
@@ -747,20 +747,20 @@ static void body_data_generate_message(qd_message_t *msg, char *s_chunk_size, ch
     }
 }
 
-static void free_body_data_list(qd_message_t *msg_in)
+static void free_stream_data_list(qd_message_t *msg_in)
 {
     // DISPATCH-1800 - this should not be required here
     qd_message_pvt_t *msg = (qd_message_pvt_t *)msg_in;
-    qd_message_body_data_t *bd = DEQ_HEAD(msg->body_data_list);
+    qd_message_stream_data_t *bd = DEQ_HEAD(msg->stream_data_list);
     while (bd) {
-        qd_message_body_data_t *next = DEQ_NEXT(bd);
-        free_qd_message_body_data_t(bd);
+        qd_message_stream_data_t *next = DEQ_NEXT(bd);
+        free_qd_message_stream_data_t(bd);
         bd = next;
     }
 
 }
 
-static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
+static char *check_stream_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
 {
     // Fill a message with n chunks of vbin chunk_size body data.
     // Then test by retrieving n chunks from a message copy and verifing.
@@ -786,7 +786,7 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
     qd_message_pvt_t     *msg_pvt = (qd_message_pvt_t *)msg;
 
     // Set the original message content
-    body_data_generate_message(msg, s_chunk_size, s_n_chunks);
+    stream_data_generate_message(msg, s_chunk_size, s_n_chunks);
 
     // flatten if required
     if (flatten) {
@@ -810,22 +810,22 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
     // Define the number of raw buffers to be extracted on each loop
 #define N_PN_RAW_BUFFS (2)
 
-    qd_message_body_data_t *body_data;
+    qd_message_stream_data_t *stream_data;
 
     for (int j=0; j<n_chunks; j++) {
         received = 0; // this chunk received size in bytes.
 
-        // Set up the next_body_data snapshot
-        qd_message_body_data_result_t body_data_result = qd_message_next_body_data(copy, &body_data);
+        // Set up the next_stream_data snapshot
+        qd_message_stream_data_result_t stream_data_result = qd_message_next_stream_data(copy, &stream_data);
 
-        if (body_data_result == QD_MESSAGE_BODY_DATA_OK) {
-            // check body_data payload length
-            if (body_data->payload.length != chunk_size) {
-                printf("********** check_body_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
+        if (stream_data_result == QD_MESSAGE_STREAM_DATA_BODY_OK) {
+            // check stream_data payload length
+            if (stream_data->payload.length != chunk_size) {
+                printf("********** check_stream_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
                     "chunk_size:%s, n_chunks:%s, payload length error : %zu \n",
-                    BUFFER_SIZE, N_PN_RAW_BUFFS, s_chunk_size, s_n_chunks, body_data->payload.length);
+                    BUFFER_SIZE, N_PN_RAW_BUFFS, s_chunk_size, s_n_chunks, stream_data->payload.length);
                 fflush(stdout);
-                result = "qd_message_next_body_data returned wrong payload length.";
+                result = "qd_message_next_stream_data returned wrong payload length.";
                 break;
             }
 
@@ -837,14 +837,14 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
             pn_raw_buffer_t buffs[N_PN_RAW_BUFFS];
 
             // used_buffers - Number of qd_buffers in content buffer chain consumed so far.
-            //                This number must increase as dictated by qd_message_body_data_buffers()
-            //                when vbin segments are consumed from the current body_data chunk.
+            //                This number must increase as dictated by qd_message_stream_data_buffers()
+            //                when vbin segments are consumed from the current stream_data chunk.
             //                A single vbin segment may consume 0, 1, or many qd_buffers.
             size_t used_buffers = 0;
 
             while (received < chunk_size) {
                 ZERO(buffs);
-                size_t n_used = qd_message_body_data_buffers(body_data, buffs, used_buffers, N_PN_RAW_BUFFS);
+                size_t n_used = qd_message_stream_data_buffers(stream_data, buffs, used_buffers, N_PN_RAW_BUFFS);
                 if (n_used > 0) {
                     for (size_t ii=0; ii<n_used; ii++) {
                         char e_char = (char)(j + 1);   // expected char in payload
@@ -852,7 +852,7 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
                         for (uint32_t idx=0; idx < buffs[ii].size; idx++) {
                             char actual = buffs[ii].bytes[buffs[ii].offset + idx];
                             if (e_char != actual) {
-                                printf("********** check_body_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
+                                printf("********** check_stream_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
                                     "chunk_size:%s, n_chunks:%s, verify error at index %d, expected:%d, actual:%d \n",
                                     BUFFER_SIZE, N_PN_RAW_BUFFS, s_chunk_size, s_n_chunks, received + idx, e_char,
                                     actual);
@@ -865,7 +865,7 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
                     used_buffers += n_used;
                     if (!!result) break;
                 } else {
-                    printf("********** check_body_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
+                    printf("********** check_stream_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
                         "chunk_size:%s, n_chunks:%s, received %d bytes (not enough) \n",
                         BUFFER_SIZE, N_PN_RAW_BUFFS, s_chunk_size, s_n_chunks, received);
                     fflush(stdout);
@@ -873,7 +873,7 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
                     break;
                 }
                 if (received > chunk_size) {
-                    printf("********** check_body_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
+                    printf("********** check_stream_data: BUFFER_SIZE=%zu, pn-buf-array-size:%d, "
                         "chunk_size:%s, n_chunks:%s, received %d bytes (too many) \n",
                         BUFFER_SIZE, N_PN_RAW_BUFFS, s_chunk_size, s_n_chunks, received);
                     result = "Received too much data";
@@ -882,32 +882,30 @@ static char *check_body_data(char *s_chunk_size, char *s_n_chunks, bool flatten)
             }
             // successful check
 
-        } else if (body_data_result == QD_MESSAGE_BODY_DATA_INCOMPLETE) {
+        } else if (stream_data_result == QD_MESSAGE_STREAM_DATA_INCOMPLETE) {
             result = "DATA_INCOMPLETE"; break;
         } else {
-            switch (body_data_result) {
-            case QD_MESSAGE_BODY_DATA_NO_MORE:
+            switch (stream_data_result) {
+            case QD_MESSAGE_STREAM_DATA_NO_MORE:
                 result = "EOS"; break;
-            case QD_MESSAGE_BODY_DATA_INVALID:
+            case QD_MESSAGE_STREAM_DATA_INVALID:
                 result = "Invalid body data for streaming message"; break;
-            case QD_MESSAGE_BODY_DATA_NOT_DATA:
-                result = "Invalid body; expected data section"; break;
             default:
                 result = "result: default"; break;
             }
         }
     }
 
-    free_body_data_list(msg);
+    free_stream_data_list(msg);
     qd_message_free(msg);
     if (!!copy) {
-        free_body_data_list(copy);
+        free_stream_data_list(copy);
         qd_message_free(copy);
     }
     return result;
 }
 
-static char *test_check_body_data(void * context)
+static char *test_check_stream_data(void * context)
 {
     char *result = 0;
 
@@ -919,16 +917,16 @@ static char *test_check_body_data(void * context)
 
     for (int i=0; i<N_CHUNK_SIZES; i++) {
         for (int j=0; j<N_N_CHUNKS; j++) {
-            result = check_body_data(chunk_sizes[i], n_chunks[j], false);
+            result = check_stream_data(chunk_sizes[i], n_chunks[j], false);
             if (!!result) {
-                printf("test_check_body_data: chunk_size:%s, n_chunks:%s, flatten:%s, result:%s   \n",
+                printf("test_check_stream_data: chunk_size:%s, n_chunks:%s, flatten:%s, result:%s   \n",
                        chunk_sizes[i], n_chunks[j], "false", result);
                 fflush(stdout);
                 return result;
             }
-            result = check_body_data(chunk_sizes[i], n_chunks[j], true);
+            result = check_stream_data(chunk_sizes[i], n_chunks[j], true);
             if (!!result) {
-                printf("test_check_body_data: chunk_size:%s, n_chunks:%s, flatten:%s, result:%s   \n",
+                printf("test_check_stream_data: chunk_size:%s, n_chunks:%s, flatten:%s, result:%s   \n",
                        chunk_sizes[i], n_chunks[j], "true", result);
                 fflush(stdout);
                 return result;
@@ -939,10 +937,10 @@ static char *test_check_body_data(void * context)
 }
 
 
-// Verify that qd_message_body_data_append() will break up a long binary data
+// Verify that qd_message_stream_data_append() will break up a long binary data
 // field in order to avoid triggering Q2
 //
-static char *test_check_body_data_append(void * context)
+static char *test_check_stream_data_append(void * context)
 {
     char *result = 0;
     qd_message_t *msg = 0;
@@ -977,7 +975,7 @@ static char *test_check_body_data_append(void * context)
 
     qd_message_compose_2(msg, field, false);
     qd_compose_free(field);
-    int depth = qd_message_body_data_append(msg, &bin_data);
+    int depth = qd_message_stream_data_append(msg, &bin_data);
     if (depth <= buffer_count) {
         // expected to add extra buffer(s) for meta-data
         result = "append length is incorrect";
@@ -995,29 +993,30 @@ static char *test_check_body_data_append(void * context)
 
     int bd_count = 0;
     int total_buffers = 0;
-    qd_message_body_data_t *body_data = 0;
+    qd_message_stream_data_t *stream_data = 0;
     bool done = false;
     while (!done) {
-        switch (qd_message_next_body_data(msg, &body_data)) {
-        case QD_MESSAGE_BODY_DATA_INCOMPLETE:
-        case QD_MESSAGE_BODY_DATA_INVALID:
-        case QD_MESSAGE_BODY_DATA_NOT_DATA:
+        switch (qd_message_next_stream_data(msg, &stream_data)) {
+        case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
+        case QD_MESSAGE_STREAM_DATA_INVALID:
             result = "Next body data failed to get next body data";
             goto exit;
-        case QD_MESSAGE_BODY_DATA_NO_MORE:
+        case QD_MESSAGE_STREAM_DATA_NO_MORE:
             done = true;
             break;
-        case QD_MESSAGE_BODY_DATA_OK:
+        case QD_MESSAGE_STREAM_DATA_BODY_OK:
             bd_count += 1;
-            // qd_message_body_data_append() breaks the buffer list up into
+            // qd_message_stream_data_append() breaks the buffer list up into
             // smaller lists that are no bigger than QD_QLIMIT_Q2_LOWER buffers
             // long
-            total_buffers += qd_message_body_data_buffer_count(body_data);
-            if (qd_message_body_data_buffer_count(body_data) > QD_QLIMIT_Q2_LOWER) {
+            total_buffers += qd_message_stream_data_buffer_count(stream_data);
+            if (qd_message_stream_data_buffer_count(stream_data) > QD_QLIMIT_Q2_LOWER) {
                 result = "Body data list length too long!";
                 goto exit;
             }
-            qd_message_body_data_release(body_data);
+            qd_message_stream_data_release(stream_data);
+            break;
+        case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
             break;
         }
     }
@@ -1051,8 +1050,8 @@ int message_tests(void)
     TEST_CASE(test_q2_input_holdoff_sensing, 0);
     TEST_CASE(test_incomplete_annotations, 0);
     TEST_CASE(test_check_weird_messages, 0);
-    TEST_CASE(test_check_body_data, 0);
-    TEST_CASE(test_check_body_data_append, 0);
+    TEST_CASE(test_check_stream_data, 0);
+    TEST_CASE(test_check_stream_data_append, 0);
 
     return result;
 }

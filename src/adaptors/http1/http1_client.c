@@ -86,7 +86,7 @@ ALLOC_DEFINE(_client_request_t);
 
 
 static void _client_tx_buffers_cb(h1_codec_request_state_t *lib_hrs, qd_buffer_list_t *blist, unsigned int len);
-static void _client_tx_body_data_cb(h1_codec_request_state_t *lib_hrs, qd_message_body_data_t *body_data);
+static void _client_tx_stream_data_cb(h1_codec_request_state_t *lib_hrs, qd_message_stream_data_t *stream_data);
 static int _client_rx_request_cb(h1_codec_request_state_t *lib_rs,
                                  const char *method,
                                  const char *target,
@@ -133,7 +133,7 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
     h1_codec_config_t config = {0};
     config.type             = HTTP1_CONN_CLIENT;
     config.tx_buffers       = _client_tx_buffers_cb;
-    config.tx_body_data     = _client_tx_body_data_cb;
+    config.tx_stream_data   = _client_tx_stream_data_cb;
     config.rx_request       = _client_rx_request_cb;
     config.rx_response      = _client_rx_response_cb;
     config.rx_header        = _client_rx_header_cb;
@@ -554,9 +554,9 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
 }
 
 
-// Encoder callback: send body_data buffers (response msg) to client endpoint
+// Encoder callback: send stream_data buffers (response msg) to client endpoint
 //
-static void _client_tx_body_data_cb(h1_codec_request_state_t *hrs, qd_message_body_data_t *body_data)
+static void _client_tx_stream_data_cb(h1_codec_request_state_t *hrs, qd_message_stream_data_t *stream_data)
 {
     _client_request_t       *hreq = (_client_request_t*) h1_codec_request_state_get_context(hrs);
     qdr_http1_connection_t *hconn = hreq->base.hconn;
@@ -565,7 +565,7 @@ static void _client_tx_body_data_cb(h1_codec_request_state_t *hrs, qd_message_bo
         // client connection has been lost
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                "[C%"PRIu64"] Discarding outgoing data - client connection closed", hconn->conn_id);
-        qd_message_body_data_release(body_data);
+        qd_message_stream_data_release(stream_data);
         return;
     }
 
@@ -578,7 +578,7 @@ static void _client_tx_body_data_cb(h1_codec_request_state_t *hrs, qd_message_bo
 
     _client_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
     assert(rmsg);
-    qdr_http1_enqueue_body_data(&rmsg->out_data, body_data);
+    qdr_http1_enqueue_stream_data(&rmsg->out_data, stream_data);
 
     // if this happens to be the current outgoing response try writing to the
     // raw connection
@@ -781,7 +781,7 @@ static int _client_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
            "[C%"PRIu64"][L%"PRIu64"] HTTP request body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
 
-    qd_message_body_data_append(msg, body);
+    qd_message_stream_data_append(msg, body);
 
     //
     // Notify the router that more data is ready to be pushed out on the delivery
@@ -1119,18 +1119,18 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
         }
     }
 
-    qd_message_body_data_t *body_data = 0;
+    qd_message_stream_data_t *stream_data = 0;
 
     while (true) {
-        switch (qd_message_next_body_data(msg, &body_data)) {
+        switch (qd_message_next_stream_data(msg, &stream_data)) {
 
-        case QD_MESSAGE_BODY_DATA_OK:
+        case QD_MESSAGE_STREAM_DATA_BODY_OK:
 
             qd_log(hconn->adaptor->log, QD_LOG_TRACE,
                    "[C%"PRIu64"][L%"PRIu64"] Encoding response body data",
                    hconn->conn_id, hconn->out_link_id);
 
-            if (h1_codec_tx_body(hreq->base.lib_rs, body_data)) {
+            if (h1_codec_tx_body(hreq->base.lib_rs, stream_data)) {
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                        "[C%"PRIu64"][L%"PRIu64"] body data encode failed",
                        hconn->conn_id, hconn->out_link_id);
@@ -1138,18 +1138,20 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
             }
             break;
 
-        case QD_MESSAGE_BODY_DATA_NO_MORE:
+        case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
+            break;
+
+        case QD_MESSAGE_STREAM_DATA_NO_MORE:
             // indicate this message is complete
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                    "[C%"PRIu64"][L%"PRIu64"] response message encoding completed",
                    hconn->conn_id, hconn->out_link_id);
             return PN_ACCEPTED;
 
-        case QD_MESSAGE_BODY_DATA_INCOMPLETE:
+        case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
             return 0;  // wait for more
 
-        case QD_MESSAGE_BODY_DATA_INVALID:
-        case QD_MESSAGE_BODY_DATA_NOT_DATA:
+        case QD_MESSAGE_STREAM_DATA_INVALID:
             qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                    "[C%"PRIu64"][L%"PRIu64"] Rejecting corrupted body data.",
                    hconn->conn_id, hconn->out_link_id);

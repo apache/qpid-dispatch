@@ -60,10 +60,10 @@ extern qdr_http1_adaptor_t *qdr_http1_adaptor;
 // Data to be written out the raw connection.
 //
 // This adaptor has to cope with two different data sources: the HTTP1 encoder
-// and the qd_message_body_data_t list.  The HTTP1 encoder produces a simple
+// and the qd_message_stream_data_t list.  The HTTP1 encoder produces a simple
 // qd_buffer_list_t for outgoing header data whose ownership is given to the
 // adaptor: the adaptor is free to deque/free these buffers as needed.  The
-// qd_message_body_data_t buffers are shared with the owning message and the
+// qd_message_stream_data_t buffers are shared with the owning message and the
 // buffer list must not be modified by the adaptor.  The qdr_http1_out_data_t
 // is used to manage both types of data sources.
 //
@@ -76,7 +76,7 @@ struct qdr_http1_out_data_t {
     // or a message body data (not both!)
 
     qd_buffer_list_t raw_buffers;
-    qd_message_body_data_t *body_data;
+    qd_message_stream_data_t *stream_data;
 
     int buffer_count;  // # total buffers
     int next_buffer;   // offset to next buffer to send
@@ -207,7 +207,7 @@ ALLOC_DECLARE(qdr_http1_connection_t);
 
 void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn);
 void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_list_t *blist);
-void qdr_http1_enqueue_body_data(qdr_http1_out_data_fifo_t *fifo, qd_message_body_data_t *body_data);
+void qdr_http1_enqueue_stream_data(qdr_http1_out_data_fifo_t *fifo, qd_message_stream_data_t *stream_data);
 uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_data_fifo_t *fifo);
 void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data);
 // return the number of buffers currently held by the proactor for writing

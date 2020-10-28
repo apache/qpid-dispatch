@@ -248,39 +248,67 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
         // over to the per-message extraction of body-data segments.
         //
         printf("qdr_ref_deliver: depth ok\n");
-        qd_message_body_data_t        *body_data;
-        qd_message_body_data_result_t  body_data_result;
+        qd_message_stream_data_t        *stream_data;
+        qd_message_stream_data_result_t  stream_data_result;
 
         //
         // Process as many body-data segments as are available.
         //
         while (true) {
-            body_data_result = qd_message_next_body_data(msg, &body_data);
+            stream_data_result = qd_message_next_stream_data(msg, &stream_data);
 
-            switch (body_data_result) {
-            case QD_MESSAGE_BODY_DATA_OK: {
+            switch (stream_data_result) {
+            case QD_MESSAGE_STREAM_DATA_BODY_OK: {
                 //
                 // We have a new valid body-data segment.  Handle it
                 //
-                printf("qdr_ref_deliver: body_data_buffer_count: %d\n", qd_message_body_data_buffer_count(body_data));
+                printf("qdr_ref_deliver: stream_data_buffer_count: %d\n", qd_message_stream_data_buffer_count(stream_data));
 
-                qd_iterator_t *body_iter = qd_message_body_data_iterator(body_data);
+                qd_iterator_t *body_iter = qd_message_stream_data_iterator(stream_data);
                 char *body = (char*) qd_iterator_copy(body_iter);
                 printf("qdr_ref_deliver: message body-data received: %s\n", body);
                 free(body);
                 qd_iterator_free(body_iter);
-                qd_message_body_data_release(body_data);
+                qd_message_stream_data_release(stream_data);
+                break;
+            }
+
+            case QD_MESSAGE_STREAM_DATA_FOOTER_OK: {
+                printf("qdr_ref_deliver: Received message footer\n");
+                qd_iterator_t     *footer_iter = qd_message_stream_data_iterator(stream_data);
+                qd_parsed_field_t *footer      = qd_parse(footer_iter);
+
+                if (qd_parse_ok(footer)) {
+                    uint8_t tag = qd_parse_tag(footer);
+                    if (tag == QD_AMQP_MAP8 || tag == QD_AMQP_MAP32) {
+                        uint32_t item_count = qd_parse_sub_count(footer);
+                        for (uint32_t i = 0; i < item_count; i++) {
+                            qd_iterator_t *key_iter   = qd_parse_raw(qd_parse_sub_key(footer, i));
+                            qd_iterator_t *value_iter = qd_parse_raw(qd_parse_sub_value(footer, i));
+                            char *key   = (char*) qd_iterator_copy(key_iter);
+                            char *value = (char*) qd_iterator_copy(value_iter);
+                            printf("qdr_ref_deliver: %s: %s\n", key, value);
+                            free(key);
+                            free(value);
+                        }
+                    } else
+                        printf("qdr_ref_deliver: Unexpected tag in footer: %02x\n", tag);
+                } else
+                    printf("qdr_ref_deliver: Footer parse error: %s\n", qd_parse_error(footer));
+
+                qd_parse_free(footer);
+                qd_iterator_free(footer_iter);
                 break;
             }
             
-            case QD_MESSAGE_BODY_DATA_INCOMPLETE:
+            case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
                 //
                 // A new segment has not completely arrived yet.  Check again later.
                 //
                 printf("qdr_ref_deliver: body-data incomplete\n");
                 return 0;
 
-            case QD_MESSAGE_BODY_DATA_NO_MORE:
+            case QD_MESSAGE_STREAM_DATA_NO_MORE:
                 //
                 // We have already handled the last body-data segment for this delivery.
                 // Complete the "sending" of this delivery and replenish credit.
@@ -293,19 +321,11 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qdr_link_flow(adaptor->core, link, 1, false);
                 return PN_ACCEPTED; // This will cause the delivery to be settled
             
-            case QD_MESSAGE_BODY_DATA_INVALID:
+            case QD_MESSAGE_STREAM_DATA_INVALID:
                 //
                 // The body-data is corrupt in some way.  Stop handling the delivery and reject it.
                 //
                 printf("qdr_ref_deliver: body-data invalid\n");
-                qdr_link_flow(adaptor->core, link, 1, false);
-                return PN_REJECTED;
-
-            case QD_MESSAGE_BODY_DATA_NOT_DATA:
-                //
-                // Valid data was seen, but it is not a body-data performative.  Reject the delivery.
-                //
-                printf("qdr_ref_deliver: body not data\n");
                 qdr_link_flow(adaptor->core, link, 1, false);
                 return PN_REJECTED;
             }
@@ -456,16 +476,24 @@ static void on_stream(void *context)
         //
         // Accumulated buffer list
         //
-        qd_buffer_list_t buffer_list;
-        DEQ_INIT(buffer_list);
-        qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
-        qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
+        for (int sections = 0; sections < 3; sections++) {
+            qd_buffer_list_t buffer_list;
+            DEQ_INIT(buffer_list);
+            qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
+            qd_buffer_list_append(&buffer_list, (const uint8_t*) content, content_length);
 
-        //
-        // append this data to the streaming message as one or more DATA
-        // performatives
-        //
-        depth = qd_message_body_data_append(adaptor->streaming_message, &buffer_list);
+            //
+            // Compose a DATA performative for this section of the stream
+            //
+            qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+            qd_compose_insert_binary_buffers(field, &buffer_list);
+
+            //
+            // Extend the streaming message and free the composed field
+            //
+            depth = qd_message_extend(adaptor->streaming_message, field);
+            qd_compose_free(field);
+        }
 
         //
         // Notify the router that more data is ready to be pushed out on the delivery
@@ -478,6 +506,14 @@ static void on_stream(void *context)
         adaptor->stream_count++;
         printf("on_stream: sent streamed frame %d, depth=%d\n", adaptor->stream_count, depth);
     } else {
+        qd_composed_field_t *footer = qd_compose(QD_PERFORMATIVE_FOOTER, 0);
+        qd_compose_start_map(footer);
+        qd_compose_insert_symbol(footer, "trailer");
+        qd_compose_insert_string(footer, "value");
+        qd_compose_end_map(footer);
+        depth = qd_message_extend(adaptor->streaming_message, footer);
+        qd_compose_free(footer);
+
         qd_message_set_receive_complete(adaptor->streaming_message);
         adaptor->streaming_message = 0;
         adaptor->stream_count      = 0;
