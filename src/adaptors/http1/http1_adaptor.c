@@ -18,6 +18,7 @@
  */
 
 #include "http1_private.h"
+#include "adaptors/adaptor_utils.h"
 
 #include <stdio.h>
 #include <inttypes.h>
@@ -113,8 +114,19 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
 
         h1_codec_connection_free(hconn->http_conn);
         if (rconn) {
+            //
+            // Since the hconn is being freed it can no longer receive raw
+            // connection events indicating that read buffers are ready to be
+            // freed.  So manually drain any buffers held by the raw
+            // connection.  Write buffers have already been freed when requests
+            // and responses were cleaned up.
+            //
+            qd_buffer_list_t blist = DEQ_EMPTY;
+            uintmax_t ignore;
             pn_raw_connection_set_context(rconn, 0);
             pn_raw_connection_close(rconn);
+            qda_raw_conn_get_read_buffers(rconn, &blist, &ignore);
+            qd_buffer_list_free_buffers(&blist);
         }
 
         free(hconn->cfg.host);
