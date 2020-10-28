@@ -889,75 +889,116 @@ static int process_header(h1_codec_connection_t *conn, struct decoder_t *decoder
 }
 
 
-// Parse out the header key and value
+// Parse an HTTP header line.
+// See RFC7230 for details.  If header line folding (obs-folding) is detected,
+// replace the folding with spaces.
 //
 static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 {
-    qd_iterator_pointer_t *rptr = &decoder->read_ptr;
-    qd_iterator_pointer_t line;
+    qd_iterator_pointer_t end_ptr = decoder->read_ptr;
     h1_codec_request_state_t *hrs = decoder->hrs;
+    qd_iterator_pointer_t line;
+
     assert(hrs);  // else state machine busted
 
-    if (read_line(rptr, &line)) {
-        debug_print_iterator_pointer("header:", &line);
+    if (!read_line(&end_ptr, &line))
+        // need more data
+        return false;
 
+    if (is_empty_line(&line)) {
+        decoder->read_ptr = end_ptr;
         hrs->in_octets += line.remaining;
-
-        if (is_empty_line(&line)) {
-            // end of headers
-            return process_headers_done(conn, decoder);
-        }
-
-        qd_iterator_pointer_t key = {0};
-
-        if (!parse_token(&line, &key)) {
-            decoder->error_msg = "Malformed Header";
-            decoder->error = (decoder->is_request) ? HTTP1_STATUS_BAD_REQ
-                : HTTP1_STATUS_SERVER_ERR;
-            return false;
-        }
-
-        // advance line past the ':'
-        uint8_t octet;
-        while (get_octet(&line, &octet) && octet != ':')
-            ;
-
-        // line now contains the value. convert to C strings and post callback
-        ensure_scratch_size(&decoder->scratch, key.remaining + line.remaining + 2);
-        uint8_t *ptr = decoder->scratch.buf;
-        size_t avail = decoder->scratch.size;
-
-        uint8_t *key_str = ptr;
-        size_t offset = pointer_2_str(&key, key_str, avail);
-        ptr += offset;
-        avail -= offset;
-
-        uint8_t *value_str = ptr;
-        pointer_2_str(&line, value_str, avail);
-
-        // trim whitespace on both ends of value
-        while (isspace(*value_str))
-            ++value_str;
-        ptr = value_str + strlen((char*) value_str);
-        while (ptr-- > value_str) {
-            if (!isspace(*ptr))
-                break;
-            *ptr = 0;
-        }
-
-        process_header(conn, decoder, key_str, value_str);
-
-        if (!decoder->error) {
-            decoder->error = conn->config.rx_header(hrs, (char *)key_str, (char *)value_str);
-            if (decoder->error)
-                decoder->error_msg = "hrs_rx_header callback error";
-        }
-
-        return !!rptr->remaining;
+        return process_headers_done(conn, decoder);
     }
 
-    return false;  // pend for more data
+    // check for header line folding
+
+    bool obs_fold = false;
+    while (true) {
+        qd_iterator_pointer_t peek = end_ptr;
+        uint8_t octet;
+        if (!get_octet(&peek, &octet))
+            // need more data
+            return false;
+
+        if (octet != ' ' && octet != '\t')
+            break;
+
+        obs_fold = true;
+
+        if (!read_line(&end_ptr, &line))
+            return false;
+    }
+
+    // end_ptr now points past the header line, advance decoder past header
+    // line and set 'line' to hold header
+
+    line = decoder->read_ptr;
+    decoder->read_ptr = end_ptr;
+    line.remaining -= end_ptr.remaining;
+
+    debug_print_iterator_pointer("header:", &line);
+
+    hrs->in_octets += line.remaining;
+
+    // convert field to key and value strings
+
+    qd_iterator_pointer_t key;
+    if (!parse_token(&line, &key)) {
+        decoder->error_msg = "Malformed Header";
+        decoder->error = (decoder->is_request) ? HTTP1_STATUS_BAD_REQ
+            : HTTP1_STATUS_SERVER_ERR;
+        return false;
+    }
+
+    // advance line past the ':'
+    uint8_t octet;
+    while (get_octet(&line, &octet) && octet != ':')
+        ;
+
+    // line now contains the value. convert to C strings and post callback
+    ensure_scratch_size(&decoder->scratch, key.remaining + line.remaining + 2);
+    uint8_t *ptr = decoder->scratch.buf;
+    size_t avail = decoder->scratch.size;
+
+    uint8_t *key_str = ptr;
+    size_t offset = pointer_2_str(&key, key_str, avail);
+    ptr += offset;
+    avail -= offset;
+
+    uint8_t *value_str = ptr;
+    pointer_2_str(&line, value_str, avail);
+
+    // trim whitespace on both ends of value
+    while (isspace(*value_str))
+        ++value_str;
+    ptr = value_str + strlen((char*) value_str);
+    while (ptr-- > value_str) {
+        if (!isspace(*ptr))
+            break;
+        *ptr = 0;
+    }
+
+    // remove header line folding by overwriting all <CR> and <LF> chars with
+    // spaces as per RFC7230
+
+    if (obs_fold) {
+        ptr = value_str;
+        while ((ptr = (uint8_t*) strpbrk((char*) ptr, CRLF)) != 0)
+            *ptr = ' ';
+    }
+
+    process_header(conn, decoder, key_str, value_str);
+
+    if (!decoder->error) {
+        decoder->error = conn->config.rx_header(hrs, (char *)key_str, (char *)value_str);
+        if (decoder->error)
+            decoder->error_msg = "hrs_rx_header callback error";
+    }
+
+    return !!decoder->read_ptr.remaining;
 }
+
 
 //
 // Chunked body encoding parser

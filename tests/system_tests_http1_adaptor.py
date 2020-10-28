@@ -532,6 +532,39 @@ class Http1AdaptorOneRouterTest(TestCase):
                           body=b'?')],
              ResponseValidator(expect_headers={'Content-Type': "text/plain;charset=utf-8"},
                                expect_body=b'?')),
+
+            # test support for "folded headers"
+
+            (RequestMsg("GET", "/GET/folded_header_01",
+                        headers={"Content-Length": 0}),
+             ResponseMsg(200, reason="OK",
+                         headers={"Content-Type": "text/plain;charset=utf-8",
+                                  "Content-Length": 1,
+                                  "folded-header": "One\r\n \r\n\tTwo"},
+                         body=b'X'),
+             ResponseValidator(expect_headers={"Content-Type":
+                                               "text/plain;charset=utf-8",
+                                               "folded-header":
+                                               "One     \tTwo"},
+                               expect_body=b'X')),
+
+            (RequestMsg("GET", "/GET/folded_header_02",
+                        headers={"Content-Length": 0}),
+             ResponseMsg(200, reason="OK",
+                         headers={"Content-Type": "text/plain;charset=utf-8",
+                                  "Content-Length": 1,
+                                  "folded-header": "\r\n \r\n\tTwo",
+                                  "another-header": "three"},
+                         body=b'X'),
+             ResponseValidator(expect_headers={"Content-Type":
+                                               "text/plain;charset=utf-8",
+                                               # trim leading and
+                                               # trailing ws:
+                                               "folded-header":
+                                               "Two",
+                                               "another-header":
+                                               "three"},
+                               expect_body=b'X')),
         ],
         #
         # HEAD
