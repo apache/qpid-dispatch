@@ -80,14 +80,14 @@ struct qdr_http2_stream_data_t {
     qd_composed_field_t      *app_properties;
     qd_composed_field_t      *footer_properties;
     qd_composed_field_t      *body;
-    qd_message_body_data_t   *curr_body_data;
-    qd_message_body_data_t   *next_body_data;
+    qd_message_stream_data_t *curr_stream_data;
+    qd_message_stream_data_t *next_stream_data;
     DEQ_LINKS(qdr_http2_stream_data_t);
 
-    qd_message_body_data_result_t  curr_body_data_result;
-    qd_message_body_data_result_t  next_body_data_result;
-    int                            curr_body_data_qd_buff_offset;
-    int                            body_data_buff_count;
+    qd_message_stream_data_result_t  curr_stream_data_result;
+    qd_message_stream_data_result_t  next_stream_data_result;
+    int                            curr_stream_data_qd_buff_offset;
+    int                            stream_data_buff_count;
     int                            in_link_credit;   // provided by router
     int32_t                        stream_id;
     size_t                         qd_buffers_to_send;

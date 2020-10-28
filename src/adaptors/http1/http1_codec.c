@@ -966,7 +966,7 @@ static bool parse_header(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
 // Pass message body data up to the application.
 //
-static inline int consume_body_data(h1_codec_connection_t *conn, bool flush)
+static inline int consume_stream_data(h1_codec_connection_t *conn, bool flush)
 {
     struct decoder_t       *decoder = &conn->decoder;
     qd_iterator_pointer_t *body_ptr = &decoder->body_ptr;
@@ -1092,7 +1092,7 @@ static bool parse_body_chunked_data(h1_codec_connection_t *conn, struct decoder_
     decoder->chunk_length -= skipped;
     body_ptr->remaining += skipped;
 
-    consume_body_data(conn, false);
+    consume_stream_data(conn, false);
 
     if (decoder->chunk_length == 0) {
         // end of chunk
@@ -1117,7 +1117,7 @@ static bool parse_body_chunked_trailer(h1_codec_connection_t *conn, struct decod
         body_ptr->remaining += line.remaining;
         if (is_empty_line(&line)) {
             // end of message
-            consume_body_data(conn, true);
+            consume_stream_data(conn, true);
             decoder->state = HTTP1_MSG_STATE_DONE;
         }
 
@@ -1164,7 +1164,7 @@ static bool parse_body_content(h1_codec_connection_t *conn, struct decoder_t *de
     body_ptr->remaining += skipped;
     bool eom = decoder->content_length == 0;
 
-    consume_body_data(conn, eom);
+    consume_stream_data(conn, eom);
     if (eom)
         decoder->state = HTTP1_MSG_STATE_DONE;
 
@@ -1188,7 +1188,7 @@ static bool parse_body(h1_codec_connection_t *conn, struct decoder_t *decoder)
         decoder->read_ptr.remaining = 0;
         decoder->read_ptr.buffer = DEQ_TAIL(decoder->incoming);
         decoder->read_ptr.cursor = qd_buffer_cursor(decoder->read_ptr.buffer);
-        consume_body_data(conn, true);
+        consume_stream_data(conn, true);
         decoder->body_ptr = decoder->read_ptr = NULL_I_PTR;
         DEQ_INIT(decoder->incoming);
     }
@@ -1489,7 +1489,7 @@ static inline void _flush_headers(h1_codec_request_state_t *hrs, struct encoder_
 
 
 // just forward the body chain along
-int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_body_data_t *body_data)
+int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_stream_data_t *stream_data)
 {
     h1_codec_connection_t *conn = h1_codec_request_state_get_connection(hrs);
     struct encoder_t *encoder = &conn->encoder;
@@ -1498,8 +1498,8 @@ int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_body_data_t *body
         _flush_headers(hrs, encoder);
 
     // skip the outgoing queue and send directly
-    hrs->out_octets += qd_message_body_data_payload_length(body_data);
-    conn->config.tx_body_data(hrs, body_data);
+    hrs->out_octets += qd_message_stream_data_payload_length(stream_data);
+    conn->config.tx_stream_data(hrs, stream_data);
 
     return 0;
 }

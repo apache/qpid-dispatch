@@ -138,8 +138,8 @@ void qdr_http1_out_data_fifo_cleanup(qdr_http1_out_data_fifo_t *out_data)
         qdr_http1_out_data_t *od = DEQ_HEAD(out_data->fifo);
         while (od) {
             DEQ_REMOVE_HEAD(out_data->fifo);
-            if (od->body_data)
-                qd_message_body_data_release(od->body_data);
+            if (od->stream_data)
+                qd_message_stream_data_release(od->stream_data);
             else
                 qd_buffer_list_free_buffers(&od->raw_buffers);
             free_qdr_http1_out_data_t(od);
@@ -265,9 +265,9 @@ uint64_t qdr_http1_write_out_data(qdr_http1_connection_t *hconn, qdr_http1_out_d
             size_t limit = MIN(RAW_BUFFER_BATCH, od_len);
             int written = 0;
 
-            if (od->body_data) {  // buffers stored in qd_message_t
+            if (od->stream_data) {  // buffers stored in qd_message_t
 
-                written = qd_message_body_data_buffers(od->body_data, buffers, od->next_buffer, limit);
+                written = qd_message_stream_data_buffers(od->stream_data, buffers, od->next_buffer, limit);
                 for (int i = 0; i < written; ++i) {
                     // enforce this: we expect the context can be used by the adaptor!
                     assert(buffers[i].context == 0);
@@ -352,14 +352,14 @@ void qdr_http1_enqueue_buffer_list(qdr_http1_out_data_fifo_t *fifo, qd_buffer_li
 // The HTTP encoder has a message body data to be written to the raw connection.
 // Queue it to the outgoing data fifo.
 //
-void qdr_http1_enqueue_body_data(qdr_http1_out_data_fifo_t *fifo, qd_message_body_data_t *body_data)
+void qdr_http1_enqueue_stream_data(qdr_http1_out_data_fifo_t *fifo, qd_message_stream_data_t *stream_data)
 {
-    int count = qd_message_body_data_buffer_count(body_data);
+    int count = qd_message_stream_data_buffer_count(stream_data);
     if (count) {
         qdr_http1_out_data_t *od = new_qdr_http1_out_data_t();
         ZERO(od);
         od->owning_fifo = fifo;
-        od->body_data = body_data;
+        od->stream_data = stream_data;
         od->buffer_count = count;
 
         DEQ_INSERT_TAIL(fifo->fifo, od);
@@ -367,7 +367,7 @@ void qdr_http1_enqueue_body_data(qdr_http1_out_data_fifo_t *fifo, qd_message_bod
             fifo->write_ptr = od;
     } else {
         // empty body-data
-        qd_message_body_data_release(body_data);
+        qd_message_stream_data_release(stream_data);
     }
 }
 
@@ -401,8 +401,8 @@ void qdr_http1_free_written_buffers(qdr_http1_connection_t *hconn)
                 // all buffers returned
                 qdr_http1_out_data_fifo_t *fifo = od->owning_fifo;
                 DEQ_REMOVE(fifo->fifo, od);
-                if (od->body_data)
-                    qd_message_body_data_release(od->body_data);
+                if (od->stream_data)
+                    qd_message_stream_data_release(od->stream_data);
                 else
                     qd_buffer_list_free_buffers(&od->raw_buffers);
                 free_qdr_http1_out_data_t(od);

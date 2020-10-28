@@ -63,7 +63,7 @@ struct qdr_tcp_connection_t {
     uint64_t              last_in_time;
     uint64_t              last_out_time;
 
-    qd_message_body_data_t *outgoing_body_data;   // current segment
+    qd_message_stream_data_t *outgoing_stream_data;   // current segment
     size_t                  outgoing_body_bytes;  // bytes received from current segment
     int                     outgoing_body_offset; // buffer offset into current segment
 
@@ -147,7 +147,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     grant_read_buffers(conn);
 
     if (conn->instream) {
-        qd_message_body_data_append(qdr_delivery_message(conn->instream), &buffers);
+        qd_message_stream_data_append(qdr_delivery_message(conn->instream), &buffers);
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, false);
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Continuing message with %i bytes", conn->conn_id, conn->incoming_id, count);
     } else {
@@ -229,25 +229,23 @@ static int read_message_body(qdr_tcp_connection_t *conn, qd_message_t *msg, pn_r
 {
     int used = 0;
 
-    // Advance to next body_data vbin segment if necessary.
+    // Advance to next stream_data vbin segment if necessary.
     // Return early if no data to process or error
-    if (conn->outgoing_body_data == 0) {
-        qd_message_body_data_result_t body_data_result = qd_message_next_body_data(msg, &conn->outgoing_body_data);
-        if (body_data_result == QD_MESSAGE_BODY_DATA_OK) {
-            // a new body_data segment has been found
+    if (conn->outgoing_stream_data == 0) {
+        qd_message_stream_data_result_t stream_data_result = qd_message_next_stream_data(msg, &conn->outgoing_stream_data);
+        if (stream_data_result == QD_MESSAGE_STREAM_DATA_BODY_OK) {
+            // a new stream_data segment has been found
             conn->outgoing_body_bytes  = 0;
             conn->outgoing_body_offset = 0;
             // continue to process this segment
-        } else if (body_data_result == QD_MESSAGE_BODY_DATA_INCOMPLETE) {
+        } else if (stream_data_result == QD_MESSAGE_STREAM_DATA_INCOMPLETE) {
             return 0;
         } else {
-            switch (body_data_result) {
-            case QD_MESSAGE_BODY_DATA_NO_MORE:
+            switch (stream_data_result) {
+            case QD_MESSAGE_STREAM_DATA_NO_MORE:
                 qd_log(tcp_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] EOS", conn->conn_id); break;
-            case QD_MESSAGE_BODY_DATA_INVALID:
+            case QD_MESSAGE_STREAM_DATA_INVALID:
                 qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Invalid body data for streaming message", conn->conn_id); break;
-            case QD_MESSAGE_BODY_DATA_NOT_DATA:
-                qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "[C%"PRIu64"] Invalid body; expected data section", conn->conn_id); break;
             default:
                 break;
             }
@@ -256,30 +254,30 @@ static int read_message_body(qdr_tcp_connection_t *conn, qd_message_t *msg, pn_r
         }
     }
 
-    // A valid body_data is in place.
+    // A valid stream_data is in place.
     // Try to get a buffer set from it.
-    used = qd_message_body_data_buffers(conn->outgoing_body_data, buffers, conn->outgoing_body_offset, count);
+    used = qd_message_stream_data_buffers(conn->outgoing_stream_data, buffers, conn->outgoing_body_offset, count);
     if (used > 0) {
         // Accumulate the lengths of the returned buffers.
         for (int i=0; i<used; i++) {
             conn->outgoing_body_bytes += buffers[i].size;
         }
 
-        // Buffers returned should never exceed the body_data payload length
-        assert(conn->outgoing_body_bytes <= conn->outgoing_body_data->payload.length);
+        // Buffers returned should never exceed the stream_data payload length
+        assert(conn->outgoing_body_bytes <= conn->outgoing_stream_data->payload.length);
 
-        if (conn->outgoing_body_bytes == conn->outgoing_body_data->payload.length) {
-            // This buffer set consumes the remainder of the body_data segment.
-            // Attach the body_data struct to the last buffer so that the struct
+        if (conn->outgoing_body_bytes == conn->outgoing_stream_data->payload.length) {
+            // This buffer set consumes the remainder of the stream_data segment.
+            // Attach the stream_data struct to the last buffer so that the struct
             // can be freed after the buffer has been transmitted by raw connection out.
-            buffers[used-1].context = (uintptr_t) conn->outgoing_body_data;
+            buffers[used-1].context = (uintptr_t) conn->outgoing_stream_data;
 
-            // Erase the body_data struct from the connection so that
+            // Erase the stream_data struct from the connection so that
             // a new one gets created on the next pass.
-            conn->outgoing_body_data = 0;
+            conn->outgoing_stream_data = 0;
         } else {
-            // Returned buffer set did not consume the entire body_data segment.
-            // Leave existing body_data struct in place for use on next pass.
+            // Returned buffer set did not consume the entire stream_data segment.
+            // Leave existing stream_data struct in place for use on next pass.
             // Add the number of returned buffers to the offset for the next pass.
             conn->outgoing_body_offset += used;
         }
@@ -517,7 +515,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             for (size_t i = 0; i < n; ++i) {
                 written += buffs[i].size;
                 if (buffs[i].context) {
-                    qd_message_body_data_release((qd_message_body_data_t*) buffs[i].context);
+                    qd_message_stream_data_release((qd_message_stream_data_t*) buffs[i].context);
                 }
             }
         }
