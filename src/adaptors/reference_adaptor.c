@@ -298,6 +298,7 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
 
                 qd_parse_free(footer);
                 qd_iterator_free(footer_iter);
+                qd_message_stream_data_release(stream_data);
                 break;
             }
             
@@ -510,6 +511,8 @@ static void on_stream(void *context)
         qd_compose_start_map(footer);
         qd_compose_insert_symbol(footer, "trailer");
         qd_compose_insert_string(footer, "value");
+        qd_compose_insert_symbol(footer, "second");
+        qd_compose_insert_string(footer, "value2");
         qd_compose_end_map(footer);
         depth = qd_message_extend(adaptor->streaming_message, footer);
         qd_compose_free(footer);
