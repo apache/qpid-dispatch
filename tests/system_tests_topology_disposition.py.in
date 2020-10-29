@@ -399,7 +399,7 @@ class TopologyDispositionTests ( TestCase ):
         error = None
         if self.skip [ name ] :
             self.skipTest ( "Test skipped during development." )
-        st_key = "PROTOCOL (trace) ["
+        st_key = "PROTOCOL (trace) [C"
         qc_key = "qd.conn-id\"="
         for letter in ['A', 'B', 'C', 'D']:
             log_name = ('../setUpClass/%s.log' % letter)
@@ -423,7 +423,7 @@ class TopologyDispositionTests ( TestCase ):
                             break
                         sti += 1
                         qci += 1
-                    if oopen[qci].isdigit():
+                    if error == None and oopen[qci].isdigit():
                         error = "log %s, line '%s' published conn-id is too big" % (log_name, oopen)
                 self.assertEqual(None, error)
             self.assertEqual ( None, error )
