@@ -23,38 +23,24 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import traceback
 from time import sleep
 from threading import Event
 from threading import Timer
 
-from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, MgmtMsgProxy, TestTimeout, PollTimeout
-from system_test import AsyncTestReceiver
-from system_test import AsyncTestSender
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import Logger
 from system_test import QdManager
 from system_test import unittest
 from system_test import Process
-from system_tests_link_routes import ConnLinkRouteService
-from test_broker import FakeBroker
-from test_broker import FakeService
-from proton.handlers import MessagingHandler
-from proton.reactor import Container, DynamicNodeProperties
-from proton.utils import BlockingConnection
+from system_test import DIR
 from qpid_dispatch.management.client import Node
-from qpid_dispatch_internal.tools.command import version_supports_mutually_exclusive_arguments
 from subprocess import PIPE, STDOUT
-import re
-
-class AddrTimer(object):
-    def __init__(self, parent):
-        self.parent = parent
-
-    def on_timer_task(self, event):
-        self.parent.check_address()
+from TCP_echo_client import TcpEchoClient
+from TCP_echo_server import TcpEchoServer
 
 
-class TcpAdaptorOneRouterEcho(TestCase):
+class TcpAdaptorOneRouterEcho(TestCase, Process):
     """
     Run echo tests through a stand-alone router
     """
@@ -64,7 +50,7 @@ class TcpAdaptorOneRouterEcho(TestCase):
 
     @classmethod
     def setUpClass(cls):
-        """Start a router and echo server"""
+        """Start a router"""
         super(TcpAdaptorOneRouterEcho, cls).setUpClass()
 
         def router(name, mode, l_amqp, l_tcp_client, l_tcp_server, addr, site, extra=None):
@@ -92,54 +78,87 @@ class TcpAdaptorOneRouterEcho(TestCase):
         cls.tcp_client_listener_port = cls.tester.get_port()
         cls.tcp_server_listener_port = cls.tester.get_port()
 
-        router('INT.A', 'interior', cls.amqp_listener_port, cls.tcp_client_listener_port,
+        router('A', 'interior', cls.amqp_listener_port, cls.tcp_client_listener_port,
                cls.tcp_server_listener_port, "some_address", "best_site")
 
-        cls.logger = Logger(title="TCP echo one router", print_to_console=True)
+        cls.logger = Logger(title="TcpAdaptorOneRouterEcho-testClass", print_to_console=True)
 
-    @classmethod
-    def tearDownClass(cls):
-        pass
+    def do_test_echo(self, test_name, logger, host, port, size, count):
+        # Run echo client. Return true if it works.
+        name = "%s_%s_%s_%s" % (test_name, port, size, count)
+        client_prefix = "ECHO_CLIENT %s" % name
+        client_logger = Logger(title=client_prefix, print_to_console=False, save_for_dump=True)
+        result = True # assume it works
+        try:
+            # start client
+            client = TcpEchoClient(prefix=client_prefix,
+                                   host=host,
+                                   port=port,
+                                   size=size,
+                                   count=count,
+                                   timeout=TIMEOUT,
+                                   logger=client_logger)
+            #assert client.is_running
 
-    def spawn_echo_server(self, port, expect=None):
-        cmd = ["TCP_echo_server.py",
-               "--port", str(port),
-               "--log"]
-        return self.popen(cmd, name='echo-server', stdout=PIPE, expect=expect,
-                          universal_newlines=True)
+            # wait for client to finish
+            keep_waiting = True
+            while keep_waiting:
+                sleep(0.1)
+                if client.error is not None:
+                    logger.log("%s Client stopped with error: %s" % (name, client.error))
+                    keep_waiting = False
+                    result = False
+                if client.exit_status is not None:
+                    logger.log("%s Client stopped with status: %s" % (name, client.exit_status))
+                    keep_waiting = False
+                    result = False
+                if keep_waiting and not client.is_running:
+                    logger.log("%s Client stopped with no error or status" % (name))
+                    keep_waiting = False
 
-    def spawn_echo_client(self, logger, host, port, size, count, expect=None):
-        if expect is None:
-            expect = Process.EXIT_OK
-        cmd = ["TCP_echo_client.py",
-               "--host", host,
-               "--port", str(port),
-               "--size", str(size),
-               "--count", str(count),
-               "--log"]
-        logger.log("Start client. cmd=%s" % str(cmd))
-        return self.popen(cmd, name='echo-clint', stdout=PIPE, expect=expect,
-                          universal_newlines=True)
+        except Exception as exc:
+            logger.log("EchoClient %s failed. Exception: %s" %
+                       (name, traceback.format_exc()))
+            result = False
 
-    def do_test_echo(self, logger, host, port, size, count):
-        # start echo client
-        client = self.spawn_echo_client(logger, host, port, size, count)
-        cl_text, cl_error = client.communicate(timeout=TIMEOUT)
-        if client.returncode:
-            raise Exception("Echo client failed size:%d, count:%d : %s %s" %
-                            (size, count, cl_text, cl_error))
+        if not result:
+            # On failure, dump the client log through the test log. Compound logs here we go
+            for line in client_logger.logs:
+                logger.log("Failed client log: %s" % line)
+        return result
 
     def test_01_tcp_echo_one_router(self):
+        """
+        Run one echo server.
+        Run many echo clients.
+        :return:
+        """
         # start echo server
-        #server = self.spawn_echo_server(self.tcp_server_listener_port)
+        test_name = "test_01_tcp_echo_one_router"
+        server_prefix = "ECHO_SERVER %s" % test_name
+        server_logger = Logger(title=test_name, print_to_console=False, save_for_dump=True)
+        server = TcpEchoServer(prefix=server_prefix,
+                               port=self.tcp_server_listener_port,
+                               timeout=TIMEOUT,
+                               logger=server_logger)
+        assert server.is_running
 
-        #for size in [1, 5, 10, 50, 100]:
-        #    for count in [1, 5, 10, 50, 100]:
-        #        self.logger.log("Starting echo client host:localhost, port:%d, size:%d, count:%d" %
-        #                   (self.tcp_client_listener_port, size, count))
-        #        self.do_test_echo(self.logger, "localhost", self.tcp_client_listener_port, size, count)
-        #server.join()
-        pass
+        # run series of clients to test
+        result = True
+        for size in [1]:
+            for count in [1]:
+                test_info = "Starting echo client %s host:localhost, port:%d, size:%d, count:%d" % \
+                           (test_name, self.tcp_client_listener_port, size, count)
+                self.logger.log(test_info)
+                result = self.do_test_echo(test_name, self.logger, "localhost",
+                                           self.tcp_client_listener_port, size, count)
+                if not result:
+                    break
+            if not result:
+                break
+        # stop echo server
+        server.wait()
+        assert result, "Test case failed %s" % test_info
 
 if __name__== '__main__':
     unittest.main(main_module())
