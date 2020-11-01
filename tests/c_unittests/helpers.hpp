@@ -21,6 +21,9 @@
 #define QPID_DISPATCH_HELPERS_HPP
 
 #include <mutex>
+#include <memory>
+#include <fstream>
+#include <sstream>
 
 #include "./qdr_doctest.h"
 
@@ -113,7 +116,7 @@ class QDR {
         // prepare the smallest amount of things that qd_dispatch_free needs to be present
         qd = qd_dispatch(nullptr, false);
         // qd can be configured at this point, e.g. qd->thread_count
-            REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
+        REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
         qd_router_setup_late(qd);  // sets up e.g. qd->router->router_core
     };
 
