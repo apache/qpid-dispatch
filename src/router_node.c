@@ -1459,7 +1459,7 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     }
 
     size_t dplen = 9 + strlen(area) + strlen(id);
-    node_id = (char*) malloc(dplen);
+    node_id = (char*) qd_malloc(dplen);
     strcpy(node_id, area);
     strcat(node_id, "/");
     strcat(node_id, id);

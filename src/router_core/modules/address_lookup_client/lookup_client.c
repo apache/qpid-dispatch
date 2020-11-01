@@ -71,7 +71,7 @@ static char* disambiguated_link_name(qdr_connection_info_t *conn, char *original
 {
     size_t olen = strlen(original);
     size_t clen = strlen(conn->container);
-    char *name = (char*) malloc(olen + clen + 2);
+    char *name = (char*) qd_malloc(olen + clen + 2);
     memset(name, 0, olen + clen + 2);
     strcat(name, original);
     name[olen] = '@';
