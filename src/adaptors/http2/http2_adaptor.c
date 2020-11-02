@@ -70,6 +70,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
 
 static void advance_stream_status(qdr_http2_stream_data_t *stream_data)
 {
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Trying to move stream status", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     if (stream_data->status == QD_STREAM_OPEN) {
         stream_data->status = QD_STREAM_HALF_CLOSED;
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Moving stream status to QD_STREAM_HALF_CLOSED", stream_data->session_data->conn->conn_id, stream_data->stream_id);
@@ -77,6 +78,12 @@ static void advance_stream_status(qdr_http2_stream_data_t *stream_data)
     else if (stream_data->status == QD_STREAM_HALF_CLOSED) {
         stream_data->status = QD_STREAM_FULLY_CLOSED;
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Moving stream status to QD_STREAM_FULLY_CLOSED", stream_data->session_data->conn->conn_id, stream_data->stream_id);
+    }
+    else if (stream_data->status == QD_STREAM_FULLY_CLOSED) {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Not moving stream status, stream is already QD_STREAM_FULLY_CLOSED", stream_data->session_data->conn->conn_id, stream_data->stream_id);
+    }
+    else {
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Unknown stream status", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     }
 }
 
@@ -278,6 +285,7 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     free(stream_data->reply_to);
     qd_compose_free(stream_data->app_properties);
     qd_compose_free(stream_data->body);
+    qd_compose_free(stream_data->footer_properties);
     if (DEQ_SIZE(session_data->streams) > 0) {
         DEQ_REMOVE(session_data->streams, stream_data);
         nghttp2_session_set_stream_user_data(session_data->session, stream_data->stream_id, NULL);
@@ -285,6 +293,8 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     if (stream_data->method)      free(stream_data->method);
     if (stream_data->remote_site) free(stream_data->remote_site);
+
+    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream_data in free_http2_stream_data (%lx)", conn->conn_id,  stream_data->stream_id, (long) stream_data);
     free_qdr_http2_stream_data_t(stream_data);
 }
 
@@ -352,6 +362,9 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
 
     ZERO(stream_data);
     stream_data->stream_id = stream_id;
+
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Created new stream_data (%lx)", session_data->conn->conn_id, stream_id, (long) stream_data);
+
     stream_data->message = qd_message();
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
@@ -487,10 +500,15 @@ static int snd_data_callback(nghttp2_session *session,
         }
     }
     if (stream_data->full_payload_handled) {
-        qd_message_stream_data_release(stream_data->curr_stream_data);
-        stream_data->curr_stream_data = 0;
+        if (!stream_data->out_msg_has_footer) {
+            qd_message_stream_data_release(stream_data->curr_stream_data);
+            stream_data->curr_stream_data = 0;
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback, full_payload_handled, no footer, qd_message_stream_data_release", conn->conn_id, stream_data->stream_id);
+        }
+        else {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback, full_payload_handled, out_msg_has_footer", conn->conn_id, stream_data->stream_id);
+        }
         stream_data->curr_stream_data_qd_buff_offset = 0;
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] snd_data_callback, full_payload_handled, qd_message_stream_data_release", conn->conn_id, stream_data->stream_id);
     }
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 snd_data_callback finished, length=%zu, bytes_sent=%i, stream_data=%p", conn->conn_id, stream_data->stream_id, length, bytes_sent, (void *)stream_data);
@@ -739,11 +757,12 @@ static void check_send_ping_frame(qdr_http2_connection_t *conn)
     //
     // Send a ping frame every 4 seconds.
     //
-    if (current - prev >= 4) {
+    if (!conn->ingress && conn->woken_by_ping && (current - prev >= 4)) {
         send_ping_frame(conn);
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Sent PING frame", conn->conn_id);
         qd_timer_schedule(conn->ping_timer, 4000);
         conn->prev_ping = current;
+        conn->woken_by_ping = false;
     }
 }
 
@@ -848,7 +867,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
                 qd_compose_end_map(stream_data->footer_properties);
                 stream_data->entire_footer_arrived = true;
                 qd_message_extend(stream_data->message, stream_data->footer_properties);
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Closing footer map, extending message", conn->conn_id, stream_id);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Closing footer map, extending message with footer", conn->conn_id, stream_id);
             }
             else {
                 //
@@ -876,18 +895,19 @@ static int on_frame_recv_callback(nghttp2_session *session,
 
             if (stream_data->entire_footer_arrived) {
                 qdr_delivery_continue(http2_adaptor->core, stream_data->in_dlv, false);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Entire footer arrived, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
             }
             else {
                 //
                 // All headers have arrived, send out the delivery with just the headers,
                 // if/when the body arrives later, we will call the qdr_delivery_continue()
                 //
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] All headers arrived, trying to route delivery", conn->conn_id);
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, trying to route delivery", conn->conn_id, stream_id);
                 if (route_delivery(stream_data, receive_complete)) {
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] All headers arrived, delivery routed successfully", conn->conn_id);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, delivery routed successfully", conn->conn_id, stream_id);
                 }
                 else {
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] All headers arrived, delivery not routed", conn->conn_id);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, delivery not routed", conn->conn_id, stream_id);
                 }
 
             }
@@ -935,6 +955,7 @@ ssize_t read_data_callback(nghttp2_session *session,
         //
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_DEPTH_OK", conn->conn_id, stream_data->stream_id);
 
+
         if (stream_data->next_stream_data) {
             stream_data->curr_stream_data = stream_data->next_stream_data;
             stream_data->curr_stream_data_result = stream_data->next_stream_data_result;
@@ -945,7 +966,10 @@ ssize_t read_data_callback(nghttp2_session *session,
         if (!stream_data->curr_stream_data) {
             stream_data->curr_stream_data_result = qd_message_next_stream_data(message, &stream_data->curr_stream_data);
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback No body data, get qd_message_next_stream_data", conn->conn_id, stream_data->stream_id);
+        }
 
+        if (stream_data->next_stream_data == 0 && stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
+            stream_data->curr_stream_data_result = stream_data->next_stream_data_result;
         }
 
         switch (stream_data->curr_stream_data_result) {
@@ -954,13 +978,13 @@ ssize_t read_data_callback(nghttp2_session *session,
             // We have a new valid body-data segment.  Handle it
             //
             size_t pn_buffs_write_capacity = pn_raw_connection_write_buffers_capacity(conn->pn_raw_conn);
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback pn_raw_connection_write_buffers_capacity=%zu", conn->conn_id, stream_data->stream_id, pn_buffs_write_capacity);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_BODY_OK pn_raw_connection_write_buffers_capacity=%zu", conn->conn_id, stream_data->stream_id, pn_buffs_write_capacity);
 
             if (pn_buffs_write_capacity == 0) {
                 //
                 // Proton capacity is zero, we will come back later to write this stream, return for now.
                 //
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Exiting read_data_callback, pn_buffs_write_capacity=0, pausing stream, returning NGHTTP2_ERR_DEFERRED", conn->conn_id, stream_data->stream_id);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Exiting read_data_callback, QD_MESSAGE_STREAM_DATA_BODY_OK pn_buffs_write_capacity=0, pausing stream, returning NGHTTP2_ERR_DEFERRED", conn->conn_id, stream_data->stream_id);
                 stream_data->out_dlv_local_disposition = 0;
                 return NGHTTP2_ERR_DEFERRED;
             }
@@ -969,16 +993,16 @@ ssize_t read_data_callback(nghttp2_session *session,
             size_t payload_length = qd_message_stream_data_payload_length(stream_data->curr_stream_data);
 
             if (payload_length == 0) {
-                //
-                // Current body data has payload length zero. Release the curr_stream_data
-                //
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0", conn->conn_id, stream_data->stream_id);
-                qd_message_stream_data_release(stream_data->curr_stream_data);
-                stream_data->curr_stream_data = 0;
 
                 // The payload length is zero on this body data. Look ahead one body data to see if it is QD_MESSAGE_STREAM_DATA_NO_MORE
                 stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
                 if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
+                    if (!stream_data->out_msg_has_footer) {
+                        qd_message_stream_data_release(stream_data->curr_stream_data);
+                        stream_data->curr_stream_data = 0;
+                    }
+
                     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
                     stream_data->out_msg_body_sent = true;
                     stream_data->full_payload_handled = true;
@@ -990,6 +1014,15 @@ ssize_t read_data_callback(nghttp2_session *session,
                     }
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0 and next_stream_data=QD_MESSAGE_STREAM_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
                     return 0;
+                }
+                else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_FOOTER_OK) {
+                    stream_data->full_payload_handled = true;
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0 and next_stream_data_result=QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
+                    return 0;
+                }
+                else {
+                    qd_message_stream_data_release(stream_data->curr_stream_data);
+                    stream_data->curr_stream_data = 0;
                 }
 
 
@@ -1003,11 +1036,12 @@ ssize_t read_data_callback(nghttp2_session *session,
             }
 
             stream_data->stream_data_buff_count = qd_message_stream_data_buffer_count(stream_data->curr_stream_data);
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, stream_data->stream_data_buff_count=%i, payload_length=%zu\n", conn->conn_id, stream_data->stream_id, stream_data->stream_data_buff_count, payload_length);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, stream_data->stream_data_buff_count=%i, payload_length=%zu", conn->conn_id, stream_data->stream_id, stream_data->stream_data_buff_count, payload_length);
 
             size_t bytes_to_send = 0;
             if (payload_length) {
                 size_t remaining_payload_length = payload_length - (stream_data->curr_stream_data_qd_buff_offset * BUFFER_SIZE);
+
 
                 if (remaining_payload_length <= QD_HTTP2_BUFFER_SIZE) {
                     bytes_to_send = remaining_payload_length;
@@ -1033,6 +1067,10 @@ ssize_t read_data_callback(nghttp2_session *session,
                         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, looking ahead one body data QD_MESSAGE_STREAM_DATA_OK", conn->conn_id, stream_data->stream_id);
 
                     }
+                    else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_FOOTER_OK) {
+                        stream_data->out_msg_body_sent = true;
+                        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, looking ahead one body data, QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
+                    }
                 }
                 else {
                     // This means that there is more that 16k worth of payload in one body data.
@@ -1051,6 +1089,12 @@ ssize_t read_data_callback(nghttp2_session *session,
         }
 
         case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
+            stream_data->out_msg_has_footer = true;
+            stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
+            if (stream_data->next_stream_data) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_FOOTER_OK, we have a next_stream_data", conn->conn_id, stream_data->stream_id);
+            }
             break;
 
         case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
@@ -1075,6 +1119,17 @@ ssize_t read_data_callback(nghttp2_session *session,
             else {
                 stream_data->qd_buffers_to_send = 0;
                 *data_flags |= NGHTTP2_DATA_FLAG_EOF;
+                if (stream_data->out_msg_has_footer) {
+                    //
+                    // We have to send the trailer fields.
+                    // You cannot send trailer fields after sending frame with END_STREAM
+                    // set.  To avoid this problem, one can set
+                    // NGHTTP2_DATA_FLAG_NO_END_STREAM along with
+                    // NGHTTP2_DATA_FLAG_EOF to signal the library not to set
+                    // END_STREAM in DATA frame.
+                    //
+                    *data_flags |= NGHTTP2_DATA_FLAG_NO_END_STREAM;
+                }
                 stream_data->full_payload_handled = true;
                 stream_data->out_msg_body_sent = true;
                 stream_data->out_dlv_local_disposition = PN_ACCEPTED;
@@ -1416,8 +1471,10 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 if (payload_length == 0) {
                     stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
                     if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
+
                         qd_message_stream_data_release(stream_data->next_stream_data);
                         stream_data->next_stream_data = 0;
+
                         qd_message_stream_data_release(stream_data->curr_stream_data);
                         stream_data->curr_stream_data = 0;
                         flags = NGHTTP2_FLAG_END_STREAM;
@@ -1427,7 +1484,6 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 }
             }
 
-            // This does not really submit the request. We need to read the bytes
             stream_data->stream_id = nghttp2_submit_headers(session_data->session,
                                                             flags,
                                                             stream_id,
@@ -1488,63 +1544,79 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         }
         stream_data->out_msg_header_sent = true;
 
-//        if (qd_message_has_footer(qdr_delivery_message(stream_data->out_dlv))) {
-//            bool send_footer = false;
-//            if (stream_data->out_msg_has_body) {
-//                if (stream_data->out_msg_body_sent) {
-//                    send_footer = true;
-//                }
-//            }
-//            else {
-//                send_footer = true;
-//            }
-//
-//            if (send_footer) {
-//                // Send the properties in the footer as a HEADERS frame.
-//                qd_iterator_t *footer_properties_iter = qd_message_field_iterator(message, QD_FIELD_FOOTER);
-//                qd_parsed_field_t *footer_properties_fld = qd_parse(footer_properties_iter);
-//
-//                uint32_t count = qd_parse_sub_count(footer_properties_fld);
-//
-//                nghttp2_nv hdrs[count];
-//
-//                for (uint32_t idx = 0; idx < count; idx++) {
-//                    qd_parsed_field_t *key = qd_parse_sub_key(footer_properties_fld, idx);
-//                    qd_parsed_field_t *val = qd_parse_sub_value(footer_properties_fld, idx);
-//                    qd_iterator_t *key_raw = qd_parse_raw(key);
-//                    qd_iterator_t *val_raw = qd_parse_raw(val);
-//
-//                    hdrs[idx].name = (uint8_t *)qd_iterator_copy(key_raw);
-//                    hdrs[idx].value = (uint8_t *)qd_iterator_copy(val_raw);
-//                    hdrs[idx].namelen = qd_iterator_length(key_raw);
-//                    hdrs[idx].valuelen = qd_iterator_length(val_raw);
-//                    hdrs[idx].flags = NGHTTP2_NV_FLAG_NONE;
-//                }
-//
-//                // This does not really submit the request. We need to read the bytes
-//                nghttp2_session_set_next_stream_id(session_data->session, stream_data->stream_id);
-//                stream_data->stream_id = nghttp2_submit_headers(session_data->session,
-//                                                                NGHTTP2_FLAG_END_STREAM,
-//                                                                stream_data->stream_id,
-//                                                                NULL,
-//                                                                hdrs,
-//                                                                count,
-//                                                                stream_data);
-//
-//                for (uint32_t idx = 0; idx < count; idx++) {
-//                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 HEADER(footer) Outgoing [%s=%s]", conn->conn_id, stream_data->stream_id, (char *)hdrs[idx].name, (char *)hdrs[idx].value);
-//                }
-//
-//                nghttp2_session_send(session_data->session);
-//                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Headers(from footer) submitted", conn->conn_id, stream_data->stream_id);
-//
-//                qd_iterator_free(footer_properties_iter);
-//                qd_parse_free(footer_properties_fld);
-//            }
-//        }
-//        else {
-//            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Message has no footer", conn->conn_id, stream_data->stream_id);
-//        }
+        if (stream_data->out_msg_has_footer) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Message has a footer", conn->conn_id, stream_data->stream_id);
+            bool send_footer = false;
+            if (stream_data->out_msg_has_body) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] stream_data->out_msg_has_body", conn->conn_id, stream_data->stream_id);
+                if (stream_data->out_msg_body_sent) {
+                    send_footer = true;
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] send_footer = true", conn->conn_id, stream_data->stream_id);
+                }
+                else {
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] send_footer = false", conn->conn_id, stream_data->stream_id);
+                }
+            }
+            else {
+                send_footer = true;
+            }
+
+            //
+            // We have a footer and are ready to send it.
+            //
+            if (send_footer) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Starting to send footer", conn->conn_id, stream_data->stream_id);
+                // Send the properties in the footer as a HEADERS frame.
+                qd_iterator_t     *footer_properties_iter = qd_message_stream_data_iterator(stream_data->curr_stream_data);
+                qd_parsed_field_t *footer_properties_fld = qd_parse(footer_properties_iter);
+
+                uint32_t count = qd_parse_sub_count(footer_properties_fld);
+
+                nghttp2_nv hdrs[count];
+
+                for (uint32_t idx = 0; idx < count; idx++) {
+                    qd_parsed_field_t *key = qd_parse_sub_key(footer_properties_fld, idx);
+                    qd_parsed_field_t *val = qd_parse_sub_value(footer_properties_fld, idx);
+                    qd_iterator_t *key_raw = qd_parse_raw(key);
+                    qd_iterator_t *val_raw = qd_parse_raw(val);
+
+                    hdrs[idx].name = (uint8_t *)qd_iterator_copy(key_raw);
+                    hdrs[idx].value = (uint8_t *)qd_iterator_copy(val_raw);
+                    hdrs[idx].namelen = qd_iterator_length(key_raw);
+                    hdrs[idx].valuelen = qd_iterator_length(val_raw);
+                    hdrs[idx].flags = NGHTTP2_NV_FLAG_NONE;
+                }
+
+                nghttp2_submit_headers(session_data->session,
+                        NGHTTP2_FLAG_END_STREAM,
+                        stream_data->stream_id,
+                        NULL,
+                        hdrs,
+                        count,
+                        stream_data);
+
+                for (uint32_t idx = 0; idx < count; idx++) {
+                    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 HEADER(footer) Outgoing [%s=%s]", conn->conn_id, stream_data->stream_id, (char *)hdrs[idx].name, (char *)hdrs[idx].value);
+                }
+
+                nghttp2_session_send(session_data->session);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Headers(from footer) submitted", conn->conn_id, stream_data->stream_id);
+
+                qd_iterator_free(footer_properties_iter);
+                qd_parse_free(footer_properties_fld);
+                if (stream_data->curr_stream_data) {
+                    qd_message_stream_data_release(stream_data->curr_stream_data);
+                    stream_data->curr_stream_data = 0;
+                }
+                if (stream_data->next_stream_data) {
+                    qd_message_stream_data_release(stream_data->next_stream_data);
+                    stream_data->next_stream_data = 0;
+                }
+            }
+        }
+        else {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Message has no footer", conn->conn_id, stream_data->stream_id);
+        }
 
         if (stream_data->out_msg_header_sent) {
             if (stream_data->out_msg_has_body) {
@@ -1849,6 +1921,7 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
             qdr_link_set_context(conn->stream_dispatcher, 0);
             conn->stream_dispatcher = 0;
             if (stream_data) {
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Freeing stream_data (stream_dispatcher, handle_disconnected) (%lx)", conn->conn_id,  (long) stream_data);
                 free_qdr_http2_stream_data_t(stream_data);
             }
             conn->stream_dispatcher_stream_data = 0;
@@ -1869,6 +1942,7 @@ static void egress_conn_ping_sender(void *context)
     if (conn->pn_raw_conn) {
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] egress_conn_ping_sender, calling pn_raw_connection_wake()", conn->conn_id);
         pn_raw_connection_wake(conn->pn_raw_conn);
+        conn->woken_by_ping = true;
     }
 }
 
@@ -1908,6 +1982,9 @@ static void create_stream_dispatcher_link(qdr_http2_connection_t *egress_http_co
 
     // Create a dummy stream_data object and set that as context.
     qdr_http2_stream_data_t *stream_data = new_qdr_http2_stream_data_t();
+
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Created new stream_data for stream_dispatcher (%lx)", egress_http_conn->conn_id,  (long) stream_data);
+
     ZERO(stream_data);
     stream_data->session_data = egress_http_conn->session_data;
     qdr_link_set_context(egress_http_conn->stream_dispatcher, stream_data);
@@ -2002,8 +2079,6 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             create_stream_dispatcher_link(conn);
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Created stream_dispatcher_link in PN_RAW_CONNECTION_CONNECTED", conn->conn_id);
             qdr_connection_process(conn->qdr_conn);
-            // Send a PING frame 4 seconds after opening an egress connection.
-            qd_timer_schedule(conn->ping_timer, 4000);
         }
         break;
     }
@@ -2071,6 +2146,16 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                 }
             }
         }
+
+        //
+        // Send the first PING only after the first real data has been written on the egress connection.
+        //
+        if (written > 0 && !conn->ingress && !conn->first_pinged) {
+            // Send a PING frame 4 seconds after opening an egress connection.
+            qd_timer_schedule(conn->ping_timer, 4000);
+            conn->first_pinged = true;
+        }
+
         qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %i bytes, DEQ_SIZE(session_data->buffs) = %zu", conn->conn_id, written, DEQ_SIZE(conn->session_data->buffs));
         restart_streams(conn);
         break;
@@ -2197,7 +2282,7 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
     qdr_http2_connection_t *http_conn = DEQ_HEAD(adaptor->connections);
     while (http_conn) {
         if (http_conn->stream_dispatcher_stream_data) {
-            qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Freeing stream dispatcher", http_conn->conn_id);
+            qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Freeing stream_data (stream_dispatcher, qdr_http2_adaptor_final) (%lx)", http_conn->conn_id,  (long) http_conn->stream_dispatcher_stream_data);
             free_qdr_http2_stream_data_t(http_conn->stream_dispatcher_stream_data);
             http_conn->stream_dispatcher_stream_data = 0;
         }
