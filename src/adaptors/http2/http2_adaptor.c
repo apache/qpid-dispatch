@@ -758,7 +758,7 @@ static void send_settings_frame(qdr_http2_connection_t *conn)
 static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data)
 {
     stream_data->stop = qd_timer_now();
-    qd_http_record_request(http2_adaptor->core, stream_data->method, conn->ingress? stream_data->status : stream_data->request_status,
+    qd_http_record_request(http2_adaptor->core, stream_data->method, stream_data->request_status,
                            conn->config->address, conn->config->host, conn->config->site,
                            stream_data->remote_site, conn->ingress, stream_data->bytes_in, stream_data->bytes_out,
                            stream_data->stop && stream_data->start ? stream_data->stop - stream_data->start : 0);
@@ -1401,7 +1401,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                     stream_data->method = qd_strdup((const char *)hdrs[idx].value);
                 }
                 if (strcmp(STATUS, (const char *)hdrs[idx].name) == 0) {
-                    stream_data->status = atoi((const char *)hdrs[idx].value);
+                    stream_data->request_status = atoi((const char *)hdrs[idx].value);
                 }
             }
 
