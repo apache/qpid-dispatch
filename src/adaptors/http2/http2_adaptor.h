@@ -82,6 +82,7 @@ struct qdr_http2_stream_data_t {
     qd_composed_field_t      *body;
     qd_message_stream_data_t *curr_stream_data;
     qd_message_stream_data_t *next_stream_data;
+    qd_message_stream_data_t *footer_stream_data;
     DEQ_LINKS(qdr_http2_stream_data_t);
 
     qd_message_stream_data_result_t  curr_stream_data_result;
@@ -99,6 +100,7 @@ struct qdr_http2_stream_data_t {
     bool                     use_footer_properties;
     bool                     full_payload_handled; // applies to the sending side.
     bool                     out_msg_has_body;
+    bool                     out_msg_has_footer;
     bool                     out_msg_send_complete; // we use this flag to save the send_complete flag because the delivery and message associated with this stream might have been freed.
     bool                     disp_updated;   // Has the disposition already been set on the out_dlv
     bool                     disp_applied;   // Has the disp been applied to the out_dlv. The stream is ready to be freed now.
@@ -131,13 +133,16 @@ struct qdr_http2_connection_t {
     char                     *reply_to;
     nghttp2_data_provider     data_prd;
     qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
+    time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
 
     bool                      connection_established;
     bool                      grant_initial_buffers;
     bool                      ingress;
     bool                      timer_scheduled;
     bool                      client_magic_sent;
-    time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
+    bool                      woken_by_ping;
+    bool                      first_pinged;
+
     DEQ_LINKS(qdr_http2_connection_t);
  };
 
