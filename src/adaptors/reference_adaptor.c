@@ -42,6 +42,7 @@ typedef struct qdr_ref_adaptor_t {
     char                   *reply_to;
     qd_message_t           *streaming_message;
     qdr_delivery_t         *streaming_delivery;
+    qd_message_t           *incoming_message;
     int                     stream_count;
 } qdr_ref_adaptor_t;
 
@@ -237,6 +238,8 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     qdr_ref_adaptor_t *adaptor = (qdr_ref_adaptor_t*) context;
     qd_message_t      *msg     = qdr_delivery_message(delivery);
 
+    adaptor->incoming_message = msg;
+
     printf("qdr_ref_deliver called\n");
 
     qd_message_depth_status_t status = qd_message_check_depth(msg, QD_DEPTH_BODY);
@@ -320,6 +323,7 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 //
                 qd_message_set_send_complete(msg);
                 qdr_link_flow(adaptor->core, link, 1, false);
+                adaptor->incoming_message = 0;
                 return PN_ACCEPTED; // This will cause the delivery to be settled
             
             case QD_MESSAGE_STREAM_DATA_INVALID:
@@ -328,6 +332,7 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 //
                 printf("qdr_ref_deliver: body-data invalid\n");
                 qdr_link_flow(adaptor->core, link, 1, false);
+                adaptor->incoming_message = 0;
                 return PN_REJECTED;
             }
         }
@@ -338,6 +343,7 @@ static uint64_t qdr_ref_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     case QD_MESSAGE_DEPTH_INVALID:
         printf("qdr_ref_deliver: message invalid\n");
         qdr_link_flow(adaptor->core, link, 1, false);
+        adaptor->incoming_message = 0;
         return PN_REJECTED;
         break;
 
@@ -570,6 +576,8 @@ void qdr_ref_adaptor_final(void *adaptor_context)
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     qd_timer_free(adaptor->startup_timer);
     qd_timer_free(adaptor->activate_timer);
+    qd_message_free(adaptor->streaming_message);
+    qd_message_free(adaptor->incoming_message);
     free(adaptor->reply_to);
     free(adaptor);
 }

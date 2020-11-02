@@ -62,10 +62,11 @@ typedef struct {
 
 
 struct qd_message_stream_data_t {
-    DEQ_LINKS(qd_message_stream_data_t);    // Linkage to form a DEQ
+     DEQ_LINKS(qd_message_stream_data_t); // Linkage to form a DEQ
     qd_message_pvt_t    *owning_message;  // Pointer to the owning message
     qd_field_location_t  section;         // Section descriptor for the field
     qd_field_location_t  payload;         // Descriptor for the payload of the body data
+    qd_buffer_t         *first_buffer;    // Pointer to the first buffer in the field
     qd_buffer_t         *last_buffer;     // Pointer to the last buffer in the field
 };
 
