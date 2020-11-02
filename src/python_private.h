@@ -20,6 +20,7 @@
  */
 #include <Python.h>
 #include <stdint.h>
+#include <qpid/dispatch/message.h>
 
 #if PY_MAJOR_VERSION <= 2
 // deal with the two integer types in Python2
@@ -42,5 +43,10 @@ char *py_string_2_c(PyObject *py_str);
 // resulting string may be UTF-8 encoded. Caller must free the returned string
 // buffer.
 char *py_obj_2_c_string(PyObject *py_obj);
+
+void qd_json_msgs_init(PyObject **msgs);
+void qd_json_msgs_done(PyObject *msgs);
+void qd_json_msgs_append(PyObject *msgs, qd_message_t *msg);
+char *qd_json_msgs_string(PyObject *msgs);
 
 #endif

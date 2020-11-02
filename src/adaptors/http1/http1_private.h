@@ -120,7 +120,6 @@ struct qdr_http1_request_base_t {
 };
 DEQ_DECLARE(qdr_http1_request_base_t, qdr_http1_request_list_t);
 
-
 // A single HTTP adaptor connection.
 //
 struct qdr_http1_connection_t {
@@ -141,6 +140,8 @@ struct qdr_http1_connection_t {
         char *address;
         char *site;
         char *host_port;
+        bool event_channel;
+        qd_http_aggregation_t aggregation;
     } cfg;
 
     // State if connected to an HTTP client

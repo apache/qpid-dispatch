@@ -34,6 +34,12 @@ typedef enum {
     VERSION_HTTP2,
 } qd_http_version_t;
 
+typedef enum {
+    QD_AGGREGATION_NONE,
+    QD_AGGREGATION_JSON,
+    QD_AGGREGATION_MULTIPART
+} qd_http_aggregation_t;
+
 typedef struct qd_http_bridge_config_t {
     char              *name;
     char              *host;
@@ -42,6 +48,8 @@ typedef struct qd_http_bridge_config_t {
     char              *site;
     char              *host_port;
     qd_http_version_t  version;
+    bool                  event_channel;
+    qd_http_aggregation_t aggregation;
 } qd_http_bridge_config_t;
 
 void qd_http_free_bridge_config(qd_http_bridge_config_t *config);
