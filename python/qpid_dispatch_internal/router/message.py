@@ -16,11 +16,11 @@
 # specific language governing permissions and limitations
 # under the License
 #
-
 from __future__ import unicode_literals
 from __future__ import division
 from __future__ import absolute_import
 from __future__ import print_function
+import json
 
 """Python class to hold message data"""
 
@@ -38,7 +38,7 @@ class Message(object):
     @ivar properties: Application properties.
     """
 
-    _fields = ['address', 'properties', 'body', 'reply_to', 'correlation_id']
+    _fields = ['address', 'properties', 'body', 'reply_to', 'correlation_id', 'content_type']
 
     def __init__(self, **kwds):
         """All instance variables can be set as keywords. See L{Message}"""
@@ -50,3 +50,16 @@ class Message(object):
     def __repr__(self):
         return "%s(%s)" % (type(self).__name__,
                            ", ".join("%s=%r"%(f, getattr(self, f)) for f in self._fields))
+
+def simplify(msg):
+    m = {}
+    for k, v in msg.properties.items():
+        m[k] = v
+    if msg.body:
+        m["body"] = msg.body.decode()
+    if msg.content_type:
+        m["content_type"] = msg.content_type
+    return m
+
+def messages_to_json(msgs):
+    return json.dumps([simplify(m) for m in msgs], indent=4)

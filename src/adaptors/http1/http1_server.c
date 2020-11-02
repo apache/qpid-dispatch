@@ -155,6 +155,8 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     hconn->cfg.host_port = qd_strdup(bconfig->host_port);
     hconn->server.connector = ctor;
     ctor->ctx = (void*)hconn;
+    hconn->cfg.event_channel = bconfig->event_channel;
+    hconn->cfg.aggregation = bconfig->aggregation;
 
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
@@ -427,6 +429,22 @@ static void _do_reconnect(void *context)
            "[C%"PRIu64"] Connecting to HTTP server...", conn_id);
 }
 
+static void _accept_and_settle_request(_server_request_t *hreq)
+{
+    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                      hreq->request_dlv,
+                                      hreq->request_dispo,
+                                      true,   // settled
+                                      0,      // error
+                                      0,      // dispo data
+                                      false);
+    // can now release the delivery
+    qdr_delivery_set_context(hreq->request_dlv, 0);
+    qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
+    hreq->request_dlv = 0;
+
+    hreq->request_settled = true;
+}
 
 // Proton Raw Connection Events
 //
@@ -613,7 +631,8 @@ static bool _process_requests(qdr_http1_connection_t *hconn)
         if (hreq->request_dlv) {
             qd_message_set_discard(qdr_delivery_message(hreq->request_dlv), true);
 
-            if (!hreq->request_acked || !hreq->request_settled) {
+            if ((!hreq->request_acked || !hreq->request_settled) &&
+                hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
 
                 if (hreq->request_dispo == 0)
                     hreq->request_dispo = (hreq->base.out_http1_octets > 0
@@ -676,8 +695,9 @@ static bool _process_requests(qdr_http1_connection_t *hconn)
 
         // hreq->out_data.fifo ==> request message written to raw conn
         // DEQ_IS_EMPTY(hreq->responses)
-        if (!hreq->request_acked || (!hreq->request_settled
-                                     && DEQ_IS_EMPTY(hreq->responses))) {
+        if ((!hreq->request_acked || (!hreq->request_settled
+                                      && DEQ_IS_EMPTY(hreq->responses)))
+            && hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
 
             assert(hreq->request_dlv);
             assert(hreq->request_dispo == PN_ACCEPTED);
@@ -861,7 +881,7 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qdr_http1_connection_t *hconn = hreq->base.hconn;
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-           "[C%"PRIu64"][L%"PRIu64" HTTP response headers done.",
+           "[C%"PRIu64"][L%"PRIu64"] HTTP response headers done.",
            hconn->conn_id, hconn->in_link_id);
 
     // expect: running incoming request at tail
@@ -978,7 +998,7 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs)
         }
     }
 
-    if (rmsg->dlv) {
+    if (rmsg->dlv && hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
         // We've finished the delivery, and don't care about outcome/settlement
         _server_response_msg_free(hreq, rmsg);
     }
@@ -1064,7 +1084,10 @@ void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
                     // stop here since response must be complete before we can deliver the next one.
                     break;
                 }
-
+                if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+                    // stop here since response should not be freed until it is accepted
+                    break;
+                }
                 // else the delivery is complete no need to save it
                 _server_response_msg_free(hreq, rmsg);
                 rmsg = DEQ_HEAD(hreq->responses);
@@ -1090,8 +1113,16 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
     // Not much can be done with error dispositions (I think)
     if (disp != PN_ACCEPTED) {
         qd_log(adaptor->log, QD_LOG_WARNING,
-               "[C%"PRIu64"][L%"PRIu64"] response message not received, outcome=0x%"PRIx64,
+               "[C%"PRIu64"][L%"PRIu64"] response message was not accepted, outcome=0x%"PRIx64,
                hconn->conn_id, hconn->in_link_id, disp);
+    }
+    if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+        _server_request_t *hreq = (_server_request_t*)hbase;
+        _accept_and_settle_request(hreq);
+        hreq->request_acked = true;
+        qd_log(adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] request accepted", hconn->conn_id, hconn->in_link_id);
+        _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
+        _server_response_msg_free(hreq, rmsg);
     }
 }
 
