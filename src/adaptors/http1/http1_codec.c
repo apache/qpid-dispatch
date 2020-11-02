@@ -23,6 +23,7 @@
 #include <qpid/dispatch/iterator.h>
 #include <qpid/dispatch/buffer.h>
 #include <qpid/dispatch/alloc_pool.h>
+#include <qpid/dispatch/discriminator.h>
 
 #include <ctype.h>
 #include <stdio.h>
@@ -43,7 +44,9 @@
 const uint8_t CR_TOKEN = '\r';
 const uint8_t LF_TOKEN = '\n';
 const char   *CRLF = "\r\n";
-
+const char   *DOUBLE_HYPHEN = "--";
+const char   *CONTENT_TYPE_KEY = "Content-Type";
+const char   *MULTIPART_CONTENT_TYPE_PREFIX = "multipart/mixed; boundary=";
 const qd_iterator_pointer_t NULL_I_PTR = {0};
 
 // true for informational response codes
@@ -179,6 +182,8 @@ struct h1_codec_connection_t {
         bool headers_sent;  // true after all headers have been sent
         bool is_request;
         bool is_chunked;
+
+        char *boundary_marker;//used for multipart content
 
         // headers provided
         bool hdr_content_length;
@@ -1528,6 +1533,65 @@ static inline void _flush_headers(h1_codec_request_state_t *hrs, struct encoder_
     }
 }
 
+int h1_codec_tx_begin_multipart(h1_codec_request_state_t *hrs)
+{
+    h1_codec_connection_t *conn = h1_codec_request_state_get_connection(hrs);
+    struct encoder_t *encoder = &conn->encoder;
+    encoder->boundary_marker = (char*) malloc(QD_DISCRIMINATOR_SIZE + 2);
+    qd_generate_discriminator(encoder->boundary_marker);
+    char *content_type = (char*) malloc(strlen(MULTIPART_CONTENT_TYPE_PREFIX) + strlen(encoder->boundary_marker) + 1);
+    strcpy(content_type, MULTIPART_CONTENT_TYPE_PREFIX);
+    strcpy(content_type + strlen(content_type), encoder->boundary_marker);
+    h1_codec_tx_add_header(hrs, CONTENT_TYPE_KEY, content_type);
+    free(content_type);
+
+    return 0;
+}
+
+int h1_codec_tx_begin_multipart_section(h1_codec_request_state_t *hrs)
+{
+    h1_codec_connection_t *conn = h1_codec_request_state_get_connection(hrs);
+    struct encoder_t *encoder = &conn->encoder;
+
+    //reset headers_sent flag for the new section
+    encoder->headers_sent = false;
+    write_string(encoder, CRLF);
+    write_string(encoder, DOUBLE_HYPHEN);
+    write_string(encoder, encoder->boundary_marker);
+    write_string(encoder, CRLF);
+
+    return 0;
+}
+
+int h1_codec_tx_end_multipart(h1_codec_request_state_t *hrs)
+{
+    h1_codec_connection_t *conn = h1_codec_request_state_get_connection(hrs);
+    struct encoder_t *encoder = &conn->encoder;
+
+    write_string(encoder, CRLF);
+    write_string(encoder, DOUBLE_HYPHEN);
+    write_string(encoder, encoder->boundary_marker);
+    write_string(encoder, DOUBLE_HYPHEN);
+    write_string(encoder, CRLF);
+    encoder->headers_sent = false;
+    _flush_headers(hrs, encoder);
+
+    free(encoder->boundary_marker);
+    encoder->boundary_marker = 0;
+
+    return 0;
+}
+
+
+uint64_t h1_codec_tx_multipart_section_boundary_length()
+{
+    return QD_DISCRIMINATOR_SIZE + 4 + 2;
+}
+
+uint64_t h1_codec_tx_multipart_end_boundary_length()
+{
+    return QD_DISCRIMINATOR_SIZE + 4 + 4;
+}
 
 // just forward the body chain along
 int h1_codec_tx_body(h1_codec_request_state_t *hrs, qd_message_stream_data_t *stream_data)

@@ -32,6 +32,7 @@
 #define DEFAULT_CAPACITY 250
 #define LISTENER_BACKLOG  16
 
+const char *CONTENT_LENGTH_KEY = "Content-Length";
 
 //
 // State for a single response message to be sent to the client via the raw
@@ -80,6 +81,8 @@ typedef struct _client_request_t {
     bool close_on_complete;   // close the conn when this request is complete
     bool conn_close_hdr;      // add Connection: close to response msg
 
+    uint32_t version_major;
+    uint32_t version_minor;
 } _client_request_t;
 ALLOC_DECLARE(_client_request_t);
 ALLOC_DEFINE(_client_request_t);
@@ -154,6 +157,8 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
     hconn->cfg.port = qd_strdup(li->config.port);
     hconn->cfg.address = qd_strdup(li->config.address);
     hconn->cfg.site = li->config.site ? qd_strdup(li->config.site) : 0;
+    hconn->cfg.event_channel = li->config.event_channel;
+    hconn->cfg.aggregation = li->config.aggregation;
 
     hconn->raw_conn = pn_raw_connection();
     pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
@@ -538,10 +543,19 @@ static void _client_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
            "[C%"PRIu64"][L%"PRIu64"] %u request octets encoded",
            hconn->conn_id, hconn->out_link_id, len);
 
-    // responses are decoded one at a time - the current response it at the
-    // tail of the response list
 
-    _client_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
+    _client_response_msg_t *rmsg;
+    if (hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
+        // responses are decoded one at a time - the current response it at the
+        // tail of the response list
+        rmsg = DEQ_TAIL(hreq->responses);
+    } else {
+        // when responses are aggregated the buffers don't need to be
+        // correlated to specific responses as they will all be
+        // written out together, so can just use the head of the
+        // response list
+        rmsg = DEQ_HEAD(hreq->responses);
+    }
     assert(rmsg);
     qdr_http1_enqueue_buffer_list(&rmsg->out_data, blist);
 
@@ -572,10 +586,19 @@ static void _client_tx_stream_data_cb(h1_codec_request_state_t *hrs, qd_message_
            "[C%"PRIu64"][L%"PRIu64"] Sending body data to client",
            hconn->conn_id, hconn->out_link_id);
 
-    // responses are decoded one at a time - the current response it at the
-    // tail of the response list
 
-    _client_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
+    _client_response_msg_t *rmsg;
+    if (hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
+        // responses are decoded one at a time - the current response it at the
+        // tail of the response list
+        rmsg = DEQ_TAIL(hreq->responses);
+    } else {
+        // when responses are aggregated the buffers don't need to be
+        // correlated to specific responses as they will all be
+        // written out together, so can just use the head of the
+        // response list
+        rmsg = DEQ_HEAD(hreq->responses);
+    }
     assert(rmsg);
     qdr_http1_enqueue_stream_data(&rmsg->out_data, stream_data);
 
@@ -610,6 +633,8 @@ static int _client_rx_request_cb(h1_codec_request_state_t *hrs,
     creq->base.lib_rs = hrs;
     creq->base.hconn = hconn;
     creq->close_on_complete = (version_minor == 0);
+    creq->version_major = version_major;
+    creq->version_minor = version_minor;
     DEQ_INIT(creq->responses);
 
     creq->request_props = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
@@ -902,6 +927,173 @@ void qdr_http1_client_core_link_flow(qdr_http1_adaptor_t    *adaptor,
     }
 }
 
+static bool _get_aggregated_content_length(_client_request_t *hreq, char *value)
+{
+    uint64_t total = 0;
+    for (_client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses); rmsg; rmsg = rmsg->next) {
+        qd_message_t *msg = qdr_delivery_message(rmsg->dlv);
+        uint64_t content_length = h1_codec_tx_multipart_section_boundary_length();
+        bool got_body_length = false;
+
+        qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
+        if (app_props_iter) {
+            qd_parsed_field_t *app_props = qd_parse(app_props_iter);
+            if (app_props && qd_parse_is_map(app_props)) {
+                // now send all headers in app properties
+                qd_parsed_field_t *key = qd_field_first_child(app_props);
+                while (key) {
+                    qd_parsed_field_t *value = qd_field_next_child(key);
+                    if (!value)
+                        break;
+
+                    qd_iterator_t *i_key = qd_parse_raw(key);
+                    if (!i_key)
+                        break;
+
+                    if (qd_iterator_equal(i_key, (const unsigned char*) CONTENT_LENGTH_KEY)) {
+                        qd_iterator_t *i_value = qd_parse_raw(value);
+                        if (i_value) {
+                            char *length_str = (char*) qd_iterator_copy(i_value);
+                            uint64_t body_length;
+                            sscanf(length_str, "%"SCNu64, &body_length);
+                            free(length_str);
+                            got_body_length = true;
+                            content_length += body_length;
+                        }
+                    } else if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+                        qd_iterator_t *i_value = qd_parse_raw(value);
+                        if (!i_value)
+                            break;
+
+                        content_length += qd_iterator_length(i_key) + 2 + qd_iterator_length(i_value) + 2;
+                    }
+
+                    key = qd_field_next_child(value);
+                }
+            }
+            qd_parse_free(app_props);
+        }
+        qd_iterator_free(app_props_iter);
+        if (got_body_length) {
+            total += content_length;
+        } else {
+            return false;
+        }
+    }
+    total += h1_codec_tx_multipart_end_boundary_length();
+    sprintf(value, "%"SCNu64, total);
+    return true;
+}
+
+static void _encode_aggregated_response(_client_request_t *hreq)
+{
+    qdr_http1_connection_t *hconn = hreq->base.hconn;
+    qd_log(hconn->adaptor->log, QD_LOG_TRACE, "[C%"PRIu64"] encoding aggregated response", hconn->conn_id);
+    bool ok = !h1_codec_tx_response(hreq->base.lib_rs, 200, NULL, hreq->version_major, hreq->version_minor);
+    char content_length[25];
+    if (_get_aggregated_content_length(hreq, content_length)) {
+        h1_codec_tx_add_header(hreq->base.lib_rs, CONTENT_LENGTH_KEY, content_length);
+    }
+    h1_codec_tx_begin_multipart(hreq->base.lib_rs);
+    for (_client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses); rmsg; rmsg = rmsg->next) {
+        h1_codec_tx_begin_multipart_section(hreq->base.lib_rs);
+        qd_message_t *msg = qdr_delivery_message(rmsg->dlv);
+
+        qd_iterator_t *app_props_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
+        if (app_props_iter) {
+            qd_parsed_field_t *app_props = qd_parse(app_props_iter);
+            if (app_props && qd_parse_is_map(app_props)) {
+                // now send all headers in app properties
+                qd_parsed_field_t *key = qd_field_first_child(app_props);
+                while (ok && key) {
+                    qd_parsed_field_t *value = qd_field_next_child(key);
+                    if (!value)
+                        break;
+
+                    qd_iterator_t *i_key = qd_parse_raw(key);
+                    if (!i_key)
+                        break;
+
+                    // ignore the special headers added by the mapping and content-length field (TODO: case insensitive comparison for content-length)
+                    if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX) && !qd_iterator_equal(i_key, (const unsigned char*) CONTENT_LENGTH_KEY)) {
+                        qd_iterator_t *i_value = qd_parse_raw(value);
+                        if (!i_value)
+                            break;
+
+                        char *header_key = (char*) qd_iterator_copy(i_key);
+                        char *header_value = (char*) qd_iterator_copy(i_value);
+                        ok = !h1_codec_tx_add_header(hreq->base.lib_rs, header_key, header_value);
+
+                        free(header_key);
+                        free(header_value);
+                    }
+
+                    key = qd_field_next_child(value);
+                }
+            }
+            qd_parse_free(app_props);
+        }
+        qd_iterator_free(app_props_iter);
+        rmsg->headers_encoded = true;
+
+        qd_message_stream_data_t *body_data = 0;
+        bool done = false;
+        while (ok && !done) {
+            switch (qd_message_next_stream_data(msg, &body_data)) {
+
+            case QD_MESSAGE_STREAM_DATA_BODY_OK:
+
+                qd_log(hconn->adaptor->log, QD_LOG_TRACE,
+                       "[C%"PRIu64"][L%"PRIu64"] Encoding response body data",
+                       hconn->conn_id, hconn->out_link_id);
+
+                if (h1_codec_tx_body(hreq->base.lib_rs, body_data)) {
+                    qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+                           "[C%"PRIu64"][L%"PRIu64"] body data encode failed",
+                           hconn->conn_id, hconn->out_link_id);
+                    ok = false;
+                }
+                break;
+
+            case QD_MESSAGE_STREAM_DATA_NO_MORE:
+                // indicate this message is complete
+                qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+                       "[C%"PRIu64"][L%"PRIu64"] response message encoding completed",
+                       hconn->conn_id, hconn->out_link_id);
+                done = true;
+                break;
+
+            case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
+                qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring incomplete body data in aggregated response.",
+                       hconn->conn_id, hconn->out_link_id);
+                done = true;
+                break;  // wait for more
+
+            case QD_MESSAGE_STREAM_DATA_INVALID:
+                qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring corrupted body data in aggregated response.",
+                       hconn->conn_id, hconn->out_link_id);
+                done = true;
+                break;
+
+            case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
+                qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
+                       "[C%"PRIu64"][L%"PRIu64"] Ignoring footer in aggregated response.",
+                       hconn->conn_id, hconn->out_link_id);
+                done = true;
+                break;
+            }
+        }
+        rmsg->encoded = true;
+
+    }
+    h1_codec_tx_end_multipart(hreq->base.lib_rs);
+    bool need_close;
+    h1_codec_tx_done(hreq->base.lib_rs, &need_close);
+    hreq->close_on_complete = need_close || hreq->close_on_complete;
+    hreq->codec_completed = true;
+}
 
 // Handle disposition/settlement update for the outstanding request msg
 //
@@ -922,7 +1114,10 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
     if (disp && disp != PN_RECEIVED && hreq->request_dispo == 0) {
         // terminal disposition
         hreq->request_dispo = disp;
-        if (disp != PN_ACCEPTED) {
+        if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+            _encode_aggregated_response(hreq);
+            _write_pending_response(hreq);
+        } else if (disp != PN_ACCEPTED) {
             // no response message is going to arrive.  Now what?  For now fake
             // a response from the server by using the codec to write an error
             // response on the behalf of the server.
@@ -1217,6 +1412,29 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
     // deliveries arrive one at a time and are added to the tail
     _client_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
     assert(rmsg && rmsg->dlv == delivery);
+
+    // when aggregating responses, they are saved on the list until
+    // the request has been settled, then encoded in the configured
+    // aggregation format
+    if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Received message, but in aggregating mode.", hconn->conn_id, link->identity);
+        rmsg->dispo = PN_ACCEPTED;
+        qd_message_set_send_complete(msg);
+        qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
+
+        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+               "[C%"PRIu64"][L%"PRIu64"] HTTP client settling response, dispo=0x%"PRIx64,
+               hconn->conn_id, hconn->out_link_id, rmsg->dispo);
+
+        qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                          rmsg->dlv,
+                                          rmsg->dispo,
+                                          true,   // settled,
+                                          0,      // error
+                                          0,      // dispo data
+                                          false);
+        return PN_ACCEPTED;
+    }
 
     if (!rmsg->dispo)
         rmsg->dispo = _encode_response_message(hreq, rmsg);

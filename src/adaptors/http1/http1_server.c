@@ -71,6 +71,7 @@ typedef struct _server_request_t {
     bool            request_acked;   // true if dispo sent to core
     bool            request_encoded; // true when encoding done
     bool            headers_encoded; // True when header encode done
+    bool            response_settled;
 
     qdr_http1_out_data_fifo_t out_data;  // encoded request written to raw conn
 
@@ -146,6 +147,8 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     hconn->cfg.address = qd_strdup(bconfig->address);
     hconn->cfg.site = bconfig->site ? qd_strdup(bconfig->site) : 0;
     hconn->cfg.host_port = qd_strdup(bconfig->host_port);
+    hconn->cfg.event_channel = bconfig->event_channel;
+    hconn->cfg.aggregation = bconfig->aggregation;
 
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
@@ -446,6 +449,22 @@ static void _do_activate(void *context)
     }
 }
 
+static void _accept_and_settle_request(_server_request_t *hreq)
+{
+    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                      hreq->request_dlv,
+                                      hreq->request_dispo,
+                                      true,   // settled
+                                      0,      // error
+                                      0,      // dispo data
+                                      false);
+    // can now release the delivery
+    qdr_delivery_set_context(hreq->request_dlv, 0);
+    qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
+    hreq->request_dlv = 0;
+
+    hreq->request_settled = true;
+}
 
 // Proton Raw Connection Events
 //
@@ -649,7 +668,8 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 // server.
                 if (!hreq->request_acked &&
                     hreq->request_encoded &&
-                    DEQ_SIZE(hreq->out_data.fifo) == 0) {
+                    DEQ_SIZE(hreq->out_data.fifo) == 0 &&
+                    (hconn->cfg.aggregation == QD_AGGREGATION_NONE || hreq->response_settled)) {
 
                     qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
                                                       hreq->request_dlv,
@@ -669,20 +689,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                 if (!hreq->request_settled &&
                     hreq->request_acked &&  // implies out_data done
                     hreq->codec_completed) {
-
-                    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                                      hreq->request_dlv,
-                                                      hreq->request_dispo,
-                                                      true,   // settled
-                                                      0,      // error
-                                                      0,      // dispo data
-                                                      false);
-                    // can now release the delivery
-                    qdr_delivery_set_context(hreq->request_dlv, 0);
-                    qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
-                    hreq->request_dlv = 0;
-
-                    hreq->request_settled = true;
+                    _accept_and_settle_request(hreq);
                 }
 
                 // Has the entire request/response completed?  It is complete after
@@ -974,7 +981,7 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs)
         }
     }
 
-    if (rmsg->dlv) {
+    if (rmsg->dlv && hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
         // We've finished the delivery, and don't care about outcome/settlement
         _server_response_msg_free(hreq, rmsg);
     }
@@ -1060,7 +1067,10 @@ void qdr_http1_server_core_link_flow(qdr_http1_adaptor_t    *adaptor,
                     // stop here since response must be complete before we can deliver the next one.
                     break;
                 }
-
+                if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+                    // stop here since response should not be freed until it is accepted
+                    break;
+                }
                 // else the delivery is complete no need to save it
                 _server_response_msg_free(hreq, rmsg);
                 rmsg = DEQ_HEAD(hreq->responses);
@@ -1088,6 +1098,13 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
         qd_log(adaptor->log, QD_LOG_WARNING,
                "[C%"PRIu64"][L%"PRIu64"] response message not received, outcome=0x%"PRIx64,
                hconn->conn_id, hconn->in_link_id, disp);
+    }
+    if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
+        _server_request_t *hreq = (_server_request_t*)hbase;
+        _accept_and_settle_request(hreq);
+        hreq->request_acked = true;
+        _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
+        _server_response_msg_free(hreq, rmsg);
     }
 }
 

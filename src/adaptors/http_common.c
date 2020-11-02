@@ -32,6 +32,7 @@ ALLOC_DEFINE(qd_http_connector_t);
 static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t *config, qd_entity_t* entity)
 {
     char *version_str = 0;
+    char *aggregation_str = 0;
 
     qd_error_clear();
     ZERO(config);
@@ -43,6 +44,8 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     config->address = qd_entity_get_string(entity, "address");         CHECK();
     config->site    = qd_entity_opt_string(entity, "siteId", 0);       CHECK();
     version_str     = qd_entity_get_string(entity, "protocolVersion");  CHECK();
+    aggregation_str = qd_entity_opt_string(entity, "aggregation", 0);  CHECK();
+    config->event_channel = qd_entity_opt_bool(entity, "eventChannel", false); CHECK();
 
     if (strcmp(version_str, "HTTP2") == 0) {
         config->version = VERSION_HTTP2;
@@ -51,6 +54,16 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     }
     free(version_str);
     version_str = 0;
+
+    if (aggregation_str && strcmp(aggregation_str, "json") == 0) {
+        config->aggregation = QD_AGGREGATION_JSON;
+    } else if (aggregation_str && strcmp(aggregation_str, "multipart") == 0) {
+        config->aggregation = QD_AGGREGATION_MULTIPART;
+    } else {
+        config->aggregation = QD_AGGREGATION_NONE;
+    }
+    free(aggregation_str);
+    aggregation_str = 0;
 
     int hplen = strlen(config->host) + strlen(config->port) + 2;
     config->host_port = malloc(hplen);

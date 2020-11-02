@@ -1124,6 +1124,21 @@
                     "default": "HTTP1",
                     "required": false,
                     "create": true
+                },
+                "aggregation": {
+                    "type": [
+                        "multipart",
+                        "json"
+                    ],
+                    "required": false,
+                    "description": "Aggregation mode for responses when used in conjunction with multicast address.",
+                    "create": true
+                },
+                "eventChannel": {
+                    "type": "boolean",
+                    "required": false,
+                    "description": "Enables restricted event mode where no reponses are sent to request and only post is allowed",
+                    "create": true
                 }
             }
         },
@@ -1164,6 +1179,21 @@
                     ],
                     "default": "HTTP1",
                     "required": false,
+                    "create": true
+                },
+                "aggregation": {
+                    "type": [
+                        "multipart",
+                        "json"
+                    ],
+                    "required": false,
+                    "description": "Aggregation mode for responses when used in conjunction with multicast address.",
+                    "create": true
+                },
+                "eventChannel": {
+                    "type": "boolean",
+                    "required": false,
+                    "description": "Enables restricted event mode where no reponses are sent to request and only post is allowed",
                     "create": true
                 }
             }
