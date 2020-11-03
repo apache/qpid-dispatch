@@ -32,14 +32,20 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
 from system_test import Logger
 from system_test import QdManager
 from system_test import unittest
-from system_test import Process
 from system_test import DIR
 from qpid_dispatch.management.client import Node
 from subprocess import PIPE, STDOUT
-from TCP_echo_client import TcpEchoClient
-from TCP_echo_server import TcpEchoServer
 
-class TcpAdaptorOneRouterEcho(TestCase, Process):
+try:
+    from TCP_echo_client import TcpEchoClient
+    from TCP_echo_server import TcpEchoServer
+except ImportError:
+    class TCP_echo_client(object):
+        pass
+    class TCP_echo_server(object):
+        pass
+
+class TcpAdaptorOneRouterEcho(TestCase):
     """
     Run echo tests through a stand-alone router
     """
@@ -150,6 +156,13 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
         Run many echo clients.
         :return:
         """
+        # run test only if selectors module is available
+        try:
+            import selectors
+        except ImportError:
+            # server and client modules require selectors
+            self.skipTest("Python selectors module is not available on this platform.")
+
         # define logging
         print_logs_server = True
         print_logs_client = True
