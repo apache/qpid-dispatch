@@ -1299,16 +1299,21 @@ void qdra_tcp_connection_get_CT(qdr_core_t          *core,
 
 static void qdr_add_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
-    DEQ_INSERT_TAIL(tcp_adaptor->connections, conn);
-    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Added tcp connection %s (%zu)", conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+    if (!discard) {
+        qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
+        DEQ_INSERT_TAIL(tcp_adaptor->connections, conn);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_add_tcp_connection_CT %s (%zu)",
+            conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+    }
 }
 
 static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
-    DEQ_REMOVE(tcp_adaptor->connections, conn);
-    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Removed tcp connection %s (%zu)",
-           conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
-    free_qdr_tcp_connection(conn);
+    if (!discard) {
+        qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
+        DEQ_REMOVE(tcp_adaptor->connections, conn);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_del_tcp_connection_CT %s (%zu)",
+            conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+        free_qdr_tcp_connection(conn);
+    }
 }
