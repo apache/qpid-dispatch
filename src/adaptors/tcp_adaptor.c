@@ -1054,12 +1054,27 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
     qd_log(tcp_adaptor->log_source, QD_LOG_CRITICAL, "Shutting down TCP protocol adaptor");
     qdr_tcp_adaptor_t *adaptor = (qdr_tcp_adaptor_t*) adaptor_context;
 
+    qd_tcp_listener_t *tl = DEQ_HEAD(adaptor->listeners);
+    while (tl) {
+        qd_tcp_listener_t *next = DEQ_NEXT(tl);
+        free_qd_tcp_listener_t(tl);
+        tl = next;
+    }
+
+    qd_tcp_connector_t *tr = DEQ_HEAD(adaptor->connectors);
+    while (tr) {
+        qd_tcp_connector_t *next = DEQ_NEXT(tr);
+        free_qd_tcp_connector_t(tr);
+        tr = next;
+    }
+
     qdr_tcp_connection_t *tc = DEQ_HEAD(adaptor->connections);
     while (tc) {
         qdr_tcp_connection_t *next = DEQ_NEXT(tc);
         free_qdr_tcp_connection(tc);
         tc = next;
     }
+
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     free(adaptor);
     tcp_adaptor =  NULL;
