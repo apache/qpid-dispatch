@@ -94,6 +94,7 @@ class TcpEchoClient():
         self._thread.start()
 
     def run(self):
+        self.logger.log("%s Client is starting up" % (self.prefix))
         try:
             start_time = time.time()
             self.is_running = True
