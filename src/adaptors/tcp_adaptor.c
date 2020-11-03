@@ -194,7 +194,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
 
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 {
-    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Freeing %p", (void*) tc);
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Freeing tcp_connection %p", tc->conn_id, (void*) tc);
     if (tc->reply_to) {
         free(tc->reply_to);
     }
@@ -207,6 +207,10 @@ static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
+    if (tc->outgoing_stream_data) {
+        free_qd_message_stream_data_t(tc->outgoing_stream_data);
+    }
+
     //proactor will free the socket
     free(tc);
 }
@@ -1047,7 +1051,15 @@ static void qdr_tcp_adaptor_init(qdr_core_t *core, void **adaptor_context)
 
 static void qdr_tcp_adaptor_final(void *adaptor_context)
 {
+    qd_log(tcp_adaptor->log_source, QD_LOG_CRITICAL, "Shutting down TCP protocol adaptor");
     qdr_tcp_adaptor_t *adaptor = (qdr_tcp_adaptor_t*) adaptor_context;
+
+    qdr_tcp_connection_t *tc = DEQ_HEAD(adaptor->connections);
+    while (tc) {
+        qdr_tcp_connection_t *next = DEQ_NEXT(tc);
+        free_qdr_tcp_connection(tc);
+        tc = next;
+    }
     qdr_protocol_adaptor_free(adaptor->core, adaptor->adaptor);
     free(adaptor);
     tcp_adaptor =  NULL;
@@ -1296,6 +1308,7 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
 {
     qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
     DEQ_REMOVE(tcp_adaptor->connections, conn);
-    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "Removed tcp connection %s (%zu)", conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Removed tcp connection %s (%zu)",
+           conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
     free_qdr_tcp_connection(conn);
 }
