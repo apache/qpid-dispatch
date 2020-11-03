@@ -39,7 +39,6 @@ from subprocess import PIPE, STDOUT
 from TCP_echo_client import TcpEchoClient
 from TCP_echo_server import TcpEchoServer
 
-
 class TcpAdaptorOneRouterEcho(TestCase, Process):
     """
     Run echo tests through a stand-alone router
@@ -173,10 +172,10 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
             for count in [1, 10]:
                 # make sure server is still running
                 if server.error is not None:
-                    logger.log("%s Server stopped with error: %s" % (name, server.error))
+                    self.logger.log("%s Server stopped with error: %s" % (self.name, server.error))
                     result = False
                 if server.exit_status is not None:
-                    logger.log("%s Server stopped with status: %s" % (name, server.exit_status))
+                    self.logger.log("%s Server stopped with status: %s" % (self.name, server.exit_status))
                     result = False
                 # run another test client
                 if result:
