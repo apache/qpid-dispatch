@@ -305,8 +305,6 @@ static bool write_outgoing_buffs(qdr_tcp_connection_t *conn)
                                                       &conn->outgoing_buffs[conn->outgoing_buff_idx],
                                                       conn->outgoing_buff_count);
         result = used == conn->outgoing_buff_count;
-        conn->outgoing_buff_count -= used;
-        conn->outgoing_buff_idx   += used;
 
         int bytes_written = 0;
         for (size_t i = 0; i < used; i++) {
@@ -319,6 +317,9 @@ static bool write_outgoing_buffs(qdr_tcp_connection_t *conn)
         }
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG,
                "[C%"PRIu64"] Writing %i bytes", conn->conn_id, bytes_written);
+
+        conn->outgoing_buff_count -= used;
+        conn->outgoing_buff_idx   += used;
     }
     return result;
 }
