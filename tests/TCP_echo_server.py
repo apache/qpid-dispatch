@@ -132,9 +132,7 @@ class TcpEchoServer():
             except Exception as exc:
                 self.error = ('%s Opening listen socket %s:%d exception: %s' %
                            (self.prefix, self.HOST, self.port, traceback.format_exc()))
-                logger.log(self.error)
-                sel.unregister(sock)
-                sock.close()
+                self.logger.log(self.error)
                 return 1
 
             # set up selector
@@ -190,7 +188,7 @@ class TcpEchoServer():
         if mask & selectors.EVENT_READ:
             try:
                 recv_data = sock.recv(1024)
-            except ConnectionResetError as exc:
+            except Exception as exc:
                 logger.log('%s Connection to %s:%d closed by peer' %
                            (self.prefix, data.addr[0], data.addr[1]))
                 sel.unregister(sock)
