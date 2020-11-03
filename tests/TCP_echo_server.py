@@ -123,11 +123,19 @@ class TcpEchoServer():
             total_echoed = 0
 
             # set up listening socket
-            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.sock.bind((self.HOST, self.port))
-            self.sock.listen()
-            self.sock.setblocking(False)
-            self.logger.log('%s Listening on host:%s, port:%d' % (self.prefix, self.HOST, self.port))
+            try:
+                self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                self.sock.bind((self.HOST, self.port))
+                self.sock.listen()
+                self.sock.setblocking(False)
+                self.logger.log('%s Listening on host:%s, port:%d' % (self.prefix, self.HOST, self.port))
+            except Exception as exc:
+                self.error = ('%s Opening listen socket %s:%d exception: %s' %
+                           (self.prefix, self.HOST, self.port, traceback.format_exc()))
+                logger.log(self.error)
+                sel.unregister(sock)
+                sock.close()
+                return 1
 
             # set up selector
             sel = selectors.DefaultSelector()
@@ -183,10 +191,18 @@ class TcpEchoServer():
             try:
                 recv_data = sock.recv(1024)
             except ConnectionResetError as exc:
-                logger.log('%s Connection to %s:%d closed by peer' % (self.prefix, data.addr[0], data.addr[1]))
+                logger.log('%s Connection to %s:%d closed by peer' %
+                           (self.prefix, data.addr[0], data.addr[1]))
                 sel.unregister(sock)
                 sock.close()
                 return 0
+            except Exception as exc:
+                self.error = ('%s Connection to %s:%d exception: %s' %
+                           (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
+                logger.log(self.error)
+                sel.unregister(sock)
+                sock.close()
+                return 1
             if recv_data:
                 data.outb += recv_data
                 logger.log('%s read from: %s:%d len:%d: %s' % (self.prefix, data.addr[0], data.addr[1], len(recv_data),

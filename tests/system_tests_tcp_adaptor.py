@@ -23,8 +23,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import time
 import traceback
-from time import sleep
 from threading import Event
 from threading import Timer
 
@@ -47,6 +47,8 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
     amqp_listener_port       = None
     tcp_client_listener_port = None
     tcp_server_listener_port = None
+
+    echo_timeout = 30 # local timeout to wait for one echo client to finish
 
     @classmethod
     def setUpClass(cls):
@@ -81,14 +83,22 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
         router('A', 'interior', cls.amqp_listener_port, cls.tcp_client_listener_port,
                cls.tcp_server_listener_port, "some_address", "best_site")
 
-        cls.logger = Logger(title="TcpAdaptorOneRouterEcho-testClass", print_to_console=True)
+        cls.logger = Logger(title="TcpAdaptorOneRouterEcho-testClass",
+                            print_to_console=True,
+                            save_for_dump=False)
+        cls.logger.log("  amqp_listener_port       : %d" % cls.amqp_listener_port)
+        cls.logger.log("  tcp_client_listener_port : %d" % cls.tcp_client_listener_port)
+        cls.logger.log("  tcp_server_listener_port : %d" % cls.tcp_server_listener_port)
 
-    def do_test_echo(self, test_name, logger, host, port, size, count):
+    def do_test_echo(self, test_name, logger, host, port, size, count, print_client_logs):
         # Run echo client. Return true if it works.
         name = "%s_%s_%s_%s" % (test_name, port, size, count)
         client_prefix = "ECHO_CLIENT %s" % name
-        client_logger = Logger(title=client_prefix, print_to_console=False, save_for_dump=True)
+        client_logger = Logger(title=client_prefix,
+                               print_to_console=print_client_logs,
+                               save_for_dump=False)
         result = True # assume it works
+        start_time = time.time()
         try:
             # start client
             client = TcpEchoClient(prefix=client_prefix,
@@ -103,7 +113,13 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
             # wait for client to finish
             keep_waiting = True
             while keep_waiting:
-                sleep(0.1)
+                time.sleep(0.1)
+                elapsed = time.time() - start_time
+                if elapsed > self.echo_timeout:
+                    client.error = "TIMEOUT - local wait time exceeded"
+                    logger.log("%s %s" % (name, client.error))
+                    keep_waiting = False
+                    result = False
                 if client.error is not None:
                     logger.log("%s Client stopped with error: %s" % (name, client.error))
                     keep_waiting = False
@@ -121,10 +137,12 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
                        (name, traceback.format_exc()))
             result = False
 
+        # wait for client to exit
+        client.wait()
+
         if not result:
-            # On failure, dump the client log through the test log. Compound logs here we go
-            for line in client_logger.logs:
-                logger.log("Failed client log: %s" % line)
+            pass
+
         return result
 
     def test_01_tcp_echo_one_router(self):
@@ -133,10 +151,16 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
         Run many echo clients.
         :return:
         """
+        # define logging
+        print_logs_server = True
+        print_logs_client = True
+
         # start echo server
         test_name = "test_01_tcp_echo_one_router"
         server_prefix = "ECHO_SERVER %s" % test_name
-        server_logger = Logger(title=test_name, print_to_console=False, save_for_dump=True)
+        server_logger = Logger(title=test_name,
+                               print_to_console=print_logs_server,
+                               save_for_dump=False)
         server = TcpEchoServer(prefix=server_prefix,
                                port=self.tcp_server_listener_port,
                                timeout=TIMEOUT,
@@ -145,13 +169,23 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
 
         # run series of clients to test
         result = True
-        for size in [1]:
-            for count in [1]:
-                test_info = "Starting echo client %s host:localhost, port:%d, size:%d, count:%d" % \
-                           (test_name, self.tcp_client_listener_port, size, count)
-                self.logger.log(test_info)
-                result = self.do_test_echo(test_name, self.logger, "localhost",
-                                           self.tcp_client_listener_port, size, count)
+        for size in [1, 50, 1000]:
+            for count in [1, 10]:
+                # make sure server is still running
+                if server.error is not None:
+                    logger.log("%s Server stopped with error: %s" % (name, server.error))
+                    result = False
+                if server.exit_status is not None:
+                    logger.log("%s Server stopped with status: %s" % (name, server.exit_status))
+                    result = False
+                # run another test client
+                if result:
+                    test_info = "Starting echo client %s host:localhost, port:%d, size:%d, count:%d" % \
+                               (test_name, self.tcp_client_listener_port, size, count)
+                    self.logger.log(test_info)
+                    result = self.do_test_echo(test_name, self.logger, "localhost",
+                                               self.tcp_client_listener_port, size, count,
+                                               print_logs_client)
                 if not result:
                     break
             if not result:
@@ -159,6 +193,7 @@ class TcpAdaptorOneRouterEcho(TestCase, Process):
         # stop echo server
         server.wait()
         assert result, "Test case failed %s" % test_info
+        self.logger.log("Test test_01_tcp_echo_one_router: SUCCESS")
 
 if __name__== '__main__':
     unittest.main(main_module())
