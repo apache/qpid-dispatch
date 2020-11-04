@@ -53,7 +53,7 @@ struct qdr_tcp_connection_t {
     bool                  egress_dispatcher;
     bool                  connector_closed;//only used if egress_dispatcher=true
     qd_timer_t           *activate_timer;
-    qd_bridge_config_t   config;
+    qd_bridge_config_t    config;
     qd_server_t          *server;
     char                 *remote_address;
     char                 *global_id;
@@ -130,6 +130,12 @@ static void grant_read_buffers(qdr_tcp_connection_t *conn)
 
 static int handle_incoming(qdr_tcp_connection_t *conn)
 {
+    //
+    // Don't initiate an ingress stream message if we don't yet have a reply-to address.
+    //
+    if (!conn->instream && conn->ingress && !conn->reply_to)
+        return 0;
+
     qd_buffer_list_t buffers;
     DEQ_INIT(buffers);
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
@@ -163,10 +169,12 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
             qd_compose_insert_string(props, conn->config.address); // to
             qd_compose_insert_string(props, conn->global_id);   // subject
             qd_compose_insert_string(props, conn->reply_to);    // reply-to
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Initiating ingress to: %s reply: %s", conn->conn_id, conn->incoming_id, conn->config.address, conn->reply_to);
         } else {
             qd_compose_insert_string(props, conn->reply_to); // to
             qd_compose_insert_string(props, conn->global_id);   // subject
             qd_compose_insert_null(props);    // reply-to
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Initiating egress to: %s", conn->conn_id, conn->incoming_id, conn->reply_to);
         }
         //qd_compose_insert_null(props);                      // correlation-id
         //qd_compose_insert_null(props);                      // content-type
@@ -195,15 +203,9 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* tc)
 {
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Freeing tcp_connection %p", tc->conn_id, (void*) tc);
-    if (tc->reply_to) {
-        free(tc->reply_to);
-    }
-    if(tc->remote_address) {
-        free(tc->remote_address);
-    }
-    if(tc->global_id) {
-        free(tc->global_id);
-    }
+    free(tc->reply_to);
+    free(tc->remote_address);
+    free(tc->global_id);
     if (tc->activate_timer) {
         qd_timer_free(tc->activate_timer);
     }
@@ -220,6 +222,16 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
     if (conn->instream) {
         qd_message_set_receive_complete(qdr_delivery_message(conn->instream));
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, true);
+        qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.handle_disconnected");
+    }
+    if (conn->outstream) {
+        qdr_delivery_decref(tcp_adaptor->core, conn->outstream, "tcp-adaptor.handle_disconnected");
+    }
+    if (conn->incoming) {
+        qdr_link_detach(conn->incoming, QD_LOST, 0);
+    }
+    if (conn->outgoing) {
+        qdr_link_detach(conn->outgoing, QD_LOST, 0);
     }
     qdr_connection_closed(conn->conn);
     qdr_connection_set_context(conn->conn, 0);
@@ -850,9 +862,7 @@ static void qdr_tcp_first_attach(void *context, qdr_connection_t *conn, qdr_link
 
 static void qdr_tcp_connection_copy_reply_to(qdr_tcp_connection_t* tc, qd_iterator_t* reply_to)
 {
-    int length = qd_iterator_length(reply_to);
-    tc->reply_to = malloc(length + 1);
-    qd_iterator_strncpy(reply_to, tc->reply_to, length + 1);
+    tc->reply_to = (char*)  qd_iterator_copy(reply_to);
 }
 
 static void qdr_tcp_connection_copy_global_id(qdr_tcp_connection_t* tc, qd_iterator_t* subject)
@@ -928,6 +938,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qdr_tcp_connection_egress(&(tc->config), tc->server, delivery);
             } else if (!tc->outstream) {
                 tc->outstream = delivery;
+                qdr_delivery_incref(delivery, "tcp_adaptor - new outstream");
                 if (!tc->ingress) {
                     //on egress, can only set up link for the reverse
                     //direction once we receive the first part of the
