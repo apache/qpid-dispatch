@@ -1006,8 +1006,10 @@ ssize_t read_data_callback(nghttp2_session *session,
                     *data_flags |= NGHTTP2_DATA_FLAG_EOF;
                     stream_data->out_msg_body_sent = true;
                     stream_data->full_payload_handled = true;
-                    qd_message_stream_data_release(stream_data->next_stream_data);
-                    stream_data->next_stream_data = 0;
+                    if (stream_data->next_stream_data) {
+                        qd_message_stream_data_release(stream_data->next_stream_data);
+                        stream_data->next_stream_data = 0;
+                    }
                     stream_data->out_dlv_local_disposition = PN_ACCEPTED;
                     if ((*data_flags & NGHTTP2_DATA_FLAG_EOF) && conn->ingress) {
                         _http_record_request(conn, stream_data);
@@ -1473,9 +1475,10 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 if (payload_length == 0) {
                     stream_data->next_stream_data_result = qd_message_next_stream_data(message, &stream_data->next_stream_data);
                     if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_NO_MORE) {
-
-                        qd_message_stream_data_release(stream_data->next_stream_data);
-                        stream_data->next_stream_data = 0;
+                        if (stream_data->next_stream_data) {
+                            qd_message_stream_data_release(stream_data->next_stream_data);
+                            stream_data->next_stream_data = 0;
+                        }
 
                         qd_message_stream_data_release(stream_data->curr_stream_data);
                         stream_data->curr_stream_data = 0;
