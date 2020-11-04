@@ -346,10 +346,10 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
                 // Send the data just returned
                 read_more_body = write_outgoing_buffs(conn);
             }
-            if (qd_message_receive_complete(msg) || qd_message_send_complete(msg)) {
-                pn_raw_connection_close(conn->socket);
-                break;
-            }
+        }
+
+        if (qd_message_receive_complete(msg) || qd_message_send_complete(msg)) {
+            pn_raw_connection_close(conn->socket);
         }
     }
 }
