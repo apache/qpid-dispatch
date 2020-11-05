@@ -846,6 +846,9 @@ class WaypointTest(MessagingHandler):
         self.waypoint_sender   = None
         self.waypoint_receiver = None
         self.waypoint_queue    = []
+        self.waypoint_sender_opened = False
+        self.waypoint_receiver_opened = False
+        self.firsts_created = False
 
         self.count  = 10
         self.n_sent = 0
@@ -880,30 +883,31 @@ class WaypointTest(MessagingHandler):
         self.first_conn  = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
 
-    def on_connection_opened(self, event):
-        if event.connection == self.first_conn:
-            self.first_sender   = event.container.create_sender(self.first_conn, self.first_address)
-            self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
-
     def on_link_opening(self, event):
-        if event.sender:
+        if event.sender and not self.waypoint_sender:
             self.waypoint_sender = event.sender
             if event.sender.remote_source.address == self.second_address:
                 event.sender.source.address = self.second_address
                 event.sender.open()
+                self.waypoint_sender_opened = True
             else:
                 self.fail("Incorrect address on incoming sender: got %s, expected %s" %
                           (event.sender.remote_source.address, self.second_address))
 
-        elif event.receiver:
+        elif event.receiver and not self.waypoint_receiver:
             self.waypoint_receiver = event.receiver
             if event.receiver.remote_target.address == self.second_address:
                 event.receiver.target.address = self.second_address
                 event.receiver.open()
+                self.waypoint_receiver_opened = True
             else:
                 self.fail("Incorrect address on incoming receiver: got %s, expected %s" %
                           (event.receiver.remote_target.address, self.second_address))
 
+        if self.waypoint_sender_opened and self.waypoint_receiver_opened and not self.firsts_created:
+            self.firsts_created = True
+            self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
+            self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 
     def on_sendable(self, event):
         if event.sender == self.first_sender:
@@ -925,6 +929,7 @@ class WaypointTest(MessagingHandler):
         container = Container(self)
         container.container_id = self.container_id
         container.run()
+
 
 
 if __name__ == '__main__':
