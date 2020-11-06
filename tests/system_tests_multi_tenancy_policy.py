@@ -23,7 +23,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 from proton import Message, Timeout
-from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout
+from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, unittest, TestTimeout, PollTimeout, Logger
 from proton.handlers import MessagingHandler
 from proton.reactor import Container, DynamicNodeProperties
 from qpid_dispatch_internal.compat import UNICODE
@@ -404,6 +404,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "hosted-group-1/queue.waypoint",
                             "hosted-group-1/queue.waypoint")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -413,6 +416,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "queue.waypoint",
                             "hosted-group-1/queue.waypoint")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -422,6 +428,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "hosted-group-1/queue.waypoint",
                             "hosted-group-1/queue.waypoint")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -431,6 +440,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "queue.waypoint",
                             "hosted-group-1/queue.waypoint")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -441,6 +453,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "EXT",
                             "ALCE")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -451,6 +466,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "EXT",
                             "ALCE")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -461,6 +479,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "EXT",
                             "ALCE")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -471,6 +492,9 @@ class RouterMultitenantPolicyTest(TestCase):
                             "EXT",
                             "ALCE")
         test.run()
+        # Dump the logger output only if there is a test error, otherwise dont bother
+        if test.error:
+            test.logger.dump()
         self.assertEqual(None, test.error)
 
 
@@ -837,12 +861,16 @@ class WaypointTest(MessagingHandler):
         self.first_address  = first_address
         self.second_address = second_address
         self.container_id   = container_id
+        self.logger = Logger(title="WaypointTest")
 
         self.first_conn        = None
         self.second_conn       = None
         self.error             = None
         self.first_sender      = None
+        self.first_sender_created = False
+        self.first_sender_link_opened = False
         self.first_receiver    = None
+        self.first_receiver_created    = False
         self.waypoint_sender   = None
         self.waypoint_receiver = None
         self.waypoint_queue    = []
@@ -853,10 +881,12 @@ class WaypointTest(MessagingHandler):
         self.count  = 10
         self.n_sent = 0
         self.n_rcvd = 0
+        self.n_waypoint_rcvd = 0
         self.n_thru = 0
+        self.outs = None
 
     def timeout(self):
-        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d" % (self.n_sent, self.n_rcvd, self.n_thru)
+        self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
         self.first_conn.close()
         self.second_conn.close()
 
@@ -865,6 +895,8 @@ class WaypointTest(MessagingHandler):
         self.second_conn.close()
         self.first_conn.close()
         self.timer.cancel()
+        self.outs = "n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
+        print (self.outs)
 
     def send_client(self):
         while self.first_sender.credit > 0 and self.n_sent < self.count:
@@ -873,15 +905,28 @@ class WaypointTest(MessagingHandler):
             self.first_sender.send(m)
 
     def send_waypoint(self):
+        self.logger.log("send_waypoint called")
         while self.waypoint_sender.credit > 0 and len(self.waypoint_queue) > 0:
             self.n_thru += 1
             m = self.waypoint_queue.pop()
             self.waypoint_sender.send(m)
+            self.logger.log("waypoint_sender message sent")
+        else:
+            self.logger.log("waypoint_sender did not sent - credit = %s, len(self.waypoint_queue) = %s" % (str(self.waypoint_sender.credit), str(len(self.waypoint_queue))))
 
     def on_start(self, event):
         self.timer       = event.reactor.schedule(TIMEOUT, TestTimeout(self))
         self.first_conn  = event.container.connect(self.first_host)
         self.second_conn = event.container.connect(self.second_host)
+
+    def on_link_flow(self, event):
+        if event.sender == self.waypoint_sender and self.first_sender_link_opened and not self.first_sender_created:
+            self.first_sender_created = True
+            self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
+
+    def on_link_opened(self, event):
+        if event.receiver == self.waypoint_receiver and not self.first_sender_link_opened:
+            self.first_sender_link_opened = True
 
     def on_link_opening(self, event):
         if event.sender and not self.waypoint_sender:
@@ -904,16 +949,13 @@ class WaypointTest(MessagingHandler):
                 self.fail("Incorrect address on incoming receiver: got %s, expected %s" %
                           (event.receiver.remote_target.address, self.second_address))
 
-        if self.waypoint_sender_opened and self.waypoint_receiver_opened and not self.firsts_created:
-            self.firsts_created = True
-            self.first_sender = event.container.create_sender(self.first_conn, self.first_address)
+        if self.waypoint_sender_opened and self.waypoint_receiver_opened and not self.first_receiver_created:
+            self.first_receiver_created = True
             self.first_receiver = event.container.create_receiver(self.first_conn, self.first_address)
 
     def on_sendable(self, event):
         if event.sender == self.first_sender:
             self.send_client()
-        elif event.sender == self.waypoint_sender:
-            self.send_waypoint()
 
     def on_message(self, event):
         if event.receiver == self.first_receiver:
@@ -921,6 +963,7 @@ class WaypointTest(MessagingHandler):
             if self.n_rcvd == self.count and self.n_thru == self.count:
                 self.fail(None)
         elif event.receiver == self.waypoint_receiver:
+            self.n_waypoint_rcvd += 1
             m = Message(body=event.message.body)
             self.waypoint_queue.append(m)
             self.send_waypoint()
