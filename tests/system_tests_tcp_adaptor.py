@@ -187,6 +187,17 @@ class TcpAdaptor(TestCase):
                             print_to_console=True,
                             save_for_dump=False)
 
+        # Write a dummy log line for scraper.
+        # With this the test log can be identified and consumed in scraper.
+        #  1. Capture test log output to file 'test.log'.
+        #  2. Edit away prefix (e.g. '71: ') so each line starts with time of day.
+        #  3. Edit away ctest lines and fragments that have no time of day.
+        #  4. Run scraper:
+        #     'scraper -lm TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT -f I*.log E*.log test.log > test.html'
+        #  5. Profit:
+        #     'firefox test.html'
+        cls.logger.log("SERVER (info) Container Name: TCP_TEST")
+
         # Create a scoreboard for the ports
         p_out = []
         for rtr in cls.router_order:
