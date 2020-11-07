@@ -889,6 +889,7 @@ class WaypointTest(MessagingHandler):
         self.error = "Timeout Expired: n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
         self.first_conn.close()
         self.second_conn.close()
+        self.logger.dump()
 
     def fail(self, text):
         self.error = text
