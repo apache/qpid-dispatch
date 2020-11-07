@@ -2025,8 +2025,6 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
     DEQ_INSERT_TAIL(http2_adaptor->connections, egress_http_conn);
     sys_mutex_unlock(http2_adaptor->lock);
 
-    nghttp2_session_client_new(&egress_http_conn->session_data->session, (nghttp2_session_callbacks*)http2_adaptor->callbacks, (void *)egress_http_conn);
-
     qdr_connection_info_t *info = qdr_connection_info(false, //bool             is_encrypted,
                                                       false, //bool             is_authenticated,
                                                       true,  //bool             opened,
@@ -2079,6 +2077,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             send_settings_frame(conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
+            nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks*)http2_adaptor->callbacks, (void *)conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED), thread_id=%i", conn->conn_id, pthread_self());
             conn->connection_established = true;
             create_stream_dispatcher_link(conn);
@@ -2102,12 +2101,11 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         }
         else {
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Egress PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
-        }
-        conn->connection_established = false;
-        if (!conn->ingress) {
+            conn->client_magic_sent = false;
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Scheduling 2 second timer to reconnect to egress connection", conn->conn_id);
             qd_timer_schedule(conn->activate_timer, 2000);
         }
+        conn->connection_established = false;
         handle_disconnected(conn);
         break;
     }
