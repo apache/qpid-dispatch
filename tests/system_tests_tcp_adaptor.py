@@ -23,19 +23,27 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import os
+import sys
 import time
 import traceback
 from threading import Event
 from threading import Timer
 
 from system_test import TestCase, Qdrouterd, main_module, TIMEOUT
-from system_test import Logger
+from system_test import Timestamp
 from system_test import QdManager
 from system_test import unittest
 from system_test import DIR
 from system_test import SkipIfNeeded
 from qpid_dispatch.management.client import Node
 from subprocess import PIPE, STDOUT
+
+# Tests in this file are organized by classes that inherit TestCase.
+# The first instance is TcpAdaptor(TestCase).
+# The tests emit files that are named starting with 'TcpAdaptor'. This includes
+# logs and shell scripts.
+# Subsequent TestCase subclasses must follow this pattern and emit files named
+# with the test class name at the beginning of the emitted files.
 
 try:
     from TCP_echo_client import TcpEchoClient
@@ -54,6 +62,47 @@ try:
 except ImportError:
     DISABLE_SELECTOR_TESTS = True
     DISABLE_SELECTOR_REASON = "Python selectors module is not available on this platform."
+
+class Logger():
+    """
+    Record event logs as existing Logger. Also add:
+    * ofile  - optional file opened in 'append' mode to which each log line is written
+    TODO: Replace system_test Logger with this after merging dev-protocol-adaptors branch
+    """
+    def __init__(self,
+                 title="Logger",
+                 print_to_console=False,
+                 save_for_dump=True,
+                 ofilename=None):
+        self.title = title
+        self.print_to_console = print_to_console
+        self.save_for_dump = save_for_dump
+        self.logs = []
+        self.ofilename = ofilename
+
+    def log(self, msg):
+        ts = Timestamp()
+        if self.save_for_dump:
+            self.logs.append( (ts, msg) )
+        if self.print_to_console:
+            print("%s %s" % (ts, msg))
+            sys.stdout.flush()
+        if self.ofilename is not None:
+            with open(self.ofilename, 'a') as f_out:
+                f_out.write("%s %s\n" % (ts, msg))
+                f_out.flush()
+
+    def dump(self):
+        print(self)
+        sys.stdout.flush()
+
+    def __str__(self):
+        lines = []
+        lines.append(self.title)
+        for ts, msg in self.logs:
+            lines.append("%s %s" % (ts, msg))
+        res = str('\n'.join(lines))
+        return res
 
 
 class TcpAdaptor(TestCase):
@@ -185,17 +234,10 @@ class TcpAdaptor(TestCase):
 
         cls.logger = Logger(title="TcpAdaptor-testClass",
                             print_to_console=True,
-                            save_for_dump=False)
+                            save_for_dump=False,
+                            ofilename='../setUpClass/TcpAdaptor.log')
 
         # Write a dummy log line for scraper.
-        # With this the test log can be identified and consumed in scraper.
-        #  1. Capture test log output to file 'test.log'.
-        #  2. Edit away prefix (e.g. '71: ') so each line starts with time of day.
-        #  3. Edit away ctest lines and fragments that have no time of day.
-        #  4. Run scraper:
-        #     'scraper -lm TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT -f I*.log E*.log test.log > test.html'
-        #  5. Profit:
-        #     'firefox test.html'
         cls.logger.log("SERVER (info) Container Name: TCP_TEST")
 
         # Create a scoreboard for the ports
@@ -223,6 +265,30 @@ class TcpAdaptor(TestCase):
             for line in p_out:
                 o_file.write("set %s\n" % line)
 
+        # Write a script to run scraper on this test's log file
+        scraper_abspath = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
+        logs_dir     = os.path.abspath("../setUpClass")
+        main_log     = "TcpAdaptor.log"
+        echo_logs    = "TcpAdaptor_echo*"
+        big_test_log = "TcpAdaptor_all.log"
+        int_logs     = "I*.log"
+        edge_logs    = "E*.log"
+        log_modules_spec  = "--log-modules TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT"
+        html_output  = "TcpAdaptor.html"
+
+        with open("../setUpClass/TcpAdaptor-run-scraper.sh", 'w') as o_file:
+            o_file.write("#!/bin/bash\n\n")
+            o_file.write("# Script to run scraper on test class TcpAdaptor test result\n")
+            o_file.write("# cd into logs directory\n")
+            o_file.write("cd %s\n\n" % logs_dir)
+            o_file.write("# Concatenate test class logs into single file\n")
+            o_file.write("cat %s %s > %s\n\n" % (main_log, echo_logs, big_test_log))
+            o_file.write("# run scraper\n")
+            o_file.write("python %s %s -f %s %s %s > %s\n\n" %
+                         (scraper_abspath, log_modules_spec, int_logs, edge_logs, big_test_log, html_output))
+            o_file.write("echo View the results by opening the html file\n")
+            o_file.write("echo     firefox %s" % (os.path.join(logs_dir, html_output)))
+
         # Launch the routers
         router('INTA', 'interior',
                [('listener', {'role': 'inter-router', 'port': inter_router_port}),
@@ -248,9 +314,9 @@ class TcpAdaptor(TestCase):
         cls.EB1 = cls.routers[4]
         cls.EB2 = cls.routers[5]
 
-        cls.logger.log("INTA waiting for connection to INTB")
+        cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
         cls.INTA.wait_router_connected('INTB')
-        cls.logger.log("INTB waiting for connection to INTA")
+        cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
         cls.INTB.wait_router_connected('INTA')
 
         # define logging
@@ -261,10 +327,11 @@ class TcpAdaptor(TestCase):
         cls.echo_servers = {}
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
-            server_prefix = "ECHO_SERVER %s addr %s" % (test_name, rtr)
+            server_prefix = "ECHO_SERVER %s %s" % (test_name, rtr)
             server_logger = Logger(title=test_name,
                                    print_to_console=cls.print_logs_server,
-                                   save_for_dump=False)
+                                   save_for_dump=False,
+                                   ofilename="../setUpClass/TcpAdaptor_echo_server_%s.log" % rtr)
             cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
             server = TcpEchoServer(prefix=server_prefix,
                                    port=cls.tcp_server_listener_ports[rtr],
@@ -291,11 +358,12 @@ class TcpAdaptor(TestCase):
         # Each router has a listener for the echo server attached to every router
         listener_port = self.tcp_client_listener_ports[client][server]
 
-        name = "%s_%s_%s_%s_%s" % (test_name, client, server, size, count)
+        name = "%s_%s_%s" % (test_name, size, count)
         client_prefix = "ECHO_CLIENT %s" % name
         client_logger = Logger(title=client_prefix,
                                print_to_console=print_client_logs,
-                               save_for_dump=False)
+                               save_for_dump=False,
+                               ofilename="../setUpClass/TcpAdaptor_echo_client_%s.log" % name)
         result = None # assume it works
         start_time = time.time()
         try:
@@ -367,7 +435,7 @@ class TcpAdaptor(TestCase):
                     result = s_status
                 # run another test client
                 if result is None:
-                    test_info = "TCP_TEST Starting echo client '%s' client_rtr:%s, server:%s size:%d, count:%d" % \
+                    test_info = "TCP_TEST Starting echo client '%s' client_rtr:%s, server_rtr:%s size:%d, count:%d" % \
                                (test_name, client, server, size, count)
                     self.logger.log(test_info)
                     result = self.do_test_echo(test_name, self.logger,
@@ -389,7 +457,7 @@ class TcpAdaptor(TestCase):
     def test_01_tcp_INTA_INTA(self):
         name = "test_01_tcp_INTA_INTA"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router("tcp", self.INTA, self.INTA)
+        result = self.do_tcp_echo_two_router(name, self.INTA, self.INTA)
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
@@ -397,7 +465,7 @@ class TcpAdaptor(TestCase):
     def test_02_tcp_INTB_INTB(self):
         name = "test_02_tcp_INTB_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router("tcp", self.INTB, self.INTB)
+        result = self.do_tcp_echo_two_router(name, self.INTB, self.INTB)
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
@@ -405,7 +473,7 @@ class TcpAdaptor(TestCase):
     def test_03_tcp_INTA_INTB(self):
         name = "test_03_tcp_INTA_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router("tcp", self.INTA, self.INTB)
+        result = self.do_tcp_echo_two_router(name, self.INTA, self.INTB)
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
@@ -413,7 +481,7 @@ class TcpAdaptor(TestCase):
     def test_04_tcp_EA1_EA1(self):
         name = "test_04_tcp_EA1_EA1"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router("tcp", self.EA1, self.EA1)
+        result = self.do_tcp_echo_two_router(name, self.EA1, self.EA1)
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
@@ -421,7 +489,7 @@ class TcpAdaptor(TestCase):
     def test_05_tcp_EA1_EA2(self):
         name = "test_05_tcp_EA1_EA2"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router("tcp", self.EA1, self.EA2)
+        result = self.do_tcp_echo_two_router(name, self.EA1, self.EA2)
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
