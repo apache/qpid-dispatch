@@ -839,7 +839,7 @@ class RouterTest(TestCase):
                                       self.routers[5].addresses[0],
                                       self.routers[2].addresses[0],
                                       self.routers[0].addresses[0],
-                                      "test_39")
+                                      "test_39", check_remote=True)
 
         test.run()
         self.assertEqual(None, test.error)
@@ -2699,7 +2699,7 @@ class MobileAddrMcastAnonSenderDroppedRxTest(MobileAddressMulticastTest):
 
 class MobileAddressEventTest(MessagingHandler):
     def __init__(self, receiver1_host, receiver2_host, receiver3_host,
-                 sender_host, interior_host, address):
+                 sender_host, interior_host, address, check_remote=False):
         super(MobileAddressEventTest, self).__init__(auto_accept=False)
         self.receiver1_host = receiver1_host
         self.receiver2_host = receiver2_host
@@ -2733,6 +2733,9 @@ class MobileAddressEventTest(MessagingHandler):
         self.n_settled = 0
         self.addr_timer = None
         self.container = None
+        self.max_attempts = 5
+        self.num_attempts = 0
+        self.check_remote = check_remote
 
     def timeout(self):
         if self.dup_msg:
@@ -2755,20 +2758,30 @@ class MobileAddressEventTest(MessagingHandler):
         outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
         remote_count = outs.attribute_names.index("remoteCount")
         found = False
+        self.num_attempts += 1
         for result in outs.results:
-
             if self.address in result[0]:
-                found = True
+                if self.check_remote:
+                    if result[remote_count] > 0:
+                        found = True
+                else:
+                    found = True
                 self.sender_conn = self.container.connect(self.sender_host)
                 self.sender = self.container.create_sender(self.sender_conn,
                                                            self.address)
+                local_node.close()
                 break
 
         if not found:
-            self.error = "Unable to create sender because of " \
-                         "absence of address in the address table"
-            self.addr_timer.cancel()
-            self.timeout()
+            if self.num_attempts < self.max_attempts:
+                local_node.close()
+                self.addr_timer = self.reactor.schedule(1.0, AddrTimer(self))
+            else:
+                self.error = "Unable to create sender because of " \
+                             "absence of address in the address table"
+                self.addr_timer.cancel()
+                local_node.close()
+                self.timeout()
 
     def on_start(self, event):
         self.timer = event.reactor.schedule(TIMEOUT, TestTimeout(self))
