@@ -1250,8 +1250,10 @@ static void qdr_http_flow(void *context, qdr_link_t *link, int credit)
         if (! stream_data)
             return;
         stream_data->in_link_credit += credit;
-        if (route_delivery(stream_data, qd_message_receive_complete(stream_data->message))) {
-            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] qdr_http_flow, delivery routed successfully", stream_data->session_data->conn->conn_id);
+        if (!stream_data->in_dlv) {
+            if (route_delivery(stream_data, qd_message_receive_complete(stream_data->message))) {
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] qdr_http_flow, delivery routed successfully", stream_data->session_data->conn->conn_id);
+            }
         }
     }
 }
