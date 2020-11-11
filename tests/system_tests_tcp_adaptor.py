@@ -120,7 +120,7 @@ class TcpAdaptor(TestCase):
     #  +-------+    +---------+    +---------+    +-------+
     #
     # Each router tcp-connects to a like-named echo server.
-    # Each router has tcp-listeners for ever echo server
+    # Each router has tcp-listeners for every echo server
     #
     #      +----+ +----+ +----+ +----+ +----+ +----+
     #   +--|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |--+
@@ -228,9 +228,9 @@ class TcpAdaptor(TestCase):
             cls.nodest_listener_ports[rtr] = cls.tester.get_port()
             cls.http_listener_ports[rtr] = cls.tester.get_port()
 
-        inter_router_port = cls.tester.get_port()
-        cls.INTA_edge_port   = cls.tester.get_port()
-        cls.INTB_edge_port   = cls.tester.get_port()
+        inter_router_port  = cls.tester.get_port()
+        cls.INTA_edge_port = cls.tester.get_port()
+        cls.INTB_edge_port = cls.tester.get_port()
 
         cls.logger = Logger(title="TcpAdaptor-testClass",
                             print_to_console=True,
@@ -265,7 +265,7 @@ class TcpAdaptor(TestCase):
             for line in p_out:
                 o_file.write("set %s\n" % line)
 
-        # Write a script to run scraper on this test's log file
+        # Write a script to run scraper on this test's log files
         scraper_abspath = os.path.join(os.environ.get('BUILD_DIR'), 'tests', 'scraper', 'scraper.py')
         logs_dir     = os.path.abspath("../setUpClass")
         main_log     = "TcpAdaptor.log"
@@ -273,7 +273,7 @@ class TcpAdaptor(TestCase):
         big_test_log = "TcpAdaptor_all.log"
         int_logs     = "I*.log"
         edge_logs    = "E*.log"
-        log_modules_spec  = "--log-modules TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT"
+        log_modules_spec = "--log-modules TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT"
         html_output  = "TcpAdaptor.html"
 
         with open("../setUpClass/TcpAdaptor-run-scraper.sh", 'w') as o_file:
@@ -319,7 +319,7 @@ class TcpAdaptor(TestCase):
         cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
         cls.INTB.wait_router_connected('INTA')
 
-        # define logging
+        # define logging levels
         cls.print_logs_server = True
         cls.print_logs_client = True
 
@@ -340,10 +340,6 @@ class TcpAdaptor(TestCase):
             assert server.is_running
             cls.echo_servers[rtr] = server
 
-        # sleep so user can verify the mess
-        # cls.logger.log("Verify the setup while I sleep 5 min: firefox http://localhost:%d" % cls.http_listener_ports["INTA"])
-        # time.sleep(300)
-
     @classmethod
     def tearDownClass(cls):
         # stop echo servers
@@ -351,113 +347,213 @@ class TcpAdaptor(TestCase):
             server = cls.echo_servers[rtr]
             cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
             server.wait()
+        super(TcpAdaptor, cls).tearDownClass()
 
-    def do_test_echo(self, test_name, logger, client, server, size, count, print_client_logs):
-        # Run echo client. Return true if it works.
+    #
+    # Test concurrent clients
+    #
+    class EchoClientRunner():
+        """
+        Launch an echo client upon construction.
+        Provide poll interface for checking done/error.
+        Provide wait/join to shut down.
+        """
+        def __init__(self, test_name, client_n, logger, client, server, size, count, print_client_logs):
+            """
+            Launch an echo client upon construction.
 
-        # Each router has a listener for the echo server attached to every router
-        listener_port = self.tcp_client_listener_ports[client][server]
+            :param test_name: Unique name for log file prefix
+            :param client_n: Client number for differentiating otherwise identical clients
+            :param logger: parent logger for logging test activity vs. client activity
+            :param client: router name to which the client connects
+            :param server: name whose address the client is targeting
+            :param size: length of messages in bytes
+            :param count: number of messages to be sent/verified
+            :param print_client_logs: verbosity switch
+            :return Null if success else string describing error
+            """
+            self.test_name = test_name
+            self.client_n = str(client_n)
+            self.logger = logger
+            self.client = client
+            self.server = server
+            self.size = size
+            self.count = count
+            self.print_client_logs = print_client_logs
+            self.client_final = False
 
-        name = "%s_%s_%s" % (test_name, size, count)
-        client_prefix = "ECHO_CLIENT %s" % name
-        client_logger = Logger(title=client_prefix,
-                               print_to_console=print_client_logs,
-                               save_for_dump=False,
-                               ofilename="../setUpClass/TcpAdaptor_echo_client_%s.log" % name)
-        result = None # assume it works
+            # Each router has a listener for the echo server attached to every router
+            self.listener_port = TcpAdaptor.tcp_client_listener_ports[self.client][self.server]
+
+            self.name = "%s_%s_%s_%s" % (self.test_name, self.client_n, self.size, self.count)
+            self.client_prefix = "ECHO_CLIENT %s" % self.name
+            self.client_logger = Logger(title=self.client_prefix,
+                                        print_to_console=self.print_client_logs,
+                                        save_for_dump=False,
+                                        ofilename="../setUpClass/TcpAdaptor_runner_%s.log" % self.name)
+
+            try:
+                self.e_client = TcpEchoClient(prefix=self.client_prefix,
+                                              host='localhost',
+                                              port=self.listener_port,
+                                              size=self.size,
+                                              count=self.count,
+                                              timeout=TIMEOUT,
+                                              logger=self.client_logger)
+
+            except Exception as exc:
+                self.e_client.error = "TCP_TEST TcpAdaptor_runner_%s failed. Exception: %s" % \
+                                      (self.name, traceback.format_exc())
+                self.logger.log(self.e_client.error)
+                raise Exception(self.e_client.error)
+
+        def client_error(self):
+            return self.e_client.error
+
+        def client_exit_status(self):
+            return self.e_client.exit_status
+
+        def client_running(self):
+            return self.e_client.is_running
+
+        def wait(self):
+            # wait for client to exit
+            # Return None if successful wait/join/exit/close else error message
+            result = None
+            try:
+                self.e_client.wait()
+
+            except Exception as exc:
+                self.e_client.error = "TCP_TEST EchoClient %s failed. Exception: %s" % \
+                                      (self.name, traceback.format_exc())
+                self.logger.log(self.e_client.error)
+                result = self.e_client.error
+            return result
+
+    class EchoPair():
+        """
+        For the concurrent tcp tests this class describes one of the client-
+        server echo pairs and the traffic pattern between them.
+        """
+        def __init__(self, client_rtr, server_rtr, sizes=None, counts=None):
+            self.client_rtr = client_rtr
+            self.server_rtr = server_rtr
+            self.sizes = [1] if sizes is None else sizes
+            self.counts = [1] if counts is None else counts
+
+    def do_tcp_echo_n_routers(self, test_name, echo_pair_list):
+        """
+        Launch all the echo pairs defined in the list
+        Wait for completion.
+        :param test_name test name
+        :param echo_pair_list list of EchoPair objects describing the test
+        :return: None if success else error message for ctest
+        """
+        self.logger.log("TCP_TEST %s Start do_tcp_echo_n_routers" % (test_name))
+        result = None
+        runners = []
+        client_num = 0
         start_time = time.time()
-        try:
-            # start client
-            e_client = TcpEchoClient(prefix=client_prefix,
-                                     host='localhost',
-                                     port=listener_port,
-                                     size=size,
-                                     count=count,
-                                     timeout=TIMEOUT,
-                                     logger=client_logger)
 
-            # wait for client to finish
-            keep_waiting = True
-            while keep_waiting:
+        try:
+            # Launch the runners
+            for echo_pair in echo_pair_list:
+                client = echo_pair.client_rtr.name
+                server = echo_pair.server_rtr.name
+                for size in echo_pair.sizes:
+                    for count in echo_pair.counts:
+                        log_msg = "TCP_TEST %s Running pair %d %s->%s size=%d count=%d" % \
+                                  (test_name, client_num, client, server, size, count)
+                        self.logger.log(log_msg)
+                        runner = self.EchoClientRunner(test_name, client_num, self.logger,
+                                                       client, server, size, count,
+                                                       self.print_logs_client)
+                        runners.append(runner)
+                        client_num += 1
+
+            # Loop until timeout, error, or completion
+            while result is None:
+                # Check for timeout
                 time.sleep(0.1)
                 elapsed = time.time() - start_time
                 if elapsed > self.echo_timeout:
-                    e_client.error = "TCP_TEST TIMEOUT - local wait time exceeded"
-                    logger.log("%s %s" % (name, e_client.error))
-                    keep_waiting = False
-                    result = e_client.error
+                    result = "TCP_TEST TIMEOUT - local wait time exceeded"
                     break
-                if e_client.error is not None:
-                    logger.log("TCP_TEST %s Client stopped with error: %s" % (name, e_client.error))
-                    keep_waiting = False
-                    result = e_client.error
-                if e_client.exit_status is not None:
-                    logger.log("TCP_TEST %s Client stopped with status: %s" % (name, e_client.exit_status))
-                    keep_waiting = False
-                    result = e_client.exit_status
-                if keep_waiting and not e_client.is_running:
-                    # this is how clients exit normally
-                    s = "TCP_TEST %s Client exited normally with no error or status" % name
-                    logger.log(s)
-                    keep_waiting = False
-
-            # wait for client to exit
-            e_client.wait()
-
-        except Exception as exc:
-            e_client.error = "TCP_TEST EchoClient %s failed. Exception: %s" % \
-                              (name, traceback.format_exc())
-            logger.log(e_client.error)
-            result = e_client.error
-
-        return result
-
-    def do_tcp_echo_two_router(self, test_name, client_rtr, server_rtr):
-        """
-        Server is running
-        Run echo_client to client_rtr's listener port that goes to server_rtr's echo server
-        :return:
-        """
-        client = client_rtr.name
-        server = server_rtr.name
-        self.logger.log("TCP_TEST Start do_tcp_echo_two_router client: %s, server:%s" % (client, server))
-        result = None
-        for size in [1]:
-            for count in [1]:
-                # make sure server is still running
-                s_error = self.echo_servers[server].error
-                s_status = self.echo_servers[server].exit_status
-                if s_error is not None:
-                    self.logger.log("TCP_TEST %s Server %s stopped with error: %s" % (test_name, server, s_error))
-                    result = s_error
-                if s_status is not None:
-                    self.logger.log("TCP_TEST %s Server %s stopped with status: %s" % (test_name, server, s_status))
-                    result = s_status
-                # run another test client
-                if result is None:
-                    test_info = "TCP_TEST Starting echo client '%s' client_rtr:%s, server_rtr:%s size:%d, count:%d" % \
-                               (test_name, client, server, size, count)
-                    self.logger.log(test_info)
-                    result = self.do_test_echo(test_name, self.logger,
-                                               client, server, size, count,
-                                               self.print_logs_client)
-                    if result is not None:
-                        self.logger.log("TCP_TEST test %s fail: %s" % (test_name, result))
+                # Make sure servers are still up
+                for rtr in TcpAdaptor.router_order:
+                    es =TcpAdaptor.echo_servers[rtr]
+                    if es.error is not None:
+                        self.logger.log("TCP_TEST %s Server %s stopped with error: %s" %
+                                        (test_name, es.prefix, es.error))
+                        result = es.error
+                        break
+                    if es.exit_status is not None:
+                        self.logger.log("TCP_TEST %s Server %s stopped with status: %s" %
+                                        (test_name, es.prefix, es.exit_status))
+                        result = es.exit_status
+                        break
                 if result is not None:
                     break
-            if result is not None:
-                break
 
-        self.logger.log("TCP_TEST Stop do_tcp_echo_two_router client: %s, server:%s" % (client, server))
+                # Check for completion or runner error
+                complete = True
+                for runner in runners:
+                    if not runner.client_final:
+                        error = runner.client_error()
+                        if error is not None:
+                            self.logger.log("TCP_TEST %s Client %s stopped with error: %s" %
+                                            (test_name, runner.name, error))
+                            result = error
+                            runner.client_final = True
+                            break
+                        status = runner.client_exit_status()
+                        if status is not None:
+                            self.logger.log("TCP_TEST %s Client %s stopped with status: %s" %
+                                            (test_name, runner.name, status))
+                            result = status
+                            runner.client_final = True
+                            break
+                        running = runner.client_running()
+                        if running:
+                            complete = False
+                        else:
+                            self.logger.log("TCP_TEST %s Client %s exited normally" %
+                                            (test_name, runner.name))
+                            runner.client_final = True
+                if complete:
+                    self.logger.log("TCP_TEST %s SUCCESS" %
+                                    test_name)
+                    break
+
+            # Wait/join all the runners
+            for runner in runners:
+                runner.wait()
+
+            if result is not None:
+                self.logger.log("TCP_TEST %s failed: %s" % (test_name, result))
+
+        except Exception as exc:
+            result = "TCP_TEST %s failed. Exception: %s" % \
+                              (test_name, traceback.format_exc())
+
+        self.logger.log("TCP_TEST Stop %s do_tcp_echo_n_routers" % test_name)
         return result
 
-    # Run a series of tests against the router/echo_server network
-
+    #
+    # A series of 1-byte messsages, one at a time, to prove general connectivity
+    #
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_01_tcp_INTA_INTA(self):
+        """
+        Connectivity - INTA only
+        """
         name = "test_01_tcp_INTA_INTA"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router(name, self.INTA, self.INTA)
+        pairs = [self.EchoPair(self.INTA, self.INTA)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
@@ -465,31 +561,134 @@ class TcpAdaptor(TestCase):
     def test_02_tcp_INTB_INTB(self):
         name = "test_02_tcp_INTB_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router(name, self.INTB, self.INTB)
+        pairs = [self.EchoPair(self.INTB, self.INTB)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_03_tcp_INTA_INTB(self):
+    def xtest_03_tcp_INTA_INTB(self):
         name = "test_03_tcp_INTA_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router(name, self.INTA, self.INTB)
+        pairs = [self.EchoPair(self.INTA, self.INTB)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_04_tcp_EA1_EA1(self):
+    def xtest_04_tcp_EA1_EA1(self):
         name = "test_04_tcp_EA1_EA1"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router(name, self.EA1, self.EA1)
+        pairs = [self.EchoPair(self.EA1, self.EA1)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_05_tcp_EA1_EA2(self):
+    def xtest_05_tcp_EA1_EA2(self):
         name = "test_05_tcp_EA1_EA2"
         self.logger.log("TCP_TEST Start %s" % name)
-        result = self.do_tcp_echo_two_router(name, self.EA1, self.EA2)
+        pairs = [self.EchoPair(self.EA1, self.EA2)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def xtest_06_tcp_EA1_INTA(self):
+        name = "xtest_06_tcp_EA1_INTA"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.EA1, self.INTA)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def xtest_07_tcp_EA1_INTB(self):
+        name = "xtest_07_tcp_EA1_INTB"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.EA1, self.INTB)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def xtest_08_tcp_EA1_EB1(self):
+        name = "xtest_08_tcp_EA1_EB1"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.EA2, self.EB2)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    # larger messages
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_10_tcp_INTA_INTA_100(self):
+        name = "test_10_tcp_INTA_INTA_100"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[100])]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_11_tcp_INTA_INTA_1000(self):
+        name = "test_11_tcp_INTA_INTA_1000"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[1000])]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def xtest_12_tcp_INTA_INTA_500000(self):
+        name = "test_12_tcp_INTA_INTA_500000"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    # concurrent messages
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_50_concurrent(self):
+        name = "test_50_concurrent_AtoA_BtoB"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA),
+                 self.EchoPair(self.INTB, self.INTB)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
