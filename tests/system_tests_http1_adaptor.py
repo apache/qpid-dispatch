@@ -1028,8 +1028,11 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
 
     def test_01_streaming(self):
         """
+        TEMPORARILY DISABLED (DISPATCH-1819)
         Test multiple clients sending streaming messages in parallel
         """
+        self.skipTest("Blocked by DISPATCH-1818")
+
         TESTS_11 = {
             "PUT": [
                 (RequestMsg("PUT", "/PUT/streaming_test",
@@ -1288,6 +1291,97 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         client.wait()
         self.assertIsNone(client.error)
         self.assertEqual(1, client.count)
+        server.wait()
+
+    def test_05_large_streaming_msg(self):
+        """
+        Verify large streaming message transfer
+        """
+        TESTS_11 = {
+            "PUT": [
+                (RequestMsg("PUT", "/PUT/streaming_test_11",
+                            headers={
+                                "Transfer-encoding": "chunked",
+                                "Content-Type": "text/plain;charset=utf-8"
+                            },
+                            # 4 chunks each ~= 600K
+                            body=b'927C1\r\n' + b'0' * 0x927C0 + b'X\r\n'
+                            + b'927C0\r\n' + b'1' * 0x927C0 + b'\r\n'
+                            + b'927C1\r\n' + b'2' * 0x927C0 + b'X\r\n'
+                            + b'927C0\r\n' + b'3' * 0x927C0 + b'\r\n'
+                            + b'0\r\n\r\n'),
+
+                 ResponseMsg(201, reason="Created",
+                             headers={"Response-Header": "data",
+                                      "Content-Length": "0"}),
+                 ResponseValidator(status=201))
+            ],
+
+            "GET": [
+                (RequestMsg("GET", "/GET/streaming_test_11",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={
+                                 "transfer-Encoding": "chunked",
+                                 "Content-Type": "text/plain;charset=utf-8"
+                             },
+                             # two 1.2MB chunk
+                             body=b'124f80\r\n' + b'4' * 0x124F80 + b'\r\n'
+                             + b'124f80\r\n' + b'5' * 0x124F80 + b'\r\n'
+                             + b'0\r\n\r\n'),
+                 ResponseValidator(status=200))
+            ],
+        }
+
+        TESTS_10 = {
+            "POST": [
+                (RequestMsg("POST", "/POST/streaming_test_10",
+                            headers={"Header-1": "H" * 2048,
+                                     "Content-Length": "2097155",
+                                     "Content-Type": "text/plain;charset=utf-8"},
+                            body=b'P' * 2097155),
+                 ResponseMsg(201, reason="Created",
+                             headers={"Response-Header": "data",
+                                      "Content-Length": "0"}),
+                 ResponseValidator(status=201))
+            ],
+
+            "GET": [
+                (RequestMsg("GET", "/GET/streaming_test_10",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": "1999999",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'G' * 1999999),
+                 ResponseValidator(status=200))
+            ],
+        }
+        server11 = TestServer(server_port=self.http_server11_port,
+                              client_port=self.http_listener11_port,
+                              tests=TESTS_11)
+        server10 = TestServer(server_port=self.http_server10_port,
+                              client_port=self.http_listener10_port,
+                              tests=TESTS_10,
+                              handler_cls=RequestHandler10)
+
+        self.EA2.wait_connectors()
+
+        client11 = ThreadedTestClient(TESTS_11,
+                                      self.http_listener11_port,
+                                      repeat=2)
+        client11.wait()
+        self.assertIsNone(client11.error);
+        self.assertEqual(4, client11.count);
+
+        client10 = ThreadedTestClient(TESTS_10,
+                                      self.http_listener10_port,
+                                      repeat=2)
+        client10.wait()
+        self.assertIsNone(client10.error)
+        self.assertEqual(4, client10.count);
+
+        server11.wait()
+        server10.wait()
 
 
 class FakeHttpServerBase(object):

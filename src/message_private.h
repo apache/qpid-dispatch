@@ -62,12 +62,12 @@ typedef struct {
 
 
 struct qd_message_stream_data_t {
-     DEQ_LINKS(qd_message_stream_data_t); // Linkage to form a DEQ
+    DEQ_LINKS(qd_message_stream_data_t);  // Linkage to form a DEQ
     qd_message_pvt_t    *owning_message;  // Pointer to the owning message
     qd_field_location_t  section;         // Section descriptor for the field
     qd_field_location_t  payload;         // Descriptor for the payload of the body data
-    qd_buffer_t         *first_buffer;    // Pointer to the first buffer in the field
     qd_buffer_t         *last_buffer;     // Pointer to the last buffer in the field
+    bool                 free_prev;       // true if old body_data buffer needs freeing
 };
 
 ALLOC_DECLARE(qd_message_stream_data_t);
@@ -151,9 +151,8 @@ struct qd_message_pvt_t {
     qd_buffer_list_t               ma_ingress;      // ingress field in outgoing message annotations
     int                            ma_phase;        // phase for the override address
     qd_message_stream_data_list_t  stream_data_list;  // TODO - move this to the content for one-time parsing (TLR)
-    qd_message_stream_data_t      *next_stream_data;
-    unsigned char                 *body_cursor;
-    qd_buffer_t                   *body_buffer;
+    unsigned char                 *body_cursor;     // tracks the point in the content buffer chain
+    qd_buffer_t                   *body_buffer;     // to parse the next body data section (if it exists)
     bool                           strip_annotations_in;
     bool                           send_complete;   // Has the message been completely received and completely sent?
     bool                           tag_sent;        // Tags are sent
