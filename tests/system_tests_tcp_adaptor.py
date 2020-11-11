@@ -335,7 +335,6 @@ class TcpAdaptor(TestCase):
             cls.logger.log("TCP_TEST Launching echo server '%s'" % server_prefix)
             server = TcpEchoServer(prefix=server_prefix,
                                    port=cls.tcp_server_listener_ports[rtr],
-                                   timeout=TIMEOUT,
                                    logger=server_logger)
             assert server.is_running
             cls.echo_servers[rtr] = server
@@ -520,7 +519,7 @@ class TcpAdaptor(TestCase):
                             self.logger.log("TCP_TEST %s Client %s exited normally" %
                                             (test_name, runner.name))
                             runner.client_final = True
-                if complete:
+                if complete and result is None:
                     self.logger.log("TCP_TEST %s SUCCESS" %
                                     test_name)
                     break
@@ -536,7 +535,6 @@ class TcpAdaptor(TestCase):
             result = "TCP_TEST %s failed. Exception: %s" % \
                               (test_name, traceback.format_exc())
 
-        self.logger.log("TCP_TEST Stop %s do_tcp_echo_n_routers" % test_name)
         return result
 
     #
@@ -570,7 +568,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_03_tcp_INTA_INTB(self):
+    def test_03_tcp_INTA_INTB(self):
         name = "test_03_tcp_INTA_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.INTA, self.INTB)]
@@ -582,7 +580,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_04_tcp_EA1_EA1(self):
+    def test_04_tcp_EA1_EA1(self):
         name = "test_04_tcp_EA1_EA1"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.EA1, self.EA1)]
@@ -594,7 +592,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_05_tcp_EA1_EA2(self):
+    def test_05_tcp_EA1_EA2(self):
         name = "test_05_tcp_EA1_EA2"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.EA1, self.EA2)]
@@ -606,8 +604,8 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_06_tcp_EA1_INTA(self):
-        name = "xtest_06_tcp_EA1_INTA"
+    def test_06_tcp_EA1_INTA(self):
+        name = "test_06_tcp_EA1_INTA"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.EA1, self.INTA)]
         result = self.do_tcp_echo_n_routers(name, pairs)
@@ -618,8 +616,8 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_07_tcp_EA1_INTB(self):
-        name = "xtest_07_tcp_EA1_INTB"
+    def test_07_tcp_EA1_INTB(self):
+        name = "test_07_tcp_EA1_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.EA1, self.INTB)]
         result = self.do_tcp_echo_n_routers(name, pairs)
@@ -630,8 +628,8 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_08_tcp_EA1_EB1(self):
-        name = "xtest_08_tcp_EA1_EB1"
+    def test_08_tcp_EA2_EB2(self):
+        name = "test_08_tcp_EA2_EB2"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.EA2, self.EB2)]
         result = self.do_tcp_echo_n_routers(name, pairs)
@@ -667,7 +665,7 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def xtest_12_tcp_INTA_INTA_500000(self):
+    def test_12_tcp_INTA_INTA_500000(self):
         name = "test_12_tcp_INTA_INTA_500000"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
