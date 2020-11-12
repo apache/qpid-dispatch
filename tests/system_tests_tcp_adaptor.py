@@ -389,7 +389,7 @@ class TcpAdaptor(TestCase):
             self.client_logger = Logger(title=self.client_prefix,
                                         print_to_console=self.print_client_logs,
                                         save_for_dump=False,
-                                        ofilename="../setUpClass/TcpAdaptor_runner_%s.log" % self.name)
+                                        ofilename="../setUpClass/TcpAdaptor_echo_client_%s.log" % self.name)
 
             try:
                 self.e_client = TcpEchoClient(prefix=self.client_prefix,
