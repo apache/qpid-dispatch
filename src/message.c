@@ -1102,7 +1102,6 @@ qd_message_t *qd_message_copy(qd_message_t *in_msg)
     qd_buffer_list_clone(&copy->ma_trace, &msg->ma_trace);
     qd_buffer_list_clone(&copy->ma_ingress, &msg->ma_ingress);
     copy->ma_phase = msg->ma_phase;
-    copy->ma_stream = msg->ma_stream;
     copy->strip_annotations_in  = msg->strip_annotations_in;
 
     copy->content = content;
@@ -1164,6 +1163,7 @@ void qd_message_message_annotations(qd_message_t *in_msg)
 
     if (ma_pf_stream) {
         content->ma_stream = qd_parse_as_int(ma_pf_stream);
+        qd_parse_free(ma_pf_stream);
     }
 
     return;
@@ -1201,7 +1201,7 @@ int qd_message_get_phase_annotation(const qd_message_t *in_msg)
 void qd_message_set_stream_annotation(qd_message_t *in_msg, bool stream)
 {
     qd_message_pvt_t *msg = (qd_message_pvt_t*) in_msg;
-    msg->ma_stream = stream;
+    msg->content->ma_stream = stream;
 }
 
 void qd_message_set_ingress_annotation(qd_message_t *in_msg, qd_composed_field_t *ingress_field)
@@ -1629,7 +1629,7 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
         !DEQ_IS_EMPTY(msg->ma_trace) ||
         !DEQ_IS_EMPTY(msg->ma_ingress) ||
         msg->ma_phase != 0 ||
-        msg->ma_stream) {
+        msg->content->ma_stream) {
 
         if (!map_started) {
             qd_compose_start_map(out_ma);
@@ -1660,9 +1660,9 @@ static void compose_message_annotations_v1(qd_message_pvt_t *msg, qd_buffer_list
             field_count++;
         }
 
-        if (msg->ma_stream) {
+        if (msg->content->ma_stream) {
             qd_compose_insert_symbol(field, QD_MA_STREAM);
-            qd_compose_insert_int(field, msg->ma_stream);
+            qd_compose_insert_int(field, msg->content->ma_stream);
             field_count++;
         }
         // pad out to N fields
