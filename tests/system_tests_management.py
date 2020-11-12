@@ -132,14 +132,14 @@ class ManagementTest(system_test.TestCase):
         """Query with type only"""
         response = self.node.query(type=ROUTER)
         for attr in ['type', 'metadata']:
-            self.assertTrue(attr in response.attribute_names)
+            self.assertIn(attr, response.attribute_names)
         self.assertEqual(response.get_entities()[0]['metadata'], 'selftest;solo')
 
     def test_query_type(self):
         """Query with type only"""
         response = self.node.query(type=LISTENER)
         for attr in ['type', 'name', 'identity', 'host', 'port']:
-            self.assertTrue(attr in response.attribute_names)
+            self.assertIn(attr, response.attribute_names)
         for r in response.get_dicts():
             self.assertEqual(len(response.attribute_names), len(r))
             self.assertEqual(r['type'], LISTENER)
@@ -153,7 +153,7 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
         for r in expect: # We might have extras in results due to create tests
-            self.assertTrue(r in response.results)
+            self.assertIn(r, response.results)
             self.assertTrue(dict(zip(attribute_names, r)) in response.get_dicts())
 
     def test_query_attributes(self):
@@ -163,7 +163,7 @@ class ManagementTest(system_test.TestCase):
         self.assertEqual(attribute_names, response.attribute_names)
         expect = [[LISTENER, 'l%s' % i, str(self.router.ports[i])] for i in range(3)]
         for r in expect: # We might have extras in results due to create tests
-            self.assertTrue(r in response.results)
+            self.assertIn(r, response.results)
         for name in ['router/' + self.router.name, 'log/DEFAULT']:
             self.assertTrue([r for r in response.get_dicts() if r['name'] == name],
                             msg="Can't find result with name '%s'" % name)

@@ -54,12 +54,12 @@ class MaxFrameMaxSessionFramesTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # max-frame is from the config
-            self.assertTrue(' max-frame-size=2048,' in open_lines[0])
+            self.assertIn(' max-frame-size=2048,', open_lines[0])
             # channel-max is default
-            self.assertTrue(" channel-max=32767" in open_lines[0])
+            self.assertIn(" channel-max=32767", open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window is from the config
-            self.assertTrue(" incoming-window=10," in begin_lines[0] )
+            self.assertIn(" incoming-window=10,", begin_lines[0] )
 
 
 class MaxSessionsTest(TestCase):
@@ -88,7 +88,7 @@ class MaxSessionsTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # channel-max is 9
-            self.assertTrue(" channel-max=9" in open_lines[0])
+            self.assertIn(" channel-max=9", open_lines[0])
 
 
 class MaxSessionsZeroTest(TestCase):
@@ -117,7 +117,7 @@ class MaxSessionsZeroTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # channel-max is 0. Should get proton default 32767
-            self.assertTrue(" channel-max=32767" in open_lines[0])
+            self.assertIn(" channel-max=32767", open_lines[0])
 
 
 class MaxSessionsLargeTest(TestCase):
@@ -146,7 +146,7 @@ class MaxSessionsLargeTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # channel-max is 0. Should get proton default 32767
-            self.assertTrue(" channel-max=32767" in open_lines[0])
+            self.assertIn(" channel-max=32767", open_lines[0])
 
 
 class MaxFrameSmallTest(TestCase):
@@ -175,7 +175,7 @@ class MaxFrameSmallTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # if frame size <= 512 proton set min of 512
-            self.assertTrue(" max-frame-size=512" in open_lines[0])
+            self.assertIn(" max-frame-size=512", open_lines[0])
 
 
 class MaxFrameDefaultTest(TestCase):
@@ -204,7 +204,7 @@ class MaxFrameDefaultTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # if frame size not set then a default is used
-            self.assertTrue(" max-frame-size=16384" in open_lines[0])
+            self.assertIn(" max-frame-size=16384", open_lines[0])
 
 
 class MaxSessionFramesDefaultTest(TestCase):
@@ -233,15 +233,15 @@ class MaxSessionFramesDefaultTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # if frame size not set then a default is used
-            self.assertTrue(" max-frame-size=16384" in open_lines[0])
+            self.assertIn(" max-frame-size=16384", open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window should be 2^31-1 (64-bit) or
             # (2^31-1) / max-frame-size (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else \
                 (" incoming-window=%d," % int(2147483647 / 16384))
-            self.assertTrue(expected in begin_lines[0],
-                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
+            #self.assertIn(expected, begin_lines[0], "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
+            self.assertIn(expected, begin_lines[0])
 
 
 class MaxFrameMaxSessionFramesZeroTest(TestCase):
@@ -274,15 +274,14 @@ class MaxFrameMaxSessionFramesZeroTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "-> @open" in s]
             # max-frame gets set to protocol min
-            self.assertTrue(' max-frame-size=512,' in open_lines[0])
+            self.assertIn(' max-frame-size=512,', open_lines[0])
             begin_lines = [s for s in log_lines if "-> @begin" in s]
             # incoming-window should be 2^31-1 (64-bit) or
             # (2^31-1) / max-frame-size (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else \
                 (" incoming-window=%d," % int(2147483647 / 512))
-            self.assertTrue(expected in begin_lines[0],
-                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
+            self.assertIn(expected, begin_lines[0])
 
 
 class ConnectorSettingsDefaultTest(TestCase):
@@ -331,16 +330,15 @@ class ConnectorSettingsDefaultTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "<- @open" in s]
             # defaults
-            self.assertTrue(' max-frame-size=16384,' in open_lines[0])
-            self.assertTrue(' channel-max=32767,' in open_lines[0])
+            self.assertIn(' max-frame-size=16384,', open_lines[0])
+            self.assertIn(' channel-max=32767,', open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # incoming-window should be 2^31-1 (64-bit) or
             # (2^31-1) / max-frame-size (32-bit)
             is_64bits = sys.maxsize > 2 ** 32
             expected = " incoming-window=2147483647," if is_64bits else \
                 (" incoming-window=%d," % int(2147483647 / 16384))
-            self.assertTrue(expected in begin_lines[0],
-                            "Expected:'%s' not found in '%s'" % (expected, begin_lines[0]))
+            self.assertIn(expected, begin_lines[0])
 
 
 class ConnectorSettingsNondefaultTest(TestCase):
@@ -390,11 +388,11 @@ class ConnectorSettingsNondefaultTest(TestCase):
             log_lines = router_log.read().split("\n")
             open_lines = [s for s in log_lines if "<- @open" in s]
             # nondefaults
-            self.assertTrue(' max-frame-size=2048,' in open_lines[0])
-            self.assertTrue(' channel-max=19,' in open_lines[0])
+            self.assertIn(' max-frame-size=2048,', open_lines[0])
+            self.assertIn(' channel-max=19,', open_lines[0])
             begin_lines = [s for s in log_lines if "<- @begin" in s]
             # nondefaults
-            self.assertTrue(" incoming-window=10," in begin_lines[0])
+            self.assertIn(" incoming-window=10,", begin_lines[0])
 
 
 if __name__ == '__main__':

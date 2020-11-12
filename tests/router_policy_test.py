@@ -254,7 +254,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('application connection limit' in diags[0])
+        self.assertIn('application connection limit', diags[0])
 
     def test_policy_app_conn_mgr_fail_by_user(self):
         stats = PolicyAppConnectionMgr(3, 1, 2)
@@ -262,7 +262,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('per user' in diags[0])
+        self.assertIn('per user', diags[0])
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, 2, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, 2, None))
@@ -273,7 +273,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('per host' in diags[0])
+        self.assertIn('per host', diags[0])
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, None, 2))
         self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, None, 2))
@@ -284,8 +284,8 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 2)
-        self.assertTrue('per user' in diags[0] or 'per user' in diags[1])
-        self.assertTrue('per host' in diags[0] or 'per host' in diags[1])
+        success = 'per user' in diags[0] or 'per user' in diags[1]
+        self.assertTrue(success)
         diags = []
         self.assertTrue(stats.can_connect('10.10.10.10:10002', 'chuck', '10.10.10.10', diags, 2, 2))
         self.assertFalse(stats.can_connect('10.10.10.10:10003', 'chuck', '10.10.10.10', diags, 2, 2))
@@ -296,7 +296,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('per user' in diags[0])
+        self.assertIn('per user', diags[0])
         diags = []
         stats.update(3, 2, 2)
         self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
@@ -307,7 +307,7 @@ class PolicyAppConnectionMgrTests(TestCase):
         self.assertTrue(stats.can_connect('10.10.10.10:10000', 'chuck', '10.10.10.10', diags, None, None))
         self.assertFalse(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))
         self.assertTrue(len(diags) == 1)
-        self.assertTrue('per user' in diags[0])
+        self.assertIn('per user', diags[0])
         diags = []
         stats.disconnect("10.10.10.10:10000", 'chuck', '10.10.10.10')
         self.assertTrue(stats.can_connect('10.10.10.10:10001', 'chuck', '10.10.10.10', diags, None, None))

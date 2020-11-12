@@ -942,7 +942,7 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('update --type=vhost --name=vhost/$default --stdin', input=self.default_patterns())
         except Exception as e:
             self.assertTrue(False, msg=('Error running qdmanage %s' % str(e)))
-        self.assertFalse("PolicyError" in qdm_out)
+        self.assertNotIn("PolicyError", qdm_out)
 
         # attempt an create that should be rejected
         qdm_out = "<not written>"
@@ -1060,7 +1060,7 @@ class PolicyHostamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=#.#.0.0 --stdin', input=self.disallowed_hostname())
         except Exception as e:
             self.assertTrue("pattern conflicts" in str(e), msg=('Error running qdmanage %s' % str(e)))
-        self.assertFalse("222222" in qdm_out)
+        self.assertNotIn("222222", qdm_out)
 
 
 class VhostPolicyFromRouterConfig(TestCase):

@@ -303,11 +303,11 @@ class QdmanageTest(TestCase):
         self.assertEqual(output[0]['name'], "test-address")
         self.assertEqual(output[0]['distribution'], "multicast")
         self.assertEqual(output[0]['prefix'], "abcd")
-        self.assertTrue('pattern' not in output[0])
+        self.assertNotIn('pattern', output[0])
         self.assertEqual(output[1]['name'], "pattern-address")
         self.assertEqual(output[1]['distribution'], "closest")
         self.assertEqual(output[1]['pattern'], "a/*/b/#/c")
-        self.assertTrue('prefix' not in output[1])
+        self.assertNotIn('prefix', output[1])
 
     def test_create_address(self):
         long_type = 'org.apache.qpid.dispatch.router.config.address'

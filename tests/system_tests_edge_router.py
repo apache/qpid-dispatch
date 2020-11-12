@@ -1247,42 +1247,42 @@ class RouterTest(TestCase):
         # summary statostics of the edge router. It will not show statistics of the interior routers.
         outs = self.run_qdstat(['--all-routers'],
                                address=self.routers[2].addresses[0])
-        self.assertTrue("Router Id                        EA1" in outs)
+        self.assertIn("Router Id                        EA1", outs)
 
         outs = self.run_qdstat(['--all-routers', '--all-entities'],
                                address=self.routers[2].addresses[0])
         # Check if each entity  section is showing
-        self.assertTrue("Router Links" in outs)
-        self.assertTrue("Router Addresses" in outs)
-        self.assertTrue("Connections" in outs)
-        self.assertTrue("AutoLinks" in outs)
-        self.assertTrue("Auto Links" in outs)
+        self.assertIn("Router Links", outs)
+        self.assertIn("Router Addresses", outs)
+        self.assertIn("Connections", outs)
+        self.assertIn("AutoLinks", outs)
         self.assertEqual(outs.count("Link Routes"), 2)
-        self.assertTrue("Router Statistics" in outs)
-        self.assertTrue("Router Id                        EA1" in outs)
+        self.assertIn("Auto Links", outs)
+        self.assertIn("Router Statistics", outs)
+        self.assertIn("Router Id                        EA1", outs)
 
-        self.assertTrue("Memory Pools" in outs)
+        self.assertIn("Memory Pools", outs)
 
         outs = self.run_qdstat(['-c', '--all-routers'],
                                address=self.routers[2].addresses[0])
 
         # Verify that the the edhe uplink connection is showing
-        self.assertTrue("INT.A" in outs)
-        self.assertTrue("inter-router" not in outs)
+        self.assertIn("INT.A", outs)
+        self.assertNotIn("inter-router", outs)
 
         outs = self.run_qdstat(['--all-entities'],
                                address=self.routers[2].addresses[0])
         # Check if each entity  section is showing
-        self.assertTrue("Router Links" in outs)
-        self.assertTrue("Router Addresses" in outs)
-        self.assertTrue("Connections" in outs)
-        self.assertTrue("AutoLinks" in outs)
-        self.assertTrue("Auto Links" in outs)
+        self.assertIn("Router Links", outs)
+        self.assertIn("Router Addresses", outs)
+        self.assertIn("Connections", outs)
+        self.assertIn("AutoLinks", outs)
+        self.assertIn("Auto Links", outs)
         self.assertEqual(outs.count("Link Routes"), 2)
-        self.assertTrue("Router Statistics" in outs)
-        self.assertTrue("Router Id                        EA1" in outs)
+        self.assertIn("Router Statistics", outs)
+        self.assertIn("Router Id                        EA1", outs)
 
-        self.assertTrue("Memory Pools" in outs)
+        self.assertIn("Memory Pools", outs)
 
     def test_69_interior_qdstat_all_routers(self):
         # Connects to an interior router and runs "qdstat --all-routers"
