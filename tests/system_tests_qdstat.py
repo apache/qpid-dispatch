@@ -147,29 +147,29 @@ class QdstatTest(system_test.TestCase):
 
     def test_qdstat_no_args(self):
         outs = self.run_qdstat(args=None)
-        self.assertTrue("Presettled Count" in outs)
-        self.assertTrue("Dropped Presettled Count" in outs)
-        self.assertTrue("Accepted Count" in outs)
-        self.assertTrue("Rejected Count" in outs)
-        self.assertTrue("Deliveries from Route Container" in outs)
-        self.assertTrue("Deliveries to Route Container" in outs)
-        self.assertTrue("Deliveries to Fallback" in outs)
-        self.assertTrue("Egress Count" in outs)
-        self.assertTrue("Ingress Count" in outs)
-        self.assertTrue("Uptime" in outs)
+        self.assertIn("Presettled Count", outs)
+        self.assertIn("Dropped Presettled Count", outs)
+        self.assertIn("Accepted Count", outs)
+        self.assertIn("Rejected Count", outs)
+        self.assertIn("Deliveries from Route Container", outs)
+        self.assertIn("Deliveries to Route Container", outs)
+        self.assertIn("Deliveries to Fallback", outs)
+        self.assertIn("Egress Count", outs)
+        self.assertIn("Ingress Count", outs)
+        self.assertIn("Uptime", outs)
 
     def test_qdstat_no_other_args_csv(self):
         outs = self.run_qdstat(["--csv"])
-        self.assertTrue("Presettled Count" in outs)
-        self.assertTrue("Dropped Presettled Count" in outs)
-        self.assertTrue("Accepted Count" in outs)
-        self.assertTrue("Rejected Count" in outs)
-        self.assertTrue("Deliveries from Route Container" in outs)
-        self.assertTrue("Deliveries to Route Container" in outs)
-        self.assertTrue("Deliveries to Fallback" in outs)
-        self.assertTrue("Egress Count" in outs)
-        self.assertTrue("Ingress Count" in outs)
-        self.assertTrue("Uptime" in outs)
+        self.assertIn("Presettled Count", outs)
+        self.assertIn("Dropped Presettled Count", outs)
+        self.assertIn("Accepted Count", outs)
+        self.assertIn("Rejected Count", outs)
+        self.assertIn("Deliveries from Route Container", outs)
+        self.assertIn("Deliveries to Route Container", outs)
+        self.assertIn("Deliveries to Fallback", outs)
+        self.assertIn("Egress Count", outs)
+        self.assertIn("Ingress Count", outs)
+        self.assertIn("Uptime", outs)
 
     def test_address_priority(self):
         out = self.run_qdstat(['--address'])
@@ -239,8 +239,8 @@ class QdstatTest(system_test.TestCase):
         if out.strip() == "No memory statistics available":
             # router built w/o memory pools enabled]
             return self.skipTest("Router's memory pools disabled")
-        self.assertTrue("QDR.A" in out)
-        self.assertTrue("UTC" in out)
+        self.assertIn("QDR.A", out)
+        self.assertIn("UTC", out)
         regexp = r'qdr_address_t\s+[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
@@ -249,20 +249,20 @@ class QdstatTest(system_test.TestCase):
         if out.strip() == "No memory statistics available":
             # router built w/o memory pools enabled]
             return self.skipTest("Router's memory pools disabled")
-        self.assertTrue("QDR.A" in out)
-        self.assertTrue("UTC" in out)
+        self.assertIn("QDR.A", out)
+        self.assertIn("UTC", out)
         regexp = r'qdr_address_t","[0-9]+'
         assert re.search(regexp, out, re.I), "Can't find '%s' in '%s'" % (regexp, out)
 
     def test_policy(self):
         out = self.run_qdstat(['--policy'])
-        self.assertTrue("Maximum Concurrent Connections" in out)
-        self.assertTrue("Total Denials" in out)
+        self.assertIn("Maximum Concurrent Connections", out)
+        self.assertIn("Total Denials", out)
 
     def test_policy_csv(self):
         out = self.run_qdstat(['-p', "--csv"])
-        self.assertTrue("Maximum Concurrent Connections" in out)
-        self.assertTrue("Total Denials" in out)
+        self.assertIn("Maximum Concurrent Connections", out)
+        self.assertIn("Total Denials", out)
 
     def test_log(self):
         self.run_qdstat(['--log',  '--limit=5'], r'AGENT \(debug\).*GET-LOG')
@@ -509,41 +509,41 @@ class QdstatTestVhostPolicy(system_test.TestCase):
 
     def test_vhost(self):
         out = self.run_qdstat(['--vhosts'])
-        self.assertTrue("Vhosts" in out)
-        self.assertTrue("allowUnknownUser" in out)
+        self.assertIn("Vhosts", out)
+        self.assertIn("allowUnknownUser", out)
 
     def test_vhost_csv(self):
         out = self.run_qdstat(['--vhosts', '--csv'])
-        self.assertTrue("Vhosts" in out)
-        self.assertTrue("allowUnknownUser" in out)
+        self.assertIn("Vhosts", out)
+        self.assertIn("allowUnknownUser", out)
 
     def test_vhostgroups(self):
         out = self.run_qdstat(['--vhostgroups'])
-        self.assertTrue("Vhost Groups" in out)
-        self.assertTrue("allowAdminStatusUpdate" in out)
-        self.assertTrue("Vhost '$default' UserGroup '$default'" in out)
-        self.assertTrue("Vhost '$default' UserGroup 'HGCrawler'" in out)
+        self.assertIn("Vhost Groups", out)
+        self.assertIn("allowAdminStatusUpdate", out)
+        self.assertIn("Vhost '$default' UserGroup '$default'", out)
+        self.assertIn("Vhost '$default' UserGroup 'HGCrawler'", out)
 
     def test_vhostgroups_csv(self):
         out = self.run_qdstat(['--vhostgroups', '--csv'])
-        self.assertTrue("Vhost Groups" in out)
-        self.assertTrue("allowAdminStatusUpdate" in out)
-        self.assertTrue("Vhost '$default' UserGroup '$default'" in out)
-        self.assertTrue("Vhost '$default' UserGroup 'HGCrawler'" in out)
+        self.assertIn("Vhost Groups", out)
+        self.assertIn("allowAdminStatusUpdate", out)
+        self.assertIn("Vhost '$default' UserGroup '$default'", out)
+        self.assertIn("Vhost '$default' UserGroup 'HGCrawler'", out)
 
     def test_vhoststats(self):
         out = self.run_qdstat(['--vhoststats'])
-        self.assertTrue("Vhost Stats" in out)
-        self.assertTrue("maxMessageSizeDenied" in out)
-        self.assertTrue("Vhost User Stats" in out)
-        self.assertTrue("remote hosts" in out)
+        self.assertIn("Vhost Stats", out)
+        self.assertIn("maxMessageSizeDenied", out)
+        self.assertIn("Vhost User Stats", out)
+        self.assertIn("remote hosts", out)
 
     def test_vhoststats_csv(self):
         out = self.run_qdstat(['--vhoststats', '--csv'])
-        self.assertTrue("Vhost Stats" in out)
-        self.assertTrue("maxMessageSizeDenied" in out)
-        self.assertTrue("Vhost User Stats" in out)
-        self.assertTrue("remote hosts" in out)
+        self.assertIn("Vhost Stats", out)
+        self.assertIn("maxMessageSizeDenied", out)
+        self.assertIn("Vhost User Stats", out)
+        self.assertIn("remote hosts", out)
 
 
 

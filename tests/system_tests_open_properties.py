@@ -274,7 +274,7 @@ class OpenPropertiesQdManageTest(TestCase):
                                             input=input,
                                             timeout=TIMEOUT)
             rc = json.loads(output)
-            self.assertTrue("openProperties" in rc)
+            self.assertIn("openProperties", rc)
             self.assertEqual(op, rc["openProperties"])
 
             client = client_class(router)

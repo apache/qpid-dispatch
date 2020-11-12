@@ -878,7 +878,8 @@ class WaypointTest(MessagingHandler):
         self.second_conn.close()
         self.first_conn.close()
         self.timer.cancel()
-        self.outs = "n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
+        if self.error:
+            self.outs = "n_sent=%d n_rcvd=%d n_thru=%d n_waypoint_rcvd=%d" % (self.n_sent, self.n_rcvd, self.n_thru, self.n_waypoint_rcvd)
         print (self.outs)
 
     def send_client(self):

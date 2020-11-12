@@ -78,12 +78,12 @@ class DefaultDistributionTest(TestCase):
 
     def test_general(self):
         out = self.run_qdstat(['--general'], r'(?s)Router Statistics.*Mode\s*Standalone')
-        self.assertTrue("Connections                      1" in out)
-        self.assertTrue("Nodes                            0" in out)
-        self.assertTrue("Auto Links                       0" in out)
-        self.assertTrue("Link Routes                      0" in out)
-        self.assertTrue("Router Id                        QDR" in out)
-        self.assertTrue("Mode                             standalone" in out)
+        self.assertIn("Connections                      1", out)
+        self.assertIn("Nodes                            0", out)
+        self.assertIn("Auto Links                       0", out)
+        self.assertIn("Link Routes                      0", out)
+        self.assertIn("Router Id                        QDR", out)
+        self.assertIn("Mode                             standalone", out)
 
 
 class UnavailableBase(MessagingHandler):

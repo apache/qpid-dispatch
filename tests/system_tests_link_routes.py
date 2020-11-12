@@ -207,23 +207,23 @@ class LinkRouteTest(TestCase):
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
 
         # Make sure there is a dir of in and out.
-        self.assertTrue('"direction": "in"' in out)
-        self.assertTrue('"direction": "out"' in out)
-        self.assertTrue('"containerId": "QDR.A"' in out)
+        self.assertIn('"direction": "in"', out)
+        self.assertIn('"direction": "out"', out)
+        self.assertIn('"containerId": "QDR.A"', out)
 
         # Use the long type and make sure that qdmanage does not mess up the long type
         cmd = 'QUERY --type=org.apache.qpid.dispatch.router.config.linkRoute'
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
 
         # Make sure there is a dir of in and out.
-        self.assertTrue('"direction": "in"' in out)
-        self.assertTrue('"direction": "out"' in out)
-        self.assertTrue('"containerId": "QDR.A"' in out)
+        self.assertIn('"direction": "in"', out)
+        self.assertIn('"direction": "out"', out)
+        self.assertIn('"containerId": "QDR.A"', out)
 
         identity = out[out.find("identity") + 12: out.find("identity") + 13]
         cmd = 'READ --type=linkRoute --identity=' + identity
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        self.assertTrue(identity in out)
+        self.assertIn(identity, out)
 
         exception_occurred = False
         try:
@@ -253,7 +253,7 @@ class LinkRouteTest(TestCase):
         identity = out[out.find("identity") + 12: out.find("identity") + 14]
         cmd = 'READ --type=autoLink --identity=' + identity
         out = self.run_qdmanage(cmd=cmd, address=self.routers[1].addresses[0])
-        self.assertTrue(identity in out)
+        self.assertIn(identity, out)
 
     def test_bbb_qdstat_link_routes_routerB(self):
         """
@@ -263,7 +263,7 @@ class LinkRouteTest(TestCase):
         """
         out = self.run_qdstat_linkRoute(self.routers[1].addresses[0])
         for route in ['a.*.toA.#', 'a.*.toD.#', 'org.apache',  'pulp.task']:
-            self.assertTrue(route in out)
+            self.assertIn(route, out)
 
         out_list = out.split()
         self.assertEqual(out_list.count('in'), 4)

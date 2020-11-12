@@ -49,10 +49,12 @@ class LinkRouteLookupTest(TestCase):
     QCM_ADDR_LOOKUP_NOT_FOUND = 3
 
     def _check_response(self, message):
-        self.assertTrue(isinstance(message.properties, dict))
+        is_instance_dict = isinstance(message.properties, dict)
+        self.assertTrue(is_instance_dict)
         self.assertEqual(self.PROTOCOL_VERSION, message.properties.get('version'))
         self.assertTrue(message.properties.get('opcode') is not None)
-        self.assertTrue(isinstance(message.body, list))
+        is_instance_list = isinstance(message.body, list)
+        self.assertTrue(is_instance_list)
         self.assertEqual(2, len(message.body))
         return (message.properties.get('status'),
                 message.body[0],  # is link_route?

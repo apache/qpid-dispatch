@@ -503,7 +503,7 @@ class RouterTestPlainSaslOverSsl(RouterTestPlainSaslCommon):
         results = local_node.query(type='org.apache.qpid.dispatch.connection').results
 
         # sslProto should be TLSv1.x
-        self.assertTrue(u'TLSv1' in results[0][10])
+        self.assertIn(u'TLSv1', results[0][10])
 
         # role should be inter-router
         self.assertEqual(u'inter-router', results[0][3])
@@ -696,7 +696,7 @@ class RouterTestVerifyHostNameNo(RouterTestPlainSaslCommon):
         self.assertTrue(found, "Connection to %s not found" % search)
 
         # sslProto should be TLSv1.x
-        self.assertTrue(u'TLSv1' in results[N][10])
+        self.assertIn(u'TLSv1', results[N][10])
 
         # role should be inter-router
         self.assertEqual(u'inter-router', results[N][3])

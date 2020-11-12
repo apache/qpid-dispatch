@@ -68,7 +68,7 @@ class ExchangeBindingsTest(TestCase):
         for entity in entities:
             if "name" in entity and entity["name"] == name:
                 for k,v in expected.items():
-                    self.assertTrue(k in entity)
+                    self.assertIn(k, entity)
                     self.assertEqual(v, entity[k])
                 return
         raise Exception("Could not find %s named %s" % (kind, name))

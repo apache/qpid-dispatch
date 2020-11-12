@@ -269,9 +269,9 @@ class TwoRouterTest(TestCase):
                 pass
 
         # verify expected count == actual count
-        self.assertTrue("ERROR" not in msgs_recvd)
+        self.assertNotIn("ERROR", msgs_recvd)
         for a in addresses:
-            self.assertTrue(a[0] in msgs_recvd)
+            self.assertIn(a[0], msgs_recvd)
             self.assertEqual(a[1], msgs_recvd[a[0]])
 
         for M in receivers:
