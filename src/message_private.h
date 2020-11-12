@@ -122,7 +122,7 @@ typedef struct {
     qd_parsed_field_t   *ma_pf_to_override;
     qd_parsed_field_t   *ma_pf_trace;
     int                  ma_int_phase;
-    bool                 ma_stream;
+    bool                 ma_stream;                      // indicates whether this message is streaming
     uint64_t             max_message_size;               // configured max; 0 if no max to enforce
     uint64_t             bytes_received;                 // bytes returned by pn_link_recv() when enforcing max_message_size
     uint32_t             fanout;                         // The number of receivers for this message, including in-process subscribers.
@@ -150,7 +150,6 @@ struct qd_message_pvt_t {
     qd_buffer_list_t               ma_trace;        // trace list in outgoing message annotations
     qd_buffer_list_t               ma_ingress;      // ingress field in outgoing message annotations
     int                            ma_phase;        // phase for the override address
-    bool                           ma_stream;       // indicates whether this message is streaming
     qd_message_stream_data_list_t  stream_data_list;  // TODO - move this to the content for one-time parsing (TLR)
     qd_message_stream_data_t      *next_stream_data;
     unsigned char                 *body_cursor;
