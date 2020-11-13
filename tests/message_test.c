@@ -938,7 +938,8 @@ static char *test_check_stream_data(void * context)
 
 
 // Verify that qd_message_stream_data_append() will break up a long binary data
-// field in order to avoid triggering Q2
+// field in order to avoid triggering Q2.  Ensure all stream_data buffers are
+// freed when done.
 //
 static char *test_check_stream_data_append(void * context)
 {
@@ -948,11 +949,10 @@ static char *test_check_stream_data_append(void * context)
 
     // generate a buffer list of binary data large enough to trigger Q2
     //
-    const int buffer_count = (QD_QLIMIT_Q2_UPPER * 3) + 5;
+    const int body_bufct = (QD_QLIMIT_Q2_UPPER * 3) + 5;
     qd_buffer_list_t bin_data = DEQ_EMPTY;
-    for (int i = 0; i < buffer_count; ++i) {
+    for (int i = 0; i < body_bufct; ++i) {
         qd_buffer_t *buffy = qd_buffer();
-        // "fill" the buffer:
         qd_buffer_insert(buffy, qd_buffer_capacity(buffy));
         DEQ_INSERT_TAIL(bin_data, buffy);
     }
@@ -975,28 +975,41 @@ static char *test_check_stream_data_append(void * context)
 
     qd_message_compose_2(msg, field, false);
     qd_compose_free(field);
+
+    // snapshot the message buffer count to use as a baseline
+    const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(msg)->buffers);
+
     int depth = qd_message_stream_data_append(msg, &bin_data);
-    if (depth <= buffer_count) {
+    if (depth <= body_bufct) {
         // expected to add extra buffer(s) for meta-data
         result = "append length is incorrect";
         goto exit;
     }
+
+    // And while we're at it, stuff in a footer
+    field = qd_compose(QD_PERFORMATIVE_FOOTER, 0);
+    qd_compose_start_map(field);
+    qd_compose_insert_symbol(field, "Key1");
+    qd_compose_insert_string(field, "Value1");
+    qd_compose_insert_symbol(field, "Key2");
+    qd_compose_insert_string(field, "Value2");
+    qd_compose_end_map(field);
+    qd_message_extend(msg, field);
+    qd_compose_free(field);
+
     qd_message_set_receive_complete(msg);
 
-    // now validate the message body sections
-
+    // "forward" the message
     out_msg = qd_message_copy(msg);
-    if (qd_message_check_depth(out_msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK) {
-        result = "Invalid body depth check";
-        goto exit;
-    }
 
+    // walk the data streams...
     int bd_count = 0;
-    int total_buffers = 0;
+    int body_buffers = 0;
     qd_message_stream_data_t *stream_data = 0;
     bool done = false;
+    int footer_found = 0;
     while (!done) {
-        switch (qd_message_next_stream_data(msg, &stream_data)) {
+        switch (qd_message_next_stream_data(out_msg, &stream_data)) {
         case QD_MESSAGE_STREAM_DATA_INCOMPLETE:
         case QD_MESSAGE_STREAM_DATA_INVALID:
             result = "Next body data failed to get next body data";
@@ -1004,30 +1017,49 @@ static char *test_check_stream_data_append(void * context)
         case QD_MESSAGE_STREAM_DATA_NO_MORE:
             done = true;
             break;
+        case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
+            bd_count += 1;
+            footer_found += 1;
+            qd_message_stream_data_release(stream_data);
+            break;
         case QD_MESSAGE_STREAM_DATA_BODY_OK:
             bd_count += 1;
             // qd_message_stream_data_append() breaks the buffer list up into
             // smaller lists that are no bigger than QD_QLIMIT_Q2_LOWER buffers
             // long
-            total_buffers += qd_message_stream_data_buffer_count(stream_data);
+            body_buffers += qd_message_stream_data_buffer_count(stream_data);
             if (qd_message_stream_data_buffer_count(stream_data) > QD_QLIMIT_Q2_LOWER) {
                 result = "Body data list length too long!";
                 goto exit;
             }
             qd_message_stream_data_release(stream_data);
             break;
-        case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
-            break;
         }
     }
 
-    if (bd_count != (buffer_count / QD_QLIMIT_Q2_LOWER) + 1) {
+    // verify:
+
+    if (body_bufct != body_buffers) {
+        result = "Not all body data buffers were decoded!";
+        goto exit;
+    }
+
+    if (footer_found != 1) {
+        result = "I ordered a side of 'footer' with that message!";
+        goto exit;
+    }
+
+    // +2 for 1 extra 5 buffers and 1 for footer
+    if (bd_count != (body_bufct / QD_QLIMIT_Q2_LOWER) + 2) {
         result = "Unexpected count of body data sections!";
         goto exit;
     }
 
-    if (total_buffers != buffer_count) {
-        result = "Not all buffers were decoded!";
+    // expect: free all the body and footer buffers except for the very last
+    // buffer.  Remember kids: perfect is good, but done is better.
+    if (DEQ_SIZE(MSG_CONTENT(out_msg)->buffers) != base_bufct + 1) {
+        result = "Possible buffer leak detected!";
+        goto exit;
     }
 
 exit:

@@ -68,6 +68,7 @@ struct qd_message_stream_data_t {
     qd_field_location_t  payload;         // Descriptor for just the payload of the body data
     qd_buffer_t         *last_buffer;     // holds final data octet
     bool                 last_full;       // true stream_data includes end of last_buffer
+    bool                 free_prev;       // true if old body_data buffer needs freeing
 };
 
 ALLOC_DECLARE(qd_message_stream_data_t);
