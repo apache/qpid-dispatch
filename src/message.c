@@ -2519,20 +2519,23 @@ int qd_message_stream_data_buffers(qd_message_stream_data_t *stream_data, pn_raw
  * data_stream do not also reference the buffer (overlap).  When this
  * data_stream is the last in the messages stream_data_list it is only safe to
  * decref the last buffer fanout if the data_stream fills the buffer
- * completely.  Any trailing data in the last buffer may belong to
- * the next (unparsed) data-stream body so we must not free it.
+ * completely.  Any trailing data in the last buffer may belong to the next
+ * (unparsed) data-stream body so we must not free it.  Also, the last buffer
+ * must not be released if it is the message body_buffer since it is needed
+ * when the next data_stream is parsed out.
  */
 void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
 {
     qd_message_pvt_t     *pvt       = stream_data->owning_message;
     qd_message_content_t *content   = pvt->content;
-    bool                  buf_freed = false;
 
     LOCK(content->lock);
 
-    bool was_blocked = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
-    const qd_buffer_t * const prev_buf = DEQ_PREV(stream_data) ? DEQ_PREV(stream_data)->last_buffer : 0;
-    const qd_buffer_t * const stop_buf = DEQ_NEXT(stream_data->last_buffer);
+    bool was_blocked             = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
+    qd_buffer_t * const prev_buf = DEQ_PREV(stream_data) ? DEQ_PREV(stream_data)->last_buffer : 0;
+    qd_buffer_t * const stop_buf = (pvt->body_buffer == stream_data->last_buffer
+                                    ? pvt->body_buffer  // do not release body_buffer
+                                    : DEQ_NEXT(stream_data->last_buffer));
 
     if (pvt->is_fanout) {
         qd_buffer_t *buf = stream_data->section.buffer;
@@ -2553,6 +2556,26 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
     }
 
     //
+    // If the old body_data buffer was preserved when this stream_data was
+    // parsed out it can now be freed.
+    //
+    if (stream_data->free_prev) {
+        qd_buffer_t *buf = DEQ_PREV(stream_data->section.buffer);
+        assert(buf);
+
+        if (pvt->is_fanout) {
+            uint32_t old = qd_buffer_dec_fanout(buf);
+            (void)old;  // avoid compiler unused var error
+            assert(old > 0);
+        }
+
+        if (qd_buffer_get_fanout(buf) == 0) {
+            DEQ_REMOVE(content->buffers, buf);
+            qd_buffer_free(buf);
+        }
+    }
+
+    //
     // Free non-overlapping buffers with zero refcounts.
     //
     qd_buffer_t *buf = stream_data->section.buffer;
@@ -2564,7 +2587,6 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
                     || stream_data->last_full))) {
             DEQ_REMOVE(content->buffers, buf);
             qd_buffer_free(buf);
-            buf_freed = true;
         }
         buf = next;
     }
@@ -2573,7 +2595,7 @@ void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
     // it is possible that we've freed enough buffers to clear Q2 holdoff
     //
     if (content->q2_input_holdoff
-        && was_blocked && buf_freed
+        && was_blocked
         && qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt)) {
         content->q2_input_holdoff = false;
         qd_link_restart_rx(qd_message_get_receiving_link((qd_message_t*) pvt));
@@ -2654,7 +2676,8 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
     qd_field_location_t location;
     ZERO(&location);
 
-    bool is_footer    = false;
+    qd_buffer_t * const old_body_buffer  = msg->body_buffer;
+    bool is_footer                       = false;
 
     LOCK(content->lock);
     section_status = message_section_check_LH(&msg->body_buffer, &msg->body_cursor,
@@ -2689,6 +2712,15 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
         trim_stream_data_headers(stream_data, !is_footer);
         DEQ_INSERT_TAIL(msg->stream_data_list, stream_data);
         *out_stream_data = stream_data;
+
+        // if the buffer pointed to by the old msg->body_buffer could not be
+        // freed when the previous stream_data was released, release it when
+        // this stream_data is released.  Do not free it here as it may affect
+        // Q2 threshold, which is checked when the stream_data is released.
+        if (DEQ_HEAD(msg->stream_data_list) == stream_data)
+            if (old_body_buffer == DEQ_PREV(stream_data->section.buffer))
+                stream_data->free_prev = true;
+
         return is_footer ? QD_MESSAGE_STREAM_DATA_FOOTER_OK : QD_MESSAGE_STREAM_DATA_BODY_OK;
 
     case QD_SECTION_NEED_MORE:
