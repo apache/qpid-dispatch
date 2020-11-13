@@ -583,6 +583,8 @@ class SwitchoverTest(MessagingHandler):
         self.sender_conn    = None
         self.primary_conn   = None
         self.fallback_conn  = None
+        self.primary_open   = False
+        self.fallback_open  = False
         self.error          = None
         self.n_tx           = 0
         self.n_rx           = 0
@@ -615,7 +617,14 @@ class SwitchoverTest(MessagingHandler):
         self.fallback_receiver.source.capabilities.put_object(symbol("qd.fallback"))
 
     def on_link_opened(self, event):
+        receiver_event = False
         if event.receiver == self.primary_receiver:
+            self.primary_open = True
+            receiver_event = True
+        if event.receiver == self.fallback_receiver:
+            self.fallback_open = True
+            receiver_event = True
+        if receiver_event and self.primary_open and self.fallback_open:
             self.sender = event.container.create_sender(self.sender_conn, self.addr, name=(self.addr + "_sender"))
 
     def on_link_closed(self, event):
