@@ -1069,6 +1069,137 @@ exit:
 }
 
 
+// Verify that decoding streaming body data across two
+// "outgoing" messages works
+static char *test_check_stream_data_fanout(void *context)
+{
+    char *result = 0;
+    qd_message_t *in_msg = 0;
+    qd_message_t *out_msg1 = 0;
+    qd_message_t *out_msg2 = 0;
+
+    // simulate building a message as an adaptor would:
+    in_msg = qd_message();
+    qd_composed_field_t *field = qd_compose(QD_PERFORMATIVE_HEADER, 0);
+    qd_compose_start_list(field);
+    qd_compose_insert_bool(field, 0);     // durable
+    qd_compose_insert_null(field);        // priority
+    qd_compose_end_list(field);
+    field = qd_compose(QD_PERFORMATIVE_PROPERTIES, field);
+    qd_compose_start_list(field);
+    qd_compose_insert_ulong(field, 666);    // message-id
+    qd_compose_insert_null(field);                 // user-id
+    qd_compose_insert_string(field, "/whereevah"); // to
+    qd_compose_insert_string(field, "my-subject");  // subject
+    qd_compose_insert_string(field, "/reply-to");   // reply-to
+    qd_compose_end_list(field);
+
+    qd_message_compose_2(in_msg, field, false);
+    qd_compose_free(field);
+
+    // snapshot the message buffer count to use as a baseline
+    const size_t base_bufct = DEQ_SIZE(MSG_CONTENT(in_msg)->buffers);
+
+    // construct a couple of body data sections, cheek-to-jowl in a buffer
+    // chain
+#define sd_count  5
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+    memset(buffer, '1', 99);
+    qd_compose_insert_binary(field, buffer, 99);
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+    memset(buffer, '2', 1);
+    qd_compose_insert_binary(field, buffer, 1);
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+    memset(buffer, '3', 1);
+    qd_compose_insert_binary(field, buffer, 1);
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+    memset(buffer, '4', 1001);
+    qd_compose_insert_binary(field, buffer, 1001);
+
+    field = qd_compose(QD_PERFORMATIVE_BODY_DATA, field);
+    memset(buffer, '5', 1001);
+    qd_compose_insert_binary(field, buffer, 5);
+
+    qd_message_extend(in_msg, field);
+    qd_compose_free(field);
+
+    qd_message_set_receive_complete(in_msg);
+
+    // "fan out" the message
+    out_msg1 = qd_message_copy(in_msg);
+    qd_message_add_fanout(in_msg, out_msg1);
+    out_msg2 = qd_message_copy(in_msg);
+    qd_message_add_fanout(in_msg, out_msg2);
+
+    // walk the data streams for both messages:
+    qd_message_stream_data_t *out_sd1[sd_count] = {0};
+    qd_message_stream_data_t *out_sd2[sd_count] = {0};
+
+    qd_message_stream_data_t *stream_data = 0;
+    bool done = false;
+    int index = 0;
+    while (!done) {
+        switch (qd_message_next_stream_data(out_msg1, &stream_data)) {
+        case QD_MESSAGE_STREAM_DATA_NO_MORE:
+            done = true;
+            break;
+        case QD_MESSAGE_STREAM_DATA_BODY_OK:
+            out_sd1[index++] = stream_data;
+            break;
+        default:
+            result = "Next body data failed to get next body data";
+            goto exit;
+        }
+    }
+    if (index != sd_count) {
+        result = "wrong stream data count out1";
+        goto exit;
+    }
+
+    index = 0;
+    done = false;
+    while (!done) {
+        switch (qd_message_next_stream_data(out_msg2, &stream_data)) {
+        case QD_MESSAGE_STREAM_DATA_NO_MORE:
+            done = true;
+            break;
+        case QD_MESSAGE_STREAM_DATA_BODY_OK:
+            out_sd2[index++] = stream_data;
+            break;
+        default:
+            result = "Next body data failed to get next body data";
+            goto exit;
+        }
+    }
+    if (index != sd_count) {
+        result = "wrong stream data count out2";
+        goto exit;
+    }
+
+    // now free each one in opposite order (evil, yes?)
+    for (index = 0; index < sd_count; ++index) {
+        qd_message_stream_data_release(out_sd1[index]);
+        qd_message_stream_data_release(out_sd2[(sd_count - 1) - index]);
+    }
+
+    // expect: all but the last body buffer is freed:
+    if (DEQ_SIZE(MSG_CONTENT(out_msg1)->buffers) != base_bufct + 1
+        || DEQ_SIZE(MSG_CONTENT(out_msg2)->buffers) != base_bufct + 1) {
+        result = "Possible buffer leak detected!";
+        goto exit;
+    }
+
+exit:
+    qd_message_free(in_msg);
+    qd_message_free(out_msg1);
+    qd_message_free(out_msg2);
+    return result;
+}
+
+
 int message_tests(void)
 {
     int result = 0;
@@ -1084,6 +1215,7 @@ int message_tests(void)
     TEST_CASE(test_check_weird_messages, 0);
     TEST_CASE(test_check_stream_data, 0);
     TEST_CASE(test_check_stream_data_append, 0);
+    TEST_CASE(test_check_stream_data_fanout, 0);
 
     return result;
 }

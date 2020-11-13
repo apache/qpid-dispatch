@@ -2352,7 +2352,7 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
  * buffer list, *buffer _must_ refer to the buffer that contains the last octet of the field and *cursor must
  * point at the octet following that octet, even if it points past the end of the buffer.
  */
-static void find_last_buffer(const qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
+static void find_last_buffer(qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
 {
     qd_buffer_t *buf       = location->buffer;
     size_t       remaining = location->hdr_length + location->length;
@@ -2378,7 +2378,6 @@ void trim_stream_data_headers(qd_message_stream_data_t *stream_data, bool remove
     qd_buffer_t               *buffer   = location->buffer;
     unsigned char             *cursor   = qd_buffer_base(buffer) + location->offset;
 
-    // advance past performative (e.g. "0x00,0x53,0x75"), point to tag byte
     bool good = advance(&cursor, &buffer, location->hdr_length);
     assert(good);
     if (good) {
@@ -2387,7 +2386,6 @@ void trim_stream_data_headers(qd_message_stream_data_t *stream_data, bool remove
 
         if (remove_vbin_header) {
             vbin_hdr_len = 1;
-            // the section has already been validated and should be fully buffered
             // coverity[check_return]
             next_octet(&cursor, &buffer, &tag);
             if (tag == QD_AMQP_VBIN8) {
@@ -2402,10 +2400,6 @@ void trim_stream_data_headers(qd_message_stream_data_t *stream_data, bool remove
         // coverity[check_return]
         can_advance(&cursor, &buffer); // bump cursor to the next buffer if necessary
 
-        // if vbin header removed:
-        //   payload.buffer & offset point past the length field to the first octet of data,
-        //   payload.length is set to the length of the data
-        // else buffer & offset point to tag, length includes tag + data length + data
         stream_data->payload.buffer     = buffer;
         stream_data->payload.offset     = cursor - qd_buffer_base(buffer);
         stream_data->payload.length     = location->length - vbin_hdr_len;
@@ -2514,79 +2508,66 @@ int qd_message_stream_data_buffers(qd_message_stream_data_t *stream_data, pn_raw
 /**
  * qd_message_stream_data_release
  *
- * Release the stream_data and any buffers that it addresses.  If this message
- * is fanned out only free those buffers where the fanout count drops to zero.
+ * Decrement the fanout ref-counts for all of the buffers referred to in the stream_data.  If any have reached zero,
+ * remove them from the buffer list and free them.
  *
- * Only decref the buffer's fanout IF the previous data_stream and the next
- * data_stream do not also reference the buffer (overlap).  When this
- * data_stream is the last in the messages stream_data_list it is only safe to
- * decref the last buffer fanout if the data_stream fills the buffer
- * completely.  Any trailing data in the last buffer may belong to the next
- * (unparsed) data-stream body so we must not free it.  Also, the last buffer
- * must not be released if it is the message body_buffer since it is needed
- * when the next data_stream is parsed out.
+ * Do not free buffers that overlap with other stream_data or the buffer pointed to by msg->body_buffer.
  */
 void qd_message_stream_data_release(qd_message_stream_data_t *stream_data)
 {
+    if (!stream_data)
+        return;
+
     qd_message_pvt_t     *pvt       = stream_data->owning_message;
     qd_message_content_t *content   = pvt->content;
+    qd_buffer_t          *buf;
+
+    //
+    // find the range of buffers that do not overlap other stream_data
+    // or msg->body_buffer
+    //
+
+    qd_buffer_t *start_buf = stream_data->free_prev ? DEQ_PREV(stream_data->section.buffer) : stream_data->section.buffer;
+    if (DEQ_PREV(stream_data) && DEQ_PREV(stream_data)->last_buffer == start_buf) {
+        // overlap previous stream_data
+        if (start_buf == stream_data->last_buffer) {
+            // no buffers to free
+            DEQ_REMOVE(pvt->stream_data_list, stream_data);
+            free_qd_message_stream_data_t(stream_data);
+            return;
+        }
+        start_buf = DEQ_NEXT(start_buf);
+    }
+
+    qd_buffer_t *stop_buf;
+    if (stream_data->last_buffer == pvt->body_buffer
+        || (DEQ_NEXT(stream_data) && DEQ_NEXT(stream_data)->section.buffer == stream_data->last_buffer)) {
+        stop_buf = stream_data->last_buffer;
+    } else {
+        stop_buf = DEQ_NEXT(stream_data->last_buffer);
+    }
 
     LOCK(content->lock);
 
-    bool was_blocked             = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
-    qd_buffer_t * const prev_buf = DEQ_PREV(stream_data) ? DEQ_PREV(stream_data)->last_buffer : 0;
-    qd_buffer_t * const stop_buf = (pvt->body_buffer == stream_data->last_buffer
-                                    ? pvt->body_buffer  // do not release body_buffer
-                                    : DEQ_NEXT(stream_data->last_buffer));
+    bool was_blocked = !qd_message_Q2_holdoff_should_unblock((qd_message_t*) pvt);
 
     if (pvt->is_fanout) {
-        qd_buffer_t *buf = stream_data->section.buffer;
+        buf = start_buf;
         while (buf != stop_buf) {
-            // only decref if buf does not overlap previous or next
-            // data_stream.  last_buffer is only decrefed if contains no
-            // trailing data
-            if (buf != prev_buf
-                && (buf != stream_data->last_buffer
-                    || stream_data->last_full)) {
-
-                uint32_t old = qd_buffer_dec_fanout(buf);
-                (void)old;  // avoid compiler unused var error
-                assert(old > 0);
-            }
-            buf = DEQ_NEXT(buf);
-        }
-    }
-
-    //
-    // If the old body_data buffer was preserved when this stream_data was
-    // parsed out it can now be freed.
-    //
-    if (stream_data->free_prev) {
-        qd_buffer_t *buf = DEQ_PREV(stream_data->section.buffer);
-        assert(buf);
-
-        if (pvt->is_fanout) {
             uint32_t old = qd_buffer_dec_fanout(buf);
             (void)old;  // avoid compiler unused var error
             assert(old > 0);
-        }
-
-        if (qd_buffer_get_fanout(buf) == 0) {
-            DEQ_REMOVE(content->buffers, buf);
-            qd_buffer_free(buf);
+            buf = DEQ_NEXT(buf);
         }
     }
 
     //
     // Free non-overlapping buffers with zero refcounts.
     //
-    qd_buffer_t *buf = stream_data->section.buffer;
+    buf = start_buf;
     while (buf != stop_buf) {
         qd_buffer_t *next = DEQ_NEXT(buf);
-        if (qd_buffer_get_fanout(buf) == 0
-            && (buf != prev_buf
-                && (buf != stream_data->last_buffer
-                    || stream_data->last_full))) {
+        if (qd_buffer_get_fanout(buf) == 0) {
             DEQ_REMOVE(content->buffers, buf);
             qd_buffer_free(buf);
         }
@@ -2622,56 +2603,23 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
         // We haven't returned a body-data record for this message yet.  Start
         // by ensuring the message has been parsed up to the first body section
         //
-        qd_message_depth_status_t status = qd_message_check_depth(in_msg, QD_DEPTH_APPLICATION_PROPERTIES);
-        if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
-            return QD_MESSAGE_STREAM_DATA_INCOMPLETE;
-        else if (status == QD_MESSAGE_DEPTH_INVALID)
-            return QD_MESSAGE_STREAM_DATA_INVALID;
 
-        assert(status == QD_MESSAGE_DEPTH_OK);
-
-        // now attempt to parse out a BODY_DATA section. Do not use
-        // qd_message_check_depth here since it allows the body to be
-        // optional or not fully present (esp if buffers have already been
-        // freed.
-        LOCK(content->lock);
-        status = message_check_depth_LH(content, QD_DEPTH_BODY,
-                                        BODY_DATA_LONG, BODY_DATA_SHORT, TAGS_BINARY,
-                                        &content->section_body,
-                                        false,   // require body
-                                        false);  // do not inc buffer fanout
-        UNLOCK(content->lock);
-
+        qd_message_depth_status_t status = qd_message_check_depth(in_msg, QD_DEPTH_BODY);
         if (status == QD_MESSAGE_DEPTH_INVALID)
             return QD_MESSAGE_STREAM_DATA_INVALID;
-
-        if (status == QD_MESSAGE_DEPTH_INCOMPLETE
-            || !content->section_body.parsed)
-            // parsed == fully buffered
+        if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
             return QD_MESSAGE_STREAM_DATA_INCOMPLETE;
 
-        assert(status == QD_MESSAGE_DEPTH_OK);
+        // Even if DEPTH_OK, body is optional.  Fail if there is no body
+        // TODO: what if footer?
+        if (!msg->content->section_body.buffer)
+            return QD_MESSAGE_STREAM_DATA_INVALID;
 
-        stream_data = new_qd_message_stream_data_t();
-        ZERO(stream_data);
-        stream_data->owning_message = msg;
-        stream_data->section        = content->section_body;
-
-        // advance body_cursor & buffer to start of next section (if present)
-        find_last_buffer(&stream_data->section, &msg->body_cursor, &msg->body_buffer);
-        stream_data->last_buffer = msg->body_buffer;
-        stream_data->last_full = msg->body_cursor == qd_buffer_cursor(stream_data->last_buffer);
-
-        // set payload to encompass entire data field
-        trim_stream_data_headers(stream_data, true);
-
-        assert(DEQ_SIZE(msg->stream_data_list) == 0);
-        DEQ_INSERT_TAIL(msg->stream_data_list, stream_data);
-        *out_stream_data = stream_data;
-        return QD_MESSAGE_STREAM_DATA_BODY_OK;
+        msg->body_buffer = msg->content->section_body.buffer;
+        msg->body_cursor = qd_buffer_base(msg->body_buffer) + msg->content->section_body.offset;
     }
 
-    // parse out the next body data section, or the footer if we're past the
+    // parse out the body data section, or the footer if we're past the
     // last data section
 
     qd_section_status_t section_status;
@@ -2687,16 +2635,13 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
                                               &location,
                                               true,  // allow duplicates
                                               false);  // do not inc buffer fanout
-    UNLOCK(content->lock);
-
     if (section_status == QD_SECTION_NO_MATCH) {
         is_footer      = true;
-        LOCK(content->lock);
         section_status = message_section_check_LH(&msg->body_buffer, &msg->body_cursor,
                                                   FOOTER_SHORT, 3, TAGS_MAP,
                                                   &location, true, false);
-        UNLOCK(content->lock);
     }
+    UNLOCK(content->lock);
 
     switch (section_status) {
     case QD_SECTION_INVALID:
@@ -2710,7 +2655,6 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
         stream_data->section        = location;
         find_last_buffer(&stream_data->section, &msg->body_cursor, &msg->body_buffer);
         stream_data->last_buffer = msg->body_buffer;
-        stream_data->last_full = msg->body_cursor == qd_buffer_cursor(stream_data->last_buffer);
         trim_stream_data_headers(stream_data, !is_footer);
         DEQ_INSERT_TAIL(msg->stream_data_list, stream_data);
         *out_stream_data = stream_data;
