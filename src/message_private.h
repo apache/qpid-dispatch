@@ -65,9 +65,8 @@ struct qd_message_stream_data_t {
     DEQ_LINKS(qd_message_stream_data_t);  // Linkage to form a DEQ
     qd_message_pvt_t    *owning_message;  // Pointer to the owning message
     qd_field_location_t  section;         // Section descriptor for the field
-    qd_field_location_t  payload;         // Descriptor for just the payload of the body data
-    qd_buffer_t         *last_buffer;     // holds final data octet
-    bool                 last_full;       // true stream_data includes end of last_buffer
+    qd_field_location_t  payload;         // Descriptor for the payload of the body data
+    qd_buffer_t         *last_buffer;     // Pointer to the last buffer in the field
     bool                 free_prev;       // true if old body_data buffer needs freeing
 };
 
