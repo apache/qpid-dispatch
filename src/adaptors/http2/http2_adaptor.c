@@ -367,6 +367,7 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Created new stream_data (%lx)", session_data->conn->conn_id, stream_id, (long) stream_data);
 
     stream_data->message = qd_message();
+    qd_message_set_stream_annotation(stream_data->message, true);
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
     stream_data->status = QD_STREAM_OPEN;
@@ -672,7 +673,7 @@ static void compose_and_deliver(qdr_http2_stream_data_t *stream_data, qd_compose
 
     if (!stream_data->in_dlv && stream_data->in_link_credit > 0) {
         stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in qdr_http_flow dlv:%lx", stream_data->session_data->conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in compose_and_deliver dlv:%lx", stream_data->session_data->conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
         qdr_delivery_set_context(stream_data->in_dlv, stream_data);
         qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "http2_adaptor - compose_and_deliver - release protection of return from deliver");
         stream_data->in_link_credit -= 1;
@@ -1154,7 +1155,8 @@ ssize_t read_data_callback(nghttp2_session *session,
             // The body-data is corrupt in some way.  Stop handling the delivery and reject it.
             //
             *data_flags |= NGHTTP2_DATA_FLAG_EOF;
-            qd_message_stream_data_release(stream_data->curr_stream_data);
+            if (stream_data->curr_stream_data)
+                qd_message_stream_data_release(stream_data->curr_stream_data);
             stream_data->curr_stream_data = 0;
             stream_data->out_dlv_local_disposition = PN_REJECTED;
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_ERROR, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_INVALID", conn->conn_id, stream_data->stream_id);
