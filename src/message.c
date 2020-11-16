@@ -2605,18 +2605,33 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
         //
 
         qd_message_depth_status_t status = qd_message_check_depth(in_msg, QD_DEPTH_BODY);
-        if (status == QD_MESSAGE_DEPTH_INVALID)
-            return QD_MESSAGE_STREAM_DATA_INVALID;
+        if (status == QD_MESSAGE_DEPTH_OK) {
+            // Even if DEPTH_OK, body is optional. If there is no body then move to
+            // the footer
+            if (msg->content->section_body.buffer) {
+                msg->body_buffer = msg->content->section_body.buffer;
+                msg->body_cursor = qd_buffer_base(msg->body_buffer) + msg->content->section_body.offset;
+            } else {
+                // No body. Look for footer
+                status = qd_message_check_depth(in_msg, QD_DEPTH_ALL);
+                if (status == QD_MESSAGE_DEPTH_OK) {
+                    if (msg->content->section_footer.buffer) {
+                        // footer is also optional
+                        msg->body_buffer = msg->content->section_footer.buffer;
+                        msg->body_cursor = qd_buffer_base(msg->body_buffer) + msg->content->section_footer.offset;
+                    }
+                }
+            }
+        }
+
         if (status == QD_MESSAGE_DEPTH_INCOMPLETE)
             return QD_MESSAGE_STREAM_DATA_INCOMPLETE;
-
-        // Even if DEPTH_OK, body is optional.  Fail if there is no body
-        // TODO: what if footer?
-        if (!msg->content->section_body.buffer)
+        if (status == QD_MESSAGE_DEPTH_INVALID)
             return QD_MESSAGE_STREAM_DATA_INVALID;
 
-        msg->body_buffer = msg->content->section_body.buffer;
-        msg->body_cursor = qd_buffer_base(msg->body_buffer) + msg->content->section_body.offset;
+        // neither data not footer found
+        if (!msg->body_buffer)
+            return QD_MESSAGE_STREAM_DATA_NO_MORE;
     }
 
     // parse out the body data section, or the footer if we're past the
