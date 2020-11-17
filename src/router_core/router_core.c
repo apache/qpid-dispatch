@@ -101,9 +101,6 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
 
 void qdr_core_free(qdr_core_t *core)
 {
-    // have adaptors clean up all core resources
-    qdr_adaptors_finalize(core);
-
     //
     // Stop and join the thread
     //
@@ -112,12 +109,28 @@ void qdr_core_free(qdr_core_t *core)
     sys_cond_signal(core->action_cond);
     sys_thread_join(core->thread);
 
+    // have adaptors clean up all core resources
+    qdr_adaptors_finalize(core);
+
     //
     // The char* core->router_id and core->router_area are owned by qd->router_id and qd->router_area respectively
     // We will set them to zero here just in case anybody tries to use these fields.
     //
     core->router_id = 0;
     core->router_area = 0;
+
+    // discard any left over actions
+
+    qdr_action_list_t  action_list;
+    DEQ_MOVE(core->action_list, action_list);
+    DEQ_APPEND(action_list, core->action_list_background);
+    qdr_action_t *action = DEQ_HEAD(action_list);
+    while (action) {
+        DEQ_REMOVE_HEAD(action_list);
+        action->action_handler(core, action, true);
+        free_qdr_action_t(action);
+        action = DEQ_HEAD(action_list);
+    }
 
     // Drain the general work lists
     qdr_general_handler(core);
