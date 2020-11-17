@@ -465,26 +465,40 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     bool need_close = false;
     _client_request_t *hreq = (_client_request_t *)DEQ_HEAD(hconn->requests);
     if (hreq) {
-        // Can we retire the current outgoing response messages?
-        _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
-        while (rmsg &&
-               rmsg->encoded &&
-               DEQ_IS_EMPTY(rmsg->out_data.fifo)) {
-            // encoded ==> entire message received from core and
-            // dispo and settlement updated to core.
-            // empty out_data ==> all outstanding raw buffers sent
-            _client_response_msg_free(hreq, rmsg);
-            rmsg = DEQ_HEAD(hreq->responses);
-        }
+        if (hreq->cancelled) {
+            need_close = true;
+        } else {
+            // Can we retire the current outgoing response messages?
+            //
+            _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
+            while (rmsg &&
+                   rmsg->dispo &&
+                   DEQ_IS_EMPTY(rmsg->out_data.fifo)) {
+                // response message fully received and forwarded to client
+                qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+                       "[C%"PRIu64"][L%"PRIu64"] HTTP client settling response, dispo=0x%"PRIx64,
+                       hconn->conn_id, hconn->out_link_id, rmsg->dispo);
+                qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                                  rmsg->dlv,
+                                                  rmsg->dispo,
+                                                  true,   // settled,
+                                                  0,      // error
+                                                  0,      // dispo data
+                                                  false);
+                qdr_link_flow(qdr_http1_adaptor->core, hconn->out_link, 1, false);
+                _client_response_msg_free(hreq, rmsg);
+                rmsg = DEQ_HEAD(hreq->responses);
+            }
 
-        if (hreq->codec_completed &&
-            DEQ_IS_EMPTY(hreq->responses) &&
-            hreq->request_settled) {
+            if (hreq->codec_completed &&
+                DEQ_IS_EMPTY(hreq->responses) &&
+                hreq->request_settled) {
 
-            qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request completed!", hconn->conn_id);
+                qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP request completed!", hconn->conn_id);
 
-            need_close = hreq->close_on_complete;
-            _client_request_free(hreq);
+                need_close = hreq->close_on_complete;
+                _client_request_free(hreq);
+            }
         }
     }
 
@@ -1140,6 +1154,8 @@ static uint64_t _encode_response_message(_client_request_t *hreq,
             break;
 
         case QD_MESSAGE_STREAM_DATA_FOOTER_OK:
+            // ignore footers
+            qd_message_stream_data_release(stream_data);
             break;
 
         case QD_MESSAGE_STREAM_DATA_NO_MORE:
@@ -1218,33 +1234,19 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
     _client_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
     assert(rmsg && rmsg->dlv == delivery);
 
-    if (!rmsg->dispo)
+    if (!rmsg->dispo) {
         rmsg->dispo = _encode_response_message(hreq, rmsg);
-
-    if (rmsg->dispo && qd_message_receive_complete(msg)) {   // encode of message complete
-        rmsg->encoded = true;
-        qd_message_set_send_complete(msg);
-        qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
-
-        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-               "[C%"PRIu64"][L%"PRIu64"] HTTP client settling response, dispo=0x%"PRIx64,
-               hconn->conn_id, hconn->out_link_id, rmsg->dispo);
-
-        qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                          rmsg->dlv,
-                                          rmsg->dispo,
-                                          true,   // settled,
-                                          0,      // error
-                                          0,      // dispo data
-                                          false);
-        if (rmsg->dispo == PN_ACCEPTED) {
-            bool need_close = false;
-            h1_codec_tx_done(hreq->base.lib_rs, &need_close);
-            hreq->close_on_complete = need_close || hreq->close_on_complete;
-        } else {
-            // The response was bad.  There's not much that can be done to
-            // recover, so for now I punt...
-            qdr_http1_close_connection(hconn, "Cannot parse response message");
+        if (rmsg->dispo) {
+            qd_message_set_send_complete(msg);
+            if (rmsg->dispo == PN_ACCEPTED) {
+                bool need_close = false;
+                h1_codec_tx_done(hreq->base.lib_rs, &need_close);
+                hreq->close_on_complete = need_close || hreq->close_on_complete;
+            } else {
+                // The response was bad.  There's not much that can be done to
+                // recover, so for now I punt...
+                qdr_http1_close_connection(hconn, "Cannot parse response message");
+            }
         }
     }
 
