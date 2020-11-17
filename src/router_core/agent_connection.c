@@ -514,14 +514,8 @@ static void qdra_connection_update_set_status(qdr_core_t *core, qdr_query_t *que
             // This connection has been force-closed.
             // Inter-router and edge connections may not be force-closed
             if (conn->role != QDR_ROLE_INTER_ROUTER && conn->role != QDR_ROLE_EDGE_CONNECTION) {
-                conn->closed = true;
-                conn->error  = qdr_error(QD_AMQP_COND_CONNECTION_FORCED, "Connection forced-closed by management request");
-                conn->admin_status = QDR_CONN_ADMIN_DELETED;
-
+                qdr_close_connection_CT(core, conn);
                 qd_log(core->log, QD_LOG_INFO, "[C%"PRIu64"] Connection force-closed by request from connection [C%"PRIu64"]", conn->identity, query->in_conn);
-
-                //Activate the connection, so the I/O threads can finish the job.
-                qdr_connection_activate_CT(core, conn);
                 query->status = QD_AMQP_OK;
                 qdr_manage_write_connection_map_CT(core, conn, query->body, qdr_connection_columns);
             }

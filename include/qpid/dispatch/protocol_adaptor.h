@@ -387,6 +387,19 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                    *core,
  */
 void qdr_connection_closed(qdr_connection_t *conn);
 
+/**
+ * qdr_core_close_connection
+ *
+ * This function is called when a connection is closed, usually by a management request.
+ * Initiates a core thread action that quite simply sets the closed flag on the passed in connection object
+ * and activates the connection. The qdr_connection_process() further processes this connection and calls
+ * back the appropriate protocol adaptor's conn_close_handler, where the io thread can further perform
+ * any appropriate cleanup.
+ *
+ * @param qdr_connection_t *conn - the connection that needs to be closed. The pointer returned by qdr_connection_opened
+ */
+void qdr_core_close_connection(qdr_connection_t *conn);
+
 bool qdr_connection_route_container(qdr_connection_t *conn);
 
 /**

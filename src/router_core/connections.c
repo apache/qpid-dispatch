@@ -275,6 +275,36 @@ void qdr_record_link_credit(qdr_core_t *core, qdr_link_t *link)
 }
 
 
+void qdr_close_connection_CT(qdr_core_t *core, qdr_connection_t  *conn)
+{
+    conn->closed = true;
+    conn->error  = qdr_error(QD_AMQP_COND_CONNECTION_FORCED, "Connection forced-closed by management request");
+    conn->admin_status = QDR_CONN_ADMIN_DELETED;
+
+    //Activate the connection, so the I/O threads can finish the job.
+    qdr_connection_activate_CT(core, conn);
+}
+
+
+static void qdr_core_close_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
+{
+    qdr_connection_t  *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+
+    if (discard || !conn)
+        return;
+
+    qdr_close_connection_CT(core, conn);
+}
+
+
+
+void qdr_core_close_connection(qdr_connection_t *conn)
+{
+    qdr_action_t *action = qdr_action(qdr_core_close_connection_CT, "qdr_core_close_connection");
+    set_safe_ptr_qdr_connection_t(conn, &action->args.connection.conn);
+    qdr_action_enqueue(conn->core, action);
+}
+
 
 int qdr_connection_process(qdr_connection_t *conn)
 {
