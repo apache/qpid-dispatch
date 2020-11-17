@@ -296,6 +296,12 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     if (stream_data->remote_site) free(stream_data->remote_site);
 
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream_data in free_http2_stream_data (%lx)", conn->conn_id,  stream_data->stream_id, (long) stream_data);
+
+    // If the httpConnector was deleted, a client request has nowhere to go because of lack of receiver and hence credit.
+    // No delivery was created. The message that was created for such a hanging request must be freed here..
+    if (!stream_data->in_dlv && stream_data->message) {
+        qd_message_free(stream_data->message);
+    }
     free_qdr_http2_stream_data_t(stream_data);
 }
 
@@ -1345,8 +1351,22 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
 }
 
 
-static void qdr_http_conn_close(void *context, qdr_connection_t *conn, qdr_error_t *error)
+static void qdr_http_conn_close(void *context, qdr_connection_t *qdr_conn, qdr_error_t *error)
 {
+    if (qdr_conn) {
+        qdr_http2_connection_t *http_conn = qdr_connection_get_context(qdr_conn);
+        assert(http_conn);
+        if (http_conn) {
+            //
+            // When the pn_raw_connection_close() is called, the
+            // PN_RAW_CONNECTION_READ and PN_RAW_CONNECTION_WRITTEN events to be emitted so
+            // the application can clean up buffers given to the raw connection. After that a
+            // PN_RAW_CONNECTION_DISCONNECTED event will be emitted which will in turn call handle_disconnected().
+            //
+            http_conn->delete_egress_connections = true;
+            pn_raw_connection_close(http_conn->pn_raw_conn);
+        }
+    }
 }
 
 
@@ -1903,8 +1923,20 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
 static void qdr_del_http2_connection_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_http2_connection_t *conn = (qdr_http2_connection_t*) action->args.general.context_1;
-    qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "Removed http2 connection %s", conn->config->host_port);
+    if (conn->config)
+        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "Removed http2 connection %s", conn->config->host_port);
     free_qdr_http2_connection(conn, false);
+}
+
+
+static void close_connections(qdr_http2_connection_t* conn)
+{
+    qdr_connection_closed(conn->qdr_conn);
+    qdr_connection_set_context(conn->qdr_conn, 0);
+    conn->qdr_conn = 0;
+    qdr_action_t *action = qdr_action(qdr_del_http2_connection_CT, "delete_http2_connection");
+    action->args.general.context_1 = conn;
+    qdr_action_enqueue(http2_adaptor->core, action);
 }
 
 
@@ -1917,12 +1949,7 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
     }
 
     if (conn->ingress) {
-        qdr_connection_closed(conn->qdr_conn);
-        qdr_connection_set_context(conn->qdr_conn, 0);
-        conn->qdr_conn = 0;
-        qdr_action_t *action = qdr_action(qdr_del_http2_connection_CT, "delete_http2_connection");
-        action->args.general.context_1 = conn;
-        qdr_action_enqueue(http2_adaptor->core, action);
+        close_connections(conn);
     }
     else {
         if (conn->stream_dispatcher) {
@@ -1936,6 +1963,11 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
                 free_qdr_http2_stream_data_t(stream_data);
             }
             conn->stream_dispatcher_stream_data = 0;
+
+            if (conn->delete_egress_connections) {
+                conn->config = 0;
+                close_connections(conn);
+            }
         }
     }
     sys_mutex_unlock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
@@ -2065,6 +2097,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
                                                    0,
                                                    0);
     egress_http_conn->qdr_conn = conn;
+    connector->ctx = conn;
 
     egress_http_conn->conn_id = conn->identity;
     qdr_connection_set_context(conn, egress_http_conn);
@@ -2108,8 +2141,10 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         else {
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Egress PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
             conn->client_magic_sent = false;
-            qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Scheduling 2 second timer to reconnect to egress connection", conn->conn_id);
-            qd_timer_schedule(conn->activate_timer, 2000);
+            if (!conn->delete_egress_connections) {
+                qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Scheduling 2 second timer to reconnect to egress connection", conn->conn_id);
+                qd_timer_schedule(conn->activate_timer, 2000);
+            }
         }
         conn->connection_established = false;
         handle_disconnected(conn);
@@ -2213,6 +2248,11 @@ void qd_http2_delete_connector(qd_dispatch_t *qd, qd_http_connector_t *connector
         sys_mutex_lock(http2_adaptor->lock);
         DEQ_REMOVE(http2_adaptor->connectors, connector);
         sys_mutex_unlock(http2_adaptor->lock);
+        //
+        // Deleting a connector must delete the corresponding qdr_connection_t and qdr_http2_connection_t objects also.
+        //
+        if (connector->ctx)
+            qdr_core_close_connection((qdr_connection_t  *)connector->ctx);
         qd_http_connector_decref(connector);
     }
 }
