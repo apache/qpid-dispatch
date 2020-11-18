@@ -69,7 +69,7 @@ def skip_test():
     return True
 
 class Http2TestBase(TestCase):
-    def run_curl(self, args=None, regexp=None, address=None):
+    def run_curl(self, args=None, regexp=None, timeout=system_test.TIMEOUT, address=None):
         # Tell with -m / --max-time the maximum time, in seconds, that you
         # allow the command line to spend before curl exits with a
         # timeout error code (28).
@@ -79,7 +79,7 @@ class Http2TestBase(TestCase):
 
         popen_args = ['curl',
                       str(address),
-                      '--max-time', str(system_test.TIMEOUT)] + local_args
+                      '--max-time', str(timeout)] + local_args
         p = self.popen(popen_args,
                        name='curl-' + self.id(), stdout=PIPE, expect=None,
                        universal_newlines=True)
@@ -117,13 +117,13 @@ class CommonHttp2Tests():
         self.assertIn(ret_string, out)
 
     @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
-    def test_large_get_request(self):
+    #def test_large_get_request(self):
         # Tests a large get request. Response is more than 50k which means it
         # will span many qd_http2_buffer_t objects.
         # Run curl 127.0.0.1:port/largeget --http2-prior-knowledge
-        address = self.router_qdra.http_addresses[0] + "/largeget"
-        out = self.run_curl(address=address)
-        self.assertIn("49996,49997,49998,49999", out)
+    #    address = self.router_qdra.http_addresses[0] + "/largeget"
+    #    out = self.run_curl(address=address)
+    #    self.assertIn("49996,49997,49998,49999", out)
 
     @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_post_request(self):
@@ -193,6 +193,77 @@ class CommonHttp2Tests():
                 passed = True
         self.assertTrue(passed)
 
+    def check_connector_delete(self, client_addr, server_addr):
+        # Run curl 127.0.0.1:port --http2-prior-knowledge
+        # We are first making sure that the http request goes thru successfully.
+        out = self.run_curl(address=client_addr)
+
+        # Run a qdmanage query on connections to see how many qdr_connections are
+        # there on the egress router
+        qd_manager = QdManager(self, address=server_addr)
+
+        connections = qd_manager.query('org.apache.qpid.dispatch.connection')
+
+        self.assertGreaterEqual(len(connections), 2)
+
+        server_conn_found = False
+        for conn in connections:
+            if os.environ['SERVER_LISTEN_PORT'] in conn['name']:
+                server_conn_found = True
+                break
+        self.assertTrue(server_conn_found)
+
+        # Run a qdmanage DELETE on the httpConnector
+        http_connectors  = qd_manager.query('org.apache.qpid.dispatch.httpConnector')
+        self.assertEqual(len(http_connectors), 1)
+
+        # Delete the httpConnector
+        qd_manager.delete("org.apache.qpid.dispatch.httpConnector", name=self.connector_name)
+
+        # Make sure the connector is gone
+        http_connectors  = qd_manager.query('org.apache.qpid.dispatch.httpConnector')
+        self.assertEqual(len(http_connectors), 0)
+
+        # Deleting the connector must have taken out the connection to the server.
+        connections = qd_manager.query('org.apache.qpid.dispatch.connection')
+        http_server_conn_found = False
+        for conn in connections:
+            if os.environ['SERVER_LISTEN_PORT'] in conn['name']:
+                server_conn_found = True
+                break
+        self.assertFalse(http_server_conn_found)
+
+        #Now, run a curl client GET request with a timeout
+        request_timed_out = False
+        try:
+            out = self.run_curl(address=client_addr, timeout=5)
+        except Exception as e:
+            request_timed_out = True
+
+        self.assertTrue(request_timed_out)
+
+        # Add back the httpConnector
+        # qdmanage CREATE type=httpConnector address=examples.com host=127.0.0.1 port=80 protocolVersion=HTTP2
+        create_result = qd_manager.create("org.apache.qpid.dispatch.httpConnector", self.connector_props)
+        num_tries = 2
+        tries = 0
+        conn_present = False
+        while tries < num_tries:
+            connections = qd_manager.query('org.apache.qpid.dispatch.connection')
+            tries += 1
+            if (len(connections) < 2):
+                sleep(2)
+            else:
+                conn_present = True
+        self.assertTrue(conn_present)
+
+        out = self.run_curl(address=client_addr)
+        ret_string = ""
+        i = 0
+        while (i < 1000):
+            ret_string += str(i) + ","
+            i += 1
+        self.assertIn(ret_string, out)
 
 class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
@@ -208,17 +279,29 @@ class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
                                                   py_string='python3',
                                                   server_file="http2_server.py")
         name = "http2-test-router"
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
         config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
 
             ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
                               'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
-            ('httpConnector',
-             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
-              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+            ('httpConnector', cls.connector_props)
         ])
         cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_zzz_http_connector_delete(self):
+        self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
+                                    server_addr=self.router_qdra.addresses[0])
+
 
     @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     def test_000_stats(self):
@@ -263,17 +346,28 @@ class Http2TestOneEdgeRouter(Http2TestBase, CommonHttp2Tests):
                                                   py_string='python3',
                                                   server_file="http2_server.py")
         name = "http2-test-router"
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
         config = Qdrouterd.Config([
             ('router', {'mode': 'edge', 'id': 'QDR'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
 
             ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
                               'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
-            ('httpConnector',
-             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
-              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+            ('httpConnector', cls.connector_props)
         ])
         cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_zzz_http_connector_delete(self):
+        self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
+                                    server_addr=self.router_qdra.addresses[0])
 
 class Http2TestOneInteriorRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
@@ -289,17 +383,28 @@ class Http2TestOneInteriorRouter(Http2TestBase, CommonHttp2Tests):
                                                   py_string='python3',
                                                   server_file="http2_server.py")
         name = "http2-test-router"
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
         config = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'QDR'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
 
             ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
                               'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
-            ('httpConnector',
-             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
-              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'})
+            ('httpConnector', cls.connector_props)
         ])
         cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_zzz_http_connector_delete(self):
+        self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
+                                    server_addr=self.router_qdra.addresses[0])
 
 class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
     @classmethod
@@ -325,12 +430,18 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
             ('listener', {'role': 'inter-router', 'port': inter_router_port})
         ])
 
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
         config_qdrb = Qdrouterd.Config([
             ('router', {'mode': 'interior', 'id': 'QDR.B'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
-            ('httpConnector',
-             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
-              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector', cls.connector_props),
             ('connector', {'name': 'connectorToA', 'role': 'inter-router',
                            'port': inter_router_port,
                            'verifyHostname': 'no'})
@@ -367,6 +478,11 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         self.assertEqual(stats_b[0].get('direction'), 'out')
         self.assertEqual(stats_b[0].get('bytesOut'), 24)
         self.assertEqual(stats_b[0].get('bytesIn'), 3944)
+
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_zzz_http_connector_delete(self):
+        self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
+                                    server_addr=self.router_qdrb.addresses[0])
 
 class Http2TestEdgeInteriorRouter(Http2TestBase, CommonHttp2Tests):
     """
@@ -472,13 +588,20 @@ class Http2TestEdgeToEdgeViaInteriorRouter(Http2TestBase, CommonHttp2Tests):
                                                   listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
                                                   py_string='python3',
                                                   server_file="http2_server.py")
+
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
         inter_router_port = cls.tester.get_port()
         config_edge_b = Qdrouterd.Config([
             ('router', {'mode': 'edge', 'id': 'EDGE.A'}),
             ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
-            ('httpConnector',
-             {'port': os.getenv('SERVER_LISTEN_PORT'), 'address': 'examples',
-              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector', cls.connector_props),
             ('connector', {'name': 'connectorToA', 'role': 'edge',
                            'port': inter_router_port,
                            'verifyHostname': 'no'})
@@ -507,3 +630,8 @@ class Http2TestEdgeToEdgeViaInteriorRouter(Http2TestBase, CommonHttp2Tests):
         cls.router_qdra = cls.tester.qdrouterd("edge-router-a", config_edge_a)
         cls.router_qdrb = cls.tester.qdrouterd("edge-router-b", config_edge_b)
         sleep(5)
+
+    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    def test_zzz_http_connector_delete(self):
+        self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
+                                    server_addr=self.router_qdrb.addresses[0])
