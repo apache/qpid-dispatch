@@ -335,6 +335,17 @@ class TcpAdaptor(TestCase):
         cls.EC1 = cls.routers[7]
         cls.EC2 = cls.routers[8]
 
+        cls.router_dict = {}
+        cls.router_dict['INTA'] = cls.INTA
+        cls.router_dict['INTB'] = cls.INTB
+        cls.router_dict['INTC'] = cls.INTC
+        cls.router_dict['EA1'] = cls.EA1
+        cls.router_dict['EA2'] = cls.EA2
+        cls.router_dict['EB1'] = cls.EB1
+        cls.router_dict['EB2'] = cls.EB2
+        cls.router_dict['EC1'] = cls.EC1
+        cls.router_dict['EC2'] = cls.EC2
+
         cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
         cls.INTA.wait_router_connected('INTB')
         cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
@@ -566,115 +577,23 @@ class TcpAdaptor(TestCase):
     # A series of 1-byte messsages, one at a time, to prove general connectivity
     #
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_01a_tcp_INTA_INTA(self):
+    def test_01_tcp_basic_connectivity(self):
         """
-        Connectivity - INTA only
+        Echo a series of 1-byte messages, one at a time, to prove general connectivity.
+        Every listener is tried. Proves every router can forward to servers on
+        every other router.
         """
-        name = "test_01_tcp_INTA_INTA"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_01b_tcp_INTB_INTB(self):
-        name = "test_01b_tcp_INTB_INTB"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTB, self.INTB)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_01c_tcp_INTC_INTC(self):
-        name = "test_01c_tcp_INTC_INTC"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTC, self.INTC)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_03_tcp_INTA_INTB(self):
-        name = "test_03_tcp_INTA_INTB"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTB)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_04_tcp_EA1_EA1(self):
-        name = "test_04_tcp_EA1_EA1"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.EA1, self.EA1)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_05_tcp_EA1_EA2(self):
-        name = "test_05_tcp_EA1_EA2"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.EA1, self.EA2)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_06_tcp_EA1_INTA(self):
-        name = "test_06_tcp_EA1_INTA"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.EA1, self.INTA)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_07_tcp_EA1_INTB(self):
-        name = "test_07_tcp_EA1_INTB"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.EA1, self.INTB)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_08_tcp_EA2_EB2(self):
-        name = "test_08_tcp_EA2_EB2"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.EA2, self.EB2)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+        for l_rtr in self.router_order:
+            for s_rtr in self.router_order:
+                name = "test_01_tcp_%s_%s" % (l_rtr, s_rtr)
+                self.logger.log("TCP_TEST test_01_tcp_basic_connectivity Start %s" % name)
+                pairs = [self.EchoPair(self.router_dict[l_rtr], self.router_dict[s_rtr])]
+                result = self.do_tcp_echo_n_routers(name, pairs)
+                if result is not None:
+                    print(result)
+                    sys.stdout.flush()
+                assert result is None, "TCP_TEST test_01_tcp_basic_connectivity Stop %s FAIL: %s" % (name, result)
+                self.logger.log("TCP_TEST test_01_tcp_basic_connectivity Stop %s SUCCESS" % name)
 
     # larger messages
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
@@ -704,6 +623,18 @@ class TcpAdaptor(TestCase):
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_12_tcp_INTA_INTA_500000(self):
         name = "test_12_tcp_INTA_INTA_500000"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_13_tcp_EA1_EC2_500000(self):
+        name = "test_12_tcp_EA1_EC2_500000"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
         result = self.do_tcp_echo_n_routers(name, pairs)
