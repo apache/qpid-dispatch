@@ -512,6 +512,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", conn->conn_id);
         while (qdr_connection_process(conn->conn)) {}
+        handle_outgoing(conn);
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
