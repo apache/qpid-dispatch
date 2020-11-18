@@ -30,6 +30,7 @@ from __future__ import print_function
 import socket
 import sys
 from threading import Thread
+from time import sleep
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
     from http.client import HTTPConnection
@@ -302,6 +303,143 @@ class ThreadedTestClient(object):
     def wait(self, timeout=TIMEOUT):
         self._thread.join(timeout=TIMEOUT)
         self._logger.log("TestClient %s shut down" % self._conn_addr)
+
+
+def http1_ping(sport, cport):
+    """
+    Test the HTTP path by doing a simple GET request
+    """
+    TEST = {
+        "GET": [
+            (RequestMsg("GET", "/GET/ping",
+                        headers={"Content-Length": 0}),
+             ResponseMsg(200, reason="OK",
+                         headers={"Content-Length": 4,
+                                  "Content-Type": "text/plain;charset=utf-8"},
+                         body=b'pong'),
+             ResponseValidator(expect_body=b'pong'))
+        ]
+    }
+
+    server = TestServer(server_port=sport,
+                        client_port=cport,
+                        tests=TEST)
+    client = ThreadedTestClient(tests=TEST, port=cport)
+    client.wait()
+    server.wait()
+    return (client.count, client.error)
+
+
+class Http1AdaptorManagementTest(TestCase):
+    """
+    Test Creation and deletion of HTTP1 management entities
+    """
+    @classmethod
+    def setUpClass(cls):
+        super(Http1AdaptorManagementTest, cls).setUpClass()
+
+        cls.http_server_port = cls.tester.get_port()
+        cls.http_listener_port = cls.tester.get_port()
+
+        config = [
+            ('router', {'mode': 'standalone',
+                            'id': 'HTTP1MgmtTest',
+                        'allowUnsettledMulticast': 'yes'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.tester.get_port()}),
+            ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+            ]
+
+        config = Qdrouterd.Config(config)
+        cls.router = cls.tester.qdrouterd('HTTP1MgmtTest', config, wait=True)
+
+    def test_01_mgmt(self):
+        """
+        Create and delete HTTP1 connectors and listeners
+        """
+        LISTENER_TYPE = 'org.apache.qpid.dispatch.httpListener'
+        CONNECTOR_TYPE = 'org.apache.qpid.dispatch.httpConnector'
+        CONNECTION_TYPE = 'org.apache.qpid.dispatch.connection'
+
+        mgmt = self.router.management
+        self.assertEqual(0, len(mgmt.query(type=LISTENER_TYPE).results))
+        self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
+
+        mgmt.create(type=CONNECTOR_TYPE,
+                    name="ServerConnector",
+                    attributes={'address': 'http1',
+                                'port': self.http_server_port,
+                                'protocolVersion': 'HTTP1'})
+
+        mgmt.create(type=LISTENER_TYPE,
+                    name="ClientListener",
+                    attributes={'address': 'http1',
+                                'port': self.http_listener_port,
+                                'protocolVersion': 'HTTP1'})
+
+        # verify the entities have been created and http traffic works
+
+        self.assertEqual(1, len(mgmt.query(type=LISTENER_TYPE).results))
+        self.assertEqual(1, len(mgmt.query(type=CONNECTOR_TYPE).results))
+
+        count, error = http1_ping(sport=self.http_server_port,
+                                  cport=self.http_listener_port)
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
+
+        #
+        # delete the connector and wait for the associated connection to be
+        # removed
+        #
+
+        mgmt.delete(type=CONNECTOR_TYPE, name="ServerConnector")
+        self.assertEqual(0, len(mgmt.query(type=CONNECTOR_TYPE).results))
+
+        hconns = 0
+        retry = 20  # 20 * 0.25 = 5 sec
+        while retry:
+            obj = mgmt.query(type=CONNECTION_TYPE,
+                             attribute_names=["protocol"])
+            for item in obj.get_dicts():
+                if "http/1.x" in item["protocol"]:
+                    hconns += 1
+            if hconns == 0:
+                break;
+            sleep(0.25)
+            retry -= 1
+
+        self.assertEqual(0, hconns, msg="HTTP connection not deleted")
+
+        # When a connector is configured the router will periodically attempt
+        # to connect to the server address. To prove that the connector has
+        # been completely removed listen for connection attempts on the server
+        # port.
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        s.bind(("", self.http_server_port))
+        s.setblocking(1)
+        s.settimeout(3)  # reconnect attempts every 2.5 seconds
+        s.listen(1)
+        with self.assertRaises(socket.timeout):
+            conn, addr = s.accept()
+        s.close()
+
+        #
+        # re-create the connector and verify it works
+        #
+        mgmt.create(type=CONNECTOR_TYPE,
+                    name="ServerConnector",
+                    attributes={'address': 'http1',
+                                'port': self.http_server_port,
+                                'protocolVersion': 'HTTP1'})
+
+        self.assertEqual(1, len(mgmt.query(type=CONNECTOR_TYPE).results))
+
+        count, error = http1_ping(sport=self.http_server_port,
+                                  cport=self.http_listener_port)
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
 
 
 class Http1AdaptorOneRouterTest(TestCase):
