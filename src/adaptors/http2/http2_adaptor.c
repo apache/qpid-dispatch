@@ -413,12 +413,6 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     if (!stream_data)
         return 0;
 
-    if (stream_data->out_msg_send_complete && qd_message_receive_complete(qdr_delivery_message(stream_data->in_dlv))) {
-        // The message has been completely sent, yet there is an additional DATA frame coming in. This is a PROTOCOL_ERROR
-        nghttp2_submit_goaway(conn->session_data->session, 0, 0, NGHTTP2_PROTOCOL_ERROR, (uint8_t *)"Sending DATA frame on invalid stream", 36);
-        nghttp2_session_send(stream_data->session_data->session);
-        return 0;
-    }
     stream_data->bytes_in += len;
 
     qd_buffer_list_t buffers;
@@ -426,7 +420,8 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     qd_buffer_list_append(&buffers, (uint8_t *)data, len);
 
     if (stream_data->in_dlv) {
-        qd_message_stream_data_append(stream_data->message, &buffers);
+        if (!stream_data->in_dlv_released)
+            qd_message_stream_data_append(stream_data->message, &buffers);
     }
     else {
         if (!stream_data->body) {
@@ -847,7 +842,9 @@ static int on_frame_recv_callback(nghttp2_session *session,
 
         if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA NGHTTP2_FLAG_END_STREAM flag received, receive_complete = true", conn->conn_id, stream_id);
-            qd_message_set_receive_complete(stream_data->message);
+            if (!stream_data->in_dlv_released) {
+                qd_message_set_receive_complete(stream_data->message);
+            }
             advance_stream_status(stream_data);
 
             if (!conn->ingress) {
@@ -855,7 +852,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
             }
         }
 
-        if (stream_data->in_dlv) {
+        if (stream_data->in_dlv && !stream_data->in_dlv_released) {
             if (!stream_data->body) {
                 stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
                 qd_compose_insert_binary(stream_data->body, 0, 0);
@@ -863,7 +860,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
             }
         }
 
-        if (stream_data->in_dlv) {
+        if (stream_data->in_dlv && !stream_data->in_dlv_released) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA frame received, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
             qdr_delivery_continue(http2_adaptor->core, stream_data->in_dlv, false);
         }
@@ -1308,9 +1305,28 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
     qdr_http2_stream_data_t* stream_data = qdr_delivery_get_context(dlv);
     if (!stream_data)
         return;
+
+    qdr_http2_connection_t *conn = stream_data->session_data->conn;
+
+    //
+    // DISPATCH-1849: In the case of large messages, the final DATA frame arriving from the server may or may not
+    // contain the END_STREAM flag. In the cases when the final DATA frame does not contain the END_STREAM flag,
+    // the router ends up forwarding all the data to the curl client without sending the END_STREAM to the client. The END_STREAM does arrive from the server
+    // but not before the curl client closes the client connection after receiving all the data. The curl client
+    // does not wait for the router to send an END_STREAM flag to close the connection. The client connection closure
+    // triggers the link cleanup on the ingress connection, in turn freeing up all deliveries and its peer deliveries.
+    // The peer delivery is released while it is still receiving the END_STREAM frame and the router crashes. To solve this issue,
+    // the stream_data->in_dlv_released flag is set to true when the peer delivery is released and this flag is
+    // check when performing further actions on the delivery. No action on the peer delivery is performed
+    // if this flag is set because the delivery and its underlying message have been freed.
+    //
+    if (settled && !conn->ingress && disp == PN_RELEASED) {
+        stream_data->in_dlv_released = true;
+    }
+
     if (settled) {
         nghttp2_nv hdrs[1];
-        if (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED) {
+        if (conn->ingress && (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED)) {
             if (disp == PN_RELEASED || disp == PN_MODIFIED) {
                 hdrs[0].name = (uint8_t *)":status";
                 hdrs[0].value = (uint8_t *)"503";
