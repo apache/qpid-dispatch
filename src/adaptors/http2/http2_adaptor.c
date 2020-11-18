@@ -790,10 +790,26 @@ static void send_settings_frame(qdr_http2_connection_t *conn)
 static void _http_record_request(qdr_http2_connection_t *conn, qdr_http2_stream_data_t *stream_data)
 {
     stream_data->stop = qd_timer_now();
+
+    bool free_remote_addr = false;
+    char *remote_addr;
+    if (conn->ingress) {
+        remote_addr = qd_get_host_from_host_port(conn->remote_address);
+        if (remote_addr) {
+            free_remote_addr = true;
+        } else {
+            remote_addr = conn->remote_address;
+        }
+    } else {
+        remote_addr = conn->config->host;
+    }
     qd_http_record_request(http2_adaptor->core, stream_data->method, stream_data->request_status,
-                           conn->config->address, conn->config->host, conn->config->site,
+                           conn->config->address, remote_addr, conn->config->site,
                            stream_data->remote_site, conn->ingress, stream_data->bytes_in, stream_data->bytes_out,
                            stream_data->stop && stream_data->start ? stream_data->stop - stream_data->start : 0);
+    if (free_remote_addr) {
+        free(remote_addr);
+    }
 }
 
 static int on_frame_recv_callback(nghttp2_session *session,

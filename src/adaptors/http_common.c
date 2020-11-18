@@ -673,3 +673,18 @@ void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t stat
     qd_log(qd_log_source(QD_HTTP_LOG_SOURCE), QD_LOG_DEBUG, "Adding http request info %s", record->key);
     _add_http_request_info(core, record);
 }
+
+char *qd_get_host_from_host_port(const char *host_port)
+{
+    char *end = strchr(host_port, ':');
+    if (end == NULL) {
+        return 0;
+    } else {
+        size_t len = end - host_port;
+        char *host = malloc(len + 1);
+        strncpy(host, host_port, len);
+        host[len] = '\0';
+        return host;
+    }
+}
+
