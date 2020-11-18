@@ -94,8 +94,6 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             DEQ_REMOVE(qdr_http1_adaptor->connections, hconn);
             qd_timer_free(hconn->server.reconnect_timer);
             hconn->server.reconnect_timer = 0;
-            qd_timer_free(hconn->server.activate_timer);
-            hconn->server.activate_timer = 0;
             rconn = hconn->raw_conn;
             hconn->raw_conn = 0;
             if (hconn->server.connector) {
@@ -435,11 +433,10 @@ static void _core_connection_activate_CT(void *context, qdr_connection_t *conn)
         if (hconn->raw_conn) {
             pn_raw_connection_wake(hconn->raw_conn);
             activated = true;
-        } else if (hconn->type == HTTP1_CONN_SERVER) {
-            if (hconn->server.activate_timer) {
-                qd_timer_schedule(hconn->server.activate_timer, 0);
-                activated = true;
-            }
+        } else if (hconn->server.reconnect_timer) {
+            assert(hconn->type == HTTP1_CONN_SERVER);
+            qd_timer_schedule(hconn->server.reconnect_timer, 0);
+            activated = true;
         }
     }
     sys_mutex_unlock(qdr_http1_adaptor->lock);
