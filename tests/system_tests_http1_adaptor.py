@@ -1149,5 +1149,123 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         self.assertEqual(1, client.count)
 
 
+class FakeHttpServerBase(object):
+    def __init__(self, host='', port=80):
+        super(FakeHttpServerBase, self).__init__()
+        self.host = host
+        self.port = port
+        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.socket.settimeout(TIMEOUT)
+        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.socket.bind((host, port))
+        self.socket.listen(1)
+        self.conn, self.addr = self.socket.accept()
+
+        self.do_connect()
+        while True:
+            data = self.conn.recv(1024)
+            if not data: break
+            self.do_data(data)
+        self.do_closed()
+        self.conn.close()
+        self.socket.close()
+
+    def do_connect(self):
+        pass
+
+    def do_data(self, data):
+        pass
+
+    def do_closed(self):
+        pass
+
+
+class Http1AdaptorBadEndpointsTest(TestCase):
+    """
+    Subject the router to mis-behaving HTTP endpoints.
+    """
+    @classmethod
+    def setUpClass(cls):
+        """
+        Single router configuration with one HTTPListener and one
+        HTTPConnector.
+        """
+        super(Http1AdaptorBadEndpointsTest, cls).setUpClass()
+
+        cls.http_server_port = cls.tester.get_port()
+        cls.http_listener_port = cls.tester.get_port()
+
+        config = [
+            ('router', {'mode': 'standalone',
+                        'id': 'TestBadEnpoints',
+                        'allowUnsettledMulticast': 'yes'}),
+            ('listener', {'role': 'normal',
+                          'port': cls.tester.get_port()}),
+            ('httpConnector', {'port': cls.http_server_port,
+                               'protocolVersion': 'HTTP1',
+                               'address': 'testServer'}),
+            ('httpListener', {'port': cls.http_listener_port,
+                              'protocolVersion': 'HTTP1',
+                              'address': 'testServer'}),
+            ('address', {'prefix': 'closest',   'distribution': 'closest'}),
+            ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
+        ]
+        config = Qdrouterd.Config(config)
+        cls.INT_A = cls.tester.qdrouterd("TestBadEndpoints", config, wait=True)
+        cls.INT_A.listener = cls.INT_A.addresses[0]
+
+    def _do_ping(self):
+        """
+        Test connectivity to router.
+        """
+        TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/ping",
+                            headers={"Content-Length": "00"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={"Content-Length": 4,
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'pong'),
+                 ResponseValidator(expect_body=b'pong'))
+            ]
+        }
+        server = TestServer(server_port=self.http_server_port,
+                            client_port=self.http_listener_port,
+                            tests=TESTS)
+        self.INT_A.wait_connectors()
+        client = ThreadedTestClient(TESTS, self.http_listener_port)
+        client.wait()
+        server.wait()
+        return (client.error, client.count)
+
+    def test_01_unsolicited_response(self):
+        """
+        Create a server that sends an immediate Request Timeout response
+        without first waiting for a request to arrive.
+        """
+        class UnsolicitedResponse(FakeHttpServerBase):
+            def __init__(self, host, port):
+                self.request_sent = False
+                super(UnsolicitedResponse, self).__init__(host, port)
+
+            def do_connect(self):
+                self.conn.sendall(b'HTTP/1.1 408 Request Timeout\r\n'
+                                  + b'Content-Length: 10\r\n'
+                                  + b'\r\n'
+                                  + b'Bad Server')
+                self.request_sent = True
+
+        error, count = self._do_ping()
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
+
+        server = UnsolicitedResponse('', self.http_server_port)
+        self.assertTrue(server.request_sent)
+
+        error, count = self._do_ping()
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
+
+
 if __name__ == '__main__':
     unittest.main(main_module())
