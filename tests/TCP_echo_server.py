@@ -38,6 +38,7 @@ import types
 from system_test import Logger
 from system_test import TIMEOUT
 
+
 class ClientRecord(object):
     """
     Object to register with the selector 'data' field
@@ -59,14 +60,15 @@ class ClientRecord(object):
         return self.__repr__()
 
 
-class GracefulKiller:
-  kill_now = False
-  def __init__(self):
-    signal.signal(signal.SIGINT, self.exit_gracefully)
-    signal.signal(signal.SIGTERM, self.exit_gracefully)
+class GracefulExitSignaler:
+    kill_now = False
 
-  def exit_gracefully(self,signum, frame):
-    self.kill_now = True
+    def __init__(self):
+        signal.signal(signal.SIGINT, self.exit_gracefully)
+        signal.signal(signal.SIGTERM, self.exit_gracefully)
+
+    def exit_gracefully(self, signum, frame):
+        self.kill_now = True
 
 
 def split_chunk_for_display(raw_bytes):
@@ -84,9 +86,10 @@ def split_chunk_for_display(raw_bytes):
     return result
 
 
-class TcpEchoServer():
+class TcpEchoServer:
+
     def __init__(self, prefix="ECHO_SERVER", port="0", echo_count=0, timeout=0.0, logger=None):
-        '''
+        """
         Start echo server in separate thread
 
         :param prefix: log prefix
@@ -95,10 +98,10 @@ class TcpEchoServer():
         :param timeout: exit after this many seconds
         :param logger: Logger() object
         :return:
-        '''
+        """
         self.sock = None
         self.prefix = prefix
-        self.port = port
+        self.port = int(port)
         self.echo_count = echo_count
         self.timeout = timeout
         self.logger = logger
@@ -128,10 +131,10 @@ class TcpEchoServer():
                 self.sock.bind((self.HOST, self.port))
                 self.sock.listen()
                 self.sock.setblocking(False)
-                self.logger.log('%s Listening on host:%s, port:%d' % (self.prefix, self.HOST, self.port))
-            except Exception as exc:
-                self.error = ('%s Opening listen socket %s:%d exception: %s' %
-                           (self.prefix, self.HOST, self.port, traceback.format_exc()))
+                self.logger.log('%s Listening on host:%s, port:%s' % (self.prefix, self.HOST, self.port))
+            except Exception:
+                self.error = ('%s Opening listen socket %s:%s exception: %s' %
+                              (self.prefix, self.HOST, self.port, traceback.format_exc()))
                 self.logger.log(self.error)
                 return 1
 
@@ -160,16 +163,16 @@ class TcpEchoServer():
                             if key.fileobj is self.sock:
                                 self.do_accept(key.fileobj, sel, self.logger)
                             else:
-                                pass # Only listener 'sock' has None in opaque data field
+                                pass  # Only listener 'sock' has None in opaque data field
                         else:
                             total_echoed += self.do_service(key, mask, sel, self.logger)
                 else:
-                    pass # select timeout. probably.
+                    pass   # select timeout. probably.
 
             sel.unregister(self.sock)
             self.sock.close()
 
-        except Exception as exc:
+        except Exception:
             self.error = "ERROR: exception : '%s'" % traceback.format_exc()
 
         self.is_running = False
@@ -188,15 +191,15 @@ class TcpEchoServer():
         if mask & selectors.EVENT_READ:
             try:
                 recv_data = sock.recv(1024)
-            except Exception as exc:
-                logger.log('%s Connection to %s:%d closed by peer' %
-                           (self.prefix, data.addr[0], data.addr[1]))
+            except IOError:
+                logger.log('%s Connection to %s:%d IOError: %s' %
+                           (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
                 sel.unregister(sock)
                 sock.close()
                 return 0
-            except Exception as exc:
+            except Exception:
                 self.error = ('%s Connection to %s:%d exception: %s' %
-                           (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
+                              (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
                 logger.log(self.error)
                 sel.unregister(sock)
                 sock.close()
@@ -204,7 +207,7 @@ class TcpEchoServer():
             if recv_data:
                 data.outb += recv_data
                 logger.log('%s read from: %s:%d len:%d: %s' % (self.prefix, data.addr[0], data.addr[1], len(recv_data),
-                                                            split_chunk_for_display(recv_data)))
+                                                               split_chunk_for_display(recv_data)))
                 sel.modify(sock, selectors.EVENT_READ | selectors.EVENT_WRITE, data=data)
             else:
                 logger.log('%s Closing connection to %s:%d' % (self.prefix, data.addr[0], data.addr[1]))
@@ -213,11 +216,25 @@ class TcpEchoServer():
                 return 0
         if mask & selectors.EVENT_WRITE:
             if data.outb:
-                sent = sock.send(data.outb)
+                try:
+                    sent = sock.send(data.outb)
+                except IOError:
+                    logger.log('%s Connection to %s:%d IOError: %s' %
+                               (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
+                    sel.unregister(sock)
+                    sock.close()
+                    return 0
+                except Exception:
+                    self.error = ('%s Connection to %s:%d exception: %s' %
+                                  (self.prefix, data.addr[0], data.addr[1], traceback.format_exc()))
+                    logger.log(self.error)
+                    sel.unregister(sock)
+                    sock.close()
+                    return 1
                 retval += sent
                 if sent > 0:
                     logger.log('%s write to : %s:%d len:%d: %s' % (self.prefix, data.addr[0], data.addr[1], sent,
-                                                                split_chunk_for_display(data.outb[:sent])))
+                                                                   split_chunk_for_display(data.outb[:sent])))
                 else:
                     logger.log('%s write to : %s:%d len:0' % (self.prefix, data.addr[0], data.addr[1]))
                 data.outb = data.outb[sent:]
@@ -226,13 +243,14 @@ class TcpEchoServer():
         return retval
 
     def wait(self, timeout=TIMEOUT):
-        self.logger.log("%s Server is shutting down" % (self.prefix))
+        self.logger.log("%s Server is shutting down" % self.prefix)
         self.keep_running = False
         self._thread.join(timeout)
 
 
 def main(argv):
     retval = 0
+    logger = None
     # parse args
     p = argparse.ArgumentParser()
     p.add_argument('--port', '-p',
@@ -252,7 +270,7 @@ def main(argv):
     # port
     if args.port is None:
         raise Exception("User must specify a port number")
-    port = int(args.port)
+    port = args.port
 
     # name / prefix
     prefix = args.name if args.name is not None else "ECHO_SERVER (%s)" % (str(port))
@@ -265,14 +283,14 @@ def main(argv):
     if args.timeout < 0.0:
         raise Exception("Timeout must be greater than or equal to zero")
 
-    killer = GracefulKiller()
+    signaller = GracefulExitSignaler()
     server = None
 
     try:
         # logging
-        logger = Logger(title = "%s port %d" % (prefix, port),
-                        print_to_console = args.log,
-                        save_for_dump = False)
+        logger = Logger(title="%s port %s" % (prefix, port),
+                        print_to_console=args.log,
+                        save_for_dump=False)
 
         server = TcpEchoServer(prefix, port, args.echo, args.timeout, logger)
 
@@ -286,16 +304,16 @@ def main(argv):
             if server.exit_status is not None:
                 logger.log("%s Server stopped with status: %s" % (prefix, server.exit_status))
                 keep_running = False
-            if killer.kill_now:
-                logger.log("%s Process killed with signal" % (prefix))
+            if signaller.kill_now:
+                logger.log("%s Process killed with signal" % prefix)
                 keep_running = False
             if keep_running and not server.is_running:
-                logger.log("%s Server stopped with no error or status" % (prefix))
+                logger.log("%s Server stopped with no error or status" % prefix)
                 keep_running = False
 
-
-    except Exception as e:
-        logger.log("%s Exception: %s" % (prefix, traceback.format_exc()))
+    except Exception:
+        if logger is not None:
+            logger.log("%s Exception: %s" % (prefix, traceback.format_exc()))
         retval = 1
 
     if server is not None and server.sock is not None:
