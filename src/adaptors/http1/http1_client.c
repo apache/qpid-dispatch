@@ -126,7 +126,7 @@ static qdr_http1_connection_t *_create_client_connection(qd_http_listener_t *li)
     hconn->handler_context.handler = &_handle_connection_events;
     hconn->handler_context.context = hconn;
 
-    hconn->client.next_msg_id = 99383939;
+    hconn->client.next_msg_id = 1;
 
     // configure the HTTP/1.x library
 
@@ -382,6 +382,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
         qdr_connection_set_context(hconn->qdr_conn, 0);
         hconn->raw_conn = 0;
         sys_mutex_unlock(qdr_http1_adaptor->lock);
+        // at this point the core can no longer activate this connection
 
         if (hconn->out_link) {
             qdr_link_set_context(hconn->out_link, 0);
