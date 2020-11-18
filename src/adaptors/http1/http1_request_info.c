@@ -24,20 +24,6 @@
 #include "dispatch_private.h"
 #include <inttypes.h>
 
-static char *_get_host_from_host_port(const char *host_port)
-{
-    char *end = strchr(host_port, ':');
-    if (end == NULL) {
-        return 0;
-    } else {
-        size_t len = end - host_port;
-        char *host = malloc(len + 1);
-        strncpy(host, host_port, len);
-        host[len] = '\0';
-        return host;
-    }
-}
-
 static void _http1_record_request_info(qdr_http1_adaptor_t *adaptor, qdr_http1_request_base_t *request, const char *host, bool ingress)
 {
      uint64_t in_octets, out_octets;
@@ -49,7 +35,7 @@ static void _http1_record_request_info(qdr_http1_adaptor_t *adaptor, qdr_http1_r
 
 void qdr_http1_record_client_request_info(qdr_http1_adaptor_t *adaptor, qdr_http1_request_base_t *request)
 {
-    char *host = _get_host_from_host_port(request->hconn->client.client_ip_addr);
+    char *host = qd_get_host_from_host_port(request->hconn->client.client_ip_addr);
     _http1_record_request_info(adaptor, request, host ? host : request->hconn->client.client_ip_addr, true);
     if (host) free(host);
 }

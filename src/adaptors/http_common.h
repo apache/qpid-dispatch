@@ -104,6 +104,7 @@ extern const char *qdr_http_request_info_columns[QDR_HTTP_REQUEST_INFO_COLUMN_CO
 void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t status_code, const char *address, const char *host,
                             const char *local_site, const char *remote_site, bool ingress,
                             uint64_t bytes_in, uint64_t bytes_out, uint64_t latency);
+char *qd_get_host_from_host_port(const char *host_port);
 
 //
 // These functions are defined in their respective HTTP adaptors:
