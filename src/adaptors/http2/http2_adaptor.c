@@ -296,6 +296,12 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     if (stream_data->remote_site) free(stream_data->remote_site);
 
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream_data in free_http2_stream_data (%lx)", conn->conn_id,  stream_data->stream_id, (long) stream_data);
+
+    // If the httpConnector was deleted, a client request has nowhere to go because of lack of receiver and hence credit.
+    // No delivery was created. The message that was created for such a hanging request must be freed here..
+    if (!stream_data->in_dlv && stream_data->message) {
+        qd_message_free(stream_data->message);
+    }
     free_qdr_http2_stream_data_t(stream_data);
 }
 
