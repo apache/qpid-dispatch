@@ -627,17 +627,23 @@ static qdr_http_request_info_t* _new_qdr_http_request_info_t()
     return record;
 }
 
-static char *_record_key(const char *host, const char* site, bool ingress)
+static char *_record_key(const char *host, const char *address, const char* site, bool ingress)
 {
     if (!host) return 0;
     size_t hostlen = strlen(host);
+    size_t addresslen = address ? strlen(address) + 1 : 0;
     size_t sitelen = site ? strlen(site) + 1 : 0;
-    char *key = malloc(hostlen + sitelen + 3);
+    char *key = malloc(hostlen + addresslen + sitelen + 3);
     size_t i = 0;
     key[i++] = ingress ? 'i' : 'o';
     key[i++] = '_';
     strcpy(key+i, host);
     i += hostlen;
+    if (address) {
+        key[i++] = '_';
+        strcpy(key+i, address);
+        i += (addresslen-1);
+    }
     if (site) {
         key[i++] = '@';
         strcpy(key+i, site);
@@ -654,7 +660,7 @@ void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t stat
     record->address = address ? qd_strdup(address) : 0;
     record->host = host ? qd_strdup(host) : 0;
     record->site = remote_site ? qd_strdup(remote_site) : 0;
-    record->key = _record_key(record->host, local_site, record->ingress);
+    record->key = _record_key(record->host, record->address, local_site, record->ingress);
     record->requests = 1;
     record->bytes_in = bytes_in;
     record->bytes_out = bytes_out;
