@@ -107,36 +107,41 @@ class Logger():
 
 class TcpAdaptor(TestCase):
     """
-    4 edge routers connected via 2 interior routers.
-    6 echo servers are connected via tcpConnector, one to each router.
-    Each router has 7 listeners, one for each server and
+    6 edge routers connected via 3 interior routers.
+    9 echo servers are connected via tcpConnector, one to each router.
+    Each router has 10 listeners, one for each server and
     another for which there is no server.
     """
-    #  +-------+    +---------+    +---------+    +-------+
-    #  |  EA1  |<-->|  INTA   |<==>|  INTB   |<-->|  EB1  |
-    #  +-------+    |         |    |         |    +-------+
-    #  +-------+    |         |    |         |    +-------+
-    #  |  EA2  |<-->|         |    |         |<-->|  EB2  |
-    #  +-------+    +---------+    +---------+    +-------+
+    #  +-------+    +---------+    +---------+    +---------+    +-------+
+    #  |  EA1  |<-->|  INTA   |<==>|  INTB   |<==>|  INTC   |<-->|  EC1  |
+    #  +-------+    |         |    |         |    |         |    +-------+
+    #  +-------+    |         |    |         |    |         |    +-------+
+    #  |  EA2  |<-->|         |    |         |    |         |<-->|  EC2  |
+    #  +-------+    +---------+    +---------+    +---------+    +-------+
+    #                                ^     ^
+    #                                |     |
+    #                          +-------+ +-------+
+    #                          |  EB1  | |  EB2  |
+    #                          +-------+ +-------+
     #
     # Each router tcp-connects to a like-named echo server.
     # Each router has tcp-listeners for every echo server
     #
-    #      +----+ +----+ +----+ +----+ +----+ +----+
-    #   +--|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |--+
-    #   |  |lsnr| |lsnr| |lsnr| |lsnr| |lsnr| |lsnr|  |
-    #   |  |EA1 | |EA2 | |INTA| |INTB| |EB1 | |EB2 |  |
-    #   |  +----+ +----+ +----+ +----+ +----+ +----+  |
-    #   |                                          +---------+  +------+
-    #   |          Router                          | tcp     |  | echo |
-    #   |          EA1                             |connector|->|server|
-    #   |                                          +---------+  | EA1  |
-    #   |                                             |         +------+
-    #   +---------------------------------------------+
+    #      +----+ +----+ +----+ +----+ +----+ +----+ +----+ +----+ +----+
+    #   +--|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |-|tcp |--+
+    #   |  |lsnr| |lsnr| |lsnr| |lsnr| |lsnr| |lsnr| |lsnr| |lsnr| |lsnr|  |
+    #   |  |EA1 | |EA2 | |INTA| |EB1 | |EB2 | |INTB| |EC1 | |EC2 | |INTC|  |
+    #   |  +----+ +----+ +----+ +----+ +----+ +----+ +----+ +----+ +----+  |
+    #   |                                                               +---------+  +------+
+    #   |          Router                                               | tcp     |  | echo |
+    #   |          EA1                                                  |connector|->|server|
+    #   |                                                               +---------+  | EA1  |
+    #   |                                                                  |         +------+
+    #   +------------------------------------------------------------------+
     #
 
     # Allocate routers in this order
-    router_order = ['INTA', 'INTB', 'EA1', 'EA2', 'EB1', 'EB2']
+    router_order = ['INTA', 'INTB', 'INTC', 'EA1', 'EA2', 'EB1', 'EB2', 'EC1', 'EC2']
 
     # List indexed in router_order
     # First listener in each router is normal AMQP for test setup and mgmt.
@@ -228,9 +233,11 @@ class TcpAdaptor(TestCase):
             cls.nodest_listener_ports[rtr] = cls.tester.get_port()
             cls.http_listener_ports[rtr] = cls.tester.get_port()
 
-        inter_router_port  = cls.tester.get_port()
+        inter_router_port_AB  = cls.tester.get_port()
+        inter_router_port_BC  = cls.tester.get_port()
         cls.INTA_edge_port = cls.tester.get_port()
         cls.INTB_edge_port = cls.tester.get_port()
+        cls.INTC_edge_port = cls.tester.get_port()
 
         cls.logger = Logger(title="TcpAdaptor-testClass",
                             print_to_console=True,
@@ -254,9 +261,11 @@ class TcpAdaptor(TestCase):
                          (rtr, cls.nodest_listener_ports[rtr]))
             p_out.append("%s_http_listener=%d" %
                          (rtr, cls.http_listener_ports[rtr]))
-        p_out.append("inter_router_port=%d" % inter_router_port)
+        p_out.append("inter_router_port_AB=%d" % inter_router_port_AB)
+        p_out.append("inter_router_port_BC=%d" % inter_router_port_BC)
         p_out.append("INTA_edge_port=%d" % cls.INTA_edge_port)
         p_out.append("INTB_edge_port=%d" % cls.INTB_edge_port)
+        p_out.append("INTC_edge_port=%d" % cls.INTC_edge_port)
         # write to log
         for line in p_out:
             cls.logger.log("TCP_TEST %s" % line)
@@ -291,12 +300,17 @@ class TcpAdaptor(TestCase):
 
         # Launch the routers
         router('INTA', 'interior',
-               [('listener', {'role': 'inter-router', 'port': inter_router_port}),
+               [('listener', {'role': 'inter-router', 'port': inter_router_port_AB}),
                 ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
 
         router('INTB', 'interior',
-               [('connector', {'role': 'inter-router', 'port': inter_router_port}),
-               ('listener',   {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+               [('connector', {'role': 'inter-router', 'port': inter_router_port_AB}),
+                ('listener', {'role': 'inter-router', 'port': inter_router_port_BC}),
+                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+
+        router('INTC', 'interior',
+               [('connector', {'role': 'inter-router', 'port': inter_router_port_BC}),
+                ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
 
         router('EA1', 'edge',
                [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
@@ -306,18 +320,29 @@ class TcpAdaptor(TestCase):
                [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
         router('EB2', 'edge',
                [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+        router('EC1', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
+        router('EC2', 'edge',
+               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
 
         cls.INTA = cls.routers[0]
         cls.INTB = cls.routers[1]
-        cls.EA1 = cls.routers[2]
-        cls.EA2 = cls.routers[3]
-        cls.EB1 = cls.routers[4]
-        cls.EB2 = cls.routers[5]
+        cls.INTC = cls.routers[2]
+        cls.EA1 = cls.routers[3]
+        cls.EA2 = cls.routers[4]
+        cls.EB1 = cls.routers[5]
+        cls.EB2 = cls.routers[6]
+        cls.EC1 = cls.routers[7]
+        cls.EC2 = cls.routers[8]
 
         cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
         cls.INTA.wait_router_connected('INTB')
         cls.logger.log("TCP_TEST INTB waiting for connection to INTA")
         cls.INTB.wait_router_connected('INTA')
+        cls.logger.log("TCP_TEST INTB waiting for connection to INTC")
+        cls.INTB.wait_router_connected('INTC')
+        cls.logger.log("TCP_TEST INTC waiting for connection to INTB")
+        cls.INTC.wait_router_connected('INTB')
 
         # define logging levels
         cls.print_logs_server = True
@@ -541,7 +566,7 @@ class TcpAdaptor(TestCase):
     # A series of 1-byte messsages, one at a time, to prove general connectivity
     #
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_01_tcp_INTA_INTA(self):
+    def test_01a_tcp_INTA_INTA(self):
         """
         Connectivity - INTA only
         """
@@ -556,10 +581,22 @@ class TcpAdaptor(TestCase):
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_02_tcp_INTB_INTB(self):
-        name = "test_02_tcp_INTB_INTB"
+    def test_01b_tcp_INTB_INTB(self):
+        name = "test_01b_tcp_INTB_INTB"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.INTB, self.INTB)]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_01c_tcp_INTC_INTC(self):
+        name = "test_01c_tcp_INTC_INTC"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTC, self.INTC)]
         result = self.do_tcp_echo_n_routers(name, pairs)
         if result is not None:
             print(result)
