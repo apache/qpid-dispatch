@@ -10,6 +10,9 @@ leak:qd_policy_c_counts_alloc
 leak:qd_policy_open_fetch_settings
 leak:qdr_error_description
 
+# DISPATCH-1844 - shutdown leak
+leak:sys_mutex
+
 # expected, not a bug:
 #
 leak:qdr_core_subscribe
