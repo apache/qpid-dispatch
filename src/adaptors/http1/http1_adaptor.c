@@ -98,6 +98,10 @@ void qdr_http1_connection_free(qdr_http1_connection_t *hconn)
             hconn->server.activate_timer = 0;
             rconn = hconn->raw_conn;
             hconn->raw_conn = 0;
+            if (hconn->server.connector) {
+                hconn->server.connector->ctx = 0;
+                hconn->server.connector = 0;
+            }
             if (hconn->qdr_conn)
                 qdr_connection_set_context(hconn->qdr_conn, 0);
             hconn->qdr_conn = 0;

@@ -146,6 +146,8 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     hconn->cfg.address = qd_strdup(bconfig->address);
     hconn->cfg.site = bconfig->site ? qd_strdup(bconfig->site) : 0;
     hconn->cfg.host_port = qd_strdup(bconfig->host_port);
+    hconn->server.connector = ctor;
+    ctor->ctx = (void*)hconn;
 
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
@@ -249,11 +251,17 @@ void qd_http1_delete_connector(qd_dispatch_t *ignored, qd_http_connector_t *ct)
 
         sys_mutex_lock(qdr_http1_adaptor->lock);
         DEQ_REMOVE(qdr_http1_adaptor->connectors, ct);
+        qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) ct->ctx;
+        if (hconn) {
+            hconn->server.connector = 0;
+            ct->ctx = 0;
+            if (hconn->qdr_conn)
+                // have the core close this connection
+                qdr_core_close_connection(hconn->qdr_conn);
+        }
         sys_mutex_unlock(qdr_http1_adaptor->lock);
 
         qd_http_connector_decref(ct);
-
-        // TODO(kgiusti): do we now close all related connections?
     }
 }
 

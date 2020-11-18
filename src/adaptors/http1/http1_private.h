@@ -157,6 +157,7 @@ struct qdr_http1_connection_t {
 
     // State if connected to an HTTP server
     struct {
+        qd_http_connector_t *connector;
         qd_timer_t *activate_timer;
         qd_timer_t *reconnect_timer;
         int         reconnect_count;
