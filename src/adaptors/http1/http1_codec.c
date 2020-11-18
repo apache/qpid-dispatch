@@ -245,20 +245,29 @@ h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *cont
 //
 void h1_codec_connection_closed(h1_codec_connection_t *conn)
 {
-    if (conn) {
-        if (conn->config.type == HTTP1_CONN_SERVER) {
-            struct decoder_t *decoder = &conn->decoder;
-            h1_codec_request_state_t *hrs = decoder->hrs;
-            if (hrs && hrs->request_complete) {
-                decoder_reset(decoder);
-                if (!hrs->response_complete) {
-                    hrs->response_complete = true;
-                    conn->config.rx_done(hrs);
-                }
-                conn->config.request_complete(hrs, false);
-                h1_codec_request_state_free(hrs);
+    if (conn && conn->config.type == HTTP1_CONN_SERVER) {
+
+        // is decoding a response in progress
+        struct decoder_t *decoder = &conn->decoder;
+        h1_codec_request_state_t *hrs = decoder->hrs;
+        if (hrs && hrs->request_complete) {
+            // the corresponding request msg is complete
+            if (!hrs->response_complete) {
+                hrs->response_complete = true;
+                conn->config.rx_done(hrs);
             }
+            conn->config.request_complete(hrs, false);
+            decoder_reset(decoder);
+            h1_codec_request_state_free(hrs);
+            if (hrs == conn->encoder.hrs)
+                encoder_reset(&conn->encoder);
         }
+
+        // since the underlying connection is gone discard all remaining
+        // incoming data
+        decoder_reset(decoder);
+        qd_buffer_list_free_buffers(&conn->decoder.incoming);
+        decoder->read_ptr = NULL_I_PTR;
     }
 }
 
