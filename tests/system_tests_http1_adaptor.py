@@ -1079,7 +1079,8 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
                                     repeat=2)
         # the adaptor will detach the links to the server if the connection
         # cannot be reestablished after 2.5 seconds.  Restart the server before
-        # that occurrs to prevent client messages from being released
+        # that occurrs to prevent client messages from being released with 503
+        # status.
         server = TestServer(server_port=self.http_server11_port,
                             client_port=self.http_listener11_port,
                             tests=TESTS)
@@ -1130,7 +1131,9 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
             ]
         }
 
-        # Kill the server then issue client requests, expect 503 response
+        # Kill the server then issue client requests. These requests will be
+        # held on the server's outgoing links until they expire (2.5 seconds).
+        # At that point the client will receive a 503 response.
         server.wait()
         client = ThreadedTestClient(TESTS_FAIL, self.http_listener11_port)
         client.wait()

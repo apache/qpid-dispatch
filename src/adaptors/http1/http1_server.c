@@ -90,9 +90,17 @@ ALLOC_DEFINE(_server_request_t);
 //
 
 
-#define DEFAULT_CAPACITY 250
-#define RETRY_PAUSE_MSEC ((qd_duration_t)500)
-#define MAX_RECONNECT    5  // 5 * 500 = 2.5 sec
+#define DEFAULT_CAPACITY     250
+
+// Reconnection logic time values: When the HTTP server disconnects this
+// adaptor will attempt to reconnect. The reconnect interval increases by
+// RETRY_PAUSE_MSEC with each reconnect failure until it hits the maximum of
+// RETRY_MAX_PAUSE_MSEC. If the reconnection does not succeed after
+// LINK_TIMEOUT_MSEC then the qdr_link_t's are detached to prevent client
+// requests from arriving for a potentially dead server.
+#define RETRY_PAUSE_MSEC     ((qd_duration_t)500)
+#define RETRY_MAX_PAUSE_MSEC ((qd_duration_t)3000)
+#define LINK_TIMEOUT_MSEC    ((qd_duration_t)2500)
 
 static void _server_tx_buffers_cb(h1_codec_request_state_t *lib_hrs, qd_buffer_list_t *blist, unsigned int len);
 static void _server_tx_stream_data_cb(h1_codec_request_state_t *lib_hrs, qd_message_stream_data_t *stream_data);
@@ -113,7 +121,6 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs);
 static void _server_request_complete_cb(h1_codec_request_state_t *hrs, bool cancelled);
 static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, void *context);
 static void _do_reconnect(void *context);
-static void _do_activate(void *context);
 static void _server_response_msg_free(_server_request_t *req, _server_response_msg_t *rmsg);
 static void _server_request_free(_server_request_t *hreq);
 static void _write_pending_request(_server_request_t *req);
@@ -125,9 +132,8 @@ static void _cancel_request(_server_request_t *req);
 ////////////////////////////////////////////////////////
 
 
-// An HttpConnector has been created.  Create an qdr_http_connection_t for it.
-// Do not create a raw connection - this is done on demand when the router
-// sends a delivery over the connector.
+// An HttpConnector has been created.  Create an qdr_http_connection_t and a
+// qdr_connection_t for it.
 //
 static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ctor,
                                                          qd_dispatch_t *qd,
@@ -150,11 +156,7 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
 
-    // to run qdr_connection_process() when there is no raw connection to wake
-    hconn->server.activate_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_activate, hconn);
-
     // Create the qdr_connection
-
     qdr_connection_info_t *info = qdr_connection_info(false, //bool             is_encrypted,
                                                       false, //bool             is_authenticated,
                                                       true,  //bool             opened,
@@ -189,18 +191,10 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
                                             info,
                                             0,      // bind context
                                             0);     // bind token
-    qdr_connection_set_context(hconn->qdr_conn, hconn);
-
-    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP connection to server created", hconn->conn_id);
 
     // wait for the raw connection to come up before creating the in and out links
 
-    hconn->raw_conn = pn_raw_connection();
-    pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
-
-    sys_mutex_lock(qdr_http1_adaptor->lock);
-    DEQ_INSERT_TAIL(qdr_http1_adaptor->connections, hconn);
-    sys_mutex_unlock(qdr_http1_adaptor->lock);
+    qd_log(hconn->adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] HTTP connection to server created", hconn->conn_id);
 
     return hconn;
 }
@@ -220,16 +214,23 @@ qd_http_connector_t *qd_http1_configure_connector(qd_dispatch_t *qd, const qd_ht
 
     qdr_http1_connection_t *hconn = _create_server_connection(c, qd, config);
     if (hconn) {
-        sys_mutex_lock(qdr_http1_adaptor->lock);
-        DEQ_INSERT_TAIL(qdr_http1_adaptor->connectors, c);
-        sys_mutex_unlock(qdr_http1_adaptor->lock);
-
-        // activate the raw connection. This connection may be scheduled on
-        // another thread by this call:
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                "[C%"PRIu64"] Initiating connection to HTTP server %s",
                hconn->conn_id, hconn->cfg.host_port);
-        pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
+
+        // lock out the core activation thread.  Up until this point the core
+        // thread cannot activate the qdr_connection_t since the
+        // qdr_connection_t context has not been set (see
+        // _core_connection_activate_CT in http1_adaptor.c). This keeps the
+        // core from attempting to schedule the connection until we finish
+        // setup.
+        sys_mutex_lock(qdr_http1_adaptor->lock);
+        DEQ_INSERT_TAIL(qdr_http1_adaptor->connections, hconn);
+        DEQ_INSERT_TAIL(qdr_http1_adaptor->connectors, c);
+        qdr_connection_set_context(hconn->qdr_conn, hconn);
+        qd_timer_schedule(hconn->server.reconnect_timer, 0);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+        // setup complete - core thread can activate the connection
         return c;
     } else {
         qd_http_connector_decref(c);
@@ -340,7 +341,6 @@ static void _setup_server_links(qdr_http1_connection_t *hconn)
 //
 static void _teardown_server_links(qdr_http1_connection_t *hconn)
 {
-    // @TODO(kgiusti): should we PN_RELEASE all unsent outbound deliveries first?
     _server_request_t *hreq = (_server_request_t*) DEQ_HEAD(hconn->requests);
     while (hreq) {
         _server_request_free(hreq);
@@ -350,12 +350,18 @@ static void _teardown_server_links(qdr_http1_connection_t *hconn)
     hconn->http_conn = 0;
 
     if (hconn->out_link) {
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] Closing outgoing HTTP link",
+               hconn->conn_id, hconn->out_link_id);
         qdr_link_set_context(hconn->out_link, 0);
         qdr_link_detach(hconn->out_link, QD_CLOSED, 0);
         hconn->out_link = 0;
     }
 
     if (hconn->in_link) {
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"][L%"PRIu64"] Closing incoming HTTP link",
+               hconn->conn_id, hconn->in_link_id);
         qdr_link_set_context(hconn->in_link, 0);
         qdr_link_detach(hconn->in_link, QD_CLOSED, 0);
         hconn->in_link = 0;
@@ -363,87 +369,51 @@ static void _teardown_server_links(qdr_http1_connection_t *hconn)
 }
 
 
-//
-// A note about reconnect and activate timer handlers:
-//
-// Both _do_reconnect and _do_activate are run via separate qd_timers.
-// qd_timers execute on an arbitrary I/O thread and are guaranteed NOT to be
-// run in parallel.  The _do_activate timer is started by the core thread via
-// _core_connection_activate_CT (http1_adaptor.c).  The _do_reconnect timer is
-// started by the I/O thread handling the server raw connection
-// PN_RAW_CONNECTION_DISCONNECTED event.
-//
-// Since the server PN_RAW_CONNECTION_DISCONNECTED handler releases the raw
-// connection and at a later point in time _do_reconnect creates a new raw
-// connection it is guaranteed that _do_reconnect will NOT run in parallel with
-// an I/O thread running the raw connection event handler (since no such raw
-// connection exists when _do_reconnect is run)
-//
-// However it is possible to have a race between an I/O thread running
-// _do_activate and an I/O thread running the raw connection event handler IF
-// _do_activate runs _after_ _do_reconnect has run (since a new raw connection
-// is created and can be immediately scheduled).
-//
-// To avoid this race the _do_reconnect handler cancels the _do_activate timer
-// to prevent it from running immediately after _do_reconnect completes
-// (remember: timer handlers never run in parallel).  To prevent the core
-// thread from rescheduling _do_activate after _do_reconnect runs a lock is
-// held by _do_reconnect while it sets hconn->raw_conn.
-//
-
-
-// This adapter attempts to keep the connection to the server up as long as the
-// connector is configured.  This is called via a timer scheduled when the
-// PN_CONNECTION_CLOSE event is handled.
-// (See above note)
+// Reconnection timer handler.
+// This timer can be scheduled either by the event loop during the
+// PN_RAW_CONNECTION_DISCONNECT event or by the core thread via
+// _core_connection_activate_CT in http1_adaptor.c.  Since timers do not run
+// concurrently this handler is guaranteed never to collide with itself. Once
+// hconn->raw_conn is set to zero by the disconnect handler it will remain zero
+// until this handler creates a new raw connection.
 //
 static void _do_reconnect(void *context)
 {
     qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) context;
-    bool connecting = false;
+    uint64_t conn_id = hconn->conn_id;
 
-    // lock out core activation
-    sys_mutex_lock(qdr_http1_adaptor->lock);
+    // while timers do not run concurrently it is possible to reschedule them
+    // via another thread while the timer handler is running, resulting in this
+    // handler running twice
+    if (hconn->raw_conn) return;  // already ran
 
-    // prevent _do_activate() from trying to process the qdr_connection after
-    // we schedule the raw connection on another thread
-    if (hconn->server.activate_timer)
-        qd_timer_cancel(hconn->server.activate_timer);
-    if (!hconn->raw_conn) {
-        connecting = true;
-        hconn->raw_conn = pn_raw_connection();
-        pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
-        // this call may reschedule the connection on another I/O thread:
-        pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
-    }
+    if (hconn->qdr_conn) {
 
-    sys_mutex_unlock(qdr_http1_adaptor->lock);
+        // handle any qdr_connection_t processing requests that occurred since
+        // this raw connection dropped.
+        while (qdr_connection_process(hconn->qdr_conn))
+            ;
 
-    if (connecting)
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-               "[C%"PRIu64"] Connecting to HTTP server...", hconn->conn_id);
-}
-
-
-// This adapter attempts to keep the qdr_connection_t open as it tries to
-// re-connect to the server.  During this reconnect phase there is no raw
-// connection.  If the core needs to process the qdr_connection_t when there is
-// no raw connection to wake this zero-length timer handler will perform the
-// connection processing (under the I/O thread).
-// (See above note)
-//
-static void _do_activate(void *context)
-{
-    qdr_http1_connection_t *hconn = (qdr_http1_connection_t*) context;
-    if (!hconn->raw_conn && hconn->qdr_conn) {
-        while (qdr_connection_process(hconn->qdr_conn)) {}
         if (!hconn->qdr_conn) {
             // the qdr_connection_t has been closed
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                    "[C%"PRIu64"] HTTP/1.x server connection closed", hconn->conn_id);
             qdr_http1_connection_free(hconn);
+            return;
         }
     }
+
+    // lock out core activation
+    sys_mutex_lock(qdr_http1_adaptor->lock);
+    hconn->raw_conn = pn_raw_connection();
+    pn_raw_connection_set_context(hconn->raw_conn, &hconn->handler_context);
+    // this next call may immediately reschedule the connection on another I/O
+    // thread. After this call hconn may no longer be valid!
+    pn_proactor_raw_connect(qd_server_proactor(hconn->qd_server), hconn->raw_conn, hconn->cfg.host_port);
+    sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+           "[C%"PRIu64"] Connecting to HTTP server...", conn_id);
 }
 
 
@@ -461,7 +431,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
     switch (pn_event_type(e)) {
 
     case PN_RAW_CONNECTION_CONNECTED: {
-        hconn->server.reconnect_count = 0;
+        hconn->server.link_timeout = 0;
         _setup_server_links(hconn);
         while (qdr_connection_process(hconn->qdr_conn)) {}
         break;
@@ -485,11 +455,6 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
 
         qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connection closed", hconn->conn_id);
 
-        // prevent core from activating raw conn since it will no longer exist
-        // on return from the handler
-        sys_mutex_lock(qdr_http1_adaptor->lock);
-        hconn->raw_conn = 0;
-        sys_mutex_unlock(qdr_http1_adaptor->lock);
 
         // if the current request was not completed, cancel it.  it's ok if
         // there are outstanding *response* deliveries in flight as long as the
@@ -501,22 +466,36 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
             _cancel_request(hreq);
         }
 
+        //
+        // reconnect to the server. Leave the links intact so pending requests
+        // are not aborted.  If we fail to reconnect after LINK_TIMEOUT_MSECS
+        // drop the links to prevent additional request from arriving.
+        //
+
+        bool reconnect = false;
         if (hconn->qdr_conn) {
-            //
-            // reconnect to the server. Leave the links intact so pending requests
-            // are not aborted.  Once we've failed to reconnect after MAX_RECONNECT
-            // tries drop the links to prevent additional request from arriving.
-            //
-            qd_duration_t nap_time = RETRY_PAUSE_MSEC * hconn->server.reconnect_count;
-            if (hconn->server.reconnect_count == MAX_RECONNECT) {
-                qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Server not responding - disconnecting...", hconn->conn_id);
-                _teardown_server_links(hconn);
+            if (hconn->server.link_timeout == 0) {
+                hconn->server.link_timeout = qd_timer_now() + LINK_TIMEOUT_MSEC;
+                hconn->server.reconnect_pause = 0;
             } else {
-                hconn->server.reconnect_count += 1;  // increase next sleep interval
+                if ((qd_timer_now() - hconn->server.link_timeout) >= 0)
+                    _teardown_server_links(hconn);
+                if (hconn->server.reconnect_pause < RETRY_MAX_PAUSE_MSEC)
+                    hconn->server.reconnect_pause += RETRY_PAUSE_MSEC;
             }
-            qd_timer_schedule(hconn->server.reconnect_timer, nap_time);
+            reconnect = true;
         }
-        break;
+
+        // prevent core activation
+        sys_mutex_lock(qdr_http1_adaptor->lock);
+        hconn->raw_conn = 0;
+        if (reconnect)
+            qd_timer_schedule(hconn->server.reconnect_timer, hconn->server.reconnect_pause);
+        sys_mutex_unlock(qdr_http1_adaptor->lock);
+
+        // do not manipulate hconn further as it may now be processed by the
+        // timer thread
+        return;
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", hconn->conn_id);
@@ -1504,6 +1483,7 @@ void qdr_http1_server_core_conn_close(qdr_http1_adaptor_t *adaptor,
     qdr_connection_set_context(hconn->qdr_conn, 0);
     hconn->qdr_conn = 0;
     sys_mutex_unlock(qdr_http1_adaptor->lock);
+    // the core thread can no longer activate this connection
 
     qdr_connection_closed(qdr_conn);
     qdr_http1_close_connection(hconn, "Connection closed by management");

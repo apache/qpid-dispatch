@@ -157,9 +157,9 @@ struct qdr_http1_connection_t {
 
     // State if connected to an HTTP server
     struct {
-        qd_timer_t *activate_timer;
-        qd_timer_t *reconnect_timer;
-        int         reconnect_count;
+        qd_timer_t     *reconnect_timer;
+        qd_timestamp_t  link_timeout;
+        qd_duration_t   reconnect_pause;
     } server;
 
     // Outgoing link (router ==> HTTP app)
