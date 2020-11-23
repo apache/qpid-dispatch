@@ -233,10 +233,13 @@ class CommonHttp2Tests():
                 break
         self.assertFalse(http_server_conn_found)
 
+        sleep(2)
+
         #Now, run a curl client GET request with a timeout
         request_timed_out = False
         try:
             out = self.run_curl(address=client_addr, timeout=5)
+            print (out)
         except Exception as e:
             request_timed_out = True
 

@@ -104,8 +104,11 @@ struct qdr_http2_stream_data_t {
     bool                     out_msg_send_complete; // we use this flag to save the send_complete flag because the delivery and message associated with this stream might have been freed.
     bool                     disp_updated;   // Has the disposition already been set on the out_dlv
     bool                     disp_applied;   // Has the disp been applied to the out_dlv. The stream is ready to be freed now.
-    bool                     in_dlv_released;
     bool                     header_and_props_composed;  // true if the header and properties of the inbound message have already been composed so we don't have to do it again.
+    bool                     stream_force_closed;
+
+    bool                     in_dlv_decrefed;
+    bool                     out_dlv_decrefed;
 
     //for stats:
     char                    *method;
