@@ -94,6 +94,11 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
 static void handle_disconnected(qdr_tcp_connection_t* conn);
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* conn);
 
+static inline uint64_t qdr_tcp_conn_linkid(const qdr_tcp_connection_t *conn)
+{
+    return conn->instream ? conn->incoming_id : conn->outgoing_id;
+}
+
 static void on_activate(void *context)
 {
     qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) context;
@@ -876,8 +881,7 @@ static void qdr_tcp_first_attach(void *context, qdr_connection_t *conn, qdr_link
     void *tcontext = qdr_connection_get_context(conn);
     if (tcontext) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) tcontext;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_first_attach: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_first_attach: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_first_attach: no link context");
         assert(false);
@@ -902,8 +906,7 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = tc->instream ? tc->incoming_id : tc->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_second_attach", tc->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_second_attach", tc->conn_id, qdr_tcp_conn_linkid(tc));
         if (qdr_link_direction(link) == QD_OUTGOING) {
             if (tc->ingress) {
                 qdr_tcp_connection_copy_reply_to(tc, qdr_terminus_get_address(source));
@@ -938,8 +941,7 @@ static void qdr_tcp_flow(void *context, qdr_link_t *link, int credit)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        assert(linkid == conn->outgoing_id);
+        assert(qdr_tcp_conn_linkid(conn) == conn->outgoing_id);
         if (!conn->flow_enabled && credit > 0) {
             conn->flow_enabled = true;
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_flow: Flow enabled, credit=%d",
@@ -947,7 +949,7 @@ static void qdr_tcp_flow(void *context, qdr_link_t *link, int credit)
             handle_incoming(conn);
         } else {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_flow: No action. enabled:%s, credit:%d",
-                   conn->conn_id, linkid, conn->flow_enabled?"T":"F", credit);
+                   conn->conn_id, qdr_tcp_conn_linkid(conn), conn->flow_enabled?"T":"F", credit);
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_flow: no link context");
@@ -961,8 +963,7 @@ static void qdr_tcp_offer(void *context, qdr_link_t *link, int delivery_count)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_offer: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_offer: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_offer: no link context");
         assert(false);
@@ -976,8 +977,7 @@ static void qdr_tcp_drained(void *context, qdr_link_t *link)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_drained: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_drained: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_drained: no link context");
         assert(false);
@@ -990,8 +990,7 @@ static void qdr_tcp_drain(void *context, qdr_link_t *link, bool mode)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_drain: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_drain: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_drain: no link context");
         assert(false);
@@ -1004,8 +1003,7 @@ static int qdr_tcp_push(void *context, qdr_link_t *link, int limit)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_push", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_push", conn->conn_id, qdr_tcp_conn_linkid(conn));
         return qdr_link_process_deliveries(tcp_adaptor->core, link, limit);
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_push: no link context");
@@ -1071,8 +1069,7 @@ static int qdr_tcp_get_credit(void *context, qdr_link_t *link)
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_get_credit: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_get_credit: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_get_credit: no link context");
         assert(false);
@@ -1086,9 +1083,8 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
     void* link_context = qdr_link_get_context(qdr_delivery_link(dlv));
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        uint64_t linkid = tc->instream ? tc->incoming_id : tc->outgoing_id;
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
-               tc->conn_id, linkid, disp, settled ? "true" : "false");
+               tc->conn_id, qdr_tcp_conn_linkid(tc), disp, settled ? "true" : "false");
 
         //
         // If one of the streaming deliveries is ever settled, the connection must be torn down.
@@ -1108,8 +1104,7 @@ static void qdr_tcp_conn_close(void *context, qdr_connection_t *conn, qdr_error_
     void *tcontext = qdr_connection_get_context(conn);
     if (tcontext) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) tcontext;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_conn_close: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_conn_close: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_conn_close: no connection context");
         assert(false);
@@ -1122,8 +1117,7 @@ static void qdr_tcp_conn_trace(void *context, qdr_connection_t *conn, bool trace
     void *tcontext = qdr_connection_get_context(conn);
     if (tcontext) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) tcontext;
-        uint64_t linkid = conn->instream ? conn->incoming_id : conn->outgoing_id;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_conn_trace: NOOP", conn->conn_id, linkid);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_conn_trace: NOOP", conn->conn_id, qdr_tcp_conn_linkid(conn));
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_conn_trace: no connection context");
         assert(false);
