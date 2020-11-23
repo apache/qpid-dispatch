@@ -69,7 +69,7 @@ static qdr_http2_adaptor_t *http2_adaptor;
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
 
-static void clear_stream_data_delivery_refs(qdr_http2_stream_data_t * stream_data, qdr_delivery_t *dlv) {
+static void set_stream_data_delivery_flags(qdr_http2_stream_data_t * stream_data, qdr_delivery_t *dlv) {
     if (dlv == stream_data->in_dlv) {
         stream_data->in_dlv_decrefed = true;
     }
@@ -1419,7 +1419,7 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
         }
 
         qdr_delivery_decref(http2_adaptor->core, dlv, "HTTP2 adaptor  - qdr_http_delivery_update");
-        clear_stream_data_delivery_refs(stream_data, dlv);
+        set_stream_data_delivery_flags(stream_data, dlv);
 
         if (send_complete && stream_data->status == QD_STREAM_FULLY_CLOSED) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_delivery_update, stream_data->status == QD_STREAM_FULLY_CLOSED, calling free_http2_stream_data, send_complete(dlv)=%i", stream_data->session_data->conn->conn_id, stream_data->stream_id, stream_data->out_msg_send_complete);
@@ -1750,7 +1750,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         if (qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
             if (stream_data->out_dlv) {
                 qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - handle_outgoing_http");
-                clear_stream_data_delivery_refs(stream_data, stream_data->out_dlv);
+                set_stream_data_delivery_flags(stream_data, stream_data->out_dlv);
             }
             advance_stream_status(stream_data);
         }
