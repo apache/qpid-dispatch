@@ -69,6 +69,15 @@ static qdr_http2_adaptor_t *http2_adaptor;
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
 
+static void set_stream_data_delivery_flags(qdr_http2_stream_data_t * stream_data, qdr_delivery_t *dlv) {
+    if (dlv == stream_data->in_dlv) {
+        stream_data->in_dlv_decrefed = true;
+    }
+    if (dlv == stream_data->out_dlv) {
+        stream_data->out_dlv_decrefed = true;
+    }
+}
+
 static void advance_stream_status(qdr_http2_stream_data_t *stream_data)
 {
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Trying to move stream status", stream_data->session_data->conn->conn_id, stream_data->stream_id);
@@ -302,6 +311,15 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
     if (!stream_data->in_dlv && stream_data->message) {
         qd_message_free(stream_data->message);
     }
+
+    if (stream_data->in_dlv && !stream_data->in_dlv_decrefed) {
+        qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "HTTP2 adaptor in_dlv - free_http2_stream_data");
+    }
+
+    if (stream_data->out_dlv && !stream_data->out_dlv_decrefed) {
+        qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - free_http2_stream_data");
+    }
+
     free_qdr_http2_stream_data_t(stream_data);
 }
 
@@ -428,7 +446,7 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     // We want to be able to keep collecting the incoming DATA in the message object so we can ultimately route it when the credit does ultimately arrive.
     //
     if (stream_data->in_dlv || stream_data->header_and_props_composed) {
-        if (!stream_data->in_dlv_released) {
+        if (!stream_data->stream_force_closed) {
             qd_message_stream_data_append(stream_data->message, &buffers);
         }
     }
@@ -710,10 +728,12 @@ static bool compose_and_deliver(qdr_http2_connection_t *conn, qdr_http2_stream_d
     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Initiating qdr_link_deliver in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
 
     if (!stream_data->in_dlv && stream_data->in_link_credit > 0) {
+        //
+        // Not doing an incref here since the qdr_link_deliver increfs the delivery twice
+        //
         stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
         qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in compose_and_deliver dlv:%lx", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
         qdr_delivery_set_context(stream_data->in_dlv, stream_data);
-        qdr_delivery_decref(http2_adaptor->core, stream_data->in_dlv, "http2_adaptor - compose_and_deliver - release protection of return from deliver");
         stream_data->in_link_credit -= 1;
         return true;
     }
@@ -855,7 +875,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA frame received", conn->conn_id, stream_id);
 
         if (frame->hd.flags & NGHTTP2_FLAG_END_STREAM) {
-            if (!stream_data->in_dlv_released) {
+            if (!stream_data->stream_force_closed) {
                 qd_message_set_receive_complete(stream_data->message);
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA NGHTTP2_FLAG_END_STREAM flag received, setting receive_complete = true", conn->conn_id, stream_id);
             }
@@ -866,7 +886,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
             }
         }
 
-        if (stream_data->in_dlv && !stream_data->in_dlv_released) {
+        if (stream_data->in_dlv && !stream_data->stream_force_closed) {
             if (!stream_data->body) {
                 stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
                 qd_compose_insert_binary(stream_data->body, 0, 0);
@@ -874,16 +894,15 @@ static int on_frame_recv_callback(nghttp2_session *session,
             }
         }
 
-        if (stream_data->in_dlv && !stream_data->in_dlv_released) {
+        if (stream_data->in_dlv && !stream_data->stream_force_closed) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA frame received, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
             qdr_delivery_continue(http2_adaptor->core, stream_data->in_dlv, false);
         }
 
-        if (stream_data->out_dlv && !stream_data->disp_updated && stream_data->status == QD_STREAM_FULLY_CLOSED) {
+        if (stream_data->out_dlv && !stream_data->disp_updated && !stream_data->out_dlv_decrefed && stream_data->status == QD_STREAM_FULLY_CLOSED ) {
+            stream_data->disp_updated = true;
             qdr_delivery_remote_state_updated(http2_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In on_frame_recv_callback NGHTTP2_DATA QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", conn->conn_id, stream_data->stream_id);
-            stream_data->disp_updated = true;
-            stream_data->out_dlv = 0;
         }
     }
     break;
@@ -952,11 +971,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
 
             }
 
-            if (stream_data->out_dlv && !stream_data->disp_updated && stream_data->status == QD_STREAM_FULLY_CLOSED) {
+            if (stream_data->out_dlv && !stream_data->disp_updated && !stream_data->out_dlv_decrefed && stream_data->status == QD_STREAM_FULLY_CLOSED) {
                 qdr_delivery_remote_state_updated(http2_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
                 qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In on_frame_recv_callback NGHTTP2_HEADERS QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", conn->conn_id, stream_data->stream_id);
                 stream_data->disp_updated = true;
-                stream_data->out_dlv = 0;
             }
         }
     }
@@ -1329,13 +1347,14 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
     // but not before the curl client closes the client connection after receiving all the data. The curl client
     // does not wait for the router to send an END_STREAM flag to close the connection. The client connection closure
     // triggers the link cleanup on the ingress connection, in turn freeing up all deliveries and its peer deliveries.
-    // The peer delivery is released while it is still receiving the END_STREAM frame and the router crashes. To solve this issue,
-    // the stream_data->in_dlv_released flag is set to true when the peer delivery is released and this flag is
+    // The peer delivery is released while it is still receiving the END_STREAM frame and the router crashes when we try to set receive complete
+    // on the message because the message has already been freed. To solve this issue,
+    // the stream_data->stream_force_closed flag is set to true when the peer delivery is released and this flag is
     // check when performing further actions on the delivery. No action on the peer delivery is performed
     // if this flag is set because the delivery and its underlying message have been freed.
     //
-    if (settled && !conn->ingress && disp == PN_RELEASED) {
-        stream_data->in_dlv_released = true;
+    if (settled && !conn->ingress && (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED)) {
+        stream_data->stream_force_closed = true;
     }
 
     if (settled) {
@@ -1356,11 +1375,26 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
                 hdrs[0].valuelen = 3;
                 hdrs[0].flags = NGHTTP2_NV_FLAG_NONE;
                 nghttp2_submit_response(stream_data->session_data->session, stream_data->stream_id, hdrs, 1, 0);
-
             }
+
+            //
+            // Send a GOAWAY frame on the client/ingress connection.
+            // The GOAWAY frame is used to initiate shutdown of a connection or to signal serious error conditions.
+            //
             nghttp2_submit_goaway(stream_data->session_data->session, 0, stream_data->stream_id, NGHTTP2_CONNECT_ERROR, (uint8_t *)"Service Unavailable", 19);
-            nghttp2_session_send(stream_data->session_data->session);
+
         }
+
+        if (!conn->ingress && (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED)) {
+            //
+            // On the server side connection, send a DATA frame with an END_STREAM flag thus closing the particular stream. We
+            // don't want to close the entire connection like we did not the client side.
+            //
+            nghttp2_submit_data(conn->session_data->session, NGHTTP2_FLAG_END_STREAM, stream_data->stream_id, &conn->data_prd);
+        }
+
+        nghttp2_session_send(stream_data->session_data->session);
+
         qdr_delivery_set_context(dlv, 0);
         if (stream_data->in_dlv == dlv) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_delivery_update, stream_data->in_dlv == dlv", stream_data->session_data->conn->conn_id, stream_data->stream_id);
@@ -1384,6 +1418,9 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_delivery_update, send_complete=false", stream_data->session_data->conn->conn_id, stream_data->stream_id);
         }
 
+        qdr_delivery_decref(http2_adaptor->core, dlv, "HTTP2 adaptor  - qdr_http_delivery_update");
+        set_stream_data_delivery_flags(stream_data, dlv);
+
         if (send_complete && stream_data->status == QD_STREAM_FULLY_CLOSED) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_delivery_update, stream_data->status == QD_STREAM_FULLY_CLOSED, calling free_http2_stream_data, send_complete(dlv)=%i", stream_data->session_data->conn->conn_id, stream_data->stream_id, stream_data->out_msg_send_complete);
             free_http2_stream_data(stream_data, false);
@@ -1391,8 +1428,6 @@ static void qdr_http_delivery_update(void *context, qdr_delivery_t *dlv, uint64_
         else {
             stream_data->disp_applied = true;
         }
-
-
     }
 }
 
@@ -1713,6 +1748,10 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         }
 
         if (qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
+            if (stream_data->out_dlv) {
+                qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - handle_outgoing_http");
+                set_stream_data_delivery_flags(stream_data, stream_data->out_dlv);
+            }
             advance_stream_status(stream_data);
         }
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Finished handle_outgoing_http, the thread id = %i", conn->conn_id, pthread_self());
@@ -1739,7 +1778,10 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
         qdr_http2_connection_t *conn = stream_data->session_data->conn;
 
         qdr_http2_stream_data_t *stream_data = create_http2_stream_data(conn->session_data, 0);
-        stream_data->out_dlv = delivery;
+        if (!stream_data->out_dlv) {
+            stream_data->out_dlv = delivery;
+            qdr_delivery_incref(delivery, "egress out_dlv referenced by HTTP2 adaptor");
+        }
         qdr_terminus_t *source = qdr_terminus(0);
         qdr_terminus_set_address(source, conn->config->address);
 
@@ -1774,7 +1816,10 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
     }
     else if (stream_data) {
         if (conn->ingress) {
-            stream_data->out_dlv = delivery;
+            if (!stream_data->out_dlv) {
+                stream_data->out_dlv = delivery;
+                qdr_delivery_incref(delivery, "ingress out_dlv referenced by HTTP2 adaptor");
+            }
         }
         qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_http_deliver - call handle_outgoing_http", conn->conn_id);
         uint64_t disp = handle_outgoing_http(stream_data);
@@ -1946,7 +1991,6 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
                 qdr_delivery_remote_state_updated(http2_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
                 qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In restart_streams QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", http_conn->conn_id, stream_data->stream_id);
                 stream_data->disp_updated = true;
-                //stream_data->out_dlv = 0;
             }
             qdr_http2_stream_data_t *next_stream_data = 0;
             next_stream_data = DEQ_NEXT(stream_data);
@@ -1990,7 +2034,7 @@ static void handle_disconnected(qdr_http2_connection_t* conn)
 {
     sys_mutex_lock(qd_server_get_activation_lock(http2_adaptor->core->qd->server));
     if (conn->pn_raw_conn) {
-        qd_log(http2_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Setting conn->pn_raw_conn=0", conn->conn_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Setting conn->pn_raw_conn=0", conn->conn_id);
         conn->pn_raw_conn = 0;
     }
 
