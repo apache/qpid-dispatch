@@ -116,11 +116,7 @@ struct qdr_http1_request_base_t {
     char                     *site;
     qd_timestamp_t            start;
     qd_timestamp_t            stop;
-
-    // statistics
-    //
-    uint64_t  in_http1_octets;    // read from raw conn
-    uint64_t  out_http1_octets;   // written to raw conn
+    uint64_t                  out_http1_octets;
 };
 DEQ_DECLARE(qdr_http1_request_base_t, qdr_http1_request_list_t);
 
