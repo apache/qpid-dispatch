@@ -1285,6 +1285,7 @@ static void _write_pending_response(_client_request_t *hreq)
         _client_response_msg_t *rmsg = DEQ_HEAD(hreq->responses);
         if (rmsg && rmsg->out_data.write_ptr) {
             uint64_t written = qdr_http1_write_out_data(hreq->base.hconn, &rmsg->out_data);
+            hreq->base.out_http1_octets += written;
             qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"] %"PRIu64" octets written",
                    hreq->base.hconn->conn_id, written);
         }
