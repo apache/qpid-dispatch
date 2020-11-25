@@ -635,6 +635,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         if (ma_to) {
             addr_iter = qd_iterator_dup(qd_parse_raw(ma_to));
             phase = qd_message_get_phase_annotation(msg);
+            unsigned char *debug_ma_to = qd_iterator_copy(addr_iter);
+            qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "AMQP_rx_handler anonymous link; ma_to addr_iter: %s", debug_ma_to);
+            free(debug_ma_to);
         }
 
         //
@@ -642,6 +645,9 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         //
         if (!addr_iter) {
             addr_iter = qd_message_field_iterator(msg, QD_FIELD_TO);
+            unsigned char *debug_ma_to = qd_iterator_copy(addr_iter);
+            qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "AMQP_rx_handler anonymous link; TO in msg properties: addr_iter: %s", debug_ma_to);
+            free(debug_ma_to);
 
             //
             // If the address came from the TO field and we need to apply a tenant-space,
@@ -661,10 +667,16 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 qd_iterator_reset_view(addr_iter, ITER_VIEW_ADDRESS_HASH);
                 if (phase > 0)
                     qd_iterator_annotate_phase(addr_iter, '0' + (char) phase);
+                unsigned char *debug_ma_to = qd_iterator_copy(addr_iter);
+                unsigned char *in_iter_to = qd_iterator_copy(ingress_iter);
+                qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "AMQP_rx_handler calling qdr_link_deliver_to() addr=%s, ingress_iter=%s, msg=%p", debug_ma_to, in_iter_to, (void*)msg);
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
                                                link_exclusions, ingress_index,
                                                pn_delivery_remote_state(pnd),
                                                pn_disposition_data(pn_delivery_remote(pnd)));
+                qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "AMQP_rx_handler returned qdr_link_deliver_to() addr=%s, ingress_iter=%s, msg=%p, delivery=%p", debug_ma_to, in_iter_to, (void*)msg, (void*)delivery);
+                free(debug_ma_to);
+                free(in_iter_to);
             } else {
                 //reject
                 qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to policy violation on target. User:%s", conn->user_id);

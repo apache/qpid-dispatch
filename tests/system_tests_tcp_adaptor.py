@@ -107,6 +107,8 @@ class Logger():
 
 class TcpAdaptor(TestCase):
     """
+    HACK ALERT: For debug A-B-C hang just start interior routers.
+
     6 edge routers connected via 3 interior routers.
     9 echo servers are connected via tcpConnector, one to each router.
     Each router has 10 listeners, one for each server and
@@ -141,7 +143,7 @@ class TcpAdaptor(TestCase):
     #
 
     # Allocate routers in this order
-    router_order = ['INTA', 'INTB', 'INTC', 'EA1', 'EA2', 'EB1', 'EB2', 'EC1', 'EC2']
+    router_order = ['INTA', 'INTB', 'INTC']
 
     # List indexed in router_order
     # First listener in each router is normal AMQP for test setup and mgmt.
@@ -199,7 +201,7 @@ class TcpAdaptor(TestCase):
                                  'siteId': cls.site}),
                 ('tcpConnector', {'host': "127.0.0.1",
                                   'port': cls.tcp_server_listener_ports[name],
-                                  'address': name,
+                                  'address': 'ES_' + name,
                                   'siteId': cls.site})
             ]
             if connection:
@@ -208,7 +210,7 @@ class TcpAdaptor(TestCase):
             for rtr in cls.router_order:
                 listener = {'host': "0.0.0.0",
                             'port': cls.tcp_client_listener_ports[name][rtr],
-                            'address': rtr,
+                            'address': 'ES_' + rtr,
                             'siteId': cls.site}
                 tup = [(('tcpListener', listener))]
                 listeners.extend( tup )
@@ -281,7 +283,7 @@ class TcpAdaptor(TestCase):
         echo_logs    = "TcpAdaptor_echo*"
         big_test_log = "TcpAdaptor_all.log"
         int_logs     = "I*.log"
-        edge_logs    = "E*.log"
+        edge_logs    = ""
         log_modules_spec = "--log-modules TCP_ADAPTOR,TCP_TEST,ECHO_SERVER,ECHO_CLIENT"
         html_output  = "TcpAdaptor.html"
 
@@ -312,39 +314,39 @@ class TcpAdaptor(TestCase):
                [('connector', {'role': 'inter-router', 'port': inter_router_port_BC}),
                 ('listener', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
 
-        router('EA1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
-        router('EA2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
-        router('EB1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
-        router('EB2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
-        router('EC1', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
-        router('EC2', 'edge',
-               [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
+        # router('EA1', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
+        # router('EA2', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTA_edge_port})])
+        # router('EB1', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+        # router('EB2', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTB_edge_port})])
+        # router('EC1', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
+        # router('EC2', 'edge',
+        #        [('connector', {'name': 'uplink', 'role': 'edge', 'port': cls.INTC_edge_port})])
 
         cls.INTA = cls.routers[0]
         cls.INTB = cls.routers[1]
         cls.INTC = cls.routers[2]
-        cls.EA1 = cls.routers[3]
-        cls.EA2 = cls.routers[4]
-        cls.EB1 = cls.routers[5]
-        cls.EB2 = cls.routers[6]
-        cls.EC1 = cls.routers[7]
-        cls.EC2 = cls.routers[8]
+        # cls.EA1 = cls.routers[3]
+        # cls.EA2 = cls.routers[4]
+        # cls.EB1 = cls.routers[5]
+        # cls.EB2 = cls.routers[6]
+        # cls.EC1 = cls.routers[7]
+        # cls.EC2 = cls.routers[8]
 
         cls.router_dict = {}
         cls.router_dict['INTA'] = cls.INTA
         cls.router_dict['INTB'] = cls.INTB
         cls.router_dict['INTC'] = cls.INTC
-        cls.router_dict['EA1'] = cls.EA1
-        cls.router_dict['EA2'] = cls.EA2
-        cls.router_dict['EB1'] = cls.EB1
-        cls.router_dict['EB2'] = cls.EB2
-        cls.router_dict['EC1'] = cls.EC1
-        cls.router_dict['EC2'] = cls.EC2
+        # cls.router_dict['EA1'] = cls.EA1
+        # cls.router_dict['EA2'] = cls.EA2
+        # cls.router_dict['EB1'] = cls.EB1
+        # cls.router_dict['EB2'] = cls.EB2
+        # cls.router_dict['EC1'] = cls.EC1
+        # cls.router_dict['EC2'] = cls.EC2
 
         cls.logger.log("TCP_TEST INTA waiting for connection to INTB")
         cls.INTA.wait_router_connected('INTB')
@@ -356,14 +358,14 @@ class TcpAdaptor(TestCase):
         cls.INTC.wait_router_connected('INTB')
 
         # define logging levels
-        cls.print_logs_server = True
+        cls.print_logs_server = False
         cls.print_logs_client = True
 
         # start echo servers
         cls.echo_servers = {}
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
-            server_prefix = "ECHO_SERVER %s %s" % (test_name, rtr)
+            server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
             server_logger = Logger(title=test_name,
                                    print_to_console=cls.print_logs_server,
                                    save_for_dump=False,
@@ -512,6 +514,24 @@ class TcpAdaptor(TestCase):
                 time.sleep(0.1)
                 elapsed = time.time() - start_time
                 if elapsed > self.echo_timeout:
+                    # snapshot of addresses and links - RUNNER TIMEOUT
+                    self.logger.log("TCP_TEST runner timeout - begin snapshot")
+                    p = self.popen(
+                        ['qdstat', '-b', str(self.INTA.addresses[0]), '-a', '--all-routers'],
+                        name='qdstat-snap1', stdout=PIPE, expect=None,
+                        universal_newlines=True)
+                    out = p.communicate()[0]
+                    for line in out.split("\n"):
+                        self.logger.log("TCP_TEST tmp snap addrs: %s" % line)
+                    p = self.popen(
+                        ['qdstat', '-b', str(self.INTA.addresses[0]), '-l', '--all-routers'],
+                        name='qdstat-snap2', stdout=PIPE, expect=None,
+                        universal_newlines=True)
+                    out = p.communicate()[0]
+                    for line in out.split("\n"):
+                        self.logger.log("TCP_TEST tmp snap links: %s" % line)
+                    self.logger.log("TCP_TEST runner timeout - end snapshot")
+
                     result = "TCP_TEST TIMEOUT - local wait time exceeded"
                     break
                 # Make sure servers are still up
@@ -592,71 +612,23 @@ class TcpAdaptor(TestCase):
                 if result is not None:
                     print(result)
                     sys.stdout.flush()
+                    # # snapshot of addresses and links
+                    # p = self.popen(
+                    #     ['qdstat', '-b', str(self.INTA.addresses[0]), '-a', '--all-routers'],
+                    #     name='qdstat-shutdown', stdout=PIPE, expect=None,
+                    #     universal_newlines=True)
+                    # out = p.communicate()[0]
+                    # for line in out.split("\n"):
+                    #     self.logger.log("TCP_TEST tearDown addrs: %s" % line)
+                    # p = self.popen(
+                    #     ['qdstat', '-b', str(self.INTA.addresses[0]), '-l', '--all-routers'],
+                    #     name='qdstat-shutdown-2', stdout=PIPE, expect=None,
+                    #     universal_newlines=True)
+                    # out = p.communicate()[0]
+                    # for line in out.split("\n"):
+                    #     self.logger.log("TCP_TEST tearDown links: %s" % line)
                 assert result is None, "TCP_TEST test_01_tcp_basic_connectivity Stop %s FAIL: %s" % (name, result)
                 self.logger.log("TCP_TEST test_01_tcp_basic_connectivity Stop %s SUCCESS" % name)
-
-    # larger messages
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_10_tcp_INTA_INTA_100(self):
-        name = "test_10_tcp_INTA_INTA_100"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[100])]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_11_tcp_INTA_INTA_1000(self):
-        name = "test_11_tcp_INTA_INTA_1000"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[1000])]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_12_tcp_INTA_INTA_500000(self):
-        name = "test_12_tcp_INTA_INTA_500000"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_13_tcp_EA1_EC2_500000(self):
-        name = "test_12_tcp_EA1_EC2_500000"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[500000])]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
-
-    # concurrent messages
-    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
-    def test_50_concurrent(self):
-        name = "test_50_concurrent_AtoA_BtoB"
-        self.logger.log("TCP_TEST Start %s" % name)
-        pairs = [self.EchoPair(self.INTA, self.INTA),
-                 self.EchoPair(self.INTB, self.INTB)]
-        result = self.do_tcp_echo_n_routers(name, pairs)
-        if result is not None:
-            print(result)
-            sys.stdout.flush()
-        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
-        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
 
 if __name__== '__main__':

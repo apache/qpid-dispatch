@@ -170,14 +170,15 @@ class TcpEchoClient:
                                     self.keep_running = False
                                     # Verify the received data
                                     for idxc in range(self.count):
-                                        for idxs in range(self.size):
-                                            ob = payload_out[idxc][idxs]
-                                            ib = payload_in[idxc][idxs]
-                                            if ob != ib:
-                                                self.error = "%s ERROR Rcvd message verify fail. row:%d, col:%d, " \
-                                                             "expected:%s, actual:%s" \
-                                                             % (self.prefix, idxc, idxs, repr(ob), repr(ib))
-                                                break
+                                        if not payload_out[idxc] == payload_in[idxc]:
+                                            for idxs in range(self.size):
+                                                ob = payload_out[idxc][idxs]
+                                                ib = payload_in[idxc][idxs]
+                                                if ob != ib:
+                                                    self.error = "%s ERROR Rcvd message verify fail. row:%d, col:%d, " \
+                                                                 "expected:%s, actual:%s" \
+                                                                 % (self.prefix, idxc, idxs, repr(ob), repr(ib))
+                                                    break
                                 else:
                                     out_ready_to_send = True
                                     sel.modify(sock, selectors.EVENT_READ | selectors.EVENT_WRITE)

@@ -477,6 +477,13 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
     if (!dlv_link)
         return;
 
+    if (addr) {
+        const char *key = (const char*) qd_hash_key_by_handle(addr->hash_handle);
+        qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "qdr_link_forward_CT addr:%s path_count:%d", key, qdr_addr_path_count_CT(addr));
+    } else {
+        qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "qdr_link_forward_CT addr=0");
+    }
+
     if (dlv_link->link_type == QD_LINK_ENDPOINT && !dlv_link->fallback)
         core->deliveries_ingress++;
 
@@ -699,6 +706,9 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
 
     if (!link)
         return;
+
+    qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "qdr_link_deliver_CT delivery=%p", (void*)dlv);
+
     if (link->conn)
         link->conn->last_delivery_time = core->uptime_ticks;
 
@@ -762,6 +772,11 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
     if (DEQ_IS_EMPTY(link->undelivered)) {
         qdr_link_ref_t *temp_rlink = 0;
         qdr_address_t *addr = link->owning_addr;
+
+        char * addr_key = "(nil)";
+        if (addr)
+            addr_key = (char*) qd_hash_key_by_handle(addr->hash_handle);
+        qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "qdr_link_deliver_CT link undelivered empty... delivery=%p, owning_addr=%p - %s", (void*)dlv, (void*)addr, addr_key);
         if (!addr && dlv->to_addr) {
             qdr_connection_t *conn = link->conn;
             if (conn && conn->tenant_space)
@@ -816,6 +831,10 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
             //
             // Give the action reference to the qdr_link_forward function. Don't decref/incref.
             //
+            char * addr_key = "(nil)";
+            if (addr)
+                addr_key = (char*) qd_hash_key_by_handle(addr->hash_handle);
+            qd_log(qd_log_source("TCP_TEST"), QD_LOG_CRITICAL, "qdr_link_deliver_CT calls qdr_link_forward_CT delivery=%p, addr=%p - %s", (void*)dlv, (void*)addr, addr_key);
             qdr_link_forward_CT(core, link, dlv, addr, more);
         }
 
