@@ -39,6 +39,8 @@ ALLOC_DEFINE(qdr_connection_ref_t);
 ALLOC_DEFINE(qdr_connection_info_t);
 ALLOC_DEFINE(qdr_subscription_ref_t);
 
+const uint64_t QD_DELIVERY_MOVED_TO_NEW_LINK = 999999999;
+
 static void qdr_general_handler(void *context);
 
 qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)

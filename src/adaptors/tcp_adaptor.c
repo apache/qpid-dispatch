@@ -494,7 +494,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     case PN_RAW_CONNECTION_CONNECTED: {
         if (conn->ingress) {
             qdr_tcp_connection_ingress_accept(conn);
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted from %s", conn->conn_id, conn->remote_address);
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted from %s (global_id=%s)", conn->conn_id, conn->remote_address, conn->global_id);
             break;
         } else {
             conn->remote_address = get_address_string(conn->socket);
@@ -1019,9 +1019,11 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_deliver Delivery event", tc->conn_id, tc->outgoing_id);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Delivery event", tc->conn_id, tc->outgoing_id);
         if (tc->egress_dispatcher) {
             qdr_tcp_connection_egress(&(tc->config), tc->server, delivery);
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Connection to dispatch at egress (%lx)", tc->conn_id, delivery);
+            return QD_DELIVERY_MOVED_TO_NEW_LINK;
         } else if (!tc->outstream) {
             tc->outstream = delivery;
             qdr_delivery_incref(delivery, "tcp_adaptor - new outstream");
@@ -1039,15 +1041,16 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qdr_terminus_t *target = qdr_terminus(0);
                 qdr_terminus_set_address(target, tc->reply_to);
                 tc->incoming = qdr_link_first_attach(tc->conn,
-                                                        QD_INCOMING,
-                                                        qdr_terminus(0),  //qdr_terminus_t   *source,
-                                                        target, //qdr_terminus_t   *target,
-                                                        "tcp.egress.in",  //const char       *name,
-                                                        0,                //const char       *terminus_addr,
-                                                        false,
-                                                        NULL,
-                                                        &(tc->incoming_id));
+                                                     QD_INCOMING,
+                                                     qdr_terminus(0),  //qdr_terminus_t   *source,
+                                                     target, //qdr_terminus_t   *target,
+                                                     "tcp.egress.in",  //const char       *name,
+                                                     0,                //const char       *terminus_addr,
+                                                     false,
+                                                     NULL,
+                                                     &(tc->incoming_id));
                 qdr_link_set_context(tc->incoming, tc);
+                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Connection initiated at egress (global_id=%s)", tc->conn_id, tc->global_id);
                 //add this connection to those visible through management now that we have the global_id
                 qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
                 action->args.general.context_1 = tc;
