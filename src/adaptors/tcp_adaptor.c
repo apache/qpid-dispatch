@@ -907,8 +907,8 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_second_attach", tc->conn_id, qdr_tcp_conn_linkid(tc));
         if (qdr_link_direction(link) == QD_OUTGOING) {
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_second_attach", tc->conn_id, tc->outgoing_id);
             if (tc->ingress) {
                 qdr_tcp_connection_copy_reply_to(tc, qdr_terminus_get_address(source));
                 // for ingress, can start reading from socket once we have
@@ -919,6 +919,7 @@ static void qdr_tcp_second_attach(void *context, qdr_link_t *link,
             }
             qdr_link_flow(tcp_adaptor->core, link, 10, false);
         } else if (!tc->ingress) {
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_second_attach", tc->conn_id, tc->incoming_id);
             //for egress we can start reading from the socket once we
             //have the link to send messages over
             grant_read_buffers(tc);
