@@ -31,6 +31,7 @@ import socket
 import sys
 from threading import Thread
 from time import sleep
+import uuid
 try:
     from http.server import HTTPServer, BaseHTTPRequestHandler
     from http.client import HTTPConnection
@@ -56,9 +57,12 @@ class RequestMsg(object):
         self.headers = headers or {}
         self.body = body
 
-    def send_request(self, conn):
+    def send_request(self, conn, extra_headers=None):
+        extra_headers = extra_headers or {}
         conn.putrequest(self.method, self.target)
         for key, value in self.headers.items():
+            conn.putheader(key, value)
+        for key, value in extra_headers.items():
             conn.putheader(key, value)
         conn.endheaders()
         if self.body:
@@ -79,7 +83,8 @@ class ResponseMsg(object):
         self.body = body
         self.error = error
 
-    def send_response(self, handler):
+    def send_response(self, handler, extra_headers=None):
+        extra_headers = extra_headers or {}
         if self.error:
             handler.send_error(self.status,
                                message=self.reason)
@@ -87,6 +92,8 @@ class ResponseMsg(object):
 
         handler.send_response(self.status, self.reason)
         for key, value in self.headers.items():
+            handler.send_header(key, value)
+        for key, value in extra_headers.items():
             handler.send_header(key, value)
         handler.end_headers()
 
@@ -131,11 +138,17 @@ class RequestHandler(BaseHTTPRequestHandler):
     def _execute_request(self, tests):
         for req, resp, val in tests:
             if req.target == self.path:
+                xhdrs = None
+                if "test-echo" in self.headers:
+                    xhdrs = {"test-echo":
+                             self.headers["test-echo"]}
+
                 self._consume_body()
                 if not isinstance(resp, list):
                     resp = [resp]
                 for r in resp:
-                    r.send_response(self)
+                    r.send_response(self, extra_headers=xhdrs)
+                self.server.request_count += 1
                 return
         self.send_error(404, "Not Found")
 
@@ -209,6 +222,7 @@ class MyHTTPServer(HTTPServer):
     """
     def __init__(self, addr, handler_cls, testcases):
         self.system_tests = testcases
+        self.request_count = 0
         HTTPServer.__init__(self, addr, handler_cls)
 
 
@@ -242,6 +256,7 @@ class TestServer(object):
 
     def wait(self, timeout=TIMEOUT):
         self._logger.log("TestServer %s:%s shutting down" % self._server_addr)
+        self.request_count = 0
         if self._thread.is_alive():
             client = HTTPConnection("127.0.0.1:%s" % self._client_port,
                                     timeout=TIMEOUT)
@@ -254,6 +269,7 @@ class TestServer(object):
             self._thread.join(timeout=TIMEOUT)
         if self._server:
             self._server.server_close()
+            self.request_count = self._server.request_count
 
 
 class ThreadedTestClient(object):
@@ -261,10 +277,12 @@ class ThreadedTestClient(object):
     An HTTP client running in a separate thread
     """
     def __init__(self, tests, port, repeat=1):
+        self._id = uuid.uuid4().hex
         self._conn_addr = ("127.0.0.1:%s" % port)
         self._tests = tests
         self._repeat = repeat
-        self._logger = Logger(title="TestClient", print_to_console=False)
+        self._logger = Logger(title="TestClient: %s" % self._id,
+                              print_to_console=False)
         self._thread = Thread(target=self._run)
         self._thread.daemon = True
         self.error = None
@@ -274,11 +292,17 @@ class ThreadedTestClient(object):
     def _run(self):
         self._logger.log("TestClient connecting on %s" % self._conn_addr)
         client = HTTPConnection(self._conn_addr, timeout=TIMEOUT)
+        self._logger.log("TestClient connected")
         for loop in range(self._repeat):
+            self._logger.log("TestClient start request %d" % loop)
             for op, tests in self._tests.items():
                 for req, _, val in tests:
                     self._logger.log("TestClient sending %s %s request" % (op, req.target))
-                    req.send_request(client)
+                    req.send_request(client,
+                                     {"test-echo": "%s-%s-%s-%s" % (self._id,
+                                                                    loop,
+                                                                    op,
+                                                                    req.target)})
                     self._logger.log("TestClient getting %s response" % op)
                     rsp = client.getresponse()
                     self._logger.log("TestClient response %s received" % op)
@@ -297,12 +321,17 @@ class ThreadedTestClient(object):
                             self.error = "error: body present!"
                             return
                     self.count += 1
+                    self._logger.log("TestClient request %s %s completed!" %
+                                     (op, req.target))
         client.close()
         self._logger.log("TestClient to %s closed" % self._conn_addr)
 
     def wait(self, timeout=TIMEOUT):
         self._thread.join(timeout=TIMEOUT)
         self._logger.log("TestClient %s shut down" % self._conn_addr)
+
+    def dump_log(self):
+        self._logger.dump()
 
 
 def http1_ping(sport, cport):
@@ -1026,101 +1055,93 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
         cls.INT_A.wait_address('EA1')
         cls.INT_A.wait_address('EA2')
 
-    def test_01_streaming(self):
+    def test_01_concurrent_requests(self):
         """
-        TEMPORARILY DISABLED (DISPATCH-1819)
-        Test multiple clients sending streaming messages in parallel
+        Test multiple concurrent clients sending streaming messages
         """
-        self.skipTest("Blocked by DISPATCH-1818")
 
+        REQ_CT = 3  # 3 requests per TEST_*
         TESTS_11 = {
             "PUT": [
-                (RequestMsg("PUT", "/PUT/streaming_test",
+                (RequestMsg("PUT", "/PUT/test_01_concurrent_requests_11",
                             headers={
                                 "Transfer-encoding": "chunked",
                                 "Content-Type": "text/plain;charset=utf-8"
                             },
-
-                            # Note: due to DISPATCH-1791 the test cannot send
-                            # messages of length > Q2 without stalling. Until
-                            # this bug is fixed use a smaller message body
-                            # length:
-                            #
-                            #body=b'aBcDe\r\n' + b'1' * 0xabcde + b'\r\n'
-                            #+ b'a9B8C\r\n' + b'2' * 0xa9b8c + b'\r\n'
-                            #+ b'0\r\n\r\n'),
-
-                            body=b'FFFF\r\n' + b'1' * 0xFFFE + b'X\r\n'
+                            # ~384K to trigger Q2
+                            body=b'20000\r\n' + b'1' * 0x20000 + b'\r\n'
+                            + b'20000\r\n' + b'2' * 0x20000 + b'\r\n'
+                            + b'20000\r\n' + b'3' * 0x20000 + b'\r\n'
+                            + b'13\r\nEND OF TRANSMISSION\r\n'
                             + b'0\r\n\r\n'),
-
                  ResponseMsg(201, reason="Created",
-                             headers={"Response-Header": "data",
+                             headers={"Test-Header": "/PUT/test_01_concurrent_requests_11",
                                       "Content-Length": "0"}),
                  ResponseValidator(status=201)
                 )],
 
             "GET": [
-                (RequestMsg("GET", "/GET/test",
+                (RequestMsg("GET", "/GET/test_01_concurrent_requests_11_small",
+                            headers={"Content-Length": "000"}),
+                 ResponseMsg(200, reason="OK",
+                             headers={
+                                 "Content-Length": "19",
+                                 "Content-Type": "text/plain;charset=utf-8",
+                                 "Test-Header": "/GET/test_01_concurrent_requests_11_small"
+                             },
+                             body=b'END OF TRANSMISSION'),
+                 ResponseValidator(status=200)),
+
+                (RequestMsg("GET", "/GET/test_01_concurrent_requests_11",
                             headers={"Content-Length": "000"}),
                  ResponseMsg(200, reason="OK",
                              headers={
                                  "transfer-Encoding": "chunked",
-                                 "Content-Type": "text/plain;charset=utf-8"
+                                 "Content-Type": "text/plain;charset=utf-8",
+                                 "Test-Header": "/GET/test_01_concurrent_requests_11"
                              },
-
-                             # See DISPATCH-1791
-                             body=b'FFFF\r\n' + b'2' * 0xFFFF + b'\r\n'
+                             # ~384K to trigger Q2
+                             body=b'20000\r\n' + b'1' * 0x20000 + b'\r\n'
+                             + b'20000\r\n' + b'2' * 0x20000 + b'\r\n'
+                             + b'20000\r\n' + b'3' * 0x20000 + b'\r\n'
+                             + b'13\r\nEND OF TRANSMISSION\r\n'
                              + b'0\r\n\r\n'),
-
-                             # body=b'20000\r\n' + b'0' * 0x20000 + b'\r\n'
-                             # + b'20019\r\n' + b'1' * 0x20019 + b'\r\n'
-                             # + b'20028\r\n' + b'2' * 0x20028 + b'\r\n'
-                             # + b'20037\r\n' + b'3' * 0x20037 + b'\r\n'
-                             # + b'20046\r\n' + b'4' * 0x20046 + b'\r\n'
-                             # + b'20054\r\n' + b'5' * 0x20054 + b'\r\n'
-                             # + b'20063\r\n' + b'6' * 0x20063 + b'\r\n'
-                             # + b'20072\r\n' + b'7' * 0x20072 + b'\r\n'
-                             # + b'20081\r\n' + b'8' * 0x20081 + b'\r\n'
-                             # + b'20090\r\n' + b'9' * 0x20090 + b'\r\n'
-                             # + b'0\r\n\r\n'),
                  ResponseValidator(status=200)
                 )],
         }
 
         TESTS_10 = {
             "POST": [
-                # See DISPATCH-1791: once fixed make body length > Q2
-                (RequestMsg("POST", "/POST/streaming_test",
-                            headers={"Header-1": "H" * 2048,
-                                     #"Content-Length": "1048577",
-                                     "Content-Length": "65536",
-                                     "Content-Type": "text/plain;charset=utf-8"},
-                            # body=b'P' * 1048577),
-                            body=b'P' * 65536),
+                (RequestMsg("POST", "/POST/test_01_concurrent_requests_10",
+                            headers={"Content-Type": "text/plain;charset=utf-8",
+                                     "Content-Length": "393216"},
+                            body=b'P' * 393197
+                            + b'END OF TRANSMISSION'),
                  ResponseMsg(201, reason="Created",
-                             headers={"Response-Header": "data",
+                             headers={"Test-Header": "/POST/test_01_concurrent_requests_10",
                                       "Content-Length": "0"}),
                  ResponseValidator(status=201)
                 )],
 
             "GET": [
-                (RequestMsg("GET", "/GET/streaming_test",
+                (RequestMsg("GET", "/GET/test_01_concurrent_requests_10_small",
                             headers={"Content-Length": "000"}),
                  ResponseMsg(200, reason="OK",
-                             #headers={"Content-Length": "999999",
-                             headers={"Content-Length": "65533",
+                             # no content-length, server must close conn when done
+                             headers={"Test-Header": "/GET/test_01_concurrent_requests_10_small",
                                       "Content-Type": "text/plain;charset=utf-8"},
-                             #body=b'G' * 999999),
-                             body=b'G' * 65533),
-                 ResponseValidator(status=200),
-                ),
-                (RequestMsg("GET", "/GET/streaming_test_close",
+                             body=b'END OF TRANSMISSION'),
+                 ResponseValidator(status=200)),
+
+                (RequestMsg("GET", "/GET/test_01_concurrent_requests_10",
                             headers={"Content-Length": "000"}),
                  ResponseMsg(200, reason="OK",
-                             headers={"Content-Type": "text/plain;charset=utf-8"},
-                             #body=b'C' * 999999),
-                             body=b'C' * 65537),
-                 ResponseValidator(status=200),
+                             headers={"Test-Header": "/GET/test_01_concurrent_requests_10",
+                                      "Content-Length": "393215",
+                                      "Content-Type": "text/plain;charset=utf-8"},
+                             body=b'G' * 393196
+                             + b'END OF TRANSMISSION'),
+                 ResponseValidator(status=200)
                 )],
         }
         server11 = TestServer(server_port=self.http_server11_port,
@@ -1133,20 +1154,31 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
 
         self.EA2.wait_connectors()
 
+        repeat_ct = 10
+        client_ct = 4  # per version
         clients = []
-        for _ in range(2):
+        for _ in range(client_ct):
             clients.append(ThreadedTestClient(TESTS_11,
                                               self.http_listener11_port,
-                                              repeat=10))
+                                              repeat=repeat_ct))
             clients.append(ThreadedTestClient(TESTS_10,
                                               self.http_listener10_port,
-                                              repeat=10))
+                                              repeat=repeat_ct))
         for client in clients:
             client.wait()
-            self.assertIsNone(client.error)
+            try:
+                self.assertIsNone(client.error)
+                self.assertEqual(repeat_ct * REQ_CT, client.count)
+            except Exception:
+                client.dump_log()
+                raise
 
         server11.wait()
+        self.assertEqual(client_ct * repeat_ct * REQ_CT,
+                         server11.request_count)
         server10.wait()
+        self.assertEqual(client_ct * repeat_ct * REQ_CT,
+                         server10.request_count)
 
     def test_02_credit_replenish(self):
         """
