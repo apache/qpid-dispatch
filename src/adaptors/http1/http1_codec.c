@@ -1281,13 +1281,13 @@ static bool parse_done(h1_codec_connection_t *conn, struct decoder_t *decoder)
         hrs->request_complete = true;
     }
 
+    decoder_reset(decoder);
+
     if (!close_expected) {
         if (hrs->request_complete && hrs->response_complete) {
             conn->config.request_complete(hrs, false);
-            decoder->hrs = 0;
             h1_codec_request_state_free(hrs);
         }
-        decoder_reset(decoder);
         return !!decoder->read_ptr.remaining;
     } else
         return false;  // stop parsing input, wait for close
@@ -1591,6 +1591,7 @@ int h1_codec_tx_done(h1_codec_request_state_t *hrs, bool *need_close)
     }
 
     encoder_reset(encoder);
+
     if (hrs->request_complete && hrs->response_complete) {
         conn->config.request_complete(hrs, false);
         h1_codec_request_state_free(hrs);
