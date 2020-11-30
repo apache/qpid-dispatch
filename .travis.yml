@@ -69,6 +69,8 @@ jobs:
     - python -m pip install --user --upgrade tox virtualenv==20.0.23
     # Install quart to run the http2 tests.
     - python -m pip install --user quart
+    # Install grpcio and protobuf to run the grpc tests.
+    - python -m pip install --user grpcio protobuf
     env:
     - CC=clang-10
     - CXX=clang++-10

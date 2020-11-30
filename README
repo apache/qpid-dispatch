@@ -79,6 +79,10 @@ To install pip and Quart
  - python3 get-pip.py
  - pip3 install --user quart
 
+The gRPC system tests (tests/system_tests_grpc.py) use grpcio and protobuf modules.
+To install them use:
+  - pip3 install --user grpcio protobuf
+
 
 Test Suite Code Coverage (GNU tools only)
 =========================================
