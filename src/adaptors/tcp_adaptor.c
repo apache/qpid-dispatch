@@ -496,12 +496,12 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     case PN_RAW_CONNECTION_CONNECTED: {
         if (conn->ingress) {
             qdr_tcp_connection_ingress_accept(conn);
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted from %s (global_id=%s)", conn->conn_id, conn->remote_address, conn->global_id);
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] PN_RAW_CONNECTION_CONNECTED Ingress accepted to %s from %s (global_id=%s)", conn->conn_id, conn->config.host_port, conn->remote_address, conn->global_id);
             break;
         } else {
             conn->remote_address = get_address_string(conn->pn_raw_conn);
             conn->opened_time = tcp_adaptor->core->uptime_ticks;
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected", conn->conn_id);
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] PN_RAW_CONNECTION_CONNECTED Egress connected to %s", conn->conn_id, conn->remote_address);
             if (!!conn->initial_delivery) {
                 qdr_tcp_open_server_side_connection(conn);
                 conn->initial_delivery = 0;
@@ -512,34 +512,34 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         }
     }
     case PN_RAW_CONNECTION_CLOSED_READ: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for reading", conn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_READ", conn->conn_id);
         pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for writing", conn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_CLOSED_WRITE", conn->conn_id);
         pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
-        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Disconnected", conn->conn_id);
+        qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] PN_RAW_CONNECTION_DISCONNECTED", conn->conn_id);
         handle_disconnected(conn);
         break;
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", conn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_NEED_WRITE_BUFFERS", conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
         handle_outgoing(conn);
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", conn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_NEED_READ_BUFFERS", conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
         handle_incoming(conn);
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wake-up", conn->conn_id);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WAKE", conn->conn_id);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -547,7 +547,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         int read = handle_incoming(conn);
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in += read;
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Read %i bytes", conn->conn_id, read);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_READ Read %i bytes", conn->conn_id, read);
         while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
@@ -563,7 +563,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                 }
             }
         }
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wrote %i bytes", conn->conn_id, written);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %i bytes", conn->conn_id, written);
         conn->last_out_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_out += written;
         while (qdr_connection_process(conn->qdr_conn)) {}
@@ -742,12 +742,12 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server, void *c
     switch (pn_event_type(e)) {
 
     case PN_LISTENER_OPEN: {
-        qd_log(log, QD_LOG_NOTICE, "Listening on %s", host_port);
+        qd_log(log, QD_LOG_NOTICE, "PN_LISTENER_OPEN Listening on %s", host_port);
         break;
     }
 
     case PN_LISTENER_ACCEPT: {
-        qd_log(log, QD_LOG_INFO, "Accepting TCP connection on %s", host_port);
+        qd_log(log, QD_LOG_INFO, "PN_LISTENER_ACCEPT Accepting TCP connection on %s", host_port);
         qdr_tcp_connection_ingress(li);
         break;
     }
@@ -756,11 +756,11 @@ static void handle_listener_event(pn_event_t *e, qd_server_t *qd_server, void *c
         if (li->pn_listener) {
             pn_condition_t *cond = pn_listener_condition(li->pn_listener);
             if (pn_condition_is_set(cond)) {
-                qd_log(log, QD_LOG_ERROR, "Listener error on %s: %s (%s)", host_port,
+                qd_log(log, QD_LOG_ERROR, "PN_LISTENER_CLOSE Listener error on %s: %s (%s)", host_port,
                        pn_condition_get_description(cond),
                        pn_condition_get_name(cond));
             } else {
-                qd_log(log, QD_LOG_TRACE, "Listener closed on %s", host_port);
+                qd_log(log, QD_LOG_TRACE, "PN_LISTENER_CLOSE Listener closed on %s", host_port);
             }
             pn_listener_set_context(li->pn_listener, 0);
             li->pn_listener = 0;
