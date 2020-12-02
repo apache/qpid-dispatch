@@ -203,6 +203,7 @@ typedef void (*qdr_link_drain_t) (void *context, qdr_link_t *link, bool mode);
  */
 typedef int (*qdr_link_push_t) (void *context, qdr_link_t *link, int limit);
 
+extern const uint64_t QD_DELIVERY_MOVED_TO_NEW_LINK;
 /**
  * qdr_link_deliver_t callback
  *
