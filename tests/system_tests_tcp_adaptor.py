@@ -35,6 +35,7 @@ from system_test import QdManager
 from system_test import unittest
 from system_test import DIR
 from system_test import SkipIfNeeded
+from system_test import Process
 from qpid_dispatch.management.client import Node
 from subprocess import PIPE, STDOUT
 
@@ -199,7 +200,7 @@ class TcpAdaptor(TestCase):
                                  'siteId': cls.site}),
                 ('tcpConnector', {'host': "127.0.0.1",
                                   'port': cls.tcp_server_listener_ports[name],
-                                  'address': name,
+                                  'address': 'ES_' + name,
                                   'siteId': cls.site})
             ]
             if connection:
@@ -208,7 +209,7 @@ class TcpAdaptor(TestCase):
             for rtr in cls.router_order:
                 listener = {'host': "0.0.0.0",
                             'port': cls.tcp_client_listener_ports[name][rtr],
-                            'address': rtr,
+                            'address': 'ES_' + rtr,
                             'siteId': cls.site}
                 tup = [(('tcpListener', listener))]
                 listeners.extend( tup )
@@ -356,14 +357,14 @@ class TcpAdaptor(TestCase):
         cls.INTC.wait_router_connected('INTB')
 
         # define logging levels
-        cls.print_logs_server = True
+        cls.print_logs_server = False
         cls.print_logs_client = True
 
         # start echo servers
         cls.echo_servers = {}
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
-            server_prefix = "ECHO_SERVER %s %s" % (test_name, rtr)
+            server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
             server_logger = Logger(title=test_name,
                                    print_to_console=cls.print_logs_server,
                                    save_for_dump=False,
@@ -374,6 +375,28 @@ class TcpAdaptor(TestCase):
                                    logger=server_logger)
             assert server.is_running
             cls.echo_servers[rtr] = server
+
+        # wait for server addresses (mobile ES_<rtr>) to propagate to all interior routers
+        interior_rtrs = [rtr for rtr in cls.router_order if rtr.startswith('I')]
+        found_all = False
+        while not found_all:
+            time.sleep(0.5)
+            found_all = True
+            for rtr in interior_rtrs:
+                # query each interior for addresses
+                p = Process(
+                    ['qdstat', '-b', str(cls.router_dict[rtr].addresses[0]), '-a'],
+                    name='qdstat-snap1', stdout=PIPE, expect=None,
+                    universal_newlines=True)
+                out = p.communicate()[0]
+                lines = out.split("\n")
+                server_lines = [line for line in lines if "mobile" in line and "ES_" in line]
+                if not len(server_lines) == len(cls.router_order):
+                    found_all = False
+                    cls.logger.log("TCP_TEST waiting for server addresses to propagate. "
+                                   "Router %s sees only %d of %d addresses" %
+                                   (rtr, len(server_lines), len(cls.router_order)))
+                    break
 
     @classmethod
     def tearDownClass(cls):
