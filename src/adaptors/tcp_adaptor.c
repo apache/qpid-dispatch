@@ -40,13 +40,13 @@ typedef struct qdr_tcp_connection_t qdr_tcp_connection_t;
 struct qdr_tcp_connection_t {
     qd_handler_context_t  context;
     char                 *reply_to;
-    qdr_connection_t     *conn;
+    qdr_connection_t     *qdr_conn;
     uint64_t              conn_id;
     qdr_link_t           *incoming;
     uint64_t              incoming_id;
     qdr_link_t           *outgoing;
     uint64_t              outgoing_id;
-    pn_raw_connection_t  *socket;
+    pn_raw_connection_t  *pn_raw_conn;
     qdr_delivery_t       *instream;
     qdr_delivery_t       *outstream;
     bool                  ingress;
@@ -107,10 +107,10 @@ static void on_activate(void *context)
     qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) context;
 
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] on_activate", conn->conn_id);
-    while (qdr_connection_process(conn->conn)) {}
+    while (qdr_connection_process(conn->qdr_conn)) {}
     if (conn->egress_dispatcher && conn->connector_closed) {
-        qdr_connection_closed(conn->conn);
-        qdr_connection_set_context(conn->conn, 0);
+        qdr_connection_closed(conn->qdr_conn);
+        qdr_connection_set_context(conn->qdr_conn, 0);
         free_qdr_tcp_connection(conn);
     }
 }
@@ -119,8 +119,8 @@ static void grant_read_buffers(qdr_tcp_connection_t *conn)
 {
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     // Give proactor more read buffers for the socket
-    if (!pn_raw_connection_is_read_closed(conn->socket)) {
-        size_t desired = pn_raw_connection_read_buffers_capacity(conn->socket);
+    if (!pn_raw_connection_is_read_closed(conn->pn_raw_conn)) {
+        size_t desired = pn_raw_connection_read_buffers_capacity(conn->pn_raw_conn);
         while (desired) {
             size_t i;
             for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
@@ -132,7 +132,7 @@ static void grant_read_buffers(qdr_tcp_connection_t *conn)
                 raw_buffers[i].context = (uintptr_t) buf;
             }
             desired -= i;
-            pn_raw_connection_give_read_buffers(conn->socket, raw_buffers, i);
+            pn_raw_connection_give_read_buffers(conn->pn_raw_conn, raw_buffers, i);
         }
     }
 }
@@ -157,7 +157,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     size_t n;
     int count = 0;
-    while ( (n = pn_raw_connection_take_read_buffers(conn->socket, raw_buffers, READ_BUFFERS)) ) {
+    while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
             qd_buffer_t *buf = (qd_buffer_t*) raw_buffers[i].context;
             qd_buffer_insert(buf, raw_buffers[i].size);
@@ -254,8 +254,8 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - detach outgoing", conn->conn_id, conn->outgoing_id);
         qdr_link_detach(conn->outgoing, QD_LOST, 0);
     }
-    qdr_connection_closed(conn->conn);
-    qdr_connection_set_context(conn->conn, 0);
+    qdr_connection_closed(conn->qdr_conn);
+    qdr_connection_set_context(conn->qdr_conn, 0);
     //need to free on core thread to avoid deleting while in use by management agent
     qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
     action->args.general.context_1 = conn;
@@ -334,7 +334,7 @@ static bool write_outgoing_buffs(qdr_tcp_connection_t *conn)
     if (conn->outgoing_buff_count == 0) {
         result = true;
     } else {
-        size_t used = pn_raw_connection_write_buffers(conn->socket,
+        size_t used = pn_raw_connection_write_buffers(conn->pn_raw_conn,
                                                       &conn->outgoing_buffs[conn->outgoing_buff_idx],
                                                       conn->outgoing_buff_count);
         result = used == conn->outgoing_buff_count;
@@ -382,7 +382,7 @@ static void handle_outgoing(qdr_tcp_connection_t *conn)
         }
 
         if (qd_message_receive_complete(msg) || qd_message_send_complete(msg)) {
-            pn_raw_connection_close(conn->socket);
+            pn_raw_connection_close(conn->pn_raw_conn);
         }
     }
 }
@@ -414,7 +414,7 @@ static char *get_address_string(pn_raw_connection_t *socket)
 
 static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
 {
-    tc->remote_address = get_address_string(tc->socket);
+    tc->remote_address = get_address_string(tc->pn_raw_conn);
     tc->global_id = get_global_id(tc->config.site_id, tc->remote_address);
     qdr_connection_info_t *info = qdr_connection_info(false, //bool             is_encrypted,
                                                       false, //bool             is_authenticated,
@@ -451,7 +451,7 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
                                                    info,
                                                    0,
                                                    0);
-    tc->conn = conn;
+    tc->qdr_conn = conn;
     qdr_connection_set_context(conn, tc);
 
     qdr_terminus_t *dynamic_source = qdr_terminus(0);
@@ -499,26 +499,26 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted from %s (global_id=%s)", conn->conn_id, conn->remote_address, conn->global_id);
             break;
         } else {
-            conn->remote_address = get_address_string(conn->socket);
+            conn->remote_address = get_address_string(conn->pn_raw_conn);
             conn->opened_time = tcp_adaptor->core->uptime_ticks;
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected", conn->conn_id);
             if (!!conn->initial_delivery) {
                 qdr_tcp_open_server_side_connection(conn);
                 conn->initial_delivery = 0;
             }
-            while (qdr_connection_process(conn->conn)) {}
+            while (qdr_connection_process(conn->qdr_conn)) {}
             handle_outgoing(conn);
             break;
         }
     }
     case PN_RAW_CONNECTION_CLOSED_READ: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for reading", conn->conn_id);
-        pn_raw_connection_close(conn->socket);
+        pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_CLOSED_WRITE: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Closed for writing", conn->conn_id);
-        pn_raw_connection_close(conn->socket);
+        pn_raw_connection_close(conn->pn_raw_conn);
         break;
     }
     case PN_RAW_CONNECTION_DISCONNECTED: {
@@ -528,19 +528,19 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
     }
     case PN_RAW_CONNECTION_NEED_WRITE_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need write buffers", conn->conn_id);
-        while (qdr_connection_process(conn->conn)) {}
+        while (qdr_connection_process(conn->qdr_conn)) {}
         handle_outgoing(conn);
         break;
     }
     case PN_RAW_CONNECTION_NEED_READ_BUFFERS: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Need read buffers", conn->conn_id);
-        while (qdr_connection_process(conn->conn)) {}
+        while (qdr_connection_process(conn->qdr_conn)) {}
         handle_incoming(conn);
         break;
     }
     case PN_RAW_CONNECTION_WAKE: {
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wake-up", conn->conn_id);
-        while (qdr_connection_process(conn->conn)) {}
+        while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
     case PN_RAW_CONNECTION_READ: {
@@ -548,14 +548,14 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         conn->last_in_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_in += read;
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Read %i bytes", conn->conn_id, read);
-        while (qdr_connection_process(conn->conn)) {}
+        while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
     case PN_RAW_CONNECTION_WRITTEN: {
         pn_raw_buffer_t buffs[WRITE_BUFFERS];
         size_t n;
         size_t written = 0;
-        while ( (n = pn_raw_connection_take_written_buffers(conn->socket, buffs, WRITE_BUFFERS)) ) {
+        while ( (n = pn_raw_connection_take_written_buffers(conn->pn_raw_conn, buffs, WRITE_BUFFERS)) ) {
             for (size_t i = 0; i < n; ++i) {
                 written += buffs[i].size;
                 if (buffs[i].context) {
@@ -566,7 +566,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
         qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] Wrote %i bytes", conn->conn_id, written);
         conn->last_out_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_out += written;
-        while (qdr_connection_process(conn->conn)) {}
+        while (qdr_connection_process(conn->qdr_conn)) {}
         break;
     }
     default:
@@ -584,13 +584,13 @@ static qdr_tcp_connection_t *qdr_tcp_connection_ingress(qd_tcp_listener_t* liste
     tc->context.handler = &handle_connection_event;
     tc->config = listener->config;
     tc->server = listener->server;
-    tc->socket = pn_raw_connection();
-    pn_raw_connection_set_context(tc->socket, tc);
+    tc->pn_raw_conn = pn_raw_connection();
+    pn_raw_connection_set_context(tc->pn_raw_conn, tc);
     //the following call will cause a PN_RAW_CONNECTION_CONNECTED
     //event on another thread, which is where the rest of the
     //initialisation will happen, through a call to
     //qdr_tcp_connection_ingress_accept
-    pn_listener_raw_accept(listener->pn_listener, tc->socket);
+    pn_listener_raw_accept(listener->pn_listener, tc->pn_raw_conn);
     return tc;
 }
 
@@ -633,7 +633,7 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                                    info,
                                                    0,
                                                    0);
-    tc->conn = conn;
+    tc->qdr_conn = conn;
     qdr_connection_set_context(conn, tc);
 
     qdr_terminus_t *source = qdr_terminus(0);
@@ -679,9 +679,9 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
         qdr_tcp_open_server_side_connection(tc);
     else {
         qd_log(tcp_adaptor->log_source, QD_LOG_INFO, "[C%"PRIu64"] Connecting to: %s", tc->conn_id, tc->config.host_port);
-        tc->socket = pn_raw_connection();
-        pn_raw_connection_set_context(tc->socket, tc);
-        pn_proactor_raw_connect(qd_server_proactor(tc->server), tc->socket, tc->config.host_port);
+        tc->pn_raw_conn = pn_raw_connection();
+        pn_raw_connection_set_context(tc->pn_raw_conn, tc);
+        pn_proactor_raw_connect(qd_server_proactor(tc->server), tc->pn_raw_conn, tc->config.host_port);
     }
 
     return tc;
@@ -1056,7 +1056,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                 qd_iterator_free(f_iter);
                 qdr_terminus_t *target = qdr_terminus(0);
                 qdr_terminus_set_address(target, tc->reply_to);
-                tc->incoming = qdr_link_first_attach(tc->conn,
+                tc->incoming = qdr_link_first_attach(tc->qdr_conn,
                                                      QD_INCOMING,
                                                      qdr_terminus(0),  //qdr_terminus_t   *source,
                                                      target, //qdr_terminus_t   *target,
@@ -1110,7 +1110,7 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
         // If one of the streaming deliveries is ever settled, the connection must be torn down.
         //
         if (settled) {
-            pn_raw_connection_close(tc->socket);
+            pn_raw_connection_close(tc->pn_raw_conn);
         }
     } else {
         qd_log(tcp_adaptor->log_source, QD_LOG_ERROR, "qdr_tcp_delivery_update: no link context");
@@ -1149,9 +1149,9 @@ static void qdr_tcp_activate(void *notused, qdr_connection_t *c)
     void *context = qdr_connection_get_context(c);
     if (context) {
         qdr_tcp_connection_t* conn = (qdr_tcp_connection_t*) context;
-        if (conn->socket) {
+        if (conn->pn_raw_conn) {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_tcp_activate: waking raw connection", conn->conn_id);
-            pn_raw_connection_wake(conn->socket);
+            pn_raw_connection_wake(conn->pn_raw_conn);
         } else if (conn->activate_timer) {
             // On egress, the raw connection is only created once the
             // first part of the message encapsulating the
