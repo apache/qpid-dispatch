@@ -875,14 +875,6 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
 
     qd_compose_end_map(rmsg->msg_props);
 
-    if (!has_body) {
-        // @TODO(kgiusti): fixme: tack on an empty body data performative.  The
-        // message decoder will barf otherwise
-        qd_buffer_list_t empty = DEQ_EMPTY;
-        rmsg->msg_props = qd_compose(QD_PERFORMATIVE_BODY_DATA, rmsg->msg_props);
-        qd_compose_insert_binary_buffers(rmsg->msg_props, &empty);
-    }
-
     qd_message_compose_3(rmsg->msg, props, rmsg->msg_props, !has_body);
     qd_compose_free(props);
     qd_compose_free(rmsg->msg_props);

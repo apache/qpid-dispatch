@@ -79,7 +79,7 @@ class ResponseMsg(object):
         self.status = status
         self.version = version or "HTTP/1.1"
         self.reason = reason
-        self.headers = headers or []
+        self.headers = headers or {}
         self.body = body
         self.error = error
 
@@ -487,6 +487,11 @@ class Http1AdaptorOneRouterTest(TestCase):
              ResponseMsg(400, reason="Bad breath", error=True),
              ResponseValidator(status=400)),
 
+            (RequestMsg("GET", "/GET/no_content",
+                        headers={"Content-Length": 0}),
+             ResponseMsg(204, reason="No Content"),
+             ResponseValidator(status=204)),
+
             (RequestMsg("GET", "/GET/content_len",
                         headers={"Content-Length": "00"}),
              ResponseMsg(200, reason="OK",
@@ -672,6 +677,11 @@ class Http1AdaptorOneRouterTest(TestCase):
                         headers={"Content-Length": 0}),
              ResponseMsg(400, reason="Bad breath", error=True),
              ResponseValidator(status=400)),
+
+            (RequestMsg("GET", "/GET/no_content",
+                        headers={"Content-Length": 0}),
+             ResponseMsg(204, reason="No Content"),
+             ResponseValidator(status=204)),
 
             (RequestMsg("GET", "/GET/content_len_511",
                         headers={"Content-Length": 0}),
@@ -951,9 +961,10 @@ class Http1AdaptorOneRouterTest(TestCase):
         stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
         self.assertEqual(len(stats), 2)
         for s in stats:
-            self.assertEqual(s.get('requests'), 9)
+            self.assertEqual(s.get('requests'), 10)
             self.assertEqual(s.get('details').get('GET:400'), 1)
             self.assertEqual(s.get('details').get('GET:200'), 6)
+            self.assertEqual(s.get('details').get('GET:204'), 1)
             self.assertEqual(s.get('details').get('POST:200'), 2)
         def assert_approximately_equal(a, b):
             self.assertTrue((abs(a - b) / a) < 0.1)
