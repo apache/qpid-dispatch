@@ -147,7 +147,6 @@ class TcpEchoClient:
                          selectors.EVENT_READ | selectors.EVENT_WRITE)
 
             # event loop
-            time.sleep(0.1)  # DISPATCH-1820 investigation
             while self.keep_running:
                 if self.timeout > 0.0:
                     elapsed = time.time() - start_time
