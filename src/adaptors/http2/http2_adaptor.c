@@ -511,8 +511,6 @@ static int snd_data_callback(nghttp2_session *session,
     qdr_http2_session_data_t *session_data = conn->session_data;
     qdr_http2_stream_data_t *stream_data = (qdr_http2_stream_data_t *)source->ptr;
 
-    stream_data->bytes_out += length;
-
     qd_http2_buffer_t *http2_buff = qd_http2_buffer();
     DEQ_INSERT_TAIL(session_data->buffs, http2_buff);
     // Insert the framehd of length 9 bytes into the buffer
@@ -1155,6 +1153,9 @@ ssize_t read_data_callback(nghttp2_session *session,
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback remaining_payload_length <= QD_HTTP2_BUFFER_SIZE ELSE bytes_to_send=%zu, stream_data->qd_buffers_to_send=%zu", conn->conn_id, stream_data->stream_id, bytes_to_send, stream_data->qd_buffers_to_send);
                 }
             }
+
+            stream_data->bytes_out += bytes_to_send;
+
             if ((*data_flags & NGHTTP2_DATA_FLAG_EOF) && conn->ingress) {
                 _http_record_request(conn, stream_data);
             }
