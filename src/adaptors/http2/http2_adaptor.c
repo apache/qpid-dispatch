@@ -300,7 +300,6 @@ static void free_http2_stream_data(qdr_http2_stream_data_t *stream_data, bool on
         DEQ_REMOVE(session_data->streams, stream_data);
         nghttp2_session_set_stream_user_data(session_data->session, stream_data->stream_id, NULL);
     }
-    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Freeing stream", stream_data->session_data->conn->conn_id, stream_data->stream_id);
     if (stream_data->method)      free(stream_data->method);
     if (stream_data->remote_site) free(stream_data->remote_site);
 
@@ -1761,11 +1760,14 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         }
 
         if (qd_message_send_complete(qdr_delivery_message(stream_data->out_dlv))) {
-            if (stream_data->out_dlv) {
+            advance_stream_status(stream_data);
+            if (!stream_data->disp_updated && stream_data->status == QD_STREAM_FULLY_CLOSED) {
+                qdr_delivery_remote_state_updated(http2_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In handle_outgoing_http, qdr_delivery_remote_state_updated(stream_data->out_dlv)", conn->conn_id, stream_data->stream_id);
+                stream_data->disp_updated = true;
                 qdr_delivery_decref(http2_adaptor->core, stream_data->out_dlv, "HTTP2 adaptor out_dlv - handle_outgoing_http");
                 set_stream_data_delivery_flags(stream_data, stream_data->out_dlv);
             }
-            advance_stream_status(stream_data);
         }
         qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Finished handle_outgoing_http", conn->conn_id);
     }
