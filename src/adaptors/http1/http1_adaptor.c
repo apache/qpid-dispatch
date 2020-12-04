@@ -182,11 +182,9 @@ void qdr_http1_close_connection(qdr_http1_connection_t *hconn, const char *error
                "[C%"PRIu64"] Connection closing: %s", hconn->conn_id, error);
     }
 
-    qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
-           "[C%"PRIu64"] Initiating close of connection", hconn->conn_id);
-
     if (hconn->raw_conn) {
-        hconn->close_connection = true;
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+               "[C%"PRIu64"] Initiating close of connection", hconn->conn_id);
         pn_raw_connection_close(hconn->raw_conn);
     }
 
