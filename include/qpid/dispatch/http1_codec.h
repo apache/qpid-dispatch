@@ -147,15 +147,6 @@ typedef struct h1_codec_config_t {
 h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *context);
 void *h1_codec_connection_get_context(h1_codec_connection_t *conn);
 
-// Notify the codec that the endpoint closed the connection.  This should be
-// called for server connections only. Once the server has reconnected it is
-// safe to resume calling h1_codec_connection_rx_data().  This method is a
-// no-op for client connections.  When a client connection closes the
-// application must cancel all outstanding requests and then call
-// h1_codec_connection_free() instead.
-//
-void h1_codec_connection_closed(h1_codec_connection_t *conn);
-
 // Release the codec.  This can only be done after all outstanding requests
 // have been completed or cancelled.
 //
@@ -168,6 +159,15 @@ void h1_codec_connection_free(h1_codec_connection_t *conn);
 // h1_codec_connection_free().
 //
 int h1_codec_connection_rx_data(h1_codec_connection_t *conn, qd_buffer_list_t *data, uintmax_t len);
+
+// Notify the codec that the endpoint closed the connection.  For server-facing
+// connections it is safe to resume calling h1_codec_connection_rx_data() for
+// the h1_codec_connection once the connection to the server is reestablished.
+// Client-facing connections cannot be resumed after the connection has been
+// closed. In the client case the  application must cancel all outstanding
+// requests and then call h1_codec_connection_free() instead.
+//
+void h1_codec_connection_rx_closed(h1_codec_connection_t *conn);
 
 void h1_codec_request_state_set_context(h1_codec_request_state_t *hrs, void *context);
 void *h1_codec_request_state_get_context(const h1_codec_request_state_t *hrs);

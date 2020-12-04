@@ -183,7 +183,6 @@ struct qdr_http1_connection_t {
     // flags
     //
     bool trace;
-    bool close_connection;
 };
 ALLOC_DECLARE(qdr_http1_connection_t);
 

@@ -107,6 +107,7 @@ struct h1_codec_request_state_t {
     bool no_body_method;    // true if request method is either HEAD or CONNECT
     bool request_complete;  // true when request message done encoding/decoding
     bool response_complete; // true when response message done encoding/decoding
+    bool close_expected;    // if true do not signal request_complete cb until closed
 };
 DEQ_DECLARE(h1_codec_request_state_t, h1_codec_request_state_list_t);
 ALLOC_DECLARE(h1_codec_request_state_t);
@@ -236,39 +237,6 @@ h1_codec_connection_t *h1_codec_connection(h1_codec_config_t *config, void *cont
     conn->decoder.read_ptr = NULL_I_PTR;
 
     return conn;
-}
-
-
-// The connection has closed.  If this is a connection to a server this may
-// simply be the end of the response message.  Mark the in-flight response as
-// completed.
-//
-void h1_codec_connection_closed(h1_codec_connection_t *conn)
-{
-    if (conn && conn->config.type == HTTP1_CONN_SERVER) {
-
-        // is decoding a response in progress
-        struct decoder_t *decoder = &conn->decoder;
-        h1_codec_request_state_t *hrs = decoder->hrs;
-        if (hrs && hrs->request_complete) {
-            // the corresponding request msg is complete
-            if (!hrs->response_complete) {
-                hrs->response_complete = true;
-                conn->config.rx_done(hrs);
-            }
-            conn->config.request_complete(hrs, false);
-            decoder_reset(decoder);
-            h1_codec_request_state_free(hrs);
-            if (hrs == conn->encoder.hrs)
-                encoder_reset(&conn->encoder);
-        }
-
-        // since the underlying connection is gone discard all remaining
-        // incoming data
-        decoder_reset(decoder);
-        qd_buffer_list_free_buffers(&conn->decoder.incoming);
-        decoder->read_ptr = NULL_I_PTR;
-    }
 }
 
 
@@ -835,6 +803,17 @@ static bool process_headers_done(h1_codec_connection_t *conn, struct decoder_t *
                 has_body = false;
             }
         }
+
+        // In certain scenarios an HTTP server will close the connection to
+        // indicate the end of a response message. This may happen even if
+        // the request message has a known length (Content-Length or
+        // Transfer-Encoding).  In these circumstances do NOT signal that
+        // the request is complete (call request_complete() callback) until
+        // the connection closes.  Otherwise the user may start sending the
+        // next request message before the HTTP server closes the TCP
+        // connection.  (see RFC7230, section Persistence)
+        hrs->close_expected = decoder->hdr_conn_close
+            || (decoder->is_http10 && !decoder->hdr_conn_keep_alive);
     }
 
     decoder->error = conn->config.rx_headers_done(decoder->hrs, has_body);
@@ -1257,25 +1236,12 @@ static bool parse_done(h1_codec_connection_t *conn, struct decoder_t *decoder)
     // signal the message receive is complete
     conn->config.rx_done(hrs);
 
-    bool close_expected = false;
     if (is_response) {
-        // Informational 1xx response codes are NOT teriminal - further responses are allowed!
+        // Informational 1xx response codes are NOT terminal - further responses are allowed!
         if (IS_INFO_RESPONSE(hrs->response_code)) {
             hrs->response_code = 0;
         } else {
             hrs->response_complete = true;
-
-            // In certain scenarios an HTTP server will close the connection to
-            // indicate the end of a response message. This may happen even if
-            // the request message has a known length (Content-Length or
-            // Transfer-Encoding).  In these circumstances do NOT signal that
-            // the request is complete (call request_complete() callback) until
-            // the connection closes.  Otherwise the user may start sending the
-            // next request message before the HTTP server closes the TCP
-            // connection.  (see RFC7230, section Persistence)
-
-            close_expected = decoder->hdr_conn_close
-                || (decoder->is_http10 && !decoder->hdr_conn_keep_alive);
         }
     } else {
         hrs->request_complete = true;
@@ -1283,7 +1249,7 @@ static bool parse_done(h1_codec_connection_t *conn, struct decoder_t *decoder)
 
     decoder_reset(decoder);
 
-    if (!close_expected) {
+    if (!hrs->close_expected) {
         if (hrs->request_complete && hrs->response_complete) {
             conn->config.request_complete(hrs, false);
             h1_codec_request_state_free(hrs);
@@ -1353,6 +1319,50 @@ int h1_codec_connection_rx_data(h1_codec_connection_t *conn, qd_buffer_list_t *d
     }
 
     return decode_incoming(conn);
+}
+
+
+// The read channel of the connection has closed.  If this is a connection to a
+// server this may simply be the end of the response message.  If a message is
+// currently being decoded see if it is valid to complete.
+//
+void h1_codec_connection_rx_closed(h1_codec_connection_t *conn)
+{
+    if (conn && conn->config.type == HTTP1_CONN_SERVER) {
+
+        // terminate the in progress decode
+
+        struct decoder_t *decoder = &conn->decoder;
+        h1_codec_request_state_t *hrs = decoder->hrs;
+        if (hrs) {
+            // consider the response valid if length is unspecified since in
+            // this case the server must close the connection to complete the
+            // message body
+            if (decoder->state == HTTP1_MSG_STATE_BODY
+                && !decoder->is_chunked
+                && !decoder->hdr_content_length) {
+
+                if (!hrs->response_complete) {
+                    hrs->response_complete = true;
+                    conn->config.rx_done(hrs);
+                }
+            }
+        }
+
+        decoder_reset(decoder);
+        // since the underlying connection is gone discard all remaining
+        // incoming data
+        qd_buffer_list_free_buffers(&conn->decoder.incoming);
+        decoder->read_ptr = NULL_I_PTR;
+
+        // complete any "done" requests
+        hrs = DEQ_HEAD(conn->hrs_queue);
+        while (hrs && hrs->response_complete && hrs->request_complete) {
+            conn->config.request_complete(hrs, false);
+            h1_codec_request_state_free(hrs);
+            hrs = DEQ_HEAD(conn->hrs_queue);
+        }
+    }
 }
 
 
