@@ -447,15 +447,32 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
     //
     if (stream_data->in_dlv || stream_data->header_and_props_composed) {
         if (!stream_data->stream_force_closed) {
+            // DISPATCH-1868: Part of the HTTP2 message body arrives *before* we can route the delivery. So we accumulated that body
+            // in the stream_data->body (in the else part). But before the rest of the HTTP2 data arrives, we got credit to send the delivery
+            // and we have an in_dlv object now. Now, we take the buffers that were added previously to stream_data->body and call qd_message_stream_data_append
+            if (stream_data->body) {
+                if (!stream_data->body_data_added) {
+                    qd_buffer_list_t existing_buffers;
+                    DEQ_INIT(existing_buffers);
+                    qd_compose_take_buffers(stream_data->body, &existing_buffers);
+                    qd_message_stream_data_append(stream_data->message, &existing_buffers);
+                    stream_data->body_data_added = true;
+                }
+            }
+            else {
+                // Add a dummy body so that other code that checks for the presense of stream_data->body will be satisfied.
+                // This dummy body field will be be used and will not be sent.
+                stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
+                stream_data->body_data_added = true;
+            }
             qd_message_stream_data_append(stream_data->message, &buffers);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->message", conn->conn_id, stream_id);
         }
     }
     else {
-        if (!stream_data->body) {
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback creating stream_data->body", conn->conn_id, stream_id);
-            stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
-        }
+        stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, stream_data->body);
         qd_compose_insert_binary_buffers(stream_data->body, &buffers);
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->body", conn->conn_id, stream_id);
     }
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback data length %zu", conn->conn_id, stream_id, len);
@@ -708,38 +725,42 @@ static bool compose_and_deliver(qdr_http2_connection_t *conn, qdr_http2_stream_d
         }
 
         if (receive_complete) {
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] receive_complete = true in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
             if (!stream_data->body) {
                 stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, 0);
                 qd_compose_insert_binary(stream_data->body, 0, 0);
                 qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Inserting empty body data in compose_and_deliver", conn->conn_id, stream_data->stream_id);
             }
-        }
-        if (stream_data->body) {
             qd_message_compose_4(stream_data->message, header_and_props, stream_data->app_properties, stream_data->body, receive_complete);
         }
         else {
-            qd_message_compose_3(stream_data->message, header_and_props, stream_data->app_properties, receive_complete);
+            if (stream_data->body) {
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] receive_complete = false and has stream_data->body in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
+                qd_message_compose_4(stream_data->message, header_and_props, stream_data->app_properties, stream_data->body, receive_complete);
+                stream_data->body_data_added = true;
+            }
+            else {
+                qd_message_compose_3(stream_data->message, header_and_props, stream_data->app_properties, receive_complete);
+            }
         }
 
         // The header and properties have been added. Now we can start adding BODY DATA to this message.
         stream_data->header_and_props_composed = true;
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] stream_data->header_and_props_composed = true in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
         qd_compose_free(header_and_props);
     }
-    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Initiating qdr_link_deliver in compose_and_deliver", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
 
     if (!stream_data->in_dlv && stream_data->in_link_credit > 0) {
         //
         // Not doing an incref here since the qdr_link_deliver increfs the delivery twice
         //
         stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in compose_and_deliver dlv:%lx", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in compose_and_deliver dlv:%lx (conn->ingress=%i)", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv, conn->ingress);
         qdr_delivery_set_context(stream_data->in_dlv, stream_data);
         stream_data->in_link_credit -= 1;
         return true;
     }
-    else {
-        return false;
-    }
+    return false;
 }
 
 static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_complete)
@@ -755,6 +776,9 @@ static bool route_delivery(qdr_http2_stream_data_t *stream_data, bool receive_co
     if (conn->ingress) {
         if (stream_data->reply_to && stream_data->entire_header_arrived && !stream_data->in_dlv) {
             delivery_routed = compose_and_deliver(conn, stream_data, receive_complete);
+        }
+        if (!stream_data->reply_to) {
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] stream_data->reply_to is unavailable, did not route delivery in route_delivery", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity);
         }
     }
     else {
@@ -961,14 +985,10 @@ static int on_frame_recv_callback(nghttp2_session *session,
                 // All headers have arrived, send out the delivery with just the headers,
                 // if/when the body arrives later, we will call the qdr_delivery_continue()
                 //
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, trying to route delivery", conn->conn_id, stream_id);
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, trying to route delivery (on_frame_recv_callback)", conn->conn_id, stream_id);
                 if (route_delivery(stream_data, receive_complete)) {
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, delivery routed successfully", conn->conn_id, stream_id);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, delivery routed successfully (on_frame_recv_callback)", conn->conn_id, stream_id);
                 }
-                else {
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] All headers arrived, delivery not routed", conn->conn_id, stream_id);
-                }
-
             }
 
             if (stream_data->out_dlv && !stream_data->disp_updated && !stream_data->out_dlv_decrefed && stream_data->status == QD_STREAM_FULLY_CLOSED) {
@@ -998,8 +1018,6 @@ ssize_t read_data_callback(nghttp2_session *session,
     qdr_http2_stream_data_t *stream_data = (qdr_http2_stream_data_t *)source->ptr;
     qd_message_t *message = qdr_delivery_message(stream_data->out_dlv);
     qd_message_depth_status_t status = qd_message_check_depth(message, QD_DEPTH_BODY);
-
-    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback with length=%zu", conn->conn_id, stream_data->stream_id, length);
 
     // This flag tells nghttp2 that the data is not being copied into its buffer (uint8_t *buf).
     *data_flags |= NGHTTP2_DATA_FLAG_NO_COPY;
@@ -1073,26 +1091,21 @@ ssize_t read_data_callback(nghttp2_session *session,
                         _http_record_request(conn, stream_data);
                     }
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0 and next_stream_data=QD_MESSAGE_STREAM_DATA_NO_MORE", conn->conn_id, stream_data->stream_id);
-                    return 0;
                 }
                 else if (stream_data->next_stream_data_result == QD_MESSAGE_STREAM_DATA_FOOTER_OK) {
                     stream_data->full_payload_handled = true;
                     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback, payload_length=0 and next_stream_data_result=QD_MESSAGE_STREAM_DATA_FOOTER_OK", conn->conn_id, stream_data->stream_id);
-                    return 0;
                 }
                 else {
                     qd_message_stream_data_release(stream_data->curr_stream_data);
                     stream_data->curr_stream_data = 0;
                 }
 
-
                 //
-                // There is more data, temporarily pause this stream.
-                // We will unpause this stream later when more data arrives or when proton returns after writing buffers.
+                // The payload length on this body data is zero. Nothing to do, just return zero to move on to the next body data. Usually, zero length body datas are a result of programmer error.
                 //
-                stream_data->out_dlv_local_disposition = 0;
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Exiting read_data_callback, payload_length=0, pausing stream, returning NGHTTP2_ERR_DEFERRED", conn->conn_id, stream_data->stream_id);
-                return NGHTTP2_ERR_DEFERRED;
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Exiting read_data_callback, payload_length=0, returning 0", conn->conn_id, stream_data->stream_id);
+                return 0;
             }
 
             stream_data->stream_data_buff_count = qd_message_stream_data_buffer_count(stream_data->curr_stream_data);
@@ -1163,7 +1176,7 @@ ssize_t read_data_callback(nghttp2_session *session,
             //
             // A new segment has not completely arrived yet.  Check again later.
             //
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_INCOMPLETE", conn->conn_id, stream_data->stream_id);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] read_data_callback QD_MESSAGE_STREAM_DATA_INCOMPLETE, returning NGHTTP2_ERR_DEFERRED", conn->conn_id, stream_data->stream_id);
             stream_data->out_dlv_local_disposition = 0;
             return NGHTTP2_ERR_DEFERRED;
 
@@ -1483,7 +1496,7 @@ static void qdr_http_second_attach(void *context, qdr_link_t *link,
                     qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Reply-to available now, delivery routed successfully", stream_data->session_data->conn->conn_id);
                 }
                 else {
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Reply-to available but delivery not routed", stream_data->session_data->conn->conn_id);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"] Reply-to available but delivery not routed (qdr_http_second_attach)", stream_data->session_data->conn->conn_id);
                 }
             }
             qdr_link_flow(http2_adaptor->core, link, DEFAULT_CAPACITY, false);
@@ -1531,7 +1544,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
     qdr_http2_session_data_t *session_data = stream_data->session_data;
     qdr_http2_connection_t *conn = session_data->conn;
 
-    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Starting to handle_outgoing_http, the thread id = %i", conn->conn_id, pthread_self());
+    qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Starting to handle_outgoing_http", conn->conn_id);
     if (stream_data->out_dlv) {
         qd_message_t *message = qdr_delivery_message(stream_data->out_dlv);
 
@@ -1736,14 +1749,14 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 if (stream_data->out_msg_body_sent) {
                     qd_message_set_send_complete(qdr_delivery_message(stream_data->out_dlv));
                     stream_data->out_msg_send_complete = true;
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv send_complete", conn->conn_id, stream_data->stream_id);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) send_complete", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
 
                 }
             }
             else {
                 qd_message_set_send_complete(qdr_delivery_message(stream_data->out_dlv));
                 stream_data->out_msg_send_complete = true;
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv send_complete", conn->conn_id, stream_data->stream_id);
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) send_complete", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
             }
         }
 
@@ -1754,10 +1767,10 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
             }
             advance_stream_status(stream_data);
         }
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Finished handle_outgoing_http, the thread id = %i", conn->conn_id, pthread_self());
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Finished handle_outgoing_http", conn->conn_id);
     }
     else {
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] No out_dlv, no handle_outgoing_http, the thread id = %i", conn->conn_id, pthread_self());
+        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] No out_dlv, no handle_outgoing_http", conn->conn_id);
     }
     return 0;
 }
@@ -1871,7 +1884,7 @@ static int handle_incoming_http(qdr_http2_connection_t *conn)
             qd_http2_buffer_insert(buf, raw_buff_size);
             count += raw_buff_size;
             DEQ_INSERT_TAIL(buffers, buf);
-            qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
+            //qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] handle_incoming_http - Inserting qd_http2_buffer of size %"PRIu32" ", conn->conn_id, raw_buff_size);
         }
     }
 
@@ -1986,7 +1999,8 @@ static void restart_streams(qdr_http2_connection_t *http_conn)
     while (stream_data) {
         if (stream_data->status == QD_STREAM_FULLY_CLOSED) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In restart_streams QD_STREAM_FULLY_CLOSED, not restarting stream", http_conn->conn_id, stream_data->stream_id);
-            if (stream_data->out_dlv && !stream_data->disp_updated) {
+
+            if (stream_data->out_dlv && !stream_data->disp_updated && !stream_data->out_dlv_decrefed && stream_data->status == QD_STREAM_FULLY_CLOSED ) {
                 // A call to qdr_delivery_remote_state_updated will free the out_dlv
                 qdr_delivery_remote_state_updated(http2_adaptor->core, stream_data->out_dlv, stream_data->out_dlv_local_disposition, true, 0, 0, false);
                 qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] In restart_streams QD_STREAM_FULLY_CLOSED, qdr_delivery_remote_state_updated(stream_data->out_dlv)", http_conn->conn_id, stream_data->stream_id);
@@ -2207,7 +2221,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
             nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks*)http2_adaptor->callbacks, (void *)conn);
-            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED), thread_id=%i", conn->conn_id, pthread_self());
+            qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED)", conn->conn_id);
             conn->connection_established = true;
             create_stream_dispatcher_link(conn);
             qd_log(log, QD_LOG_TRACE, "[C%"PRIu64"] Created stream_dispatcher_link in PN_RAW_CONNECTION_CONNECTED", conn->conn_id);
