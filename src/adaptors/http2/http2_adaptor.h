@@ -109,6 +109,7 @@ struct qdr_http2_stream_data_t {
 
     bool                     in_dlv_decrefed;
     bool                     out_dlv_decrefed;
+    bool                     body_data_added;
 
     //for stats:
     char                    *method;
