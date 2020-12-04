@@ -53,6 +53,7 @@ struct qdr_tcp_connection_t {
     bool                  flow_enabled;
     bool                  egress_dispatcher;
     bool                  connector_closed;//only used if egress_dispatcher=true
+    bool                  in_list;         // This connection is in the adaptor's connections list
     qdr_delivery_t       *initial_delivery;
     qd_timer_t           *activate_timer;
     qd_bridge_config_t    config;
@@ -254,8 +255,14 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - detach outgoing", conn->conn_id, conn->outgoing_id);
         qdr_link_detach(conn->outgoing, QD_LOST, 0);
     }
-    qdr_connection_closed(conn->qdr_conn);
-    qdr_connection_set_context(conn->qdr_conn, 0);
+    if (conn->qdr_conn) {
+        qdr_connection_closed(conn->qdr_conn);
+        qdr_connection_set_context(conn->qdr_conn, 0);
+    }
+    if (conn->initial_delivery) {
+        qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->initial_delivery, PN_RELEASED, true, 0, 0, false);
+    }
+
     //need to free on core thread to avoid deleting while in use by management agent
     qdr_action_t *action = qdr_action(qdr_del_tcp_connection_CT, "delete_tcp_connection");
     action->args.general.context_1 = conn;
@@ -1476,6 +1483,7 @@ static void qdr_add_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
     if (!discard) {
         qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
         DEQ_INSERT_TAIL(tcp_adaptor->connections, conn);
+        conn->in_list = true;
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_add_tcp_connection_CT %s (%zu)",
             conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
     }
@@ -1485,9 +1493,11 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
 {
     if (!discard) {
         qdr_tcp_connection_t *conn = (qdr_tcp_connection_t*) action->args.general.context_1;
-        DEQ_REMOVE(tcp_adaptor->connections, conn);
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_del_tcp_connection_CT %s (%zu)",
-            conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+        if (conn->in_list) {
+            DEQ_REMOVE(tcp_adaptor->connections, conn);
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_del_tcp_connection_CT %s (%zu)",
+                   conn->conn_id, conn->config.host_port, DEQ_SIZE(tcp_adaptor->connections));
+        }
         free_qdr_tcp_connection(conn);
     }
 }
