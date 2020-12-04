@@ -40,10 +40,11 @@ except ImportError:
     from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
     from httplib import HTTPConnection, HTTPException
 
+from proton import Message
 from proton.handlers import MessagingHandler
 from proton.reactor import Container
 from system_test import TestCase, unittest, main_module, Qdrouterd, QdManager
-from system_test import TIMEOUT, Logger
+from system_test import TIMEOUT, Logger, AsyncTestSender, AsyncTestReceiver
 
 
 class RequestMsg(object):
@@ -304,7 +305,12 @@ class ThreadedTestClient(object):
                                                                     op,
                                                                     req.target)})
                     self._logger.log("TestClient getting %s response" % op)
-                    rsp = client.getresponse()
+                    try:
+                        rsp = client.getresponse()
+                    except HTTPException as exc:
+                        self._logger.log("TestClient response failed: %s" % exc)
+                        self.error = str(exc)
+                        return
                     self._logger.log("TestClient response %s received" % op)
                     if val:
                         try:
@@ -1472,10 +1478,11 @@ class Http1AdaptorBadEndpointsTest(TestCase):
 
         cls.http_server_port = cls.tester.get_port()
         cls.http_listener_port = cls.tester.get_port()
+        cls.http_fake_port = cls.tester.get_port()
 
         config = [
             ('router', {'mode': 'standalone',
-                        'id': 'TestBadEnpoints',
+                        'id': 'TestBadEndpoints',
                         'allowUnsettledMulticast': 'yes'}),
             ('listener', {'role': 'normal',
                           'port': cls.tester.get_port()}),
@@ -1485,6 +1492,9 @@ class Http1AdaptorBadEndpointsTest(TestCase):
             ('httpListener', {'port': cls.http_listener_port,
                               'protocolVersion': 'HTTP1',
                               'address': 'testServer'}),
+            ('httpListener', {'port': cls.http_fake_port,
+                              'protocolVersion': 'HTTP1',
+                              'address': 'fakeServer'}),
             ('address', {'prefix': 'closest',   'distribution': 'closest'}),
             ('address', {'prefix': 'multicast', 'distribution': 'multicast'}),
         ]
@@ -1517,6 +1527,161 @@ class Http1AdaptorBadEndpointsTest(TestCase):
         server = UnsolicitedResponse('', self.http_server_port)
         self.assertTrue(server.request_sent)
 
+        count, error = http1_ping(self.http_server_port,
+                                  self.http_listener_port)
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
+
+    def test_02_bad_request_message(self):
+        """
+        Test various improperly constructed request messages
+        """
+        server = TestServer(server_port=self.http_server_port,
+                            client_port=self.http_listener_port,
+                            tests={})
+
+        body_filler = "?" * 1024 * 300  # Q2
+
+        msg = Message(body="NOMSGID " + body_filler)
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target="testServer",
+                             message=msg)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+
+        msg = Message(body="NO REPLY TO " + body_filler)
+        msg.id = 1
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target="testServer",
+                             message=msg)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+
+        msg = Message(body="NO SUBJECT " + body_filler)
+        msg.id = 1
+        msg.reply_to = "amqp://fake/reply_to"
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target="testServer",
+                             message=msg)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+
+        msg = Message(body="NO APP PROPERTIES " + body_filler)
+        msg.id = 1
+        msg.reply_to = "amqp://fake/reply_to"
+        msg.subject = "GET"
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target="testServer",
+                             message=msg)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+
+        # TODO: fix body parsing (returns NEED_MORE)
+        # msg = Message(body="INVALID BODY " + body_filler)
+        # msg.id = 1
+        # msg.reply_to = "amqp://fake/reply_to"
+        # msg.subject = "GET"
+        # msg.properties = {"http:target": "/Some/target"}
+        # ts = AsyncTestSender(address=self.INT_A.listener,
+        #                      target="testServer",
+        #                      message=msg)
+        # ts.wait()
+        # self.assertEqual(1, ts.rejected);
+
+        server.wait()
+
+        # verify router is still sane:
+        count, error = http1_ping(self.http_server_port,
+                                  self.http_listener_port)
+        self.assertIsNone(error)
+        self.assertEqual(1, count)
+
+    def test_03_bad_response_message(self):
+        """
+        Test various improperly constructed response messages
+        """
+        DUMMY_TESTS = {
+            "GET": [
+                (RequestMsg("GET", "/GET/test_03_bad_response_message",
+                            headers={"Content-Length": "000"}),
+                 None,
+                 None,
+                ),
+            ]
+        }
+
+        body_filler = "?" * 1024 * 300  # Q2
+
+        # fake server
+        rx = AsyncTestReceiver(self.INT_A.listener,
+                               source="fakeServer")
+
+        # no correlation id:
+        client = ThreadedTestClient(DUMMY_TESTS,
+                                    self.http_fake_port)
+        req = rx.queue.get(timeout=TIMEOUT)
+        resp = Message(body="NO CORRELATION ID " + body_filler)
+        resp.to = req.reply_to
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target=req.reply_to,
+                             message=resp)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+        client.wait()
+        self.assertIsNotNone(client.error)
+
+        # missing application properties
+        client = ThreadedTestClient(DUMMY_TESTS,
+                                    self.http_fake_port)
+        req = rx.queue.get(timeout=TIMEOUT)
+
+        resp = Message(body="NO APPLICATION PROPS " + body_filler)
+        resp.to = req.reply_to
+        resp.correlation_id = req.id
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target=req.reply_to,
+                             message=resp)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+        client.wait()
+        self.assertIsNotNone(client.error)
+
+        # no status application property
+        client = ThreadedTestClient(DUMMY_TESTS,
+                                    self.http_fake_port)
+        req = rx.queue.get(timeout=TIMEOUT)
+        resp = Message(body="MISSING STATUS HEADER " + body_filler)
+        resp.to = req.reply_to
+        resp.correlation_id = req.id
+        resp.properties = {"stuff": "value"}
+        ts = AsyncTestSender(address=self.INT_A.listener,
+                             target=req.reply_to,
+                             message=resp)
+        ts.wait()
+        self.assertEqual(1, ts.rejected);
+        client.wait()
+        self.assertIsNotNone(client.error)
+
+        # TODO: fix body parsing (returns NEED_MORE)
+        # # invalid body format
+        # client = ThreadedTestClient(DUMMY_TESTS,
+        #                             self.http_fake_port)
+        # req = rx.queue.get(timeout=TIMEOUT)
+        # resp = Message(body="INVALID BODY FORMAT " + body_filler)
+        # resp.to = req.reply_to
+        # resp.correlation_id = req.id
+        # resp.properties = {"http:status": 200}
+        # ts = AsyncTestSender(address=self.INT_A.listener,
+        #                      target=req.reply_to,
+        #                      message=resp)
+        # ts.wait()
+        # self.assertEqual(1, ts.rejected);
+        # client.wait()
+        # self.assertIsNotNone(client.error)
+
+        rx.stop()
+
+        # verify router is still sane:
         count, error = http1_ping(self.http_server_port,
                                   self.http_listener_port)
         self.assertIsNone(error)
