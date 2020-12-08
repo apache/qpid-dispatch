@@ -411,7 +411,7 @@ static void on_startup(void *context)
                                                       "",                  //const char     *ssl_cipher,
                                                       "",                  //const char     *user,
                                                       "reference-adaptor", //const char     *container,
-                                                      pn_data(0),          //pn_data_t      *connection_properties,
+                                                      0,                   //pn_data_t      *connection_properties,
                                                       0,                   //int             ssl_ssf,
                                                       false,               //bool            ssl,
                                                       "",                  // peer router version,

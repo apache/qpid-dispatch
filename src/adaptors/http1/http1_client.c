@@ -279,7 +279,7 @@ static void _setup_client_connection(qdr_http1_connection_t *hconn)
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "HTTP/1.x Adaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
