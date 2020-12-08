@@ -56,7 +56,6 @@ DEQ_DECLARE(qdr_http2_stream_data_t, qd_http2_stream_data_list_t);
 DEQ_DECLARE(qd_http2_buffer_t,       qd_http2_buffer_list_t);
 DEQ_DECLARE(qdr_http2_connection_t,  qdr_http2_connection_list_t);
 
-//TODO - Categorize the fields in the structs so they are in their own sections
 struct qdr_http2_session_data_t {
     qdr_http2_connection_t       *conn;       // Connection associated with the session_data
     nghttp2_session             *session;    // A pointer to the nghttp2s' session object
@@ -69,6 +68,8 @@ struct qdr_http2_stream_data_t {
     qdr_http2_session_data_t *session_data;
     void                     *context;
     char                     *reply_to;
+    char                     *remote_site; //for stats:
+    char                     *method; //for stats:
     qdr_delivery_t           *in_dlv;
     qdr_delivery_t           *out_dlv;
     uint64_t                  incoming_id;
@@ -110,11 +111,7 @@ struct qdr_http2_stream_data_t {
     bool                     in_dlv_decrefed;
     bool                     out_dlv_decrefed;
     bool                     body_data_added;
-
-    //for stats:
-    char                    *method;
     int                      request_status;
-    char                    *remote_site;
     int                      bytes_in;
     int                      bytes_out;
     qd_timestamp_t           start;
@@ -136,7 +133,6 @@ struct qdr_http2_connection_t {
     qdr_link_t               *stream_dispatcher;
     qdr_http2_stream_data_t  *stream_dispatcher_stream_data;
     uint64_t                  stream_dispatcher_id;
-    char                     *reply_to;
     nghttp2_data_provider     data_prd;
     qd_http2_buffer_list_t    granted_read_buffs; //buffers for reading
     time_t                    prev_ping; // Time the previous PING frame was sent on egress connection.
