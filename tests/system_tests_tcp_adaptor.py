@@ -672,6 +672,20 @@ class TcpAdaptor(TestCase):
         assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
         self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
 
+    @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
+    def test_20_tcp_connect_disconnect(self):
+        self.skipTest("DISPATCH-1876 reproducer: disabled until DISPATCH-1876 is fixed")
+        name = "test_20_tcp_connect_disconnect"
+        self.logger.log("TCP_TEST Start %s" % name)
+        pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[0])]
+        result = self.do_tcp_echo_n_routers(name, pairs)
+        if result is not None:
+            print(result)
+            sys.stdout.flush()
+        assert result is None, "TCP_TEST Stop %s FAIL: %s" % (name, result)
+        # TODO: This test passes but in passing router INTA crashes undetected.
+        self.logger.log("TCP_TEST Stop %s SUCCESS" % name)
+
     # concurrent messages
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_50_concurrent(self):
