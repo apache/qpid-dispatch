@@ -105,35 +105,39 @@ class TcpEchoClient:
             total_sent = 0
             total_rcvd = 0
 
-            # outbound payload
-            payload_out = []
-            out_list_idx = 0  # current _out array being sent
-            out_byte_idx = 0  # next-to-send in current array
-            out_ready_to_send = True
-            # Generate unique content for each message so you can tell where the message
-            # or fragment belongs in the whole stream. Chunks look like:
-            #    b'[localhost:33333:6:0]ggggggggggggggggggggggggggggg'
-            #    host: localhost
-            #    port: 33333
-            #    index: 6
-            #    offset into message: 0
-            CONTENT_CHUNK_SIZE = 50  # Content repeats after chunks this big - used by echo server, too
-            for idx in range(self.count):
-                body_msg = ""
-                padchar = "abcdefghijklmnopqrstuvwxyz@#$%"[idx % 30]
-                while len(body_msg) < self.size:
-                    chunk = "[%s:%d:%d:%d]" % (self.host, self.port, idx, len(body_msg))
-                    padlen = CONTENT_CHUNK_SIZE - len(chunk)
-                    chunk += padchar * padlen
-                    body_msg += chunk
-                if len(body_msg) > self.size:
-                    body_msg = body_msg[:self.size]
-                payload_out.append(bytearray(body_msg.encode()))
-            # incoming payloads
-            payload_in = []
-            in_list_idx = 0  # current _in array being received
-            for i in range(self.count):
-                payload_in.append(bytearray())
+            if self.count > 0 and self.size > 0:
+                # outbound payload only if count and size both greater than zero
+                payload_out = []
+                out_list_idx = 0  # current _out array being sent
+                out_byte_idx = 0  # next-to-send in current array
+                out_ready_to_send = True
+                # Generate unique content for each message so you can tell where the message
+                # or fragment belongs in the whole stream. Chunks look like:
+                #    b'[localhost:33333:6:0]ggggggggggggggggggggggggggggg'
+                #    host: localhost
+                #    port: 33333
+                #    index: 6
+                #    offset into message: 0
+                CONTENT_CHUNK_SIZE = 50  # Content repeats after chunks this big - used by echo server, too
+                for idx in range(self.count):
+                    body_msg = ""
+                    padchar = "abcdefghijklmnopqrstuvwxyz@#$%"[idx % 30]
+                    while len(body_msg) < self.size:
+                        chunk = "[%s:%d:%d:%d]" % (self.host, self.port, idx, len(body_msg))
+                        padlen = CONTENT_CHUNK_SIZE - len(chunk)
+                        chunk += padchar * padlen
+                        body_msg += chunk
+                    if len(body_msg) > self.size:
+                        body_msg = body_msg[:self.size]
+                    payload_out.append(bytearray(body_msg.encode()))
+                # incoming payloads
+                payload_in = []
+                in_list_idx = 0  # current _in array being received
+                for i in range(self.count):
+                    payload_in.append(bytearray())
+            else:
+                # when count or size .LE. zero then just connect-disconnect
+                self.keep_running = False
 
             # set up connection
             host_address = (self.host, self.port)
@@ -231,9 +235,9 @@ def main(argv):
     p.add_argument('--port', '-p', type=int,
                    help='Required target port number')
     p.add_argument('--size', '-s', type=int, default=100, const=1, nargs='?',
-                   help='Size of payload in bytes')
+                   help='Size of payload in bytes must be >= 0. Size of zero connects and disconnects with no data traffic.')
     p.add_argument('--count', '-c', type=int, default=1, const=1, nargs='?',
-                   help='Number of payloads to process')
+                   help='Number of payloads to process must be >= 0. Count of zero connects and disconnects with no data traffic.')
     p.add_argument('--name',
                    help='Optional logger prefix')
     p.add_argument('--timeout', '-t', type=float, default=0.0, const=1, nargs="?",
@@ -255,13 +259,13 @@ def main(argv):
     port = args.port
 
     # size
-    if args.size <= 0:
-        raise Exception("Size must be greater than zero")
+    if args.size < 0:
+        raise Exception("Size must be greater than or equal to zero")
     size = args.size
 
     # count
-    if args.count <= 0:
-        raise Exception("Count must be greater than zero")
+    if args.count < 0:
+        raise Exception("Count must be greater than or equal to zero")
     count = args.count
 
     # name / prefix
