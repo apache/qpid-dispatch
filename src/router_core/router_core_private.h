@@ -895,6 +895,7 @@ struct qdr_core_t {
 
     uint64_t              next_identifier;
     sys_mutex_t          *id_lock;
+    sys_mutex_t          *adaptor_startup_lock;
 
     qdr_exchange_list_t   exchanges;
     qdr_forwarder_t      *forwarders[QD_TREATMENT_LINK_BALANCED + 1];

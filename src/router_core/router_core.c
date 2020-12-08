@@ -81,6 +81,7 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     //
     core->next_identifier = 1;
     core->id_lock = sys_mutex();
+    core->adaptor_startup_lock = sys_mutex();
 
     //
     // Initialize the management agent
@@ -145,6 +146,7 @@ void qdr_core_free(qdr_core_t *core)
     sys_mutex_free(core->action_lock);
     sys_mutex_free(core->work_lock);
     sys_mutex_free(core->id_lock);
+    sys_mutex_free(core->adaptor_startup_lock);
     qd_timer_free(core->work_timer);
 
     for (int i = 0; i <= QD_TREATMENT_LINK_BALANCED; ++i) {

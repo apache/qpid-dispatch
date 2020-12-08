@@ -65,9 +65,10 @@ typedef struct qdr_http2_adaptor_t {
 } qdr_http2_adaptor_t;
 
 
-static qdr_http2_adaptor_t *http2_adaptor;
+static qdr_http2_adaptor_t *http2_adaptor = 0;
 
 static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void *context);
+static void qdr_http2_adaptor_init(qdr_core_t *core, void **adaptor_context);
 
 static void set_stream_data_delivery_flags(qdr_http2_stream_data_t * stream_data, qdr_delivery_t *dlv) {
     if (dlv == stream_data->in_dlv) {
@@ -2402,6 +2403,25 @@ void qd_http2_delete_listener(qd_dispatch_t *qd, qd_http_listener_t *li)
     }
 }
 
+/**
+ * Initializes the the http2_adaptor if not already initialized.
+ * When http listeners and connectors are about to be created, it is possible that the qdr_http2_adaptor_init has not even been called yet because the qd_router_setup_late() function
+ * can return before the core thread has started executing the router_core_thread() function. If this is the case,
+ * we will call the adaptor init here to initialize the adaptor.
+ */
+static void initialize_http2_adaptor(qd_dispatch_t *qd)
+{
+    sys_mutex_lock(qd->router->router_core->adaptor_startup_lock);
+    if (!http2_adaptor) {
+        //
+        // This is a dummy context we don't do anything with it except pass it to qdr_http2_adaptor_init
+        //
+        void                *context;
+        qdr_http2_adaptor_init(qd->router->router_core, &context);
+    }
+    sys_mutex_unlock(qd->router->router_core->adaptor_startup_lock);
+}
+
 
 qd_http_listener_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http_bridge_config_t *config, qd_entity_t *entity)
 {
@@ -2412,6 +2432,8 @@ qd_http_listener_t *qd_http2_configure_listener(qd_dispatch_t *qd, const qd_http
     }
 
     li->config = *config;
+
+    initialize_http2_adaptor(qd);
     DEQ_INSERT_TAIL(http2_adaptor->listeners, li);
     qd_log(http2_adaptor->log_source, QD_LOG_INFO, "Configured http2_adaptor listener on %s", (&li->config)->host_port);
     pn_proactor_listen(qd_server_proactor(li->server), li->pn_listener, li->config.host_port, BACKLOG);
@@ -2427,6 +2449,7 @@ qd_http_connector_t *qd_http2_configure_connector(qd_dispatch_t *qd, const qd_ht
         return 0;
     }
     c->config = *config;
+    initialize_http2_adaptor(qd);
     DEQ_ITEM_INIT(c);
     DEQ_INSERT_TAIL(http2_adaptor->connectors, c);
     qdr_http_connection_egress(c);
@@ -2482,49 +2505,54 @@ static void qdr_http2_adaptor_final(void *adaptor_context)
  */
 static void qdr_http2_adaptor_init(qdr_core_t *core, void **adaptor_context)
 {
-    qdr_http2_adaptor_t *adaptor = NEW(qdr_http2_adaptor_t);
-    adaptor->core    = core;
-    adaptor->adaptor = qdr_protocol_adaptor(core,
-                                            "http2",                // name
-                                            adaptor,               // context
-                                            qdr_http_activate,
-                                            qdr_http_first_attach,
-                                            qdr_http_second_attach,
-                                            qdr_http_detach,
-                                            qdr_http_flow,
-                                            qdr_http_offer,
-                                            qdr_http_drained,
-                                            qdr_http_drain,
-                                            qdr_http_push,
-                                            qdr_http_deliver,
-                                            qdr_http_get_credit,
-                                            qdr_http_delivery_update,
-                                            qdr_http_conn_close,
-                                            qdr_http_conn_trace);
-    adaptor->log_source = qd_log_source(QD_HTTP_LOG_SOURCE);
-    adaptor->protocol_log_source = qd_log_source("PROTOCOL");
-    adaptor->lock = sys_mutex();
-    *adaptor_context = adaptor;
-    DEQ_INIT(adaptor->listeners);
-    DEQ_INIT(adaptor->connectors);
-    DEQ_INIT(adaptor->connections);
+    if (!http2_adaptor) {
+        qdr_http2_adaptor_t *adaptor = NEW(qdr_http2_adaptor_t);
+        adaptor->core    = core;
+        adaptor->adaptor = qdr_protocol_adaptor(core,
+                                                "http2",                // name
+                                                adaptor,               // context
+                                                qdr_http_activate,
+                                                qdr_http_first_attach,
+                                                qdr_http_second_attach,
+                                                qdr_http_detach,
+                                                qdr_http_flow,
+                                                qdr_http_offer,
+                                                qdr_http_drained,
+                                                qdr_http_drain,
+                                                qdr_http_push,
+                                                qdr_http_deliver,
+                                                qdr_http_get_credit,
+                                                qdr_http_delivery_update,
+                                                qdr_http_conn_close,
+                                                qdr_http_conn_trace);
+        adaptor->log_source = qd_log_source(QD_HTTP_LOG_SOURCE);
+        adaptor->protocol_log_source = qd_log_source("PROTOCOL");
+        adaptor->lock = sys_mutex();
+        *adaptor_context = adaptor;
+        DEQ_INIT(adaptor->listeners);
+        DEQ_INIT(adaptor->connectors);
+        DEQ_INIT(adaptor->connections);
 
-    //
-    // Register all nghttp2 callbacks.
-    //
-    nghttp2_session_callbacks *callbacks;
-    nghttp2_session_callbacks_new(&callbacks);
-    nghttp2_session_callbacks_set_on_frame_recv_callback(callbacks, on_frame_recv_callback);
-    nghttp2_session_callbacks_set_on_begin_headers_callback(callbacks, on_begin_headers_callback);
-    nghttp2_session_callbacks_set_on_header_callback(callbacks, on_header_callback);
-    nghttp2_session_callbacks_set_on_stream_close_callback(callbacks, on_stream_close_callback);
-    nghttp2_session_callbacks_set_on_data_chunk_recv_callback(callbacks, on_data_chunk_recv_callback);
-    nghttp2_session_callbacks_set_send_data_callback(callbacks, snd_data_callback);
-    nghttp2_session_callbacks_set_send_callback(callbacks, send_callback);
-    nghttp2_session_callbacks_set_on_invalid_frame_recv_callback(callbacks, on_invalid_frame_recv_callback);
+        //
+        // Register all nghttp2 callbacks.
+        //
+        nghttp2_session_callbacks *callbacks;
+        nghttp2_session_callbacks_new(&callbacks);
+        nghttp2_session_callbacks_set_on_frame_recv_callback(callbacks, on_frame_recv_callback);
+        nghttp2_session_callbacks_set_on_begin_headers_callback(callbacks, on_begin_headers_callback);
+        nghttp2_session_callbacks_set_on_header_callback(callbacks, on_header_callback);
+        nghttp2_session_callbacks_set_on_stream_close_callback(callbacks, on_stream_close_callback);
+        nghttp2_session_callbacks_set_on_data_chunk_recv_callback(callbacks, on_data_chunk_recv_callback);
+        nghttp2_session_callbacks_set_send_data_callback(callbacks, snd_data_callback);
+        nghttp2_session_callbacks_set_send_callback(callbacks, send_callback);
+        nghttp2_session_callbacks_set_on_invalid_frame_recv_callback(callbacks, on_invalid_frame_recv_callback);
 
-    adaptor->callbacks = callbacks;
-    http2_adaptor = adaptor;
+        adaptor->callbacks = callbacks;
+        http2_adaptor = adaptor;
+    }
+    else {
+        *adaptor_context = http2_adaptor;
+    }
 }
 
 /**

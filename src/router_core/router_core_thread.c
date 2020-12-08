@@ -149,11 +149,13 @@ void qdr_adaptors_init(qdr_core_t *core)
     //
     // Initialize registered adaptors
     //
+    sys_mutex_lock(core->adaptor_startup_lock);
     qdrc_adaptor_t *adaptor = DEQ_HEAD(registered_adaptors);
     while (adaptor) {
         adaptor->on_init(core, &adaptor->context);
         adaptor = DEQ_NEXT(adaptor);
     }
+    sys_mutex_unlock(core->adaptor_startup_lock);
 }
 
 
