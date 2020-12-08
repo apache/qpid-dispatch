@@ -169,7 +169,7 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "HTTP/1.x Adaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
