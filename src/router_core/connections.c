@@ -203,7 +203,8 @@ qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,
         connection_info->version = strdup(version);
 
     pn_data_t *qdr_conn_properties = pn_data(0);
-    pn_data_copy(qdr_conn_properties, connection_properties);
+    if (connection_properties)
+        pn_data_copy(qdr_conn_properties, connection_properties);
 
     connection_info->connection_properties = qdr_conn_properties;
     connection_info->ssl_ssf = ssl_ssf;

@@ -154,8 +154,10 @@ qd_composed_field_t  *qd_message_compose_amqp(qd_message_t *msg,
 {
     qd_composed_field_t  *field   = qd_compose(QD_PERFORMATIVE_HEADER, 0);
     qd_message_content_t *content = MSG_CONTENT(msg);
-    if (!content)
+    if (!content) {
+        qd_compose_free(field);
         return 0;
+    }
     //
     // Header
     //
@@ -393,6 +395,10 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     qd_message_set_stream_annotation(stream_data->message, true);
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
+    if (!stream_data->app_properties) {
+        qd_compose_free(stream_data->app_properties);
+        return 0;
+    }
     stream_data->status = QD_STREAM_OPEN;
     stream_data->start = qd_timer_now();
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Creating new stream_data->app_properties=QD_PERFORMATIVE_APPLICATION_PROPERTIES", session_data->conn->conn_id, stream_id);
@@ -467,11 +473,19 @@ static int on_data_chunk_recv_callback(nghttp2_session *session,
             qd_message_stream_data_append(stream_data->message, &buffers);
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->message", conn->conn_id, stream_id);
         }
+        else {
+            qd_buffer_list_free_buffers(&buffers);
+        }
     }
     else {
-        stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, stream_data->body);
-        qd_compose_insert_binary_buffers(stream_data->body, &buffers);
-        qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->body", conn->conn_id, stream_id);
+        if (stream_data->stream_force_closed) {
+            qd_buffer_list_free_buffers(&buffers);
+        }
+        else {
+            stream_data->body = qd_compose(QD_PERFORMATIVE_BODY_DATA, stream_data->body);
+            qd_compose_insert_binary_buffers(stream_data->body, &buffers);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback qd_compose_insert_binary_buffers into stream_data->body", conn->conn_id, stream_id);
+        }
     }
 
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 DATA on_data_chunk_recv_callback data length %zu", conn->conn_id, stream_id, len);
@@ -1548,8 +1562,10 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
     if (stream_data->out_dlv) {
         qd_message_t *message = qdr_delivery_message(stream_data->out_dlv);
 
-        if (stream_data->out_msg_send_complete)
+        if (stream_data->out_msg_send_complete) {
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http send is already complete (dlv:%lx), returning", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
             return 0;
+        }
 
         if (!stream_data->out_msg_header_sent) {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"] Header not sent yet", conn->conn_id);
@@ -1618,9 +1634,16 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                                                             count,
                                                             stream_data);
 
+            for (uint32_t idx = 0; idx < count; idx++) {
+                free(hdrs[idx].name);
+                free(hdrs[idx].value);
+            }
+
             if (stream_id != -1) {
                 stream_data->stream_id = stream_id;
             }
+
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) before sending Outgoing headers", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
 
             for (uint32_t idx = 0; idx < count; idx++) {
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 HEADER Outgoing [%s=%s]", conn->conn_id, stream_data->stream_id, (char *)hdrs[idx].name, (char *)hdrs[idx].value);
@@ -1837,7 +1860,7 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
                 qdr_delivery_incref(delivery, "ingress out_dlv referenced by HTTP2 adaptor");
             }
         }
-        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] qdr_http_deliver - call handle_outgoing_http", conn->conn_id);
+        qd_log(http2_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - call handle_outgoing_http", conn->conn_id, stream_data->stream_id);
         uint64_t disp = handle_outgoing_http(stream_data);
         if (stream_data->status == QD_STREAM_FULLY_CLOSED && disp == PN_ACCEPTED) {
             qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] qdr_http_deliver - calling free_http2_stream_data", conn->conn_id, stream_data->stream_id);
@@ -1955,7 +1978,7 @@ qdr_http2_connection_t *qdr_http_connection_ingress_accept(qdr_http2_connection_
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "HttpAdaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
@@ -2180,7 +2203,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "httpAdaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
