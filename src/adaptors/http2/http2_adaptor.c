@@ -395,10 +395,6 @@ static qdr_http2_stream_data_t *create_http2_stream_data(qdr_http2_session_data_
     qd_message_set_stream_annotation(stream_data->message, true);
     stream_data->session_data = session_data;
     stream_data->app_properties = qd_compose(QD_PERFORMATIVE_APPLICATION_PROPERTIES, 0);
-    if (!stream_data->app_properties) {
-        qd_compose_free(stream_data->app_properties);
-        return 0;
-    }
     stream_data->status = QD_STREAM_OPEN;
     stream_data->start = qd_timer_now();
     qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Creating new stream_data->app_properties=QD_PERFORMATIVE_APPLICATION_PROPERTIES", session_data->conn->conn_id, stream_id);
