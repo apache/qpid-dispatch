@@ -191,6 +191,8 @@ class TcpEchoClient:
                         else:
                             # socket closed
                             self.keep_running = False
+                            if not in_list_idx == self.count:
+                                self.error = "ERROR server closed. Echoed %d of %d messages." % (in_list_idx, self.count)
                     if self.keep_running and mask & selectors.EVENT_WRITE:
                         if out_ready_to_send:
                             n_sent = self.sock.send(payload_out[out_list_idx][out_byte_idx:])
@@ -299,9 +301,19 @@ def main(argv):
                 keep_running = False
 
     except Exception:
+        client.error = "ERROR: exception : '%s'" % traceback.format_exc()
         if logger is not None:
             logger.log("%s Exception: %s" % (prefix, traceback.format_exc()))
         retval = 1
+
+    if client.error is not None:
+        # write client errors to stderr
+        def eprint(*args, **kwargs):
+            print(*args, file=sys.stderr, **kwargs)
+
+        elines = client.error.split("\n")
+        for line in elines:
+            eprint("ERROR:", prefix, line)
 
     return retval
 
