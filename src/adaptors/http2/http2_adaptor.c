@@ -1634,6 +1634,11 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                                                             count,
                                                             stream_data);
 
+            for (uint32_t idx = 0; idx < count; idx++) {
+                free(hdrs[idx].name);
+                free(hdrs[idx].value);
+            }
+
             if (stream_id != -1) {
                 stream_data->stream_id = stream_id;
             }
@@ -1973,7 +1978,7 @@ qdr_http2_connection_t *qdr_http_connection_ingress_accept(qdr_http2_connection_
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "HttpAdaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
@@ -2198,7 +2203,7 @@ qdr_http2_connection_t *qdr_http_connection_egress(qd_http_connector_t *connecto
                                                       "",    //const char      *ssl_cipher,
                                                       "",    //const char      *user,
                                                       "httpAdaptor",    //const char      *container,
-                                                      pn_data(0),     //pn_data_t       *connection_properties,
+                                                      0,     //pn_data_t       *connection_properties,
                                                       0,     //int              ssl_ssf,
                                                       false, //bool             ssl,
                                                       "",                  // peer router version,
