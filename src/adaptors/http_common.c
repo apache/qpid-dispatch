@@ -555,7 +555,7 @@ static void _free_qdr_http_request_info(qdr_http_request_info_t* record)
     if (record->site) {
         free(record->site);
     }
-    for (qdr_http_method_status_t *item = DEQ_HEAD(record->detail); item; item = DEQ_NEXT(item)) {
+    for (qdr_http_method_status_t *item = DEQ_HEAD(record->detail); item; item = DEQ_HEAD(record->detail)) {
         _free_qdr_http_method_status(item);
     }
     free(record);
