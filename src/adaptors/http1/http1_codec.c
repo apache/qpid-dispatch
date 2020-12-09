@@ -1335,10 +1335,13 @@ void h1_codec_connection_rx_closed(h1_codec_connection_t *conn)
         struct decoder_t *decoder = &conn->decoder;
         h1_codec_request_state_t *hrs = decoder->hrs;
         if (hrs) {
-            // consider the response valid if length is unspecified since in
+            // consider the response complete if length is unspecified since in
             // this case the server must close the connection to complete the
-            // message body
+            // message body.  However if the response message is a "continue"
+            // then the final response never arrived and the response is
+            // incomplete
             if (decoder->state == HTTP1_MSG_STATE_BODY
+                && !IS_INFO_RESPONSE(hrs->response_code)
                 && !decoder->is_chunked
                 && !decoder->hdr_content_length) {
 
