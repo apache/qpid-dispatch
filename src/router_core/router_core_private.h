@@ -1011,6 +1011,9 @@ qdr_query_t *qdr_query(qdr_core_t              *core,
                        qd_router_entity_type_t  type,
                        qd_composed_field_t     *body,
                        uint64_t                 conn_id);
+
+void qdr_modules_init(qdr_core_t *core);
+void qdr_adaptors_init(qdr_core_t *core);
 void qdr_modules_finalize(qdr_core_t *core);
 void qdr_adaptors_finalize(qdr_core_t *core);
 

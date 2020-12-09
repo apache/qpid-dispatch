@@ -206,12 +206,6 @@ void *router_core_thread(void *arg)
     qdr_action_list_t  action_list;
     qdr_action_t      *action;
 
-    qdr_forwarder_setup_CT(core);
-    qdr_route_table_setup_CT(core);
-
-    qdr_modules_init(core);
-    qdr_adaptors_init(core);
-
     qd_log(core->log, QD_LOG_INFO, "Router Core thread running. %s/%s", core->router_area, core->router_id);
     while (core->running) {
         //
