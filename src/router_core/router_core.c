@@ -43,6 +43,28 @@ const uint64_t QD_DELIVERY_MOVED_TO_NEW_LINK = 999999999;
 
 static void qdr_general_handler(void *context);
 
+static void qdr_core_setup_init(qdr_core_t *core)
+{
+    //
+    // DISPATCH-1867: These functions used to be called inside the router_core_thread() function in router_core_thread.c
+    // which meant they were executed asynchronously by the core thread which meant qd_router_setup_late() could
+    // return before these functions executed in the core thread. But we need the adaptors and modules to be initialized *before* qd_router_setup_late() completes
+    // so that python can successfully initialize httpConnectors and httpListeners.
+    //
+    qdr_forwarder_setup_CT(core);
+    qdr_route_table_setup_CT(core);
+
+    //
+    // Initialize the core modules
+    //
+    qdr_modules_init(core);
+
+    //
+    // Initialize all registered adaptors (HTTP1, HTTP2, TCP)
+    //
+    qdr_adaptors_init(core);
+}
+
 qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area, const char *id)
 {
     qdr_core_t *core = NEW(qdr_core_t);
@@ -86,6 +108,12 @@ qdr_core_t *qdr_core(qd_dispatch_t *qd, qd_router_mode_t mode, const char *area,
     // Initialize the management agent
     //
     core->mgmt_agent = qdr_agent(core);
+
+    //
+    // Setup and initialize modules, adaptors, address table etc. so we can have everything initialized and ready to
+    // go when the core thread starts handling actions.
+    //
+    qdr_core_setup_init(core);
 
     //
     // Launch the core thread
