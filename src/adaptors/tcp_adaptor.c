@@ -123,6 +123,7 @@ static void grant_read_buffers(qdr_tcp_connection_t *conn)
     // Give proactor more read buffers for the socket
     if (!pn_raw_connection_is_read_closed(conn->pn_raw_conn)) {
         size_t desired = pn_raw_connection_read_buffers_capacity(conn->pn_raw_conn);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Granted %i read buffers", conn->conn_id, desired);
         while (desired) {
             size_t i;
             for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
@@ -144,7 +145,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     //
     // Don't initiate an ingress stream message if we don't yet have a reply-to address and credit.
     //
-    if (!conn->instream && ((conn->ingress && !conn->reply_to) || !conn->flow_enabled)) {
+    if (!pn_raw_connection_is_read_closed(conn->pn_raw_conn) && !conn->instream && ((conn->ingress && !conn->reply_to) || !conn->flow_enabled)) {
         if (conn->ingress && !conn->reply_to) {
             qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Waiting for reply-to address to initiate message", conn->conn_id, conn->outgoing_id);
         }
@@ -159,15 +160,23 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
     pn_raw_buffer_t raw_buffers[READ_BUFFERS];
     size_t n;
     int count = 0;
+    int free_count = 0;
     while ( (n = pn_raw_connection_take_read_buffers(conn->pn_raw_conn, raw_buffers, READ_BUFFERS)) ) {
         for (size_t i = 0; i < n && raw_buffers[i].bytes; ++i) {
             qd_buffer_t *buf = (qd_buffer_t*) raw_buffers[i].context;
             qd_buffer_insert(buf, raw_buffers[i].size);
             count += raw_buffers[i].size;
-            DEQ_INSERT_TAIL(buffers, buf);
+            if (raw_buffers[i].size > 0) {
+                DEQ_INSERT_TAIL(buffers, buf);
+            } else {
+                qd_buffer_free(buf);
+                free_count++;
+            }
         }
     }
 
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Took %i read buffers", conn->conn_id, DEQ_SIZE(buffers));
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Freed %i read buffers", conn->conn_id, free_count);
     grant_read_buffers(conn);
 
     if (conn->instream) {
@@ -242,11 +251,11 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - close instream", conn->conn_id, conn->incoming_id);
         qd_message_set_receive_complete(qdr_delivery_message(conn->instream));
         qdr_delivery_continue(tcp_adaptor->core, conn->instream, true);
-        qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.handle_disconnected");
+        qdr_delivery_decref(tcp_adaptor->core, conn->instream, "tcp-adaptor.handle_disconnected - instream");
     }
     if (conn->outstream) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] handle_disconnected close outstream", conn->conn_id, conn->outgoing_id);
-        qdr_delivery_decref(tcp_adaptor->core, conn->outstream, "tcp-adaptor.handle_disconnected");
+        qdr_delivery_decref(tcp_adaptor->core, conn->outstream, "tcp-adaptor.handle_disconnected - outstream");
     }
     if (conn->incoming) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] handle_disconnected - detach incoming", conn->conn_id, conn->incoming_id);
@@ -262,6 +271,8 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
     }
     if (conn->initial_delivery) {
         qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->initial_delivery, PN_RELEASED, true, 0, 0, false);
+        qdr_delivery_decref(tcp_adaptor->core, conn->initial_delivery, "tcp-adaptor.handle_disconnected - initial_delivery");
+        conn->initial_delivery = 0;
     }
 
     //need to free on core thread to avoid deleting while in use by management agent
@@ -512,7 +523,6 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] PN_RAW_CONNECTION_CONNECTED Egress connected to %s", conn->conn_id, conn->remote_address);
             if (!!conn->initial_delivery) {
                 qdr_tcp_open_server_side_connection(conn);
-                conn->initial_delivery = 0;
             }
             while (qdr_connection_process(conn->qdr_conn)) {}
             handle_outgoing(conn);
@@ -660,6 +670,10 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                          !(tc->egress_dispatcher),
                                          tc->initial_delivery,
                                          &(tc->outgoing_id));
+    if (!!tc->initial_delivery) {
+        qdr_delivery_decref(tcp_adaptor->core, tc->initial_delivery, "tcp-adaptor - passing initial_delivery into new link");
+        tc->initial_delivery = 0;
+    }
     qdr_link_set_context(tc->outgoing, tc);
 }
 
@@ -672,6 +686,7 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
     if (initial_delivery) {
         tc->egress_dispatcher = false;
         tc->initial_delivery  = initial_delivery;
+        qdr_delivery_incref(initial_delivery, "qdr_tcp_connection_egress - held initial delivery");
     } else {
         tc->activate_timer = qd_timer(tcp_adaptor->core->qd, on_activate, tc);
         tc->egress_dispatcher = true;
@@ -1051,6 +1066,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_deliver Delivery event dlv:%lx", tc->conn_id, tc->outgoing_id, delivery);
         if (tc->egress_dispatcher) {
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] tcp_adaptor initiating egress connection %p", tc->conn_id, tc->outgoing_id, delivery);
             qdr_tcp_connection_egress(&(tc->config), tc->server, delivery);
             return QD_DELIVERY_MOVED_TO_NEW_LINK;
         } else if (!tc->outstream) {

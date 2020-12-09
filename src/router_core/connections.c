@@ -630,6 +630,8 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     action->args.connection.source = source;
     action->args.connection.target = target;
     action->args.connection.initial_delivery = initial_delivery;
+    if (!!initial_delivery)
+        qdr_delivery_incref(initial_delivery, "qdr_link_first_attach - protect delivery in action list");
     qdr_action_enqueue(conn->core, action);
 
     return link;
@@ -1607,7 +1609,7 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
     qdr_link_t *old_link  = safe_deref_qdr_link_t(dlv->link_sp);
-    int         ref_delta = 0;
+    int         ref_delta = -1; // Account for the action-list protection
 
     //
     // Remove the delivery from its current link if needed
