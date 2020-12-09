@@ -674,7 +674,6 @@ class TcpAdaptor(TestCase):
 
     @SkipIfNeeded(DISABLE_SELECTOR_TESTS, DISABLE_SELECTOR_REASON)
     def test_20_tcp_connect_disconnect(self):
-        self.skipTest("DISPATCH-1876 reproducer: disabled until DISPATCH-1876 is fixed")
         name = "test_20_tcp_connect_disconnect"
         self.logger.log("TCP_TEST Start %s" % name)
         pairs = [self.EchoPair(self.INTA, self.INTA, sizes=[0])]
