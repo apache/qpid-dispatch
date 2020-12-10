@@ -487,16 +487,18 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                    DEQ_IS_EMPTY(rmsg->out_data.fifo) &&
                    hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
                 // response message fully received and forwarded to client
-                qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
-                       "[C%"PRIu64"][L%"PRIu64"] HTTP client request msg-id=%"PRIu64" settling response, dispo=0x%"PRIx64,
-                       hconn->conn_id, hconn->out_link_id, hreq->base.msg_id, rmsg->dispo);
-                qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
-                                                  rmsg->dlv,
-                                                  rmsg->dispo,
-                                                  true,   // settled,
-                                                  0,      // error
-                                                  0,      // dispo data
-                                                  false);
+                if (rmsg->dlv) {
+                    qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+                           "[C%"PRIu64"][L%"PRIu64"] HTTP client request msg-id=%"PRIu64" settling response, dispo=0x%"PRIx64,
+                           hconn->conn_id, hconn->out_link_id, hreq->base.msg_id, rmsg->dispo);
+                    qdr_delivery_remote_state_updated(qdr_http1_adaptor->core,
+                                                      rmsg->dlv,
+                                                      rmsg->dispo,
+                                                      true,   // settled,
+                                                      0,      // error
+                                                      0,      // dispo data
+                                                      false);
+                }
                 qdr_link_flow(qdr_http1_adaptor->core, hconn->out_link, 1, false);
                 _client_response_msg_free(hreq, rmsg);
                 rmsg = DEQ_HEAD(hreq->responses);
@@ -1208,7 +1210,7 @@ void qdr_http1_client_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
                    "[C%"PRIu64"][L%"PRIu64"] HTTP request msg-id=%"PRIu64" failure, outcome=0x%"PRIx64,
                    hconn->conn_id, hconn->in_link_id, hreq->base.msg_id, disp);
 
-            if (DEQ_IS_EMPTY(hreq->responses)) {
+            if (hreq->base.out_http1_octets == 0) {
                 // best effort attempt to send an error to the client
                 // if nothing has been sent back so far
                 _client_response_msg_t *rmsg = new__client_response_msg_t();
@@ -1535,11 +1537,23 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 bool need_close = false;
                 h1_codec_tx_done(hreq->base.lib_rs, &need_close);
                 hreq->close_on_complete = need_close || hreq->close_on_complete;
+
+                qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
+                       "[C%"PRIu64"][L%"PRIu64"] HTTP response message msg-id=%"PRIu64" encoding complete",
+                       hconn->conn_id, link->identity, hreq->base.msg_id);
+
             } else {
                 // The response was bad.  There's not much that can be done to
                 // recover, so for now I punt...
                 qd_message_set_discard(msg, true);
+
+                // returning a terminal disposition will cause the delivery to be updated and settled,
+                // so drop our reference
+                qdr_delivery_set_context(rmsg->dlv, 0);
+                qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "malformed HTTP1 response, delivery released");
+                rmsg->dlv = 0;
                 qdr_http1_close_connection(hconn, "Cannot parse response message");
+                return rmsg->dispo;
             }
         }
     }
