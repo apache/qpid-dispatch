@@ -116,7 +116,7 @@ class CommonHttp2Tests():
             i += 1
         self.assertIn(ret_string, out)
 
-    @SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
+    #@SkipIfNeeded(skip_test(), "Python 3.7 or greater, Quart 0.13.0 or greater and curl needed to run http2 tests")
     #def test_large_get_request(self):
         # Tests a large get request. Response is more than 50k which means it
         # will span many qd_http2_buffer_t objects.
