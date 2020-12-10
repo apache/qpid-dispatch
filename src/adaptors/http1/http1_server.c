@@ -636,7 +636,7 @@ static bool _process_requests(qdr_http1_connection_t *hconn)
             if ((!hreq->request_acked || !hreq->request_settled) &&
                 hconn->cfg.aggregation == QD_AGGREGATION_NONE) {
 
-                if (hreq->request_dispo == 0)
+                if (!hreq->request_dispo || hreq->request_dispo == PN_ACCEPTED)
                     hreq->request_dispo = (hreq->base.out_http1_octets > 0
                                            ? PN_MODIFIED : PN_RELEASED);
 
@@ -990,7 +990,6 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs)
            "[C%"PRIu64"][L%"PRIu64"] HTTP response message msg-id=%"PRIu64" decoding complete.",
            hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
 
-    hreq->response_complete = true;
     rmsg->rx_complete = true;
 
     if (!qd_message_receive_complete(msg)) {
@@ -1004,6 +1003,10 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs)
         // We've finished the delivery, and don't care about outcome/settlement
         _server_response_msg_free(hreq, rmsg);
     }
+
+    // only consider the response complete if terminal response code (!1xx)
+    if (h1_codec_request_state_response_code(hrs) / 100 != 1)
+        hreq->response_complete = true;
 }
 
 
