@@ -1449,7 +1449,10 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
         if (hreq->request_dispo) {
             qd_message_set_send_complete(msg);
             if (hreq->request_dispo == PN_ACCEPTED) {
-                h1_codec_tx_done(hreq->base.lib_rs, &hreq->close_on_complete);
+                bool need_close = false;
+                h1_codec_tx_done(hreq->base.lib_rs, &need_close);
+                hreq->close_on_complete = need_close || hreq->close_on_complete;
+
                 qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                        "[C%"PRIu64"][L%"PRIu64"] HTTP request message msg-id=%"PRIu64" encoding complete",
                        hconn->conn_id, link->identity, hreq->base.msg_id);
