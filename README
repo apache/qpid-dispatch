@@ -85,6 +85,15 @@ To install pip, Quart, and selectors
  - pip3 install --user quart
  - pip3 install --user selectors
 
+The gRPC system tests (tests/system_tests_grpc.py) use grpcio and protobuf modules.
+To install them use:
+  - pip3 install --user grpcio protobuf
+In order to regenerate the auto generated pb2 files used by system_tests_grpc.py,
+you must also install the following dependency:
+  - pip3 install --user grpcio-tools
+And run the following command to generate grpc code:
+  - python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. ./friendship.proto
+
 
 Test Suite Code Coverage (GNU tools only)
 =========================================
