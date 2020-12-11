@@ -365,6 +365,7 @@ void free_qdr_http2_connection(qdr_http2_connection_t* http_conn, bool on_shutdo
     http_conn->context.context = 0;
 
     nghttp2_session_del(http_conn->session_data->session);
+
     free_qdr_http2_session_data_t(http_conn->session_data);
     sys_mutex_lock(http2_adaptor->lock);
     DEQ_REMOVE(http2_adaptor->connections, http_conn);
@@ -1630,11 +1631,6 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                                                             count,
                                                             stream_data);
 
-            for (uint32_t idx = 0; idx < count; idx++) {
-                free(hdrs[idx].name);
-                free(hdrs[idx].value);
-            }
-
             if (stream_id != -1) {
                 stream_data->stream_id = stream_id;
             }
@@ -1651,6 +1647,11 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
 
             qd_iterator_free(app_properties_iter);
             qd_parse_free(app_properties_fld);
+
+            for (uint32_t idx = 0; idx < count; idx++) {
+                free(hdrs[idx].name);
+                free(hdrs[idx].value);
+            }
         }
         else {
             qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Headers already submitted, Proceeding with the body", conn->conn_id, stream_data->stream_id);
@@ -2242,7 +2243,8 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             send_settings_frame(conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
-            nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks*)http2_adaptor->callbacks, (void *)conn);
+            if (!conn->session_data->session)
+                nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks *)http2_adaptor->callbacks, (void *)conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED)", conn->conn_id);
             conn->connection_established = true;
             create_stream_dispatcher_link(conn);
