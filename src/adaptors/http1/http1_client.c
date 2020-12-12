@@ -1456,8 +1456,6 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                                             bool                    settled)
 {
     qd_message_t        *msg = qdr_delivery_message(delivery);
-    if (qd_message_is_discard(msg))
-        return 0;
 
     _client_request_t  *hreq = (_client_request_t*) qdr_delivery_get_context(delivery);
     if (!hreq) {
@@ -1471,7 +1469,6 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                    "[C%"PRIu64"][L%"PRIu64"] Malformed HTTP/1.x message",
                    hconn->conn_id, link->identity);
             qd_message_set_send_complete(msg);
-            qd_message_set_discard(msg, true);
             qdr_http1_close_connection(hconn, "Malformed response message");
             return PN_REJECTED;
 
@@ -1483,7 +1480,6 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                        "[C%"PRIu64"][L%"PRIu64"] Discarding malformed message.", hconn->conn_id, link->identity);
                 qd_message_set_send_complete(msg);
-                qd_message_set_discard(msg, true);
                 qdr_http1_close_connection(hconn, "Cannot correlate response message");
                 return PN_REJECTED;
             }
@@ -1545,7 +1541,6 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             } else {
                 // The response was bad.  There's not much that can be done to
                 // recover, so for now I punt...
-                qd_message_set_discard(msg, true);
 
                 // returning a terminal disposition will cause the delivery to be updated and settled,
                 // so drop our reference

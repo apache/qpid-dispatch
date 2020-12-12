@@ -1960,7 +1960,7 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
             qdr_node_disconnect_deliveries(router->router_core, link, dlv, pnd);
             pn_delivery_settle(pnd);
         } else {
-            if (disp == PN_RELEASED || disp == PN_MODIFIED || qdr_delivery_presettled(dlv)) {
+            if (disp == PN_RELEASED || disp == PN_MODIFIED || disp == PN_REJECTED || qdr_delivery_presettled(dlv)) {
                 //
                 // If the delivery is settled and it is still arriving, defer the settlement
                 // until the content has fully arrived. For now set the disposition on the qdr_delivery
