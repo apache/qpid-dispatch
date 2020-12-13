@@ -80,7 +80,7 @@ class AbsoluteConnectionCountLimit(TestCase):
         except ConnectionException:
             denied = True
 
-        self.assertFalse(denied) # assert if connections that should open did not open
+        self.assertFalse(denied)  # assert if connections that should open did not open
 
         # third connection should be denied
         denied = False
@@ -951,7 +951,7 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-2 --stdin', input=self.disallowed_source())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-2' is invalid:" in str(e))
+            self.assertIn("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-2' is invalid:", str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected
@@ -961,7 +961,7 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_target())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-3' is invalid:" in str(e))
+            self.assertIn("InternalServerErrorStatus: PolicyError: Policy 'DISPATCH-1993-3' is invalid:", str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected - name subst must whole token
@@ -971,8 +971,8 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern1())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError:" in str(e))
-            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in str(e))
+            self.assertIn("InternalServerErrorStatus: PolicyError:", str(e))
+            self.assertIn("Policy 'DISPATCH-1993-3' is invalid:", str(e))
         self.assertTrue(exception)
 
         # attempt another create that should be rejected - name subst must be prefix or suffix
@@ -982,8 +982,8 @@ class PolicyLinkNamePatternTest(TestCase):
             qdm_out = self.run_qdmanage('create --type=vhost --name=DISPATCH-1993-3 --stdin', input=self.disallowed_source_pattern2())
         except Exception as e:
             exception = True
-            self.assertTrue("InternalServerErrorStatus: PolicyError:" in str(e))
-            self.assertTrue("Policy 'DISPATCH-1993-3' is invalid:" in str(e))
+            self.assertIn("InternalServerErrorStatus: PolicyError:", str(e))
+            self.assertIn("Policy 'DISPATCH-1993-3' is invalid:", str(e))
         self.assertTrue(exception)
 
 
@@ -1059,7 +1059,7 @@ class PolicyHostamePatternTest(TestCase):
         try:
             qdm_out = self.run_qdmanage('create --type=vhost --name=#.#.0.0 --stdin', input=self.disallowed_hostname())
         except Exception as e:
-            self.assertTrue("pattern conflicts" in str(e), msg=('Error running qdmanage %s' % str(e)))
+            self.assertIn("pattern conflicts", str(e), msg=('Error running qdmanage %s' % str(e)))
         self.assertNotIn("222222", qdm_out)
 
 
@@ -1642,27 +1642,18 @@ class ConnectorPolicySrcTgt(TestCase):
             self.assertTrue(res)
 
         # senders that should fail
-        for addr in ["test", "a/bad/addr"]: # denied targets
-            try:
-                res = cpc.try_sender(addr)
-            except:
-                res = False
+        for addr in ["test", "a/bad/addr"]:  # denied targets
+            res = cpc.try_sender(addr)
             self.assertFalse(res)
 
         # receivers that should work
-        for addr in ["examples", "test", "workaholic"]: # allowed sources
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+        for addr in ["examples", "test", "workaholic"]:  # allowed sources
+            res = cpc.try_receiver(addr)
             self.assertTrue(res)
 
         # receivers that should fail
         for addr in ["$management", "a/bad/addr"]: # denied sources
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+            res = cpc.try_receiver(addr)
             self.assertFalse(res)
 
         # anonomyous sender should be disallowed
@@ -1740,7 +1731,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         self.assertTrue(res)
 
         # waypoint links should be allowed
-        res = cpc.try_sender("node.1")       # semder 2
+        res = cpc.try_sender("node.1")       # sender 2
         self.assertTrue(res)
         res = cpc.try_receiver("node.1")     # receiver 1
         self.assertTrue(res)
@@ -1755,26 +1746,17 @@ class ConnectorPolicyNSndrRcvr(TestCase):
 
         # senders that should fail
         for i in range(2):
-            try:
-                res = cpc.try_sender(addr)
-            except:
-                res = False
+            res = cpc.try_sender(addr)
             self.assertFalse(res)
 
         # receivers that should work
         for i in range(self.MAX_RECEIVERS - 1):
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+            res = cpc.try_receiver(addr)
             self.assertTrue(res)
 
         # receivers that should fail
         for i in range(2):
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+            res = cpc.try_receiver(addr)
             self.assertFalse(res)
 
         # close a sender and verify that another one only may open
@@ -1782,36 +1764,24 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         cpc.close_sender()
 
         for i in range(1):
-            try:
-                res = cpc.try_sender(addr)
-            except:
-                res = False
+            res = cpc.try_sender(addr)
             self.assertTrue(res)
 
         # senders that should fail
         for i in range(1):
-            try:
-                res = cpc.try_sender(addr)
-            except:
-                res = False
+            res = cpc.try_sender(addr)
             self.assertFalse(res)
 
         # close a receiver and verify that another one only may open
         cpc.close_receiver()
 
         for i in range(1):
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+            res = cpc.try_receiver(addr)
             self.assertTrue(res)
 
         # senders that should fail
         for i in range(1):
-            try:
-                res = cpc.try_receiver(addr)
-            except:
-                res = False
+            res = cpc.try_receiver(addr)
             self.assertFalse(res)
 
 
