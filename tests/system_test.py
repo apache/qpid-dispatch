@@ -878,7 +878,7 @@ class TestCase(unittest.TestCase, Tester):  # pylint: disable=too-many-public-me
 
     if not hasattr(unittest.TestCase, 'assertRegex'):
         def assertRegex(self, text, regexp, msg=None):
-            """For python < 3.2"""
+            """For Python < 3.2"""
             if hasattr(unittest.TestCase, 'assertRegexpMatches'):
                 self.assertRegexpMatches(text, regexp, msg)
             else:
