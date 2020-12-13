@@ -19,7 +19,6 @@
 
 find_library(NGHTTP2_LIBRARIES
   NAMES libnghttp2 nghttp2
-  REQUIRED
 )
 
 find_path(NGHTTP2_INCLUDE_DIRS
@@ -31,6 +30,3 @@ find_path(NGHTTP2_INCLUDE_DIRS
 include(FindPackageHandleStandardArgs)
   find_package_handle_standard_args(
     libnghttp2 DEFAULT_MSG NGHTTP2_LIBRARIES NGHTTP2_INCLUDE_DIRS)
-
-
-
