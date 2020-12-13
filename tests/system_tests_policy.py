@@ -80,7 +80,7 @@ class AbsoluteConnectionCountLimit(TestCase):
         except ConnectionException:
             denied = True
 
-        self.assertFalse(denied) # assert if connections that should open did not open
+        self.assertFalse(denied)  # assert if connections that should open did not open
 
         # third connection should be denied
         denied = False
@@ -1731,7 +1731,7 @@ class ConnectorPolicyNSndrRcvr(TestCase):
         self.assertTrue(res)
 
         # waypoint links should be allowed
-        res = cpc.try_sender("node.1")       # semder 2
+        res = cpc.try_sender("node.1")       # sender 2
         self.assertTrue(res)
         res = cpc.try_receiver("node.1")     # receiver 1
         self.assertTrue(res)
