@@ -96,13 +96,13 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: 3.7
           architecture: x64
 
-      - name: Install python dependencies
+      - name: Install Python build dependencies
         run: python -m pip install setuptools wheel tox
 
-      - name: Install Linux dependencies
+      - name: Install Linux build dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
           sudo apt install -y swig libpython3-dev libsasl2-dev libjsoncpp-dev libwebsockets-dev libnghttp2-dev ccache ninja-build pixz
@@ -193,16 +193,16 @@ jobs:
       - name: Setup python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.6
+          python-version: 3.7
           architecture: x64
 
-      - name: Install python dependencies
-        run: python -m pip install tox
+      - name: Install Python runtime/test dependencies
+        run: python -m pip install tox quart
 
-      - name: Install Linux dependencies
+      - name: Install Linux runtime/test dependencies
         if: ${{ runner.os == 'Linux' }}
         run: |
-          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap
+          sudo apt install -y libsasl2-2 libsasl2-modules sasl2-bin libjsoncpp1 libwebsockets15 pixz bubblewrap curl
 
       - name: Unpack archive
         run: tar -I pixz -xf archive.tar.xz
