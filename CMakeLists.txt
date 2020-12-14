@@ -57,8 +57,9 @@ endif (NOT APPLE)
 find_package(PythonInterp REQUIRED)
 find_package(PythonLibs REQUIRED)
 find_package(Threads REQUIRED)
-find_package(Proton 0.23 REQUIRED COMPONENTS Core Proactor)
+find_package(Proton 0.33.0 REQUIRED COMPONENTS Core Proactor)
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
+find_package(libnghttp2 1.4.0 REQUIRED)
 
 ##
 ## Optional dependencies
@@ -66,7 +67,6 @@ message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERS
 
 # Web Sockets
 find_package(LibWebSockets 2.4.2)
-find_package(libnghttp2 1.4.0)
 CMAKE_DEPENDENT_OPTION(USE_LIBWEBSOCKETS "Use libwebsockets for WebSocket support" ON
                          "LIBWEBSOCKETS_FOUND" OFF)
 if (LIBWEBSOCKETS_FOUND AND LIBWEBSOCKETS_VERSION_STRING)
