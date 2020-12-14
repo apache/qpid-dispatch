@@ -2244,7 +2244,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Accepted Ingress ((PN_RAW_CONNECTION_CONNECTED)) from %s", conn->conn_id, conn->remote_address);
         } else {
             if (!conn->session_data->session)
-                nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks*)http2_adaptor->callbacks, (void *)conn);
+                nghttp2_session_client_new(&conn->session_data->session, (nghttp2_session_callbacks *)http2_adaptor->callbacks, (void *)conn);
             qd_log(log, QD_LOG_INFO, "[C%"PRIu64"] Connected Egress (PN_RAW_CONNECTION_CONNECTED)", conn->conn_id);
             conn->connection_established = true;
             create_stream_dispatcher_link(conn);
