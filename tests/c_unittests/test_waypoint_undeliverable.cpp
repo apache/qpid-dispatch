@@ -37,6 +37,8 @@ extern "C" {
 #include <proton/message.h>
 #include <router_core/agent_config_address.h>
 #include <router_core/agent_config_auto_link.h>
+#include <router_core/router_core_private.h>
+#include <qpid/dispatch/protocol_adaptor.h>
 }
 
 static void check_query(const qdr_query_t *query);
@@ -222,19 +224,97 @@ TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
         // this deserves some wrapper, but I don't know how to write something generic and usable
 
         {  // dealloc uniqe ptrs created in this scope
-            std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
-            link->core = qdr.qd->router->router_core;
-            link->conn = new_qdr_connection_t();
-            link->conn->work_lock = sys_mutex();
-            link->conn->in_activate_list = true; // TODO don't know what this does; true codepath is simpler, though
+
+//            std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
+//            link->core = qdr.qd->router->router_core;
+
+
+//            link->conn = new_qdr_connection_t();
+//            link->conn->work_lock = sys_mutex();
+//            link->conn->in_activate_list = true; // TODO don't know what this does; true codepath is simpler, though
+
+          // alternative for the above, it is tedious to fill what I need
+          char                   rversion[128];
+          qdr_connection_info_t *connection_info = qdr_connection_info(false,
+                                                                       false,
+                                                                       true,
+                                                                       nullptr,
+                                                                       QD_INCOMING,
+                                                                       "localhost",
+                                                                       nullptr,
+                                                                       nullptr,
+                                                                       nullptr,
+                                                                       nullptr,
+                                                                       nullptr,
+                                                                       0,
+                                                                       false,
+                                                                       rversion,
+                                                                       false);
+
+//          qdr_protocol_adaptor_t *adaptor = qdr_protocol_adaptor(
+//              qdr.qd->router->router_core,
+//              "http2",  // name
+//              nullptr,  // context
+//              [](void *notused, qdr_connection_t *c){},
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr,
+//              nullptr);
+
+          qdr_connection_t *conn = qdr_connection_opened(qdr.qd->router->router_core,
+                                                         qdr.qd->router->router_core->protocol_adaptors.head,
+                                                         true,  // incoming
+                                                         QDR_ROLE_NORMAL,
+                                                         1,  // cost
+                                                         0,
+                                                         nullptr,  // label
+                                                         nullptr,  // remote container id
+                                                         false,    // strip annotations in
+                                                         false,    // strip annotations out
+                                                         false,    // allow dynamic link routes
+                                                         false,    // allow admin status update
+                                                         1,
+                                                         nullptr,  // vhost
+                                                         connection_info,
+                                                         nullptr,   // bind context
+                                                         nullptr);  // bind token
+
+          // ok, lets make link using router
+          qdr_link_t * qd_link = qdr_create_link_CT(qdr.qd->router->router_core,
+                                         conn,
+                                         QD_LINK_ROUTER,
+                                         QD_INCOMING,
+                                         nullptr,
+                                         nullptr,
+                                         QD_SSN_LINK_ROUTE);
+
+          std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{qd_link, free_qdr_link_t};
+
+          
+          
+          
             link->core_endpoint = NULL;
             link->connected_link = NULL;
             memset(&link->undelivered, 0, sizeof(link->undelivered));
-            link->owning_addr = new_qdr_address_t();
-            link->owning_addr->router_control_only = false; // TODO don't know what this is
-            link->owning_addr->rnodes = qd_bitmask(0); // TODO don't know what this is
-            link->owning_addr->exchange = NULL; // qd_exchange_t is private type
-            link->owning_addr->forwarder = NULL;
+
+//            link->owning_addr = new_qdr_address_t();
+//            link->owning_addr->router_control_only = false; // TODO don't know what this is
+//            link->owning_addr->rnodes = qd_bitmask(0); // TODO don't know what this is
+//            link->owning_addr->exchange = NULL; // qd_exchange_t is private type
+//            link->owning_addr->forwarder = NULL;
+
+            // alternative for the commented block above; always better to use existing "constructors"
+//            link->owning_addr = qdr_address_CT(qdr.qd->router->router_core, QD_TREATMENT_ANYCAST_BALANCED, nullptr);
+
             memset(&link->updated_deliveries, 0, sizeof(link->updated_deliveries));
             link->link_direction = QD_INCOMING;
             memset(&link->work_list, 0, sizeof(link->work_list));
@@ -256,15 +336,58 @@ TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
             // qdr_link_deliver triggers async work, cannot check too soon
             qdr.wait();
 
+            // expect one unsettled delivery reference
+            qdr_delivery_ref_t *dref = DEQ_HEAD(link->updated_deliveries);
+            REQUIRE(dref != nullptr);
+//            free_qdr_delivery_ref_t(dref);
+//            dref = DEQ_HEAD(link->updated_deliveries);
+//            REQUIRE(dref == nullptr);
+
+//          while (dref) {
+//              conn->protocol_adaptor->delivery_update_handler(conn->protocol_adaptor->user_context, dref->dlv, dref->dlv->disposition, dref->dlv->settled);
+//              qdr_delivery_decref(core, dref->dlv, "qdr_connection_process - remove from updated list");
+//              qdr_del_delivery_ref(&updated_deliveries, dref);
+//              dref = DEQ_HEAD(updated_deliveries);
+//              event_count++;
+//          }
+
             CHECK(delivery->presettled == false);
             // CHECK it all
+//            qdr_delivery_decref(qdr.qd->router->router_core, delivery, "release protection of return from deliver");
+//
 
-            free_qdr_connection_t(link->conn);
-            free_qdr_address_t(link->owning_addr);
-            free_qdr_delivery_t(delivery);
+//          qdr_link_cleanup_CT();
+          qdr_connection_process(link->conn);
+          qdr.wait();
+          qdr_connection_process(link->conn);
+          qdr.wait();
+          qdr_connection_process(link->conn);
+          qdr.wait();
+
+          // qdr create link CT
+//          void qdr_add_link_ref(qdr_link_ref_list_t *ref_list, qdr_link_t *link, int cls);
+//          qdr_add_link_ref(&link->conn->links, link.get(), QDR_LINK_LIST_CLASS_CONNECTION);
+
+          free_qdr_delivery_t(delivery);
+
+          qdr_connection_closed(link->conn);
+          qdr.wait();
+
+//          link->conn->core = qdr.qd->router->router_core;
+//          qdr_connection_closed(link->conn);
+          //            free_qdr_connection_t(link->conn);
+//            free_qd_bitmask
+//            qd_bitmask_free(link->owning_addr->rnodes); // todo
+//            free_qdr_address_t(link->owning_addr);
+//            free_qdr_delivery_t(delivery);
+
+//            qdr_protocol_adaptor_free(qdr.qd->router->router_core, adaptor);
+          link.release();
         }
-
         qdr.stop();
+
+
+
      }).join();
 }
 

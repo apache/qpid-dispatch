@@ -76,7 +76,7 @@ class WithNoMemoryLeaks {
         std::stringstream buffer;
         buffer << f.rdbuf();
         std::string leak_reports = buffer.str();
-        CHECK_MESSAGE(leak_reports.length() == 0, leak_reports);
+        REQUIRE_MESSAGE(leak_reports.length() == 0, leak_reports);
         qd_alloc_debug_dump(nullptr);
 #endif  // QD_MEMORY_DEBUG
 

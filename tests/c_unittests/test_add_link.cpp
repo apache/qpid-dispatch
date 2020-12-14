@@ -87,7 +87,7 @@ TEST_CASE("More to come" * doctest::skip(false)) {
         uint64_t in_conn_id = 0;
 
 //        qd_composed_field_t *composed_body = NULL;
-        qd_composed_field_t *composed_body = qd_compose_subfield(0);
+        qd_composed_field_t *composed_body = qd_compose_subfield(nullptr);
         // nobody is looking at this, yet; TODO because this is to store the reply, not request!
 //        qd_compose_start_map(composed_body);
 //        qd_compose_insert_string(composed_body, "address");
@@ -142,9 +142,10 @@ TEST_CASE("More to come" * doctest::skip(false)) {
         REQUIRE(addr_field != nullptr);
 
         qdra_config_auto_link_create_CT(core, name, query, parsed_body);
-        // called qdr_route_add_auto_link_CT to actually add the auto link
+        // calls qdr_route_add_auto_link_CT to actually add the auto link
 
         // result is put into query; no need to read logs
+        REQUIRE(query != nullptr);
         CHECK(query->status.status == QD_AMQP_CREATED.status);  // some smarter compare in doctest?
         CHECK(query->status.description == QD_AMQP_CREATED.description);
         // if query->body is null, it is not set
