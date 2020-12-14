@@ -1093,27 +1093,6 @@ pn_terminus_t *qd_link_remote_target(qd_link_t *link)
 }
 
 
-void qd_link_activate(qd_link_t *link)
-{
-    if (!link || !link->pn_link)
-        return;
-
-    pn_session_t *sess = pn_link_session(link->pn_link);
-    if (!sess)
-        return;
-
-    pn_connection_t *conn = pn_session_connection(sess);
-    if (!conn)
-        return;
-
-    qd_connection_t *ctx = pn_connection_get_context(conn);
-    if (!ctx)
-        return;
-
-    qd_server_activate(ctx);
-}
-
-
 void qd_link_close(qd_link_t *link)
 {
     if (link->pn_link)

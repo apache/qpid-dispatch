@@ -224,7 +224,6 @@ pn_terminus_t *qd_link_source(qd_link_t *link);
 pn_terminus_t *qd_link_target(qd_link_t *link);
 pn_terminus_t *qd_link_remote_source(qd_link_t *link);
 pn_terminus_t *qd_link_remote_target(qd_link_t *link);
-void qd_link_activate(qd_link_t *link);
 void qd_link_close(qd_link_t *link);
 void qd_link_detach(qd_link_t *link);
 void qd_link_free(qd_link_t *link);

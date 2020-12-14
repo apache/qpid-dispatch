@@ -1578,7 +1578,9 @@ void qd_connection_invoke_deferred(qd_connection_t *conn, qd_deferred_t call, vo
     DEQ_INSERT_TAIL(conn->deferred_calls, dc);
     sys_mutex_unlock(conn->deferred_call_lock);
 
+    sys_mutex_lock(conn->server->conn_activation_lock);
     qd_server_activate(conn);
+    sys_mutex_unlock(conn->server->conn_activation_lock);
 }
 
 
