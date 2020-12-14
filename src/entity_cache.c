@@ -56,6 +56,16 @@ void qd_entity_cache_initialize() {
     DEQ_INIT(event_list);
 }
 
+void qd_entity_cache_free_entries() {
+    sys_mutex_lock(event_lock);
+    entity_event_t *event = DEQ_HEAD(event_list);
+    while (event) {
+        DEQ_REMOVE_HEAD(event_list);
+        free(event);
+        event = DEQ_HEAD(event_list);
+    }
+}
+
 static void push_event(action_t action, const char *type, void *object) {
     if (!event_lock) return;    /* Unit tests don't call qd_entity_cache_initialize */
     sys_mutex_lock(event_lock);

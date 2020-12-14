@@ -108,6 +108,12 @@ class BetterRouterStartupLatch {
 // This also prevents me from doing a startup time benchmark. I can't run multiple startups
 // in a loop to average them easily. There will be a way, but not with `for (auto _ : state)`.
 
+static std::string get_env(std::string const & key)
+{
+    char * val = std::getenv(key.c_str());
+    return val == NULL ? std::string("") : std::string(val);
+}
+
 /// Initializes and deinitializes the router
 class QDR {
    public:
@@ -115,9 +121,22 @@ class QDR {
     void start() {
         // prepare the smallest amount of things that qd_dispatch_free needs to be present
         qd = qd_dispatch(nullptr, false);
-        // qd can be configured at this point, e.g. qd->thread_count
-        REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
-        qd_router_setup_late(qd);  // sets up e.g. qd->router->router_core
+        REQUIRE(qd != nullptr);
+
+        const bool load_config = true;
+        if (load_config) {
+            // call qd_dispatch_load_config to get management agent; so far, I never needed it for anything
+            std::string config_path = get_env("CMAKE_CURRENT_SOURCE_DIR") + "/threads4.conf";
+            qd_dispatch_validate_config(config_path.c_str());
+            qd_dispatch_load_config(qd, config_path.c_str());
+        } else {
+            // this is what load_config calls from Python, so don't run both, or there be leaks
+
+            // qd can be configured at this point, e.g. qd->thread_count
+
+            REQUIRE(qd_dispatch_prepare(qd) == QD_ERROR_NONE);
+            qd_router_setup_late(qd);  // sets up e.g. qd->router->router_core
+        }
     };
 
     /// cleaning up too early after init will lead to leaks and other
@@ -129,6 +148,7 @@ class QDR {
 
     void stop() const {
         qd_dispatch_free(qd);
+        qd_entity_cache_free_entries(); // cache is a global var, redeclaring it without freeing what becomes unreachable creates leak
     };
 };
 #endif  // QPID_DISPATCH_HELPERS_HPP
