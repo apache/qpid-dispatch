@@ -32,7 +32,7 @@
  */
 
 /** Initialize the module. */
-void qd_entity_cache_initialize(void);
+void qd_entity_cache_initialize();
 
 /** Add an entity to the agent cache. */
 void qd_entity_cache_add(const char *type, void *object);

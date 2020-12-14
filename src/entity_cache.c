@@ -51,7 +51,7 @@ static entity_event_t *entity_event(action_t action, const char *type, void *obj
 static sys_mutex_t *event_lock = 0;
 static entity_event_list_t  event_list;
 
-void qd_entity_cache_initialize(void) {
+void qd_entity_cache_initialize() {
     event_lock = sys_mutex();
     DEQ_INIT(event_list);
 }
