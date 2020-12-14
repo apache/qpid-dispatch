@@ -718,9 +718,10 @@ static qdr_tcp_connection_t *qdr_tcp_connection_egress(qd_bridge_config_t *confi
 static void free_bridge_config(qd_bridge_config_t *config)
 {
     if (!config) return;
+    free(config->name);
+    free(config->address);
     free(config->host);
     free(config->port);
-    free(config->name);
     free(config->site_id);
     free(config->host_port);
 }
@@ -732,11 +733,11 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_bridge_config_t *conf
     qd_error_clear();
     ZERO(config);
 
-    config->name                 = qd_entity_get_string(entity, "name");              CHECK();
-    config->address              = qd_entity_get_string(entity, "address");           CHECK();
-    config->host                 = qd_entity_get_string(entity, "host");              CHECK();
-    config->port                 = qd_entity_get_string(entity, "port");              CHECK();
-    config->site_id              = qd_entity_opt_string(entity, "siteId", 0);        CHECK();
+    config->name    = qd_entity_get_string(entity, "name");      CHECK();
+    config->address = qd_entity_get_string(entity, "address");   CHECK();
+    config->host    = qd_entity_get_string(entity, "host");      CHECK();
+    config->port    = qd_entity_get_string(entity, "port");      CHECK();
+    config->site_id = qd_entity_opt_string(entity, "siteId", 0); CHECK();
 
     int hplen = strlen(config->host) + strlen(config->port) + 2;
     config->host_port = malloc(hplen);
@@ -1249,6 +1250,7 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
     qd_tcp_listener_t *tl = DEQ_HEAD(adaptor->listeners);
     while (tl) {
         qd_tcp_listener_t *next = DEQ_NEXT(tl);
+        free_bridge_config(&tl->config);
         free_qd_tcp_listener_t(tl);
         tl = next;
     }
@@ -1256,6 +1258,8 @@ static void qdr_tcp_adaptor_final(void *adaptor_context)
     qd_tcp_connector_t *tr = DEQ_HEAD(adaptor->connectors);
     while (tr) {
         qd_tcp_connector_t *next = DEQ_NEXT(tr);
+        free_bridge_config(&tr->config);
+        free_qdr_tcp_connection((qdr_tcp_connection_t*) tr->dispatcher);
         free_qd_tcp_connector_t(tr);
         tr = next;
     }
