@@ -167,6 +167,9 @@ class TcpAdaptor(TestCase):
     # TCP siteId for listeners and connectors
     site = "mySite"
 
+    # Each router has an echo server to which it connects
+    echo_servers = {}
+
     @classmethod
     def setUpClass(cls):
         """Start a router"""
@@ -361,7 +364,6 @@ class TcpAdaptor(TestCase):
         cls.print_logs_client = True
 
         # start echo servers
-        cls.echo_servers = {}
         for rtr in cls.router_order:
             test_name = "TcpAdaptor"
             server_prefix = "ECHO_SERVER %s ES_%s" % (test_name, rtr)
@@ -407,9 +409,10 @@ class TcpAdaptor(TestCase):
     def tearDownClass(cls):
         # stop echo servers
         for rtr in cls.router_order:
-            server = cls.echo_servers[rtr]
-            cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
-            server.wait()
+            server = cls.echo_servers.get(rtr)
+            if not server is None:
+                cls.logger.log("TCP_TEST Stopping echo server %s" % rtr)
+                server.wait()
         super(TcpAdaptor, cls).tearDownClass()
 
     #
