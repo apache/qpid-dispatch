@@ -1,3 +1,6 @@
+#ifndef __http2_adaptor_h__
+#define __http2_adaptor_h__ 1
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
@@ -210,3 +213,4 @@ ALLOC_DECLARE(qdr_http2_connection_t);
 ALLOC_DECLARE(qd_http2_buffer_t);
 
 
+#endif // __http2_adaptor_h__
