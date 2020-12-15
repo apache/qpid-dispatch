@@ -34,6 +34,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import errno, os, time, socket, random, subprocess, shutil, unittest, __main__, re, sys
+import functools
 from datetime import datetime
 from subprocess import PIPE, STDOUT
 from copy import copy
@@ -911,6 +912,7 @@ class SkipIfNeeded(object):
 
     def __call__(self, f):
 
+        @functools.wraps(f)
         def wrap(*args, **kwargs):
             """
             Wraps original test method's invocation and dictates whether or
