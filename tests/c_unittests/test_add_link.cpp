@@ -32,6 +32,18 @@ extern "C" {
 #include <router_core/agent_config_auto_link.h>
 }
 
+#include <memory>
+
+// https://stackoverflow.com/questions/65290961/can-i-succintly-declare-stdunique-ptr-with-custom-deleter
+template <typename T, typename Deleter>
+std::unique_ptr<T, Deleter> qd_make_unique(T* raw, Deleter deleter)
+{
+    return std::unique_ptr<T, Deleter>(raw, deleter);
+}
+
+//std::unique_ptr<qdr_link_t, decltype(&free_qdr_link_t)> link{new_qdr_link_t(), free_qdr_link_t};
+//auto link = qd_make_unique(new_qdr_link_t(), free_qdr_link_t);
+
 TEST_CASE("Start and shutdown router twice" * doctest::skip(false)) {
     std::thread([]() {
         WithNoMemoryLeaks leaks{};
