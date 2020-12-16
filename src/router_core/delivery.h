@@ -62,6 +62,9 @@ struct qdr_delivery_t {
     qdr_link_work_t        *link_work;         ///< Delivery work item for this delivery
     qdr_subscription_ref_list_t subscriptions;
     qdr_delivery_ref_list_t peers;             /// Use this list if there if the delivery has more than one peer.
+    uint32_t                delivery_id;       /// id for logging
+    uint64_t                link_id;           /// id for logging
+    uint64_t                conn_id;           /// id for logging
     bool                    multicast;         /// True if this delivery is targeted for a multicast address.
     bool                    via_edge;          /// True if this delivery arrived via an edge-connection.
     bool                    stuck;             /// True if this delivery was counted as stuck.
@@ -69,6 +72,14 @@ struct qdr_delivery_t {
 
 ALLOC_DECLARE(qdr_delivery_t);
 
+/** Delivery Id for logging - thread safe
+ */
+extern sys_atomic_t global_delivery_id;
+static inline uint32_t next_delivery_id() { return sys_atomic_inc(&global_delivery_id); }
+
+// Common log line prefix
+#define DLV_FMT       "[C%"PRIu64"][L%"PRIu64"][D%"PRIu32"]"
+#define DLV_ARGS(dlv) dlv->conn_id, dlv->link_id, dlv->delivery_id
 
 ///////////////////////////////////////////////////////////////////////////////
 //                               Delivery API

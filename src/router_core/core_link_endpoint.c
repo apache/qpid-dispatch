@@ -21,6 +21,7 @@
 #include "qpid/dispatch/alloc.h"
 #include "delivery.h"
 #include <stdio.h>
+#include <inttypes.h>
 
 struct qdrc_endpoint_t {
     qdrc_endpoint_desc_t *desc;
@@ -143,6 +144,10 @@ qdr_delivery_t *qdrc_endpoint_delivery_CT(qdr_core_t *core, qdrc_endpoint_t *end
     *tag                = core->next_tag++;
     dlv->tag_length = 8;
     dlv->ingress_index = -1;
+    dlv->delivery_id = next_delivery_id();
+    dlv->link_id     = endpoint->link->identity;
+    dlv->conn_id     = endpoint->link->conn_id;
+    qd_log(core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdrc_endpoint_delivery_CT", DLV_ARGS(dlv));
     return dlv;
 }
 

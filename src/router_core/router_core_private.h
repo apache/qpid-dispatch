@@ -484,6 +484,7 @@ struct qdr_link_t {
     uint8_t   priority;
     uint8_t   rate_cursor;
     uint32_t  core_ticks;
+    uint64_t  conn_id;
 
     DEQ_LINKS_N(STREAMING_POOL, qdr_link_t);
 };

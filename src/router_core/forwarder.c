@@ -153,6 +153,10 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     ZERO(out_dlv);
     set_safe_ptr_qdr_link_t(out_link, &out_dlv->link_sp);
     out_dlv->msg        = qd_message_copy(msg);
+    out_dlv->delivery_id = next_delivery_id();
+    out_dlv->link_id     = out_link->identity;
+    out_dlv->conn_id     = out_link->conn_id;
+    qd_log(core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_forward_new_delivery_CT", DLV_ARGS(out_dlv));
 
     if (in_dlv) {
         out_dlv->settled       = in_dlv->settled;
@@ -963,6 +967,7 @@ void qdr_forward_link_direct_CT(qdr_core_t       *core,
     out_link->core           = core;
     out_link->identity       = qdr_identifier(core);
     out_link->conn           = conn;
+    out_link->conn_id        = conn->identity;
     out_link->link_type      = QD_LINK_ENDPOINT;
     out_link->link_direction = qdr_link_direction(in_link) == QD_OUTGOING ? QD_INCOMING : QD_OUTGOING;
     out_link->admin_enabled  = true;
