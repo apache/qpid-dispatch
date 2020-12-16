@@ -142,6 +142,7 @@ struct qdr_http1_connection_t {
         char *host_port;
         bool event_channel;
         qd_http_aggregation_t aggregation;
+        char *host_override;
     } cfg;
 
     // State if connected to an HTTP client

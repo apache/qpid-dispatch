@@ -1195,6 +1195,12 @@
                     "required": false,
                     "description": "Enables restricted event mode where no reponses are sent to request and only post is allowed",
                     "create": true
+                },
+                "hostOverride": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to override the value of the Host header sent to the client.",
+                    "create": true
                 }
             }
         },
