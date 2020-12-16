@@ -54,6 +54,7 @@ ALLOC_DECLARE(_server_response_msg_t);
 ALLOC_DEFINE(_server_response_msg_t);
 DEQ_DECLARE(_server_response_msg_t, _server_response_msg_list_t);
 
+const char *HOST_KEY = "Host";
 
 //
 // State for an HTTP/1.x Request+Response exchange, server facing
@@ -155,6 +156,7 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
     hconn->cfg.host_port = qd_strdup(bconfig->host_port);
     hconn->server.connector = ctor;
     ctor->ctx = (void*)hconn;
+    hconn->cfg.host_override = bconfig->host_override ? qd_strdup(bconfig->host_override) : 0;
 
     // for initiating a connection to the server
     hconn->server.reconnect_timer = qd_timer(qdr_http1_adaptor->core->qd, _do_reconnect, hconn);
@@ -1249,8 +1251,20 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
         if (!i_key)
             break;
 
-        // ignore the special headers added by the mapping
-        if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+        if (hconn->cfg.host_override && qd_iterator_equal(i_key, (const unsigned char*) HOST_KEY)) {
+            //if host override option is in use, write the configured
+            //value rather than that submitted by client
+            char *header_key = (char*) qd_iterator_copy(i_key);
+            qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+                   "[C%"PRIu64"][L%"PRIu64"] Encoding request header %s:%s",
+                   hconn->conn_id, hconn->out_link_id,
+                   header_key, hconn->cfg.host_override);
+
+            ok = !h1_codec_tx_add_header(hreq->base.lib_rs, header_key, hconn->cfg.host_override);
+
+            free(header_key);
+        } else if (!qd_iterator_prefix(i_key, HTTP1_HEADER_PREFIX)) {
+            // ignore the special headers added by the mapping
             qd_iterator_t *i_value = qd_parse_raw(value);
             if (!i_value)
                 break;
@@ -1268,6 +1282,7 @@ static uint64_t _send_request_headers(_server_request_t *hreq, qd_message_t *msg
             free(header_key);
             free(header_value);
         }
+
 
         key = qd_field_next_child(value);
     }

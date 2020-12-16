@@ -1165,6 +1165,12 @@
                     "default": "HTTP1",
                     "required": false,
                     "create": true
+                },
+                "hostOverride": {
+                    "type": "string",
+                    "required": false,
+                    "description": "Used to override the value of the Host header sent to the client.",
+                    "create": true
                 }
             }
         },

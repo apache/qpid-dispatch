@@ -43,6 +43,7 @@ static qd_error_t load_bridge_config(qd_dispatch_t *qd, qd_http_bridge_config_t 
     config->address = qd_entity_get_string(entity, "address");         CHECK();
     config->site    = qd_entity_opt_string(entity, "siteId", 0);       CHECK();
     version_str     = qd_entity_get_string(entity, "protocolVersion");  CHECK();
+    config->host_override  = qd_entity_opt_string(entity, "hostOverride", 0);   CHECK();
 
     if (strcmp(version_str, "HTTP2") == 0) {
         config->version = VERSION_HTTP2;
@@ -75,6 +76,7 @@ void qd_http_free_bridge_config(qd_http_bridge_config_t *config)
     free(config->name);
     free(config->address);
     free(config->site);
+    free(config->host_override);
     free(config->host_port);
 }
 

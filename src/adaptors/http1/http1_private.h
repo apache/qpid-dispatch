@@ -141,6 +141,7 @@ struct qdr_http1_connection_t {
         char *address;
         char *site;
         char *host_port;
+        char *host_override;
     } cfg;
 
     // State if connected to an HTTP client
