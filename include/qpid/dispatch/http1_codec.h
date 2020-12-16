@@ -238,10 +238,10 @@ int h1_codec_tx_body_str(h1_codec_request_state_t *hrs, char *data);
 // outgoing message construction complete.  The request_complete() callback MAY
 // occur during this call.
 //
-// need_close: set to true if the message is a response that does not provide
-// an explict body length. If true it is up to the caller to close the
-// underlying socket connection after all outgoing data for this request has
-// been sent.
+// need_close: set to true if the outgoing message is an HTTP response that
+// does not provide an explict body length. If true it is up to the caller to
+// close the underlying socket connection after all outgoing data for this
+// request has been sent.
 //
 int h1_codec_tx_done(h1_codec_request_state_t *hrs, bool *need_close);
 
