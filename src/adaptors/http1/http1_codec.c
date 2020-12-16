@@ -1691,9 +1691,11 @@ int h1_codec_tx_done(h1_codec_request_state_t *hrs, bool *need_close)
 
     encoder_reset(encoder);
 
-    if (hrs->request_complete && hrs->response_complete) {
-        conn->config.request_complete(hrs, false);
-        h1_codec_request_state_free(hrs);
+    if (!hrs->close_expected) {
+        if (hrs->request_complete && hrs->response_complete) {
+            conn->config.request_complete(hrs, false);
+            h1_codec_request_state_free(hrs);
+        }
     }
 
     return 0;
