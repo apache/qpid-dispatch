@@ -34,8 +34,8 @@ RUN dnf -y install gcc gcc-c++ cmake openssl-devel cyrus-sasl-devel cyrus-sasl-p
 
 RUN curl https://bootstrap.pypa.io/get-pip.py -o get-pip.py
 RUN python3 get-pip.py
-RUN pip3 install --user quart
-RUN pip3 install --user selectors
+RUN pip3 install quart
+RUN pip3 install selectors
 
 # Create a main directory and clone the qpid-proton repo from github
 RUN mkdir /main && cd /main && git clone https://gitbox.apache.org/repos/asf/qpid-proton.git  && cd /main/qpid-proton && mkdir /main/qpid-proton/build
