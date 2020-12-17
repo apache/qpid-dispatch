@@ -17,9 +17,9 @@
  * under the License.
  */
 
+#include "python_private.h"
 #include "http1_private.h"
 #include "adaptors/adaptor_utils.h"
-#include "python_private.h"
 
 #include <proton/listener.h>
 #include <proton/proactor.h>
