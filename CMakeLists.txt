@@ -59,11 +59,12 @@ find_package(PythonLibs REQUIRED)
 find_package(Threads REQUIRED)
 find_package(Proton 0.33.0 REQUIRED COMPONENTS Core Proactor)
 message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERSION}\")" )
-find_package(libnghttp2 1.4.0 REQUIRED)
-
 ##
 ## Optional dependencies
 ##
+
+# http2 support is optional
+find_package(libnghttp2 1.4.0)
 
 # Web Sockets
 find_package(LibWebSockets 2.4.2)
