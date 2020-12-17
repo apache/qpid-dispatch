@@ -1338,6 +1338,7 @@
                         "PROTOCOL",
                         "TCP_ADAPTOR",
                         "HTTP_ADAPTOR",
+                        "TEMPSTORE",
                         "DEFAULT"
                     ],
                     "required": true,

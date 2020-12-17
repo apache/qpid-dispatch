@@ -29,7 +29,7 @@ from subprocess import Popen, PIPE
 from qpid_dispatch.management.client import Node
 from system_test import TestCase, main_module, Qdrouterd, DIR, SkipIfNeeded
 from system_test import unittest
-from proton import SASL, Url, SSLDomain, SSLUnavailable
+from proton import SASL, Url, SSLDomain, SSLUnavailable, Message
 from proton.utils import BlockingConnection
 from distutils.version import StrictVersion
 import proton
@@ -87,6 +87,7 @@ class RouterTestSslClient(RouterTestSslBase):
     are being accepted through the related listener.
     """
     # Listener ports for each TLS protocol definition
+    PORT_CLEAR = 0
     PORT_TLS1 = 0
     PORT_TLS11 = 0
     PORT_TLS12 = 0
@@ -96,6 +97,7 @@ class RouterTestSslClient(RouterTestSslBase):
     PORT_TLS11_TLS12 = 0
     PORT_TLS_ALL = 0
     PORT_TLS_SASL = 0
+    PORT_TLS_LIVE = 0
     PORT_SSL3 = 0
     TIMEOUT = 3
 
@@ -198,6 +200,7 @@ class RouterTestSslClient(RouterTestSslBase):
                                  'mode': 'interior'})
 
         # Saving listener ports for each TLS definition
+        cls.PORT_CLEAR = cls.tester.get_port()
         cls.PORT_TLS1 = cls.tester.get_port()
         cls.PORT_TLS11 = cls.tester.get_port()
         cls.PORT_TLS12 = cls.tester.get_port()
@@ -207,10 +210,13 @@ class RouterTestSslClient(RouterTestSslBase):
         cls.PORT_TLS11_TLS12 = cls.tester.get_port()
         cls.PORT_TLS_ALL = cls.tester.get_port()
         cls.PORT_TLS_SASL = cls.tester.get_port()
+        cls.PORT_TLS_LIVE = cls.tester.get_port()
         cls.PORT_SSL3 = cls.tester.get_port()
 
         conf = [
             router,
+            # enclair
+            ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_CLEAR, 'authenticatePeer': 'no'}),
             # TLSv1 only
             ('listener', {'host': '0.0.0.0', 'role': 'normal', 'port': cls.PORT_TLS1,
                           'authenticatePeer': 'no',
@@ -452,6 +458,76 @@ class RouterTestSslClient(RouterTestSslBase):
                 self.OPENSSL_ALLOW_TLSV1_2 and tlsv1_2,
                 self.OPENSSL_ALLOW_TLSV1_3 and tlsv1_3]
 
+    def inject_file(self, source_file, dest_file):
+        source_path = self.ssl_file(source_file)
+        url         = Url("amqp://0.0.0.0:%d" % self.PORT_CLEAR)
+        try:
+            connection = BlockingConnection(url, sasl_enabled=False, timeout=self.TIMEOUT)
+            sender     = connection.create_sender('_$qd.store_file')
+            fd         = open(source_path, "r")
+            body       = fd.read()
+            fd.close()
+            sender.send(Message(subject=dest_file, body=body))
+            connection.close()
+        except proton.Timeout:
+            return False
+        except proton.ConnectionException:
+            return False
+        except Exception as e:
+            print("Exception: %r" % e)
+            return False
+        return True
+
+    def create_ssl_profile(self, name, args):
+        url = Url("amqp://0.0.0.0:%d" % self.PORT_CLEAR)
+        try:
+            connection = BlockingConnection(url, sasl_enabled=False, timeout=self.TIMEOUT)
+            receiver   = connection.create_receiver(None, dynamic=True)
+            sender     = connection.create_sender('$management')
+            sender.send(Message(properties={'operation': 'CREATE',
+                                            'type': 'org.apache.qpid.dispatch.sslProfile',
+                                            'name': name},
+                                reply_to=receiver.remote_source.address,
+                                body=args))
+            reply = receiver.receive()
+            connection.close()
+            if reply.properties['statusCode'] > 299:
+                print("Create error: %d %s" % (reply.properties['statusCode'], reply.properties['statusDescription']))
+                return False
+        except proton.Timeout:
+            return False
+        except proton.ConnectionException:
+            return False
+        except Exception as e:
+            print("Exception: %r" % e)
+            return False
+        return True
+
+    def create_listener(self, name, args):
+        url = Url("amqp://0.0.0.0:%d" % self.PORT_CLEAR)
+        try:
+            connection = BlockingConnection(url, sasl_enabled=False, timeout=self.TIMEOUT)
+            receiver   = connection.create_receiver(None, dynamic=True)
+            sender     = connection.create_sender('$management')
+            sender.send(Message(properties={'operation': 'CREATE',
+                                            'type': 'org.apache.qpid.dispatch.listener',
+                                            'name': name},
+                                reply_to=receiver.remote_source.address,
+                                body=args))
+            reply = receiver.receive()
+            connection.close()
+            if reply.properties['statusCode'] > 299:
+                print("Create error: %d %s" % (reply.properties['statusCode'], reply.properties['statusDescription']))
+                return False
+        except proton.Timeout:
+            return False
+        except proton.ConnectionException:
+            return False
+        except Exception as e:
+            print("Exception: %r" % e)
+            return False
+        return True
+
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_tls1_only(self):
         """
@@ -515,6 +591,28 @@ class RouterTestSslClient(RouterTestSslBase):
         """
         self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
                           self.get_allowed_protocols(self.PORT_TLS_ALL))
+
+    @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
+    def test_tls_live(self):
+        """
+        Expects all supported versions: TLSv1, TLSv1.1, TLSv1.2 and TLSv1.3 to be allowed
+        Uses a live-created listener and profile with injected certificate files.
+        """
+        self.inject_file("ca-certificate.pem",     "live-ca.pem")
+        self.inject_file("server-certificate.pem", "live-server.pem")
+        self.inject_file("server-private-key.pem", "live-key.pem")
+        self.create_ssl_profile('ssl-profile-live',
+                                {'caCertFile': 'live-ca.pem',
+                                 'certFile': 'live-server.pem',
+                                 'privateKeyFile': 'live-key.pem',
+                                 'ciphers': 'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:' \
+                                 'DH+AES:RSA+AESGCM:RSA+AES:!aNULL:!MD5:!DSS',
+                                 'password': 'server-password'})
+        self.create_listener('0.0.0.0/%s' % self.PORT_TLS_LIVE,
+                             {'host': '0.0.0.0', 'role': 'normal', 'port': self.PORT_TLS_LIVE,
+                              'authenticatePeer': 'no', 'sslProfile': 'ssl-profile-live'})
+        self.assertEqual(self.get_expected_tls_result([True, True, True, True]),
+                         self.get_allowed_protocols(self.PORT_TLS_LIVE))
 
     @SkipIfNeeded(RouterTestSslBase.DISABLE_SSL_TESTING, RouterTestSslBase.DISABLE_REASON)
     def test_ssl_invalid(self):

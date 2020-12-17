@@ -22,6 +22,7 @@
 #include <qpid/dispatch/threading.h>
 #include <qpid/dispatch/atomic.h>
 #include <qpid/dispatch/failoverlist.h>
+#include <qpid/dispatch/tempstore.h>
 #include <proton/listener.h>
 #include "dispatch_private.h"
 #include "connection_manager_private.h"
@@ -155,6 +156,44 @@ static qd_config_sasl_plugin_t *qd_find_sasl_plugin(qd_connection_manager_t *cm,
 
     return 0;
 }
+
+
+/**
+ * qdcm_normalize_filename
+ *
+ * If the infile (file name) is absolute or null, simply pass it through.  If it is 
+ * relative (contains no slashes or ".."), check to see if the file is in the temporary
+ * store.  If it is, return the full path to the location of the file in the temporary
+ * store.
+ *
+ * If a new string is allocated to handle the return value, free infile.
+ *
+ * Set the qd_error if there is an error condition.
+ */
+static char* qdcm_normalize_filename(char* infile)
+{
+    if (!infile || *infile == '/' || *infile == '\\')
+        return infile;
+
+    if (!!strchr(infile, '/') || !!strchr(infile, '\\') || !!strstr(infile, "..")) {
+        qd_error(QD_ERROR_CONFIG, "Relative filename '%s' contains '/', '\\', or '..'", infile);
+        return infile;
+    }
+
+    if (!qd_temp_is_store_created()) {
+        qd_error(QD_ERROR_CONFIG, "Relative filename '%s' provided, but the temp store has not been created", infile);
+        return infile;
+    }
+
+    char *new_path = qd_temp_get_path(infile);
+    if (!new_path) {
+        qd_error(QD_ERROR_CONFIG, "Relative filename '%s' not found in the temp store", infile);
+    }
+
+    free(infile);
+    return new_path;
+}
+
 
 void qd_server_config_free(qd_server_config_t *cf)
 {
@@ -411,6 +450,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
         qd_config_process_password(&actual_pass, config->sasl_password, &is_file_path, false, qd->connection_manager->log_source);
         if (actual_pass) {
             if (is_file_path) {
+                actual_pass = qdcm_normalize_filename(actual_pass);
                 qd_set_password_from_file(actual_pass, &config->sasl_password, qd->connection_manager->log_source);
                 free(actual_pass);
             }
@@ -420,6 +460,7 @@ static qd_error_t load_server_config(qd_dispatch_t *qd, qd_server_config_t *conf
             }
         }
     }
+    CHECK();
 
     //
     // Handle the defaults for various settings
@@ -598,10 +639,10 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     DEQ_ITEM_INIT(ssl_profile);
     DEQ_INSERT_TAIL(cm->config_ssl_profiles, ssl_profile);
     ssl_profile->name                       = qd_entity_opt_string(entity, "name", 0); CHECK();
-    ssl_profile->ssl_certificate_file       = qd_entity_opt_string(entity, "certFile", 0); CHECK();
-    ssl_profile->ssl_private_key_file       = qd_entity_opt_string(entity, "privateKeyFile", 0); CHECK();
+    ssl_profile->ssl_certificate_file       = qdcm_normalize_filename(qd_entity_opt_string(entity, "certFile", 0)); CHECK();
+    ssl_profile->ssl_private_key_file       = qdcm_normalize_filename(qd_entity_opt_string(entity, "privateKeyFile", 0)); CHECK();
     ssl_profile->ssl_password               = qd_entity_opt_string(entity, "password", 0); CHECK();
-    char *password_file                     = qd_entity_opt_string(entity, "passwordFile", 0); CHECK();
+    char *password_file                     = qdcm_normalize_filename(qd_entity_opt_string(entity, "passwordFile", 0)); CHECK();
 
     if (ssl_profile->ssl_password) {
         //
@@ -612,6 +653,7 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
         qd_config_process_password(&actual_pass, ssl_profile->ssl_password, &is_file_path, true, cm->log_source); CHECK();
         if (actual_pass) {
             if (is_file_path) {
+                actual_pass = qdcm_normalize_filename(actual_pass);
                 qd_set_password_from_file(actual_pass, &ssl_profile->ssl_password, cm->log_source);
                 free(actual_pass);
             }
@@ -630,10 +672,11 @@ qd_config_ssl_profile_t *qd_dispatch_configure_ssl_profile(qd_dispatch_t *qd, qd
     }
 
     free(password_file);
+    CHECK();
 
     ssl_profile->ssl_ciphers   = qd_entity_opt_string(entity, "ciphers", 0);                   CHECK();
     ssl_profile->ssl_protocols = qd_entity_opt_string(entity, "protocols", 0);                 CHECK();
-    ssl_profile->ssl_trusted_certificate_db = qd_entity_opt_string(entity, "caCertFile", 0);   CHECK();
+    ssl_profile->ssl_trusted_certificate_db = qdcm_normalize_filename(qd_entity_opt_string(entity, "caCertFile", 0));   CHECK();
     ssl_profile->ssl_uid_format             = qd_entity_opt_string(entity, "uidFormat", 0);          CHECK();
     ssl_profile->uid_name_mapping_file      = qd_entity_opt_string(entity, "uidNameMappingFile", 0); CHECK();
 
