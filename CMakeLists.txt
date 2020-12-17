@@ -112,6 +112,9 @@ message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERS
 ## Optional dependencies
 ##
 
+# http2 support is optional
+find_package(libnghttp2 1.4.0)
+
 # Benchmarks
 OPTION(BUILD_BENCHMARKS "Enable building and running benchmarks with Google Benchmark" OFF)
 
