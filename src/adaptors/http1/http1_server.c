@@ -822,6 +822,10 @@ static int _server_rx_response_cb(h1_codec_request_state_t *hrs,
            hconn->conn_id, hconn->in_link_id, hreq->base.msg_id, status_code, reason_phrase ? reason_phrase : "<NONE>",
            version_major, version_minor);
 
+    if (hconn->cfg.event_channel) {
+        return 0;
+    }
+
     _server_response_msg_t *rmsg = new__server_response_msg_t();
     ZERO(rmsg);
     rmsg->hreq = hreq;
@@ -860,6 +864,10 @@ static int _server_rx_header_cb(h1_codec_request_state_t *hrs, const char *key, 
            "[C%"PRIu64"]L%"PRIu64"] HTTP response header received: key='%s' value='%s'",
            hconn->conn_id, hconn->in_link_id, key, value);
 
+    if (hconn->cfg.event_channel) {
+        return 0;
+    }
+
     // expect: running incoming request at tail
     _server_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
     assert(rmsg);
@@ -885,6 +893,10 @@ static int _server_rx_headers_done_cb(h1_codec_request_state_t *hrs, bool has_bo
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
            "[C%"PRIu64"][L%"PRIu64"] HTTP response headers done.",
            hconn->conn_id, hconn->in_link_id);
+
+    if (hconn->cfg.event_channel) {
+        return 0;
+    }
 
     // expect: running incoming request at tail
     _server_response_msg_t *rmsg = DEQ_TAIL(hreq->responses);
@@ -954,13 +966,19 @@ static int _server_rx_body_cb(h1_codec_request_state_t *hrs, qd_buffer_list_t *b
 {
     _server_request_t       *hreq = (_server_request_t*) h1_codec_request_state_get_context(hrs);
     qdr_http1_connection_t *hconn = hreq->base.hconn;
-    _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
-
-    qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
 
     qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
            "[C%"PRIu64"][L%"PRIu64"] HTTP response body received len=%zu.",
            hconn->conn_id, hconn->in_link_id, len);
+
+    if (hconn->cfg.event_channel) {
+        qd_buffer_list_free_buffers(body);
+        return 0;
+    }
+
+    _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
+
+    qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
 
     qd_message_stream_data_append(msg, body);
 
@@ -982,6 +1000,13 @@ static void _server_rx_done_cb(h1_codec_request_state_t *hrs)
 {
     _server_request_t       *hreq = (_server_request_t*) h1_codec_request_state_get_context(hrs);
     qdr_http1_connection_t *hconn = hreq->base.hconn;
+    if (hconn->cfg.event_channel) {
+        qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
+               "[C%"PRIu64"][L%"PRIu64"] HTTP response message msg-id=%"PRIu64" decoding complete.",
+               hconn->conn_id, hconn->in_link_id, hreq->base.msg_id);
+        hreq->response_complete = true;
+        return;
+    }
     _server_response_msg_t *rmsg  = DEQ_TAIL(hreq->responses);
 
     qd_message_t *msg = rmsg->msg ? rmsg->msg : qdr_delivery_message(rmsg->dlv);
@@ -1169,7 +1194,7 @@ static _server_request_t *_create_request_context(qdr_http1_connection_t *hconn,
     reply_to = (char*) qd_iterator_copy(reply_to_itr);
     qd_iterator_free(reply_to_itr);
 
-    if (!reply_to) {
+    if (!reply_to && !hconn->cfg.event_channel) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_WARNING,
                "[C%"PRIu64"][L%"PRIu64"] Rejecting message no reply-to.",
                hconn->conn_id, hconn->out_link_id);
