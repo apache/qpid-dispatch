@@ -137,13 +137,13 @@ class QdstatTest(system_test.TestCase):
         out = self.run_qdstat(['--address'], r'QDR.A')
         out = self.run_qdstat(['--address'], r'\$management')
         parts = out.split("\n")
-        self.assertEqual(len(parts), 11)
+        self.assertEqual(len(parts), 12)
 
     def test_address_csv(self):
         out = self.run_qdstat(['--address'], r'QDR.A')
         out = self.run_qdstat(['--address'], r'\$management')
         parts = out.split("\n")
-        self.assertEqual(len(parts), 11)
+        self.assertEqual(len(parts), 12)
 
     def test_qdstat_no_args(self):
         outs = self.run_qdstat(args=None)

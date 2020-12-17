@@ -645,19 +645,19 @@
                 },
                 "caCertFile": {
                     "type": "path",
-                    "description": "The absolute path to the database that contains the public certificates of trusted certificate authorities (CA).",
+                    "description": "The absolute path or 'tmp:<filename>' to the database that contains the public certificates of trusted certificate authorities (CA).  If the 'tmp:' form is used, the file must exist in the router's temporary file store.",
                     "deprecationName": "certDb",
                     "create": true
                 },
                 "certFile": {
                     "type": "path",
-                    "description": "The absolute path to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.",
+                    "description": "The absolute path or 'tmp:<filename>' to the file containing the PEM-formatted public certificate to be used on the local end of any connections using this profile.  If the 'tmp:' form is used, the file must exist in the router's temporary file store.",
                     "create": true
 
                 },
                 "privateKeyFile": {
                     "type": "path",
-                    "description": "The absolute path to the file containing the PEM-formatted private key for the above certificate.",
+                    "description": "The absolute path or 'tmp:<filename>' to the file containing the PEM-formatted private key for the above certificate.  If the 'tmp:' form is used, the file must exist in the router's temporary file store.",
                     "deprecationName": "keyFile",
                     "create": true
 
@@ -671,7 +671,7 @@
                 },
                 "password": {
                     "type": "string",
-                    "description": "The password that unlocks the certificate key. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'password: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'password: file:<absolute-path-to-file>'. This option is the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'password: pass:<password>', or 'password: literal:<password>', or 'password: <password>'. This option is insecure, so it should only be used if security is not a concern. If both password and passwordFile are provided, the passwordFile is ignored.",
+                    "description": "The password that unlocks the certificate key. You can specify the password by specifying an environment variable that stores the password, a file that stores the password, or by entering the password in clear text. To use an environment variable, specify 'password: env:<var>'. Use this option with caution, because the environment of other processes is visible on certain platforms (for example, ps on certain Unix OSs). To use a file, specify 'password: file:<absolute-path-to-file>' or 'password: tmp:<temp-store-filename>. These options are the most secure, because permissions can be set on the file that contains the password. To specify the password in clear text, specify 'password: pass:<password>', or 'password: literal:<password>', or 'password: <password>'. This option is insecure, so it should only be used if security is not a concern. If both password and passwordFile are provided, the passwordFile is ignored.",
                     "create": true
 
                 },
@@ -1338,6 +1338,7 @@
                         "PROTOCOL",
                         "TCP_ADAPTOR",
                         "HTTP_ADAPTOR",
+                        "TEMPSTORE",
                         "DEFAULT"
                     ],
                     "required": true,
@@ -2397,6 +2398,27 @@
                     "type": "boolean",
                     "description": "Whether this connection is allowed to claim 'qd.fallback' capability for attached links.  This allows endpoints to act as fallback destinations for addresses that have fallback capability enabled.",
                     "default": true,
+                    "required": false,
+                    "create": true
+                },
+                "allowTempFile": {
+                    "type": "boolean",
+                    "description": "Whether this connection is allowed to transfer files to the temporary file store.",
+                    "default": true,
+                    "required": false,
+                    "create": true
+                },
+                "maxTempFileSize": {
+                    "type": "integer",
+                    "description": "The maximum payload size permitted for a transferred temporary file.",
+                    "default": 32768,
+                    "required": false,
+                    "create": true
+                },
+                "maxTempFileCount": {
+                    "type": "integer",
+                    "description": "The maximum number of files permitted for transfer to the temporary store.",
+                    "default": 128,
                     "required": false,
                     "create": true
                 },
