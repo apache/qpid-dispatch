@@ -159,7 +159,7 @@ class TcpAdaptor(TestCase):
     nodest_listener_ports = {}
 
     # Each router has a console listener
-    http_listener_ports = {}
+    #http_listener_ports = {}
 
     # local timeout in seconds to wait for one echo client to finish
     echo_timeout = 30
@@ -183,7 +183,7 @@ class TcpAdaptor(TestCase):
             Launch a router through the system_test framework.
             For each router:
              * normal listener first
-             * http listener for console connections
+             #* http listener for console connections
              * tcp listener for 'nodest', which will never exist
              * tcp connector to echo server whose address is the same as this router's name
              * six tcp listeners, one for each server on each router on the network
@@ -196,7 +196,7 @@ class TcpAdaptor(TestCase):
             config = [
                 ('router', {'mode': mode, 'id': name}),
                 ('listener', {'port': cls.amqp_listener_ports[name]}),
-                ('listener', {'port': cls.http_listener_ports[name], 'http': 'yes'}),
+                #('listener', {'port': cls.http_listener_ports[name], 'http': 'yes'}),
                 ('tcpListener', {'host': "0.0.0.0",
                                  'port': cls.nodest_listener_ports[name],
                                  'address': 'nodest',
@@ -235,7 +235,7 @@ class TcpAdaptor(TestCase):
                 tl_ports[tcp_listener] = cls.tester.get_port()
             cls.tcp_client_listener_ports[rtr] = tl_ports
             cls.nodest_listener_ports[rtr] = cls.tester.get_port()
-            cls.http_listener_ports[rtr] = cls.tester.get_port()
+            #cls.http_listener_ports[rtr] = cls.tester.get_port()
 
         inter_router_port_AB  = cls.tester.get_port()
         inter_router_port_BC  = cls.tester.get_port()
@@ -263,8 +263,8 @@ class TcpAdaptor(TestCase):
                              (rtr, tcp_listener, cls.tcp_client_listener_ports[rtr][tcp_listener]))
             p_out.append("%s_nodest_listener=%d" %
                          (rtr, cls.nodest_listener_ports[rtr]))
-            p_out.append("%s_http_listener=%d" %
-                         (rtr, cls.http_listener_ports[rtr]))
+            #p_out.append("%s_http_listener=%d" %
+            #             (rtr, cls.http_listener_ports[rtr]))
         p_out.append("inter_router_port_AB=%d" % inter_router_port_AB)
         p_out.append("inter_router_port_BC=%d" % inter_router_port_BC)
         p_out.append("INTA_edge_port=%d" % cls.INTA_edge_port)
