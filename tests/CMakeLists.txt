@@ -96,6 +96,10 @@ if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
 endif()
 
+if(libnghttp2_FOUND)
+  set(SYSTEM_TESTS_HTTP2 system_tests_http2)
+endif(libnghttp2_FOUND)
+
 if(CONSOLE_INSTALL)
   set(CONSOLE_TEST system_tests_console)
 endif(CONSOLE_INSTALL)
@@ -159,7 +163,7 @@ foreach(py_test_module
     system_tests_log_level_update
     system_tests_routing_protocol
     system_tests_open_properties
-    system_tests_http2
+    ${SYSTEM_TESTS_HTTP2}
     system_tests_http1_adaptor
     system_tests_tcp_adaptor
     )
