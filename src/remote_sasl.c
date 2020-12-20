@@ -68,7 +68,7 @@ typedef struct {
 
 static void allocate_buffer(buffer_t* buffer)
 {
-    buffer->start = malloc(buffer->capacity);
+    buffer->start = qd_malloc(buffer->capacity);
     memset(buffer->start, 0, buffer->capacity);
 }
 

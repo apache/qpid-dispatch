@@ -31,9 +31,9 @@
 
 #define CT_ASSERT(exp) { assert(exp); }
 
-#define NEW(t)             (t*)  malloc(sizeof(t))
-#define NEW_ARRAY(t,n)     (t*)  malloc(sizeof(t)*(n))
-#define NEW_PTR_ARRAY(t,n) (t**) malloc(sizeof(t*)*(n))
+#define NEW(t)             (t*)  qd_malloc(sizeof(t))
+#define NEW_ARRAY(t,n)     (t*)  qd_malloc(sizeof(t)*(n))
+#define NEW_PTR_ARRAY(t,n) (t**) qd_malloc(sizeof(t*)*(n))
 
 //
 // If available, use aligned_alloc for cache-line-aligned allocations.  Otherwise
