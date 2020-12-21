@@ -237,7 +237,7 @@ static inline void *qd_malloc(size_t size)
 static inline void *qd_calloc(size_t nmemb, size_t size)
 {
     void *ptr = calloc(nmemb, size);
-    if (!ptr) {
+    if (!ptr && nmemb && size) {
         perror("qd_calloc");
         abort();
     }
