@@ -51,12 +51,13 @@ class RouterTestBadConfiguration(TestCase):
         """
         super(RouterTestBadConfiguration, cls).setUpClass()
         cls.name = "test-router"
+        cls.unresolvable_host_name = 'unresolvable.host.name'
         cls.config = Qdrouterd.Config([
             ('router', {'mode': 'standalone', 'id': 'QDR.A'}),
             # Define a connector that uses an unresolvable hostname
             ('connector',
              {'name': 'UnresolvableConn',
-              'host': 'unresolvable.host.name',
+              'host': cls.unresolvable_host_name,
               'port': 'amqp'}),
             ('listener',
              {'port': cls.tester.get_port()}),
@@ -112,11 +113,11 @@ class RouterTestBadConfiguration(TestCase):
         with open('../setUpClass/test-router.log', 'r') as router_log:
             log_lines = router_log.read().split("\n")
             expected_errors = [
-                "proton:io Name or service not known",  # Linux
-                "proton:io unknown node or service",  # macOS
+                "Connection to %s" % self.unresolvable_host_name
             ]
             errors_caught = [line for line in log_lines
-                             if any([expected_error in line for expected_error in expected_errors])]
+                             if any([expected_error in line for expected_error in expected_errors])
+                             and "failed" in line]
 
             self.error_caught = any(errors_caught)
 
