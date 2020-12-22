@@ -300,7 +300,7 @@ def configure_dispatch(dispatch, lib_handle, filename):
     # Configure and prepare the router before we can activate the agent.
     configure(config.by_type('router')[0])
     qd.qd_dispatch_prepare(dispatch)
-    qd.qd_router_setup_late(dispatch) # Actions requiring active management agent.
+    qd.qd_router_setup_late(dispatch)  # Actions requiring active management agent.
     agent.activate("$_management_internal")
 
     from qpid_dispatch_internal.display_name.display_name import DisplayNameService

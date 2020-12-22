@@ -458,7 +458,7 @@ qd_parsed_field_t *qd_message_get_trace(qd_message_t *msg);
  */
 int                qd_message_get_phase_val  (qd_message_t *msg);
 
-/*
+/**
  * Should the message be discarded.
  * A message can be discarded if the disposition is released or rejected.
  *
@@ -529,7 +529,7 @@ void qd_message_add_fanout(qd_message_t *in_msg,
 void qd_message_Q2_holdoff_disable(qd_message_t *msg);
 
 /**
- * Test if attempt to retreive message data through qd_message_recv should block
+ * Test if attempt to retrieve message data through qd_message_recv should block
  * due to Q2 input holdoff limit being exceeded. This message has enough
  * buffers in the internal buffer chain and any calls to to qd_message_receive
  * will not result in a call to pn_link_receive to retrieve more data.

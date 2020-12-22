@@ -881,7 +881,7 @@ class DeliveryTagsTest(MessagingHandler):
     def on_connection_remote_open(self, event):
         if event.connection == self.receiver_connection:
             continue_loop = True
-            # Dont open the sender connection unless we can make sure that there is a remote receiver ready to
+            # Don't open the sender connection unless we can make sure that there is a remote receiver ready to
             # accept the message.
             # If there is no remote receiver, the router will throw a 'No route to destination' error when
             # creating sender connection.

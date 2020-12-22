@@ -442,7 +442,7 @@ void qdra_config_auto_link_create_CT(qdr_core_t        *core,
         //
         if (!addr_field || !dir_field) {
             query->status = QD_AMQP_BAD_REQUEST;
-            query->status.description = "addr and direction fields are mandatory";
+            query->status.description = "address and direction fields are mandatory";
             qd_log(core->agent_log, QD_LOG_ERROR, "Error performing CREATE of %s: %s", CONFIG_AUTOLINK_TYPE, query->status.description);
             break;
         }

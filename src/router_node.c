@@ -1251,7 +1251,7 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
 // 1. The failover-server-list is present but the content of the list is empty in which case we scrub the failover list except we keep the original connector information and current connection information.
 // 2. If the failover list contains one or more maps that contain failover connection information, that information will be appended to the list which already contains the original connection information
 //    and the current connection information. Any other failover information left over from the previous connection is deleted
-// 3. If the failover-server-list is not present at all in the connection properties, the failover list we maintain in untoched.
+// 3. If the failover-server-list is not present at all in the connection properties, the failover list we maintain is untouched.
 //
 // props should be pointing at the value that corresponds to the QD_CONNECTION_PROPERTY_FAILOVER_LIST_KEY
 // returns true if failover list properly parsed.

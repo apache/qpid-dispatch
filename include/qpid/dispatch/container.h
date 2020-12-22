@@ -123,7 +123,7 @@ typedef struct {
      * @{
      */
 
-    /** Invoked when a new or existing received delivery is avaliable for processing. */
+    /** Invoked when a new or existing received delivery is available for processing. */
     qd_container_delivery_handler_t rx_handler;
 
     /** Invoked when an existing delivery changes disposition or settlement state. */
