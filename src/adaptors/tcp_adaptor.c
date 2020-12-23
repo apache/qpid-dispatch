@@ -26,6 +26,8 @@
 #include "qpid/dispatch/protocol_adaptor.h"
 #include "delivery.h"
 #include "tcp_adaptor.h"
+#include "aprintf.h"
+#include <ctype.h>
 #include <stdio.h>
 #include <inttypes.h>
 
@@ -87,6 +89,7 @@ typedef struct qdr_tcp_adaptor_t {
     qd_tcp_connector_list_t   connectors;
     qdr_tcp_connection_list_t connections;
     qd_log_source_t          *log_source;
+    qd_log_source_t          *plog_source;
 } qdr_tcp_adaptor_t;
 
 static qdr_tcp_adaptor_t *tcp_adaptor;
@@ -97,6 +100,21 @@ static void qdr_del_tcp_connection_CT(qdr_core_t *core, qdr_action_t *action, bo
 static void handle_disconnected(qdr_tcp_connection_t* conn);
 static void free_qdr_tcp_connection(qdr_tcp_connection_t* conn);
 static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc);
+
+// Log first QUOTE_SIZE bytes of every buffer that comes and goes.
+#define QUOTE_SIZE 40
+
+/**
+ * Quote non-printable characters suitable for log messages. Output in buffer.
+ */
+static void quote(char* bytes, int n, char **begin, char *end) {
+    for (char* p = bytes; p < bytes+n; ++p) {
+        if (isprint(*p) || isspace(*p))
+            aprintf(begin, end, "%c", (int)*p);
+        else
+            aprintf(begin, end, "\\%02hhx", *p);
+    }
+}
 
 static inline uint64_t qdr_tcp_conn_linkid(const qdr_tcp_connection_t *conn)
 {
@@ -167,6 +185,14 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
             qd_buffer_insert(buf, raw_buffers[i].size);
             count += raw_buffers[i].size;
             if (raw_buffers[i].size > 0) {
+                if (qd_log_enabled(tcp_adaptor->plog_source, QD_LOG_TRACE)) {
+                    char logbuf[4 * QUOTE_SIZE + 1];
+                    char *logbufp = logbuf;
+                    char *bufstart = (char *)qd_buffer_base(buf);
+                    size_t bufsize = qd_buffer_size(buf);
+                    quote(bufstart, MIN(bufsize, QUOTE_SIZE), &logbufp, logbuf + (4 * QUOTE_SIZE + 1));
+                    qd_log(tcp_adaptor->plog_source, QD_LOG_TRACE, "[C%"PRIu64"]:FRAME: 0 <- @transfer(20) [handle=0] (%d) \"%s\"", conn->conn_id, bufsize, logbuf);
+                }
                 DEQ_INSERT_TAIL(buffers, buf);
             } else {
                 qd_buffer_free(buf);
@@ -362,6 +388,15 @@ static bool write_outgoing_buffs(qdr_tcp_connection_t *conn)
         for (size_t i = 0; i < used; i++) {
             if (conn->outgoing_buffs[conn->outgoing_buff_idx + i].bytes) {
                 bytes_written += conn->outgoing_buffs[conn->outgoing_buff_idx + i].size;
+                if (qd_log_enabled(tcp_adaptor->plog_source, QD_LOG_TRACE)) {
+                    char logbuf[4 * QUOTE_SIZE + 1];
+                    char *logbufp = logbuf;
+                    char *bufstart = conn->outgoing_buffs[conn->outgoing_buff_idx + i].bytes;
+                    bufstart += conn->outgoing_buffs[conn->outgoing_buff_idx + i].offset;
+                    size_t bufsize = conn->outgoing_buffs[conn->outgoing_buff_idx + i].size;
+                    quote(bufstart, MIN(bufsize, QUOTE_SIZE), &logbufp, logbuf + (4 * QUOTE_SIZE + 1));
+                    qd_log(tcp_adaptor->plog_source, QD_LOG_TRACE, "[C%"PRIu64"]:FRAME: 0 -> @transfer(20) [handle=0] (%d) \"%s\"", conn->conn_id, bufsize, logbuf);
+                }
             } else {
                 qd_log(tcp_adaptor->log_source, QD_LOG_ERROR,
                        "[C%"PRIu64"] empty buffer can't be written (%"PRIu64" of %"PRIu64")", conn->conn_id, i+1, used);
@@ -1233,6 +1268,7 @@ static void qdr_tcp_adaptor_init(qdr_core_t *core, void **adaptor_context)
                                             qdr_tcp_conn_close,
                                             qdr_tcp_conn_trace);
     adaptor->log_source  = qd_log_source("TCP_ADAPTOR");
+    adaptor->plog_source = qd_log_source("PROTOCOL");
     DEQ_INIT(adaptor->listeners);
     DEQ_INIT(adaptor->connectors);
     DEQ_INIT(adaptor->connections);
