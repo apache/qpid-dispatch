@@ -67,10 +67,7 @@ target_link_libraries(clogger ${Proton_LIBRARIES})
 # running tests in parallel (the ctest -j option) without port clashes
 set(USE_BWRAP OFF CACHE BOOL "Wrap test executions with bwrap (https://github.com/containers/bubblewrap)")
 if(USE_BWRAP)
-  # Inaccessible DNS servers produce "proton:io Temporary failure in name resolution".
-  # For system_tests_bad_configuration we need to get "proton:io Name or service not known",
-  # so blank /etc/nsswitch.conf to achieve that.
-  set(BWRAP_ARGS bwrap --bind / / --bind /dev/zero /etc/nsswitch.conf --unshare-net --dev /dev --die-with-parent --)
+  set(BWRAP_ARGS bwrap --bind / / --unshare-net --dev /dev --die-with-parent --)
 else()
   set(BWRAP_ARGS "")
 endif()
