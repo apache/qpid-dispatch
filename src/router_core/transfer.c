@@ -275,6 +275,19 @@ void qdr_link_complete_sent_message(qdr_core_t *core, qdr_link_t *link)
     qdr_delivery_t *dlv = DEQ_HEAD(link->undelivered);
     if (!!dlv && qdr_delivery_send_complete(dlv)) {
         DEQ_REMOVE_HEAD(link->undelivered);
+        if (dlv->link_work) {
+            assert(dlv->link_work == link->work_list.head);
+            assert(dlv->link_work->value > 0);
+            dlv->link_work->value -= 1;
+
+            if (dlv->link_work->value == 0) {
+                DEQ_REMOVE_HEAD(link->work_list);
+                qdr_error_free(dlv->link_work->error);
+                free_qdr_link_work_t(dlv->link_work);
+                dlv->link_work = 0;
+            }
+        }
+
         if (!dlv->settled && !qdr_delivery_oversize(dlv) && !qdr_delivery_is_aborted(dlv)) {
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;

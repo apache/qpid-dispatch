@@ -228,6 +228,7 @@ static void qdr_forward_drop_presettled_CT_LH(qdr_core_t *core, qdr_link_t *link
             assert(dlv->link_work);
             if (dlv->link_work && (--dlv->link_work->value == 0)) {
                 DEQ_REMOVE(link->work_list, dlv->link_work);
+                qdr_error_free(dlv->link_work->error);
                 free_qdr_link_work_t(dlv->link_work);
                 dlv->link_work = 0;
             }
