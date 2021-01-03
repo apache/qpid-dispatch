@@ -1367,12 +1367,14 @@ void h1_codec_connection_rx_closed(h1_codec_connection_t *conn)
         qd_buffer_list_free_buffers(&conn->decoder.incoming);
         decoder->read_ptr = NULL_I_PTR;
 
-        // complete any "done" requests
+        // check if current request is completed
         hrs = DEQ_HEAD(conn->hrs_queue);
-        while (hrs && hrs->response_complete && hrs->request_complete) {
-            conn->config.request_complete(hrs, false);
-            h1_codec_request_state_free(hrs);
-            hrs = DEQ_HEAD(conn->hrs_queue);
+        if (hrs) {
+            hrs->close_expected = false;   // the close just occurred
+            if (hrs->response_complete && hrs->request_complete) {
+                conn->config.request_complete(hrs, false);
+                h1_codec_request_state_free(hrs);
+            }
         }
     }
 }
