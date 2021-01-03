@@ -1490,7 +1490,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
             rmsg->dlv = delivery;
             DEQ_INIT(rmsg->out_data.fifo);
             qdr_delivery_set_context(delivery, hreq);
-            qdr_delivery_incref(delivery, "referenced by HTTP1 adaptor");
+            qdr_delivery_incref(delivery, "HTTP1 client referencing response delivery");
             DEQ_INSERT_TAIL(hreq->responses, rmsg);
             qd_log(qdr_http1_adaptor->log, QD_LOG_TRACE,
                    "[C%"PRIu64"][L%"PRIu64"] HTTP received response for msg-id=%"PRIu64,
@@ -1545,7 +1545,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 // returning a terminal disposition will cause the delivery to be updated and settled,
                 // so drop our reference
                 qdr_delivery_set_context(rmsg->dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "malformed HTTP1 response, delivery released");
+                qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client releasing malformed response delivery");
                 rmsg->dlv = 0;
                 qdr_http1_close_connection(hconn, "Cannot parse response message");
                 return rmsg->dispo;
@@ -1569,7 +1569,7 @@ static void _client_response_msg_free(_client_request_t *req, _client_response_m
     DEQ_REMOVE(req->responses, rmsg);
     if (rmsg->dlv) {
         qdr_delivery_set_context(rmsg->dlv, 0);
-        qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 adaptor response settled");
+        qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 client response delivery settled");
     }
 
     qdr_http1_out_data_fifo_cleanup(&rmsg->out_data);
@@ -1602,7 +1602,7 @@ static void _client_request_free(_client_request_t *hreq)
         qd_message_free(hreq->request_msg);
         if (hreq->request_dlv) {
             qdr_delivery_set_context(hreq->request_dlv, 0);
-            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
+            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 client request delivery settled");
         }
         qd_compose_free(hreq->request_props);
 

@@ -649,7 +649,7 @@ static bool _process_requests(qdr_http1_connection_t *hconn)
                 hreq->request_acked = hreq->request_settled = true;
             }
             qdr_delivery_set_context(hreq->request_dlv, 0);
-            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request cancelled");
+            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server request cancelled releasing delivery");
             hreq->request_dlv = 0;
         }
 
@@ -713,7 +713,7 @@ static bool _process_requests(qdr_http1_connection_t *hconn)
             hreq->request_acked = true;
             if (hreq->request_settled) {
                 qdr_delivery_set_context(hreq->request_dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request settled");
+                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server request settled releasing delivery");
                 hreq->request_dlv = 0;
             }
         }
@@ -1434,7 +1434,7 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
 
             hreq->request_dlv = delivery;
             qdr_delivery_set_context(delivery, (void*) hreq);
-            qdr_delivery_incref(delivery, "referenced by HTTP1 adaptor");
+            qdr_delivery_incref(delivery, "HTTP1 server referencing request delivery");
             break;
         }
     }
@@ -1458,7 +1458,7 @@ uint64_t qdr_http1_server_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                 // returning a terminal disposition will cause the delivery to be updated and settled,
                 // so drop our reference
                 qdr_delivery_set_context(hreq->request_dlv, 0);
-                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "malformed HTTP1 request, delivery released");
+                qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing malformed HTTP1 request delivery");
                 hreq->request_dlv = 0;
                 hreq->request_acked = hreq->request_settled = true;
                 return hreq->request_dispo;
@@ -1483,7 +1483,7 @@ static void _server_response_msg_free(_server_request_t *hreq, _server_response_
     qd_compose_free(rmsg->msg_props);
     if (rmsg->dlv) {
         qdr_delivery_set_context(rmsg->dlv, 0);
-        qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 adaptor response freed");
+        qdr_delivery_decref(qdr_http1_adaptor->core, rmsg->dlv, "HTTP1 server releasing response delivery");
     }
     free__server_response_msg_t(rmsg);
 }
@@ -1497,7 +1497,7 @@ static void _server_request_free(_server_request_t *hreq)
         qdr_http1_request_base_cleanup(&hreq->base);
         if (hreq->request_dlv) {
             qdr_delivery_set_context(hreq->request_dlv, 0);
-            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 adaptor request freed");
+            qdr_delivery_decref(qdr_http1_adaptor->core, hreq->request_dlv, "HTTP1 server releasing request delivery");
         }
 
         qdr_http1_out_data_fifo_cleanup(&hreq->out_data);
