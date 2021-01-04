@@ -761,9 +761,6 @@ static void _server_tx_buffers_cb(h1_codec_request_state_t *hrs, qd_buffer_list_
                "[C%"PRIu64"][L%"PRIu64"] Sending %u octets to server",
                hconn->conn_id, hconn->out_link_id, len);
         qdr_http1_enqueue_buffer_list(&hreq->out_data, blist);
-        if (hreq == (_server_request_t*) DEQ_HEAD(hconn->requests)) {
-            _write_pending_request(hreq);
-        }
     }
 }
 
@@ -782,9 +779,6 @@ static void _server_tx_stream_data_cb(h1_codec_request_state_t *hrs, qd_message_
                "[C%"PRIu64"][L%"PRIu64"] Sending body data to server",
                hconn->conn_id, hconn->out_link_id);
         qdr_http1_enqueue_stream_data(&hreq->out_data, stream_data);
-        if (hreq == (_server_request_t*) DEQ_HEAD(hconn->requests)) {
-            _write_pending_request(hreq);
-        }
     }
 }
 

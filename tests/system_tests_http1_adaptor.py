@@ -708,11 +708,9 @@ class Http1AdaptorOneRouterTest(TestCase):
 
             (RequestMsg("GET", "/GET/info_content_len",
                         headers={"Content-Length": 0}),
-             [ResponseMsg(100, reason="Continue",
-                          headers={"Blab": 1, "Blob": "?"}),
-              ResponseMsg(200, reason="OK",
-                          headers={"Content-Type": "text/plain;charset=utf-8"},
-                          body=b'?')],
+             ResponseMsg(200, reason="OK",
+                         headers={"Content-Type": "text/plain;charset=utf-8"},
+                         body=b'?'),
              ResponseValidator(expect_headers={'Content-Type': "text/plain;charset=utf-8"},
                                expect_body=b'?')),
 
