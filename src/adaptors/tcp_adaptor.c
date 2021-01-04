@@ -661,6 +661,8 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     qdr_terminus_t *source = qdr_terminus(0);
     qdr_terminus_set_address(source, tc->config.address);
 
+    // This attach passes the ownership of the delivery from the core-side connection and link
+    // to the adaptor-side outgoing connection and link.
     tc->outgoing = qdr_link_first_attach(conn,
                                          QD_OUTGOING,
                                          source,           //qdr_terminus_t   *source,
@@ -671,6 +673,10 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
                                          tc->initial_delivery,
                                          &(tc->outgoing_id));
     if (!!tc->initial_delivery) {
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, DLV_FMT" initial_delivery ownership passed to "DLV_FMT,
+               DLV_ARGS(tc->initial_delivery), tc->outgoing->conn_id, tc->outgoing->identity, tc->initial_delivery->delivery_id);
+        tc->initial_delivery->conn_id = tc->outgoing->conn_id;
+        tc->initial_delivery->link_id = tc->outgoing->identity;
         qdr_delivery_decref(tcp_adaptor->core, tc->initial_delivery, "tcp-adaptor - passing initial_delivery into new link");
         tc->initial_delivery = 0;
     }
@@ -1065,9 +1071,9 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
     void* link_context = qdr_link_get_context(link);
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_deliver Delivery event dlv:%lx", tc->conn_id, tc->outgoing_id, delivery);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, DLV_FMT" qdr_tcp_deliver Delivery event", DLV_ARGS(delivery));
         if (tc->egress_dispatcher) {
-            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] tcp_adaptor initiating egress connection %p", tc->conn_id, tc->outgoing_id, delivery);
+            qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, DLV_FMT" tcp_adaptor initiating egress connection", DLV_ARGS(delivery));
             qdr_tcp_connection_egress(&(tc->config), tc->server, delivery);
             return QD_DELIVERY_MOVED_TO_NEW_LINK;
         } else if (!tc->outstream) {
@@ -1095,7 +1101,7 @@ static uint64_t qdr_tcp_deliver(void *context, qdr_link_t *link, qdr_delivery_t 
                                                      false,
                                                      NULL,
                                                      &(tc->incoming_id));
-                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Create Link to %s", tc->conn_id, tc->reply_to);
+                qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Create Link to %s", tc->conn_id, tc->incoming->identity, tc->reply_to);
                 qdr_link_set_context(tc->incoming, tc);
                 //add this connection to those visible through management now that we have the global_id
                 qdr_action_t *action = qdr_action(qdr_add_tcp_connection_CT, "add_tcp_connection");
@@ -1133,8 +1139,8 @@ static void qdr_tcp_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t
     void* link_context = qdr_link_get_context(qdr_delivery_link(dlv));
     if (link_context) {
         qdr_tcp_connection_t* tc = (qdr_tcp_connection_t*) link_context;
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
-               tc->conn_id, qdr_tcp_conn_linkid(tc), disp, settled ? "true" : "false");
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, DLV_FMT" qdr_tcp_delivery_update: disp: %"PRIu64", settled: %s",
+               DLV_ARGS(dlv), disp, settled ? "true" : "false");
 
         //
         // If one of the streaming deliveries is ever settled, the connection must be torn down.

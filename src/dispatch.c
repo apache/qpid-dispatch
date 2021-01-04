@@ -61,6 +61,8 @@ const char     *MULTICAST_DISTRIBUTION = "multicast";
 const char     *BALANCED_DISTRIBUTION  = "balanced";
 const char     *UNAVAILABLE_DISTRIBUTION = "unavailable";
 
+sys_atomic_t global_delivery_id;
+
 qd_dispatch_t *qd = 0;
 
 qd_dispatch_t *qd_dispatch_get_dispatch()

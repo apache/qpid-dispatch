@@ -1485,6 +1485,8 @@ qd_router_t *qd_router(qd_dispatch_t *qd, qd_router_mode_t mode, const char *are
     router->lock  = sys_mutex();
     router->timer = qd_timer(qd, qd_router_timer_handler, (void*) router);
 
+    sys_atomic_init(&global_delivery_id, 1);
+
     //
     // Inform the field iterator module of this router's mode, id, and area.  The field iterator
     // uses this to offload some of the address-processing load from the router.

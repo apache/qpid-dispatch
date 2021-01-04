@@ -587,6 +587,7 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     link->identity = qdr_identifier(conn->core);
     *link_id = link->identity;
     link->conn = conn;
+    link->conn_id = conn->identity;
     link->name = (char*) malloc(strlen(name) + 1);
 
     if (terminus_addr) {
@@ -1100,6 +1101,7 @@ qdr_link_t *qdr_create_link_CT(qdr_core_t        *core,
     link->identity       = qdr_identifier(core);
     link->user_context   = 0;
     link->conn           = conn;
+    link->conn_id        = conn->identity;
     link->link_type      = link_type;
     link->link_direction = dir;
     link->capacity       = conn->link_capacity;
