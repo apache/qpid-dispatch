@@ -76,9 +76,6 @@ struct pn_data_t *qd_entity_opt_map(qd_entity_t *entity, const char *attribute);
  */
 qd_error_t qd_entity_set_string(qd_entity_t *entity, const char* attribute, const char *value);
 
-/** Set a string valued attribute from a printf format */
-qd_error_t qd_entity_set_stringf(qd_entity_t *entity, const char* attribute, const char *format, ...);
-
 /** Set an integer valued attribute. */
 qd_error_t qd_entity_set_long(qd_entity_t *entity, const char* attribute, long value);
 

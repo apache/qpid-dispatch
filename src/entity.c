@@ -259,22 +259,3 @@ qd_error_t qd_entity_set_map_key_value_string(qd_entity_t *entity, const char *a
     return ret;
 }
 
-
-
-
-qd_error_t qd_entity_set_stringf(qd_entity_t *entity, const char* attribute, const char *format, ...)
-{
-    // Calculate the size
-    char dummy[1];
-    va_list ap;
-    va_start(ap, format);
-    size_t len = vsnprintf(dummy, 1, format, ap);
-    va_end(ap);
-
-    char buf[len+1];
-    va_start(ap, format);
-    vsnprintf(buf, len+1, format, ap);
-    va_end(ap);
-
-    return qd_entity_set_string(entity, attribute, buf);
-}
