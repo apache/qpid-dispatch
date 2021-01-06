@@ -436,6 +436,8 @@ static void _do_reconnect(void *context)
     // qdr_http1_server_core_link_deliver callback until the request message is
     // complete.
 
+    // false positive: head request is removed before it is freed, null is passed
+    /* coverity[pass_freed_arg] */
     if (!_is_request_in_progress((_server_request_t*) DEQ_HEAD(hconn->requests))) {
         qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG,
                "[C%"PRIu64"] Connecting to HTTP server...", conn_id);
