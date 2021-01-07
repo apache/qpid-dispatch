@@ -75,6 +75,9 @@ class PolicyKeys(object):
     KW_ALLOW_FALLBACK_LINKS      = "allowFallbackLinks"
     KW_ALLOW_DYNAMIC_LINK_ROUTES = "allowDynamicLinkRoutes"
     KW_ALLOW_ADMIN_STATUS_UPDATE = "allowAdminStatusUpdate"
+    KW_ALLOW_TEMP_FILE           = "allowTempFile"
+    KW_MAX_TEMP_FILE_SIZE        = "maxTempFileSize"
+    KW_MAX_TEMP_FILE_COUNT       = "maxTempFileCount"
     KW_SOURCES                   = "sources"
     KW_TARGETS                   = "targets"
     KW_SOURCE_PATTERN            = "sourcePattern"
@@ -159,6 +162,9 @@ class PolicyCompiler(object):
         PolicyKeys.KW_ALLOW_FALLBACK_LINKS,
         PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES,
         PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE,
+        PolicyKeys.KW_ALLOW_TEMP_FILE,
+        PolicyKeys.KW_MAX_TEMP_FILE_SIZE,
+        PolicyKeys.KW_MAX_TEMP_FILE_COUNT,
         PolicyKeys.KW_SOURCES,
         PolicyKeys.KW_TARGETS,
         PolicyKeys.KW_SOURCE_PATTERN,
@@ -264,6 +270,9 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_ALLOW_FALLBACK_LINKS] = True
         policy_out[PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES] = True
         policy_out[PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE] = True
+        policy_out[PolicyKeys.KW_ALLOW_TEMP_FILE] = True
+        policy_out[PolicyKeys.KW_MAX_TEMP_FILE_SIZE] = 32768
+        policy_out[PolicyKeys.KW_MAX_TEMP_FILE_COUNT] = 128
         policy_out[PolicyKeys.KW_SOURCES] = ''
         policy_out[PolicyKeys.KW_TARGETS] = ''
         policy_out[PolicyKeys.KW_SOURCE_PATTERN] = ''
@@ -290,11 +299,13 @@ class PolicyCompiler(object):
                     return False
                 policy_out[key] = int(val)
             elif key in [PolicyKeys.KW_MAX_FRAME_SIZE,
-                       PolicyKeys.KW_MAX_MESSAGE_SIZE,
-                       PolicyKeys.KW_MAX_RECEIVERS,
-                       PolicyKeys.KW_MAX_SENDERS,
-                       PolicyKeys.KW_MAX_SESSION_WINDOW,
-                       PolicyKeys.KW_MAX_SESSIONS
+                         PolicyKeys.KW_MAX_MESSAGE_SIZE,
+                         PolicyKeys.KW_MAX_RECEIVERS,
+                         PolicyKeys.KW_MAX_SENDERS,
+                         PolicyKeys.KW_MAX_SESSION_WINDOW,
+                         PolicyKeys.KW_MAX_SESSIONS,
+                         PolicyKeys.KW_MAX_TEMP_FILE_SIZE,
+                         PolicyKeys.KW_MAX_TEMP_FILE_COUNT
                        ]:
                 if not self.validateNumber(val, 0, 0, cerror):
                     errors.append("Policy vhost '%s' user group '%s' option '%s' has error '%s'." %
@@ -314,7 +325,8 @@ class PolicyCompiler(object):
                          PolicyKeys.KW_ALLOW_WAYPOINT_LINKS,
                          PolicyKeys.KW_ALLOW_FALLBACK_LINKS,
                          PolicyKeys.KW_ALLOW_DYNAMIC_LINK_ROUTES,
-                         PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE
+                         PolicyKeys.KW_ALLOW_ADMIN_STATUS_UPDATE,
+                         PolicyKeys.KW_ALLOW_TEMP_FILE
                          ]:
                 if isinstance(val, (PY_STRING_TYPE, PY_TEXT_TYPE)) and val.lower() in ['true', 'false']:
                     val = True if val == 'true' else False
@@ -436,6 +448,9 @@ class PolicyCompiler(object):
         policy_out[PolicyKeys.KW_GROUPS] = {}
         policy_out[PolicyKeys.KW_MAX_MESSAGE_SIZE] = None
         policy_out[PolicyKeys.KW_VHOST_ALIASES] = []
+        policy_out[PolicyKeys.KW_MAX_TEMP_FILE_SIZE] = 32768
+        policy_out[PolicyKeys.KW_MAX_TEMP_FILE_COUNT] = 128
+
 
         # validate the options
         for key, val in dict_iteritems(policy_in):

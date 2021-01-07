@@ -566,6 +566,10 @@ bool qd_policy_open_fetch_settings(
                         settings->spec.allowFallbackLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowFallbackLinks", true);
                         settings->spec.allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
 
+                        settings->spec.allowTempFile          = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowTempFile", true);
+                        settings->spec.maxTempFileSize        = qd_entity_opt_long((qd_entity_t*)upolicy, "maxTempFileSize", 32768);
+                        settings->spec.maxTempFileCount       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxTempFileCount", 128);
+
                         //
                         // By default, deleting connections are enabled. To disable, set the allowAdminStatusUpdate to false in a policy.
                         //

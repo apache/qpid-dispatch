@@ -2401,6 +2401,27 @@
                     "required": false,
                     "create": true
                 },
+                "allowTempFile": {
+                    "type": "boolean",
+                    "description": "Whether this connection is allowed to transfer files to the temporary file store.",
+                    "default": true,
+                    "required": false,
+                    "create": true
+                },
+                "maxTempFileSize": {
+                    "type": "integer",
+                    "description": "The maximum payload size permitted for a transferred temporary file.",
+                    "default": 32768,
+                    "required": false,
+                    "create": true
+                },
+                "maxTempFileCount": {
+                    "type": "integer",
+                    "description": "The maximum number of files permitted for transfer to the temporary store.",
+                    "default": 128,
+                    "required": false,
+                    "create": true
+                },
                 "sources": {
                     "type": "string",
                     "description": "A list of source addresses from which users in this group may receive messages. To specify multiple addresses, separate the addresses with either a comma or a space. If you do not specify any addresses, users in this group are not allowed to receive messages from any addresses. You can use the substitution token '${user}' to specify an address that contains a user's authenticated user name. You can use an asterisk ('*') wildcard to match one or more characters in an address. However, this wildcard is only recognized if it is the last character in the address name. You may specify attributes 'sources' or 'sourcePattern' but not both at the same time.",

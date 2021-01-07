@@ -128,13 +128,23 @@ static void qdts_init_storage(qdts_state_t *state)
 }
 
 
-static void qdts_write_file(qdts_state_t *state, const char *filename, const char *body)
+static bool qdts_write_file(qdts_state_t *state, const char *filename, const char *body, int limit)
 {
     char *full_path = (char*) malloc(strlen(state->path) + strlen(filename) + 2);
 
     strcpy(full_path, state->path);
     strcat(full_path, "/");
     strcat(full_path, filename);
+
+    qdts_file_t *file = DEQ_HEAD(state->files);
+    while (!!file && strcmp(file->file_path, full_path) != 0) {
+        file = DEQ_NEXT(file);
+    }
+
+    if (!file && DEQ_SIZE(state->files) >= limit && limit != 0) {
+        free(full_path);
+        return false;
+    }
 
     int fd = open(full_path, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR);
     if (fd > 0) {
@@ -143,12 +153,7 @@ static void qdts_write_file(qdts_state_t *state, const char *filename, const cha
     } else {
         qd_log(state->log, QD_LOG_ERROR, "Failed to open file '%s' (%s)", full_path, strerror(errno));
         free(full_path);
-        return;
-    }
-
-    qdts_file_t *file = DEQ_HEAD(state->files);
-    while (!!file && strcmp(file->file_path, full_path) != 0) {
-        file = DEQ_NEXT(file);
+        return true;
     }
 
     if (!!file) {
@@ -161,12 +166,21 @@ static void qdts_write_file(qdts_state_t *state, const char *filename, const cha
         file->write_count = 1;
         DEQ_INSERT_TAIL(state->files, file);
     }
+
+    qd_log(state->log, QD_LOG_INFO, "Temporary file stored: %s", filename);
+    return true;
 }
 
 
-static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost, uint64_t conn_id)
+static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
+                            uint64_t conn_id, const qd_policy_spec_t *policy_spec)
 {
     qdts_state_t *state = (qdts_state_t*) context;
+
+    if (!!policy_spec && !policy_spec->allowTempFile) {
+        qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - temp file store not permitted", conn_id);
+        return;
+    }
 
     if (state->failed)
         return;
@@ -195,6 +209,18 @@ static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, 
     char          *body      = 0;
 
     if (!!body_iter) {
+        //
+        // Check the body size
+        //
+        if (!!policy_spec) {
+            int length = qd_iterator_length(body_iter);
+            if (length > policy_spec->maxTempFileSize) {
+                qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - temp file larger than max size: %d", conn_id, length);
+                free(filename);
+                return;
+            }
+        }
+
         qd_parsed_field_t *field = qd_parse(body_iter);
         if (qd_parse_ok(field)) {
             uint8_t tag = qd_parse_tag(field);
@@ -210,8 +236,9 @@ static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, 
         qdts_init_storage(state);
 
     if (state->initialized) {
-        qdts_write_file(state, filename, body);
-        qd_log(state->log, QD_LOG_INFO, "Temporary file stored: %s", filename);
+        bool success = qdts_write_file(state, filename, body, !!policy_spec ? policy_spec->maxTempFileCount : 0);
+        if (!success)
+            qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - too many files in the temporary store", conn_id);
     }
 
     free(filename);

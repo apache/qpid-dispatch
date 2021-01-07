@@ -34,6 +34,9 @@ typedef struct {
     bool      allowDynamicLinkRoutes;
     bool      allowAdminStatusUpdate;
     bool      outgoingConnection;
+    bool      allowTempFile;
+    int       maxTempFileSize;
+    int       maxTempFileCount;
 } qd_policy_spec_t;
 
 #endif
