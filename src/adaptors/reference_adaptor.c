@@ -427,10 +427,9 @@ static void on_startup(void *context)
                                           0,                // remote_container_id
                                           false,            // strip_annotations_in
                                           false,            // strip_annotations_out
-                                          false,            // policy_allow_dynamic_link_routes
-                                          false,            // policy_allow_admin_status_update
                                           250,              // link_capacity
                                           0,                // vhost
+                                          0,                // policy_spec
                                           info,             // connection_info
                                           0,                // context_binder
                                           0);               // bind_token

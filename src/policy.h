@@ -25,6 +25,7 @@
 #include "qpid/dispatch/static_assert.h"
 #include "qpid/dispatch/alloc.h"
 #include "qpid/dispatch/alloc_pool.h"
+#include "qpid/dispatch/policy_spec.h"
 
 #include "config.h"
 #include "entity.h"
@@ -44,21 +45,12 @@ struct qd_policy_denial_counts_s {
 
 typedef struct qd_policy_t qd_policy_t;
 
+//
+// Policy settings are defined in include/qpid/dispatch/policy_settings.h
+//
+
 struct qd_policy__settings_s {
-    int  maxFrameSize;
-    int  maxSessionWindow;
-    int  maxSessions;
-    int  maxSenders;
-    int  maxReceivers;
-    uint64_t  maxMessageSize;
-    bool allowDynamicSource;
-    bool allowAnonymousSender;
-    bool allowUserIdProxy;
-    bool allowWaypointLinks;
-    bool allowFallbackLinks;
-    bool allowDynamicLinkRoutes;
-    bool allowAdminStatusUpdate;
-    bool outgoingConnection;
+    qd_policy_spec_t spec;
     char *sources;
     char *targets;
     char *sourcePattern;
@@ -208,10 +200,10 @@ void qd_policy_settings_free(qd_policy_settings_t *settings);
  * @param[in] isReceiver indication to check using receiver settings
  */
 bool qd_policy_approve_link_name(const char *username,
-                                  const qd_policy_settings_t *settings,
-                                  const char *proposed,
-                                  bool isReceiver
-                                );
+                                 const qd_policy_settings_t *settings,
+                                 const char *proposed,
+                                 bool isReceiver
+                                 );
 
 /** Add a hostname to the lookup parse_tree
  * Note that the parse_tree may store an 'optimised' pattern for a given

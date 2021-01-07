@@ -239,6 +239,7 @@ struct qdr_general_work_t {
     void                        *on_message_context;
     uint64_t                     in_conn_id;
     uint64_t                     mobile_seq;
+    const qd_policy_spec_t      *policy_spec;
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;
     qdr_global_stats_handler_t   stats_handler;
     void                        *context;
@@ -671,8 +672,6 @@ struct qdr_connection_t {
     qdr_conn_identifier_t      *alt_conn_id;
     bool                        strip_annotations_in;
     bool                        strip_annotations_out;
-    bool                        policy_allow_dynamic_link_routes;
-    bool                        policy_allow_admin_status_update;
     int                         link_capacity;
     int                         mask_bit;  ///< set only if inter-router connection
     qdr_connection_work_list_t  work_list;
@@ -693,6 +692,7 @@ struct qdr_connection_t {
     bool                        enable_protocol_trace; // Has trace level logging been turned on for this connection.
     bool                        has_streaming_links;   ///< one or more of this connection's links are for streaming messages
     qdr_link_list_t             streaming_link_pool;   ///< pool of links available for streaming messages
+    const qd_policy_spec_t     *policy_spec;
 };
 
 DEQ_DECLARE(qdr_connection_t, qdr_connection_list_t);
@@ -942,7 +942,7 @@ ALLOC_DECLARE(qdr_terminus_t);
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost, uint64_t in_conn_id);
+void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost, uint64_t in_conn_id, const qd_policy_spec_t *policy_spec);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 qdr_agent_t *qdr_agent(qdr_core_t *core);
 void qdr_agent_setup_subscriptions(qdr_agent_t *agent, qdr_core_t *core);

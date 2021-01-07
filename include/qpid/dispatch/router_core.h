@@ -24,6 +24,7 @@
 #include <qpid/dispatch/compose.h>
 #include <qpid/dispatch/parse.h>
 #include <qpid/dispatch/router.h>
+#include <qpid/dispatch/policy_spec.h>
 
 
 /**
@@ -98,7 +99,7 @@ void qdr_core_route_table_handlers(qdr_core_t              *core,
  ******************************************************************************
  */
 typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
-                               uint64_t conn_id);
+                               uint64_t conn_id, const qd_policy_spec_t *policy);
 
 /**
  * qdr_core_subscribe

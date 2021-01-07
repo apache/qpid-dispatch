@@ -331,8 +331,8 @@ static void set_policy_settings(pn_connection_t* conn, permissions_t* permission
         if (permissions->sources.start && permissions->sources.capacity) {
             qd_conn->policy_settings->sources = qd_policy_compile_allowed_csv(permissions->sources.start);
         }
-        qd_conn->policy_settings->allowDynamicSource = true;
-        qd_conn->policy_settings->allowAnonymousSender = true;
+        qd_conn->policy_settings->spec.allowDynamicSource = true;
+        qd_conn->policy_settings->spec.allowAnonymousSender = true;
     }
 }
 

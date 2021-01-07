@@ -20,6 +20,7 @@
  */
 
 #include <qpid/dispatch/router_core.h>
+#include <qpid/dispatch/policy_spec.h>
 
 typedef struct qdr_protocol_adaptor_t  qdr_protocol_adaptor_t;
 typedef struct qdr_connection_t        qdr_connection_t;
@@ -369,10 +370,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                    *core,
                                         const char                    *remote_container_id,
                                         bool                           strip_annotations_in,
                                         bool                           strip_annotations_out,
-                                        bool                           policy_allow_dynamic_link_routes,
-                                        bool                           policy_allow_admin_status_update,
                                         int                            link_capacity,
                                         const char                    *vhost,
+                                        const qd_policy_spec_t        *policy_spec,
                                         qdr_connection_info_t         *connection_info,
                                         qdr_connection_bind_context_t  context_binder,
                                         void                          *bind_token);

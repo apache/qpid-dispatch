@@ -694,11 +694,12 @@ static void qcm_mobile_sync_on_mau_CT(qdrm_mobile_sync_t *msync, qd_parsed_field
 }
 
 
-static void qcm_mobile_sync_on_message_CT(void         *context,
-                                          qd_message_t *msg,
-                                          int           unused_link_maskbit,
-                                          int           unused_inter_router_cost,
-                                          uint64_t      unused_conn_id)
+static void qcm_mobile_sync_on_message_CT(void                   *context,
+                                          qd_message_t           *msg,
+                                          int                     unused_link_maskbit,
+                                          int                     unused_inter_router_cost,
+                                          uint64_t                unused_conn_id,
+                                          const qd_policy_spec_t *unused_policy_spec)
 {
     qdrm_mobile_sync_t *msync      = (qdrm_mobile_sync_t*) context;
     qd_iterator_t      *ap_iter    = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);
