@@ -455,21 +455,20 @@ static void qdr_tcp_connection_ingress_accept(qdr_tcp_connection_t* tc)
     tc->conn_id = qd_server_allocate_connection_id(tc->server);
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
                                                    tcp_adaptor->adaptor,
-                                                   true,
-                                                   QDR_ROLE_NORMAL,
-                                                   1,
-                                                   tc->conn_id,
-                                                   0,
-                                                   0,
-                                                   false,
-                                                   false,
-                                                   false,
-                                                   false,
-                                                   250,
-                                                   0,
-                                                   info,
-                                                   0,
-                                                   0);
+                                                   true,            // incoming
+                                                   QDR_ROLE_NORMAL, // role
+                                                   1,               // cost
+                                                   tc->conn_id,     // management_id
+                                                   0,               // label
+                                                   0,               // remote_container_id
+                                                   false,           // strip_annotations_in
+                                                   false,           // strip_annotations_out
+                                                   250,             // link_capacity
+                                                   0,               // vhost
+                                                   0,               // policy_spec
+                                                   info,            // connection_info
+                                                   0,               // context_binder
+                                                   0);              // bind_token
     tc->qdr_conn = conn;
     qdr_connection_set_context(conn, tc);
 
@@ -640,21 +639,20 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
 
     qdr_connection_t *conn = qdr_connection_opened(tcp_adaptor->core,
                                                    tcp_adaptor->adaptor,
-                                                   false,
-                                                   QDR_ROLE_NORMAL,
-                                                   1,
-                                                   tc->conn_id,
-                                                   0,
-                                                   0,
-                                                   false,
-                                                   false,
-                                                   false,
-                                                   false,
-                                                   250,
-                                                   0,
-                                                   info,
-                                                   0,
-                                                   0);
+                                                   false,           // incoming
+                                                   QDR_ROLE_NORMAL, // role
+                                                   1,               // cost
+                                                   tc->conn_id,     // management_id
+                                                   0,               // label
+                                                   0,               // remote_container_id
+                                                   false,           // strip_annotations_in
+                                                   false,           // strip_annotations_out
+                                                   250,             // link_capacity
+                                                   0,               // vhost
+                                                   0,               // policy_spec
+                                                   info,            // connection_info
+                                                   0,               // context_binder
+                                                   0);              // bind_token
     tc->qdr_conn = conn;
     qdr_connection_set_context(conn, tc);
 

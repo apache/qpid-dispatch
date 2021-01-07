@@ -77,10 +77,9 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
                                         const char                   *remote_container_id,
                                         bool                          strip_annotations_in,
                                         bool                          strip_annotations_out,
-                                        bool                          policy_allow_dynamic_link_routes,
-                                        bool                          policy_allow_admin_status_update,
                                         int                           link_capacity,
                                         const char                   *vhost,
+                                        const qd_policy_spec_t       *policy_spec,
                                         qdr_connection_info_t        *connection_info,
                                         qdr_connection_bind_context_t context_binder,
                                         void                         *bind_token)
@@ -99,8 +98,7 @@ qdr_connection_t *qdr_connection_opened(qdr_core_t                   *core,
     conn->inter_router_cost     = cost;
     conn->strip_annotations_in  = strip_annotations_in;
     conn->strip_annotations_out = strip_annotations_out;
-    conn->policy_allow_dynamic_link_routes = policy_allow_dynamic_link_routes;
-    conn->policy_allow_admin_status_update = policy_allow_admin_status_update;
+    conn->policy_spec           = policy_spec;
     conn->link_capacity         = link_capacity;
     conn->mask_bit              = -1;
     conn->admin_status          = QDR_CONN_ADMIN_ENABLED;

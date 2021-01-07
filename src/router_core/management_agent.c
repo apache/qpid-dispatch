@@ -499,7 +499,7 @@ static bool qd_can_handle_request(qd_parsed_field_t           *properties_fld,
  *
  */
 void qdr_management_agent_on_message(void *context, qd_message_t *msg, int unused_link_id, int unused_cost,
-                                     uint64_t in_conn_id)
+                                     uint64_t in_conn_id, const qd_policy_spec_t *policy_spec)
 {
     qdr_core_t *core = (qdr_core_t*) context;
     qd_iterator_t *app_properties_iter = qd_message_field_iterator(msg, QD_FIELD_APPLICATION_PROPERTIES);

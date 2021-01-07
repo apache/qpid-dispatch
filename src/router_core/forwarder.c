@@ -309,7 +309,7 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
 
 void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
 {
-    work->on_message(work->on_message_context, work->msg, work->maskbit, work->inter_router_cost, work->in_conn_id);
+    work->on_message(work->on_message_context, work->msg, work->maskbit, work->inter_router_cost, work->in_conn_id, work->policy_spec);
     qd_message_free(work->msg);
 }
 
@@ -324,7 +324,7 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
         //
         // The handler runs in-core.  Invoke it right now.
         //
-        sub->on_message(sub->on_message_context, msg, mask_bit, cost, identity);
+        sub->on_message(sub->on_message_context, msg, mask_bit, cost, identity, link ? link->conn->policy_spec : 0);
     } else {
         //
         // The handler runs in an IO thread.  Defer its invocation.
@@ -336,6 +336,7 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
         work->maskbit            = mask_bit;
         work->inter_router_cost  = cost;
         work->in_conn_id         = identity;
+        work->policy_spec        = link ? link->conn->policy_spec : 0;
         qdr_post_general_work_CT(core, work);
     }
 }

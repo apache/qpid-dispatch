@@ -549,27 +549,27 @@ bool qd_policy_open_fetch_settings(
                 if (result2) {
                     int truthy = PyObject_IsTrue(result2);
                     if (truthy) {
-                        settings->maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
-                        settings->maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
-                        settings->maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
-                        settings->maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
-                        settings->maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
-                        settings->maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
-                        if (!settings->allowAnonymousSender) { //don't override if enabled by authz plugin
-                            settings->allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
+                        settings->spec.maxFrameSize         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxFrameSize", 0);
+                        settings->spec.maxSessionWindow     = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessionWindow", 0);
+                        settings->spec.maxSessions          = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSessions", 0);
+                        settings->spec.maxSenders           = qd_entity_opt_long((qd_entity_t*)upolicy, "maxSenders", 0);
+                        settings->spec.maxReceivers         = qd_entity_opt_long((qd_entity_t*)upolicy, "maxReceivers", 0);
+                        settings->spec.maxMessageSize       = qd_entity_opt_long((qd_entity_t*)upolicy, "maxMessageSize", 0);
+                        if (!settings->spec.allowAnonymousSender) { //don't override if enabled by authz plugin
+                            settings->spec.allowAnonymousSender = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAnonymousSender", false);
                         }
-                        if (!settings->allowDynamicSource) { //don't override if enabled by authz plugin
-                            settings->allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
+                        if (!settings->spec.allowDynamicSource) { //don't override if enabled by authz plugin
+                            settings->spec.allowDynamicSource   = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicSource", false);
                         }
-                        settings->allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
-                        settings->allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
-                        settings->allowFallbackLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowFallbackLinks", true);
-                        settings->allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
+                        settings->spec.allowUserIdProxy       = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowUserIdProxy", false);
+                        settings->spec.allowWaypointLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowWaypointLinks", true);
+                        settings->spec.allowFallbackLinks     = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowFallbackLinks", true);
+                        settings->spec.allowDynamicLinkRoutes = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowDynamicLinkRoutes", true);
 
                         //
                         // By default, deleting connections are enabled. To disable, set the allowAdminStatusUpdate to false in a policy.
                         //
-                        settings->allowAdminStatusUpdate = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAdminStatusUpdate", true);
+                        settings->spec.allowAdminStatusUpdate = qd_entity_opt_bool((qd_entity_t*)upolicy, "allowAdminStatusUpdate", true);
                         if (settings->sources == 0) { //don't override if configured by authz plugin
                             settings->sources              = qd_entity_get_string((qd_entity_t*)upolicy, "sources");
                         }
@@ -640,8 +640,8 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     bool result = true;
     if (qd_conn->policy_settings) {
-        if (qd_conn->policy_settings->maxSessions) {
-            if (qd_conn->n_sessions == qd_conn->policy_settings->maxSessions) {
+        if (qd_conn->policy_settings->spec.maxSessions) {
+            if (qd_conn->n_sessions == qd_conn->policy_settings->spec.maxSessions) {
                 qd_policy_deny_amqp_session(ssn, qd_conn);
                 result = false;
             }
@@ -672,9 +672,9 @@ bool qd_policy_approve_amqp_session(pn_session_t *ssn, qd_connection_t *qd_conn)
 void qd_policy_apply_session_settings(pn_session_t *ssn, qd_connection_t *qd_conn)
 {
     size_t capacity;
-    if (qd_conn->policy_settings && qd_conn->policy_settings->maxSessionWindow
-        && !qd_conn->policy_settings->outgoingConnection) {
-        capacity = qd_conn->policy_settings->maxSessionWindow;
+    if (qd_conn->policy_settings && qd_conn->policy_settings->spec.maxSessionWindow
+        && !qd_conn->policy_settings->spec.outgoingConnection) {
+        capacity = qd_conn->policy_settings->spec.maxSessionWindow;
     } else {
         const qd_server_config_t * cf = qd_connection_config(qd_conn);
         capacity = cf->incoming_capacity;
@@ -1107,8 +1107,8 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     const char *hostip = qd_connection_remote_ip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
-    if (qd_conn->policy_settings->maxSenders) {
-        if (qd_conn->n_senders == qd_conn->policy_settings->maxSenders) {
+    if (qd_conn->policy_settings->spec.maxSenders) {
+        if (qd_conn->n_senders == qd_conn->policy_settings->spec.maxSenders) {
             // Max sender limit specified and violated.
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "[C%"PRIu64"] DENY AMQP Attach sender for user '%s', rhost '%s', vhost '%s' based on maxSenders limit",
@@ -1126,7 +1126,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     bool lookup;
     if (target && *target) {
         // a target is specified
-        if (!qd_conn->policy_settings->allowWaypointLinks) {
+        if (!qd_conn->policy_settings->spec.allowWaypointLinks) {
             bool waypoint = qd_policy_terminus_is_waypoint(pn_link_remote_target(pn_link));
             if (waypoint) {
                 qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
@@ -1137,7 +1137,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
             }
         }
 
-        if (!qd_conn->policy_settings->allowFallbackLinks) {
+        if (!qd_conn->policy_settings->spec.allowFallbackLinks) {
             bool fallback = qd_policy_terminus_is_fallback(pn_link_remote_target(pn_link));
             if (fallback) {
                 qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
@@ -1161,7 +1161,7 @@ bool qd_policy_approve_amqp_sender_link(pn_link_t *pn_link, qd_connection_t *qd_
     } else {
         // A sender with no remote target.
         // This happens all the time with anonymous relay
-        lookup = qd_conn->policy_settings->allowAnonymousSender;
+        lookup = qd_conn->policy_settings->spec.allowAnonymousSender;
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "[C%"PRIu64"] %s AMQP Attach anonymous sender for user '%s', rhost '%s', vhost '%s'",
             qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
@@ -1180,8 +1180,8 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     const char *hostip = qd_connection_remote_ip(qd_conn);
     const char *vhost = pn_connection_remote_hostname(qd_connection_pn(qd_conn));
 
-    if (qd_conn->policy_settings->maxReceivers) {
-        if (qd_conn->n_receivers == qd_conn->policy_settings->maxReceivers) {
+    if (qd_conn->policy_settings->spec.maxReceivers) {
+        if (qd_conn->n_receivers == qd_conn->policy_settings->spec.maxReceivers) {
             // Max sender limit specified and violated.
             qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
                 "[C%"PRIu64"] DENY AMQP Attach receiver for user '%s', rhost '%s', vhost '%s' based on maxReceivers limit",
@@ -1197,7 +1197,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     // Approve receiver link based on source
     bool dynamic_src = pn_terminus_is_dynamic(pn_link_remote_source(pn_link));
     if (dynamic_src) {
-        bool lookup = qd_conn->policy_settings->allowDynamicSource;
+        bool lookup = qd_conn->policy_settings->spec.allowDynamicSource;
         qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, (lookup ? QD_LOG_TRACE : QD_LOG_INFO),
             "[C%"PRIu64"] %s AMQP Attach receiver dynamic source for user '%s', rhost '%s', vhost '%s',",
             qd_conn->connection_id, (lookup ? "ALLOW" : "DENY"), qd_conn->user_id, hostip, vhost);
@@ -1210,7 +1210,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
     const char * source = pn_terminus_get_address(pn_link_remote_source(pn_link));
     if (source && *source) {
         // a source is specified
-        if (!qd_conn->policy_settings->allowWaypointLinks) {
+        if (!qd_conn->policy_settings->spec.allowWaypointLinks) {
             bool waypoint = qd_policy_terminus_is_waypoint(pn_link_remote_source(pn_link));
             if (waypoint) {
                 qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
@@ -1221,7 +1221,7 @@ bool qd_policy_approve_amqp_receiver_link(pn_link_t *pn_link, qd_connection_t *q
             }
         }
 
-        if (!qd_conn->policy_settings->allowFallbackLinks) {
+        if (!qd_conn->policy_settings->spec.allowFallbackLinks) {
             bool fallback = qd_policy_terminus_is_fallback(pn_link_remote_source(pn_link));
             if (fallback) {
                 qd_log(qd_server_dispatch(qd_conn->server)->policy->log_source, QD_LOG_INFO,
@@ -1286,10 +1286,10 @@ void qd_policy_amqp_open(qd_connection_t *qd_conn) {
             // This connection is allowed by policy.
             // Apply transport policy settings
             if (qd_policy_open_fetch_settings(policy, vhost, settings_name, qd_conn->policy_settings)) {
-                if (qd_conn->policy_settings->maxFrameSize > 0)
-                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->maxFrameSize);
-                if (qd_conn->policy_settings->maxSessions > 0)
-                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->maxSessions - 1);
+                if (qd_conn->policy_settings->spec.maxFrameSize > 0)
+                    pn_transport_set_max_frame(pn_trans, qd_conn->policy_settings->spec.maxFrameSize);
+                if (qd_conn->policy_settings->spec.maxSessions > 0)
+                    pn_transport_set_channel_max(pn_trans, qd_conn->policy_settings->spec.maxSessions - 1);
                 const qd_server_config_t *cf = qd_connection_config(qd_conn);
                 if (cf && cf->multi_tenant) {
                     char vhost_name_buf[SETTINGS_NAME_SIZE];
@@ -1348,7 +1348,7 @@ void qd_policy_amqp_open_connector(qd_connection_t *qd_conn) {
                 ZERO(qd_conn->policy_settings);
 
                 if (qd_policy_open_fetch_settings(policy, policy_vhost, POLICY_VHOST_GROUP, qd_conn->policy_settings)) {
-                    qd_conn->policy_settings->outgoingConnection = true;
+                    qd_conn->policy_settings->spec.outgoingConnection = true;
                     qd_conn->policy_counted = true; // Count senders and receivers for this connection
                 } else {
                     qd_log(policy->log_source,

@@ -608,7 +608,8 @@ void qdra_connection_update_CT(qdr_core_t      *core,
                 admin_status_bad_or_forbidden = true;
             }
             else {
-                if (!user_conn->policy_allow_admin_status_update) {
+                bool allow = user_conn->policy_spec ? user_conn->policy_spec->allowAdminStatusUpdate : true;
+                if (!allow) {
                     //
                     // Policy on the connection that is requesting that some other connection be deleted does not allow
                     // for the other connection to be deleted.Set the status to QD_AMQP_FORBIDDEN and just quit.

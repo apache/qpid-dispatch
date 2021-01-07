@@ -180,7 +180,8 @@ void qdra_conn_link_route_create_CT(qdr_core_t         *core,
     }
 
     // fail if forbidden by policy
-    if (!conn->policy_allow_dynamic_link_routes) {
+    bool allow = conn->policy_spec ? conn->policy_spec->allowDynamicLinkRoutes : true;
+    if (!allow) {
         query->status = QD_AMQP_FORBIDDEN;
         goto exit;
     }

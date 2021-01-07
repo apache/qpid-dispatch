@@ -194,10 +194,9 @@ static qdr_http1_connection_t *_create_server_connection(qd_http_connector_t *ct
                                             0,  // remote container id
                                             false,  // strip annotations in
                                             false,  // strip annotations out
-                                            false,  // allow dynamic link routes
-                                            false,  // allow admin status update
                                             DEFAULT_CAPACITY,
                                             0,      // vhost
+                                            0,      // policy_spec
                                             info,
                                             0,      // bind context
                                             0);     // bind token

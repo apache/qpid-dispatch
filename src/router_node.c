@@ -508,7 +508,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
     int               tenant_space_len;
     const char       *tenant_space = qdr_connection_get_tenant_space(qdr_conn, &tenant_space_len);
     if (conn->policy_settings)
-        check_user = !conn->policy_settings->allowUserIdProxy;
+        check_user = !conn->policy_settings->spec.allowUserIdProxy;
 
     //
     // Validate the content of the delivery as an AMQP message.  This is done partially, only
@@ -1225,10 +1225,9 @@ static void AMQP_opened_handler(qd_router_t *router, qd_connection_t *conn, bool
                           pn_connection_remote_container(pn_conn),
                           conn->strip_annotations_in,
                           conn->strip_annotations_out,
-                          conn->policy_settings ? conn->policy_settings->allowDynamicLinkRoutes : true,
-                          conn->policy_settings ? conn->policy_settings->allowAdminStatusUpdate : true,
                           link_capacity,
                           vhost,
+                          !!conn->policy_settings ? &conn->policy_settings->spec : 0,
                           connection_info,
                           bind_connection_context,
                           conn);
