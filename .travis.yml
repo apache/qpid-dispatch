@@ -80,8 +80,8 @@ jobs:
     # https://github.com/pypa/virtualenv/issues/1873
     - python -m pip install --user --upgrade pip
     - python -m pip install --user --upgrade tox virtualenv==20.0.23
-    # Install quart to run the http2 tests.
-    - python -m pip install --user quart
+    # Install quart, h2 to run the http2 tests.
+    - python -m pip install --user quart h2
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
     - python -m pip install --user selectors
     # Install grpcio and protobuf to run the grpc tests.
