@@ -317,6 +317,18 @@ class Http2TestOneStandaloneRouter(Http2TestBase, CommonHttp2Tests):
         qd_manager = QdManager(self, address=self.router_qdra.addresses[0])
         stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
         self.assertEqual(len(stats), 2)
+
+        # Give time for the core thread to augment the stats.
+        i = 0
+        while i < 3:
+            s = stats[0]
+            i += 1
+            if s.get('requests') < 2:
+                sleep(1)
+                stats = qd_manager.query('org.apache.qpid.dispatch.httpRequestInfo')
+            else:
+                break
+
         for s in stats:
             self.assertEqual(s.get('requests'), 2)
             self.assertEqual(s.get('details').get('GET:200'), 1)
@@ -469,6 +481,18 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         self.assertIn('Success! Your first name is Mickey, last name is Mouse', out)
         qd_manager_a = QdManager(self, address=self.router_qdra.addresses[0])
         stats_a = qd_manager_a.query('org.apache.qpid.dispatch.httpRequestInfo')
+
+        # Give time for the core thread to augment the stats.
+        i = 0
+        while i < 3:
+            s = stats_a[0]
+            i += 1
+            if s.get('requests') < 2:
+                sleep(1)
+                stats_a = qd_manager_a.query('org.apache.qpid.dispatch.httpRequestInfo')
+            else:
+                break
+
         self.assertEqual(len(stats_a), 1)
         self.assertEqual(stats_a[0].get('requests'), 2)
         self.assertEqual(stats_a[0].get('direction'), 'in')
@@ -477,6 +501,17 @@ class Http2TestTwoRouter(Http2TestBase, CommonHttp2Tests):
         qd_manager_b = QdManager(self, address=self.router_qdrb.addresses[0])
         stats_b = qd_manager_b.query('org.apache.qpid.dispatch.httpRequestInfo')
         self.assertEqual(len(stats_b), 1)
+
+        i = 0
+        while i < 3:
+            s = stats_b[0]
+            i += 1
+            if s.get('requests') < 2:
+                sleep(1)
+                stats_b = qd_manager_b.query('org.apache.qpid.dispatch.httpRequestInfo')
+            else:
+                break
+
         self.assertEqual(stats_b[0].get('requests'), 2)
         self.assertEqual(stats_b[0].get('direction'), 'out')
         self.assertEqual(stats_b[0].get('bytesOut'), 24)
