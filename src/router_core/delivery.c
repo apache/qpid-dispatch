@@ -908,7 +908,7 @@ static bool qdr_delivery_mcast_outbound_settled_CT(qdr_core_t *core, qdr_deliver
     } else {
 
         qd_log(core->log, QD_LOG_TRACE,
-               DLV_FMT" mcast delivery (%p) out peer "DLV_FMT" has settled, remaining peers=%d",
+               DLV_FMT" mcast delivery out peer "DLV_FMT" has settled, remaining peers=%d",
                DLV_ARGS(in_dlv), DLV_ARGS(out_dlv), peer_count - 1);
     }
 

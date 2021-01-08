@@ -776,7 +776,7 @@ static void qdr_link_deliver_CT(qdr_core_t *core, qdr_action_t *action, bool dis
         if (!dlv->settled) {
             DEQ_INSERT_TAIL(link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_IN_UNSETTLED;
-            qd_log(core->log, QD_LOG_DEBUG, DLV_FMT"Delivery transfer:  dlv:%lx qdr_link_deliver_CT: action-list -> unsettled-list", DLV_ARGS(dlv));
+            qd_log(core->log, QD_LOG_DEBUG, DLV_FMT"Delivery transfer:  qdr_link_deliver_CT: action-list -> unsettled-list", DLV_ARGS(dlv));
         } else {
             //
             // If the delivery is settled, decrement the ref_count on the delivery.

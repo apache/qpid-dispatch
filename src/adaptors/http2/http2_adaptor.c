@@ -763,7 +763,7 @@ static bool compose_and_deliver(qdr_http2_connection_t *conn, qdr_http2_stream_d
         // Not doing an incref here since the qdr_link_deliver increfs the delivery twice
         //
         stream_data->in_dlv = qdr_link_deliver(stream_data->in_link, stream_data->message, 0, false, 0, 0, 0, 0);
-        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"][L%"PRIu64"] Routed delivery in compose_and_deliver dlv:%lx (conn->ingress=%i)", conn->conn_id, stream_data->stream_id, stream_data->in_link->identity, (long) stream_data->in_dlv, conn->ingress);
+        qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Routed delivery in compose_and_deliver (conn->ingress=%i) "DLV_FMT, conn->conn_id, stream_data->stream_id, conn->ingress, DLV_ARGS(stream_data->in_dlv));
         qdr_delivery_set_context(stream_data->in_dlv, stream_data);
         stream_data->in_link_credit -= 1;
         return true;
@@ -927,7 +927,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
         }
 
         if (stream_data->in_dlv && !stream_data->stream_force_closed) {
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA frame received, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] NGHTTP2_DATA frame received, qdr_delivery_continue "DLV_FMT, conn->conn_id, stream_id, DLV_ARGS(stream_data->in_dlv));
             qdr_delivery_continue(http2_adaptor->core, stream_data->in_dlv, false);
         }
 
@@ -986,7 +986,7 @@ static int on_frame_recv_callback(nghttp2_session *session,
 
             if (stream_data->entire_footer_arrived) {
                 qdr_delivery_continue(http2_adaptor->core, stream_data->in_dlv, false);
-                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Entire footer arrived, qdr_delivery_continue(dlv=%lx)", conn->conn_id, stream_id, (long) stream_data->in_dlv);
+                qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] Entire footer arrived, qdr_delivery_continue "DLV_FMT, conn->conn_id, stream_id, DLV_ARGS(stream_data->in_dlv));
             }
             else {
                 //
@@ -1560,7 +1560,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
         qd_message_t *message = qdr_delivery_message(stream_data->out_dlv);
 
         if (stream_data->out_msg_send_complete) {
-            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http send is already complete (dlv:%lx), returning", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
+            qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http send is already complete, returning " DLV_FMT, conn->conn_id, stream_data->stream_id, DLV_ARGS(stream_data->out_dlv));
             return 0;
         }
 
@@ -1635,7 +1635,7 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 stream_data->stream_id = stream_id;
             }
 
-            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) before sending Outgoing headers", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
+            qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv before sending Outgoing headers "DLV_FMT, conn->conn_id, stream_data->stream_id, DLV_ARGS(stream_data->out_dlv));
 
             for (uint32_t idx = 0; idx < count; idx++) {
                 qd_log(http2_adaptor->protocol_log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] HTTP2 HEADER Outgoing [%s=%s]", conn->conn_id, stream_data->stream_id, (char *)hdrs[idx].name, (char *)hdrs[idx].value);
@@ -1769,14 +1769,14 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                 if (stream_data->out_msg_body_sent) {
                     qd_message_set_send_complete(qdr_delivery_message(stream_data->out_dlv));
                     stream_data->out_msg_send_complete = true;
-                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) send_complete", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
+                    qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv send_complete "DLV_FMT , conn->conn_id, stream_data->stream_id, DLV_ARGS(stream_data->out_dlv));
 
                 }
             }
             else {
                 qd_message_set_send_complete(qdr_delivery_message(stream_data->out_dlv));
                 stream_data->out_msg_send_complete = true;
-                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv (dlv:%lx) send_complete", conn->conn_id, stream_data->stream_id, (long)stream_data->out_dlv);
+                qd_log(http2_adaptor->log_source, QD_LOG_TRACE, "[C%"PRIu64"][S%"PRId32"] handle_outgoing_http, out_dlv send_complete "DLV_FMT, conn->conn_id, stream_data->stream_id, DLV_ARGS(stream_data->out_dlv));
             }
         }
 
