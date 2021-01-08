@@ -148,6 +148,7 @@ struct qdr_http2_connection_t {
     bool                      woken_by_ping;
     bool                      first_pinged;
     bool                      delete_egress_connections;  // If set to true, the egress qdr_connection_t and qdr_http2_connection_t objects will be deleted
+    bool                      goaway_received;
 
     DEQ_LINKS(qdr_http2_connection_t);
  };

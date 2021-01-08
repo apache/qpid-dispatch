@@ -74,6 +74,7 @@ jobs:
     - python -m pip install --user selectors
     # Install grpcio and protobuf to run the grpc tests.
     - python -m pip install --user grpcio protobuf
+    - python -m pip install --user h2
     env:
     - CC=clang-10
     - CXX=clang++-10
