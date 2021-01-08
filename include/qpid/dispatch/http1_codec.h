@@ -127,7 +127,7 @@ typedef struct h1_codec_config_t {
     int (*rx_header)(h1_codec_request_state_t *hrs, const char *key, const char *value);
     int (*rx_headers_done)(h1_codec_request_state_t *hrs, bool has_body);
 
-    int (*rx_body)(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, uintmax_t len, bool more);
+    int (*rx_body)(h1_codec_request_state_t *hrs, qd_buffer_list_t *body, size_t len, bool more);
 
     // Invoked after a received HTTP message has been completely parsed.
     //
@@ -158,7 +158,7 @@ void h1_codec_connection_free(h1_codec_connection_t *conn);
 // outstanding requests and destroy the conn by calling
 // h1_codec_connection_free().
 //
-int h1_codec_connection_rx_data(h1_codec_connection_t *conn, qd_buffer_list_t *data, uintmax_t len);
+int h1_codec_connection_rx_data(h1_codec_connection_t *conn, qd_buffer_list_t *data, size_t len);
 
 // Notify the codec that the endpoint closed the connection.  For server-facing
 // connections it is safe to resume calling h1_codec_connection_rx_data() for
