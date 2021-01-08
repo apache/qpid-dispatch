@@ -24,6 +24,12 @@ import system_test
 from system_test import TestCase, Qdrouterd, QdManager, Process, SkipIfNeeded
 from subprocess import PIPE
 
+h2hyper_installed = True
+try:
+    import h2.connection
+except ImportError:
+    h2hyper_installed = False
+
 
 def python_37_available():
     if sys.version_info >= (3, 7):
@@ -73,8 +79,16 @@ def skip_test():
     return True
 
 
+def skip_h2_test():
+    if python_37_available() and h2hyper_installed and curl_available():
+        return False
+    return True
+
+
 class Http2TestBase(TestCase):
-    def run_curl(self, args=None, regexp=None, timeout=system_test.TIMEOUT, address=None):
+    def run_curl(self, args=None, regexp=None,
+                 timeout=system_test.TIMEOUT,
+                 address=None):
         # Tell with -m / --max-time the maximum time, in seconds, that you
         # allow the command line to spend before curl exits with a
         # timeout error code (28).
@@ -692,3 +706,47 @@ class Http2TestEdgeToEdgeViaInteriorRouter(Http2TestBase, CommonHttp2Tests):
     def test_zzz_http_connector_delete(self):
         self.check_connector_delete(client_addr=self.router_qdra.http_addresses[0],
                                     server_addr=self.router_qdrb.addresses[0])
+
+
+class Http2TestGoAway(Http2TestBase):
+    @classmethod
+    def setUpClass(cls):
+        super(Http2TestGoAway, cls).setUpClass()
+        if skip_h2_test():
+            return
+        cls.http2_server_name = "hyperh2_server"
+        os.environ['SERVER_LISTEN_PORT'] = str(cls.tester.get_port())
+        cls.http2_server = cls.tester.http2server(name=cls.http2_server_name,
+                                                  listen_port=int(os.getenv('SERVER_LISTEN_PORT')),
+                                                  py_string='python3',
+                                                  server_file="hyperh2_server.py")
+        name = "http2-test-router"
+        cls.connector_name = 'connectorToBeDeleted'
+        cls.connector_props = {
+            'port': os.getenv('SERVER_LISTEN_PORT'),
+            'address': 'examples',
+            'host': '127.0.0.1',
+            'protocolVersion': 'HTTP2',
+            'name': cls.connector_name
+        }
+        config = Qdrouterd.Config([
+            ('router', {'mode': 'standalone', 'id': 'QDR'}),
+            ('listener', {'port': cls.tester.get_port(), 'role': 'normal', 'host': '0.0.0.0'}),
+
+            ('httpListener', {'port': cls.tester.get_port(), 'address': 'examples',
+                              'host': '127.0.0.1', 'protocolVersion': 'HTTP2'}),
+            ('httpConnector', cls.connector_props)
+        ])
+        cls.router_qdra = cls.tester.qdrouterd(name, config, wait=True)
+
+    @SkipIfNeeded(skip_h2_test(),
+                  "Python 3.7 or greater, hyper-h2 and curl needed to run hyperhttp2 tests")
+    def test_goaway(self):
+        # Executes a request against the router at the /goaway_test_1 URL
+        # The router in turn forwards the request to the http2 server which
+        # responds with a GOAWAY frame. The router propagates this
+        # GOAWAY frame to the client and issues a HTTP 503 to the client
+        address = self.router_qdra.http_addresses[0] + "/goaway_test_1"
+        out = self.run_curl(address=address, args=["-i"])
+        self.assertIn("HTTP/2 503", out)
+
