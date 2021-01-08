@@ -71,6 +71,7 @@ jobs:
     - python -m pip install --user quart
     # DISPATCH-1883: Install selectors to run tcp echo server/client tools
     - python -m pip install --user selectors
+    - python -m pip install --user h2
     env:
     - CC=clang-10
     - CXX=clang++-10
