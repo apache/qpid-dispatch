@@ -240,6 +240,7 @@ struct qdr_general_work_t {
     uint64_t                     in_conn_id;
     uint64_t                     mobile_seq;
     const qd_policy_spec_t      *policy_spec;
+    qdr_delivery_t              *delivery;
     qdr_delivery_cleanup_list_t  delivery_cleanup_list;
     qdr_global_stats_handler_t   stats_handler;
     void                        *context;
@@ -942,7 +943,8 @@ ALLOC_DECLARE(qdr_terminus_t);
 
 void *router_core_thread(void *arg);
 uint64_t qdr_identifier(qdr_core_t* core);
-void qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost, uint64_t in_conn_id, const qd_policy_spec_t *policy_spec);
+uint64_t qdr_management_agent_on_message(void *context, qd_message_t *msg, int link_id, int cost,
+                                         uint64_t in_conn_id, const qd_policy_spec_t *policy_spec, qdr_error_t **error);
 void  qdr_route_table_setup_CT(qdr_core_t *core);
 qdr_agent_t *qdr_agent(qdr_core_t *core);
 void qdr_agent_setup_subscriptions(qdr_agent_t *agent, qdr_core_t *core);
@@ -961,7 +963,7 @@ void qdr_addr_start_inlinks_CT(qdr_core_t *core, qdr_address_t *addr);
  */
 bool qdr_address_is_mobile_CT(qdr_address_t *addr);
 
-void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg);
+void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg, qdr_delivery_t *in_dlv);
 void qdr_in_process_send_to_CT(qdr_core_t *core, qd_iterator_t *address, qd_message_t *msg, bool exclude_inprocess, bool control);
 void qdr_agent_enqueue_response_CT(qdr_core_t *core, qdr_query_t *query);
 

@@ -307,28 +307,74 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
 }
 
 
-void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
+static void qdr_settle_subscription_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    work->on_message(work->on_message_context, work->msg, work->maskbit, work->inter_router_cost, work->in_conn_id, work->policy_spec);
-    qd_message_free(work->msg);
+    qdr_delivery_t *in_delivery = action->args.delivery.delivery;
+    if (discard || !in_delivery)
+        return;
+
+    in_delivery->disposition = action->args.delivery.disposition;
+    in_delivery->error       = action->args.delivery.error;
+    in_delivery->settled     = true;
+
+    bool moved = qdr_delivery_settled_CT(core, in_delivery);
+    if (moved) {
+        qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from unsettled");
+        qdr_delivery_push_CT(core, in_delivery);
+    }
+
+    qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from action");
 }
 
 
-void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg)
+void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
 {
-    int      mask_bit = link ? link->conn->mask_bit : 0;
-    int      cost     = link ? link->conn->inter_router_cost : 1;
-    uint64_t identity = link ? link->conn->identity : 0;
+    qdr_error_t *error = 0;
+    uint64_t disposition = work->on_message(work->on_message_context, work->msg, work->maskbit,
+                                            work->inter_router_cost, work->in_conn_id, work->policy_spec, &error);
+    qd_message_free(work->msg);
+
+    if (!work->delivery)
+        return;
+
+    if (!work->delivery->multicast) {
+        qdr_action_t*action = qdr_action(qdr_settle_subscription_delivery_CT, "settle_subscription_delivery");
+        action->args.delivery.delivery    = work->delivery;
+        action->args.delivery.disposition = disposition;
+        action->args.delivery.error       = error;
+        qdr_action_enqueue(core, action);
+        // Transfer the delivery reference from work protection to action protection
+    } else
+        qdr_delivery_decref_CT(core, work->delivery, "qdr_forward_on_message - remove from general work");
+}
+
+
+void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_link_t *link, qd_message_t *msg, qdr_delivery_t *in_delivery)
+{
+    int          mask_bit = link ? link->conn->mask_bit : 0;
+    int          cost     = link ? link->conn->inter_router_cost : 1;
+    uint64_t     identity = link ? link->conn->identity : 0;
+    qdr_error_t *error    = 0;
 
     if (sub->in_core) {
         //
         // The handler runs in-core.  Invoke it right now.
         //
-        sub->on_message(sub->on_message_context, msg, mask_bit, cost, identity, link ? link->conn->policy_spec : 0);
+        uint64_t disposition = sub->on_message(sub->on_message_context, msg, mask_bit, cost,
+                                               identity, link ? link->conn->policy_spec : 0, &error);
+        if (!!in_delivery) {
+            in_delivery->disposition = disposition;
+            in_delivery->error       = error;
+            in_delivery->settled     = true;
+            qdr_delivery_push_CT(core, in_delivery);
+        }
     } else {
         //
         // The handler runs in an IO thread.  Defer its invocation.
         //
+        if (!!in_delivery)
+            qdr_delivery_incref(in_delivery, "qdr_forward_on_message_CT - adding to general work item");
+
         qdr_general_work_t *work = qdr_general_work(qdr_forward_on_message);
         work->on_message         = sub->on_message;
         work->on_message_context = sub->on_message_context;
@@ -337,6 +383,7 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
         work->inter_router_cost  = cost;
         work->in_conn_id         = identity;
         work->policy_spec        = link ? link->conn->policy_spec : 0;
+        work->delivery           = in_delivery;
         qdr_post_general_work_CT(core, work);
     }
 }
@@ -371,17 +418,17 @@ static inline bool qdr_forward_edge_echo_CT(qdr_delivery_t *in_dlv, qdr_link_t *
 /**
  * Handle forwarding to a subscription
  */
-static void qdr_forward_to_subscriber(qdr_core_t *core, qdr_subscription_t *sub, qdr_delivery_t *in_dlv, qd_message_t *in_msg, bool receive_complete)
+static void qdr_forward_to_subscriber_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_delivery_t *in_dlv, qd_message_t *in_msg, bool receive_complete)
 {
     qd_message_add_fanout(in_msg, 0);
 
     //
-    // Only if the message has been completely received, forward it to the subscription
-    // Subscriptions, at the moment, dont have the ability to deal with partial messages
+    // Only if the message has been completely received, forward it to the subscription.
+    // Subscriptions don't have the ability to deal with partial messages.
     //
     if (receive_complete) {
         qdr_link_t *link = in_dlv ? safe_deref_qdr_link_t(in_dlv->link_sp) : 0;
-        qdr_forward_on_message_CT(core, sub, link, in_msg);
+        qdr_forward_on_message_CT(core, sub, link, in_msg, in_dlv);
     } else {
         //
         // Receive is not complete, we will store the sub in
@@ -541,7 +588,7 @@ int qdr_forward_multicast_CT(qdr_core_t      *core,
         //
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         while (sub) {
-            qdr_forward_to_subscriber(core, sub, in_delivery, msg, receive_complete);
+            qdr_forward_to_subscriber_CT(core, sub, in_delivery, msg, receive_complete);
             fanout++;
             addr->deliveries_to_container++;
             sub = DEQ_NEXT(sub);
@@ -574,16 +621,7 @@ int qdr_forward_closest_CT(qdr_core_t      *core,
     if (!exclude_inprocess) {
         qdr_subscription_t *sub = DEQ_HEAD(addr->subscriptions);
         if (sub) {
-            qdr_forward_to_subscriber(core, sub, in_delivery, msg, receive_complete);
-
-            //
-            // If the incoming delivery is not settled, it should be accepted and settled here.
-            //
-            if (in_delivery && !in_delivery->settled) {
-                in_delivery->disposition = PN_ACCEPTED;
-                in_delivery->settled     = true;
-                qdr_delivery_push_CT(core, in_delivery);
-            }
+            qdr_forward_to_subscriber_CT(core, sub, in_delivery, msg, receive_complete);
 
             //
             // Rotate this subscription to the end of the list to get round-robin distribution.

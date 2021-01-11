@@ -630,16 +630,19 @@ static qd_error_t iter_to_py_attr(qd_iterator_t *iter,
     return qd_error_code();
 }
 
-static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int inter_router_cost,
-                             uint64_t ignore, const qd_policy_spec_t *policy_spec)
+static uint64_t qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int inter_router_cost,
+                                 uint64_t ignore, const qd_policy_spec_t *policy_spec, qdr_error_t **error)
 {
     IoAdapter *self = (IoAdapter*) context;
+    *error = 0;
 
     //
     // Parse the message through the body and exit if the message is not well formed.
     //
-    if (qd_message_check_depth(msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK)
-        return;
+    if (qd_message_check_depth(msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK) {
+        *error = qdr_error(QD_AMQP_COND_DECODE_ERROR, "Parse error in message content");
+        return PN_REJECTED;
+    }
 
     // This is called from non-python threads so we need to acquire the GIL to use python APIS.
     qd_python_lock_state_t lock_state = qd_python_lock();
@@ -647,7 +650,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int 
     if (!py_msg) {
         qd_error_py();
         qd_python_unlock(lock_state);
-        return;
+        return PN_ACCEPTED;
     }
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_TO), py_iter_copy, py_msg, "address");
     iter_to_py_attr(qd_message_field_iterator(msg, QD_FIELD_REPLY_TO), py_iter_copy, py_msg, "reply_to");
@@ -662,6 +665,7 @@ static void qd_io_rx_handler(void *context, qd_message_t *msg, int link_id, int 
     Py_XDECREF(value);
     qd_error_py();
     qd_python_unlock(lock_state);
+    return PN_ACCEPTED;
 }
 
 

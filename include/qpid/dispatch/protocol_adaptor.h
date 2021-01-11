@@ -27,7 +27,6 @@ typedef struct qdr_connection_t        qdr_connection_t;
 typedef struct qdr_link_t              qdr_link_t;
 typedef struct qdr_delivery_t          qdr_delivery_t;
 typedef struct qdr_terminus_t          qdr_terminus_t;
-typedef struct qdr_error_t             qdr_error_t;
 typedef struct qdr_connection_info_t   qdr_connection_info_t;
 
 /**
@@ -644,20 +643,6 @@ qd_iterator_t *qdr_terminus_dnp_address(qdr_terminus_t *term);
  */
 void qdr_terminus_set_dnp_address_iterator(qdr_terminus_t *term, qd_iterator_t *iter);
 
-
-/**
- ******************************************************************************
- * Error functions
- ******************************************************************************
- */
-
-qdr_error_t *qdr_error_from_pn(pn_condition_t *pn);
-qdr_error_t *qdr_error(const char *name, const char *description);
-void qdr_error_free(qdr_error_t *error);
-void qdr_error_copy(qdr_error_t *from, pn_condition_t *to);
-char *qdr_error_description(const qdr_error_t *err);
-char *qdr_error_name(const qdr_error_t *err);
-pn_data_t *qdr_error_info(const qdr_error_t *err);
 
 /**
  ******************************************************************************
