@@ -172,28 +172,33 @@ static bool qdts_write_file(qdts_state_t *state, const char *filename, const cha
 }
 
 
-static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
-                            uint64_t conn_id, const qd_policy_spec_t *policy_spec)
+static uint64_t qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
+                                uint64_t conn_id, const qd_policy_spec_t *policy_spec, qdr_error_t **error)
 {
     qdts_state_t *state = (qdts_state_t*) context;
 
     if (!!policy_spec && !policy_spec->allowTempFile) {
         qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - temp file store not permitted", conn_id);
-        return;
+        *error = qdr_error(QD_AMQP_COND_UNAUTHORIZED_ACCESS, "File store access forbidden");
+        return PN_REJECTED;
     }
 
-    if (state->failed)
-        return;
+    if (state->failed) {
+        *error = qdr_error(QD_AMQP_COND_INTERNAL_ERROR, "File store initialization failed");
+        return PN_REJECTED;
+    }
 
     if (qd_message_check_depth(msg, QD_DEPTH_BODY) != QD_MESSAGE_DEPTH_OK) {
         qd_log(state->log, QD_LOG_ERROR, "Invalid message received");
-        return;
+        *error = qdr_error(QD_AMQP_COND_DECODE_ERROR, "Parse error in message");
+        return PN_REJECTED;
     }
 
     qd_iterator_t *subject_iter = qd_message_field_iterator(msg, QD_FIELD_SUBJECT);
     if (!subject_iter) {
         qd_log(state->log, QD_LOG_ERROR, "Invalid message received - No Subject");
-        return;
+        *error = qdr_error(QD_AMQP_COND_INVALID_FIELD, "Invalid request - no subject header");
+        return PN_REJECTED;
     }
 
     char *filename = (char*) qd_iterator_copy(subject_iter);
@@ -202,7 +207,8 @@ static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, 
     if (!!strchr(filename, '/') || !!strchr(filename, '\\') || !!strstr(filename, "..")) {
         qd_log(state->log, QD_LOG_ERROR, "Invalid message received - File name with path traversal characters");
         free(filename);
-        return;
+        *error = qdr_error(QD_AMQP_COND_INVALID_FIELD, "File name contains path traversal characters");
+        return PN_REJECTED;
     }
 
     qd_iterator_t *body_iter = qd_message_field_iterator(msg, QD_FIELD_BODY);
@@ -217,7 +223,8 @@ static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, 
             if (length > policy_spec->maxTempFileSize) {
                 qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - temp file larger than max size: %d", conn_id, length);
                 free(filename);
-                return;
+                *error = qdr_error(QD_AMQP_COND_UNAUTHORIZED_ACCESS, "File larger than maximum allowed size");
+                return PN_REJECTED;
             }
         }
 
@@ -237,12 +244,18 @@ static void qdts_on_message(void *context, qd_message_t *msg, int link_maskbit, 
 
     if (state->initialized) {
         bool success = qdts_write_file(state, filename, body, !!policy_spec ? policy_spec->maxTempFileCount : 0);
-        if (!success)
+        if (!success) {
+            free(filename);
+            free(body);
             qd_log(state->log, QD_LOG_ERROR, "[C%"PRIu64"] Policy violation - too many files in the temporary store", conn_id);
+            *error = qdr_error(QD_AMQP_COND_UNAUTHORIZED_ACCESS, "Too many files in file store");
+            return PN_REJECTED;
+        }
     }
 
     free(filename);
     free(body);
+    return PN_ACCEPTED;
 }
 
 
