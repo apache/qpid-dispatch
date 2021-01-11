@@ -1137,7 +1137,7 @@ static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, boo
             //
             qdr_subscription_ref_t *subref = DEQ_HEAD(in_dlv->subscriptions);
             while (subref) {
-                qdr_forward_on_message_CT(core, subref->sub, link, in_dlv->msg);
+                qdr_forward_on_message_CT(core, subref->sub, link, in_dlv->msg, in_dlv);
                 qdr_del_subscription_ref_CT(&in_dlv->subscriptions, subref);
                 subref = DEQ_HEAD(in_dlv->subscriptions);
             }

@@ -33,7 +33,8 @@
  * exclusive access to that connection.
  */
 
-typedef struct qdr_subscription_t    qdr_subscription_t;
+typedef struct qdr_subscription_t qdr_subscription_t;
+typedef struct qdr_error_t        qdr_error_t;
 
 typedef enum {
     QD_ROUTER_MODE_STANDALONE,  ///< Standalone router.  No routing protocol participation
@@ -98,8 +99,21 @@ void qdr_core_route_table_handlers(qdr_core_t              *core,
  * In-process messaging functions
  ******************************************************************************
  */
-typedef void (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
-                               uint64_t conn_id, const qd_policy_spec_t *policy);
+
+/**
+ * Subscription on_message callback
+ *
+ * @param context The opaque context supplied in the call to qdr_core_subscribe
+ * @param msg The received message
+ * @param link_maskbit The maskbit identifying the neighbor router from which the message was received
+ * @param inter_router_cost The inter-router-cost of the connection over which the message was received
+ * @param conn_id The identifier of the connection over which the message wad received
+ * @param policy Pointer to the policy-spec in effect for the connection.  This may be NULL
+ * @param error Output error to be used if the message delivery is rejected
+ * @return The disposition to be used in settling the delivery (if the delivery was not pre-settled)
+ */
+typedef uint64_t (*qdr_receive_t) (void *context, qd_message_t *msg, int link_maskbit, int inter_router_cost,
+                                   uint64_t conn_id, const qd_policy_spec_t *policy, qdr_error_t **error);
 
 /**
  * qdr_core_subscribe
@@ -146,6 +160,20 @@ void qdr_send_to1(qdr_core_t *core, qd_message_t *msg, qd_iterator_t *addr,
 void qdr_send_to2(qdr_core_t *core, qd_message_t *msg, const char *addr,
                   bool exclude_inprocess, bool control);
 
+
+/**
+ ******************************************************************************
+ * Error functions
+ ******************************************************************************
+ */
+
+qdr_error_t *qdr_error_from_pn(pn_condition_t *pn);
+qdr_error_t *qdr_error(const char *name, const char *description);
+void qdr_error_free(qdr_error_t *error);
+void qdr_error_copy(qdr_error_t *from, pn_condition_t *to);
+char *qdr_error_description(const qdr_error_t *err);
+char *qdr_error_name(const qdr_error_t *err);
+pn_data_t *qdr_error_info(const qdr_error_t *err);
 
 /**
  ******************************************************************************
