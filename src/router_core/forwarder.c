@@ -310,17 +310,20 @@ void qdr_forward_deliver_CT(qdr_core_t *core, qdr_link_t *out_link, qdr_delivery
 static void qdr_settle_subscription_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
     qdr_delivery_t *in_delivery = action->args.delivery.delivery;
-    if (discard || !in_delivery)
+
+    if (!in_delivery)
         return;
 
-    in_delivery->disposition = action->args.delivery.disposition;
-    in_delivery->error       = action->args.delivery.error;
-    in_delivery->settled     = true;
+    if (!discard) {
+        in_delivery->disposition = action->args.delivery.disposition;
+        in_delivery->error       = action->args.delivery.error;
+        in_delivery->settled     = true;
 
-    bool moved = qdr_delivery_settled_CT(core, in_delivery);
-    if (moved) {
-        qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from unsettled");
-        qdr_delivery_push_CT(core, in_delivery);
+        bool moved = qdr_delivery_settled_CT(core, in_delivery);
+        if (moved) {
+            qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from unsettled");
+            qdr_delivery_push_CT(core, in_delivery);
+        }
     }
 
     qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from action");
