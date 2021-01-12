@@ -226,6 +226,14 @@ class MyHTTPServer(HTTPServer):
         self.request_count = 0
         HTTPServer.__init__(self, addr, handler_cls)
 
+    def server_close(self):
+        try:
+            # force immediate close of listening socket
+            self.socket.shutdown(socket.SHUT_RDWR)
+        except Exception:
+            pass
+        HTTPServer.server_close(self)
+
 
 class TestServer(object):
     """
@@ -271,6 +279,8 @@ class TestServer(object):
         if self._server:
             self._server.server_close()
             self.request_count = self._server.request_count
+            del self._server
+        sleep(0.5)  # fudge factor allow socket close to complete
 
 
 class ThreadedTestClient(object):
@@ -335,6 +345,7 @@ class ThreadedTestClient(object):
     def wait(self, timeout=TIMEOUT):
         self._thread.join(timeout=TIMEOUT)
         self._logger.log("TestClient %s shut down" % self._conn_addr)
+        sleep(0.5)  # fudge factor allow socket close to complete
 
     def dump_log(self):
         self._logger.dump()
@@ -1432,25 +1443,26 @@ class Http1AdaptorEdge2EdgeTest(TestCase):
 
 
 class FakeHttpServerBase(object):
-    def __init__(self, host='', port=80):
+    """
+    A very base socket server to simulate HTTP server behaviors
+    """
+    def __init__(self, host='', port=80, bufsize=1024):
         super(FakeHttpServerBase, self).__init__()
         self.host = host
         self.port = port
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.socket.settimeout(TIMEOUT)
-        self.socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self.socket.bind((host, port))
-        self.socket.listen(1)
-        self.conn, self.addr = self.socket.accept()
+        self.listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.listener.settimeout(TIMEOUT)
+        self.listener.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.listener.bind((host, port))
+        self.listener.listen(1)
+        self.conn, self.addr = self.listener.accept()
 
         self.do_connect()
         while True:
-            data = self.conn.recv(1024)
+            data = self.conn.recv(bufsize)
             if not data: break
             self.do_data(data)
-        self.do_closed()
-        self.conn.close()
-        self.socket.close()
+        self.do_close()
 
     def do_connect(self):
         pass
@@ -1458,8 +1470,14 @@ class FakeHttpServerBase(object):
     def do_data(self, data):
         pass
 
-    def do_closed(self):
-        pass
+    def do_close(self):
+        self.listener.shutdown(socket.SHUT_RDWR)
+        self.listener.close()
+        del self.listener
+        self.conn.shutdown(socket.SHUT_RDWR)
+        self.conn.close()
+        del self.conn
+        sleep(0.5)  # fudge factor allow socket close to complete
 
 
 class Http1AdaptorBadEndpointsTest(TestCase):
@@ -1678,6 +1696,7 @@ class Http1AdaptorBadEndpointsTest(TestCase):
         # self.assertIsNotNone(client.error)
 
         rx.stop()
+        sleep(0.5)  # fudge factor allow socket close to complete
 
         # verify router is still sane:
         count, error = http1_ping(self.http_server_port,

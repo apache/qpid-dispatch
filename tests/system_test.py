@@ -994,6 +994,8 @@ class AsyncTestReceiver(MessagingHandler):
         self._thread.join(timeout=TIMEOUT)
         if self._thread.is_alive():
             raise Exception("AsyncTestReceiver did not exit")
+        del self._conn
+        del self._container
 
     def on_start(self, event):
         kwargs = {'url': self.address}
@@ -1055,6 +1057,8 @@ class AsyncTestSender(MessagingHandler):
         self.error = None
         self.link_stats = None
 
+        self._conn = None
+        self._sender = None
         self._message = message or Message(body="test")
         self._container = Container(self)
         cid = container_id or "ATS-%s:%s" % (target, uuid.uuid4())
@@ -1076,6 +1080,9 @@ class AsyncTestSender(MessagingHandler):
         assert not self._thread.is_alive(), "sender did not complete"
         if self.error:
             raise AsyncTestSender.TestSenderException(self.error)
+        del self._sender
+        del self._conn
+        del self._container
 
     def on_start(self, event):
         self._conn = self._container.connect(self.address)
