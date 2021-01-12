@@ -2340,7 +2340,7 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
 
 
 /**
- * find_last_buffer
+ * find_last_buffer_LH
  *
  * Given a field location, find the following:
  *
@@ -2352,7 +2352,7 @@ int qd_message_extend(qd_message_t *msg, qd_composed_field_t *field)
  * buffer list, *buffer _must_ refer to the buffer that contains the last octet of the field and *cursor must
  * point at the octet following that octet, even if it points past the end of the buffer.
  */
-static void find_last_buffer(qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
+static void find_last_buffer_LH(qd_field_location_t *location, unsigned char **cursor, qd_buffer_t **buffer)
 {
     qd_buffer_t *buf       = location->buffer;
     size_t       remaining = location->hdr_length + location->length;
@@ -2372,7 +2372,7 @@ static void find_last_buffer(qd_field_location_t *location, unsigned char **curs
 }
 
 
-void trim_stream_data_headers(qd_message_stream_data_t *stream_data, bool remove_vbin_header)
+void trim_stream_data_headers_LH(qd_message_stream_data_t *stream_data, bool remove_vbin_header)
 {
     const qd_field_location_t *location = &stream_data->section;
     qd_buffer_t               *buffer   = location->buffer;
@@ -2641,10 +2641,12 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
     qd_field_location_t location;
     ZERO(&location);
 
-    qd_buffer_t * const old_body_buffer  = msg->body_buffer;
-    bool is_footer                       = false;
+    qd_buffer_t * const old_body_buffer    = msg->body_buffer;
+    bool is_footer                         = false;
+    qd_message_stream_data_result_t result = QD_MESSAGE_STREAM_DATA_NO_MORE;
 
     LOCK(content->lock);
+
     section_status = message_section_check_LH(&msg->body_buffer, &msg->body_cursor,
                                               BODY_DATA_SHORT, 3, TAGS_BINARY,
                                               &location,
@@ -2656,21 +2658,21 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
                                                   FOOTER_SHORT, 3, TAGS_MAP,
                                                   &location, true, false);
     }
-    UNLOCK(content->lock);
 
     switch (section_status) {
     case QD_SECTION_INVALID:
     case QD_SECTION_NO_MATCH:
-        return QD_MESSAGE_STREAM_DATA_INVALID;
+        result = QD_MESSAGE_STREAM_DATA_INVALID;
+        break;
 
     case QD_SECTION_MATCH:
         stream_data = new_qd_message_stream_data_t();
         ZERO(stream_data);
         stream_data->owning_message = msg;
         stream_data->section        = location;
-        find_last_buffer(&stream_data->section, &msg->body_cursor, &msg->body_buffer);
+        find_last_buffer_LH(&stream_data->section, &msg->body_cursor, &msg->body_buffer);
         stream_data->last_buffer = msg->body_buffer;
-        trim_stream_data_headers(stream_data, !is_footer);
+        trim_stream_data_headers_LH(stream_data, !is_footer);
         DEQ_INSERT_TAIL(msg->stream_data_list, stream_data);
         *out_stream_data = stream_data;
 
@@ -2682,16 +2684,19 @@ qd_message_stream_data_result_t qd_message_next_stream_data(qd_message_t *in_msg
             if (old_body_buffer == DEQ_PREV(stream_data->section.buffer))
                 stream_data->free_prev = true;
 
-        return is_footer ? QD_MESSAGE_STREAM_DATA_FOOTER_OK : QD_MESSAGE_STREAM_DATA_BODY_OK;
+        result = is_footer ? QD_MESSAGE_STREAM_DATA_FOOTER_OK : QD_MESSAGE_STREAM_DATA_BODY_OK;
+        break;
 
     case QD_SECTION_NEED_MORE:
         if (msg->content->receive_complete)
-            return QD_MESSAGE_STREAM_DATA_NO_MORE;
+            result = QD_MESSAGE_STREAM_DATA_NO_MORE;
         else
-            return QD_MESSAGE_STREAM_DATA_INCOMPLETE;
+            result = QD_MESSAGE_STREAM_DATA_INCOMPLETE;
+        break;
     }
 
-    return QD_MESSAGE_STREAM_DATA_NO_MORE;
+    UNLOCK(content->lock);
+    return result;
 }
 
 
