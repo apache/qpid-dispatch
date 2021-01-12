@@ -623,7 +623,7 @@ static void _add_http_request_info_CT(qdr_core_t *core, qdr_action_t *action, bo
     }
     if (!updated) {
         DEQ_INSERT_TAIL(_get_request_info()->records, update);
-        qd_log(qd_log_source(QD_HTTP_LOG_SOURCE), QD_LOG_DEBUG, "Added http request info %s (%i)", update->key, DEQ_SIZE(_get_request_info()->records));
+        qd_log(qd_log_source(QD_HTTP_LOG_SOURCE), QD_LOG_DEBUG, "Added http request info %s (%zu)", update->key, DEQ_SIZE(_get_request_info()->records));
     }
 }
 

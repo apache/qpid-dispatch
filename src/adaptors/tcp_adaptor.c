@@ -123,7 +123,7 @@ static void grant_read_buffers(qdr_tcp_connection_t *conn)
     // Give proactor more read buffers for the socket
     if (!pn_raw_connection_is_read_closed(conn->pn_raw_conn)) {
         size_t desired = pn_raw_connection_read_buffers_capacity(conn->pn_raw_conn);
-        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Granted %i read buffers", conn->conn_id, desired);
+        qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Granted %zu read buffers", conn->conn_id, desired);
         while (desired) {
             size_t i;
             for (i = 0; i < desired && i < READ_BUFFERS; ++i) {
@@ -175,7 +175,7 @@ static int handle_incoming(qdr_tcp_connection_t *conn)
         }
     }
 
-    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Took %i read buffers", conn->conn_id, DEQ_SIZE(buffers));
+    qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Took %zu read buffers", conn->conn_id, DEQ_SIZE(buffers));
     qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, "[C%"PRIu64"] Freed %i read buffers", conn->conn_id, free_count);
     grant_read_buffers(conn);
 
@@ -583,7 +583,7 @@ static void handle_connection_event(pn_event_t *e, qd_server_t *qd_server, void 
                 }
             }
         }
-        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %i bytes", conn->conn_id, written);
+        qd_log(log, QD_LOG_DEBUG, "[C%"PRIu64"] PN_RAW_CONNECTION_WRITTEN Wrote %zu bytes", conn->conn_id, written);
         conn->last_out_time = tcp_adaptor->core->uptime_ticks;
         conn->bytes_out += written;
         while (qdr_connection_process(conn->qdr_conn)) {}

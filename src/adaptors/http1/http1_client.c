@@ -1507,10 +1507,10 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
     // aggregation format
     if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
         if (!qd_message_receive_complete(msg)) {
-            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Response incomplete (%i responses received)", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
+            qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Response incomplete (%zu responses received)", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
             return 0;
         }
-        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Received response (%i responses received), settling", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
+        qd_log(qdr_http1_adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] Received response (%zu responses received), settling", hconn->conn_id, link->identity, DEQ_SIZE(hreq->responses));
         rmsg->dispo = PN_ACCEPTED;
         qd_message_set_send_complete(msg);
         qdr_link_flow(qdr_http1_adaptor->core, link, 1, false);
