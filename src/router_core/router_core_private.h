@@ -144,7 +144,6 @@ struct qdr_action_t {
         //
         struct {
             qdr_delivery_t *delivery;
-            qdr_error_t    *error;
             uint64_t        disposition;
             uint8_t         tag[32];
             int             tag_length;

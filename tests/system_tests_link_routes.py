@@ -32,8 +32,8 @@ from system_test import TestCase, Qdrouterd, main_module, TIMEOUT, Process, Test
 from test_broker import FakeBroker
 from test_broker import FakeService
 
-from proton import Delivery
-from proton import Message
+from proton import Delivery, symbol
+from proton import Message, Data, Condition
 from proton.handlers import MessagingHandler
 from proton.reactor import AtMostOnce, Container, DynamicNodeProperties, LinkOption, AtLeastOnce
 from proton.reactor import ApplicationEvent
@@ -2348,6 +2348,63 @@ class SendReceive(MessagingHandler):
         Container(self).run()
 
 
+class DispositionSniffer(MessagingHandler):
+    """
+    Capture the outgoing delivery after the remote has set its terminal
+    outcome.  Used by tests that need to examine the delivery state
+    """
+    def __init__(self, send_url):
+        super(DispositionSniffer, self).__init__(auto_accept=False,
+                                                 auto_settle=False)
+        self.send_url = send_url
+        self.sender = None
+        self.timer = None
+        self.error = None
+        self.sent = False
+        self.delivery = None
+
+    def close(self):
+        if self.timer:
+            self.timer.cancel()
+        if self.sender:
+            self.sender.close()
+            self.sender.connection.close()
+
+    def timeout(self):
+        self.error = "Timeout Expired - Check for cores"
+        self.close()
+
+    def stop(self):
+        self.close()
+
+    def on_start(self, event):
+        self.timer  = event.reactor.schedule(TIMEOUT, TestTimeout(self))
+        self.sender = event.container.create_sender(self.send_url)
+
+    def on_sendable(self, event):
+        if not self.sent:
+            event.sender.send(Message(body="HI"))
+            self.sent = True
+
+    def on_accepted(self, event):
+        self.stop()
+
+    def on_released(self, event):
+        self.delivery = event.delivery
+        self.close()
+
+    def on_modified(self, event):
+        self.delivery = event.delivery
+        self.close()
+
+    def on_rejected(self, event):
+        self.delivery = event.delivery
+        self.close()
+
+    def run(self):
+        Container(self).run()
+
+
 class LinkRoute3Hop(TestCase):
     """
     Sets up a linear 3 hop router network for testing multi-hop link routes.
@@ -2440,11 +2497,6 @@ class LinkRoute3Hop(TestCase):
         cls.QDR_C.wait_router_connected('QDR.A')
         cls.QDR_A.wait_router_connected('QDR.C')
 
-        cls.fake_service = FakeService(cls.QDR_A.addresses[1],
-                                       container_id="FakeService")
-        cls.QDR_C.wait_address("closest/test-client",
-                               remotes=1, count=2)
-
     def test_01_parallel_link_routes(self):
         """
         Verify Q2/Q3 recovery in the case of multiple link-routes sharing the
@@ -2454,11 +2506,12 @@ class LinkRoute3Hop(TestCase):
         send_batch = 10
         total = send_clients * send_batch
 
-        start_in = self.fake_service.in_count
-        start_out = self.fake_service.out_count
+        fake_service = FakeService(self.QDR_A.addresses[1],
+                                   container_id="FakeService")
+        self.QDR_C.wait_address("closest/test-client",
+                                remotes=1)
 
-        env = dict(os.environ, PN_TRACE_FRM="1")
-
+        env = None
         rx = self.popen(["test-receiver",
                          "-a", self.QDR_C.addresses[0],
                          "-c", str(total),
@@ -2485,12 +2538,92 @@ class LinkRoute3Hop(TestCase):
 
         if rx.wait(timeout=TIMEOUT):
             raise Exception("Receiver failed to consume all messages in=%s out=%s",
-                            self.fake_service.in_count,
-                            self.fake_service.out_count)
+                            fake_service.in_count,
+                            fake_service.out_count)
 
-        self.assertEqual(start_in + total, self.fake_service.in_count)
-        self.assertEqual(start_out + total, self.fake_service.out_count)
+        fake_service.join()
+        self.assertEqual(total, fake_service.in_count)
+        self.assertEqual(total, fake_service.out_count)
 
+    def test_02_modified_outcome(self):
+        """
+        Ensure all elements of a Modified disposition are passed thru the link
+        route
+        """
+
+        class FakeServiceModified(FakeService):
+            def on_message(self, event):
+                # set non-default values for delivery state for delivery to
+                # remote endpoint
+                dlv = event.delivery
+                dlv.local.failed = True
+                dlv.local.undeliverable = True
+                dlv.local.annotations = {symbol("Key"): "Value"}
+                dlv.update(Delivery.MODIFIED)
+                dlv.settle()
+
+        fake_service = FakeServiceModified(self.QDR_A.addresses[1],
+                                           container_id="FakeService",
+                                           auto_accept=False,
+                                           auto_settle=False)
+        self.QDR_C.wait_address("closest/test-client",
+                                remotes=1)
+
+        sniffer = DispositionSniffer("%s/closest/test-client" %
+                                     self.QDR_C.addresses[0])
+        sniffer.run()
+        state = sniffer.delivery.remote
+        self.assertTrue(state.failed)
+        self.assertTrue(state.undeliverable)
+        self.assertTrue(state.annotations is not None)
+        self.assertTrue(symbol('Key') in state.annotations)
+        self.assertEqual('Value', state.annotations[symbol('Key')])
+
+        fake_service.join()
+
+    def test_03_rejected_outcome(self):
+        """
+        Ensure all elements of a Rejected disposition are passed thru the link
+        route
+        """
+
+        class FakeServiceReject(FakeService):
+            def on_message(self, event):
+                # set non-default values for delivery state for delivery to
+                # remote endpoint
+                dlv = event.delivery
+                dlv.local.condition = Condition("condition-name",
+                                                "condition-description",
+                                                {symbol("condition"): "info"})
+                dlv.update(Delivery.REJECTED)
+                dlv.settle()
+
+        fake_service = FakeServiceReject(self.QDR_A.addresses[1],
+                                         container_id="FakeService",
+                                         auto_accept=False,
+                                         auto_settle=False)
+        self.QDR_C.wait_address("closest/test-client",
+                                remotes=1)
+
+        sniffer = DispositionSniffer("%s/closest/test-client" %
+                                     self.QDR_C.addresses[0])
+        sniffer.run()
+        state = sniffer.delivery.remote
+        self.assertTrue(state.condition is not None)
+        self.assertEqual("condition-name", state.condition.name)
+        self.assertEqual("condition-description", state.condition.description)
+        self.assertTrue(state.condition.info is not None)
+        self.assertTrue(symbol("condition") in state.condition.info)
+        self.assertEqual('info', state.condition.info[symbol("condition")])
+
+        fake_service.join()
+
+    def test_04_extension_state(self):
+        """
+        system_tests_two_routers.TwoRouterExtensionsStateTest() already tests
+        sending extended state via a link route.
+        """
+        pass
 
 if __name__ == '__main__':
     unittest.main(main_module())

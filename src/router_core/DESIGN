@@ -80,11 +80,13 @@ Router Core Objects
 
   qdr_terminus_t
   qdr_error_t
+  qd_delivery_state_t
 
-    The terminus and error objects are used to hold all of the content of a Proton
-    terminus and error state.  These are needed to ensure that these Proton state
-    objects are not ever held within the core thread where thread safety with Proton
-    may be a problem.
+    The these objects are used to hold a copy of the relevent content
+    of Proton terminus, condition, disposition, and error state
+    objects.  These are needed to ensure that references to these
+    Proton state objects are not held within the core thread where
+    thread safety with Proton may be a problem.
 
 
 =========

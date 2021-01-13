@@ -41,7 +41,7 @@ static void qdr_send_to_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
                                  bool settled, qd_bitmask_t *link_exclusion, int ingress_index,
                                  uint64_t remote_disposition,
-                                 pn_data_t *remote_extension_state)
+                                 qd_delivery_state_t *remote_state)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -55,13 +55,12 @@ qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterato
     dlv->link_exclusion     = link_exclusion;
     dlv->ingress_index      = ingress_index;
     dlv->remote_disposition = remote_disposition;
+    dlv->remote_state       = remote_state;
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver", DLV_ARGS(dlv));
 
-    if (remote_disposition)
-        qdr_delivery_set_remote_extension_state(dlv, remote_disposition, remote_extension_state);
     qdr_delivery_incref(dlv, "qdr_link_deliver - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver - protect returned value");
 
@@ -76,7 +75,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_iterator_t *ingress, qd_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion, int ingress_index,
                                     uint64_t remote_disposition,
-                                    pn_data_t *remote_extension_state)
+                                    qd_delivery_state_t *remote_state)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -91,13 +90,12 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
     dlv->link_exclusion     = link_exclusion;
     dlv->ingress_index      = ingress_index;
     dlv->remote_disposition = remote_disposition;
+    dlv->remote_state       = remote_state;
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver_to", DLV_ARGS(dlv));
 
-    if (remote_disposition)
-        qdr_delivery_set_remote_extension_state(dlv, remote_disposition, remote_extension_state);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to - protect returned value");
 
@@ -111,7 +109,7 @@ qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t remote_disposition,
-                                                pn_data_t* remote_extension_state)
+                                                qd_delivery_state_t* remote_state)
 {
     qdr_action_t   *action = qdr_action(qdr_link_deliver_CT, "link_deliver");
     qdr_delivery_t *dlv    = new_qdr_delivery_t();
@@ -122,13 +120,12 @@ qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *
     dlv->settled            = settled;
     dlv->presettled         = settled;
     dlv->remote_disposition = remote_disposition;
+    dlv->remote_state       = remote_state;
     dlv->delivery_id        = next_delivery_id();
     dlv->link_id            = link->identity;
     dlv->conn_id            = link->conn_id;
     qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery created qdr_link_deliver_to_routed_link", DLV_ARGS(dlv));
 
-    if (remote_disposition)
-        qdr_delivery_set_remote_extension_state(dlv, remote_disposition, remote_extension_state);
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - newly created delivery, add to action list");
     qdr_delivery_incref(dlv, "qdr_link_deliver_to_routed_link - protect returned value");
 
@@ -257,7 +254,7 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     // the remote sender-settle-mode forced us to pre-settle the
                     // message.  The core needs to know this, so we "fake" receiving a
                     // settle+disposition update from the remote end of the link:
-                    qdr_delivery_remote_state_updated(core, dlv, new_disp, true, 0, 0, false);
+                    qdr_delivery_remote_state_updated(core, dlv, new_disp, true, 0, false);
                 }
 
                 qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - done processing");
@@ -602,8 +599,8 @@ static void qdr_link_forward_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery
             // all) - the loss of the destination may be temporary.
             //
             if (link->link_type == QD_LINK_ENDPOINT) {
-                dlv->error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Deliveries cannot be sent to an unavailable address");
-                qdr_delivery_reject_CT(core, dlv);
+                qdr_error_t *error = qdr_error(QD_AMQP_COND_NOT_FOUND, "Deliveries cannot be sent to an unavailable address");
+                qdr_delivery_reject_CT(core, dlv, error);
                 if (qdr_link_is_anonymous(link)) {
                     qdr_link_issue_credit_CT(core, link, 1, false);
                 } else {
