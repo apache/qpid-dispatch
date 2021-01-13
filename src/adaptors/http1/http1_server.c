@@ -1147,6 +1147,8 @@ void qdr_http1_server_core_delivery_update(qdr_http1_adaptor_t      *adaptor,
     }
     if (hconn->cfg.aggregation != QD_AGGREGATION_NONE) {
         _server_request_t *hreq = (_server_request_t*)hbase;
+        qd_message_set_send_complete(qdr_delivery_message(hreq->request_dlv));
+        qdr_link_complete_sent_message(qdr_http1_adaptor->core, hconn->out_link);
         _accept_and_settle_request(hreq);
         hreq->request_acked = true;
         qd_log(adaptor->log, QD_LOG_DEBUG, "[C%"PRIu64"][L%"PRIu64"] request accepted", hconn->conn_id, hconn->in_link_id);
