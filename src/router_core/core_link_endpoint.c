@@ -123,9 +123,8 @@ void qdrc_endpoint_send_CT(qdr_core_t *core, qdrc_endpoint_t *ep, qdr_delivery_t
     dlv->presettled    = presettled;
     *tag               = core->next_tag++;
     dlv->tag_length    = 8;
-    dlv->error         = 0;
     dlv->ingress_index = -1;
-    
+
     qdr_forward_deliver_CT(core, ep->link, dlv);
 }
 

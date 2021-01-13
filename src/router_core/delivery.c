@@ -27,9 +27,8 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 static void qdr_delete_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delivery_continue_CT(qdr_core_t *core, qdr_action_t *action, bool discard);
 static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *delivery);
-static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
-                                         qdr_delivery_t *peer, uint64_t new_disp, bool settled,
-                                         qdr_error_t *error);
+static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
+                                           qdr_delivery_t *peer, uint64_t new_disp, bool settled);
 
 
 void qdr_delivery_set_context(qdr_delivery_t *delivery, void *context)
@@ -175,12 +174,6 @@ qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery)
 }
 
 
-qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery)
-{
-    return delivery->error;
-}
-
-
 bool qdr_delivery_presettled(const qdr_delivery_t *delivery)
 {
     return delivery->presettled;
@@ -189,16 +182,17 @@ bool qdr_delivery_presettled(const qdr_delivery_t *delivery)
 
 // remote endpoint modified its disposition and/or settlement
 void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disposition,
-                                       bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given)
+                                       bool settled, qd_delivery_state_t *dstate, bool ref_given)
 {
     qdr_action_t *action = qdr_action(qdr_update_delivery_CT, "update_delivery");
     action->args.delivery.delivery    = delivery;
     action->args.delivery.disposition = disposition;
     action->args.delivery.settled     = settled;
-    action->args.delivery.error       = error;
 
     // handle delivery-state extensions e.g. declared, transactional-state
-    qdr_delivery_set_remote_extension_state(delivery, disposition, ext_state);
+    if (!qdr_delivery_set_remote_delivery_state(delivery, dstate)) {
+        qd_delivery_state_free(dstate);
+    }
 
     //
     // The delivery's ref_count must be incremented to protect its travels into the
@@ -280,12 +274,18 @@ void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
-void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *dlv)
+// ownership of *error is passed to dlv
+void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *dlv, qdr_error_t *error)
 {
     bool push = dlv->disposition != PN_REJECTED;
 
     dlv->disposition = PN_REJECTED;
     dlv->settled = true;
+    if (error) {
+        qd_delivery_state_free(dlv->local_state);
+        dlv->local_state = qd_delivery_state_from_error(error);
+    }
+
     bool moved = qdr_delivery_settled_CT(core, dlv);
 
     if (push || moved)
@@ -481,11 +481,8 @@ static void qdr_delete_delivery_internal_CT(qdr_core_t *core, qdr_delivery_t *de
     }
 
     qd_bitmask_free(delivery->link_exclusion);
-    qdr_error_free(delivery->error);
-    if (delivery->remote_extension_state)
-        pn_data_free(delivery->remote_extension_state);
-    if (delivery->local_extension_state)
-        pn_data_free(delivery->local_extension_state);
+    qd_delivery_state_free(delivery->local_state);
+    qd_delivery_state_free(delivery->remote_state);
 
     free_qdr_delivery_t(delivery);
 }
@@ -652,15 +649,16 @@ void qdr_delivery_decref_CT(qdr_core_t *core, qdr_delivery_t *dlv, const char *l
 //
 static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    if (discard)
+    if (discard) {
+        qdr_delivery_decref_CT(core, action->args.delivery.delivery,
+                               "qdr_update_delivery_CT - remove from action on discard");
         return;
+    }
 
     qdr_delivery_t *dlv      = action->args.delivery.delivery;
     qdr_delivery_t *peer     = qdr_delivery_first_peer_CT(dlv);
     uint64_t        new_disp = action->args.delivery.disposition;
     bool            settled  = action->args.delivery.settled;
-    qdr_error_t    *error    = action->args.delivery.error;
-    bool free_error          = true;
 
     if (dlv->multicast) {
         //
@@ -681,16 +679,13 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
         //
         // Anycast forwarding - note: peer _may_ be freed by this call
         //
-        free_error = !qdr_delivery_anycast_update_CT(core, dlv, peer, new_disp, settled, error);
+        qdr_delivery_anycast_update_CT(core, dlv, peer, new_disp, settled);
     }
 
     //
     // Release the action reference, possibly freeing the delivery
     //
     qdr_delivery_decref_CT(core, dlv, "qdr_update_delivery_CT - remove from action");
-
-    if (free_error)
-        qdr_error_free(error);
 }
 
 
@@ -699,14 +694,12 @@ static void qdr_update_delivery_CT(qdr_core_t *core, qdr_action_t *action, bool 
 //
 // returns true if ownership of error parameter is taken (do not free it)
 //
-static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
-                                           qdr_delivery_t *peer, uint64_t new_disp, bool settled,
-                                           qdr_error_t *error)
+static void qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv,
+                                           qdr_delivery_t *peer, uint64_t new_disp, bool settled)
 {
     bool push           = false;
     bool peer_moved     = false;
     bool dlv_moved      = false;
-    bool error_assigned = false;
     qdr_link_t *dlink   = qdr_delivery_link(dlv);
 
     assert(!dlv->multicast);
@@ -733,10 +726,8 @@ static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
         dlv->remote_disposition = new_disp;
         if (peer) {
             peer->disposition = new_disp;
-            peer->error       = error;
             push = true;
-            error_assigned = true;
-            qdr_delivery_move_extension_state_CT(dlv, peer);
+            qdr_delivery_move_delivery_state_CT(dlv, peer);
         }
     }
 
@@ -780,8 +771,6 @@ static bool qdr_delivery_anycast_update_CT(qdr_core_t *core, qdr_delivery_t *dlv
         qdr_delivery_decref_CT(core, peer, "qdr_delivery_anycast_update_CT - peer removed from unsettled");
     if (peer)
         qdr_delivery_decref_CT(core, peer, "qdr_delivery_anycast_update_CT - allow free of peer");
-
-    return error_assigned;
 }
 
 
@@ -1220,48 +1209,41 @@ void qdr_delivery_push_CT(qdr_core_t *core, qdr_delivery_t *dlv)
 }
 
 
-// copy remote disposition and extension state into a delivery
-//
-void qdr_delivery_set_remote_extension_state(qdr_delivery_t *dlv, uint64_t remote_dispo, pn_data_t *remote_ext_state)
+// Set remote delivery state. Ownership of *remote_state is passed to the delivery.
+// Called on I/O thread that reads the delivery state from proton.
+bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, qd_delivery_state_t *remote_state)
 {
-    if (dlv->remote_extension_state)
-        // once set the I/O thread cannot overwrite this until the core has forwarded it
-        return;
-
-    if (remote_dispo > PN_MODIFIED) {  // set only if non-terminal outcome
-        const size_t esize = pn_data_size(remote_ext_state);
-        if (esize) {
-            // note: performance tests show that creating a new pn_data instance
-            // can be expensive, so only do so if there is actually extension state
-            // data to copy
-            dlv->remote_extension_state = pn_data(esize);
-            pn_data_copy(dlv->remote_extension_state, remote_ext_state);
-        }
+    // once set the I/O thread cannot overwrite this until the core has forwarded it
+    if (!dlv->remote_state) {
+        dlv->remote_state = remote_state;
+        return true;
     }
+    return false;
 }
 
 
-// take local disposition and extension state from the delivery
+// Take local delivery state from the delivery.  Caller assumes ownership of state object.
+// Called on the I/O thread that writes the delivery state to proton
 //
-pn_data_t *qdr_delivery_take_local_extension_state(qdr_delivery_t *dlv, uint64_t *dispo)
+qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv, uint64_t *dispo)
 {
-    pn_data_t *ext_state = dlv->local_extension_state;
-    dlv->local_extension_state = 0;
+    qd_delivery_state_t *dstate = dlv->local_state;
+    dlv->local_state = 0;
     if (dispo) *dispo = dlv->disposition;
-    return ext_state;
+    return dstate;
 }
 
 
-// move the REMOTE extension state from a delivery to the LOCAL extension state
-// of its peer delivery.  This causes the extension state data to propagate
+// move the REMOTE delivery state from a delivery to the LOCAL delivery state
+// of its peer delivery.  This causes the delivery state data to propagate
 // from one delivery to another.
 //
-void qdr_delivery_move_extension_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
+void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer)
 {
-    // if extension_state is already present do not overwrite it as the outgoing
+    // if state is already present do not overwrite it as the outgoing
     // I/O thread may be in the process of writing it to proton
-    if (!peer->local_extension_state) {
-        peer->local_extension_state = dlv->remote_extension_state;
-        dlv->remote_extension_state = 0;
+    if (!peer->local_state) {
+        peer->local_state = dlv->remote_state;
+        dlv->remote_state = 0;
     }
 }

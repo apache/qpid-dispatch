@@ -515,8 +515,7 @@ static void _handle_connection_events(pn_event_t *e, qd_server_t *qd_server, voi
                                                       rmsg->dlv,
                                                       rmsg->dispo,
                                                       true,   // settled,
-                                                      0,      // error
-                                                      0,      // dispo data
+                                                      0,      // delivery state
                                                       false);
                 }
                 qdr_link_flow(qdr_http1_adaptor->core, hconn->out_link, 1, false);
@@ -1557,8 +1556,7 @@ uint64_t qdr_http1_client_core_link_deliver(qdr_http1_adaptor_t    *adaptor,
                                           rmsg->dlv,
                                           rmsg->dispo,
                                           true,   // settled,
-                                          0,      // error
-                                          0,      // dispo data
+                                          0,      // delivery state
                                           false);
         return PN_ACCEPTED;
     }

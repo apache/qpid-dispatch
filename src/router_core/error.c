@@ -20,10 +20,17 @@
 #include "router_core_private.h"
 #include <stdio.h>
 
+
+// The AMQP 'error' type
+//
+// The AMQP standard defines an 'error' type for expressing various formal
+// errors. Corresponds to a Proton Condition (pn_condition_t) that is associate
+// with the Proton Disposition (pn_disposition_t).
+//
 struct qdr_error_t {
-    qdr_field_t *name;
-    qdr_field_t *description;
-    pn_data_t   *info;
+    qdr_field_t *name;         // symbol, e.g. "amqp:connection:forced"
+    qdr_field_t *description;  // string
+    pn_data_t   *info;         // symbol-keyed map
 };
 
 ALLOC_DECLARE(qdr_error_t);
@@ -39,15 +46,9 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
     const char *name = pn_condition_get_name(pn);
     const char *desc = pn_condition_get_description(pn);
     pn_data_t *info = pn_condition_info(pn);
-    bool is_byt_size_gt_zero = false;
+    const bool info_ok = (info && pn_data_size(info) > 0);
 
-    if (info) {
-        pn_bytes_t byt = pn_data_get_bytes(info);
-        if (byt.size > 0)
-            is_byt_size_gt_zero = true;
-    }
-
-    if ((name && *name) || (desc && *desc) || is_byt_size_gt_zero) {
+    if ((name && *name) || (desc && *desc) || info_ok) {
         error = new_qdr_error_t();
         ZERO(error);
 
@@ -57,7 +58,7 @@ qdr_error_t *qdr_error_from_pn(pn_condition_t *pn)
         if (desc && *desc)
             error->description = qdr_field(desc);
 
-        if (is_byt_size_gt_zero) {
+        if (info_ok) {
             error->info = pn_data(0);
             pn_data_copy(error->info, info);
         }

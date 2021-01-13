@@ -27,7 +27,7 @@ import json, os
 import logging
 from threading import Timer
 from subprocess import PIPE, STDOUT
-from proton import Message, Timeout, Delivery
+from proton import Message, Timeout, Delivery, symbol, Condition
 from system_test import Logger, TestCase, Process, Qdrouterd, main_module, TIMEOUT, DIR, TestTimeout
 from system_test import AsyncTestReceiver
 from system_test import AsyncTestSender
@@ -201,6 +201,11 @@ class TwoRouterTest(TestCase):
 
     def test_10_propagated_disposition(self):
         test = PropagatedDisposition(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
+        test.run()
+        self.assertTrue(test.passed)
+
+    def test_10a_propagated_disposition_data(self):
+        test = PropagatedDispositionData(self, self.routers[0].addresses[0], self.routers[1].addresses[0])
         test.run()
         self.assertTrue(test.passed)
 
@@ -1539,6 +1544,9 @@ class SemanticsBalanced(MessagingHandler):
 
 
 class PropagatedDisposition(MessagingHandler):
+    """
+    Verify outcomes are properly sent end-to-end
+    """
     def __init__(self, test, address1, address2):
         super(PropagatedDisposition, self).__init__(auto_accept=False)
         self.address1 = address1
@@ -1556,20 +1564,20 @@ class PropagatedDisposition(MessagingHandler):
         addr = "unsettled/2"
         self.sender = event.container.create_sender(self.sender_conn, addr)
         self.receiver = event.container.create_receiver(self.receiver_conn, addr)
-        self.receiver.flow(2)
+        self.receiver.flow(3)
         self.trackers = {}
-        for b in ['accept', 'reject']:
+        for b in ['accept', 'modified', 'reject']:
             self.trackers[self.sender.send(Message(body=b))] = b
 
     def timeout(self):
         unique_list = sorted(list(dict.fromkeys(self.settled)))
-        self.error = "Timeout Expired: Expected ['accept', 'reject'] got %s" % unique_list
+        self.error = "Timeout Expired: Expected ['accept', 'modified', 'reject'] got %s" % unique_list
         self.sender_conn.close()
         self.receiver_conn.close()
 
     def check(self):
         unique_list = sorted(list(dict.fromkeys(self.settled)))
-        if unique_list == [u'accept', u'reject']:
+        if unique_list == [u'accept', u'modified', u'reject']:
             self.passed = True
             self.sender_conn.close()
             self.receiver_conn.close()
@@ -1580,7 +1588,12 @@ class PropagatedDisposition(MessagingHandler):
             event.delivery.update(Delivery.ACCEPTED)
             event.delivery.settle()
         elif event.message.body == u'reject':
+            self.set_rejected_data(event.delivery.local)
             event.delivery.update(Delivery.REJECTED)
+            event.delivery.settle()
+        elif event.message.body == u'modified':
+            self.set_modified_data(event.delivery.local)
+            event.delivery.update(Delivery.MODIFIED)
             event.delivery.settle()
 
     def on_accepted(self, event):
@@ -1592,11 +1605,67 @@ class PropagatedDisposition(MessagingHandler):
     def on_rejected(self, event):
         self.test.assertEqual(Delivery.REJECTED, event.delivery.remote_state)
         self.test.assertEqual('reject', self.trackers[event.delivery])
+        self.check_rejected_data(event.delivery.remote)
         self.settled.append('reject')
         self.check()
 
+    def on_released(self, event):
+        # yes, for some reason Proton triggers on_released when MODIFIED is set
+        self.test.assertEqual(Delivery.MODIFIED, event.delivery.remote_state)
+        self.test.assertEqual('modified', self.trackers[event.delivery])
+        self.check_modified_data(event.delivery.remote)
+        self.settled.append('modified')
+        self.check()
+
+    def set_rejected_data(self, local_state):
+        # use defaults
+        pass
+
+    def check_rejected_data(self, remote_state):
+        self.test.assertTrue(remote_state.condition is None)
+
+    def set_modified_data(self, local_state):
+        # use defaults
+        pass
+
+    def check_modified_data(self, remote_state):
+        self.test.assertTrue(remote_state.failed)
+        self.test.assertFalse(remote_state.undeliverable)
+        self.test.assertTrue(remote_state.annotations is None)
+
     def run(self):
         Container(self).run()
+
+
+class PropagatedDispositionData(PropagatedDisposition):
+    """
+    Verify that data associated with a terminal outcome is correctly passed end
+    to end
+    """
+    def set_rejected_data(self, local_state):
+        local_state.condition = Condition("name",
+                                          "description",
+                                          {symbol("info"): True})
+
+    def check_rejected_data(self, remote_state):
+        cond = remote_state.condition
+        self.test.assertEqual("name", cond.name)
+        self.test.assertEqual("description", cond.description)
+        self.test.assertTrue(cond.info is not None)
+        self.test.assertTrue(symbol("info") in cond.info)
+        self.test.assertEqual(True, cond.info[symbol("info")])
+
+    def set_modified_data(self, local_state):
+        local_state.failed = True
+        local_state.undeliverable = True
+        local_state.annotations = {symbol('modified'): True}
+
+    def check_modified_data(self, remote_state):
+        self.test.assertTrue(remote_state.failed)
+        self.test.assertTrue(remote_state.undeliverable)
+        self.test.assertTrue(remote_state.annotations is not None)
+        self.test.assertTrue(symbol('modified') in remote_state.annotations)
+        self.test.assertEqual(True, remote_state.annotations[symbol('modified')])
 
 
 class ThreeAck(MessagingHandler):

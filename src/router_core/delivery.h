@@ -45,10 +45,9 @@ struct qdr_delivery_t {
     uint64_t                disposition;         ///< local disposition, will be pushed to remote endpoint
     uint64_t                remote_disposition;  ///< disposition as set by remote endpoint
     uint64_t                mcast_disposition;   ///< temporary terminal disposition while multicast fwding
+    qd_delivery_state_t    *remote_state;        ///< outcome-specific data read from remote endpoint
+    qd_delivery_state_t    *local_state;         ///< outcome-specific data to send to remote endpoint
     uint32_t                ingress_time;
-    pn_data_t              *remote_extension_state;  ///< extension state from peer endpoint
-    pn_data_t              *local_extension_state;   ///< extension state to send to peer endpoint
-    qdr_error_t            *error;
     bool                    settled;
     bool                    presettled; /// Proton does not have a notion of pre-settled. This flag is introduced in Dispatch and should exclusively be used only to update management counters like presettled delivery counts on links etc. This flag DOES NOT represent the remote settlement state of the delivery.
     qdr_delivery_where_t    where;
@@ -105,14 +104,12 @@ void qdr_delivery_set_aborted(const qdr_delivery_t *delivery, bool aborted);
 bool qdr_delivery_is_aborted(const qdr_delivery_t *delivery);
 
 qd_message_t *qdr_delivery_message(const qdr_delivery_t *delivery);
-qdr_error_t *qdr_delivery_error(const qdr_delivery_t *delivery);
 qdr_link_t *qdr_delivery_link(const qdr_delivery_t *delivery);
 bool qdr_delivery_presettled(const qdr_delivery_t *delivery);
 
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label);
 
-pn_data_t *qdr_delivery_extension_state(qdr_delivery_t *dlv);
-void qdr_delivery_move_extension_state_CT(qdr_delivery_t *dlv, qdr_delivery_t *peer);
+void qdr_delivery_move_delivery_state_CT(qdr_delivery_t *from, qdr_delivery_t *to);
 
 //
 // I/O thread only functions
@@ -132,7 +129,7 @@ void qdr_delivery_set_presettled(qdr_delivery_t *delivery);
 /* handles delivery disposition and settlement changes from the remote end of
  * the link, and schedules Core thread */
 void qdr_delivery_remote_state_updated(qdr_core_t *core, qdr_delivery_t *delivery, uint64_t disp,
-                                       bool settled, qdr_error_t *error, pn_data_t *ext_state, bool ref_given);
+                                       bool settled, qd_delivery_state_t *dstate, bool ref_given);
 
 /* invoked when incoming message data arrives - schedule core thread */
 qdr_delivery_t *qdr_delivery_continue(qdr_core_t *core, qdr_delivery_t *delivery, bool settled);
@@ -145,7 +142,7 @@ qdr_delivery_t *qdr_delivery_continue(qdr_core_t *core, qdr_delivery_t *delivery
 
 /* update settlement and/or disposition and schedule I/O processing */
 void qdr_delivery_release_CT(qdr_core_t *core, qdr_delivery_t *delivery);
-void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *delivery);
+void qdr_delivery_reject_CT(qdr_core_t *core, qdr_delivery_t *delivery, qdr_error_t *error);
 void qdr_delivery_failed_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 bool qdr_delivery_settled_CT(qdr_core_t *core, qdr_delivery_t *delivery);
 

@@ -270,7 +270,7 @@ static void handle_disconnected(qdr_tcp_connection_t* conn)
         qdr_connection_set_context(conn->qdr_conn, 0);
     }
     if (conn->initial_delivery) {
-        qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->initial_delivery, PN_RELEASED, true, 0, 0, false);
+        qdr_delivery_remote_state_updated(tcp_adaptor->core, conn->initial_delivery, PN_RELEASED, true, 0, false);
         qdr_delivery_decref(tcp_adaptor->core, conn->initial_delivery, "tcp-adaptor.handle_disconnected - initial_delivery");
         conn->initial_delivery = 0;
     }

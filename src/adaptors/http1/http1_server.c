@@ -456,8 +456,7 @@ static void _accept_and_settle_request(_server_request_t *hreq)
                                       hreq->request_dlv,
                                       hreq->request_dispo,
                                       true,   // settled
-                                      0,      // error
-                                      0,      // dispo data
+                                      0,      // delivery state
                                       false);
     // can now release the delivery
     qdr_delivery_set_context(hreq->request_dlv, 0);
@@ -657,8 +656,7 @@ static bool _process_request(_server_request_t *hreq)
                                                   hreq->request_dlv,
                                                   hreq->request_dispo,
                                                   true,   // settled
-                                                  0,      // error
-                                                  0,      // dispo data
+                                                  0,      // delivery state
                                                   false);
                 hreq->request_acked = hreq->request_settled = true;
             }
@@ -718,8 +716,7 @@ static bool _process_request(_server_request_t *hreq)
                                               hreq->request_dlv,
                                               hreq->request_dispo,
                                               hreq->request_settled,
-                                              0,      // error
-                                              0,      // dispo data
+                                              0,      // delivery state
                                               false);
             hreq->request_acked = true;
             if (hreq->request_settled) {

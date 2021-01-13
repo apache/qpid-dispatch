@@ -146,7 +146,6 @@ static void qdr_forward_find_closest_remotes_CT(qdr_core_t *core, qdr_address_t 
 qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, qdr_link_t *out_link, qd_message_t *msg)
 {
     qdr_delivery_t *out_dlv = new_qdr_delivery_t();
-    uint64_t       *tag = (uint64_t*) out_dlv->tag;
     if (out_link->conn)
         out_link->conn->last_delivery_time = core->uptime_ticks;
 
@@ -163,9 +162,9 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
         out_dlv->ingress_time  = in_dlv->ingress_time;
         out_dlv->ingress_index = in_dlv->ingress_index;
         if (in_dlv->remote_disposition) {
-            // propagate from disposition state from remote to peer
+            // propagate disposition state from remote to peer
             out_dlv->disposition = in_dlv->remote_disposition;
-            qdr_delivery_move_extension_state_CT(in_dlv, out_dlv);
+            qdr_delivery_move_delivery_state_CT(in_dlv, out_dlv);
         }
     } else {
         out_dlv->settled       = true;
@@ -174,8 +173,10 @@ qdr_delivery_t *qdr_forward_new_delivery_CT(qdr_core_t *core, qdr_delivery_t *in
     }
 
     out_dlv->presettled = out_dlv->settled;
-    *tag                = core->next_tag++;
-    out_dlv->tag_length = 8;
+
+    uint64_t tag = core->next_tag++;
+    memcpy(out_dlv->tag, &tag, sizeof(tag));
+    out_dlv->tag_length = sizeof(tag);
 
     //
     // Add one to the message fanout. This will later be used in the qd_message_send function that sends out messages.
@@ -316,7 +317,6 @@ static void qdr_settle_subscription_delivery_CT(qdr_core_t *core, qdr_action_t *
 
     if (!discard) {
         in_delivery->disposition = action->args.delivery.disposition;
-        in_delivery->error       = action->args.delivery.error;
         in_delivery->settled     = true;
 
         bool moved = qdr_delivery_settled_CT(core, in_delivery);
@@ -337,18 +337,28 @@ void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
                                             work->inter_router_cost, work->in_conn_id, work->policy_spec, &error);
     qd_message_free(work->msg);
 
-    if (!work->delivery)
+    if (!work->delivery) {
+        qdr_error_free(error);
         return;
+    }
 
     if (!work->delivery->multicast) {
         qdr_action_t*action = qdr_action(qdr_settle_subscription_delivery_CT, "settle_subscription_delivery");
         action->args.delivery.delivery    = work->delivery;
         action->args.delivery.disposition = disposition;
-        action->args.delivery.error       = error;
+        if (error) {
+            // setting the local state will cause proton to send this
+            // error to the remote
+            qd_delivery_state_free(work->delivery->local_state);
+            work->delivery->local_state = qd_delivery_state_from_error(error);
+        }
+
         qdr_action_enqueue(core, action);
         // Transfer the delivery reference from work protection to action protection
-    } else
+    } else {
+        qdr_error_free(error);
         qdr_delivery_decref(core, work->delivery, "qdr_forward_on_message - remove from general work");
+    }
 }
 
 
@@ -367,9 +377,16 @@ void qdr_forward_on_message_CT(qdr_core_t *core, qdr_subscription_t *sub, qdr_li
                                                identity, link ? link->conn->policy_spec : 0, &error);
         if (!!in_delivery) {
             in_delivery->disposition = disposition;
-            in_delivery->error       = error;
             in_delivery->settled     = true;
+            if (error) {
+                // setting the local state will cause proton to send this
+                // error to the remote
+                qd_delivery_state_free(in_delivery->local_state);
+                in_delivery->local_state = qd_delivery_state_from_error(error);
+            }
             qdr_delivery_push_CT(core, in_delivery);
+        } else {
+            qdr_error_free(error);
         }
     } else {
         //

@@ -21,6 +21,8 @@
 
 #include <qpid/dispatch/router_core.h>
 #include <qpid/dispatch/policy_spec.h>
+#include <qpid/dispatch/delivery_state.h>
+
 
 typedef struct qdr_protocol_adaptor_t  qdr_protocol_adaptor_t;
 typedef struct qdr_connection_t        qdr_connection_t;
@@ -846,16 +848,16 @@ void qdr_link_delete(qdr_link_t *link);
 qdr_delivery_t *qdr_link_deliver(qdr_link_t *link, qd_message_t *msg, qd_iterator_t *ingress,
                                  bool settled, qd_bitmask_t *link_exclusion, int ingress_index,
                                  uint64_t remote_disposition,
-                                 pn_data_t *remote_extension_state);
+                                 qd_delivery_state_t *remote_state);
 qdr_delivery_t *qdr_link_deliver_to(qdr_link_t *link, qd_message_t *msg,
                                     qd_iterator_t *ingress, qd_iterator_t *addr,
                                     bool settled, qd_bitmask_t *link_exclusion, int ingress_index,
                                     uint64_t remote_disposition,
-                                    pn_data_t *remote_extension_state);
+                                    qd_delivery_state_t *remote_state);
 qdr_delivery_t *qdr_link_deliver_to_routed_link(qdr_link_t *link, qd_message_t *msg, bool settled,
                                                 const uint8_t *tag, int tag_length,
                                                 uint64_t remote_disposition,
-                                                pn_data_t *remote_extension_state);
+                                                qd_delivery_state_t *remote_state);
 
 /**
  * qdr_link_process_deliveries
@@ -909,14 +911,17 @@ void qdr_link_set_drained(qdr_core_t *core, qdr_link_t *link);
 
 
 /**
- * Write the disposition and state data that has arrived from the remote endpoint to the delivery
+ * Set the remote delivery state for dlv. Ownership of dstate is transferred to
+ * the dlv and true is returned. Caller must free dstate if false is returned.
  */
-void qdr_delivery_set_remote_extension_state(qdr_delivery_t *dlv, uint64_t remote_dispo, pn_data_t *remote_ext_state);
+bool qdr_delivery_set_remote_delivery_state(qdr_delivery_t *dlv, qd_delivery_state_t *dstate);
 
 /**
- * Extract the disposition and state data that is to be sent to the remote endpoint via the delivery
+ * Extract the disposition and delivery state data that is to be sent to the
+ * remote endpoint via the delivery. Caller takes ownership of the returned
+ * delivery_state and must free it when done.
  */
-pn_data_t *qdr_delivery_take_local_extension_state(qdr_delivery_t *dlv, uint64_t *dispo);
+qd_delivery_state_t *qdr_delivery_take_local_delivery_state(qdr_delivery_t *dlv, uint64_t *dispo);
 
 
 qdr_connection_info_t *qdr_connection_info(bool             is_encrypted,

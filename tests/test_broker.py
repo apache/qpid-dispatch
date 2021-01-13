@@ -197,8 +197,8 @@ class FakeService(FakeBroker):
     Like a broker, but proactively connects to the message bus
     Useful for testing link routes
     """
-    def __init__(self, url, container_id=None):
-        super(FakeService, self).__init__(url, container_id)
+    def __init__(self, url, container_id=None, **handler_kwargs):
+        super(FakeService, self).__init__(url, container_id, **handler_kwargs)
 
     def on_start(self, event):
         event.container.connect(url=self.url)

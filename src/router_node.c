@@ -126,6 +126,109 @@ void qd_link_abandoned_deliveries_handler(void *context, qd_link_t *link)
 }
 
 
+// read the delivery-state set by the remote endpoint
+//
+static qd_delivery_state_t *qd_delivery_read_remote_state(pn_delivery_t *pnd)
+{
+    qd_delivery_state_t *dstate = 0;
+    uint64_t            outcome = pn_delivery_remote_state(pnd);
+    if (pnd) {
+        switch (outcome) {
+        case PN_RECEIVED:
+        case PN_ACCEPTED:
+        case PN_RELEASED:
+            // no associated state (that we care about)
+            break;
+        case PN_REJECTED: {
+            // See AMQP 1.0 section 3.4.4 Rejected
+            pn_condition_t *cond = pn_disposition_condition(pn_delivery_remote(pnd));
+            dstate = qd_delivery_state();
+            dstate->error = qdr_error_from_pn(cond);
+            break;
+        }
+        case PN_MODIFIED: {
+            // See AMQP 1.0 section 3.4.5 Modified
+            pn_disposition_t *disp = pn_delivery_remote(pnd);
+            bool failed = pn_disposition_is_failed(disp);
+            bool undeliverable = pn_disposition_is_undeliverable(disp);
+            pn_data_t *anno = pn_disposition_annotations(disp);
+
+            // avoid expensive alloc if only default values found
+            const bool need_anno = (anno && pn_data_size(anno) > 0);
+            if (failed || undeliverable || need_anno) {
+                dstate = qd_delivery_state();
+                dstate->delivery_failed = failed;
+                dstate->undeliverable_here = undeliverable;
+                if (need_anno) {
+                    dstate->annotations = pn_data(0);
+                    pn_data_copy(dstate->annotations, anno);
+                }
+            }
+            break;
+        }
+        default: {
+            // Check for custom state data. Custom outcomes and AMQP 1.0
+            // Transaction defined outcomes will all be numerically >
+            // PN_MODIFIED. See Part 4: Transactions and section 1.5 Descriptor
+            // Values in the AMQP 1.0 spec.
+            if (outcome > PN_MODIFIED) {
+                pn_data_t *data = pn_disposition_data(pn_delivery_remote(pnd));
+                if (data && pn_data_size(data) > 0) {
+                    dstate = qd_delivery_state();
+                    dstate->extension = pn_data(0);
+                    pn_data_copy(dstate->extension, data);
+                }
+            }
+        break;
+        }
+        } // end switch
+    }
+    return dstate;
+}
+
+
+// Set the delivery-state to be sent to the remote endpoint.
+//
+static void qd_delivery_write_local_state(pn_delivery_t *pnd, uint64_t outcome, const qd_delivery_state_t *dstate)
+{
+    if (pnd && dstate) {
+        switch (outcome) {
+        case PN_RECEIVED:
+        case PN_ACCEPTED:
+        case PN_RELEASED:
+            // no associated state (that we care about)
+            break;
+        case PN_REJECTED:
+            if (dstate->error) {
+                pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
+                char *name = qdr_error_name(dstate->error);
+                char *description = qdr_error_description(dstate->error);
+                pn_condition_set_name(condition, (const char*) name);
+                pn_condition_set_description(condition, (const char*) description);
+                if (qdr_error_info(dstate->error)) {
+                    pn_data_copy(pn_condition_info(condition), qdr_error_info(dstate->error));
+                }
+                //proton makes copies of name and description, so it is ok to free them here.
+                free(name);
+                free(description);
+            }
+            break;
+        case PN_MODIFIED: {
+            pn_disposition_t *ldisp = pn_delivery_local(pnd);
+            pn_disposition_set_failed(ldisp, dstate->delivery_failed);
+            pn_disposition_set_undeliverable(ldisp, dstate->undeliverable_here);
+            if (dstate->annotations)
+                pn_data_copy(pn_disposition_annotations(ldisp), dstate->annotations);
+            break;
+        }
+        default:
+            if (dstate->extension)
+                pn_data_copy(pn_disposition_data(pn_delivery_local(pnd)), dstate->extension);
+            break;
+        }
+    }
+}
+
 
 /**
  * Determine the role of a connection
@@ -483,7 +586,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                                                    (uint8_t*) dtag.start,
                                                    dtag.size,
                                                    pn_delivery_remote_state(pnd),
-                                                   pn_disposition_data(pn_delivery_remote(pnd)));
+                                                   qd_delivery_read_remote_state(pnd));
         qd_link_set_incoming_msg(link, (qd_message_t*) 0);  // msg no longer exclusive to qd_link
         qdr_node_connect_deliveries(link, delivery, pnd);
         qdr_delivery_decref(router->router_core, delivery, "release protection of return from deliver_to_routed_link");
@@ -664,7 +767,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
                 delivery = qdr_link_deliver_to(rlink, msg, ingress_iter, addr_iter, pn_delivery_settled(pnd),
                                                link_exclusions, ingress_index,
                                                pn_delivery_remote_state(pnd),
-                                               pn_disposition_data(pn_delivery_remote(pnd)));
+                                               qd_delivery_read_remote_state(pnd));
             } else {
                 //reject
                 qd_log(router->log_source, QD_LOG_DEBUG, "Message rejected due to policy violation on target. User:%s", conn->user_id);
@@ -713,7 +816,7 @@ static bool AMQP_rx_handler(void* context, qd_link_t *link)
         }
         delivery = qdr_link_deliver(rlink, msg, ingress_iter, pn_delivery_settled(pnd), link_exclusions, ingress_index,
                                     pn_delivery_remote_state(pnd),
-                                    pn_disposition_data(pn_delivery_remote(pnd)));
+                                    qd_delivery_read_remote_state(pnd));
     }
 
     //
@@ -781,18 +884,13 @@ static void AMQP_disposition_handler(void* context, qd_link_t *link, pn_delivery
     if (!delivery || !qdr_delivery_receive_complete(delivery))
         return;
 
-    pn_disposition_t *disp  = pn_delivery_remote(pnd);
-    pn_condition_t   *cond  = pn_disposition_condition(disp);
-    qdr_error_t      *error = qdr_error_from_pn(cond);
-
     //
     // Update the disposition of the delivery
     //
     qdr_delivery_remote_state_updated(router->router_core, delivery,
                                       pn_delivery_remote_state(pnd),
                                       pn_delivery_settled(pnd),
-                                      error,
-                                      pn_disposition_data(disp),
+                                      qd_delivery_read_remote_state(pnd),
                                       false);
 
     //
@@ -1785,7 +1883,6 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         const char *tag;
         int         tag_length;
         uint64_t    disposition = 0;
-        pn_data_t   *extension_state = 0;
 
         qdr_delivery_tag(dlv, &tag, &tag_length);
 
@@ -1795,10 +1892,10 @@ static uint64_t CORE_link_deliver(void *context, qdr_link_t *link, qdr_delivery_
         pdlv = pn_link_current(plink);
 
         // handle any delivery-state on the transfer e.g. transactional-state
-        extension_state = qdr_delivery_take_local_extension_state(dlv, &disposition);
-        if (extension_state) {
-            pn_data_copy(pn_disposition_data(pn_delivery_local(pdlv)), extension_state);
-            pn_data_free(extension_state);
+        qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &disposition);
+        if (dstate) {
+            qd_delivery_write_local_state(pdlv, disposition, dstate);
+            qd_delivery_state_free(dstate);
         }
         if (disposition)
             pn_delivery_update(pdlv, disposition);
@@ -1891,21 +1988,6 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     if (!pn_delivery_link(pnd))
         return;
 
-    qdr_error_t *error = qdr_delivery_error(dlv);
-
-    if (error) {
-        pn_condition_t *condition = pn_disposition_condition(pn_delivery_local(pnd));
-        char *name = qdr_error_name(error);
-        char *description = qdr_error_description(error);
-        pn_condition_set_name(condition, (const char*) name);
-        pn_condition_set_description(condition, (const char*) description);
-        if (qdr_error_info(error))
-            pn_data_copy(pn_condition_info(condition), qdr_error_info(error));
-        //proton makes copies of name and description, so it is ok to free them here.
-        free(name);
-        free(description);
-    }
-
     qdr_link_t      *qlink   = qdr_delivery_link(dlv);
     qd_link_t       *link    = 0;
     qd_connection_t *qd_conn = 0;
@@ -1929,14 +2011,15 @@ static void CORE_delivery_update(void *context, qdr_delivery_t *dlv, uint64_t di
     if (disp != pn_delivery_remote_state(pnd) && !pn_delivery_settled(pnd)) {
         qd_message_t *msg = qdr_delivery_message(dlv);
 
+        // handle propagation of delivery state from qdr_delivery_t to proton:
+        uint64_t ignore = 0;  // expect same value as 'disp'
+        qd_delivery_state_t *dstate = qdr_delivery_take_local_delivery_state(dlv, &ignore);
+        assert(ignore == disp);
+        qd_delivery_write_local_state(pnd, disp, dstate);
+        qd_delivery_state_free(dstate);
+
         if (disp == PN_MODIFIED)
             pn_disposition_set_failed(pn_delivery_local(pnd), true);
-
-        pn_data_t *extension_state = qdr_delivery_take_local_extension_state(dlv, 0);
-        if (extension_state) {
-            pn_data_copy(pn_disposition_data(pn_delivery_local(pnd)), extension_state);
-            pn_data_free(extension_state);
-        }
 
         //
         // If the delivery is still arriving, don't push out the disposition change yet.
