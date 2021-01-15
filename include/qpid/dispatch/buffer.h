@@ -44,6 +44,10 @@ struct qd_buffer_t {
 
 /**
  * Set the initial buffer capacity to be allocated by future calls to qp_buffer.
+ *
+ * NOTICE:  This function is provided for testing purposes only.  It should not be invoked
+ * in the production code.  If this function is called after the first buffer has been allocated,
+ * the software WILL BE unstable and WILL crash.
  */
 void qd_buffer_set_size(size_t size);
 

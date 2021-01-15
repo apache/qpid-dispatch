@@ -348,7 +348,7 @@ void qdr_forward_on_message(qdr_core_t *core, qdr_general_work_t *work)
         qdr_action_enqueue(core, action);
         // Transfer the delivery reference from work protection to action protection
     } else
-        qdr_delivery_decref_CT(core, work->delivery, "qdr_forward_on_message - remove from general work");
+        qdr_delivery_decref(core, work->delivery, "qdr_forward_on_message - remove from general work");
 }
 
 

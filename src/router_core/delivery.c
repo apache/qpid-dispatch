@@ -108,8 +108,6 @@ uint64_t qdr_delivery_disposition(const qdr_delivery_t *delivery)
 void qdr_delivery_incref(qdr_delivery_t *delivery, const char *label)
 {
     uint32_t rc = sys_atomic_inc(&delivery->ref_count);
-    assert(rc > 0 || !delivery->ref_counted);
-    delivery->ref_counted = true;
     qdr_link_t *link = qdr_delivery_link(delivery);
     if (link)
         qd_log(link->core->log, QD_LOG_DEBUG, DLV_FMT" Delivery incref:    rc:%"PRIu32"  %s",
@@ -138,11 +136,16 @@ void qdr_delivery_set_presettled(qdr_delivery_t *delivery)
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {
+    char log_prefix[DLV_ARGS_MAX];
+    if (qd_log_enabled(core->log, QD_LOG_DEBUG)) {
+        snprintf(log_prefix, DLV_ARGS_MAX, DLV_FMT, DLV_ARGS(delivery));
+    }
+
     uint32_t ref_count = sys_atomic_dec(&delivery->ref_count);
     assert(ref_count > 0);
 
-    qd_log(core->log, QD_LOG_DEBUG, DLV_FMT" Delivery decref:    rc:%"PRIu32"  %s",
-           DLV_ARGS(delivery), ref_count - 1, label);
+    qd_log(core->log, QD_LOG_DEBUG, "%s Delivery decref:    rc:%"PRIu32"  %s",
+           log_prefix, ref_count - 1, label);
 
     if (ref_count == 1) {
         // The ref_count was 1 and now it is zero. We are deleting the last ref.

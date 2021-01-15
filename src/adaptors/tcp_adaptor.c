@@ -673,8 +673,6 @@ static void qdr_tcp_open_server_side_connection(qdr_tcp_connection_t* tc)
     if (!!tc->initial_delivery) {
         qd_log(tcp_adaptor->log_source, QD_LOG_DEBUG, DLV_FMT" initial_delivery ownership passed to "DLV_FMT,
                DLV_ARGS(tc->initial_delivery), tc->outgoing->conn_id, tc->outgoing->identity, tc->initial_delivery->delivery_id);
-        tc->initial_delivery->conn_id = tc->outgoing->conn_id;
-        tc->initial_delivery->link_id = tc->outgoing->identity;
         qdr_delivery_decref(tcp_adaptor->core, tc->initial_delivery, "tcp-adaptor - passing initial_delivery into new link");
         tc->initial_delivery = 0;
     }

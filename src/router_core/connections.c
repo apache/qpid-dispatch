@@ -1646,6 +1646,12 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
     qdr_forward_deliver_CT(core, link, dlv);
 
     //
+    // Adjust the delivery's identity
+    //
+    dlv->conn_id = link->conn->identity;
+    dlv->link_id = link->identity;
+
+    //
     // Adjust the delivery's reference count
     //
     assert(ref_delta <= 0);
