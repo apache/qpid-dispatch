@@ -42,7 +42,7 @@ A broker is not used in this procedure, so there is no _"store and forward"_ mec
 --
 [source,bash,options="nowrap",subs="+quotes"]
 ----
-$ cd __<install-dir>__/examples/python/
+$ cd __<install-dir>__/python/examples/
 ----
 
 <install-dir>:: The directory where you installed {ClientAmqpPythonName}.
@@ -69,7 +69,7 @@ In practice, the order in which you start senders and receivers does not matter.
 --
 [source,bash,options="nowrap",subs="+quotes"]
 ----
-$ cd __<install-dir>__/examples/python/
+$ cd __<install-dir>__/python/examples/
 $ python simple_send.py -a 127.0.0.1:5672/examples -m 5
 ----
 
