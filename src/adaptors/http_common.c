@@ -675,7 +675,7 @@ void qd_http_record_request(qdr_core_t *core, const char * method, uint32_t stat
     record->address = address ? qd_strdup(address) : 0;
     record->host = host ? qd_strdup(host) : 0;
     record->site = remote_site ? qd_strdup(remote_site) : 0;
-    record->key = _record_key(record->host, record->address, local_site, record->ingress);
+    record->key = _record_key(record->host, record->address, remote_site, record->ingress);
     record->requests = 1;
     record->bytes_in = bytes_in;
     record->bytes_out = bytes_out;
