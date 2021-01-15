@@ -36,7 +36,6 @@ struct qdr_delivery_t {
     DEQ_LINKS(qdr_delivery_t);
     void                   *context;
     sys_atomic_t            ref_count;
-    bool                    ref_counted;   /// Used to protect against ref count going 1 -> 0 -> 1
     qdr_link_t_sp           link_sp;       /// Safe pointer to the link
     qdr_delivery_t         *peer;          /// Use this peer if the delivery has one and only one peer.
     qdr_delivery_ref_t     *next_peer_ref;
@@ -80,6 +79,7 @@ static inline uint32_t next_delivery_id() { return sys_atomic_inc(&global_delive
 // Common log line prefix
 #define DLV_FMT       "[C%"PRIu64"][L%"PRIu64"][D%"PRIu32"]"
 #define DLV_ARGS(dlv) dlv->conn_id, dlv->link_id, dlv->delivery_id
+#define DLV_ARGS_MAX  75
 
 ///////////////////////////////////////////////////////////////////////////////
 //                               Delivery API
