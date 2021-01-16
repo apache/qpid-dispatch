@@ -18,7 +18,7 @@ under the License.
 */
 
 import React, { Component } from "react";
-import { Modal } from "@patternfly/react-core";
+import { Modal, ModalVariant } from "@patternfly/react-core";
 
 class RouterInfoComponent extends Component {
   constructor(props) {
@@ -52,7 +52,7 @@ class RouterInfoComponent extends Component {
   render() {
     return (
       <Modal
-        isSmall
+        variant={ModalVariant.small}
         title="Router info"
         isOpen={true}
         onClose={this.props.handleCloseRouterInfo}

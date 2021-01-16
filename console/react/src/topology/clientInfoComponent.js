@@ -18,7 +18,7 @@ under the License.
 */
 
 import React, { Component } from "react";
-import { Button, Modal } from "@patternfly/react-core";
+import { Button, Modal, ModalVariant } from "@patternfly/react-core";
 import {
   Table,
   TableHeader,
@@ -492,7 +492,7 @@ class ClientInfoComponent extends Component {
     const { columns, rows } = this.state;
     return (
       <Modal
-        isSmall
+        variant={ModalVariant.small}
         title={`Details ${detail ? detail.title : ""}`}
         isOpen={true}
         onClose={this.props.handleCloseClientInfo}
