@@ -17,7 +17,6 @@ specific language governing permissions and limitations
 under the License.
 */
 
-/* global Set */
 import { utils } from "../common/amqp/utilities.js";
 import * as d3 from "d3";
 
