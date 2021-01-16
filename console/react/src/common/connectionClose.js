@@ -124,7 +124,6 @@ class ConnectionClose extends React.Component {
                 Cancel
               </Button>
             ]}
-            isFooterLeftAligned
           >
             {closing
               ? `Closing connection ${record.name}`

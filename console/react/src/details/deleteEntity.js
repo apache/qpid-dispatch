@@ -117,7 +117,6 @@ class DeleteEntity extends React.Component {
               Cancel
             </Button>
           ]}
-          isFooterLeftAligned
         >
           {closing ? `Deleting ${name}` : `${name}`}
         </Modal>
