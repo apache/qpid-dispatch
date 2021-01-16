@@ -285,8 +285,7 @@ class Congestion extends TrafficAnimation {
     return this.fillColor(v);
   }
   fillColor(v) {
-    let color = d3.scale
-      .linear()
+    let color = d3.scaleLinear()
       .domain([...Array(STEPS).keys()])
       .interpolate(d3.interpolateHcl)
       .range([
@@ -311,7 +310,7 @@ class Congestion extends TrafficAnimation {
   }
 }
 
-const colorGen = d3.scale.category10();
+const colorGen = d3.scaleOrdinal(d3.schemeCategory10);
 const addressColors = {};
 
 /* Create animated dots moving along the links between routers
@@ -411,8 +410,7 @@ class Dots extends TrafficAnimation {
     let matrixMessages = matrix.matrixMessages();
     // the fastest traffic rate gets more dots than the slowest
     let minmax = matrix.getMinMax();
-    let flowScale = d3.scale
-      .linear()
+    let flowScale = d3.scaleLinear()
       .domain(minmax)
       .range([1, 1.5]);
     // row is ingress router, col is egress router. Value at [row][col] is the rate

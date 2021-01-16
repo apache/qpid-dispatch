@@ -84,14 +84,13 @@ export class BackgroundMap {
     this.scaleExtent = [1, 10];
 
     // setup the projection with some defaults
-    this.projection = d3.geo
-      .mercator()
+    this.projection = d3.geoMercator()
       .rotate([this.rotate, 0])
       .scale(1)
       .translate([width / 2, height / 2]);
 
     // this path will hold the land coordinates once they are loaded
-    this.geoPath = d3.geo.path().projection(this.projection);
+    this.geoPath = d3.geoPath().projection(this.projection);
 
     // set up the scale extent and initial scale for the projection
     var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
@@ -100,11 +99,10 @@ export class BackgroundMap {
 
     this.projection.scale(this.scaleExtent[0]);
 
-    this.zoom = d3.behavior
-      .zoom()
+    this.zoom = d3.zoom() // TODO XXX
       .scaleExtent(this.scaleExtent)
-      .scale(this.projection.scale())
-      .translate([0, 0]) // not linked directly to projection
+      // .scale(this.projection.scale())
+      // .translate([0, 0]) // not linked directly to projection
       .on("zoom", this.zoomed);
 
     this.geo
@@ -156,14 +154,13 @@ export class BackgroundMap {
       this.scaleExtent = [1, 10];
 
       // setup the projection with some defaults
-      this.projection = d3.geo
-        .mercator()
+      this.projection = d3.geoMercator()
         .rotate([this.rotate, 0])
         .scale(1)
         .translate([width / 2, height / 2]);
 
       // this path will hold the land coordinates once they are loaded
-      this.geoPath = d3.geo.path().projection(this.projection);
+      this.geoPath = d3.geoPath().projection(this.projection);
 
       // set up the scale extent and initial scale for the projection
       var b = getMapBounds(this.projection, Math.max(maxnorth, maxsouth)),
@@ -181,11 +178,10 @@ export class BackgroundMap {
             translate: [width / 2, height / 2]
           };
 
-      this.zoom = d3.behavior
-        .zoom()
+        this.zoom = d3.zoom() // TODO XXX
         .scaleExtent(this.scaleExtent)
-        .scale(this.projection.scale())
-        .translate([0, 0]) // not linked directly to projection
+        // .scale(this.projection.scale())
+        // .translate([0, 0]) // not linked directly to projection
         .on("zoom", this.zoomed);
 
       if (!this.svg) this.setSvg(svg, width, height);
@@ -227,8 +223,8 @@ export class BackgroundMap {
     this.projection.rotate([this.lastProjection.rotate, 0]);
     this.projection.translate(this.lastProjection.translate);
     this.projection.scale(this.lastProjection.scale);
-    this.zoom.scale(this.lastProjection.scale);
-    this.zoom.translate(this.lastProjection.translate);
+    // this.zoom.scale(this.lastProjection.scale); // TODO XXX
+    // this.zoom.translate(this.lastProjection.translate);
   }
 
   // stop responding to pan/zoom events
@@ -281,13 +277,13 @@ export class BackgroundMap {
         let lonlat1 = this.projection.invert([mx, my]);
         // calc the distance to rotate based on change in longitude
         dx = lonlat1[0] - lonlat[0];
-        // calc the distance to translate based on change in lattitude
+        // calc the distance to translate based on change in latitude
         dy = my - this.projection([0, lonlat[1]])[1];
 
         // rotate the map so that the longitude under the mouse is where it was before the scale
         this.projection.rotate([yaw + dx, 0, 0]);
 
-        // translate the map so that the lattitude under the mouse is where it was before the scale
+        // translate the map so that the latitude under the mouse is where it was before the scale
         this.projection.translate([tp[0], tp[1] + dy]);
       } else {
         // rotate instead of translate in the x direction
@@ -296,7 +292,7 @@ export class BackgroundMap {
           0,
           0
         ]);
-        // translate only in the y direction. don't translate beyond the max lattitude north or south
+        // translate only in the y direction. don't translate beyond the max latitude north or south
         var bnorth = getMapBounds(this.projection, maxnorth),
           bsouth = getMapBounds(this.projection, maxsouth);
         if (bnorth[0][1] + dy > 0) dy = -bnorth[0][1];

@@ -29,24 +29,19 @@ const twoPI = Math.PI * 2.0;
 // But since we are animating chords, we need to smoothly chnage the control point from
 // [0, 0] to 1/2 way to the center of the bezier curve.
 const dom = [0.06, 0.98, Math.PI];
-const ys = d3.scale
-  .linear()
+const ys = d3.scaleLinear()
   .domain(dom)
   .range([0.18, 0, 0]);
-const x0s = d3.scale
-  .linear()
+const x0s = d3.scaleLinear()
   .domain(dom)
   .range([0.03, 0.24, 0.24]);
-const x1s = d3.scale
-  .linear()
+const x1s = d3.scaleLinear()
   .domain(dom)
   .range([0.24, 0.6, 0.6]);
-const x2s = d3.scale
-  .linear()
+const x2s = d3.scaleLinear()
   .domain(dom)
   .range([1.32, 0.8, 0.8]);
-const x3s = d3.scale
-  .linear()
+const x3s = d3.scaleLinear()
   .domain(dom)
   .range([3, 2, 2]);
 
@@ -174,8 +169,7 @@ let cpRatio = function(gap, x, y) {
     // middle. get distance to top
     dist = top - y;
   }
-  let distScale = d3.scale
-    .linear()
+  let distScale = d3.scaleLinear()
     .domain([0, top / 8, top / 2, top])
     .range([0, 0.3, 0.4, 0.5]);
   return distScale(dist);
