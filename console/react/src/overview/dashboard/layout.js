@@ -57,6 +57,8 @@ import { utils } from "../../common/amqp/utilities";
 import throughputData from "./throughputData";
 import inflightData from "./inflightData";
 
+import img_avatar from "../../assets/img_avatar.svg";
+
 const SUPPRESS_NOTIFICATIONS = "noNotify";
 
 class PageLayout extends React.PureComponent {
@@ -397,7 +399,7 @@ class PageLayout extends React.PureComponent {
         className="topology-header"
         logo={<span className="logo-text">{this.props.config.title}</span>}
         toolbar={PageToolbar}
-        avatar={<Avatar src="./assets/img_avatar.svg" alt="Avatar image" />}
+        avatar={<Avatar src={img_avatar} alt="Avatar image" />}
         showNavToggle
         onNavToggle={isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop}
         isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}
