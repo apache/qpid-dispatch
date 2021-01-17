@@ -985,6 +985,11 @@ div.qdrChord .legend-text {
   padding-right: 2em;
 }
 
+/*force Patternfly v3 style for table Toolbar (flex, not box)*/
+.table-toolbar {
+  display: flex !important;
+}
+
 .table-toolbar .pf-l-toolbar__item {
   margin-right: 0 !important;
 }
