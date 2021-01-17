@@ -82,7 +82,7 @@ class ConnectPage extends React.Component {
           </TextContent>
           <TextContent>
             <Text component="h2" className="connect-description">
-              The console displays information about a qpid dispatch router network. It
+              The console displays information about a Qpid Dispatch Router network. It
               allows monitoring and management control of the router's entities.
             </Text>
             <Text component="h2" className="connect-description">

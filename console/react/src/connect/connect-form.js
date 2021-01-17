@@ -152,7 +152,7 @@ class ConnectForm extends React.Component {
               <TextContent className="connect-title">
                 <Text component={TextVariants.h1}>Connect</Text>
                 <Text component={TextVariants.p}>
-                  Enter the address and an HTTP-enabled port of a qpid dispatch router.
+                  Enter the address and an HTTP-enabled port of a Qpid Dispatch Router.
                 </Text>
               </TextContent>
               <FormGroup

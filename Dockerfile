@@ -17,7 +17,7 @@
 # under the License.
 #
 
-# Downloads, builds and installs apache proton and qpid dispatch on Centos and starts the dispatch router
+# Downloads, builds and installs Apache Qpid Proton and Qpid Dispatch on CentOS and starts the dispatch router
 # /main is the top level folder under which proton (/main/qpid-proton/) and dispatch (/main/qpid-dispatch) source code is downloaded from github
 # /usr/lib64 is the folder in which the proton artifacts are installed.
 # /usr/sbin is the folder in which dispatch executable installed
