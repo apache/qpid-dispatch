@@ -20,7 +20,7 @@ under the License.
 import React from "react";
 import { PageSection, PageSectionVariants } from "@patternfly/react-core";
 import { Stack, StackItem } from "@patternfly/react-core";
-import { Card, CardHeader, CardBody } from "@patternfly/react-core";
+import { Card, CardTitle, CardBody } from "@patternfly/react-core";
 import { Split, SplitItem } from "@patternfly/react-core";
 import ThroughputChart from "./throughputChart";
 import InflightChart from "./inflightChart";
@@ -51,13 +51,14 @@ class DashboardPage extends React.Component {
         <Stack hasGutter="md">
           <StackItem>
             <Card>
-              <CardHeader>
+              <CardTitle>
                 <div className="dashboard-header">
                   <div>Router network statistics</div>
                   <div className="duration-tabs">
                     <nav className="pf-c-nav" aria-label="Local">
-                      <ul className="pf-c-nav__tertiary-list">
+                      <ul className="pf-c-nav__tertiary-list" style={{"display": "inline-flex"}}>
                         <li
+                          style={{"margin-right": "32px"}}
                           onClick={() => this.setTimePeriod(60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "selected" : ""
@@ -78,7 +79,7 @@ class DashboardPage extends React.Component {
                   </div>
                 </div>
                 <div className="time-period">For the past {this.timePeriodString()}</div>
-              </CardHeader>
+              </CardTitle>
               <CardBody>
                 <ThroughputChart
                   period={this.state.timePeriod}
