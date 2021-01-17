@@ -48,7 +48,7 @@ class DashboardPage extends React.Component {
         className="overview-charts-page"
         aria-label="dashboard-page"
       >
-        <Stack gutter="md">
+        <Stack hasGutter="md">
           <StackItem>
             <Card>
               <CardHeader>
@@ -92,7 +92,7 @@ class DashboardPage extends React.Component {
             </Card>
           </StackItem>
           <StackItem>
-            <Split gutter="md">
+            <Split hasGutter="md">
               <SplitItem id="activeAddresses">
                 <ActiveAddressesCard service={this.props.service} />
               </SplitItem>
