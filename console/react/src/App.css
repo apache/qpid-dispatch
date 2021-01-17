@@ -430,7 +430,8 @@ svg.address-svg g text {
   pointer-events: auto;
 }
 
-svg {
+/*not all SVGs are charts*/
+svg:not([role="img"]) {
   background-color: transparent;
   cursor: default;
   -webkit-user-select: none;
@@ -439,8 +440,8 @@ svg {
   -o-user-select: none;
   user-select: none;
 }
-
-svg:not(.active):not(.ctrl) {
+/*not all SVGs are charts*/
+svg:not(.active):not(.ctrl):not([role="img"]) {
   cursor: crosshair;
 }
 
