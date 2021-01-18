@@ -136,7 +136,7 @@ void qdr_delivery_set_presettled(qdr_delivery_t *delivery)
 
 void qdr_delivery_decref(qdr_core_t *core, qdr_delivery_t *delivery, const char *label)
 {
-    char log_prefix[DLV_ARGS_MAX];
+    char log_prefix[DLV_ARGS_MAX] = "";
     if (qd_log_enabled(core->log, QD_LOG_DEBUG)) {
         snprintf(log_prefix, DLV_ARGS_MAX, DLV_FMT, DLV_ARGS(delivery));
     }
