@@ -287,7 +287,7 @@
         },
 
         "management": {
-            "description": "Qpid dispatch router extensions to the standard org.amqp.management interface.",
+            "description": "Qpid Dispatch Router extensions to the standard org.amqp.management interface.",
             "extends": "org.amqp.management",
             "singleton": true,
             "operations": ["GET-SCHEMA", "GET-JSON-SCHEMA", "GET-LOG", "PROFILE"],

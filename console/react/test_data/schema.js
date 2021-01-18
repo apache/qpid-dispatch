@@ -345,7 +345,7 @@ export default {
       },
       singleton: true,
       fullyQualifiedType: "org.apache.qpid.dispatch.management",
-      description: "Qpid dispatch router extensions to the standard org.amqp.management interface."
+      description: "Qpid Dispatch Router extensions to the standard org.amqp.management interface."
     },
     log: {
       operations: ["UPDATE", "READ"],
