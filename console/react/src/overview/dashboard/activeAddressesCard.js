@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { Table, TableHeader, TableBody } from "@patternfly/react-table";
+import {nowrap, Table, TableBody, TableHeader} from "@patternfly/react-table";
 
 // update the table every 5 seconds
 const UPDATE_INTERVAL = 1000 * 5;
@@ -28,7 +28,7 @@ class ActiveAddressesCard extends React.Component {
     super(props);
     this.state = {
       lastUpdate: new Date(),
-      columns: ["Address", "In", "Out", "Settle rate"],
+      columns: ["Address", "In", "Out", "Settle rate"].map(it => ({"title": it, "transforms": [nowrap]})),
       rows: []
     };
   }

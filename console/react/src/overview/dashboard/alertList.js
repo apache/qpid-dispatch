@@ -74,7 +74,7 @@ class AlertList extends React.Component {
             variant={alert.type}
             title={alert.type}
             isInline
-            action={
+            actionClose={
               <AlertActionCloseButton
                 aria-label="alert-close-button"
                 onClose={() => this.hideAlert(alert)}

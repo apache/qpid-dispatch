@@ -26,9 +26,9 @@ import {
   Page,
   PageHeader,
   SkipToContent,
-  Toolbar,
-  ToolbarGroup,
-  ToolbarItem,
+  PageHeaderTools,
+  PageHeaderToolsGroup,
+  PageHeaderToolsItem,
   Nav,
   NavExpandable,
   NavItem,
@@ -56,6 +56,8 @@ import NotificationDrawer from "./notificationDrawer";
 import { utils } from "../../common/amqp/utilities";
 import throughputData from "./throughputData";
 import inflightData from "./inflightData";
+
+import img_avatar from "../../assets/img_avatar.svg";
 
 const SUPPRESS_NOTIFICATIONS = "noNotify";
 
@@ -350,11 +352,11 @@ class PageLayout extends React.PureComponent {
       </Nav>
     );
     const PageToolbar = (
-      <Toolbar>
-        <ToolbarGroup
+      <PageHeaderTools>
+        <PageHeaderToolsGroup
           className={css(accessibleStyles.screenReader, accessibleStyles.visibleOnLg)}
         >
-          <ToolbarItem>
+          <PageHeaderToolsItem>
             <Button
               id="connectButton"
               onClick={this.toggleConnectForm}
@@ -363,16 +365,16 @@ class PageLayout extends React.PureComponent {
             >
               <PowerOffIcon />
             </Button>
-          </ToolbarItem>
-          <ToolbarItem className="notification-button">
+          </PageHeaderToolsItem>
+          <PageHeaderToolsItem className="notification-button">
             <NotificationDrawer
               ref={el => (this.notificationRef = el)}
               suppress={this.state.suppress}
             />
-          </ToolbarItem>
-        </ToolbarGroup>
-        <ToolbarGroup>
-          <ToolbarItem
+          </PageHeaderToolsItem>
+        </PageHeaderToolsGroup>
+        <PageHeaderToolsGroup>
+          <PageHeaderToolsItem
             className={css(accessibleStyles.screenReader, accessibleStyles.visibleOnMd)}
           >
             <DropdownToggle className="user-button" onToggle={this.onDropdownToggle}>
@@ -387,17 +389,17 @@ class PageLayout extends React.PureComponent {
               isConnected={this.isConnected}
               parentClass="user-button"
             />
-          </ToolbarItem>
-        </ToolbarGroup>
-      </Toolbar>
+          </PageHeaderToolsItem>
+        </PageHeaderToolsGroup>
+        <Avatar src={img_avatar} alt="Avatar image" />
+      </PageHeaderTools>
     );
 
     const Header = (
       <PageHeader
         className="topology-header"
         logo={<span className="logo-text">{this.props.config.title}</span>}
-        toolbar={PageToolbar}
-        avatar={<Avatar src="./assets/img_avatar.svg" alt="Avatar image" />}
+        headerTools={PageToolbar}
         showNavToggle
         onNavToggle={isMobileView ? this.onNavToggleMobile : this.onNavToggleDesktop}
         isNavOpen={isMobileView ? isNavOpenMobile : isNavOpenDesktop}

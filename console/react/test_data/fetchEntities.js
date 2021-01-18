@@ -17,6 +17,7 @@ specific language governing permissions and limitations
 under the License.
 */
 
+// eslint-disable-next-line import/no-anonymous-default-export
 export default {
   "amqp:/_topo/0/A/$management": {
     "router.node": {

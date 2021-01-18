@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { Button, Modal } from "@patternfly/react-core";
+import { Button, Modal, ModalVariant } from "@patternfly/react-core";
 import PropTypes from "prop-types";
 
 class ConnectionClose extends React.Component {
@@ -100,9 +100,9 @@ class ConnectionClose extends React.Component {
             Close
           </Button>
           <Modal
-            isSmall
+            variant={ModalVariant.small}
             aria-label="connection-close-modal"
-            title="Close conection"
+            title="Close connection"
             isOpen={isModalOpen}
             onClose={this.handleModalToggle}
             actions={[
@@ -124,7 +124,6 @@ class ConnectionClose extends React.Component {
                 Cancel
               </Button>
             ]}
-            isFooterLeftAligned
           >
             {closing
               ? `Closing connection ${record.name}`

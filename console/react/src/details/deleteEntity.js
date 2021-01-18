@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import { Button, Modal } from "@patternfly/react-core";
+import { Button, Modal, ModalVariant } from "@patternfly/react-core";
 
 class DeleteEntity extends React.Component {
   constructor(props) {
@@ -93,7 +93,7 @@ class DeleteEntity extends React.Component {
           </Button>
         )}
         <Modal
-          isSmall
+          variant={ModalVariant.small}
           title={`Delete this ${this.props.entity}?`}
           isOpen={isModalOpen || (this.props.showNow && !this.state.closed)}
           onClose={this.handleModalHide}
@@ -117,7 +117,6 @@ class DeleteEntity extends React.Component {
               Cancel
             </Button>
           ]}
-          isFooterLeftAligned
         >
           {closing ? `Deleting ${name}` : `${name}`}
         </Modal>
