@@ -321,6 +321,9 @@ static void qdr_settle_subscription_delivery_CT(qdr_core_t *core, qdr_action_t *
 
         bool moved = qdr_delivery_settled_CT(core, in_delivery);
         if (moved) {
+            // expect: in_delivery has at least 2 refcounts - one from being on
+            // the unsettled list and another from the action
+            assert(sys_atomic_get(&in_delivery->ref_count) > 1);
             qdr_delivery_decref_CT(core, in_delivery, "qdr_settle_subscription_delivery_CT - removed from unsettled");
             qdr_delivery_push_CT(core, in_delivery);
         }

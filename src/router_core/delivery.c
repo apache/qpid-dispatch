@@ -838,17 +838,18 @@ void qdr_delivery_mcast_inbound_update_CT(qdr_core_t *core, qdr_delivery_t *in_d
             qdr_delivery_push_CT(core, out_peer);
         }
 
-        if (moved) {
-            // expect: in_dlv still references out_peer (with refcount), so
-            // out_peer will not be freed by this decref:
-            assert(!unlink || sys_atomic_get(&out_peer->ref_count) > 1);
-            qdr_delivery_decref_CT(core, out_peer,
-                                   "qdr_delivery_mcast_inbound_update_CT - removed out_peer from unsettled");
-        }
-
         qd_log(core->log, QD_LOG_TRACE,
                DLV_FMT" Updating mcast delivery out peer "DLV_FMT" updated disp=%s settled=%s",
                DLV_ARGS(in_dlv), DLV_ARGS(out_peer), (push) ? "True" : "False", (unlink) ? "True" : "False");
+
+        if (moved) {
+            // expect: in_dlv still references out_peer (with refcount), and
+            // there remains an old refcount from being on the unsettled list,
+            // so out_peer will not be freed by this decref:
+            assert(sys_atomic_get(&out_peer->ref_count) > 1);
+            qdr_delivery_decref_CT(core, out_peer,
+                                   "qdr_delivery_mcast_inbound_update_CT - removed out_peer from unsettled");
+        }
 
         if (unlink) {
             // expect: in_dlv should not be freed here as caller must hold reference:
@@ -919,6 +920,8 @@ static bool qdr_delivery_mcast_outbound_settled_CT(qdr_core_t *core, qdr_deliver
 
     out_dlv->settled = true;
     if (qdr_delivery_settled_CT(core, out_dlv)) {
+        // expect: out_dlv reference count should include the unsettled list and the peer
+        assert(sys_atomic_get(&out_dlv->ref_count) > 1);
         qdr_delivery_decref_CT(core, out_dlv, "qdr_delivery_mcast_outbound_settled_CT - out_dlv removed from unsettled");
     }
 
