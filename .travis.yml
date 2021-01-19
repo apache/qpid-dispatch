@@ -23,6 +23,7 @@ jobs:
   fast_finish: true
   allow_failures:
     - os: osx
+    - name: "qdrouterd:TSAN"
   include:
   - name: "apache-rat:check"
     os: linux
@@ -80,6 +81,12 @@ jobs:
     os: linux
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.33.0
+  - name: "qdrouterd:TSAN"
+    os: linux
+    dist: bionic
+    env:
+    - PATH="/usr/bin:$PATH" PROTON_VERSION=0.33.0
+    - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
   - os: osx
     osx_image: xcode11
     env:
