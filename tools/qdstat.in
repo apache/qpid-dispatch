@@ -44,18 +44,17 @@ from qpid_dispatch_internal.compat import UNICODE
 def get(obj, attr):
     return getattr(obj, attr, None)
 
-class BusManager(Node):
+class BusManager(object):
 
     schema = QdSchema()
 
     def __init__(self, opts):
         self.opts = opts
-        super(BusManager, self).__init__(
-            Node.connection(opts_url(opts), opts.router,
-                            timeout=opts.timeout,
-                            ssl_domain=opts_ssl_domain(opts),
-                            sasl=opts_sasl(opts),
-                            edge_router=opts.edge_router))
+        self.node = Node.connect(opts_url(opts), opts.router,
+                                 timeout=opts.timeout,
+                                 ssl_domain=opts_ssl_domain(opts),
+                                 sasl=opts_sasl(opts),
+                                 edge_router=opts.edge_router)
         self.show = getattr(self, opts.show)
         self.bodyFormat = BodyFormat.CSV if opts.csv else BodyFormat.CLASSIC
 
@@ -65,7 +64,10 @@ class BusManager(Node):
             for a in attribute_names:
                 unames.append(UNICODE(a))
             attribute_names = unames
-        return super(BusManager, self).query(entity_type, attribute_names, count=limit).get_entities()
+        return self.node.query(entity_type, attribute_names, count=limit).get_entities()
+
+    def close(self):
+        self.node.close()
 
     def connAuth(self, conn):
         ##
@@ -858,7 +860,7 @@ class BusManager(Node):
         disp = Display(prefix="  ", bodyFormat=self.bodyFormat)
 
         vhosts = self.query('org.apache.qpid.dispatch.vhost')
-        schema = self.get_schema()
+        schema = self.node.get_schema()
         vg_schema = schema['entityTypes']['vhostUserGroupSettings']['attributes']
 
         if len(vhosts) == 0:
@@ -995,7 +997,7 @@ class BusManager(Node):
 
 
     def displayLog(self):
-        log = self.get_log(limit=self.opts.limit)
+        log = self.node.get_log(limit=self.opts.limit)
         for line in log:
             print("%s %s (%s) %s" % (ctime(line[5]), line[0], line[1], line[2]))
 
@@ -1031,7 +1033,7 @@ class BusManager(Node):
         print("")
 
     def has_nodes(self):
-        all_nodes = super(BusManager, self).get_mgmt_nodes()
+        all_nodes = self.node.get_mgmt_nodes()
         has_nodes = True
         if all_nodes:
             if len(all_nodes) < 2:
@@ -1042,7 +1044,7 @@ class BusManager(Node):
         return has_nodes, all_nodes
 
     def has_nodes(self):
-        all_nodes = super(BusManager, self).get_mgmt_nodes()
+        all_nodes = self.node.get_mgmt_nodes()
         has_nodes = True
         if all_nodes:
             if len(all_nodes) < 2:
@@ -1057,7 +1059,7 @@ class BusManager(Node):
         if self.opts.all_routers and has_nodes:
             print(str(datetime.utcnow()) + " UTC")
             for node in nodes:
-                super(BusManager, self).set_client(node[6:])
+                self.node.set_client(node[6:])
                 parts = node.split("/")
                 print ("Router ", parts[3])
                 print("")

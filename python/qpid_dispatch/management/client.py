@@ -93,20 +93,7 @@ class Node(object):
     @staticmethod
     def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None, edge_router=None):
         """Return a BlockingConnection suitable for connecting to a management node
-        @param url: URL of the management node.
-        @param router: If address does not contain a path, use the management node for this router ID.
-            If not specified and address does not contain a path, use the default management node.
         """
-        url = Url(url)          # Convert string to Url class.
-
-        if url.path is None:
-            if router:
-                url.path = u'_topo/0/%s/$management' % router
-            elif edge_router:
-                url.path = u'_edge/%s/$management' % edge_router
-            else:
-                url.path = u'$management'
-
         if ssl_domain:
             sasl_enabled = True
         else:
@@ -124,11 +111,26 @@ class Node(object):
     @staticmethod
     def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
                 edge_router=None):
-        """Return a Node connected with the given parameters, see L{connection}"""
-        return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
-                                    edge_router=edge_router))
+        """
+        Return a Node connected with the given parameters, see L{connection}
+        @param url: URL of the management node.
+        @param router: If address does not contain a path, use the management node for this router ID.
+        If not specified and address does not contain a path, use the default management node.
+        """
+        url_ = Url(url)          # Convert string to Url class.
 
-    def __init__(self, connection, locales=None):
+        if url_.path is not None:
+            path = url_.path
+        elif router:
+            path = u'_topo/0/%s/$management' % router
+        elif edge_router:
+            path = u'_edge/%s/$management' % edge_router
+        else:
+            path = u'$management'
+        return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
+                                    edge_router=edge_router), path)
+
+    def __init__(self, connection, path, locales=None):
         """
         Create a management node proxy using the given connection.
         @param locales: Default list of locales for management operations.
@@ -139,7 +141,8 @@ class Node(object):
         self.locales = locales
 
         self.locales = locales
-        self.url = connection.url
+        self.url = Url(connection.url)
+        self.url.path = path
         self.client = SyncRequestResponse(connection, self.url.path)
         self.reply_to = self.client.reply_to
         self.connection = connection
