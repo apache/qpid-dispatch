@@ -19,7 +19,6 @@
 
 language: c
 cache: ccache
-node_js: lts/*
 jobs:
   fast_finish: true
   allow_failures:
@@ -116,6 +115,9 @@ addons:
     - tox
     # code coverage
     - lcov
+
+before_install:
+- nvm install "lts/*"
 
 install:
 - NPROC=2
