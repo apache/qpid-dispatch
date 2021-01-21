@@ -26,9 +26,8 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 import unittest, json
+from collections import OrderedDict
 from qpid_dispatch_internal.management.schema import Schema, BooleanType, EnumType, AttributeType, ValidationError, EnumValue, EntityType
-from qpid_dispatch_internal.compat import OrderedDict
-import collections
 
 def replace_od(thing):
     """Replace OrderedDict with dict"""

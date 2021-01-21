@@ -24,19 +24,6 @@ packages installed:
 - asciidoctor (for building docs)
 
 The unit tests are implemented using Python's unittest library.
-Python versions prior to 2.7 do not have this library.  In
-order to run the unit tests using older versions of python the
-"unittest2" module must be installed.
-
-This may be available from your Linux distribution or via pip:
-
-  pip install unittest2
-
-The command line arguments parsing is done using Python's argparse library.
-Python versions prior to 2.7 do not have this library. Similar to what happend
-with unittest2, this may be fixed via pip:
-
-  pip install argparse
 
 Dispatch will not build on Windows.
 

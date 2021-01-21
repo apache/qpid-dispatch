@@ -25,7 +25,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 
 __all__ = [
-    "OrderedDict",
     "JSON_LOAD_KWARGS",
     "dictify",
     "IS_PY2",
@@ -33,6 +32,9 @@ __all__ = [
     "PY_TEXT_TYPE",
     "PY_BINARY_TYPE",
     "PY_INTEGER_TYPES",
+    "dict_keys",
+    "dict_values",
+    "dict_items",
     "dict_iterkeys",
     "dict_itervalues",
     "dict_iteritems",
@@ -42,15 +44,10 @@ __all__ = [
 
 import sys
 
-try:
-    from collections import OrderedDict
-except Exception:
-    from ordereddict import OrderedDict
+from collections import OrderedDict
 
-if sys.version_info >= (2, 7):
-    JSON_LOAD_KWARGS = {'object_pairs_hook':OrderedDict}
-else:
-    JSON_LOAD_KWARGS = {}
+JSON_LOAD_KWARGS = {'object_pairs_hook': OrderedDict}
+
 
 def dictify(od):
     """Recursively replace OrderedDict with dict"""

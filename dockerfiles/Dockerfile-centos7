@@ -17,11 +17,10 @@
 # under the License.
 #
 
-# Downloads, builds and installs apache proton and qpid dispatch on Centos and starts the dispatch router
+# Downloads, builds and installs apache proton and qpid dispatch on CentOS and starts the dispatch router
 # /main is the top level folder under which proton (/main/qpid-proton/) and dispatch (/main/qpid-dispatch) source code is downloaded from github
 # /usr/lib64 is the folder in which the proton artifacts are installed.
-# /usr/sbin is the folder in which dispatch executable installed
-
+# /usr/sbin is the folder in which dispatch executable is installed
 
 # Copy this docker file to your local folder. Build the docker image like this:
 # > sudo docker build -t <username>/dispatch --file=Dockerfile .
@@ -36,26 +35,24 @@
 
 ################# Begin code #######
 
-# Get the latest Centos version from dockerhub
-FROM centos:6
+# Get the latest CentOS 7 version from dockerhub
+FROM library/centos:7
 
 MAINTAINER "dev@qpid.apache.org"
-
-# Install all the required packages. Some in this list were picked off from proton's INSTALL.md (https://github.com/apache/qpid-proton/blob/master/INSTALL.md) and the rest are from dispatch (https://github.com/apache/qpid-dispatch/blob/master/README)
 
 # For centos, some packages are found in the epel repo, so first install access to it
 RUN yum -y install epel-release
 
 # now install the rest of the packages
-RUN yum -y install gcc gcc-c++ cmake libuuid-devel openssl-devel python-unittest2 python-setuptools python-argparse cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel java-1.8.0-openjdk-devel git make doxygen valgrind emacs libuv libuv-devel libwebsockets-devel && yum clean all -y
+RUN yum -y install gcc gcc-c++ cmake libuuid-devel openssl-devel cyrus-sasl-devel cyrus-sasl-plain cyrus-sasl-gssapi cyrus-sasl-md5 swig python-devel git make doxygen valgrind emacs libwebsockets-devel && yum clean all -y
 
 # Create a main directory and clone the qpid-proton repo from github
-RUN mkdir /main && cd /main && git clone https://github.com/apache/qpid-proton.git  && cd /main/qpid-proton && mkdir /main/qpid-proton/build
+RUN mkdir /main && cd /main && git clone https://github.com/apache/qpid-proton.git && cd /main/qpid-proton && mkdir /main/qpid-proton/build
 
 WORKDIR /main/qpid-proton/build
 
 # make and install proton
-RUN cmake .. -DSYSINSTALL_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_PYTHON=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=Debug -DBUILD_JAVA=OFF -DBUILD_RUBY=OFF -DBUILD_CPP=OFF -DBUILD_GO=OFF -DBUILD_WITH_CXX=OFF -DNOENABLE_LINKTIME_OPTIMIZATION=ON && make install
+RUN cmake .. -DSYSINSTALL_BINDINGS=ON -DCMAKE_INSTALL_PREFIX=/usr -DSYSINSTALL_PYTHON=ON -DCMAKE_VERBOSE_MAKEFILE=ON -DCMAKE_BUILD_TYPE=Debug && make install
 
 # Clone the qpid-dispatch git repo
 RUN cd /main && git clone https://github.com/apache/qpid-dispatch.git && mkdir /main/qpid-dispatch/build
@@ -63,10 +60,9 @@ RUN cd /main && git clone https://github.com/apache/qpid-dispatch.git && mkdir /
 WORKDIR /main/qpid-dispatch/build
 RUN cmake .. -DCMAKE_INSTALL_PREFIX=/usr && make install
 
-# Uncomment the following line if you would like to run all the dispatch unit tests and system tests. 
+# Uncomment the following line if you would like to run all the dispatch unit tests and system tests.
 # RUN ctest -VV
 
 # Start the dispatch router
 #ENTRYPOINT ["qdrouterd"]
 CMD ["/bin/bash"]
-
