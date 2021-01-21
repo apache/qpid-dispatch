@@ -2565,10 +2565,16 @@ class MobileAddressMulticastTest(MessagingHandler):
         local_node = Node.connect(self.check_addr_host, timeout=TIMEOUT)
         outs = local_node.query(type='org.apache.qpid.dispatch.router.address')
         found = False
+
+        subscriber_count_index = outs.attribute_names.index("subscriberCount")
+        remote_count_index = outs.attribute_names.index("remoteCount")
+
         self.num_attempts += 1
         for result in outs.results:
             if self.address in result[0]:
-                if self.subscriber_count == 0 or (result[6] + result[7] == self.subscriber_count):
+                # We are good if the sum of subscriberCount and remoteCount
+                # equals the total subscriber_count
+                if self.subscriber_count == 0 or (result[subscriber_count_index] + result[remote_count_index] == self.subscriber_count):
                     # The address is in the address table and the subscriber count is as expected.
                     # subscriberCount match means that both edge routers have
                     # told the interior router about the existence of the address
