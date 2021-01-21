@@ -2545,6 +2545,8 @@ class LinkRoute3Hop(TestCase):
         self.assertEqual(total, fake_service.in_count)
         self.assertEqual(total, fake_service.out_count)
 
+        self.QDR_C.wait_address_unsubscribed("closest/test-client")
+
     def test_02_modified_outcome(self):
         """
         Ensure all elements of a Modified disposition are passed thru the link
@@ -2572,6 +2574,7 @@ class LinkRoute3Hop(TestCase):
         sniffer = DispositionSniffer("%s/closest/test-client" %
                                      self.QDR_C.addresses[0])
         sniffer.run()
+        self.assertEqual(None, sniffer.error)
         state = sniffer.delivery.remote
         self.assertTrue(state.failed)
         self.assertTrue(state.undeliverable)
@@ -2580,6 +2583,7 @@ class LinkRoute3Hop(TestCase):
         self.assertEqual('Value', state.annotations[symbol('Key')])
 
         fake_service.join()
+        self.QDR_C.wait_address_unsubscribed("closest/test-client")
 
     def test_03_rejected_outcome(self):
         """
@@ -2593,7 +2597,7 @@ class LinkRoute3Hop(TestCase):
                 # remote endpoint
                 dlv = event.delivery
                 dlv.local.condition = Condition("condition-name",
-                                                "condition-description",
+                                                str("condition-description"),
                                                 {symbol("condition"): "info"})
                 dlv.update(Delivery.REJECTED)
                 dlv.settle()
@@ -2608,6 +2612,7 @@ class LinkRoute3Hop(TestCase):
         sniffer = DispositionSniffer("%s/closest/test-client" %
                                      self.QDR_C.addresses[0])
         sniffer.run()
+        self.assertEqual(None, sniffer.error)
         state = sniffer.delivery.remote
         self.assertTrue(state.condition is not None)
         self.assertEqual("condition-name", state.condition.name)
@@ -2617,6 +2622,7 @@ class LinkRoute3Hop(TestCase):
         self.assertEqual('info', state.condition.info[symbol("condition")])
 
         fake_service.join()
+        self.QDR_C.wait_address_unsubscribed("closest/test-client")
 
     def test_04_extension_state(self):
         """
