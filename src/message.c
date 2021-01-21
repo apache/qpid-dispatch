@@ -2496,6 +2496,9 @@ int qd_message_stream_data_buffers(qd_message_stream_data_t *stream_data, pn_raw
     qd_buffer_t *buffer       = stream_data->payload.buffer;
     size_t       data_offset  = stream_data->payload.offset;
     size_t       payload_len  = stream_data->payload.length;
+    qd_message_content_t *content = stream_data->owning_message->content;
+
+    LOCK(content->lock);
 
     //
     // Skip the buffer offset
@@ -2527,6 +2530,8 @@ int qd_message_stream_data_buffers(qd_message_stream_data_t *stream_data, pn_raw
         buffer = DEQ_NEXT(buffer);
         idx++;
     }
+
+    UNLOCK(content->lock);
 
     return idx;
 }
