@@ -123,6 +123,10 @@ addons:
     # code coverage
     - lcov
 
+before_install:
+# Install and use the latest Node.js LTS version
+- nvm install "lts/*"
+
 install:
 - NPROC=2
 - PREFIX=$PWD/install
