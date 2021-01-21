@@ -671,6 +671,24 @@ class Qdrouterd(Process):
                     and addrs[0]['containerCount'] >= containers)
         assert retry(check, **retry_kwargs)
 
+    def wait_address_unsubscribed(self, address, **retry_kwargs):
+        """
+        Block until address has no subscribers
+        """
+        a_type = 'org.apache.qpid.dispatch.router.address'
+        def check():
+            addrs = self.management.query(a_type).get_dicts()
+            rc = list(filter(lambda a: a['name'].find(address) != -1,
+                             addrs))
+            count = 0
+            for a in rc:
+                count += a['subscriberCount']
+                count += a['remoteCount']
+                count += a['containerCount']
+
+            return count == 0
+        assert retry(check, **retry_kwargs)
+
     def get_host(self, protocol_family):
         if protocol_family == 'IPv4':
             return '127.0.0.1'

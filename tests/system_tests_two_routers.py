@@ -1644,7 +1644,7 @@ class PropagatedDispositionData(PropagatedDisposition):
     """
     def set_rejected_data(self, local_state):
         local_state.condition = Condition("name",
-                                          "description",
+                                          str("description"),
                                           {symbol("info"): True})
 
     def check_rejected_data(self, remote_state):
