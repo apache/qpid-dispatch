@@ -83,7 +83,7 @@ jobs:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.33.0
   - name: "qdrouterd:TSAN"
     os: linux
-    dist: bionic
+    dist: focal
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.33.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
