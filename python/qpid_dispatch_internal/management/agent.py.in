@@ -435,6 +435,8 @@ class ListenerEntity(ConnectionBaseEntity):
         return super(ListenerEntity, self).__str__().replace("Entity(", "ListenerEntity(")
 
     def _delete(self):
+        if self.http and ${SKIP_DELETE_HTTP_LISTENER}:
+            raise BadRequestStatus("HTTP listeners cannot be deleted")
         self._qd.qd_connection_manager_delete_listener(self._dispatch, self._implementations[0].key)
 
 

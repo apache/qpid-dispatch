@@ -49,6 +49,13 @@ class RouterTestHttp(TestCase):
         return os.path.join(DIR, 'ssl_certs', name)
 
     @classmethod
+    def setUpClass(cls):
+        super(RouterTestHttp, cls).setUpClass()
+        # Http listener delete tests will run only if LWS version == 2.4.2
+        # OR (if LWS version > 3.0 and LWS version < 4.0)
+        cls.skip_delete_http_listener_test = ${SKIP_DELETE_HTTP_LISTENER}
+
+    @classmethod
     def get(cls, url, use_ca=True):
         if sys.version_info >= (2, 7):
             if use_ca:
@@ -149,17 +156,28 @@ class RouterTestHttp(TestCase):
         # Delete the listener on port http_delete_listen_port_1
         long_type = 'org.apache.qpid.dispatch.listener'
         mgmt = QdManager(self, address=address())
-        mgmt.delete(long_type, name=name)
 
-        # Once again try to perform a GET request. Now since the listener
-        # is gone, the GET will fail.
-        ret_val = retry(lambda: self.is_get_request_failing(url_1, use_ca=False), timeout=10, delay=2)
-        self.assertTrue(ret_val)
+        if self.skip_delete_http_listener_test:
+            # You are not allowed to delete a http:yes listener
+            # Try deleting it and make sure you get an exception.
+            try:
+                mgmt.delete(long_type, name=name)
+            except Exception as e:
+                if "BadRequestStatus: HTTP listeners cannot be deleted" in str(e):
+                    exception_raised = True
+            self.assertTrue(exception_raised)
+        else:
+            mgmt.delete(long_type, name=name)
 
-        # HTTP listener on port http_delete_listen_port_1 has been
-        # deleted successfully. Make sure that the listener on port
-        # http_delete_listen_port_2 is still working.
-        out = self.get(url_2, use_ca=False)
+            # Once again try to perform a GET request. Now since the listener
+            # is gone, the GET will fail.
+            ret_val = retry(lambda: self.is_get_request_failing(url_1, use_ca=False), timeout=10, delay=2)
+            self.assertTrue(ret_val)
+
+            # HTTP listener on port http_delete_listen_port_1 has been
+            # deleted successfully. Make sure that the listener on port
+            # http_delete_listen_port_2 is still working.
+            out = self.get(url_2, use_ca=False)
 
     def test_http_get(self):
         config = Qdrouterd.Config([
@@ -321,18 +339,19 @@ class RouterTestHttp(TestCase):
 
             # Try a get on the HTTP listener we are going to delete
             self.assert_get_cert("https://localhost:%d" % r.ports[3])
-            
-            # Delete the listener with name 'delete-me'
-            long_type = 'org.apache.qpid.dispatch.listener'
-            mgmt = QdManager(self, address=address())
-            mgmt.delete(long_type, name=name)
 
-            # Make sure that the listener got deleted.
-            ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
-            self.assertTrue(ret_val)
+            if not self.skip_delete_http_listener_test:
+                # Delete the listener with name 'delete-me'
+                long_type = 'org.apache.qpid.dispatch.listener'
+                mgmt = QdManager(self, address=address())
+                mgmt.delete(long_type, name=name)
 
-            # Make sure other ports are working normally after the above delete.
-            self.assert_get_cert("https://localhost:%d" % r.ports[2])
+                # Make sure that the listener got deleted.
+                ret_val = retry(lambda: self.is_get_request_failing("https://localhost:%s/system_tests_http.txt" % r.ports[3], use_get_cert=True), timeout=10, delay=2)
+                self.assertTrue(ret_val)
+
+                # Make sure other ports are working normally after the above delete.
+                self.assert_get_cert("https://localhost:%d" % r.ports[2])
 
 
 
