@@ -222,10 +222,12 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     }
                 }
                 else if (new_disp == QD_DELIVERY_MOVED_TO_NEW_LINK) {
-                    DEQ_REMOVE_HEAD(link->undelivered);
-                    dlv->link_work = 0;
-                    dlv->where = QDR_DELIVERY_NOWHERE;
-                    qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - moved from undelivered list to some other link");
+                    if (DEQ_HEAD(link->undelivered) != 0) {
+                        DEQ_REMOVE_HEAD(link->undelivered);
+                        dlv->link_work = 0;
+                        dlv->where = QDR_DELIVERY_NOWHERE;
+                        qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - moved from undelivered list to some other link");
+                    }
                 }
                 else {
                     qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - not send_complete");
