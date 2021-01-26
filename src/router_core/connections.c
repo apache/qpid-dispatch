@@ -628,11 +628,59 @@ qdr_link_t *qdr_link_first_attach(qdr_connection_t *conn,
     action->args.connection.dir    = dir;
     action->args.connection.source = source;
     action->args.connection.target = target;
-    action->args.connection.initial_delivery = initial_delivery;
-    if (!!initial_delivery)
-        qdr_delivery_incref(initial_delivery, "qdr_link_first_attach - protect delivery in action list");
-    qdr_action_enqueue(conn->core, action);
 
+    //
+    // If there is an initial delivery for this attach, remove it from its old link now so it can be placed on
+    // the new link later by the action handler inside the core thread.
+    //
+    if (!!initial_delivery) {
+        action->args.connection.initial_delivery = initial_delivery;
+        qdr_delivery_incref(initial_delivery, "qdr_link_first_attach - protect delivery in action list");
+        qdr_link_t *old_link = safe_deref_qdr_link_t(initial_delivery->link_sp);
+
+        //
+        // Remove the delivery from its current link if needed
+        //
+        if (!!old_link) {
+            bool removed = false;
+            qd_nullify_safe_ptr(&initial_delivery->link_sp);
+            sys_mutex_lock(old_link->conn->work_lock);
+            switch (initial_delivery->where) {
+            case QDR_DELIVERY_NOWHERE:
+                break;
+
+            case QDR_DELIVERY_IN_UNDELIVERED:
+                DEQ_REMOVE(old_link->undelivered, initial_delivery);
+                initial_delivery->where = QDR_DELIVERY_NOWHERE;
+                removed = true;
+                break;
+
+            case QDR_DELIVERY_IN_UNSETTLED:
+                DEQ_REMOVE(old_link->unsettled, initial_delivery);
+                initial_delivery->where = QDR_DELIVERY_NOWHERE;
+                removed = true;
+                break;
+
+            case QDR_DELIVERY_IN_SETTLED:
+                DEQ_REMOVE(old_link->settled, initial_delivery);
+                initial_delivery->where = QDR_DELIVERY_NOWHERE;
+                removed = true;
+                break;
+            }
+            sys_mutex_unlock(old_link->conn->work_lock);
+
+            if (removed)
+                qdr_delivery_decref(conn->core, initial_delivery, "qdr_link_first_attach - initial_delivery removed from old link");
+
+            //
+            // Set the delivery's conn and link ids to zero to indicate the delivery is in limbo.
+            //
+            initial_delivery->conn_id = 0;
+            initial_delivery->link_id = 0;
+        }
+    }
+
+    qdr_action_enqueue(conn->core, action);
     return link;
 }
 
@@ -1608,36 +1656,11 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 
 static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
-    qdr_link_t *old_link  = safe_deref_qdr_link_t(dlv->link_sp);
-    int         ref_delta = -1; // Account for the action-list protection
-
     //
-    // Remove the delivery from its current link if needed
+    // Adjust the delivery's identity
     //
-    if (!!old_link) {
-        switch (dlv->where) {
-        case QDR_DELIVERY_NOWHERE:
-            break;
-
-        case QDR_DELIVERY_IN_UNDELIVERED:
-            DEQ_REMOVE(old_link->undelivered, dlv);
-            dlv->where = QDR_DELIVERY_NOWHERE;
-            ref_delta--;
-            break;
-
-        case QDR_DELIVERY_IN_UNSETTLED:
-            DEQ_REMOVE(old_link->unsettled, dlv);
-            dlv->where = QDR_DELIVERY_NOWHERE;
-            ref_delta--;
-            break;
-
-        case QDR_DELIVERY_IN_SETTLED:
-            DEQ_REMOVE(old_link->settled, dlv);
-            dlv->where = QDR_DELIVERY_NOWHERE;
-            ref_delta--;
-            break;
-        }
-    }
+    dlv->conn_id = link->conn->identity;
+    dlv->link_id = link->identity;
 
     //
     // Enqueue the delivery onto the new link's undelivered list
@@ -1646,19 +1669,9 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
     qdr_forward_deliver_CT(core, link, dlv);
 
     //
-    // Adjust the delivery's identity
-    //
-    dlv->conn_id = link->conn->identity;
-    dlv->link_id = link->identity;
-
-    //
     // Adjust the delivery's reference count
     //
-    assert(ref_delta <= 0);
-    while (ref_delta < 0) {
-        qdr_delivery_decref(core, dlv, "qdr_link_process_initial_delivery_CT");
-        ref_delta++;
-    }
+    qdr_delivery_decref(core, dlv, "qdr_link_process_initial_delivery_CT - action-list protection");
 }
 
 

@@ -175,11 +175,8 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     sys_mutex_unlock(conn->work_lock);
                     new_disp = conn->protocol_adaptor->deliver_handler(conn->protocol_adaptor->user_context, link, dlv, settled);
                     sys_mutex_lock(conn->work_lock);
-                    if (safe_deref_qdr_link_t(dlv->link_sp) != link) {
-                        to_new_link = true;
-                        break;
-                    }
                     if (new_disp == QD_DELIVERY_MOVED_TO_NEW_LINK) {
+                        to_new_link = true;
                         break;
                     }
                 } while (settled != dlv->settled && !to_new_link);  // oops missed the settlement
@@ -220,12 +217,6 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                             qd_log(core->log, QD_LOG_DEBUG, DLV_FMT"Delivery transfer:  qdr_link_process_deliveries: undelivered-list -> unsettled-list", DLV_ARGS(dlv));
                         }
                     }
-                }
-                else if (new_disp == QD_DELIVERY_MOVED_TO_NEW_LINK) {
-                    DEQ_REMOVE_HEAD(link->undelivered);
-                    dlv->link_work = 0;
-                    dlv->where = QDR_DELIVERY_NOWHERE;
-                    qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - moved from undelivered list to some other link");
                 }
                 else {
                     qdr_delivery_decref(core, dlv, "qdr_link_process_deliveries - release local reference - not send_complete");
