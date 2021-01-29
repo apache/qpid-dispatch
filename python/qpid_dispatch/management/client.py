@@ -90,26 +90,8 @@ class Node(object):
 
         return attrs
 
-    @staticmethod
-    def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None, edge_router=None):
-        """Return a BlockingConnection suitable for connecting to a management node
-        """
-        if ssl_domain:
-            sasl_enabled = True
-        else:
-            sasl_enabled = True if sasl else False
-
-        # if sasl_mechanism is unicode, convert it to python string
-        return BlockingConnection(url,
-                                  timeout=timeout,
-                                  ssl_domain=ssl_domain,
-                                  sasl_enabled=sasl_enabled,
-                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs != None else None,
-                                  user=str(sasl.user) if sasl and sasl.user != None else None,
-                                  password=str(sasl.password) if sasl and sasl.password != None else None)
-
-    @staticmethod
-    def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
+    @classmethod
+    def connect(cls, url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
                 edge_router=None):
         """
         Return a Node connected with the given parameters, see L{connection}
@@ -127,8 +109,14 @@ class Node(object):
             path = u'_edge/%s/$management' % edge_router
         else:
             path = u'$management'
-        return Node(Node.connection(url, router, timeout, ssl_domain, sasl,
-                                    edge_router=edge_router), path)
+        return cls(BlockingConnection(url,
+                                      timeout=timeout,
+                                      ssl_domain=ssl_domain,
+                                      sasl_enabled=bool(ssl_domain or sasl),
+                                      allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs is not None else None,
+                                      user=str(sasl.user) if sasl and sasl.user is not None else None,
+                                      password=str(sasl.password) if sasl and sasl.password is not None else None),
+                   path)
 
     def __init__(self, connection, path, locales=None):
         """
