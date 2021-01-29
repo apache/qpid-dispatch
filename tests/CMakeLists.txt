@@ -163,6 +163,7 @@ foreach(py_test_module
     ${SYSTEM_TESTS_HTTP2}
     system_tests_http1_adaptor
     system_tests_tcp_adaptor
+    system_tests_grpc
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
