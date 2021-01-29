@@ -85,32 +85,17 @@ class Node(object):
 
         return attrs
 
-    @staticmethod
-    def connection(url=None, router=None, timeout=10, ssl_domain=None, sasl=None, edge_router=None):
-        """Return a BlockingConnection suitable for connecting to a management node
-        """
-        if ssl_domain:
-            sasl_enabled = True
-        else:
-            sasl_enabled = True if sasl else False
-
-        # if sasl_mechanism is unicode, convert it to python string
-        return BlockingConnection(url,
-                                  timeout=timeout,
-                                  ssl_domain=ssl_domain,
-                                  sasl_enabled=sasl_enabled,
-                                  allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs is not None else None,
-                                  user=str(sasl.user) if sasl and sasl.user is not None else None,
-                                  password=str(sasl.password) if sasl and sasl.password is not None else None)
-
-    @staticmethod
-    def connect(url=None, router=None, timeout=10, ssl_domain=None, sasl=None,
-                edge_router=None):
+    @classmethod
+    def connect(cls, url=None, router=None, timeout=10, ssl_domain=None, sasl=None, edge_router=None):
         """
         Return a Node connected with the given parameters, see L{connection}
         @param url: URL of the management node.
         @param router: If address does not contain a path, use the management node for this router ID.
         If not specified and address does not contain a path, use the default management node.
+        :param edge_router:
+        :param timeout:
+        :param sasl:
+        :param ssl_domain:
         """
         url_ = Url(url)          # Convert string to Url class.
 
@@ -121,10 +106,16 @@ class Node(object):
         elif edge_router:
             path = '_edge/%s/$management' % edge_router
         else:
-            path = '$management'
-        connection = Node.connection(url, router, timeout, ssl_domain, sasl, edge_router=edge_router)
+            path = u'$management'
+        connection = BlockingConnection(url,
+                                        timeout=timeout,
+                                        ssl_domain=ssl_domain,
+                                        sasl_enabled=bool(ssl_domain or sasl),
+                                        allowed_mechs=str(sasl.mechs) if sasl and sasl.mechs is not None else None,
+                                        user=str(sasl.user) if sasl and sasl.user is not None else None,
+                                        password=str(sasl.password) if sasl and sasl.password is not None else None)
         try:
-            return Node(connection, path)
+            return cls(connection, path)
         except Exception:
             # ownership of connection has not been given to a new Node; close the connection
             connection.close()
