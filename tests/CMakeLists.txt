@@ -94,7 +94,7 @@ if(USE_LIBWEBSOCKETS)
 endif()
 
 if(libnghttp2_FOUND)
-  set(SYSTEM_TESTS_HTTP2 system_tests_http2)
+  set(SYSTEM_TESTS_HTTP2 system_tests_http2 system_tests_grpc)
 endif(libnghttp2_FOUND)
 
 if(CONSOLE_INSTALL)
@@ -163,7 +163,6 @@ foreach(py_test_module
     ${SYSTEM_TESTS_HTTP2}
     system_tests_http1_adaptor
     system_tests_tcp_adaptor
-    system_tests_grpc
     )
 
   add_test(${py_test_module} ${TEST_WRAP} ${PYTHON_TEST_COMMAND} -v ${py_test_module})
