@@ -31,7 +31,8 @@
   "eslintConfig": {
     "extends": "react-app",
     "ignorePatterns": [
-      "build/**"
+      "build/**",
+      "dist/**"
     ],
     "overrides": [
       {
