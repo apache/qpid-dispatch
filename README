@@ -206,3 +206,36 @@ order to use this option.
 
 False positive leak errors can be suppressed via the lsan.supp file in
 the tests directory.
+
+
+CMake Build Options
+===================
+
+Use `cmake-gui` to explore the CMake build options available.
+Existing build directory can be opened with `cmake-gui -S .. -B .`
+
+-DCMAKE_BUILD_TYPE=
+-------------------
+
+Dispatch defaults to building with the `RelWithDebInfo` CMake preset.
+Other options include `Debug` (disables optimizations) and `Coverage`.
+
+-DQD_ENABLE_ASSERTIONS=
+-----------------------
+
+Seting this to `ON` enables asserts irrespective of `CMAKE_BUILD_TYPE`.
+
+-DQD_MEMORY_STATS=
+------------------
+
+Dispatch will track memory pool usage statistics if this is enabled.
+
+-DCONSOLE_INSTALL=
+------------------
+
+Web console will not be built if this is set to `OFF`.
+
+-DRUNTIME_CHECK=
+----------------
+
+Enables C/C++ runtime checkers. See "Run Time Validation" chapter above.
