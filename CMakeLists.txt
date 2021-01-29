@@ -34,8 +34,16 @@ if (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
   set (has_debug_symbols " (has debug symbols)")
 endif (CMAKE_BUILD_TYPE MATCHES "Deb|Cover")
 message(STATUS "Build type is \"${CMAKE_BUILD_TYPE}\"${has_debug_symbols}")
+# This is commonly needed so define it before we include anything else.
+string(TOUPPER "${CMAKE_BUILD_TYPE}" uppercase_CMAKE_BUILD_TYPE)
 
 option(QD_MEMORY_STATS "Track memory pool usage statistics" ON)
+
+if(uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG" )
+    option(QD_ENABLE_ASSERTIONS "Enable assertions" ON)
+else()
+    option(QD_ENABLE_ASSERTIONS "Enable assertions" OFF)
+endif()
 
 file(STRINGS "${CMAKE_SOURCE_DIR}/VERSION.txt" QPID_DISPATCH_VERSION)
 
@@ -187,6 +195,32 @@ include_directories(
     ${Proton_Core_INCLUDE_DIRS}
     ${PYTHON_INCLUDE_PATH}
     )
+
+# Originally from the LLVM project, https://opensource.apple.com/source/llvmCore/llvmCore-2358.3/CMakeLists.txt.auto.html
+if(QD_ENABLE_ASSERTIONS)
+    # MSVC doesn't like _DEBUG on release builds.
+    if(NOT MSVC)
+        add_definitions(-D_DEBUG)
+    endif()
+    # On non-Debug builds cmake automatically defines NDEBUG, so we explicitly undefine it:
+    if(NOT uppercase_CMAKE_BUILD_TYPE STREQUAL "DEBUG")
+        # NOTE: use `add_compile_options` rather than `add_definitions` since
+        # `add_definitions` does not support generator expressions.
+        add_compile_options($<$<OR:$<COMPILE_LANGUAGE:C>,$<COMPILE_LANGUAGE:CXX>>:-UNDEBUG>)
+
+        # Also remove /D NDEBUG to avoid MSVC warnings about conflicting defines.
+        foreach (flags_var_to_scrub
+                CMAKE_CXX_FLAGS_RELEASE
+                CMAKE_CXX_FLAGS_RELWITHDEBINFO
+                CMAKE_CXX_FLAGS_MINSIZEREL
+                CMAKE_C_FLAGS_RELEASE
+                CMAKE_C_FLAGS_RELWITHDEBINFO
+                CMAKE_C_FLAGS_MINSIZEREL)
+            string (REGEX REPLACE "(^| )[/-]D *NDEBUG($| )" " "
+                    "${flags_var_to_scrub}" "${${flags_var_to_scrub}}")
+        endforeach()
+    endif()
+endif()
 
 if (NOT CMAKE_SYSTEM_NAME STREQUAL SunOS)
  add_compile_options(-Werror)
