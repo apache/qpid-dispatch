@@ -82,7 +82,7 @@ void set_content(qd_message_content_t *content, unsigned char *buffer, size_t le
     content->receive_complete = true;
 }
 
-TEST_CASE("More to come" * doctest::skip(false)) {
+TEST_CASE("Add autoLink to running router through qdra_config_auto_link_create_CT()" * doctest::skip(false)) {
     std::thread([]() {
         WithNoMemoryLeaks leaks{};
         QDR qdr{};
