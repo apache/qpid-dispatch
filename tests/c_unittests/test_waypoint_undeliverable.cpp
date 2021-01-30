@@ -280,13 +280,12 @@ TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
                                                          nullptr,  // remote container id
                                                          false,    // strip annotations in
                                                          false,    // strip annotations out
-                                                         false,    // allow dynamic link routes
-                                                         false,    // allow admin status update
-                                                         1,
-                                                         nullptr,  // vhost
+                                                         250, // link capacity  // TODO: had to update this due to production code update
+                                                         0,    // allow dynamic link routes
+                                                         0,    // allow admin status update
                                                          connection_info,
-                                                         nullptr,   // bind context
-                                                         nullptr);  // bind token
+                                                         0,
+                                                         0);
 
           // ok, lets make link using router
           qdr_link_t * qd_link = qdr_create_link_CT(qdr.qd->router->router_core,
@@ -329,10 +328,10 @@ TEST_CASE("waypoint_undeliverable" * doctest::skip(false)) {
             qd_bitmask_t * link_exclusion = NULL;
             int            ingress_index = 0;
             uint64_t       remote_disposition = 42;
-            pn_data_t *    remote_extension_state = NULL;
+            qd_delivery_state_t *remote_delivery_state = NULL;
 
             qdr_delivery_t *delivery = qdr_link_deliver(link.get(), msg, ingress, settled, link_exclusion,
-                                                        ingress_index, remote_disposition, remote_extension_state);
+                                                        ingress_index, remote_disposition, remote_delivery_state);  // TODO: had to update this, changed param type
             // qdr_link_deliver triggers async work, cannot check too soon
             qdr.wait();
 
