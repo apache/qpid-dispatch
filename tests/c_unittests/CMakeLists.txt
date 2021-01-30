@@ -25,6 +25,9 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_STANDARD_FLAGS} ${SANITIZE_FLAGS}"
 add_executable(c_unittests ${unittest_SOURCES} $<TARGET_OBJECTS:qpid-dispatch>)
 target_link_libraries(c_unittests pthread qpid-dispatch-libraries ${Proton_LIBRARIES})
 
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/threads4.conf
+    DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+
 add_test(
     NAME c_unittests
     COMMAND ${TEST_WRAP} $<TARGET_FILE:c_unittests>

@@ -126,7 +126,8 @@ class QDR {
         const bool load_config = true;
         if (load_config) {
             // call qd_dispatch_load_config to get management agent; so far, I never needed it for anything
-            std::string config_path = get_env("CMAKE_CURRENT_SOURCE_DIR") + "/threads4.conf";
+            const std::string &source_dir = get_env("CMAKE_CURRENT_SOURCE_DIR");
+            std::string config_path = "./threads4.conf";
             qd_dispatch_validate_config(config_path.c_str());
             qd_dispatch_load_config(qd, config_path.c_str());
         } else {
