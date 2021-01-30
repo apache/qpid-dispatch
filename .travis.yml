@@ -86,6 +86,17 @@ jobs:
   - name: "qdrouterd:TSAN"
     os: linux
     dist: focal
+    before_install:
+      # https://github.com/pypa/virtualenv/issues/1740
+      # https://github.com/pypa/virtualenv/issues/1873
+      - python -m pip install --user --upgrade pip
+      - python -m pip install --user --upgrade tox virtualenv==20.0.23
+      # Install quart to run the http2 tests.
+      - python -m pip install --user quart
+      # DISPATCH-1883: Install selectors to run tcp echo server/client tools
+      - python -m pip install --user selectors
+      # Install grpcio and protobuf to run the grpc tests.
+      - python -m pip install --user grpcio protobuf
     env:
     - PATH="/usr/bin:$PATH" PROTON_VERSION=0.33.0
     - DISPATCH_CMAKE_ARGS='-DRUNTIME_CHECK=tsan'
