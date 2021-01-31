@@ -1758,6 +1758,11 @@ uint64_t handle_outgoing_http(qdr_http2_stream_data_t *stream_data)
                     qd_message_stream_data_release(stream_data->next_stream_data);
                     stream_data->next_stream_data = 0;
                 }
+
+                for (uint32_t idx = 0; idx < count; idx++) {
+                    free(hdrs[idx].name);
+                    free(hdrs[idx].value);
+                }
             }
         }
         else {
