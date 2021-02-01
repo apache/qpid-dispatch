@@ -33,7 +33,7 @@ set(GENERATOR_DEPENDS ${GENERATOR_DEPENDS} ${GENERATOR_SRC})
 
 add_custom_command (
   OUTPUT ${GENERATED_SOURCES}
-  COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
+  COMMAND ${Python_EXECUTABLE} ${CMAKE_BINARY_DIR}/tests/run.py -s ${CMAKE_CURRENT_SOURCE_DIR}/schema_c.py
   DEPENDS ${GENERATOR_DEPENDS})
 
 # Build the qpid-dispatch library.
@@ -134,7 +134,7 @@ set(qpid_dispatch_LIBRARIES
   ${CMAKE_THREAD_LIBS_INIT}
   ${rt_lib}
   ${CMAKE_DL_LIBS}
-  ${PYTHON_LIBRARIES}
+  ${Python_LIBRARIES}
   )
 
 # USE_LIBWEBSOCKETS is true only if LIBWEBSOCKETS_FOUND
