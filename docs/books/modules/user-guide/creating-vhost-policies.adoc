@@ -133,7 +133,7 @@ The maximum size in bytes of AMQP message transfers allowed for connections crea
 If `true`, connections from users in this group are permitted to attach receivers to dynamic sources. This permits creation of listeners to temporary addresses or temporary queues. If `false`, use of dynamic sources is not permitted.
 
 `allowAdminStatusUpdate`::
-If `true`, connections from users in this group are permitted to modify the `adminStatus` of connections. This permits termination of sender or receiver connections.  If `false`, the users of this group are prohibited from terminating any connections. Inter-router connections can never be terminated by any usee. The default is `true`, even if the policy is not configured.
+If `true`, connections from users in this group are permitted to modify the `adminStatus` of connections. This permits termination of sender or receiver connections.  If `false`, the users of this group are prohibited from terminating any connections. Inter-router connections can never be terminated by any user. The default is `true`, even if the policy is not configured.
 
 `allowWaypointLinks`::
 If `true`, connections from users in this group are permitted to attach links using waypoint capabilities. This allows endpoints to act as waypoints (that is, brokers) without the need for configuring auto-links. If `false`, use of waypoint capabilities is not permitted.
