@@ -1137,7 +1137,7 @@
                 "eventChannel": {
                     "type": "boolean",
                     "required": false,
-                    "description": "Enables restricted event mode where no reponses are sent to request and only post is allowed",
+                    "description": "Enables restricted event mode where no responses are sent to request and only post is allowed",
                     "create": true
                 }
             }
@@ -1193,7 +1193,7 @@
                 "eventChannel": {
                     "type": "boolean",
                     "required": false,
-                    "description": "Enables restricted event mode where no reponses are sent to request and only post is allowed",
+                    "description": "Enables restricted event mode where no responses are sent to request and only post is allowed",
                     "create": true
                 },
                 "hostOverride": {

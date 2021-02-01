@@ -37,7 +37,7 @@ Containers contain addressable entities called _nodes_ that are responsible for 
 Links::
 Messages are transferred between connected containers over _links_. A link is a unidirectional route between nodes. Essentially, a link is a channel for sending or receiving messages.
 +
-Links are established over _sesssions_, which are contexts for sending and receiving messages. Sessions are established over connections. 
+Links are established over _sessions_, which are contexts for sending and receiving messages. Sessions are established over connections.
 
 .Additional resources
 
