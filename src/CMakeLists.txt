@@ -146,13 +146,13 @@ else(USE_LIBWEBSOCKETS)
   list(APPEND qpid_dispatch_SOURCES http-none.c)
 endif(USE_LIBWEBSOCKETS)
 
-if(libnghttp2_FOUND)
+if(USE_LIBNGHTTP2)
   list(APPEND qpid_dispatch_SOURCES adaptors/http2/http2_adaptor.c)
   list(APPEND qpid_dispatch_INCLUDES ${NGHTTP2_INCLUDE_DIRS})
   list(APPEND qpid_dispatch_LIBRARIES ${NGHTTP2_LIBRARIES})
-else(libnghttp2_FOUND)
+else(USE_LIBNGHTTP2)
   list(APPEND qpid_dispatch_SOURCES adaptors/http2/http2_adaptor_none.c)
-endif(libnghttp2_FOUND)
+endif(USE_LIBNGHTTP2)
 
 # DISPATCH-654 There are, in fact, no strict-aliasing violations and newer compilers don't complain.
 if (CMAKE_C_COMPILER_ID STREQUAL "GNU")

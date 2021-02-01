@@ -93,9 +93,9 @@ if(USE_LIBWEBSOCKETS)
   set(SYSTEM_TESTS_HTTP system_tests_http)
 endif()
 
-if(libnghttp2_FOUND)
+if(USE_LIBNGHTTP2)
   set(SYSTEM_TESTS_HTTP2 system_tests_http2 system_tests_grpc)
-endif(libnghttp2_FOUND)
+endif(USE_LIBNGHTTP2)
 
 if(CONSOLE_INSTALL)
   set(CONSOLE_TEST system_tests_console)

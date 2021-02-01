@@ -65,6 +65,8 @@ message(STATUS "Found Proton: ${Proton_LIBRARIES} (found version \"${Proton_VERS
 
 # http2 support is optional
 find_package(libnghttp2 1.4.0)
+CMAKE_DEPENDENT_OPTION(USE_LIBNGHTTP2 "Use libnghttp2 for HTTP/2 support" ON
+                         "libnghttp2_FOUND" OFF)
 
 # Web Sockets
 find_package(LibWebSockets 2.4.2)
