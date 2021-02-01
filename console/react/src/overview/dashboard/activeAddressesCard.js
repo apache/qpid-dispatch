@@ -18,7 +18,7 @@ under the License.
 */
 
 import React from "react";
-import {nowrap, Table, TableBody, TableHeader} from "@patternfly/react-table";
+import { nowrap, Table, TableBody, TableHeader } from "@patternfly/react-table";
 
 // update the table every 5 seconds
 const UPDATE_INTERVAL = 1000 * 5;
@@ -28,8 +28,11 @@ class ActiveAddressesCard extends React.Component {
     super(props);
     this.state = {
       lastUpdate: new Date(),
-      columns: ["Address", "In", "Out", "Settle rate"].map(it => ({"title": it, "transforms": [nowrap]})),
-      rows: []
+      columns: ["Address", "In", "Out", "Settle rate"].map(it => ({
+        title: it,
+        transforms: [nowrap],
+      })),
+      rows: [],
     };
   }
 
@@ -49,12 +52,12 @@ class ActiveAddressesCard extends React.Component {
       [
         {
           entity: "router.link",
-          attrs: ["settleRate", "linkType", "linkDir", "owningAddr"]
+          attrs: ["settleRate", "linkType", "linkDir", "owningAddr"],
         },
         {
           entity: "router.address",
-          attrs: ["identity", "deliveriesIngress", "deliveriesEgress"]
-        }
+          attrs: ["identity", "deliveriesIngress", "deliveriesEgress"],
+        },
       ],
       results => {
         if (!this.mounted) return;
@@ -71,22 +74,38 @@ class ActiveAddressesCard extends React.Component {
             );
             if (link.linkType === "endpoint") {
               if (link.owningAddr && !link.owningAddr.startsWith("Ltemp.")) {
+                console.log(`adding deliveries for ${link.owningAddr}`);
+                console.log(link);
                 if (!active[link.owningAddr]) {
                   active[link.owningAddr] = {
                     addr: this.props.service.utilities.addr_text(link.owningAddr),
                     in: 0,
                     out: 0,
-                    settleRate: 0
+                    settleRate: 0,
                   };
                 }
                 const address = addresses.find(
                   address => address.identity === link.owningAddr
                 );
                 if (address) {
-                  active[link.owningAddr].in += parseInt(address.deliveriesIngress);
-                  active[link.owningAddr].out += parseInt(address.deliveriesEgress);
+                  if (link.linkDir === "in") {
+                    active[link.owningAddr].in += parseInt(address.deliveriesIngress);
+                    console.log(
+                      `in: ${parseInt(address.deliveriesIngress)} for a total of ${
+                        active[link.owningAddr].in
+                      }`
+                    );
+                  }
+                  if (link.linkDir === "out") {
+                    active[link.owningAddr].out += parseInt(address.deliveriesEgress);
+                    active[link.owningAddr].settleRate += parseInt(link.settleRate);
+                    console.log(
+                      `out: ${parseInt(address.deliveriesEgress)} for a total of ${
+                        active[link.owningAddr].out
+                      }`
+                    );
+                  }
                 }
-                active[link.owningAddr].settleRate += parseInt(link.settleRate);
               }
             }
           }
@@ -100,8 +119,8 @@ class ActiveAddressesCard extends React.Component {
               active[addr].addr,
               active[addr].in.toLocaleString(),
               active[addr].out.toLocaleString(),
-              active[addr].settleRate.toLocaleString()
-            ]
+              active[addr].settleRate.toLocaleString(),
+            ],
           };
         });
         this.setState({ rows, lastUpdate: new Date() });
