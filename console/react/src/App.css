@@ -103,8 +103,17 @@ g.selected line {
 
 #topologyPage .pf-l-stack__item,
 #messageFlowPage .pf-l-stack__item {
-  border-bottom: 1px solid #aaa;
+  /* border-bottom: 1px solid #aaa; */
 }
+
+#pf-topology-view-2 {
+  padding-bottom: 0;
+}
+
+.pf-topology-container__with-sidebar {
+  overflow-y: hidden;
+}
+
 .node.client rect {
   stroke: black;
   fill: white;

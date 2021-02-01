@@ -31,7 +31,7 @@ class DashboardPage extends React.Component {
   constructor(props) {
     super(props);
     this.state = {
-      timePeriod: 60
+      timePeriod: 60,
     };
   }
 
@@ -56,9 +56,12 @@ class DashboardPage extends React.Component {
                   <div>Router network statistics</div>
                   <div className="duration-tabs">
                     <nav className="pf-c-nav" aria-label="Local">
-                      <ul className="pf-c-nav__tertiary-list" style={{"display": "inline-flex"}}>
+                      <ul
+                        className="pf-c-nav__tertiary-list"
+                        style={{ display: "inline-flex" }}
+                      >
                         <li
-                          style={{"margin-right": "32px"}}
+                          style={{ marginRight: "32px" }}
                           onClick={() => this.setTimePeriod(60)}
                           className={`pf-c-nav__item ${
                             this.state.timePeriod === 60 ? "selected" : ""

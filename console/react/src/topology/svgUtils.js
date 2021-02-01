@@ -24,16 +24,16 @@ import { utils } from "../common/amqp/utilities.js";
 export function updateState(circle) {
   circle
     .selectAll("circle")
-    .classed("highlighted", function(d) {
+    .classed("highlighted", function (d) {
       return d.highlighted;
     })
-    .classed("selected", function(d) {
+    .classed("selected", function (d) {
       return d.selected;
     })
-    .classed("fixed", function(d) {
+    .classed("fixed", function (d) {
       return d.fixed ? d.fixed & 1 : false;
     })
-    .classed("multiple", function(d) {
+    .classed("multiple", function (d) {
       return d.normals;
     })
     .classed("dropped", d => d.dropped);
@@ -46,10 +46,10 @@ export function appendCircle(g) {
       .append("svg:circle")
       .attr("class", "node")
       // the following attrs and classes won't change after the node is created
-      .attr("r", function(d) {
+      .attr("r", function (d) {
         return Nodes.radius(d.nodeType);
       })
-      .attr("fill", function(d) {
+      .attr("fill", function (d) {
         if (d.nodeType === "edge" && d.normals && d.normals.length > 1) {
           return "url(#diagonal-stripe-1) #fff;";
         }
@@ -58,45 +58,45 @@ export function appendCircle(g) {
         }
         return null;
       })
-      .attr("data-testid", function(d) {
+      .attr("data-testid", function (d) {
         return (d.nodeType !== "normal" ? "router" : "client") + "-" + d.index;
       })
-      .classed("normal", function(d) {
+      .classed("normal", function (d) {
         return d.nodeType === "normal" || utils.isConsole(d);
       })
-      .classed("in", function(d) {
+      .classed("in", function (d) {
         return d.cdir === "in";
       })
-      .classed("out", function(d) {
+      .classed("out", function (d) {
         return d.cdir === "out";
       })
-      .classed("inout", function(d) {
+      .classed("inout", function (d) {
         return d.cdir === "both";
       })
-      .classed("inter-router", function(d) {
+      .classed("inter-router", function (d) {
         return d.nodeType === "inter-router" || d.nodeType === "_topo";
       })
-      .classed("on-demand", function(d) {
+      .classed("on-demand", function (d) {
         return d.nodeType === "on-demand";
       })
-      .classed("edge", function(d) {
+      .classed("edge", function (d) {
         return d.nodeType === "edge" || d.nodeType === "_edge";
       })
-      .classed("console", function(d) {
+      .classed("console", function (d) {
         return utils.isConsole(d);
       })
-      .classed("artemis", function(d) {
+      .classed("artemis", function (d) {
         return utils.isArtemis(d);
       })
-      .classed("qpid-cpp", function(d) {
+      .classed("qpid-cpp", function (d) {
         return utils.isQpid(d);
       })
-      .classed("route-container", function(d) {
+      .classed("route-container", function (d) {
         return (
           !utils.isArtemis(d) && !utils.isQpid(d) && d.nodeType === "route-container"
         );
       })
-      .classed("client", function(d) {
+      .classed("client", function (d) {
         return d.nodeType === "normal" && !d.properties.console_identifier;
       })
   );
@@ -106,7 +106,7 @@ export function appendContent(g, legend) {
   // show node IDs
   g.append("svg:text")
     .attr("x", d => Nodes.textOffset(d.nodeType, d.name.length))
-    .attr("y", function(d) {
+    .attr("y", function (d) {
       let y = 7;
       if (utils.isArtemis(d)) y = 8;
       else if (utils.isQpid(d)) y = 9;
@@ -119,28 +119,28 @@ export function appendContent(g, legend) {
       d.nodeType === "_topo" || d.nodeType === "_edge" ? "label" : "id"
     )
     .classed("long", d => d.name.length > 4)
-    .classed("console", function(d) {
+    .classed("console", function (d) {
       return utils.isConsole(d);
     })
-    .classed("normal", function(d) {
+    .classed("normal", function (d) {
       return d.nodeType === "normal";
     })
-    .classed("on-demand", function(d) {
+    .classed("on-demand", function (d) {
       return d.nodeType === "on-demand";
     })
-    .classed("edge", function(d) {
+    .classed("edge", function (d) {
       return d.nodeType === "edge";
     })
-    .classed("edge", function(d) {
+    .classed("edge", function (d) {
       return d.nodeType === "_edge";
     })
-    .classed("artemis", function(d) {
+    .classed("artemis", function (d) {
       return utils.isArtemis(d);
     })
-    .classed("qpid-cpp", function(d) {
+    .classed("qpid-cpp", function (d) {
       return utils.isQpid(d);
     })
-    .text(function(d) {
+    .text(function (d) {
       if (legend && (d.nodeType === "_edge" || d.nodeType === "_topo")) return null;
       if (utils.isConsole(d)) {
         return "\uf108"; // icon-desktop for a console
@@ -162,7 +162,7 @@ export function appendContent(g, legend) {
 }
 
 export function appendTitle(g) {
-  g.append("svg:title").text(function(d) {
+  g.append("svg:title").text(function (d) {
     return d.title();
   });
 }
@@ -180,7 +180,7 @@ export function addDefs(svg) {
         defs.push({
           sten: sten[isten],
           state: states[istate],
-          r: radii[iradii]
+          r: radii[iradii],
         });
       }
     }
@@ -192,11 +192,11 @@ export function addDefs(svg) {
     .data(defs)
     .enter()
     .append("svg:marker")
-    .attr("id", function(d) {
+    .attr("id", function (d) {
       return [d.sten, d.state, d.r].join("-");
     })
     .attr("viewBox", "0 -5 10 10")
-    .attr("refX", function(d) {
+    .attr("refX", function (d) {
       return Nodes.refX(d.sten, d.r);
     })
     .attr("markerWidth", 14)
@@ -204,7 +204,7 @@ export function addDefs(svg) {
     .attr("markerUnits", "userSpaceOnUse")
     .attr("orient", "auto")
     .append("svg:path")
-    .attr("d", function(d) {
+    .attr("d", function (d) {
       return d.sten === "end" ? "M 0 -5 L 10 0 L 0 5 z" : "M 10 -5 L 0 0 L 10 5 z";
     });
 
@@ -226,15 +226,17 @@ export function addDefs(svg) {
     .attr("width", 10)
     .attr("height", 10);
 
-  addStyles(
+  /*
+    addStyles(
     sten,
     {
       selected: "#33F",
       highlighted: "#6F6",
-      unknown: "#888"
+      unknown: "#888",
     },
     radii
   );
+  */
 }
 export function addGradient(svg) {
   // gradient for sender/receiver client
@@ -246,14 +248,8 @@ export function addGradient(svg) {
     .attr("x2", "0%")
     .attr("y1", "100%")
     .attr("y2", "0%");
-  grad
-    .append("stop")
-    .attr("offset", "50%")
-    .style("stop-color", "#C0F0C0");
-  grad
-    .append("stop")
-    .attr("offset", "50%")
-    .style("stop-color", "#F0F000");
+  grad.append("stop").attr("offset", "50%").style("stop-color", "#C0F0C0");
+  grad.append("stop").attr("offset", "50%").style("stop-color", "#F0F000");
 }
 
 function addStyles(stend, stateColor, radii) {

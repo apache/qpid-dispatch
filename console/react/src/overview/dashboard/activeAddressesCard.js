@@ -74,8 +74,6 @@ class ActiveAddressesCard extends React.Component {
             );
             if (link.linkType === "endpoint") {
               if (link.owningAddr && !link.owningAddr.startsWith("Ltemp.")) {
-                console.log(`adding deliveries for ${link.owningAddr}`);
-                console.log(link);
                 if (!active[link.owningAddr]) {
                   active[link.owningAddr] = {
                     addr: this.props.service.utilities.addr_text(link.owningAddr),
@@ -90,20 +88,10 @@ class ActiveAddressesCard extends React.Component {
                 if (address) {
                   if (link.linkDir === "in") {
                     active[link.owningAddr].in += parseInt(address.deliveriesIngress);
-                    console.log(
-                      `in: ${parseInt(address.deliveriesIngress)} for a total of ${
-                        active[link.owningAddr].in
-                      }`
-                    );
                   }
                   if (link.linkDir === "out") {
                     active[link.owningAddr].out += parseInt(address.deliveriesEgress);
                     active[link.owningAddr].settleRate += parseInt(link.settleRate);
-                    console.log(
-                      `out: ${parseInt(address.deliveriesEgress)} for a total of ${
-                        active[link.owningAddr].out
-                      }`
-                    );
                   }
                 }
               }
