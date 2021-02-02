@@ -1608,13 +1608,14 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 
 static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
-    qdr_link_t *old_link  = safe_deref_qdr_link_t(dlv->link_sp);
-    int         ref_delta = -1; // Account for the action-list protection
+    int ref_delta = -1; // Account for the action-list protection
 
     //
     // Remove the delivery from its current link if needed
     //
+    qdr_link_t *old_link  = safe_deref_qdr_link_t(dlv->link_sp);
     if (!!old_link) {
+        sys_mutex_lock(old_link->conn->work_lock);
         switch (dlv->where) {
         case QDR_DELIVERY_NOWHERE:
             break;
@@ -1622,6 +1623,7 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
         case QDR_DELIVERY_IN_UNDELIVERED:
             DEQ_REMOVE(old_link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
+            dlv->link_work = 0;
             ref_delta--;
             break;
 
@@ -1637,6 +1639,7 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
             ref_delta--;
             break;
         }
+        sys_mutex_unlock(old_link->conn->work_lock);
     }
 
     //
