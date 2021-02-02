@@ -252,6 +252,7 @@ export function addGradient(svg) {
   grad.append("stop").attr("offset", "50%").style("stop-color", "#F0F000");
 }
 
+/*
 function addStyles(stend, stateColor, radii) {
   // the <style>
   let element = document.querySelector("style");
@@ -272,3 +273,4 @@ function addStyles(stend, stateColor, radii) {
     }
   }
 }
+*/
