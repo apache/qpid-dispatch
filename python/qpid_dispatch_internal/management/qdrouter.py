@@ -40,7 +40,7 @@ class QdSchema(schema.Schema):
 
     def __init__(self):
         """Load schema."""
-        qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json')
+        qd_schema = get_data('qpid_dispatch.management', 'qdrouter.json').decode('utf8')
         try:
             super(QdSchema, self).__init__(**json.loads(qd_schema, **JSON_LOAD_KWARGS))
         except Exception as e:
