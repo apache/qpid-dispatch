@@ -1056,10 +1056,12 @@ void qdr_delivery_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bo
         if (! peer->presettled && in_dlv->presettled) {
             peer->presettled       = in_dlv->presettled;
         }
-        qdr_link_work_t *work      = peer->link_work;
-        qdr_link_t      *peer_link = qdr_delivery_link(peer);
 
+        qdr_link_t *peer_link = qdr_delivery_link(peer);
         if (!!peer_link) {
+            sys_mutex_lock(peer_link->conn->work_lock);
+            qdr_link_work_t *work     = peer->link_work;
+            bool             activate = false;
 
             if (peer_link->streaming && !more) {
                 if (!peer_link->in_streaming_pool) {
@@ -1078,19 +1080,19 @@ void qdr_delivery_continue_peers_CT(qdr_core_t *core, qdr_delivery_t *in_dlv, bo
             // after the streaming message has been sent.
             //
             if (!!work) {
-                sys_mutex_lock(peer_link->conn->work_lock);
                 if (work->processing || work == DEQ_HEAD(peer_link->work_list)) {
                     qdr_add_link_ref(&peer_link->conn->links_with_work[peer_link->priority], peer_link, QDR_LINK_LIST_CLASS_WORK);
-                    sys_mutex_unlock(peer_link->conn->work_lock);
 
                     //
                     // Activate the outgoing connection for later processing.
                     //
-                    qdr_connection_activate_CT(core, peer_link->conn);
+                    activate = true;
                 }
-                else
-                    sys_mutex_unlock(peer_link->conn->work_lock);
             }
+            sys_mutex_unlock(peer_link->conn->work_lock);
+
+            if (activate)
+                qdr_connection_activate_CT(core, peer_link->conn);
         }
 
         peer = qdr_delivery_next_peer_CT(in_dlv);

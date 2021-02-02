@@ -1854,6 +1854,7 @@ static uint64_t qdr_http_deliver(void *context, qdr_link_t *link, qdr_delivery_t
                                                      0,
                                                      &(stream_data->incoming_id));
         qdr_link_set_context(stream_data->in_link, stream_data);
+        return QD_DELIVERY_MOVED_TO_NEW_LINK;
     }
     else if (stream_data) {
         if (conn->ingress) {
