@@ -418,7 +418,6 @@ void *qd_alloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool)
         item->header = PATTERN_FRONT;
         const uint32_t pb = PATTERN_BACK;
         memcpy((char*) &item[1] + desc->total_size, &pb, sizeof(pb));
-        //*((uint32_t*) ((char*) &item[1] + desc->total_size))= PATTERN_BACK;
         QD_MEMORY_FILL(&item[1], QD_MEMORY_INIT, desc->total_size);
 #endif
         return &item[1];
