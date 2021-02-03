@@ -438,6 +438,7 @@ void qd_dealloc(qd_alloc_type_desc_t *desc, qd_alloc_pool_t **tpool, char *p)
     assert (desc->trailer == PATTERN_BACK);
     assert (item->header  == PATTERN_FRONT);
     const uint32_t pb = PATTERN_BACK;
+    (void)pb;  // prevent unused warning
     assert (memcmp(p + desc->total_size, &pb, sizeof(pb)) == 0);
     assert (item->desc == desc);  // Check for double-free
     qd_alloc_type_t *qtype = (qd_alloc_type_t*) desc->debug;
