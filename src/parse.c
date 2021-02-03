@@ -493,33 +493,34 @@ int64_t qd_parse_as_long(qd_parsed_field_t *field)
     qd_iterator_reset(field->raw_iter);
 
     switch (field->tag) {
-    case QD_AMQP_LONG:
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 56;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 48;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 40;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 32;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 24;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 16;
-        result |= ((int64_t) qd_iterator_octet(field->raw_iter)) << 8;
-        result |= (uint64_t) qd_iterator_octet(field->raw_iter);
+    case QD_AMQP_LONG: {
+        uint64_t tmp = ((uint64_t) qd_iterator_octet(field->raw_iter)) << 56;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 48;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 40;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 32;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 24;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 16;
+        tmp |= ((uint64_t) qd_iterator_octet(field->raw_iter)) << 8;
+        tmp |= (uint64_t) qd_iterator_octet(field->raw_iter);
+        result = (int64_t) tmp;
         break;
+    }
 
-    case QD_AMQP_INT:
-        {
-            int32_t i32 = ((int32_t) qd_iterator_octet(field->raw_iter)) << 24;
-            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 16;
-            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter)) << 8;
-            i32 |= ((int32_t) qd_iterator_octet(field->raw_iter));
-            result = i32;
-        }
+    case QD_AMQP_INT: {
+        uint32_t tmp = ((uint32_t) qd_iterator_octet(field->raw_iter)) << 24;
+        tmp |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 16;
+        tmp |= ((uint32_t) qd_iterator_octet(field->raw_iter)) << 8;
+        tmp |= ((uint32_t) qd_iterator_octet(field->raw_iter));
+        result = (int32_t) tmp;
         break;
+    }
 
-    case QD_AMQP_SHORT:
-        {
-            int16_t i16 = ((int16_t) qd_iterator_octet(field->raw_iter)) << 8;
-            i16 |= ((int16_t) qd_iterator_octet(field->raw_iter));
-            result = i16;
-        } break;
+    case QD_AMQP_SHORT: {
+        uint16_t tmp = ((uint16_t) qd_iterator_octet(field->raw_iter)) << 8;
+        tmp |= ((uint16_t) qd_iterator_octet(field->raw_iter));
+        result = (int16_t) tmp;
+        break;
+    }
 
     case QD_AMQP_BYTE:
     case QD_AMQP_BOOLEAN:
