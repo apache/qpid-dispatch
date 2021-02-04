@@ -1606,10 +1606,9 @@ static void qdr_attach_link_downlink_CT(qdr_core_t *core, qdr_connection_t *conn
 }
 
 
+// move dlv to new link.
 static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *link, qdr_delivery_t *dlv)
 {
-    int ref_delta = -1; // Account for the action-list protection
-
     //
     // Remove the delivery from its current link if needed
     //
@@ -1624,29 +1623,27 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
             DEQ_REMOVE(old_link->undelivered, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
             dlv->link_work = 0;
-            ref_delta--;
+            // expect: caller holds reference to dlv (in action)
+            assert(sys_atomic_get(&dlv->ref_count) > 1);
+            qdr_delivery_decref_CT(core, dlv, "qdr_link_process_initial_delivery_CT - remove from undelivered list");
             break;
 
         case QDR_DELIVERY_IN_UNSETTLED:
             DEQ_REMOVE(old_link->unsettled, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
-            ref_delta--;
+            assert(sys_atomic_get(&dlv->ref_count) > 1);
+            qdr_delivery_decref_CT(core, dlv, "qdr_link_process_initial_delivery_CT - remove from unsettled list");
             break;
 
         case QDR_DELIVERY_IN_SETTLED:
             DEQ_REMOVE(old_link->settled, dlv);
             dlv->where = QDR_DELIVERY_NOWHERE;
-            ref_delta--;
+            assert(sys_atomic_get(&dlv->ref_count) > 1);
+            qdr_delivery_decref_CT(core, dlv, "qdr_link_process_initial_delivery_CT - remove from settled list");
             break;
         }
         sys_mutex_unlock(old_link->conn->work_lock);
     }
-
-    //
-    // Enqueue the delivery onto the new link's undelivered list
-    //
-    set_safe_ptr_qdr_link_t(link, &dlv->link_sp);
-    qdr_forward_deliver_CT(core, link, dlv);
 
     //
     // Adjust the delivery's identity
@@ -1655,27 +1652,28 @@ static void qdr_link_process_initial_delivery_CT(qdr_core_t *core, qdr_link_t *l
     dlv->link_id = link->identity;
 
     //
-    // Adjust the delivery's reference count
+    // Enqueue the delivery onto the new link's undelivered list
     //
-    assert(ref_delta <= 0);
-    while (ref_delta < 0) {
-        qdr_delivery_decref(core, dlv, "qdr_link_process_initial_delivery_CT");
-        ref_delta++;
-    }
+    set_safe_ptr_qdr_link_t(link, &dlv->link_sp);
+    qdr_forward_deliver_CT(core, link, dlv);
 }
 
 
 static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *action, bool discard)
 {
-    qdr_connection_t  *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
-    qdr_link_t        *link = safe_deref_qdr_link_t(action->args.connection.link);
-    if (discard || !conn || !link)
+    qdr_connection_t      *conn = safe_deref_qdr_connection_t(action->args.connection.conn);
+    qdr_link_t            *link = safe_deref_qdr_link_t(action->args.connection.link);
+    qdr_delivery_t *initial_dlv = action->args.connection.initial_delivery;
+    if (discard || !conn || !link) {
+        if (initial_dlv)
+            qdr_delivery_decref(core, initial_dlv,
+                                "qdr_link_inbound_first_attach_CT - discarding action");
         return;
+    }
 
     qd_direction_t  dir         = action->args.connection.dir;
     qdr_terminus_t *source      = action->args.connection.source;
     qdr_terminus_t *target      = action->args.connection.target;
-    qdr_delivery_t *initial_dlv = action->args.connection.initial_delivery;
 
     //
     // Start the attach count.
@@ -1778,8 +1776,12 @@ static void qdr_link_inbound_first_attach_CT(qdr_core_t *core, qdr_action_t *act
         //
         // Handle outgoing link cases
         //
-        if (initial_dlv)
+        if (initial_dlv) {
             qdr_link_process_initial_delivery_CT(core, link, initial_dlv);
+            qdr_delivery_decref(core, initial_dlv,
+                                "qdr_link_inbound_first_attach_CT - dropping action reference");
+            initial_dlv = 0;
+        }
 
         switch (link->link_type) {
         case QD_LINK_ENDPOINT: {
