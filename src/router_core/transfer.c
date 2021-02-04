@@ -220,19 +220,13 @@ int qdr_link_process_deliveries(qdr_core_t *core, qdr_link_t *link, int credit)
                     } else {
                         //
                         // This delivery is in the process of being transfered
-                        // to a different link.  Hack: the adaptor
-                        // deliver_handler has issued a new link-attached
-                        // action to the core, passing this dlv as the initial
-                        // delivery on that new link.  When the core gets
-                        // around to processing that action it will move the
-                        // dlv from this link to the new link.  Problem: that
-                        // _may_ have already happened before the lock was
-                        // taken.  This is a race. To work-around, check if the
-                        // dlv is still on the current link and if so remove
-                        // it.  Once the core processes the link attach it will
-                        // move the dlv to the new link.
+                        // to a different link, possibly on a entirely
+                        // different connection. The delivery must be
+                        // disassociated with this link.  Depending on the
+                        // order of the events this may happen either in the
+                        // core thread (qdr_link_process_initial_delivery) or
+                        // here:
                         //
-                        assert(new_disp == QD_DELIVERY_MOVED_TO_NEW_LINK);
                         if (dlv == DEQ_HEAD(link->undelivered)) {
                             DEQ_REMOVE_HEAD(link->undelivered);
                             dlv->link_work = 0;
