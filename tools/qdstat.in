@@ -532,7 +532,7 @@ class BusManager(object):
                 row.append('-')
             else:
                 row.append('-')
-                row.append(node.routerLink)
+                row.append(PlainNum(node.routerLink))
 
             if self.opts.verbose:
                 row.append(get(node, 'protocolVersion'))
